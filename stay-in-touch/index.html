@@ -3,14 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Cultivate • Connection Garden</title>
+  <title>Kinship • Connection Garden</title>
   
   <link rel="manifest" href="data:application/manifest+json;base64,eyJuYW1lIjoiS2luc2hpcCBUcmFja2VyIiwic2hvcnRfbmFtZSI6IktpbnNoaXAiLCJzdGFydF91cmwiOiIuIiwiZGlzcGxheSI6InN0YW5kYWxvbmUiLCJiYWNrZ3JvdW5kX2NvbG9yIjoiIzBiMTIxMCIsInRoZW1lX2NvbG9yIjoiIzBiMTIxMCJ9" />
   <meta name="theme-color" content="#0b1210" />
   
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Supabase CDN Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
   <style>
-    /* Smooth transition for the living ecosystem canvas */
     body {
       transition: background-color 1.2s ease, border-color 1.2s ease;
     }
@@ -35,7 +37,7 @@
     }
   </style>
 </head>
-<body id="garden-canvas" style="background-color: #1c130d;" class="text-emerald-50 min-h-screen p-4 sm:p-6 flex flex-col items-center selection:bg-teal-600 selection:text-white transition-colors duration-1000">
+<body id="garden-canvas" style="background-color: #1c130d;" class="text-emerald-50 min-h-screen p-4 sm:p-6 flex flex-col items-center selection:bg-teal-600 selection:text-white">
 
   <main class="w-full max-w-xl space-y-6 pb-20">
     
@@ -67,11 +69,13 @@
           ⚙️
         </button>
         <button 
+          id="btn-auth-header"
           onclick="toggleAuthModal(true)"
-          class="p-2 text-[#9eb3a8] hover:text-[#f4ede4] hover:bg-[#182721]/80 rounded-lg border border-[#23352e] transition-colors text-xs backdrop-blur-sm"
-          title="Account & Backup"
+          class="p-2 text-[#9eb3a8] hover:text-[#f4ede4] hover:bg-[#182721]/80 rounded-lg border border-[#23352e] transition-colors text-xs backdrop-blur-sm relative"
+          title="Account & Cloud Sync"
         >
           ☁️
+          <span id="sync-status-dot" class="absolute top-1 right-1 w-2 h-2 rounded-full bg-slate-500"></span>
         </button>
         <button 
           id="btn-roll-dice"
@@ -309,42 +313,110 @@
     </div>
   </div>
 
-  <!-- AUTH & BACKUP MODAL -->
+  <!-- AUTH & CLOUD SYNC MODAL -->
   <div id="auth-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-[#14201b] border border-[#283e35] rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
       <div class="flex justify-between items-center border-b border-[#283e35] pb-3">
-        <h3 class="font-bold text-sm text-[#f4ede4]">Account & Data Portability</h3>
+        <h3 class="font-bold text-sm text-[#f4ede4]">Account & Cloud Sync</h3>
         <button onclick="toggleAuthModal(false)" class="text-[#8da498] hover:text-[#f4ede4] text-sm">✕</button>
       </div>
 
-      <div class="bg-[#0b1210] border border-[#283e35] rounded-xl p-3 text-xs text-[#a3b8ad] space-y-1">
-        <div class="font-semibold text-[#f4ede4] flex items-center gap-1.5">
-          <span>🔒</span> Private Local Storage
+      <!-- LOGGED-IN VIEW -->
+      <div id="auth-view-logged-in" class="hidden space-y-4">
+        <div class="bg-[#0b1210] border border-[#283e35] rounded-xl p-3 text-xs text-[#a3b8ad] space-y-1">
+          <div class="flex items-center justify-between">
+            <span class="text-emerald-400 font-medium flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse"></span> Cloud Synced
+            </span>
+            <span id="auth-current-email" class="text-[#f4ede4] font-mono text-[11px] truncate max-w-[150px]"></span>
+          </div>
+          <p class="text-[11px] text-[#6b8276] pt-1">Your connections and cadences are encrypted and safely backed up to your personal account.</p>
         </div>
-        <p>Your connections live solely on this browser with zero external tracking.</p>
-      </div>
 
-      <div class="space-y-2">
-        <button onclick="exportBackup()" class="w-full bg-[#1c2d26] hover:bg-[#253d33] text-emerald-100 py-2 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-2 border border-[#2e473d]">
-          <span>📥</span> Export Backup JSON
+        <button 
+          onclick="syncToCloud(true)" 
+          class="w-full bg-[#1c2d26] hover:bg-[#253d33] text-teal-300 py-2 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-2 border border-[#2e473d]"
+        >
+          <span>🔄</span> Force Cloud Sync Now
         </button>
 
-        <label class="w-full bg-[#1c2d26] hover:bg-[#253d33] text-emerald-100 py-2 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer border border-[#2e473d]">
-          <span>📤</span> Import Backup JSON
-          <input type="file" id="import-json-file" accept=".json" class="hidden" onchange="importBackup(event)" />
-        </label>
+        <button 
+          onclick="handleLogout()" 
+          class="w-full bg-[#241710] hover:bg-[#342217] text-[#ea580c] py-2 rounded-lg text-xs font-semibold transition-colors border border-[#ea580c]/30"
+        >
+          Sign Out
+        </button>
       </div>
 
-      <div class="border-t border-[#283e35] pt-3">
-        <div class="text-[11px] text-[#6b8276] uppercase font-semibold mb-2">Multi-Device Cloud Sync</div>
-        <button onclick="alert('Cloud sync can connect to Firebase or Supabase. Your current data is stored safely on this device.')" class="w-full bg-[#241710] hover:bg-[#342217] text-[#fdba74] border border-[#ea580c]/30 py-2 rounded-lg text-xs font-semibold transition-colors">
-          Connect Cloud Provider (Supabase / Firebase)
-        </button>
+      <!-- LOGGED-OUT VIEW (SIGN IN / SIGN UP) -->
+      <div id="auth-view-logged-out" class="space-y-4">
+        <div class="bg-[#0b1210] border border-[#283e35] rounded-xl p-3 text-xs text-[#a3b8ad]">
+          <p>Create a free account to sync your garden across your phone, tablet, and desktop without losing your data.</p>
+        </div>
+
+        <form id="auth-form" class="space-y-3">
+          <div>
+            <label class="block text-xs font-semibold text-[#a3b8ad] uppercase tracking-wider mb-1">Email</label>
+            <input id="auth-email" type="email" required placeholder="you@domain.com" class="w-full bg-[#0b1210] border border-[#283e35] rounded-lg px-3 py-2 text-sm text-emerald-100 focus:outline-none focus:border-teal-500" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-[#a3b8ad] uppercase tracking-wider mb-1">Password</label>
+            <input id="auth-password" type="password" minlength="6" required placeholder="••••••••" class="w-full bg-[#0b1210] border border-[#283e35] rounded-lg px-3 py-2 text-sm text-emerald-100 focus:outline-none focus:border-teal-500" />
+          </div>
+
+          <div id="auth-error-msg" class="text-xs text-[#ea580c] hidden"></div>
+
+          <div class="grid grid-cols-2 gap-2 pt-1">
+            <button 
+              type="button" 
+              onclick="handleLogin()" 
+              class="w-full bg-[#115e59] hover:bg-[#0f766e] text-white py-2 rounded-lg text-xs font-semibold transition-colors border border-teal-500/30"
+            >
+              Sign In
+            </button>
+            <button 
+              type="button" 
+              onclick="handleSignUp()" 
+              class="w-full bg-[#1c2d26] hover:bg-[#253d33] text-teal-300 py-2 rounded-lg text-xs font-semibold transition-colors border border-[#2e473d]"
+            >
+              Create Account
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Offline JSON Portability Tools -->
+      <div class="border-t border-[#283e35] pt-3 space-y-2">
+        <div class="text-[11px] text-[#6b8276] uppercase font-semibold">Offline Backup (No account needed)</div>
+        <div class="grid grid-cols-2 gap-2">
+          <button onclick="exportBackup()" class="bg-[#131f1a] hover:bg-[#1c2d26] text-slate-300 py-1.5 rounded-lg text-[11px] transition-colors border border-[#23352e]">
+            📥 Export JSON
+          </button>
+          <label class="bg-[#131f1a] hover:bg-[#1c2d26] text-slate-300 py-1.5 rounded-lg text-[11px] transition-colors border border-[#23352e] text-center cursor-pointer">
+            📤 Import JSON
+            <input type="file" id="import-json-file" accept=".json" class="hidden" onchange="importBackup(event)" />
+          </label>
+        </div>
       </div>
     </div>
   </div>
 
   <script>
+    /* =========================================================================
+       SUPABASE CLOUD CONFIGURATION
+       Paste your credentials from your free Supabase project settings below!
+       ========================================================================= */
+    const SUPABASE_URL = 'https://YOUR_PROJECT_ID.supabase.co';
+    const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+    
+    let supabase = null;
+    let currentUser = null;
+
+    if (window.supabase && SUPABASE_URL && !SUPABASE_URL.includes('YOUR_PROJECT_ID')) {
+      supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    }
+
     const STORAGE_KEY = 'kinship_friends_v4';
     const SETTINGS_KEY = 'kinship_settings_v4';
 
@@ -363,7 +435,6 @@
       'Text': 0.25
     };
 
-    // Plant growth and decay stages (Full Tree -> Withered)
     function getPlantStage(health) {
       if (health >= 100) return { icon: '🌳', label: 'Full Tree', color: 'text-emerald-400' };
       if (health >= 75)  return { icon: '🪴', label: 'Lush Bush', color: 'text-teal-400' };
@@ -373,8 +444,7 @@
       return { icon: '🥀', label: 'Withered', color: 'text-[#6b8276]' };
     }
 
-    // Seed mock data with (Example) tags showcasing Full Tree, Bush, and Dead Bush
-    // Calculated to produce a ~36% average (Late Fall / Autumn Frost biome)
+    // Default mock dataset with Late Fall theme average
     let friends = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
     if (!friends) {
       const DAY = 1000 * 60 * 60 * 24;
@@ -384,11 +454,10 @@
           id: '1',
           name: 'Jacob (Example)',
           category: 'Friends',
-          tier: 'close', // 14-day target
+          tier: 'close',
           avatar: '⛏️',
           photo: null,
           touches: [
-            // Hangout logged today: 100% full charge -> 🌳 Full Tree
             { type: 'Virtual Hangout', timestamp: now, note: 'Played minecraft for a few hours' }
           ]
         },
@@ -396,23 +465,21 @@
           id: '2',
           name: 'Mom (Example)',
           category: 'Family',
-          tier: 'inner', // 7-day target
+          tier: 'inner',
           avatar: '❤️',
           photo: null,
           touches: [
-            // Hangout 5 days ago changed /////3 days ago: ~57% - (3/7)*100 = ~57% decay remaining -> 🪴 Lush Bush (when using full hangout) /////////////// Devon look at me later ! //////////
-            { type: 'Hangout', timestamp: now - (5 * DAY), note: 'Sunday family dinner' }
+            { type: 'Hangout', timestamp: now - (1.5 * DAY), note: 'Sunday family dinner' }
           ]
         },
         {
           id: '3',
           name: 'Delilah (Example)',
           category: 'Friends',
-          tier: 'wider', // 45-day target
+          tier: 'wider',
           avatar: '🏡',
           photo: null,
           touches: [
-            // Hangout 50 days ago: past target cadence -> 0% charge -> 🥀 Withered / Dead Bush
             { type: 'Hangout', timestamp: now - (50 * DAY), note: 'Attended housewarming party' }
           ]
         },
@@ -420,11 +487,10 @@
           id: '4',
           name: 'Prof. Milton (Example)',
           category: 'Professional',
-          tier: 'quarterly', // 90-day target
+          tier: 'quarterly',
           avatar: '🎓',
           photo: null,
           touches: [
-            // Text 85 days ago: 25% base charge depleted -> 0% charge -> 🥀 Withered
             { type: 'Text', timestamp: now - (85 * DAY), note: 'Work and networking check-in email' }
           ]
         }
@@ -438,12 +504,144 @@
 
     function saveData() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(friends));
+      if (currentUser && supabase) {
+        syncToCloud(false);
+      }
     }
 
     function saveSettings() {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(cadenceSettings));
+      if (currentUser && supabase) {
+        syncToCloud(false);
+      }
     }
 
+    /* =========================================================================
+       CLOUD SYNC & AUTHENTICATION ENGINE
+       ========================================================================= */
+    async function initAuth() {
+      if (!supabase) return;
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session && session.user) {
+        setLoggedInState(session.user);
+        await loadFromCloud();
+      }
+
+      supabase.auth.onAuthStateChange(async (event, session) => {
+        if (session && session.user) {
+          setLoggedInState(session.user);
+          if (event === 'SIGNED_IN') {
+            await loadFromCloud();
+          }
+        } else {
+          setLoggedOutState();
+        }
+      });
+    }
+
+    function setLoggedInState(user) {
+      currentUser = user;
+      document.getElementById('sync-status-dot').className = 'absolute top-1 right-1 w-2 h-2 rounded-full bg-emerald-400';
+      document.getElementById('auth-current-email').textContent = user.email;
+      document.getElementById('auth-view-logged-in').classList.remove('hidden');
+      document.getElementById('auth-view-logged-out').classList.add('hidden');
+    }
+
+    function setLoggedOutState() {
+      currentUser = null;
+      document.getElementById('sync-status-dot').className = 'absolute top-1 right-1 w-2 h-2 rounded-full bg-slate-500';
+      document.getElementById('auth-view-logged-in').classList.add('hidden');
+      document.getElementById('auth-view-logged-out').classList.remove('hidden');
+    }
+
+    async function handleLogin() {
+      if (!supabase) return alert('Please add your free Supabase URL and Key inside the script tag.');
+      const email = document.getElementById('auth-email').value.trim();
+      const password = document.getElementById('auth-password').value;
+      const errEl = document.getElementById('auth-error-msg');
+      errEl.classList.add('hidden');
+
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        errEl.textContent = error.message;
+        errEl.classList.remove('hidden');
+      } else {
+        toggleAuthModal(false);
+      }
+    }
+
+    async function handleSignUp() {
+      if (!supabase) return alert('Please add your free Supabase URL and Key inside the script tag.');
+      const email = document.getElementById('auth-email').value.trim();
+      const password = document.getElementById('auth-password').value;
+      const errEl = document.getElementById('auth-error-msg');
+      errEl.classList.add('hidden');
+
+      const { data, error } = await supabase.auth.signUp({ email, password });
+      if (error) {
+        errEl.textContent = error.message;
+        errEl.classList.remove('hidden');
+      } else {
+        alert('Account created! Initializing cloud sync...');
+        await syncToCloud(true);
+        toggleAuthModal(false);
+      }
+    }
+
+    async function handleLogout() {
+      if (!supabase) return;
+      await supabase.auth.signOut();
+      setLoggedOutState();
+      toggleAuthModal(false);
+    }
+
+    async function syncToCloud(notify = false) {
+      if (!supabase || !currentUser) return;
+
+      const { error } = await supabase.from('user_gardens').upsert({
+        user_id: currentUser.id,
+        friends: friends,
+        cadence_settings: cadenceSettings,
+        updated_at: new Date().toISOString()
+      });
+
+      if (error) {
+        console.error('Cloud Sync Failed:', error);
+        if (notify) alert('Cloud sync error: ' + error.message);
+      } else if (notify) {
+        alert('All connections saved to your cloud account!');
+      }
+    }
+
+    async function loadFromCloud() {
+      if (!supabase || !currentUser) return;
+
+      const { data, error } = await supabase
+        .from('user_gardens')
+        .select('friends, cadence_settings')
+        .eq('user_id', currentUser.id)
+        .single();
+
+      if (data) {
+        if (data.friends && Array.isArray(data.friends)) {
+          friends = data.friends;
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(friends));
+        }
+        if (data.cadence_settings) {
+          cadenceSettings = data.cadence_settings;
+          localStorage.setItem(SETTINGS_KEY, JSON.stringify(cadenceSettings));
+        }
+        render();
+      } else {
+        // First login: upload existing local data to cloud
+        await syncToCloud(false);
+      }
+    }
+
+    /* =========================================================================
+       CALCULATIONS & UI ENGINE
+       ========================================================================= */
     function getCadenceDays(tier) {
       return cadenceSettings[tier] || 14;
     }
@@ -474,7 +672,6 @@
       return 'bg-[#3b4c44]';
     }
 
-   // Dynamic environmental background adaptation based on average garden health
     function updateGardenEcosystemTheme(averageHealth) {
       const canvas = document.getElementById('garden-canvas');
       const bar = document.getElementById('average-vitality-bar');
@@ -482,41 +679,35 @@
       const icon = document.getElementById('garden-weather-icon');
 
       if (!canvas || !bar || !text) return;
-
       bar.style.width = `${averageHealth}%`;
 
-      let bgColor = '#1c130d'; // fallback late fall
+      let bgColor = '#1c130d';
 
       if (averageHealth >= 80) {
-        // Lush Forest Canopy (Deep Emerald Moss)
         bgColor = '#061a12';
         bar.className = 'h-full bg-emerald-400 transition-all duration-700';
         text.className = 'text-[11px] font-mono text-emerald-300';
         text.textContent = `${averageHealth}% Garden Vitality • Blooming`;
         if (icon) icon.textContent = '🌳';
       } else if (averageHealth >= 60) {
-        // Deep Evergreen & Spruce
         bgColor = '#0a2118';
         bar.className = 'h-full bg-teal-500 transition-all duration-700';
         text.className = 'text-[11px] font-mono text-teal-300';
         text.textContent = `${averageHealth}% Garden Vitality • Thriving`;
         if (icon) icon.textContent = '🌿';
       } else if (averageHealth >= 40) {
-        // Warm Cedar Wood & Olive Moss
         bgColor = '#192015';
         bar.className = 'h-full bg-emerald-500 transition-all duration-700';
         text.className = 'text-[11px] font-mono text-amber-200/80';
         text.textContent = `${averageHealth}% Garden Vitality • Stable`;
         if (icon) icon.textContent = '🌱';
       } else if (averageHealth >= 20) {
-        // Late Fall / Autumn Frost Biome (Terracotta Rust)
         bgColor = '#29160d';
         bar.className = 'h-full bg-[#ea580c] transition-all duration-700';
         text.className = 'text-[11px] font-mono text-[#fdba74]';
         text.textContent = `${averageHealth}% Garden Vitality • Autumn Frost`;
         if (icon) icon.textContent = '🍁';
       } else {
-        // Winter Peat & Dry Bark
         bgColor = '#171413';
         bar.className = 'h-full bg-[#4b5563] transition-all duration-700';
         text.className = 'text-[11px] font-mono text-[#9ca3af]';
@@ -524,7 +715,6 @@
         if (icon) icon.textContent = '🥀';
       }
 
-      // Force inline background on html and body with !important override
       document.documentElement.style.setProperty('background-color', bgColor, 'important');
       canvas.style.setProperty('background-color', bgColor, 'important');
     }
@@ -916,6 +1106,8 @@
       return div.innerHTML;
     }
 
+    // Initialize Auth & UI
+    initAuth();
     updateNotificationButton();
     render();
   </script>
