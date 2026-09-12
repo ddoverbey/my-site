@@ -10,6 +10,10 @@
   
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
+    /* Smooth transition for the living ecosystem canvas */
+    body {
+      transition: background-color 1.2s ease, border-color 1.2s ease;
+    }
     .battery-fill {
       transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.4s ease;
     }
@@ -31,32 +35,40 @@
     }
   </style>
 </head>
-<body class="bg-[#0b1210] text-emerald-50 min-h-screen p-4 sm:p-6 flex flex-col items-center selection:bg-teal-600 selection:text-white">
+<body id="garden-canvas" class="bg-[#0b1210] text-emerald-50 min-h-screen p-4 sm:p-6 flex flex-col items-center selection:bg-teal-600 selection:text-white">
 
   <main class="w-full max-w-xl space-y-6 pb-20">
     
     <!-- Header -->
-    <header class="flex items-center justify-between border-b border-[#23352e] pb-4">
+    <header class="flex items-center justify-between border-b border-[#23352e]/80 pb-4">
       <div>
         <h1 class="text-2xl font-bold tracking-tight text-[#f4ede4] flex items-center gap-2">
-          <span>🌱</span> Kinship
+          <span id="garden-weather-icon">🌱</span> Kinship
         </h1>
         <p class="text-xs text-[#9eb3a8] mt-0.5">
           <span class="line-through text-[#63756c]">Zero</span> (some) guilt. Gentle connections.
         </p>
+        
+        <!-- Garden Vitality Indicator -->
+        <div class="flex items-center gap-2 mt-2">
+          <div class="w-20 bg-black/40 h-1.5 rounded-full overflow-hidden border border-[#23352e]">
+            <div id="average-vitality-bar" class="h-full bg-emerald-500 transition-all duration-700" style="width: 50%"></div>
+          </div>
+          <span id="average-vitality-text" class="text-[11px] font-mono text-teal-300">50% Garden Vitality</span>
+        </div>
       </div>
 
       <div class="flex items-center gap-2">
         <button 
           onclick="toggleSettingsModal(true)"
-          class="p-2 text-[#9eb3a8] hover:text-[#f4ede4] hover:bg-[#182721] rounded-lg border border-[#23352e] transition-colors text-xs"
+          class="p-2 text-[#9eb3a8] hover:text-[#f4ede4] hover:bg-[#182721]/80 rounded-lg border border-[#23352e] transition-colors text-xs backdrop-blur-sm"
           title="Settings & Cadence Profiles"
         >
           ⚙️
         </button>
         <button 
           onclick="toggleAuthModal(true)"
-          class="p-2 text-[#9eb3a8] hover:text-[#f4ede4] hover:bg-[#182721] rounded-lg border border-[#23352e] transition-colors text-xs"
+          class="p-2 text-[#9eb3a8] hover:text-[#f4ede4] hover:bg-[#182721]/80 rounded-lg border border-[#23352e] transition-colors text-xs backdrop-blur-sm"
           title="Account & Backup"
         >
           ☁️
@@ -64,7 +76,7 @@
         <button 
           id="btn-roll-dice"
           onclick="rollTheDice()"
-          class="bg-[#2d1b11] hover:bg-[#3d2417] border border-[#ea580c]/40 text-[#fdba74] font-semibold px-3 py-1.5 rounded-lg text-xs transition-colors flex items-center gap-1.5 shadow-sm"
+          class="bg-[#2d1b11]/90 hover:bg-[#3d2417] border border-[#ea580c]/40 text-[#fdba74] font-semibold px-3 py-1.5 rounded-lg text-xs transition-colors flex items-center gap-1.5 shadow-sm backdrop-blur-sm"
           title="Randomly choose someone whose connection needs attention"
         >
           <span>🎲</span> Roll Dice
@@ -79,7 +91,7 @@
     </header>
 
     <!-- Notification / Reminder Bar -->
-    <div id="notification-banner" class="bg-[#131f1a] border border-[#23352e] rounded-xl p-3 flex items-center justify-between text-xs">
+    <div id="notification-banner" class="bg-[#131f1a]/85 border border-[#23352e] rounded-xl p-3 flex items-center justify-between text-xs backdrop-blur-sm">
       <div class="flex items-center gap-2">
         <span>🔔</span>
         <span id="notification-status-text" class="text-[#c4d4cc]">Enable check-in reminders for tired plants.</span>
@@ -94,7 +106,7 @@
     </div>
 
     <!-- Dice Result Banner -->
-    <div id="dice-banner" class="hidden bg-[#241710] border border-[#ea580c]/50 rounded-xl p-3 flex items-center justify-between text-xs text-[#fed7aa]">
+    <div id="dice-banner" class="hidden bg-[#241710]/95 border border-[#ea580c]/50 rounded-xl p-3 flex items-center justify-between text-xs text-[#fed7aa] backdrop-blur-sm">
       <div class="flex items-center gap-2">
         <span class="text-base">✨</span>
         <span>The dice selected <strong id="dice-banner-name" class="text-white font-semibold"></strong>! Consider reaching out.</span>
@@ -102,13 +114,13 @@
       <button onclick="dismissDiceBanner()" class="text-[#ea580c] hover:text-[#fed7aa] text-sm px-1">✕</button>
     </div>
 
-    <!-- Category Filter Tabs: Friends, Family, Romantic, Professional -->
+    <!-- Category Filter Tabs -->
     <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar">
-      <button onclick="setFilter('all')" id="filter-all" class="px-3 py-1 rounded-full font-medium transition-colors bg-teal-900/40 text-teal-200 border border-teal-600/50">All</button>
-      <button onclick="setFilter('Friends')" id="filter-Friends" class="px-3 py-1 rounded-full font-medium transition-colors bg-[#131f1a] text-[#9eb3a8] border border-[#23352e] hover:text-[#f4ede4]">Friends</button>
-      <button onclick="setFilter('Family')" id="filter-Family" class="px-3 py-1 rounded-full font-medium transition-colors bg-[#131f1a] text-[#9eb3a8] border border-[#23352e] hover:text-[#f4ede4]">Family</button>
-      <button onclick="setFilter('Romantic')" id="filter-Romantic" class="px-3 py-1 rounded-full font-medium transition-colors bg-[#131f1a] text-[#9eb3a8] border border-[#23352e] hover:text-[#f4ede4]">Romantic</button>
-      <button onclick="setFilter('Professional')" id="filter-Professional" class="px-3 py-1 rounded-full font-medium transition-colors bg-[#131f1a] text-[#9eb3a8] border border-[#23352e] hover:text-[#f4ede4]">Professional</button>
+      <button onclick="setFilter('all')" id="filter-all" class="px-3 py-1 rounded-full font-medium transition-colors bg-teal-900/40 text-teal-200 border border-teal-600/50 backdrop-blur-sm">All</button>
+      <button onclick="setFilter('Friends')" id="filter-Friends" class="px-3 py-1 rounded-full font-medium transition-colors bg-[#131f1a]/80 text-[#9eb3a8] border border-[#23352e] hover:text-[#f4ede4] backdrop-blur-sm">Friends</button>
+      <button onclick="setFilter('Family')" id="filter-Family" class="px-3 py-1 rounded-full font-medium transition-colors bg-[#131f1a]/80 text-[#9eb3a8] border border-[#23352e] hover:text-[#f4ede4] backdrop-blur-sm">Family</button>
+      <button onclick="setFilter('Romantic')" id="filter-Romantic" class="px-3 py-1 rounded-full font-medium transition-colors bg-[#131f1a]/80 text-[#9eb3a8] border border-[#23352e] hover:text-[#f4ede4] backdrop-blur-sm">Romantic</button>
+      <button onclick="setFilter('Professional')" id="filter-Professional" class="px-3 py-1 rounded-full font-medium transition-colors bg-[#131f1a]/80 text-[#9eb3a8] border border-[#23352e] hover:text-[#f4ede4] backdrop-blur-sm">Professional</button>
     </div>
 
     <!-- Queue Header -->
@@ -336,7 +348,6 @@
     const STORAGE_KEY = 'kinship_friends_v3';
     const SETTINGS_KEY = 'kinship_settings_v3';
 
-    // Cadence presets (in days)
     let cadenceSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || JSON.stringify({
       inner: 7,
       close: 14,
@@ -344,16 +355,14 @@
       quarterly: 90
     }));
 
-    // Touch weighting
     const TOUCH_WEIGHTS = {
-      'Hangout': 1.0,          // 100% full reset
-      'Virtual Hangout': 1.0,  // 100% full reset
-      'Long Call': 0.75,       // 75% recharge
-      'Quick Call': 0.50,      // 50% recharge
-      'Text': 0.25             // 25% recharge
+      'Hangout': 1.0,
+      'Virtual Hangout': 1.0,
+      'Long Call': 0.75,
+      'Quick Call': 0.50,
+      'Text': 0.25
     };
 
-    // Plant growth and decay stages (Full Tree -> Withered)
     function getPlantStage(health) {
       if (health >= 100) return { icon: '🌳', label: 'Full Tree', color: 'text-emerald-400' };
       if (health >= 75)  return { icon: '🪴', label: 'Lush Bush', color: 'text-teal-400' };
@@ -363,7 +372,6 @@
       return { icon: '🥀', label: 'Withered', color: 'text-[#6b8276]' };
     }
 
-    // Seed mock data matching the 4 simplified relationships
     let friends = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
     if (!friends) {
       const DAY = 1000 * 60 * 60 * 24;
@@ -433,7 +441,6 @@
       return cadenceSettings[tier] || 14;
     }
 
-    // Health calculation based on decay and accumulated touches
     function calculateHealth(friend) {
       const targetCadence = getCadenceDays(friend.tier);
       if (!friend.touches || friend.touches.length === 0) {
@@ -453,12 +460,58 @@
       return { health, daysSince: Math.floor(daysSince) };
     }
 
-    // Organic Environmental Progress Bar Colors
     function getBatteryColor(health) {
       if (health >= 75) return 'bg-emerald-500';
       if (health >= 50) return 'bg-teal-500';
-      if (health >= 25) return 'bg-[#ea580c]'; // Rust orange
-      return 'bg-[#3b4c44]';                 // Dry earthy slate
+      if (health >= 25) return 'bg-[#ea580c]';
+      return 'bg-[#3b4c44]';
+    }
+
+    // Dynamic environmental background adaptation based on average garden health
+    function updateGardenEcosystemTheme(averageHealth) {
+      const canvas = document.getElementById('garden-canvas');
+      const bar = document.getElementById('average-vitality-bar');
+      const text = document.getElementById('average-vitality-text');
+      const icon = document.getElementById('garden-weather-icon');
+
+      bar.style.width = `${averageHealth}%`;
+
+      if (averageHealth >= 80) {
+        // Lush Forest Canopy
+        canvas.style.backgroundColor = '#071611';
+        bar.className = 'h-full bg-emerald-400 transition-all duration-700';
+        text.className = 'text-[11px] font-mono text-emerald-300';
+        text.textContent = `${averageHealth}% Garden Vitality • Blooming`;
+        icon.textContent = '🌳';
+      } else if (averageHealth >= 60) {
+        // Deep Evergreen & Spruce
+        canvas.style.backgroundColor = '#0c1a14';
+        bar.className = 'h-full bg-teal-500 transition-all duration-700';
+        text.className = 'text-[11px] font-mono text-teal-300';
+        text.textContent = `${averageHealth}% Garden Vitality • Thriving`;
+        icon.textContent = '🌿';
+      } else if (averageHealth >= 40) {
+        // Warm Cedar Wood & Moss
+        canvas.style.backgroundColor = '#141912';
+        bar.className = 'h-full bg-[#10b981] transition-all duration-700';
+        text.className = 'text-[11px] font-mono text-amber-200/80';
+        text.textContent = `${averageHealth}% Garden Vitality • Stable`;
+        icon.textContent = '🌱';
+      } else if (averageHealth >= 20) {
+        // Warm Autumn Soil & Terracotta
+        canvas.style.backgroundColor = '#1c130d';
+        bar.className = 'h-full bg-[#ea580c] transition-all duration-700';
+        text.className = 'text-[11px] font-mono text-[#fdba74]';
+        text.textContent = `${averageHealth}% Garden Vitality • Autumn Frost`;
+        icon.textContent = '🍁';
+      } else {
+        // Winter Peat & Dry Bark
+        canvas.style.backgroundColor = '#141211';
+        bar.className = 'h-full bg-[#4b5563] transition-all duration-700';
+        text.className = 'text-[11px] font-mono text-[#9ca3af]';
+        text.textContent = `${averageHealth}% Garden Vitality • Winter Drought`;
+        icon.textContent = '🥀';
+      }
     }
 
     function setFilter(category) {
@@ -467,9 +520,9 @@
         const el = document.getElementById(`filter-${cat}`);
         if (!el) return;
         if (cat === category) {
-          el.className = 'px-3 py-1 rounded-full font-medium transition-colors bg-teal-900/40 text-teal-200 border border-teal-600/50';
+          el.className = 'px-3 py-1 rounded-full font-medium transition-colors bg-teal-900/40 text-teal-200 border border-teal-600/50 backdrop-blur-sm';
         } else {
-          el.className = 'px-3 py-1 rounded-full font-medium transition-colors bg-[#131f1a] text-[#9eb3a8] border border-[#23352e] hover:text-[#f4ede4]';
+          el.className = 'px-3 py-1 rounded-full font-medium transition-colors bg-[#131f1a]/80 text-[#9eb3a8] border border-[#23352e] hover:text-[#f4ede4] backdrop-blur-sm';
         }
       });
       render();
@@ -478,6 +531,14 @@
     function render() {
       const container = document.getElementById('friends-queue');
       
+      // Calculate overall garden average health
+      let totalHealth = 0;
+      friends.forEach(f => {
+        totalHealth += calculateHealth(f).health;
+      });
+      const avgHealth = friends.length > 0 ? Math.round(totalHealth / friends.length) : 100;
+      updateGardenEcosystemTheme(avgHealth);
+
       let filtered = friends;
       if (activeFilter !== 'all') {
         filtered = friends.filter(f => f.category === activeFilter);
@@ -495,7 +556,6 @@
         return;
       }
 
-      // Sort lowest health first
       const sorted = [...filtered].sort((a, b) => calculateHealth(a).health - calculateHealth(b).health);
 
       container.innerHTML = sorted.map(friend => {
@@ -509,10 +569,9 @@
         return `
           <div 
             id="card-${friend.id}"
-            class="bg-[#14201b] border ${isHighlighted ? 'dice-highlight' : 'border-[#23352e]'} rounded-xl p-4 transition-all duration-200 shadow-sm"
+            class="bg-[#14201b]/90 border ${isHighlighted ? 'dice-highlight' : 'border-[#23352e]'} rounded-xl p-4 transition-all duration-200 shadow-sm backdrop-blur-sm"
           >
             <div class="flex items-center justify-between gap-3">
-              <!-- Avatar & Details -->
               <div class="flex items-center gap-3 cursor-pointer flex-1 min-w-0" onclick="toggleExpand('${friend.id}')">
                 <div class="relative shrink-0">
                   ${friend.photo ? `
@@ -542,7 +601,6 @@
                 </div>
               </div>
 
-              <!-- Quick Water Button -->
               <button 
                 onclick="openTouchModal('${friend.id}')"
                 class="bg-[#1c2d26] hover:bg-[#253d33] border border-[#2e473d] text-teal-300 hover:text-teal-200 font-medium px-2.5 py-1.5 rounded-lg text-xs transition-colors shrink-0 flex items-center gap-1.5"
@@ -552,12 +610,10 @@
               </button>
             </div>
 
-            <!-- Health Battery Progress Bar -->
             <div class="w-full bg-[#0b1210] h-1.5 rounded-full overflow-hidden mt-3 cursor-pointer" onclick="toggleExpand('${friend.id}')">
               <div class="battery-fill h-full rounded-full ${barColor}" style="width: ${health}%"></div>
             </div>
 
-            <!-- Expanded Tray -->
             ${isExpanded ? `
               <div class="mt-4 pt-3 border-t border-[#23352e] space-y-2 text-xs">
                 <div class="flex justify-between items-center text-[#8da498] font-medium text-[11px] uppercase tracking-wider">
@@ -601,7 +657,6 @@
       }
     }
 
-    // Photo input conversion to Base64
     document.getElementById('input-photo').addEventListener('change', function(e) {
       const file = e.target.files[0];
       if (file) {
@@ -613,7 +668,6 @@
       }
     });
 
-    // Roll Dice
     function rollTheDice() {
       const lowHealth = friends.filter(f => calculateHealth(f).health < 50);
       const pool = lowHealth.length > 0 ? lowHealth : friends;
@@ -647,7 +701,6 @@
       render();
     }
 
-    // Modals
     function toggleAddModal(show) {
       const modal = document.getElementById('friend-modal');
       if (show) {
@@ -698,7 +751,6 @@
       }
     }
 
-    // Forms
     document.getElementById('friend-form').addEventListener('submit', (e) => {
       e.preventDefault();
       const name = document.getElementById('input-name').value.trim();
@@ -760,7 +812,6 @@
       render();
     });
 
-    // Web Notifications & Reminders
     function updateNotificationButton() {
       const btn = document.getElementById('btn-request-notifications');
       const text = document.getElementById('notification-status-text');
@@ -814,7 +865,6 @@
       }
     }
 
-    // Export / Import
     function exportBackup() {
       const blob = new Blob([JSON.stringify({ friends, cadenceSettings }, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -852,7 +902,6 @@
       return div.innerHTML;
     }
 
-    // Initialize
     updateNotificationButton();
     render();
   </script>
