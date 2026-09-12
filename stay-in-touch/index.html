@@ -45,7 +45,7 @@
     <header class="flex items-center justify-between border-b border-[#23352e]/80 pb-4">
       <div>
         <h1 class="text-2xl font-bold tracking-tight text-[#f4ede4] flex items-center gap-2">
-          <span id="garden-weather-icon">🌱</span> Kinship
+          <span id="garden-weather-icon">🌱</span> Cultivate
         </h1>
         <p class="text-xs text-[#9eb3a8] mt-0.5">
           <span class="line-through text-[#63756c]">Zero</span> (some) guilt. Gentle connections.
@@ -1057,12 +1057,12 @@
       
       if (thirsty.length > 0) {
         const person = thirsty[0];
-        new Notification('Kinship • Gentle Reminder', {
+        new Notification('Cultivate • Gentle Reminder', {
           body: `${person.name} could use some love! Their plant has reached the ${getPlantStage(calculateHealth(person).health).label} stage.`,
           icon: '🌱'
         });
       } else if (isTest) {
-        new Notification('Kinship • All Connections Blooming', {
+        new Notification('Cultivate • All Connections Blooming', {
           body: 'All your plants are currently well hydrated!',
           icon: '🌿'
         });
