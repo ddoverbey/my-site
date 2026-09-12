@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Kinship • Connection Garden</title>
   
-  <link rel="manifest" href="data:application/manifest+json;base64,eyJuYW1lIjoiS2luc2hpcCBUcmFja2VyIiwic2hvcnRfbmFtZSI6IktpbnNoaXAiLCJzdGFydF91cmwiOiIuIiwiZGlzcGxheSI6InN0YW5kYWxvbmUiLCJiYWNrZ3JvdW5kX2NvbG9yIjoiIzAyMDYxNyIsInRoZW1lX2NvbG9yIjoiIzAyMDYxNyJ9" />
-  <meta name="theme-color" content="#020617" />
+  <link rel="manifest" href="data:application/manifest+json;base64,eyJuYW1lIjoiS2luc2hpcCBUcmFja2VyIiwic2hvcnRfbmFtZSI6IktpbnNoaXAiLCJzdGFydF91cmwiOiIuIiwiZGlzcGxheSI6InN0YW5kYWxvbmUiLCJiYWNrZ3JvdW5kX2NvbG9yIjoiIzBiMTIxMCIsInRoZW1lX2NvbG9yIjoiIzBiMTIxMCJ9" />
+  <meta name="theme-color" content="#0b1210" />
   
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
@@ -14,42 +14,49 @@
       transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.4s ease;
     }
     @keyframes pulse-ring {
-      0% { transform: scale(0.97); box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.7); }
-      70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(56, 189, 248, 0); }
-      100% { transform: scale(0.97); box-shadow: 0 0 0 0 rgba(56, 189, 248, 0); }
+      0% { transform: scale(0.97); box-shadow: 0 0 0 0 rgba(234, 88, 12, 0.6); }
+      70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(234, 88, 12, 0); }
+      100% { transform: scale(0.97); box-shadow: 0 0 0 0 rgba(234, 88, 12, 0); }
     }
     .dice-highlight {
       animation: pulse-ring 1.5s infinite;
-      border-color: #38bdf8 !important;
+      border-color: #ea580c !important;
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
     }
   </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen p-4 sm:p-6 flex flex-col items-center selection:bg-cyan-500 selection:text-white">
+<body class="bg-[#0b1210] text-emerald-50 min-h-screen p-4 sm:p-6 flex flex-col items-center selection:bg-teal-600 selection:text-white">
 
   <main class="w-full max-w-xl space-y-6 pb-20">
     
     <!-- Header -->
-    <header class="flex items-center justify-between border-b border-slate-800 pb-4">
+    <header class="flex items-center justify-between border-b border-[#23352e] pb-4">
       <div>
-        <h1 class="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+        <h1 class="text-2xl font-bold tracking-tight text-[#f4ede4] flex items-center gap-2">
           <span>🌱</span> Kinship
         </h1>
-        <p class="text-xs text-slate-400 mt-0.5">
-          <span class="line-through text-slate-500">Zero</span> (some) guilt. Gentle connections.
+        <p class="text-xs text-[#9eb3a8] mt-0.5">
+          <span class="line-through text-[#63756c]">Zero</span> (some) guilt. Gentle connections.
         </p>
       </div>
 
       <div class="flex items-center gap-2">
         <button 
           onclick="toggleSettingsModal(true)"
-          class="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-900 rounded-lg border border-slate-800 transition-colors text-xs"
+          class="p-2 text-[#9eb3a8] hover:text-[#f4ede4] hover:bg-[#182721] rounded-lg border border-[#23352e] transition-colors text-xs"
           title="Settings & Cadence Profiles"
         >
           ⚙️
         </button>
         <button 
           onclick="toggleAuthModal(true)"
-          class="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-900 rounded-lg border border-slate-800 transition-colors text-xs"
+          class="p-2 text-[#9eb3a8] hover:text-[#f4ede4] hover:bg-[#182721] rounded-lg border border-[#23352e] transition-colors text-xs"
           title="Account & Backup"
         >
           ☁️
@@ -57,14 +64,14 @@
         <button 
           id="btn-roll-dice"
           onclick="rollTheDice()"
-          class="bg-indigo-950/70 hover:bg-indigo-900 border border-indigo-500/30 text-indigo-300 font-semibold px-3 py-1.5 rounded-lg text-xs transition-colors flex items-center gap-1.5"
+          class="bg-[#2d1b11] hover:bg-[#3d2417] border border-[#ea580c]/40 text-[#fdba74] font-semibold px-3 py-1.5 rounded-lg text-xs transition-colors flex items-center gap-1.5 shadow-sm"
           title="Randomly choose someone whose connection needs attention"
         >
           <span>🎲</span> Roll Dice
         </button>
         <button 
           onclick="toggleAddModal(true)"
-          class="bg-cyan-600 hover:bg-cyan-500 text-white font-semibold px-3 py-1.5 rounded-lg text-xs transition-colors flex items-center gap-1 shadow-sm"
+          class="bg-[#115e59] hover:bg-[#0f766e] text-white font-semibold px-3 py-1.5 rounded-lg text-xs transition-colors flex items-center gap-1 shadow-sm border border-teal-500/30"
         >
           <span>+</span> Add
         </button>
@@ -72,43 +79,42 @@
     </header>
 
     <!-- Notification / Reminder Bar -->
-    <div id="notification-banner" class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center justify-between text-xs">
+    <div id="notification-banner" class="bg-[#131f1a] border border-[#23352e] rounded-xl p-3 flex items-center justify-between text-xs">
       <div class="flex items-center gap-2">
         <span>🔔</span>
-        <span id="notification-status-text" class="text-slate-300">Enable check-in reminders for tired plants.</span>
+        <span id="notification-status-text" class="text-[#c4d4cc]">Enable check-in reminders for tired plants.</span>
       </div>
       <button 
         id="btn-request-notifications"
         onclick="requestNotificationPermission()"
-        class="bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-slate-700 px-2.5 py-1 rounded text-[11px] font-medium transition-colors"
+        class="bg-[#1c2d26] hover:bg-[#253d33] text-teal-300 border border-[#2e473d] px-2.5 py-1 rounded text-[11px] font-medium transition-colors"
       >
         Enable
       </button>
     </div>
 
     <!-- Dice Result Banner -->
-    <div id="dice-banner" class="hidden bg-indigo-950/50 border border-indigo-500/40 rounded-xl p-3 flex items-center justify-between text-xs text-indigo-200">
+    <div id="dice-banner" class="hidden bg-[#241710] border border-[#ea580c]/50 rounded-xl p-3 flex items-center justify-between text-xs text-[#fed7aa]">
       <div class="flex items-center gap-2">
         <span class="text-base">✨</span>
         <span>The dice selected <strong id="dice-banner-name" class="text-white font-semibold"></strong>! Consider reaching out.</span>
       </div>
-      <button onclick="dismissDiceBanner()" class="text-indigo-400 hover:text-indigo-200 text-sm px-1">✕</button>
+      <button onclick="dismissDiceBanner()" class="text-[#ea580c] hover:text-[#fed7aa] text-sm px-1">✕</button>
     </div>
 
-    <!-- Category Filter Tabs -->
-    <div class="flex items-center gap-1 overflow-x-auto pb-1 text-xs no-scrollbar">
-      <button onclick="setFilter('all')" id="filter-all" class="px-2.5 py-1 rounded-full font-medium transition-colors bg-cyan-600/20 text-cyan-300 border border-cyan-500/30">All</button>
-      <button onclick="setFilter('Family')" id="filter-Family" class="px-2.5 py-1 rounded-full font-medium transition-colors bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200">Family</button>
-      <button onclick="setFilter('Friend')" id="filter-Friend" class="px-2.5 py-1 rounded-full font-medium transition-colors bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200">Friends</button>
-      <button onclick="setFilter('Partner')" id="filter-Partner" class="px-2.5 py-1 rounded-full font-medium transition-colors bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200">Partner</button>
-      <button onclick="setFilter('Colleague')" id="filter-Colleague" class="px-2.5 py-1 rounded-full font-medium transition-colors bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200">Colleagues</button>
-      <button onclick="setFilter('Business')" id="filter-Business" class="px-2.5 py-1 rounded-full font-medium transition-colors bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200">Business</button>
+    <!-- Category Filter Tabs: Friends, Family, Romantic, Professional -->
+    <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar">
+      <button onclick="setFilter('all')" id="filter-all" class="px-3 py-1 rounded-full font-medium transition-colors bg-teal-900/40 text-teal-200 border border-teal-600/50">All</button>
+      <button onclick="setFilter('Friends')" id="filter-Friends" class="px-3 py-1 rounded-full font-medium transition-colors bg-[#131f1a] text-[#9eb3a8] border border-[#23352e] hover:text-[#f4ede4]">Friends</button>
+      <button onclick="setFilter('Family')" id="filter-Family" class="px-3 py-1 rounded-full font-medium transition-colors bg-[#131f1a] text-[#9eb3a8] border border-[#23352e] hover:text-[#f4ede4]">Family</button>
+      <button onclick="setFilter('Romantic')" id="filter-Romantic" class="px-3 py-1 rounded-full font-medium transition-colors bg-[#131f1a] text-[#9eb3a8] border border-[#23352e] hover:text-[#f4ede4]">Romantic</button>
+      <button onclick="setFilter('Professional')" id="filter-Professional" class="px-3 py-1 rounded-full font-medium transition-colors bg-[#131f1a] text-[#9eb3a8] border border-[#23352e] hover:text-[#f4ede4]">Professional</button>
     </div>
 
     <!-- Queue Header -->
-    <div class="flex items-center justify-between text-xs text-slate-400 px-1">
+    <div class="flex items-center justify-between text-xs text-[#8da498] px-1">
       <span class="font-medium">Connection Garden (Lowest charge first)</span>
-      <span id="queue-stat" class="text-[11px] text-slate-500">4 connections</span>
+      <span id="queue-stat" class="text-[11px] text-[#6b8276]">4 connections</span>
     </div>
 
     <!-- Contact Cards Container -->
@@ -116,34 +122,33 @@
   </main>
 
   <!-- ADD / EDIT CONTACT MODAL -->
-  <div id="friend-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
-      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-        <h3 class="font-bold text-sm text-slate-200">Add Connection</h3>
-        <button onclick="toggleAddModal(false)" class="text-slate-400 hover:text-slate-200 text-sm">✕</button>
+  <div id="friend-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-[#14201b] border border-[#283e35] rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center border-b border-[#283e35] pb-3">
+        <h3 class="font-bold text-sm text-[#f4ede4]">Add Connection</h3>
+        <button onclick="toggleAddModal(false)" class="text-[#8da498] hover:text-[#f4ede4] text-sm">✕</button>
       </div>
 
       <form id="friend-form" class="space-y-3">
         <div>
-          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Name</label>
-          <input id="input-name" type="text" required placeholder="Full name or nickname" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-500" />
+          <label class="block text-xs font-semibold text-[#a3b8ad] uppercase tracking-wider mb-1">Name</label>
+          <input id="input-name" type="text" required placeholder="Full name or nickname" class="w-full bg-[#0b1210] border border-[#283e35] rounded-lg px-3 py-2 text-sm text-emerald-100 focus:outline-none focus:border-teal-500" />
         </div>
 
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Relationship</label>
-            <select id="input-category" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-cyan-500">
-              <option value="Friend">Friend</option>
+            <label class="block text-xs font-semibold text-[#a3b8ad] uppercase tracking-wider mb-1">Relationship</label>
+            <select id="input-category" class="w-full bg-[#0b1210] border border-[#283e35] rounded-lg px-3 py-2 text-sm text-emerald-100 focus:outline-none focus:border-teal-500">
+              <option value="Friends">Friends</option>
               <option value="Family">Family</option>
-              <option value="Partner">Partner</option>
-              <option value="Colleague">Colleague</option>
-              <option value="Business">Business / Mentor</option>
+              <option value="Romantic">Romantic</option>
+              <option value="Professional">Professional</option>
             </select>
           </div>
 
           <div>
-            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Cadence Tier</label>
-            <select id="input-cadence-tier" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-cyan-500">
+            <label class="block text-xs font-semibold text-[#a3b8ad] uppercase tracking-wider mb-1">Cadence Tier</label>
+            <select id="input-cadence-tier" class="w-full bg-[#0b1210] border border-[#283e35] rounded-lg px-3 py-2 text-sm text-emerald-100 focus:outline-none focus:border-teal-500">
               <option value="inner">Inner Circle</option>
               <option value="close" selected>Close Circle</option>
               <option value="wider">Wider Network</option>
@@ -153,27 +158,27 @@
         </div>
 
         <!-- Avatar Selection: Emoji OR Photo Upload -->
-        <div class="space-y-2 border border-slate-800/80 bg-slate-950/50 p-3 rounded-xl">
-          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Avatar Choice</label>
+        <div class="space-y-2 border border-[#283e35] bg-[#0b1210]/60 p-3 rounded-xl">
+          <label class="block text-xs font-semibold text-[#a3b8ad] uppercase tracking-wider">Avatar Choice</label>
           <div class="grid grid-cols-2 gap-2">
             <div>
-              <span class="text-[11px] text-slate-500 block mb-1">Custom Emoji</span>
-              <input id="input-avatar" type="text" maxlength="2" placeholder="🌿" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 text-center focus:outline-none focus:border-cyan-500" />
+              <span class="text-[11px] text-[#6b8276] block mb-1">Custom Emoji</span>
+              <input id="input-avatar" type="text" maxlength="2" placeholder="🌿" class="w-full bg-[#0b1210] border border-[#283e35] rounded-lg px-2.5 py-1.5 text-sm text-emerald-100 text-center focus:outline-none focus:border-teal-500" />
             </div>
             <div>
-              <span class="text-[11px] text-slate-500 block mb-1">Or Upload Photo</span>
-              <input id="input-photo" type="file" accept="image/*" class="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-slate-800 file:text-slate-300 hover:file:bg-slate-700 cursor-pointer" />
+              <span class="text-[11px] text-[#6b8276] block mb-1">Or Upload Photo</span>
+              <input id="input-photo" type="file" accept="image/*" class="w-full text-xs text-[#8da498] file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-[#1c2d26] file:text-emerald-200 hover:file:bg-[#253d33] cursor-pointer" />
             </div>
           </div>
           <input type="hidden" id="input-photo-base64" />
         </div>
 
         <div>
-          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Last Interaction Date</label>
-          <input id="input-last-contact" type="date" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-cyan-500" />
+          <label class="block text-xs font-semibold text-[#a3b8ad] uppercase tracking-wider mb-1">Last Interaction Date</label>
+          <input id="input-last-contact" type="date" required class="w-full bg-[#0b1210] border border-[#283e35] rounded-lg px-3 py-2 text-sm text-emerald-100 focus:outline-none focus:border-teal-500" />
         </div>
 
-        <button type="submit" class="w-full bg-cyan-600 hover:bg-cyan-500 font-semibold py-2 rounded-lg text-sm text-white transition-colors mt-2">
+        <button type="submit" class="w-full bg-[#115e59] hover:bg-[#0f766e] font-semibold py-2 rounded-lg text-sm text-white transition-colors mt-2 border border-teal-500/30">
           Plant Seed
         </button>
       </form>
@@ -181,23 +186,23 @@
   </div>
 
   <!-- LOG TOUCH MODAL -->
-  <div id="touch-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
-      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+  <div id="touch-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-[#14201b] border border-[#283e35] rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-[#283e35] pb-3">
         <div>
-          <h3 class="font-bold text-sm text-slate-200">Water <span id="touch-modal-name" class="text-cyan-400"></span></h3>
-          <p class="text-[11px] text-slate-500">Touches restore battery based on depth</p>
+          <h3 class="font-bold text-sm text-[#f4ede4]">Water <span id="touch-modal-name" class="text-teal-300"></span></h3>
+          <p class="text-[11px] text-[#8da498]">Touches restore vitality based on depth</p>
         </div>
-        <button onclick="toggleTouchModal(false)" class="text-slate-400 hover:text-slate-200 text-sm">✕</button>
+        <button onclick="toggleTouchModal(false)" class="text-[#8da498] hover:text-[#f4ede4] text-sm">✕</button>
       </div>
 
       <form id="touch-form" class="space-y-3">
         <input type="hidden" id="touch-friend-id" />
         
         <div>
-          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Interaction Type</label>
+          <label class="block text-xs font-semibold text-[#a3b8ad] uppercase tracking-wider mb-1.5">Interaction Type</label>
           <div class="space-y-1.5">
-            <label class="flex items-center justify-between bg-slate-950 border border-slate-800 px-3 py-2 rounded-lg text-xs font-medium cursor-pointer has-[:checked]:border-cyan-500 has-[:checked]:text-cyan-400">
+            <label class="flex items-center justify-between bg-[#0b1210] border border-[#283e35] px-3 py-2 rounded-lg text-xs font-medium cursor-pointer has-[:checked]:border-teal-500 has-[:checked]:text-teal-300">
               <div class="flex items-center gap-2">
                 <input type="radio" name="touch-type" value="Hangout" checked class="hidden" />
                 <span>☕ In-Person Hangout</span>
@@ -205,7 +210,7 @@
               <span class="text-[10px] text-emerald-400 font-mono">+100% (Full)</span>
             </label>
 
-            <label class="flex items-center justify-between bg-slate-950 border border-slate-800 px-3 py-2 rounded-lg text-xs font-medium cursor-pointer has-[:checked]:border-cyan-500 has-[:checked]:text-cyan-400">
+            <label class="flex items-center justify-between bg-[#0b1210] border border-[#283e35] px-3 py-2 rounded-lg text-xs font-medium cursor-pointer has-[:checked]:border-teal-500 has-[:checked]:text-teal-300">
               <div class="flex items-center gap-2">
                 <input type="radio" name="touch-type" value="Virtual Hangout" class="hidden" />
                 <span>💻 Virtual Hangout / Game Night</span>
@@ -213,15 +218,15 @@
               <span class="text-[10px] text-emerald-400 font-mono">+100% (Full)</span>
             </label>
 
-            <label class="flex items-center justify-between bg-slate-950 border border-slate-800 px-3 py-2 rounded-lg text-xs font-medium cursor-pointer has-[:checked]:border-cyan-500 has-[:checked]:text-cyan-400">
+            <label class="flex items-center justify-between bg-[#0b1210] border border-[#283e35] px-3 py-2 rounded-lg text-xs font-medium cursor-pointer has-[:checked]:border-teal-500 has-[:checked]:text-teal-300">
               <div class="flex items-center gap-2">
                 <input type="radio" name="touch-type" value="Long Call" class="hidden" />
                 <span>📹 Video Call / Long Call</span>
               </div>
-              <span class="text-[10px] text-cyan-400 font-mono">+75% charge</span>
+              <span class="text-[10px] text-teal-400 font-mono">+75% charge</span>
             </label>
 
-            <label class="flex items-center justify-between bg-slate-950 border border-slate-800 px-3 py-2 rounded-lg text-xs font-medium cursor-pointer has-[:checked]:border-cyan-500 has-[:checked]:text-cyan-400">
+            <label class="flex items-center justify-between bg-[#0b1210] border border-[#283e35] px-3 py-2 rounded-lg text-xs font-medium cursor-pointer has-[:checked]:border-teal-500 has-[:checked]:text-teal-300">
               <div class="flex items-center gap-2">
                 <input type="radio" name="touch-type" value="Quick Call" class="hidden" />
                 <span>📞 Quick Call</span>
@@ -229,22 +234,22 @@
               <span class="text-[10px] text-amber-400 font-mono">+50% charge</span>
             </label>
 
-            <label class="flex items-center justify-between bg-slate-950 border border-slate-800 px-3 py-2 rounded-lg text-xs font-medium cursor-pointer has-[:checked]:border-cyan-500 has-[:checked]:text-cyan-400">
+            <label class="flex items-center justify-between bg-[#0b1210] border border-[#283e35] px-3 py-2 rounded-lg text-xs font-medium cursor-pointer has-[:checked]:border-teal-500 has-[:checked]:text-teal-300">
               <div class="flex items-center gap-2">
                 <input type="radio" name="touch-type" value="Text" class="hidden" />
                 <span>💬 Text / DM / Meme</span>
               </div>
-              <span class="text-[10px] text-slate-400 font-mono">+25% charge</span>
+              <span class="text-[10px] text-[#8da498] font-mono">+25% charge</span>
             </label>
           </div>
         </div>
 
         <div>
-          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Quick Reflection <span class="text-slate-500 font-normal">(Optional)</span></label>
-          <input id="touch-note" type="text" placeholder="e.g., Talked about career moves" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-500" />
+          <label class="block text-xs font-semibold text-[#a3b8ad] uppercase tracking-wider mb-1">Quick Reflection <span class="text-[#6b8276] font-normal">(Optional)</span></label>
+          <input id="touch-note" type="text" placeholder="e.g., Talked about career moves" class="w-full bg-[#0b1210] border border-[#283e35] rounded-lg px-3 py-2 text-sm text-emerald-100 focus:outline-none focus:border-teal-500" />
         </div>
 
-        <button type="submit" class="w-full bg-cyan-600 hover:bg-cyan-500 font-semibold py-2 rounded-lg text-sm text-white transition-colors mt-2">
+        <button type="submit" class="w-full bg-[#115e59] hover:bg-[#0f766e] font-semibold py-2 rounded-lg text-sm text-white transition-colors mt-2 border border-teal-500/30">
           Water Plant 💧
         </button>
       </form>
@@ -252,40 +257,40 @@
   </div>
 
   <!-- CADENCE SETTINGS MODAL -->
-  <div id="settings-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl">
-      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+  <div id="settings-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-[#14201b] border border-[#283e35] rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-[#283e35] pb-3">
         <div>
-          <h3 class="font-bold text-sm text-slate-200">Cadence Settings</h3>
-          <p class="text-[11px] text-slate-400">What is a cadence profile?</p>
+          <h3 class="font-bold text-sm text-[#f4ede4]">Cadence Settings</h3>
+          <p class="text-[11px] text-[#8da498]">What is a cadence profile?</p>
         </div>
-        <button onclick="toggleSettingsModal(false)" class="text-slate-400 hover:text-slate-200 text-sm">✕</button>
+        <button onclick="toggleSettingsModal(false)" class="text-[#8da498] hover:text-[#f4ede4] text-sm">✕</button>
       </div>
 
-      <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-400 space-y-1.5 leading-relaxed">
-        <p><strong class="text-slate-200">A Cadence Profile</strong> is your personal target frequency for touching base with someone before their connection "battery" fully depletes.</p>
-        <p>Instead of pressuring yourself with arbitrary daily streaks, you set natural rhythms that make sense for each tier in your life.</p>
+      <div class="bg-[#0b1210] border border-[#283e35] rounded-xl p-3 text-xs text-[#a3b8ad] space-y-1.5 leading-relaxed">
+        <p><strong class="text-[#f4ede4]">A Cadence Profile</strong> is your personal target rhythm for reaching out before a connection's vitality reaches zero.</p>
+        <p>Instead of strict daily streaks, it gives each tier in your life a natural grace period to stay gently connected.</p>
       </div>
 
       <form id="settings-form" class="space-y-3 text-xs">
         <div>
-          <label class="block font-semibold text-slate-300 mb-1">Inner Circle Target (Days)</label>
-          <input id="cfg-cadence-inner" type="number" min="1" max="365" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-100 focus:border-cyan-500 font-mono" />
+          <label class="block font-semibold text-[#c4d4cc] mb-1">Inner Circle Target (Days)</label>
+          <input id="cfg-cadence-inner" type="number" min="1" max="365" class="w-full bg-[#0b1210] border border-[#283e35] rounded-lg px-3 py-1.5 text-emerald-100 focus:border-teal-500 font-mono" />
         </div>
         <div>
-          <label class="block font-semibold text-slate-300 mb-1">Close Friends Target (Days)</label>
-          <input id="cfg-cadence-close" type="number" min="1" max="365" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-100 focus:border-cyan-500 font-mono" />
+          <label class="block font-semibold text-[#c4d4cc] mb-1">Close Friends Target (Days)</label>
+          <input id="cfg-cadence-close" type="number" min="1" max="365" class="w-full bg-[#0b1210] border border-[#283e35] rounded-lg px-3 py-1.5 text-emerald-100 focus:border-teal-500 font-mono" />
         </div>
         <div>
-          <label class="block font-semibold text-slate-300 mb-1">Wider Network Target (Days)</label>
-          <input id="cfg-cadence-wider" type="number" min="1" max="365" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-100 focus:border-cyan-500 font-mono" />
+          <label class="block font-semibold text-[#c4d4cc] mb-1">Wider Network Target (Days)</label>
+          <input id="cfg-cadence-wider" type="number" min="1" max="365" class="w-full bg-[#0b1210] border border-[#283e35] rounded-lg px-3 py-1.5 text-emerald-100 focus:border-teal-500 font-mono" />
         </div>
         <div>
-          <label class="block font-semibold text-slate-300 mb-1">Quarterly Check-ins Target (Days)</label>
-          <input id="cfg-cadence-quarterly" type="number" min="1" max="365" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-100 focus:border-cyan-500 font-mono" />
+          <label class="block font-semibold text-[#c4d4cc] mb-1">Quarterly Check-ins Target (Days)</label>
+          <input id="cfg-cadence-quarterly" type="number" min="1" max="365" class="w-full bg-[#0b1210] border border-[#283e35] rounded-lg px-3 py-1.5 text-emerald-100 focus:border-teal-500 font-mono" />
         </div>
 
-        <button type="submit" class="w-full bg-cyan-600 hover:bg-cyan-500 font-semibold py-2 rounded-lg text-sm text-white transition-colors mt-3">
+        <button type="submit" class="w-full bg-[#115e59] hover:bg-[#0f766e] font-semibold py-2 rounded-lg text-sm text-white transition-colors mt-3 border border-teal-500/30">
           Save Cadences
         </button>
       </form>
@@ -293,37 +298,34 @@
   </div>
 
   <!-- AUTH & BACKUP MODAL -->
-  <div id="auth-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
-      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-        <h3 class="font-bold text-sm text-slate-200">Account & Data Portability</h3>
-        <button onclick="toggleAuthModal(false)" class="text-slate-400 hover:text-slate-200 text-sm">✕</button>
+  <div id="auth-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-[#14201b] border border-[#283e35] rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-[#283e35] pb-3">
+        <h3 class="font-bold text-sm text-[#f4ede4]">Account & Data Portability</h3>
+        <button onclick="toggleAuthModal(false)" class="text-[#8da498] hover:text-[#f4ede4] text-sm">✕</button>
       </div>
 
-      <!-- Cloud Architecture Note -->
-      <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-400 space-y-1">
-        <div class="font-semibold text-slate-200 flex items-center gap-1.5">
+      <div class="bg-[#0b1210] border border-[#283e35] rounded-xl p-3 text-xs text-[#a3b8ad] space-y-1">
+        <div class="font-semibold text-[#f4ede4] flex items-center gap-1.5">
           <span>🔒</span> Private Local Storage
         </div>
-        <p>Your connections currently live solely on this browser with zero external tracking.</p>
+        <p>Your connections live solely on this browser with zero external tracking.</p>
       </div>
 
-      <!-- Export / Import Options -->
       <div class="space-y-2">
-        <button onclick="exportBackup()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 py-2 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-2">
+        <button onclick="exportBackup()" class="w-full bg-[#1c2d26] hover:bg-[#253d33] text-emerald-100 py-2 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-2 border border-[#2e473d]">
           <span>📥</span> Export Backup JSON
         </button>
 
-        <label class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 py-2 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer">
+        <label class="w-full bg-[#1c2d26] hover:bg-[#253d33] text-emerald-100 py-2 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer border border-[#2e473d]">
           <span>📤</span> Import Backup JSON
           <input type="file" id="import-json-file" accept=".json" class="hidden" onchange="importBackup(event)" />
         </label>
       </div>
 
-      <!-- Cloud Sync Stub -->
-      <div class="border-t border-slate-800 pt-3">
-        <div class="text-[11px] text-slate-500 uppercase font-semibold mb-2">Multi-Device Cloud Sync</div>
-        <button onclick="alert('Cloud sync can connect to Firebase or Supabase. For full privacy, your current data remains entirely offline and exported locally.')" class="w-full bg-indigo-950 hover:bg-indigo-900 text-indigo-300 border border-indigo-500/30 py-2 rounded-lg text-xs font-semibold transition-colors">
+      <div class="border-t border-[#283e35] pt-3">
+        <div class="text-[11px] text-[#6b8276] uppercase font-semibold mb-2">Multi-Device Cloud Sync</div>
+        <button onclick="alert('Cloud sync can connect to Firebase or Supabase. Your current data is stored safely on this device.')" class="w-full bg-[#241710] hover:bg-[#342217] text-[#fdba74] border border-[#ea580c]/30 py-2 rounded-lg text-xs font-semibold transition-colors">
           Connect Cloud Provider (Supabase / Firebase)
         </button>
       </div>
@@ -331,8 +333,8 @@
   </div>
 
   <script>
-    const STORAGE_KEY = 'kinship_friends_v2';
-    const SETTINGS_KEY = 'kinship_settings_v2';
+    const STORAGE_KEY = 'kinship_friends_v3';
+    const SETTINGS_KEY = 'kinship_settings_v3';
 
     // Cadence presets (in days)
     let cadenceSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || JSON.stringify({
@@ -342,7 +344,7 @@
       quarterly: 90
     }));
 
-    // Touch weighting: determines effective days credited back
+    // Touch weighting
     const TOUCH_WEIGHTS = {
       'Hangout': 1.0,          // 100% full reset
       'Virtual Hangout': 1.0,  // 100% full reset
@@ -351,17 +353,17 @@
       'Text': 0.25             // 25% recharge
     };
 
-    // Plant growth and decay stages (Peak tree down to withered bush)
+    // Plant growth and decay stages (Full Tree -> Withered)
     function getPlantStage(health) {
       if (health >= 100) return { icon: '🌳', label: 'Full Tree', color: 'text-emerald-400' };
       if (health >= 75)  return { icon: '🪴', label: 'Lush Bush', color: 'text-teal-400' };
-      if (health >= 50)  return { icon: '🌿', label: 'Sprout', color: 'text-cyan-400' };
-      if (health >= 25)  return { icon: '🍁', label: 'Autumn Tree', color: 'text-amber-400' };
-      if (health > 0)    return { icon: '🍂', label: 'Bare Tree', color: 'text-orange-500' };
-      return { icon: '🥀', label: 'Withered', color: 'text-slate-500' };
+      if (health >= 50)  return { icon: '🌿', label: 'Sprout', color: 'text-emerald-300' };
+      if (health >= 25)  return { icon: '🍁', label: 'Autumn Tree', color: 'text-[#ea580c]' };
+      if (health > 0)    return { icon: '🍂', label: 'Bare Tree', color: 'text-[#d97706]' };
+      return { icon: '🥀', label: 'Withered', color: 'text-[#6b8276]' };
     }
 
-    // Seed mock data matching requested examples
+    // Seed mock data matching the 4 simplified relationships
     let friends = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
     if (!friends) {
       const DAY = 1000 * 60 * 60 * 24;
@@ -381,7 +383,7 @@
         {
           id: '2',
           name: 'Jacob',
-          category: 'Friend',
+          category: 'Friends',
           tier: 'close',
           avatar: '⛏️',
           photo: null,
@@ -392,7 +394,7 @@
         {
           id: '3',
           name: 'Delilah',
-          category: 'Friend',
+          category: 'Friends',
           tier: 'wider',
           avatar: '🏡',
           photo: null,
@@ -403,7 +405,7 @@
         {
           id: '4',
           name: 'Prof. Milton',
-          category: 'Business',
+          category: 'Professional',
           tier: 'quarterly',
           avatar: '🎓',
           photo: null,
@@ -435,7 +437,7 @@
     function calculateHealth(friend) {
       const targetCadence = getCadenceDays(friend.tier);
       if (!friend.touches || friend.touches.length === 0) {
-        return { health: 0, daysSince: 999, effectiveHealth: 0 };
+        return { health: 0, daysSince: 999 };
       }
 
       const now = Date.now();
@@ -443,10 +445,7 @@
       const diffMs = Math.max(0, now - lastTouch.timestamp);
       const daysSince = diffMs / (1000 * 60 * 60 * 24);
 
-      // Raw elapsed decay
       const baseDecayPercent = (daysSince / targetCadence) * 100;
-      
-      // Determine bonus percentage based on the depth of the latest touch
       const weight = TOUCH_WEIGHTS[lastTouch.type] !== undefined ? TOUCH_WEIGHTS[lastTouch.type] : 1.0;
       const initialCharge = weight * 100;
 
@@ -454,22 +453,23 @@
       return { health, daysSince: Math.floor(daysSince) };
     }
 
+    // Organic Environmental Progress Bar Colors
     function getBatteryColor(health) {
       if (health >= 75) return 'bg-emerald-500';
-      if (health >= 50) return 'bg-cyan-500';
-      if (health >= 25) return 'bg-amber-400';
-      return 'bg-slate-600';
+      if (health >= 50) return 'bg-teal-500';
+      if (health >= 25) return 'bg-[#ea580c]'; // Rust orange
+      return 'bg-[#3b4c44]';                 // Dry earthy slate
     }
 
     function setFilter(category) {
       activeFilter = category;
-      ['all', 'Family', 'Friend', 'Partner', 'Colleague', 'Business'].forEach(cat => {
+      ['all', 'Friends', 'Family', 'Romantic', 'Professional'].forEach(cat => {
         const el = document.getElementById(`filter-${cat}`);
         if (!el) return;
         if (cat === category) {
-          el.className = 'px-2.5 py-1 rounded-full font-medium transition-colors bg-cyan-600/20 text-cyan-300 border border-cyan-500/30';
+          el.className = 'px-3 py-1 rounded-full font-medium transition-colors bg-teal-900/40 text-teal-200 border border-teal-600/50';
         } else {
-          el.className = 'px-2.5 py-1 rounded-full font-medium transition-colors bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200';
+          el.className = 'px-3 py-1 rounded-full font-medium transition-colors bg-[#131f1a] text-[#9eb3a8] border border-[#23352e] hover:text-[#f4ede4]';
         }
       });
       render();
@@ -487,9 +487,9 @@
 
       if (filtered.length === 0) {
         container.innerHTML = `
-          <div class="text-center py-12 border border-dashed border-slate-800 rounded-2xl p-6 text-slate-500 text-sm space-y-2">
+          <div class="text-center py-12 border border-dashed border-[#283e35] rounded-2xl p-6 text-[#7d968a] text-sm space-y-2">
             <div>🌱 No connections found in this group.</div>
-            <p class="text-xs text-slate-600">Tap "+ Add" above to plant a new connection.</p>
+            <p class="text-xs text-[#5e7469]">Tap "+ Add" above to plant a new connection.</p>
           </div>
         `;
         return;
@@ -509,43 +509,43 @@
         return `
           <div 
             id="card-${friend.id}"
-            class="bg-slate-900 border ${isHighlighted ? 'dice-highlight' : 'border-slate-800/90'} rounded-xl p-4 transition-all duration-200"
+            class="bg-[#14201b] border ${isHighlighted ? 'dice-highlight' : 'border-[#23352e]'} rounded-xl p-4 transition-all duration-200 shadow-sm"
           >
             <div class="flex items-center justify-between gap-3">
               <!-- Avatar & Details -->
               <div class="flex items-center gap-3 cursor-pointer flex-1 min-w-0" onclick="toggleExpand('${friend.id}')">
                 <div class="relative shrink-0">
                   ${friend.photo ? `
-                    <img src="${friend.photo}" alt="${escapeHtml(friend.name)}" class="w-11 h-11 rounded-full object-cover border border-slate-700/80" />
+                    <img src="${friend.photo}" alt="${escapeHtml(friend.name)}" class="w-11 h-11 rounded-full object-cover border border-[#2e473d]" />
                   ` : `
-                    <div class="w-11 h-11 rounded-full bg-slate-800 border border-slate-700/80 flex items-center justify-center text-base font-bold text-slate-200 select-none">
+                    <div class="w-11 h-11 rounded-full bg-[#1c2d26] border border-[#2e473d] flex items-center justify-center text-base font-bold text-[#e4ece7] select-none">
                       ${friend.avatar || friend.name.slice(0, 2).toUpperCase()}
                     </div>
                   `}
-                  <span class="absolute -bottom-1 -right-1 text-xs bg-slate-950 rounded-full border border-slate-800 px-0.5" title="${plant.label}">
+                  <span class="absolute -bottom-1 -right-1 text-xs bg-[#0b1210] rounded-full border border-[#23352e] px-0.5" title="${plant.label}">
                     ${plant.icon}
                   </span>
                 </div>
 
                 <div class="min-w-0">
                   <div class="flex items-center gap-2">
-                    <span class="font-semibold text-slate-100 text-sm truncate">${escapeHtml(friend.name)}</span>
-                    <span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">${friend.category || 'Friend'}</span>
+                    <span class="font-semibold text-[#f4ede4] text-sm truncate">${escapeHtml(friend.name)}</span>
+                    <span class="text-[10px] px-1.5 py-0.5 rounded bg-[#1c2d26] text-teal-300 font-medium border border-[#283e35]">${friend.category || 'Friends'}</span>
                   </div>
-                  <div class="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5">
+                  <div class="text-xs text-[#9eb3a8] flex items-center gap-1.5 mt-0.5">
                     <span>${daysSince === 0 ? 'Connected today' : `${daysSince}d ago`}</span>
-                    <span class="text-slate-600">•</span>
+                    <span class="text-[#4b6056]">•</span>
                     <span class="font-mono text-[11px] ${plant.color}">${health}% charge</span>
-                    <span class="text-slate-600">•</span>
-                    <span class="text-[11px] text-slate-500">${targetDays}d target</span>
+                    <span class="text-[#4b6056]">•</span>
+                    <span class="text-[11px] text-[#788f83]">${targetDays}d target</span>
                   </div>
                 </div>
               </div>
 
-              <!-- Quick Water / Log Button -->
+              <!-- Quick Water Button -->
               <button 
                 onclick="openTouchModal('${friend.id}')"
-                class="bg-slate-800 hover:bg-slate-700 border border-slate-700/60 text-cyan-400 hover:text-cyan-300 font-medium px-2.5 py-1.5 rounded-lg text-xs transition-colors shrink-0 flex items-center gap-1.5"
+                class="bg-[#1c2d26] hover:bg-[#253d33] border border-[#2e473d] text-teal-300 hover:text-teal-200 font-medium px-2.5 py-1.5 rounded-lg text-xs transition-colors shrink-0 flex items-center gap-1.5"
                 title="Log interaction"
               >
                 <span>💧</span> Water
@@ -553,35 +553,35 @@
             </div>
 
             <!-- Health Battery Progress Bar -->
-            <div class="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden mt-3 cursor-pointer" onclick="toggleExpand('${friend.id}')">
+            <div class="w-full bg-[#0b1210] h-1.5 rounded-full overflow-hidden mt-3 cursor-pointer" onclick="toggleExpand('${friend.id}')">
               <div class="battery-fill h-full rounded-full ${barColor}" style="width: ${health}%"></div>
             </div>
 
             <!-- Expanded Tray -->
             ${isExpanded ? `
-              <div class="mt-4 pt-3 border-t border-slate-800/80 space-y-2 text-xs">
-                <div class="flex justify-between items-center text-slate-400 font-medium text-[11px] uppercase tracking-wider">
+              <div class="mt-4 pt-3 border-t border-[#23352e] space-y-2 text-xs">
+                <div class="flex justify-between items-center text-[#8da498] font-medium text-[11px] uppercase tracking-wider">
                   <span>Connection Journal</span>
-                  <button onclick="removeFriend('${friend.id}')" class="text-rose-400/80 hover:text-rose-300 text-[10px] lowercase transition-colors">remove connection</button>
+                  <button onclick="removeFriend('${friend.id}')" class="text-[#ea580c] hover:text-[#fed7aa] text-[10px] lowercase transition-colors">remove connection</button>
                 </div>
 
                 ${friend.touches && friend.touches.length > 0 ? `
                   <div class="space-y-1.5 max-h-40 overflow-y-auto pr-1">
                     ${friend.touches.map(touch => `
-                      <div class="flex items-start justify-between bg-slate-950/60 p-2 rounded-lg border border-slate-800/40">
+                      <div class="flex items-start justify-between bg-[#0b1210]/70 p-2 rounded-lg border border-[#23352e]">
                         <div>
-                          <div class="flex items-center gap-1.5 font-medium text-slate-300">
+                          <div class="flex items-center gap-1.5 font-medium text-[#c4d4cc]">
                             <span>${getTouchEmoji(touch.type)}</span>
                             <span>${touch.type}</span>
-                            <span class="text-slate-600 font-mono text-[10px]">${new Date(touch.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                            <span class="text-[#6b8276] font-mono text-[10px]">${new Date(touch.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                           </div>
-                          ${touch.note ? `<p class="text-slate-400 text-[11px] mt-0.5">${escapeHtml(touch.note)}</p>` : ''}
+                          ${touch.note ? `<p class="text-[#8da498] text-[11px] mt-0.5">${escapeHtml(touch.note)}</p>` : ''}
                         </div>
                       </div>
                     `).join('')}
                   </div>
                 ` : `
-                  <div class="text-slate-500 text-xs italic">No entries yet.</div>
+                  <div class="text-[#6b8276] text-xs italic">No entries yet.</div>
                 `}
               </div>
             ` : ''}
@@ -773,12 +773,12 @@
       if (Notification.permission === 'granted') {
         text.textContent = 'Gentle check-in reminders are active.';
         btn.textContent = 'Active ✓';
-        btn.classList.replace('text-cyan-400', 'text-emerald-400');
+        btn.classList.replace('text-teal-300', 'text-emerald-400');
         btn.onclick = testNotification;
       } else if (Notification.permission === 'denied') {
         text.textContent = 'Reminders blocked in browser settings.';
         btn.textContent = 'Blocked';
-        btn.classList.replace('text-cyan-400', 'text-slate-500');
+        btn.classList.replace('text-teal-300', 'text-[#6b8276]');
       }
     }
 
