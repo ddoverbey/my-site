@@ -404,17 +404,22 @@
 
   <script>
     /* =========================================================================
-       SUPABASE CLOUD CONFIGURATION
-       Paste your credentials from your free Supabase project settings below!
+       SAFE SUPABASE CLOUD CONFIGURATION
+       (Works 100% locally if credentials are not yet set)
        ========================================================================= */
-    const SUPABASE_URL = 'https://YOUR_PROJECT_ID.supabase.co';
-    const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+    const SUPABASE_URL = '';
+    const SUPABASE_ANON_KEY = '';
     
     let supabase = null;
     let currentUser = null;
 
-    if (window.supabase && SUPABASE_URL && !SUPABASE_URL.includes('YOUR_PROJECT_ID')) {
-      supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // Strict regex to check for real Supabase URL format before initializing
+    if (window.supabase && SUPABASE_URL && SUPABASE_URL.startsWith('https://') && !SUPABASE_URL.includes('YOUR_PROJECT_ID')) {
+      try {
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      } catch (err) {
+        console.warn('Supabase initialization bypassed:', err);
+      }
     }
 
     const STORAGE_KEY = 'kinship_friends_v4';
@@ -444,12 +449,10 @@
       return { icon: '🥀', label: 'Withered', color: 'text-[#6b8276]' };
     }
 
-    // Default mock dataset with Late Fall theme average
-    let friends = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-    if (!friends) {
+    function getDefaultExamples() {
       const DAY = 1000 * 60 * 60 * 24;
       const now = Date.now();
-      friends = [
+      return [
         {
           id: '1',
           name: 'Jacob (Example)',
@@ -495,7 +498,13 @@
           ]
         }
       ];
-      saveData();
+    }
+
+    // Load from local storage or seed defaults if empty
+    let friends = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+    if (!friends || friends.length === 0) {
+      friends = getDefaultExamples();
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(friends));
     }
 
     let activeFilter = 'all';
@@ -517,46 +526,53 @@
     }
 
     /* =========================================================================
-       CLOUD SYNC & AUTHENTICATION ENGINE
+       CLOUD SYNC & AUTHENTICATION
        ========================================================================= */
     async function initAuth() {
       if (!supabase) return;
 
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session && session.user) {
-        setLoggedInState(session.user);
-        await loadFromCloud();
-      }
-
-      supabase.auth.onAuthStateChange(async (event, session) => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
         if (session && session.user) {
           setLoggedInState(session.user);
-          if (event === 'SIGNED_IN') {
-            await loadFromCloud();
-          }
-        } else {
-          setLoggedOutState();
+          await loadFromCloud();
         }
-      });
+
+        supabase.auth.onAuthStateChange(async (event, session) => {
+          if (session && session.user) {
+            setLoggedInState(session.user);
+            if (event === 'SIGNED_IN') {
+              await loadFromCloud();
+            }
+          } else {
+            setLoggedOutState();
+          }
+        });
+      } catch (e) {
+        console.warn('Auth init failed:', e);
+      }
     }
 
     function setLoggedInState(user) {
       currentUser = user;
-      document.getElementById('sync-status-dot').className = 'absolute top-1 right-1 w-2 h-2 rounded-full bg-emerald-400';
-      document.getElementById('auth-current-email').textContent = user.email;
+      const dot = document.getElementById('sync-status-dot');
+      if (dot) dot.className = 'absolute top-1 right-1 w-2 h-2 rounded-full bg-emerald-400';
+      const emailEl = document.getElementById('auth-current-email');
+      if (emailEl) emailEl.textContent = user.email;
       document.getElementById('auth-view-logged-in').classList.remove('hidden');
       document.getElementById('auth-view-logged-out').classList.add('hidden');
     }
 
     function setLoggedOutState() {
       currentUser = null;
-      document.getElementById('sync-status-dot').className = 'absolute top-1 right-1 w-2 h-2 rounded-full bg-slate-500';
+      const dot = document.getElementById('sync-status-dot');
+      if (dot) dot.className = 'absolute top-1 right-1 w-2 h-2 rounded-full bg-slate-500';
       document.getElementById('auth-view-logged-in').classList.add('hidden');
       document.getElementById('auth-view-logged-out').classList.remove('hidden');
     }
 
     async function handleLogin() {
-      if (!supabase) return alert('Please add your free Supabase URL and Key inside the script tag.');
+      if (!supabase) return alert('Add your Supabase URL & Key in the script tag to activate cloud login.');
       const email = document.getElementById('auth-email').value.trim();
       const password = document.getElementById('auth-password').value;
       const errEl = document.getElementById('auth-error-msg');
@@ -572,7 +588,7 @@
     }
 
     async function handleSignUp() {
-      if (!supabase) return alert('Please add your free Supabase URL and Key inside the script tag.');
+      if (!supabase) return alert('Add your Supabase URL & Key in the script tag to activate cloud login.');
       const email = document.getElementById('auth-email').value.trim();
       const password = document.getElementById('auth-password').value;
       const errEl = document.getElementById('auth-error-msg');
@@ -583,7 +599,7 @@
         errEl.textContent = error.message;
         errEl.classList.remove('hidden');
       } else {
-        alert('Account created! Initializing cloud sync...');
+        alert('Account created! Syncing your current garden...');
         await syncToCloud(true);
         toggleAuthModal(false);
       }
@@ -634,13 +650,12 @@
         }
         render();
       } else {
-        // First login: upload existing local data to cloud
         await syncToCloud(false);
       }
     }
 
     /* =========================================================================
-       CALCULATIONS & UI ENGINE
+       CALCULATIONS & UI RENDERING
        ========================================================================= */
     function getCadenceDays(tier) {
       return cadenceSettings[tier] || 14;
@@ -735,6 +750,7 @@
 
     function render() {
       const container = document.getElementById('friends-queue');
+      if (!container) return;
       
       let totalHealth = 0;
       friends.forEach(f => {
@@ -748,7 +764,10 @@
         filtered = friends.filter(f => f.category === activeFilter);
       }
 
-      document.getElementById('queue-stat').textContent = `${filtered.length} connection${filtered.length === 1 ? '' : 's'}`;
+      const queueStat = document.getElementById('queue-stat');
+      if (queueStat) {
+        queueStat.textContent = `${filtered.length} connection${filtered.length === 1 ? '' : 's'}`;
+      }
 
       if (filtered.length === 0) {
         container.innerHTML = `
@@ -1019,6 +1038,8 @@
     function updateNotificationButton() {
       const btn = document.getElementById('btn-request-notifications');
       const text = document.getElementById('notification-status-text');
+      if (!btn || !text) return;
+      
       if (!('Notification' in window)) {
         text.textContent = 'Notifications not supported on this device.';
         btn.classList.add('hidden');
@@ -1106,7 +1127,7 @@
       return div.innerHTML;
     }
 
-    // Initialize Auth & UI
+    // Initialize App
     initAuth();
     updateNotificationButton();
     render();
