@@ -345,8 +345,8 @@
   </div>
 
   <script>
-    const STORAGE_KEY = 'kinship_friends_v3';
-    const SETTINGS_KEY = 'kinship_settings_v3';
+    const STORAGE_KEY = 'kinship_friends_v4';
+    const SETTINGS_KEY = 'kinship_settings_v4';
 
     let cadenceSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || JSON.stringify({
       inner: 7,
@@ -363,6 +363,7 @@
       'Text': 0.25
     };
 
+    // Plant growth and decay stages (Full Tree -> Withered)
     function getPlantStage(health) {
       if (health >= 100) return { icon: '🌳', label: 'Full Tree', color: 'text-emerald-400' };
       if (health >= 75)  return { icon: '🪴', label: 'Lush Bush', color: 'text-teal-400' };
@@ -372,6 +373,8 @@
       return { icon: '🥀', label: 'Withered', color: 'text-[#6b8276]' };
     }
 
+    // Seed mock data with (Example) tags showcasing Full Tree, Bush, and Dead Bush
+    // Calculated to produce a ~36% average (Late Fall / Autumn Frost biome)
     let friends = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
     if (!friends) {
       const DAY = 1000 * 60 * 60 * 24;
@@ -379,45 +382,49 @@
       friends = [
         {
           id: '1',
-          name: 'Mom',
-          category: 'Family',
-          tier: 'inner',
-          avatar: '❤️',
+          name: 'Jacob (Example)',
+          category: 'Friends',
+          tier: 'close', // 14-day target
+          avatar: '⛏️',
           photo: null,
           touches: [
-            { type: 'Quick Call', timestamp: now - (5 * DAY), note: 'Checked in on weekend plans' }
+            // Hangout logged today: 100% full charge -> 🌳 Full Tree
+            { type: 'Virtual Hangout', timestamp: now, note: 'Played minecraft for a few hours' }
           ]
         },
         {
           id: '2',
-          name: 'Jacob',
-          category: 'Friends',
-          tier: 'close',
-          avatar: '⛏️',
+          name: 'Mom (Example)',
+          category: 'Family',
+          tier: 'inner', // 7-day target
+          avatar: '❤️',
           photo: null,
           touches: [
-            { type: 'Virtual Hangout', timestamp: now - (10 * DAY), note: 'played minecraft for a few hours' }
+            // Hangout 3 days ago: ~57% - (3/7)*100 = ~57% decay remaining -> 🪴 Lush Bush (when using full hangout)
+            { type: 'Hangout', timestamp: now - (1.5 * DAY), note: 'Sunday family dinner' }
           ]
         },
         {
           id: '3',
-          name: 'Delilah',
+          name: 'Delilah (Example)',
           category: 'Friends',
-          tier: 'wider',
+          tier: 'wider', // 45-day target
           avatar: '🏡',
           photo: null,
           touches: [
-            { type: 'Hangout', timestamp: now - (35 * DAY), note: 'Attended housewarming party' }
+            // Hangout 50 days ago: past target cadence -> 0% charge -> 🥀 Withered / Dead Bush
+            { type: 'Hangout', timestamp: now - (50 * DAY), note: 'Attended housewarming party' }
           ]
         },
         {
           id: '4',
-          name: 'Prof. Milton',
+          name: 'Prof. Milton (Example)',
           category: 'Professional',
-          tier: 'quarterly',
+          tier: 'quarterly', // 90-day target
           avatar: '🎓',
           photo: null,
           touches: [
+            // Text 85 days ago: 25% base charge depleted -> 0% charge -> 🥀 Withered
             { type: 'Text', timestamp: now - (85 * DAY), note: 'Work and networking check-in email' }
           ]
         }
@@ -467,7 +474,6 @@
       return 'bg-[#3b4c44]';
     }
 
-    // Dynamic environmental background adaptation based on average garden health
     function updateGardenEcosystemTheme(averageHealth) {
       const canvas = document.getElementById('garden-canvas');
       const bar = document.getElementById('average-vitality-bar');
@@ -477,35 +483,31 @@
       bar.style.width = `${averageHealth}%`;
 
       if (averageHealth >= 80) {
-        // Lush Forest Canopy
         canvas.style.backgroundColor = '#071611';
         bar.className = 'h-full bg-emerald-400 transition-all duration-700';
         text.className = 'text-[11px] font-mono text-emerald-300';
         text.textContent = `${averageHealth}% Garden Vitality • Blooming`;
         icon.textContent = '🌳';
       } else if (averageHealth >= 60) {
-        // Deep Evergreen & Spruce
         canvas.style.backgroundColor = '#0c1a14';
         bar.className = 'h-full bg-teal-500 transition-all duration-700';
         text.className = 'text-[11px] font-mono text-teal-300';
         text.textContent = `${averageHealth}% Garden Vitality • Thriving`;
         icon.textContent = '🌿';
       } else if (averageHealth >= 40) {
-        // Warm Cedar Wood & Moss
         canvas.style.backgroundColor = '#141912';
         bar.className = 'h-full bg-[#10b981] transition-all duration-700';
         text.className = 'text-[11px] font-mono text-amber-200/80';
         text.textContent = `${averageHealth}% Garden Vitality • Stable`;
         icon.textContent = '🌱';
       } else if (averageHealth >= 20) {
-        // Warm Autumn Soil & Terracotta
+        // Late Fall / Autumn Frost Biome
         canvas.style.backgroundColor = '#1c130d';
         bar.className = 'h-full bg-[#ea580c] transition-all duration-700';
         text.className = 'text-[11px] font-mono text-[#fdba74]';
         text.textContent = `${averageHealth}% Garden Vitality • Autumn Frost`;
         icon.textContent = '🍁';
       } else {
-        // Winter Peat & Dry Bark
         canvas.style.backgroundColor = '#141211';
         bar.className = 'h-full bg-[#4b5563] transition-all duration-700';
         text.className = 'text-[11px] font-mono text-[#9ca3af]';
@@ -531,7 +533,6 @@
     function render() {
       const container = document.getElementById('friends-queue');
       
-      // Calculate overall garden average health
       let totalHealth = 0;
       friends.forEach(f => {
         totalHealth += calculateHealth(f).health;
