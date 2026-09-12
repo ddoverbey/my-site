@@ -26,15 +26,39 @@
           class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-cyan-500"
         />
       </div>
-      <div>
-        <label for="event-datetime" class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Date & Time</label>
-        <input 
-          id="event-datetime" 
-          type="datetime-local" 
-          required 
-          class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-cyan-500 text-slate-200"
-        />
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label for="event-date" class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Date</label>
+          <input 
+            id="event-date" 
+            type="date" 
+            required 
+            class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-cyan-500 text-slate-200"
+          />
+        </div>
+        <div>
+          <label for="event-time" class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Time <span class="text-slate-500 font-normal">(Optional)</span></label>
+          <input 
+            id="event-time" 
+            type="time" 
+            class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-cyan-500 text-slate-200"
+          />
+        </div>
       </div>
+
+      <div>
+        <label for="event-format" class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Display Format</label>
+        <select 
+          id="event-format" 
+          class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-cyan-500 text-slate-200"
+        >
+          <option value="standard">Standard (Years, Days, Time)</option>
+          <option value="days">Total Days</option>
+          <option value="weeks">Weeks & Days</option>
+        </select>
+      </div>
+
       <button 
         type="submit" 
         class="w-full bg-cyan-600 hover:bg-cyan-500 font-medium py-2 rounded-lg text-sm transition-colors text-white"
@@ -50,7 +74,9 @@
   <script>
     const form = document.getElementById('tracker-form');
     const titleInput = document.getElementById('event-title');
-    const datetimeInput = document.getElementById('event-datetime');
+    const dateInput = document.getElementById('event-date');
+    const timeInput = document.getElementById('event-time');
+    const formatInput = document.getElementById('event-format');
     const container = document.getElementById('events-container');
 
     // Load persisted data
@@ -61,15 +87,82 @@
     }
 
     function calculateTimeDifference(targetTimestamp) {
-      const now = new Date().getTime();
-      const diff = Math.max(0, now - targetTimestamp);
+      const now = new Date();
+      const start = new Date(targetTimestamp);
+      const diffMs = Math.max(0, now.getTime() - start.getTime());
 
-      const seconds = Math.floor((diff / 1000) % 60);
-      const minutes = Math.floor((diff / (1000 * 60)) % 60);
-      const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
-      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      // Raw totals
+      const totalSeconds = Math.floor(diffMs / 1000);
+      const totalMinutes = Math.floor(totalSeconds / 60);
+      const totalHours = Math.floor(totalMinutes / 60);
+      const totalDays = Math.floor(totalHours / 24);
 
-      return { days, hours, minutes, seconds };
+      // Remaining clock components
+      const seconds = totalSeconds % 60;
+      const minutes = totalMinutes % 60;
+      const hours = totalHours % 24;
+
+      // Weeks breakdown
+      const weeks = Math.floor(totalDays / 7);
+      const daysAfterWeeks = totalDays % 7;
+
+      // Calendar years breakdown (accounting for leap years accurately)
+      let years = 0;
+      let tempDate = new Date(start.getTime());
+      
+      while (true) {
+        let nextYear = new Date(tempDate);
+        nextYear.setFullYear(nextYear.getFullYear() + 1);
+        if (nextYear.getTime() <= now.getTime()) {
+          years++;
+          tempDate = nextYear;
+        } else {
+          break;
+        }
+      }
+      
+      const remainderAfterYears = now.getTime() - tempDate.getTime();
+      const daysAfterYears = Math.floor(remainderAfterYears / (1000 * 60 * 60 * 24));
+
+      return {
+        totalDays,
+        years,
+        daysAfterYears,
+        weeks,
+        daysAfterWeeks,
+        hours,
+        minutes,
+        seconds
+      };
+    }
+
+    function renderTimeValues(diff, format) {
+      if (format === 'weeks') {
+        return `
+          <span class="text-2xl font-bold">${diff.weeks}</span><span class="text-xs text-slate-400 uppercase mr-2">w</span>
+          <span class="text-2xl font-bold">${diff.daysAfterWeeks}</span><span class="text-xs text-slate-400 uppercase mr-2">d</span>
+          <span class="text-2xl font-bold">${diff.hours}</span><span class="text-xs text-slate-400 uppercase mr-2">h</span>
+          <span class="text-lg text-slate-400">${diff.minutes}</span><span class="text-xs text-slate-400 uppercase">m</span>
+        `;
+      }
+
+      if (format === 'days') {
+        return `
+          <span class="text-2xl font-bold">${diff.totalDays}</span><span class="text-xs text-slate-400 uppercase mr-2">d</span>
+          <span class="text-2xl font-bold">${diff.hours}</span><span class="text-xs text-slate-400 uppercase mr-2">h</span>
+          <span class="text-2xl font-bold">${diff.minutes}</span><span class="text-xs text-slate-400 uppercase mr-2">m</span>
+          <span class="text-lg text-slate-400">${diff.seconds}</span><span class="text-xs text-slate-400 uppercase">s</span>
+        `;
+      }
+
+      // Default: Standard (Years, Days, Hours...)
+      return `
+        ${diff.years > 0 ? `<span class="text-2xl font-bold">${diff.years}</span><span class="text-xs text-slate-400 uppercase mr-2">y</span>` : ''}
+        <span class="text-2xl font-bold">${diff.daysAfterYears}</span><span class="text-xs text-slate-400 uppercase mr-2">d</span>
+        <span class="text-2xl font-bold">${diff.hours}</span><span class="text-xs text-slate-400 uppercase mr-2">h</span>
+        <span class="text-2xl font-bold">${diff.minutes}</span><span class="text-xs text-slate-400 uppercase mr-2">m</span>
+        <span class="text-lg text-slate-400">${diff.seconds}</span><span class="text-xs text-slate-400 uppercase">s</span>
+      `;
     }
 
     function render() {
@@ -83,26 +176,37 @@
       }
 
       container.innerHTML = events.map((ev, index) => {
-        const { days, hours, minutes, seconds } = calculateTimeDifference(ev.timestamp);
-        const dateString = new Date(ev.timestamp).toLocaleDateString(undefined, { 
-          year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
-        });
+        const diff = calculateTimeDifference(ev.timestamp);
+        
+        const dateOptions = { year: 'numeric', month: 'short', day: 'numeric' };
+        if (ev.hasTime) {
+          dateOptions.hour = '2-digit';
+          dateOptions.minute = '2-digit';
+        }
+        const dateString = new Date(ev.timestamp).toLocaleDateString(undefined, dateOptions);
 
         return `
-          <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center justify-between">
-            <div>
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-start justify-between">
+            <div class="space-y-1">
               <div class="font-semibold text-base text-slate-100">${escapeHtml(ev.title)}</div>
-              <div class="text-xs text-slate-500 mb-2">${dateString}</div>
-              <div class="flex items-baseline space-x-2 font-mono text-cyan-400">
-                <span class="text-2xl font-bold">${days}</span><span class="text-xs text-slate-400 uppercase">d</span>
-                <span class="text-2xl font-bold">${hours}</span><span class="text-xs text-slate-400 uppercase">h</span>
-                <span class="text-2xl font-bold">${minutes}</span><span class="text-xs text-slate-400 uppercase">m</span>
-                <span class="text-lg text-slate-400">${seconds}</span><span class="text-xs text-slate-400 uppercase">s</span>
+              <div class="text-xs text-slate-500">${dateString}</div>
+              
+              <div class="flex items-baseline font-mono text-cyan-400 pt-1">
+                ${renderTimeValues(diff, ev.format || 'standard')}
+              </div>
+
+              <!-- Quick format toggle -->
+              <div class="pt-2 flex items-center space-x-1">
+                <span class="text-[11px] text-slate-500 uppercase font-semibold mr-1">View:</span>
+                <button onclick="setFormat(${index}, 'standard')" class="text-xs px-1.5 py-0.5 rounded ${ev.format === 'standard' || !ev.format ? 'bg-slate-800 text-cyan-400' : 'text-slate-500 hover:text-slate-300'}">Standard</button>
+                <button onclick="setFormat(${index}, 'days')" class="text-xs px-1.5 py-0.5 rounded ${ev.format === 'days' ? 'bg-slate-800 text-cyan-400' : 'text-slate-500 hover:text-slate-300'}">Days</button>
+                <button onclick="setFormat(${index}, 'weeks')" class="text-xs px-1.5 py-0.5 rounded ${ev.format === 'weeks' ? 'bg-slate-800 text-cyan-400' : 'text-slate-500 hover:text-slate-300'}">Weeks</button>
               </div>
             </div>
+
             <button 
               onclick="removeEvent(${index})" 
-              class="text-slate-500 hover:text-rose-400 p-2 text-sm transition-colors"
+              class="text-slate-500 hover:text-rose-400 p-1 text-sm transition-colors ml-2"
               title="Delete event"
             >
               ✕
@@ -124,14 +228,27 @@
       render();
     };
 
+    window.setFormat = function(index, format) {
+      events[index].format = format;
+      saveEvents();
+      render();
+    };
+
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       const title = titleInput.value.trim();
-      const dateVal = datetimeInput.value;
+      const dateVal = dateInput.value;
+      const timeVal = timeInput.value;
+      const format = formatInput.value;
+
       if (!title || !dateVal) return;
 
-      const timestamp = new Date(dateVal).getTime();
-      events.unshift({ title, timestamp });
+      const hasTime = Boolean(timeVal);
+      // If time is provided, construct YYYY-MM-DDTHH:MM, otherwise default to midnight local time
+      const datetimeString = hasTime ? `${dateVal}T${timeVal}` : `${dateVal}T00:00:00`;
+      const timestamp = new Date(datetimeString).getTime();
+
+      events.unshift({ title, timestamp, hasTime, format });
       saveEvents();
       render();
 
