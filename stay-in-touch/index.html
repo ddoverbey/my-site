@@ -351,11 +351,11 @@
       'Text': 0.25             // 25% recharge
     };
 
-    // Plant growth and decay stages
+    // Plant growth and decay stages (Peak tree down to withered bush)
     function getPlantStage(health) {
-      if (health >= 100) return { icon: '🌿', label: 'Sprout', color: 'text-emerald-400' };
-      if (health >= 75)  return { icon: '🪴', label: 'Bush', color: 'text-teal-400' };
-      if (health >= 50)  return { icon: '🌳', label: 'Full Tree', color: 'text-cyan-400' };
+      if (health >= 100) return { icon: '🌳', label: 'Full Tree', color: 'text-emerald-400' };
+      if (health >= 75)  return { icon: '🪴', label: 'Lush Bush', color: 'text-teal-400' };
+      if (health >= 50)  return { icon: '🌿', label: 'Sprout', color: 'text-cyan-400' };
       if (health >= 25)  return { icon: '🍁', label: 'Autumn Tree', color: 'text-amber-400' };
       if (health > 0)    return { icon: '🍂', label: 'Bare Tree', color: 'text-orange-500' };
       return { icon: '🥀', label: 'Withered', color: 'text-slate-500' };
