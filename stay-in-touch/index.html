@@ -3,22 +3,20 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Kinship • Friend Tracker</title>
+  <title>Kinship • Connection Garden</title>
   
-  <!-- Web App Manifest for "Add to Home Screen" -->
   <link rel="manifest" href="data:application/manifest+json;base64,eyJuYW1lIjoiS2luc2hpcCBUcmFja2VyIiwic2hvcnRfbmFtZSI6IktpbnNoaXAiLCJzdGFydF91cmwiOiIuIiwiZGlzcGxheSI6InN0YW5kYWxvbmUiLCJiYWNrZ3JvdW5kX2NvbG9yIjoiIzAyMDYxNyIsInRoZW1lX2NvbG9yIjoiIzAyMDYxNyJ9" />
   <meta name="theme-color" content="#020617" />
   
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    /* Smooth transitions for battery bar */
     .battery-fill {
-      transition: width 0.4s ease, background-color 0.4s ease;
+      transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.4s ease;
     }
     @keyframes pulse-ring {
-      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.7); }
+      0% { transform: scale(0.97); box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.7); }
       70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(56, 189, 248, 0); }
-      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(56, 189, 248, 0); }
+      100% { transform: scale(0.97); box-shadow: 0 0 0 0 rgba(56, 189, 248, 0); }
     }
     .dice-highlight {
       animation: pulse-ring 1.5s infinite;
@@ -30,21 +28,37 @@
 
   <main class="w-full max-w-xl space-y-6 pb-20">
     
-    <!-- Header & Action Bar -->
+    <!-- Header -->
     <header class="flex items-center justify-between border-b border-slate-800 pb-4">
       <div>
         <h1 class="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
           <span>🌱</span> Kinship
         </h1>
-        <p class="text-xs text-slate-400">Zero guilt. Gentle connections.</p>
+        <p class="text-xs text-slate-400 mt-0.5">
+          <span class="line-through text-slate-500">Zero</span> (some) guilt. Gentle connections.
+        </p>
       </div>
 
       <div class="flex items-center gap-2">
         <button 
+          onclick="toggleSettingsModal(true)"
+          class="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-900 rounded-lg border border-slate-800 transition-colors text-xs"
+          title="Settings & Cadence Profiles"
+        >
+          ⚙️
+        </button>
+        <button 
+          onclick="toggleAuthModal(true)"
+          class="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-900 rounded-lg border border-slate-800 transition-colors text-xs"
+          title="Account & Backup"
+        >
+          ☁️
+        </button>
+        <button 
           id="btn-roll-dice"
           onclick="rollTheDice()"
-          class="bg-indigo-950/70 hover:bg-indigo-900 border border-indigo-500/30 text-indigo-300 font-semibold px-3 py-1.5 rounded-lg text-xs transition-colors flex items-center gap-1.5 shadow-sm"
-          title="Pick someone needing connection"
+          class="bg-indigo-950/70 hover:bg-indigo-900 border border-indigo-500/30 text-indigo-300 font-semibold px-3 py-1.5 rounded-lg text-xs transition-colors flex items-center gap-1.5"
+          title="Randomly choose someone whose connection needs attention"
         >
           <span>🎲</span> Roll Dice
         </button>
@@ -52,68 +66,115 @@
           onclick="toggleAddModal(true)"
           class="bg-cyan-600 hover:bg-cyan-500 text-white font-semibold px-3 py-1.5 rounded-lg text-xs transition-colors flex items-center gap-1 shadow-sm"
         >
-          <span>+</span> Friend
+          <span>+</span> Add
         </button>
       </div>
     </header>
 
-    <!-- Dice Result Banner (Hidden by default) -->
+    <!-- Notification / Reminder Bar -->
+    <div id="notification-banner" class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center justify-between text-xs">
+      <div class="flex items-center gap-2">
+        <span>🔔</span>
+        <span id="notification-status-text" class="text-slate-300">Enable check-in reminders for tired plants.</span>
+      </div>
+      <button 
+        id="btn-request-notifications"
+        onclick="requestNotificationPermission()"
+        class="bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-slate-700 px-2.5 py-1 rounded text-[11px] font-medium transition-colors"
+      >
+        Enable
+      </button>
+    </div>
+
+    <!-- Dice Result Banner -->
     <div id="dice-banner" class="hidden bg-indigo-950/50 border border-indigo-500/40 rounded-xl p-3 flex items-center justify-between text-xs text-indigo-200">
       <div class="flex items-center gap-2">
         <span class="text-base">✨</span>
-        <span>The dice chose <strong id="dice-banner-name" class="text-white font-semibold"></strong>! Send a quick hello?</span>
+        <span>The dice selected <strong id="dice-banner-name" class="text-white font-semibold"></strong>! Consider reaching out.</span>
       </div>
       <button onclick="dismissDiceBanner()" class="text-indigo-400 hover:text-indigo-200 text-sm px-1">✕</button>
     </div>
 
-    <!-- Filter / Sort Status Strip -->
-    <div class="flex items-center justify-between text-xs text-slate-400 px-1">
-      <span id="queue-count" class="font-medium">Sorted by lowest charge first</span>
-      <span class="text-[11px] text-slate-500">Decays gracefully over time</span>
+    <!-- Category Filter Tabs -->
+    <div class="flex items-center gap-1 overflow-x-auto pb-1 text-xs no-scrollbar">
+      <button onclick="setFilter('all')" id="filter-all" class="px-2.5 py-1 rounded-full font-medium transition-colors bg-cyan-600/20 text-cyan-300 border border-cyan-500/30">All</button>
+      <button onclick="setFilter('Family')" id="filter-Family" class="px-2.5 py-1 rounded-full font-medium transition-colors bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200">Family</button>
+      <button onclick="setFilter('Friend')" id="filter-Friend" class="px-2.5 py-1 rounded-full font-medium transition-colors bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200">Friends</button>
+      <button onclick="setFilter('Partner')" id="filter-Partner" class="px-2.5 py-1 rounded-full font-medium transition-colors bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200">Partner</button>
+      <button onclick="setFilter('Colleague')" id="filter-Colleague" class="px-2.5 py-1 rounded-full font-medium transition-colors bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200">Colleagues</button>
+      <button onclick="setFilter('Business')" id="filter-Business" class="px-2.5 py-1 rounded-full font-medium transition-colors bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200">Business</button>
     </div>
 
-    <!-- Who Needs Love Queue (Cards Container) -->
-    <div id="friends-queue" class="space-y-3">
-      <!-- Cards rendered here via JS -->
+    <!-- Queue Header -->
+    <div class="flex items-center justify-between text-xs text-slate-400 px-1">
+      <span class="font-medium">Connection Garden (Lowest charge first)</span>
+      <span id="queue-stat" class="text-[11px] text-slate-500">4 connections</span>
     </div>
+
+    <!-- Contact Cards Container -->
+    <div id="friends-queue" class="space-y-3"></div>
   </main>
 
-  <!-- ADD / EDIT FRIEND MODAL -->
+  <!-- ADD / EDIT CONTACT MODAL -->
   <div id="friend-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-        <h3 class="font-bold text-sm text-slate-200">Add New Connection</h3>
+        <h3 class="font-bold text-sm text-slate-200">Add Connection</h3>
         <button onclick="toggleAddModal(false)" class="text-slate-400 hover:text-slate-200 text-sm">✕</button>
       </div>
 
       <form id="friend-form" class="space-y-3">
         <div>
           <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Name</label>
-          <input id="input-name" type="text" required placeholder="e.g., Mom, Alex, Sam" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-500" />
+          <input id="input-name" type="text" required placeholder="Full name or nickname" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-500" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Relationship</label>
+            <select id="input-category" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-cyan-500">
+              <option value="Friend">Friend</option>
+              <option value="Family">Family</option>
+              <option value="Partner">Partner</option>
+              <option value="Colleague">Colleague</option>
+              <option value="Business">Business / Mentor</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Cadence Tier</label>
+            <select id="input-cadence-tier" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-cyan-500">
+              <option value="inner">Inner Circle</option>
+              <option value="close" selected>Close Circle</option>
+              <option value="wider">Wider Network</option>
+              <option value="quarterly">Quarterly</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Avatar Selection: Emoji OR Photo Upload -->
+        <div class="space-y-2 border border-slate-800/80 bg-slate-950/50 p-3 rounded-xl">
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Avatar Choice</label>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <span class="text-[11px] text-slate-500 block mb-1">Custom Emoji</span>
+              <input id="input-avatar" type="text" maxlength="2" placeholder="🌿" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 text-center focus:outline-none focus:border-cyan-500" />
+            </div>
+            <div>
+              <span class="text-[11px] text-slate-500 block mb-1">Or Upload Photo</span>
+              <input id="input-photo" type="file" accept="image/*" class="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-slate-800 file:text-slate-300 hover:file:bg-slate-700 cursor-pointer" />
+            </div>
+          </div>
+          <input type="hidden" id="input-photo-base64" />
         </div>
 
         <div>
-          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Avatar / Emoji</label>
-          <input id="input-avatar" type="text" maxlength="2" placeholder="🌱 (Leave blank for initials)" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-500" />
-        </div>
-
-        <div>
-          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Cadence Profile</label>
-          <select id="input-cadence" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-cyan-500">
-            <option value="7">Inner Circle / Mom (Every 7 days)</option>
-            <option value="14" selected>Close Friends (Every 14 days)</option>
-            <option value="45">Wider Network / Dorm Mates (Every 45 days)</option>
-            <option value="90">Quarterly Check-in (Every 90 days)</option>
-          </select>
-        </div>
-
-        <div>
-          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Last Contact</label>
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Last Interaction Date</label>
           <input id="input-last-contact" type="date" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-cyan-500" />
         </div>
 
         <button type="submit" class="w-full bg-cyan-600 hover:bg-cyan-500 font-semibold py-2 rounded-lg text-sm text-white transition-colors mt-2">
-          Save Friend
+          Plant Seed
         </button>
       </form>
     </div>
@@ -124,8 +185,8 @@
     <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
       <div class="flex justify-between items-center border-b border-slate-800 pb-3">
         <div>
-          <h3 class="font-bold text-sm text-slate-200">Log Contact with <span id="touch-modal-name" class="text-cyan-400"></span></h3>
-          <p class="text-[11px] text-slate-500">Recharges battery back to 100%</p>
+          <h3 class="font-bold text-sm text-slate-200">Water <span id="touch-modal-name" class="text-cyan-400"></span></h3>
+          <p class="text-[11px] text-slate-500">Touches restore battery based on depth</p>
         </div>
         <button onclick="toggleTouchModal(false)" class="text-slate-400 hover:text-slate-200 text-sm">✕</button>
       </div>
@@ -134,134 +195,316 @@
         <input type="hidden" id="touch-friend-id" />
         
         <div>
-          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Type of Touch</label>
-          <div class="grid grid-cols-3 gap-2">
-            <label class="flex items-center justify-center gap-1 bg-slate-950 border border-slate-800 py-2 rounded-lg text-xs font-medium cursor-pointer has-[:checked]:border-cyan-500 has-[:checked]:text-cyan-400">
-              <input type="radio" name="touch-type" value="Text" checked class="hidden" />
-              <span>💬 Text</span>
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Interaction Type</label>
+          <div class="space-y-1.5">
+            <label class="flex items-center justify-between bg-slate-950 border border-slate-800 px-3 py-2 rounded-lg text-xs font-medium cursor-pointer has-[:checked]:border-cyan-500 has-[:checked]:text-cyan-400">
+              <div class="flex items-center gap-2">
+                <input type="radio" name="touch-type" value="Hangout" checked class="hidden" />
+                <span>☕ In-Person Hangout</span>
+              </div>
+              <span class="text-[10px] text-emerald-400 font-mono">+100% (Full)</span>
             </label>
-            <label class="flex items-center justify-center gap-1 bg-slate-950 border border-slate-800 py-2 rounded-lg text-xs font-medium cursor-pointer has-[:checked]:border-cyan-500 has-[:checked]:text-cyan-400">
-              <input type="radio" name="touch-type" value="Call" class="hidden" />
-              <span>📞 Call</span>
+
+            <label class="flex items-center justify-between bg-slate-950 border border-slate-800 px-3 py-2 rounded-lg text-xs font-medium cursor-pointer has-[:checked]:border-cyan-500 has-[:checked]:text-cyan-400">
+              <div class="flex items-center gap-2">
+                <input type="radio" name="touch-type" value="Virtual Hangout" class="hidden" />
+                <span>💻 Virtual Hangout / Game Night</span>
+              </div>
+              <span class="text-[10px] text-emerald-400 font-mono">+100% (Full)</span>
             </label>
-            <label class="flex items-center justify-center gap-1 bg-slate-950 border border-slate-800 py-2 rounded-lg text-xs font-medium cursor-pointer has-[:checked]:border-cyan-500 has-[:checked]:text-cyan-400">
-              <input type="radio" name="touch-type" value="Hangout" class="hidden" />
-              <span>☕ Hangout</span>
+
+            <label class="flex items-center justify-between bg-slate-950 border border-slate-800 px-3 py-2 rounded-lg text-xs font-medium cursor-pointer has-[:checked]:border-cyan-500 has-[:checked]:text-cyan-400">
+              <div class="flex items-center gap-2">
+                <input type="radio" name="touch-type" value="Long Call" class="hidden" />
+                <span>📹 Video Call / Long Call</span>
+              </div>
+              <span class="text-[10px] text-cyan-400 font-mono">+75% charge</span>
+            </label>
+
+            <label class="flex items-center justify-between bg-slate-950 border border-slate-800 px-3 py-2 rounded-lg text-xs font-medium cursor-pointer has-[:checked]:border-cyan-500 has-[:checked]:text-cyan-400">
+              <div class="flex items-center gap-2">
+                <input type="radio" name="touch-type" value="Quick Call" class="hidden" />
+                <span>📞 Quick Call</span>
+              </div>
+              <span class="text-[10px] text-amber-400 font-mono">+50% charge</span>
+            </label>
+
+            <label class="flex items-center justify-between bg-slate-950 border border-slate-800 px-3 py-2 rounded-lg text-xs font-medium cursor-pointer has-[:checked]:border-cyan-500 has-[:checked]:text-cyan-400">
+              <div class="flex items-center gap-2">
+                <input type="radio" name="touch-type" value="Text" class="hidden" />
+                <span>💬 Text / DM / Meme</span>
+              </div>
+              <span class="text-[10px] text-slate-400 font-mono">+25% charge</span>
             </label>
           </div>
         </div>
 
         <div>
-          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Quick Note <span class="text-slate-500 font-normal">(Optional)</span></label>
-          <input id="touch-note" type="text" placeholder="e.g., Talked about his new puppy" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-500" />
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Quick Reflection <span class="text-slate-500 font-normal">(Optional)</span></label>
+          <input id="touch-note" type="text" placeholder="e.g., Talked about career moves" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-500" />
         </div>
 
         <button type="submit" class="w-full bg-cyan-600 hover:bg-cyan-500 font-semibold py-2 rounded-lg text-sm text-white transition-colors mt-2">
-          Recharge Connection ⚡
+          Water Plant 💧
         </button>
       </form>
     </div>
   </div>
 
+  <!-- CADENCE SETTINGS MODAL -->
+  <div id="settings-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <div>
+          <h3 class="font-bold text-sm text-slate-200">Cadence Settings</h3>
+          <p class="text-[11px] text-slate-400">What is a cadence profile?</p>
+        </div>
+        <button onclick="toggleSettingsModal(false)" class="text-slate-400 hover:text-slate-200 text-sm">✕</button>
+      </div>
+
+      <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-400 space-y-1.5 leading-relaxed">
+        <p><strong class="text-slate-200">A Cadence Profile</strong> is your personal target frequency for touching base with someone before their connection "battery" fully depletes.</p>
+        <p>Instead of pressuring yourself with arbitrary daily streaks, you set natural rhythms that make sense for each tier in your life.</p>
+      </div>
+
+      <form id="settings-form" class="space-y-3 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Inner Circle Target (Days)</label>
+          <input id="cfg-cadence-inner" type="number" min="1" max="365" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-100 focus:border-cyan-500 font-mono" />
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Close Friends Target (Days)</label>
+          <input id="cfg-cadence-close" type="number" min="1" max="365" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-100 focus:border-cyan-500 font-mono" />
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Wider Network Target (Days)</label>
+          <input id="cfg-cadence-wider" type="number" min="1" max="365" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-100 focus:border-cyan-500 font-mono" />
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Quarterly Check-ins Target (Days)</label>
+          <input id="cfg-cadence-quarterly" type="number" min="1" max="365" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-100 focus:border-cyan-500 font-mono" />
+        </div>
+
+        <button type="submit" class="w-full bg-cyan-600 hover:bg-cyan-500 font-semibold py-2 rounded-lg text-sm text-white transition-colors mt-3">
+          Save Cadences
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- AUTH & BACKUP MODAL -->
+  <div id="auth-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h3 class="font-bold text-sm text-slate-200">Account & Data Portability</h3>
+        <button onclick="toggleAuthModal(false)" class="text-slate-400 hover:text-slate-200 text-sm">✕</button>
+      </div>
+
+      <!-- Cloud Architecture Note -->
+      <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-400 space-y-1">
+        <div class="font-semibold text-slate-200 flex items-center gap-1.5">
+          <span>🔒</span> Private Local Storage
+        </div>
+        <p>Your connections currently live solely on this browser with zero external tracking.</p>
+      </div>
+
+      <!-- Export / Import Options -->
+      <div class="space-y-2">
+        <button onclick="exportBackup()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 py-2 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-2">
+          <span>📥</span> Export Backup JSON
+        </button>
+
+        <label class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 py-2 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer">
+          <span>📤</span> Import Backup JSON
+          <input type="file" id="import-json-file" accept=".json" class="hidden" onchange="importBackup(event)" />
+        </label>
+      </div>
+
+      <!-- Cloud Sync Stub -->
+      <div class="border-t border-slate-800 pt-3">
+        <div class="text-[11px] text-slate-500 uppercase font-semibold mb-2">Multi-Device Cloud Sync</div>
+        <button onclick="alert('Cloud sync can connect to Firebase or Supabase. For full privacy, your current data remains entirely offline and exported locally.')" class="w-full bg-indigo-950 hover:bg-indigo-900 text-indigo-300 border border-indigo-500/30 py-2 rounded-lg text-xs font-semibold transition-colors">
+          Connect Cloud Provider (Supabase / Firebase)
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script>
-    // Storage Key
-    const STORAGE_KEY = 'kinship_friends_data';
+    const STORAGE_KEY = 'kinship_friends_v2';
+    const SETTINGS_KEY = 'kinship_settings_v2';
 
-    // State
-    let friends = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    let expandedCards = new Set();
-    let highlightedId = null;
+    // Cadence presets (in days)
+    let cadenceSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || JSON.stringify({
+      inner: 7,
+      close: 14,
+      wider: 45,
+      quarterly: 90
+    }));
 
-    // Seed initial mock data if first run so the UI isn't a blank void
-    if (friends.length === 0) {
-      const now = Date.now();
+    // Touch weighting: determines effective days credited back
+    const TOUCH_WEIGHTS = {
+      'Hangout': 1.0,          // 100% full reset
+      'Virtual Hangout': 1.0,  // 100% full reset
+      'Long Call': 0.75,       // 75% recharge
+      'Quick Call': 0.50,      // 50% recharge
+      'Text': 0.25             // 25% recharge
+    };
+
+    // Plant growth and decay stages
+    function getPlantStage(health) {
+      if (health >= 100) return { icon: '🌿', label: 'Sprout', color: 'text-emerald-400' };
+      if (health >= 75)  return { icon: '🪴', label: 'Bush', color: 'text-teal-400' };
+      if (health >= 50)  return { icon: '🌳', label: 'Full Tree', color: 'text-cyan-400' };
+      if (health >= 25)  return { icon: '🍁', label: 'Autumn Tree', color: 'text-amber-400' };
+      if (health > 0)    return { icon: '🍂', label: 'Bare Tree', color: 'text-orange-500' };
+      return { icon: '🥀', label: 'Withered', color: 'text-slate-500' };
+    }
+
+    // Seed mock data matching requested examples
+    let friends = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+    if (!friends) {
       const DAY = 1000 * 60 * 60 * 24;
+      const now = Date.now();
       friends = [
         {
           id: '1',
           name: 'Mom',
+          category: 'Family',
+          tier: 'inner',
           avatar: '❤️',
-          cadence: 7,
+          photo: null,
           touches: [
-            { type: 'Call', timestamp: now - (5 * DAY), note: 'Checked in on work and weekend plans' }
+            { type: 'Quick Call', timestamp: now - (5 * DAY), note: 'Checked in on weekend plans' }
           ]
         },
         {
           id: '2',
-          name: 'Owen',
-          avatar: '⚡',
-          cadence: 14,
+          name: 'Jacob',
+          category: 'Friend',
+          tier: 'close',
+          avatar: '⛏️',
+          photo: null,
           touches: [
-            { type: 'Hangout', timestamp: now - (15 * DAY), note: 'Attended housewarming party' }
+            { type: 'Virtual Hangout', timestamp: now - (10 * DAY), note: 'played minecraft for a few hours' }
           ]
         },
         {
           id: '3',
-          name: 'Thomas',
-          avatar: '🎓',
-          cadence: 28,
+          name: 'Delilah',
+          category: 'Friend',
+          tier: 'wider',
+          avatar: '🏡',
+          photo: null,
           touches: [
-            { type: 'Text', timestamp: now - (29 * DAY), note: 'Shared a meme' }
+            { type: 'Hangout', timestamp: now - (35 * DAY), note: 'Attended housewarming party' }
+          ]
+        },
+        {
+          id: '4',
+          name: 'Prof. Milton',
+          category: 'Business',
+          tier: 'quarterly',
+          avatar: '🎓',
+          photo: null,
+          touches: [
+            { type: 'Text', timestamp: now - (85 * DAY), note: 'Work and networking check-in email' }
           ]
         }
       ];
       saveData();
     }
 
+    let activeFilter = 'all';
+    let expandedCards = new Set();
+    let highlightedId = null;
+
     function saveData() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(friends));
     }
 
-    // Health / Decay Math per Spec:
-    // Health = max(0, 100 - (Days Since Last Contact / Target Cadence) * 100)
+    function saveSettings() {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(cadenceSettings));
+    }
+
+    function getCadenceDays(tier) {
+      return cadenceSettings[tier] || 14;
+    }
+
+    // Health calculation based on decay and accumulated touches
     function calculateHealth(friend) {
-      if (!friend.touches || friend.touches.length === 0) return { health: 0, daysSince: 999 };
-      
-      const lastTouch = friend.touches[0];
+      const targetCadence = getCadenceDays(friend.tier);
+      if (!friend.touches || friend.touches.length === 0) {
+        return { health: 0, daysSince: 999, effectiveHealth: 0 };
+      }
+
       const now = Date.now();
+      const lastTouch = friend.touches[0];
       const diffMs = Math.max(0, now - lastTouch.timestamp);
       const daysSince = diffMs / (1000 * 60 * 60 * 24);
 
-      const health = Math.max(0, Math.min(100, Math.round(100 - (daysSince / friend.cadence) * 100)));
+      // Raw elapsed decay
+      const baseDecayPercent = (daysSince / targetCadence) * 100;
+      
+      // Determine bonus percentage based on the depth of the latest touch
+      const weight = TOUCH_WEIGHTS[lastTouch.type] !== undefined ? TOUCH_WEIGHTS[lastTouch.type] : 1.0;
+      const initialCharge = weight * 100;
+
+      const health = Math.max(0, Math.min(100, Math.round(initialCharge - baseDecayPercent)));
       return { health, daysSince: Math.floor(daysSince) };
     }
 
-    // Battery bar styling: Green/Emerald (>60%) -> Amber (25-60%) -> Calm Slate/Muted Grey (0-25%)
     function getBatteryColor(health) {
-      if (health > 60) return 'bg-emerald-500';
-      if (health > 25) return 'bg-amber-400';
-      return 'bg-slate-600'; // No screaming red alerts; calm grey/slate
+      if (health >= 75) return 'bg-emerald-500';
+      if (health >= 50) return 'bg-cyan-500';
+      if (health >= 25) return 'bg-amber-400';
+      return 'bg-slate-600';
+    }
+
+    function setFilter(category) {
+      activeFilter = category;
+      ['all', 'Family', 'Friend', 'Partner', 'Colleague', 'Business'].forEach(cat => {
+        const el = document.getElementById(`filter-${cat}`);
+        if (!el) return;
+        if (cat === category) {
+          el.className = 'px-2.5 py-1 rounded-full font-medium transition-colors bg-cyan-600/20 text-cyan-300 border border-cyan-500/30';
+        } else {
+          el.className = 'px-2.5 py-1 rounded-full font-medium transition-colors bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200';
+        }
+      });
+      render();
     }
 
     function render() {
       const container = document.getElementById('friends-queue');
+      
+      let filtered = friends;
+      if (activeFilter !== 'all') {
+        filtered = friends.filter(f => f.category === activeFilter);
+      }
 
-      if (friends.length === 0) {
+      document.getElementById('queue-stat').textContent = `${filtered.length} connection${filtered.length === 1 ? '' : 's'}`;
+
+      if (filtered.length === 0) {
         container.innerHTML = `
           <div class="text-center py-12 border border-dashed border-slate-800 rounded-2xl p-6 text-slate-500 text-sm space-y-2">
-            <div>🌱 No friends added yet.</div>
-            <p class="text-xs text-slate-600">Add your close circle to keep track of connections without streak pressure.</p>
+            <div>🌱 No connections found in this group.</div>
+            <p class="text-xs text-slate-600">Tap "+ Add" above to plant a new connection.</p>
           </div>
         `;
         return;
       }
 
-      // Sort: Lowest battery health first ("Who Needs Love?" queue)
-      const sorted = [...friends].sort((a, b) => {
-        return calculateHealth(a).health - calculateHealth(b).health;
-      });
+      // Sort lowest health first
+      const sorted = [...filtered].sort((a, b) => calculateHealth(a).health - calculateHealth(b).health);
 
       container.innerHTML = sorted.map(friend => {
         const { health, daysSince } = calculateHealth(friend);
+        const plant = getPlantStage(health);
         const barColor = getBatteryColor(health);
         const isExpanded = expandedCards.has(friend.id);
         const isHighlighted = highlightedId === friend.id;
-
-        const avatarDisplay = friend.avatar 
-          ? friend.avatar 
-          : friend.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
-
-        const cadenceLabel = friend.cadence === 7 ? 'Every 7d' : friend.cadence === 14 ? 'Every 14d' : `Every ${friend.cadence}d`;
+        const targetDays = getCadenceDays(friend.tier);
 
         return `
           <div 
@@ -269,31 +512,43 @@
             class="bg-slate-900 border ${isHighlighted ? 'dice-highlight' : 'border-slate-800/90'} rounded-xl p-4 transition-all duration-200"
           >
             <div class="flex items-center justify-between gap-3">
-              <!-- Avatar & Name Area (Click expands history) -->
+              <!-- Avatar & Details -->
               <div class="flex items-center gap-3 cursor-pointer flex-1 min-w-0" onclick="toggleExpand('${friend.id}')">
-                <div class="w-10 h-10 rounded-full bg-slate-800 border border-slate-700/80 flex items-center justify-center text-sm font-bold text-slate-200 shrink-0 select-none">
-                  ${avatarDisplay}
+                <div class="relative shrink-0">
+                  ${friend.photo ? `
+                    <img src="${friend.photo}" alt="${escapeHtml(friend.name)}" class="w-11 h-11 rounded-full object-cover border border-slate-700/80" />
+                  ` : `
+                    <div class="w-11 h-11 rounded-full bg-slate-800 border border-slate-700/80 flex items-center justify-center text-base font-bold text-slate-200 select-none">
+                      ${friend.avatar || friend.name.slice(0, 2).toUpperCase()}
+                    </div>
+                  `}
+                  <span class="absolute -bottom-1 -right-1 text-xs bg-slate-950 rounded-full border border-slate-800 px-0.5" title="${plant.label}">
+                    ${plant.icon}
+                  </span>
                 </div>
+
                 <div class="min-w-0">
                   <div class="flex items-center gap-2">
                     <span class="font-semibold text-slate-100 text-sm truncate">${escapeHtml(friend.name)}</span>
-                    <span class="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 font-mono">${cadenceLabel}</span>
+                    <span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">${friend.category || 'Friend'}</span>
                   </div>
                   <div class="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5">
-                    <span>${daysSince === 0 ? 'Contacted today' : `${daysSince}d ago`}</span>
+                    <span>${daysSince === 0 ? 'Connected today' : `${daysSince}d ago`}</span>
                     <span class="text-slate-600">•</span>
-                    <span class="font-mono text-[11px] ${health === 0 ? 'text-slate-500' : 'text-slate-300'}">${health}% charge</span>
+                    <span class="font-mono text-[11px] ${plant.color}">${health}% charge</span>
+                    <span class="text-slate-600">•</span>
+                    <span class="text-[11px] text-slate-500">${targetDays}d target</span>
                   </div>
                 </div>
               </div>
 
-              <!-- Quick Log Button -->
+              <!-- Quick Water / Log Button -->
               <button 
                 onclick="openTouchModal('${friend.id}')"
-                class="bg-slate-800 hover:bg-slate-700 border border-slate-700/60 text-cyan-400 hover:text-cyan-300 font-medium px-2.5 py-1.5 rounded-lg text-xs transition-colors shrink-0 flex items-center gap-1"
-                title="Log Contact"
+                class="bg-slate-800 hover:bg-slate-700 border border-slate-700/60 text-cyan-400 hover:text-cyan-300 font-medium px-2.5 py-1.5 rounded-lg text-xs transition-colors shrink-0 flex items-center gap-1.5"
+                title="Log interaction"
               >
-                <span>+</span> Touch
+                <span>💧</span> Water
               </button>
             </div>
 
@@ -302,21 +557,21 @@
               <div class="battery-fill h-full rounded-full ${barColor}" style="width: ${health}%"></div>
             </div>
 
-            <!-- History Tray (Revealed on click) -->
+            <!-- Expanded Tray -->
             ${isExpanded ? `
               <div class="mt-4 pt-3 border-t border-slate-800/80 space-y-2 text-xs">
                 <div class="flex justify-between items-center text-slate-400 font-medium text-[11px] uppercase tracking-wider">
-                  <span>Past Connections</span>
-                  <button onclick="removeFriend('${friend.id}')" class="text-rose-400/80 hover:text-rose-300 text-[10px] lowercase transition-colors">remove friend</button>
+                  <span>Connection Journal</span>
+                  <button onclick="removeFriend('${friend.id}')" class="text-rose-400/80 hover:text-rose-300 text-[10px] lowercase transition-colors">remove connection</button>
                 </div>
 
                 ${friend.touches && friend.touches.length > 0 ? `
                   <div class="space-y-1.5 max-h-40 overflow-y-auto pr-1">
-                    ${friend.touches.slice(0, 5).map(touch => `
+                    ${friend.touches.map(touch => `
                       <div class="flex items-start justify-between bg-slate-950/60 p-2 rounded-lg border border-slate-800/40">
                         <div>
                           <div class="flex items-center gap-1.5 font-medium text-slate-300">
-                            <span>${touch.type === 'Call' ? '📞' : touch.type === 'Hangout' ? '☕' : '💬'}</span>
+                            <span>${getTouchEmoji(touch.type)}</span>
                             <span>${touch.type}</span>
                             <span class="text-slate-600 font-mono text-[10px]">${new Date(touch.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                           </div>
@@ -326,7 +581,7 @@
                     `).join('')}
                   </div>
                 ` : `
-                  <div class="text-slate-500 text-xs italic">No history logged yet.</div>
+                  <div class="text-slate-500 text-xs italic">No entries yet.</div>
                 `}
               </div>
             ` : ''}
@@ -335,17 +590,38 @@
       }).join('');
     }
 
-    // Roll The Dice Mechanic
+    function getTouchEmoji(type) {
+      switch(type) {
+        case 'Hangout': return '☕';
+        case 'Virtual Hangout': return '💻';
+        case 'Long Call': return '📹';
+        case 'Quick Call': return '📞';
+        case 'Text': return '💬';
+        default: return '🤝';
+      }
+    }
+
+    // Photo input conversion to Base64
+    document.getElementById('input-photo').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+          document.getElementById('input-photo-base64').value = evt.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    // Roll Dice
     function rollTheDice() {
-      // Find friends below 50% health
-      const lowHealthFriends = friends.filter(f => calculateHealth(f).health < 50);
-      
-      const pool = lowHealthFriends.length > 0 ? lowHealthFriends : friends;
+      const lowHealth = friends.filter(f => calculateHealth(f).health < 50);
+      const pool = lowHealth.length > 0 ? lowHealth : friends;
       if (pool.length === 0) return;
 
       const chosen = pool[Math.floor(Math.random() * pool.length)];
       highlightedId = chosen.id;
-      expandedCards.add(chosen.id); // Expand their history card automatically
+      expandedCards.add(chosen.id);
 
       const banner = document.getElementById('dice-banner');
       document.getElementById('dice-banner-name').textContent = chosen.name;
@@ -353,7 +629,6 @@
 
       render();
 
-      // Scroll into view
       setTimeout(() => {
         const el = document.getElementById(`card-${chosen.id}`);
         if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -367,18 +642,17 @@
     }
 
     function toggleExpand(id) {
-      if (expandedCards.has(id)) {
-        expandedCards.delete(id);
-      } else {
-        expandedCards.add(id);
-      }
+      if (expandedCards.has(id)) expandedCards.delete(id);
+      else expandedCards.add(id);
       render();
     }
 
+    // Modals
     function toggleAddModal(show) {
       const modal = document.getElementById('friend-modal');
       if (show) {
         document.getElementById('input-last-contact').value = new Date().toISOString().split('T')[0];
+        document.getElementById('input-photo-base64').value = '';
         modal.classList.remove('hidden');
       } else {
         modal.classList.add('hidden');
@@ -386,23 +660,34 @@
       }
     }
 
-    function openTouchModal(id) {
-      const friend = friends.find(f => f.id === id);
-      if (!friend) return;
-
-      document.getElementById('touch-friend-id').value = id;
-      document.getElementById('touch-modal-name').textContent = friend.name;
-      document.getElementById('touch-note').value = '';
-      document.getElementById('touch-modal').classList.remove('hidden');
-    }
-
-    function toggleTouchModal(show) {
-      const modal = document.getElementById('touch-modal');
+    function toggleSettingsModal(show) {
+      const modal = document.getElementById('settings-modal');
       if (show) {
+        document.getElementById('cfg-cadence-inner').value = cadenceSettings.inner;
+        document.getElementById('cfg-cadence-close').value = cadenceSettings.close;
+        document.getElementById('cfg-cadence-wider').value = cadenceSettings.wider;
+        document.getElementById('cfg-cadence-quarterly').value = cadenceSettings.quarterly;
         modal.classList.remove('hidden');
       } else {
         modal.classList.add('hidden');
       }
+    }
+
+    function toggleAuthModal(show) {
+      document.getElementById('auth-modal').classList.toggle('hidden', !show);
+    }
+
+    function toggleTouchModal(show) {
+      document.getElementById('touch-modal').classList.toggle('hidden', !show);
+    }
+
+    function openTouchModal(id) {
+      const friend = friends.find(f => f.id === id);
+      if (!friend) return;
+      document.getElementById('touch-friend-id').value = id;
+      document.getElementById('touch-modal-name').textContent = friend.name;
+      document.getElementById('touch-note').value = '';
+      toggleTouchModal(true);
     }
 
     function removeFriend(id) {
@@ -413,33 +698,29 @@
       }
     }
 
-    function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
-    }
-
-    // Handlers
+    // Forms
     document.getElementById('friend-form').addEventListener('submit', (e) => {
       e.preventDefault();
       const name = document.getElementById('input-name').value.trim();
+      const category = document.getElementById('input-category').value;
+      const tier = document.getElementById('input-cadence-tier').value;
       const avatar = document.getElementById('input-avatar').value.trim();
-      const cadence = parseInt(document.getElementById('input-cadence').value, 10);
+      const photo = document.getElementById('input-photo-base64').value || null;
       const lastContact = document.getElementById('input-last-contact').value;
 
       if (!name) return;
-
       const timestamp = new Date(lastContact + 'T12:00:00').getTime();
 
-      const newFriend = {
+      friends.push({
         id: Date.now().toString(),
         name,
-        avatar,
-        cadence,
-        touches: [{ type: 'Initial', timestamp, note: 'Added to circle' }]
-      };
+        category,
+        tier,
+        avatar: avatar || '🌱',
+        photo,
+        touches: [{ type: 'Hangout', timestamp, note: 'Initial connection logged' }]
+      });
 
-      friends.push(newFriend);
       saveData();
       toggleAddModal(false);
       render();
@@ -454,13 +735,11 @@
       const friend = friends.find(f => f.id === id);
       if (friend) {
         if (!friend.touches) friend.touches = [];
-        // Add new touch to top of array
         friend.touches.unshift({
           type,
           timestamp: Date.now(),
           note
         });
-
         saveData();
       }
 
@@ -469,7 +748,112 @@
       render();
     });
 
-    // Initial render
+    document.getElementById('settings-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      cadenceSettings.inner = parseInt(document.getElementById('cfg-cadence-inner').value, 10) || 7;
+      cadenceSettings.close = parseInt(document.getElementById('cfg-cadence-close').value, 10) || 14;
+      cadenceSettings.wider = parseInt(document.getElementById('cfg-cadence-wider').value, 10) || 45;
+      cadenceSettings.quarterly = parseInt(document.getElementById('cfg-cadence-quarterly').value, 10) || 90;
+
+      saveSettings();
+      toggleSettingsModal(false);
+      render();
+    });
+
+    // Web Notifications & Reminders
+    function updateNotificationButton() {
+      const btn = document.getElementById('btn-request-notifications');
+      const text = document.getElementById('notification-status-text');
+      if (!('Notification' in window)) {
+        text.textContent = 'Notifications not supported on this device.';
+        btn.classList.add('hidden');
+        return;
+      }
+
+      if (Notification.permission === 'granted') {
+        text.textContent = 'Gentle check-in reminders are active.';
+        btn.textContent = 'Active ✓';
+        btn.classList.replace('text-cyan-400', 'text-emerald-400');
+        btn.onclick = testNotification;
+      } else if (Notification.permission === 'denied') {
+        text.textContent = 'Reminders blocked in browser settings.';
+        btn.textContent = 'Blocked';
+        btn.classList.replace('text-cyan-400', 'text-slate-500');
+      }
+    }
+
+    function requestNotificationPermission() {
+      if (!('Notification' in window)) return;
+      Notification.requestPermission().then(permission => {
+        updateNotificationButton();
+        if (permission === 'granted') {
+          checkRemindersAndNotify();
+        }
+      });
+    }
+
+    function testNotification() {
+      checkRemindersAndNotify(true);
+    }
+
+    function checkRemindersAndNotify(isTest = false) {
+      if (Notification.permission !== 'granted') return;
+      const thirsty = friends.filter(f => calculateHealth(f).health <= 25);
+      
+      if (thirsty.length > 0) {
+        const person = thirsty[0];
+        new Notification('Kinship • Gentle Reminder', {
+          body: `${person.name} could use some love! Their plant has reached the ${getPlantStage(calculateHealth(person).health).label} stage.`,
+          icon: '🌱'
+        });
+      } else if (isTest) {
+        new Notification('Kinship • All Connections Blooming', {
+          body: 'All your plants are currently well hydrated!',
+          icon: '🌿'
+        });
+      }
+    }
+
+    // Export / Import
+    function exportBackup() {
+      const blob = new Blob([JSON.stringify({ friends, cadenceSettings }, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `kinship_backup_${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importBackup(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = JSON.parse(e.target.result);
+          if (data.friends) friends = data.friends;
+          if (data.cadenceSettings) cadenceSettings = data.cadenceSettings;
+          saveData();
+          saveSettings();
+          render();
+          toggleAuthModal(false);
+          alert('Backup imported successfully!');
+        } catch (err) {
+          alert('Failed to parse backup JSON file.');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Initialize
+    updateNotificationButton();
     render();
   </script>
 </body>
