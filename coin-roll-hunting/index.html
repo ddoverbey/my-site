@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CRH Hunt Tracker & Stats Calculator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen p-4 sm:p-8 flex flex-col items-center">
+
+  <main class="w-full max-w-5xl space-y-6">
+    <!-- Header -->
+    <header class="border-b border-slate-800 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+          <span>🪙</span> Coin Roll Hunting Analytics
+        </h1>
+        <p class="text-sm text-slate-400">Log box hunts & calculate silver yields, hit rates, and returns.</p>
+      </div>
+
+      <!-- Spot Silver Setting -->
+      <div class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 flex items-center space-x-2 self-start sm:self-auto">
+        <label for="silver-spot" class="text-xs font-semibold text-slate-400 uppercase">Spot Silver ($/oz):</label>
+        <div class="relative">
+          <span class="absolute left-2.5 top-1.5 text-slate-400 text-sm">$</span>
+          <input 
+            id="silver-spot" 
+            type="number" 
+            step="0.10" 
+            value="33.00" 
+            class="w-24 bg-slate-950 border border-slate-700 rounded px-2 py-1 pl-6 text-sm text-cyan-400 font-mono font-bold focus:outline-none focus:border-cyan-500"
+          />
+        </div>
+      </div>
+    </header>
+
+    <!-- Top KPI Cards -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+        <div class="text-xs font-semibold uppercase text-slate-400">Searched</div>
+        <div id="stat-total-face" class="text-xl font-mono font-bold text-slate-100 mt-1">$0.00</div>
+        <div id="stat-total-boxes" class="text-xs text-slate-500 mt-0.5">0 boxes searched</div>
+      </div>
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+        <div class="text-xs font-semibold uppercase text-slate-400">Silver Found</div>
+        <div id="stat-total-silver" class="text-xl font-mono font-bold text-cyan-400 mt-1">0</div>
+        <div id="stat-silver-hit-rate" class="text-xs text-slate-500 mt-0.5">0.0% box hit rate</div>
+      </div>
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+        <div class="text-xs font-semibold uppercase text-slate-400">Net Profit (Melt - Face)</div>
+        <div id="stat-net-melt" class="text-xl font-mono font-bold text-emerald-400 mt-1">$0.00</div>
+        <div id="stat-gross-melt" class="text-xs text-slate-500 mt-0.5">$0.00 gross melt</div>
+      </div>
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+        <div class="text-xs font-semibold uppercase text-slate-400">Hourly Return</div>
+        <div id="stat-dollars-per-hour" class="text-xl font-mono font-bold text-amber-400 mt-1">$0.00 / hr</div>
+        <div id="stat-hours-searched" class="text-xs text-slate-500 mt-0.5">0.0 hrs logged</div>
+      </div>
+    </div>
+
+    <!-- Log Session Form -->
+    <section class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+      <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Log a Hunt Session</h2>
+      <form id="hunt-form" class="space-y-4">
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+          <div>
+            <label for="input-date" class="block text-xs font-medium text-slate-400 mb-1">Date</label>
+            <input id="input-date" type="date" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm focus:border-cyan-500 outline-none text-slate-200" />
+          </div>
+          <div>
+            <label for="input-boxes" class="block text-xs font-medium text-slate-400 mb-1">Boxes ($500 ea)</label>
+            <input id="input-boxes" type="number" min="0.5" step="0.5" value="1" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm focus:border-cyan-500 outline-none font-mono text-slate-200" />
+          </div>
+          <div>
+            <label for="input-90" class="block text-xs font-medium text-slate-400 mb-1">90% Halves</label>
+            <input id="input-90" type="number" min="0" step="1" value="0" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm focus:border-cyan-500 outline-none font-mono text-slate-200" />
+          </div>
+          <div>
+            <label for="input-40" class="block text-xs font-medium text-slate-400 mb-1">40% Halves</label>
+            <input id="input-40" type="number" min="0" step="1" value="0" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm focus:border-cyan-500 outline-none font-mono text-slate-200" />
+          </div>
+          <div>
+            <label for="input-nifc" class="block text-xs font-medium text-slate-400 mb-1">NIFCs</label>
+            <input id="input-nifc" type="number" min="0" step="1" value="0" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm focus:border-cyan-500 outline-none font-mono text-slate-200" />
+          </div>
+          <div>
+            <label for="input-hours" class="block text-xs font-medium text-slate-400 mb-1">Hours Hunted</label>
+            <input id="input-hours" type="number" min="0" step="0.1" value="0.5" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm focus:border-cyan-500 outline-none font-mono text-slate-200" />
+          </div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-3">
+          <input id="input-notes" type="text" placeholder="Notes (e.g. Loomis box, 1964 Kennedy, ender, bank branch...)" class="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm focus:border-cyan-500 outline-none text-slate-200" />
+          <button type="submit" class="bg-cyan-600 hover:bg-cyan-500 font-semibold px-6 py-2 rounded-lg text-sm transition-colors text-white whitespace-nowrap">
+            + Add Hunt
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Analytics Breakdown Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      
+      <!-- Melt Breakdown -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+        <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Melt & Value Breakdown</h2>
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-slate-800 text-left text-xs font-semibold text-slate-400 uppercase">
+              <th class="pb-2">Category</th>
+              <th class="pb-2 text-right">Count</th>
+              <th class="pb-2 text-right">Face</th>
+              <th class="pb-2 text-right">Melt</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-800/60 font-mono text-slate-200">
+            <tr>
+              <td class="py-2 text-slate-300 font-sans">90% Halves</td>
+              <td id="table-90-count" class="py-2 text-right">0</td>
+              <td id="table-90-face" class="py-2 text-right text-slate-400">$0.00</td>
+              <td id="table-90-melt" class="py-2 text-right text-cyan-400">$0.00</td>
+            </tr>
+            <tr>
+              <td class="py-2 text-slate-300 font-sans">40% Halves</td>
+              <td id="table-40-count" class="py-2 text-right">0</td>
+              <td id="table-40-face" class="py-2 text-right text-slate-400">$0.00</td>
+              <td id="table-40-melt" class="py-2 text-right text-cyan-400">$0.00</td>
+            </tr>
+            <tr class="font-bold bg-slate-950/40">
+              <td class="py-2 text-white font-sans">Total Silver</td>
+              <td id="table-total-count" class="py-2 text-right">0</td>
+              <td id="table-total-face" class="py-2 text-right text-slate-300">$0.00</td>
+              <td id="table-total-melt" class="py-2 text-right text-cyan-300">$0.00</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="mt-4 pt-3 border-t border-slate-800 flex justify-between items-center text-sm">
+          <span class="text-slate-400">Net Value Added:</span>
+          <span id="table-net-profit" class="font-mono font-bold text-base text-emerald-400">$0.00</span>
+        </div>
+      </div>
+
+      <!-- Box Hit Rates & Stats -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+        <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Box Hit Rates & Statistics</h2>
+        <div class="space-y-2.5 text-sm">
+          <div class="flex justify-between py-1 border-b border-slate-800/40">
+            <span class="text-slate-400">Boxes with Silver</span>
+            <span id="stat-rate-silver" class="font-mono font-semibold text-slate-200">0.0% (0)</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-slate-800/40">
+            <span class="text-slate-400">Boxes with 90%</span>
+            <span id="stat-rate-90" class="font-mono font-semibold text-slate-200">0.0% (0)</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-slate-800/40">
+            <span class="text-slate-400">Boxes with 40%</span>
+            <span id="stat-rate-40" class="font-mono font-semibold text-slate-200">0.0% (0)</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-slate-800/40">
+            <span class="text-slate-400">Boxes with both 90% & 40%</span>
+            <span id="stat-rate-both" class="font-mono font-semibold text-slate-200">0.0% (0)</span>
+          </div>
+          <div class="flex justify-between py-1">
+            <span class="text-slate-400">Boxes with NIFC</span>
+            <span id="stat-rate-nifc" class="font-mono font-semibold text-slate-200">0.0% (0)</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Recent Hunts Table -->
+    <section class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+      <div class="flex justify-between items-center mb-3">
+        <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Hunts History</h2>
+        <button id="btn-clear-all" class="text-xs text-rose-400 hover:text-rose-300 font-medium">Clear All</button>
+      </div>
+      
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm text-left">
+          <thead class="text-xs text-slate-400 uppercase border-b border-slate-800 font-semibold">
+            <tr>
+              <th class="py-2 px-3">Date</th>
+              <th class="py-2 px-3 text-right">Boxes</th>
+              <th class="py-2 px-3 text-right">90%</th>
+              <th class="py-2 px-3 text-right">40%</th>
+              <th class="py-2 px-3 text-right">NIFC</th>
+              <th class="py-2 px-3 text-right">Time</th>
+              <th class="py-2 px-3 text-right">Net Value</th>
+              <th class="py-2 px-3">Notes</th>
+              <th class="py-2 px-3 text-center">Action</th>
+            </tr>
+          </thead>
+          <tbody id="hunts-tbody" class="divide-y divide-slate-800/60 font-mono text-slate-200">
+            <!-- Dynamically injected -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // Spec constants
+    const ASW_90 = 0.36169; // Troy oz per 90% half
+    const ASW_40 = 0.1479;  // Troy oz per 40% half
+    const FACE_VALUE_HALF = 0.50;
+    const BOX_VALUE = 500.00;
+
+    // Form inputs
+    const spotInput = document.getElementById('silver-spot');
+    const huntForm = document.getElementById('hunt-form');
+    const inputDate = document.getElementById('input-date');
+    const inputBoxes = document.getElementById('input-boxes');
+    const input90 = document.getElementById('input-90');
+    const input40 = document.getElementById('input-40');
+    const inputNifc = document.getElementById('input-nifc');
+    const inputHours = document.getElementById('input-hours');
+    const inputNotes = document.getElementById('input-notes');
+    const huntsTbody = document.getElementById('hunts-tbody');
+    const btnClearAll = document.getElementById('btn-clear-all');
+
+    // Default date to today
+    inputDate.value = new Date().toISOString().split('T')[0];
+
+    // Persisted state
+    let hunts = JSON.parse(localStorage.getItem('crh_hunts') || '[]');
+    let spotPrice = parseFloat(localStorage.getItem('crh_spot_price') || '33.00');
+    spotInput.value = spotPrice.toFixed(2);
+
+    function saveState() {
+      localStorage.setItem('crh_hunts', JSON.stringify(hunts));
+      localStorage.setItem('crh_spot_price', spotInput.value);
+    }
+
+    function formatCurrency(val) {
+      return '$' + val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function calculateAndRender() {
+      const spot = parseFloat(spotInput.value) || 0;
+
+      let totalBoxes = 0;
+      let total90 = 0;
+      let total40 = 0;
+      let totalNifc = 0;
+      let totalHours = 0;
+
+      let boxesWithSilver = 0;
+      let boxesWith90 = 0;
+      let boxesWith40 = 0;
+      let boxesWithBoth = 0;
+      let boxesWithNifc = 0;
+
+      hunts.forEach(h => {
+        totalBoxes += h.boxes;
+        total90 += h.count90;
+        total40 += h.count40;
+        totalNifc += h.countNifc;
+        totalHours += h.hours;
+
+        const hasSilver = (h.count90 + h.count40) > 0;
+        const has90 = h.count90 > 0;
+        const has40 = h.count40 > 0;
+        const hasBoth = has90 && has40;
+        const hasNifc = h.countNifc > 0;
+
+        // Weight session hit rates proportionally by boxes searched in that session
+        if (hasSilver) boxesWithSilver += h.boxes;
+        if (has90) boxesWith90 += h.boxes;
+        if (has40) boxesWith40 += h.boxes;
+        if (hasBoth) boxesWithBoth += h.boxes;
+        if (hasNifc) boxesWithNifc += h.boxes;
+      });
+
+      const totalFaceValueSearched = totalBoxes * BOX_VALUE;
+      const totalSilverFound = total90 + total40;
+
+      const face90 = total90 * FACE_VALUE_HALF;
+      const face40 = total40 * FACE_VALUE_HALF;
+      const totalFaceKept = face90 + face40;
+
+      const melt90 = total90 * ASW_90 * spot;
+      const melt40 = total40 * ASW_40 * spot;
+      const totalMelt = melt90 + melt40;
+      const netProfit = totalMelt - totalFaceKept;
+
+      const dollarsPerHour = totalHours > 0 ? netProfit / totalHours : 0;
+      const silverHitRate = totalBoxes > 0 ? (boxesWithSilver / totalBoxes) * 100 : 0;
+
+      // Top Cards
+      document.getElementById('stat-total-face').textContent = formatCurrency(totalFaceValueSearched);
+      document.getElementById('stat-total-boxes').textContent = `${totalBoxes.toLocaleString()} boxes searched`;
+
+      document.getElementById('stat-total-silver').textContent = totalSilverFound.toLocaleString();
+      document.getElementById('stat-silver-hit-rate').textContent = `${silverHitRate.toFixed(1)}% box hit rate`;
+
+      document.getElementById('stat-net-melt').textContent = formatCurrency(netProfit);
+      document.getElementById('stat-gross-melt').textContent = `${formatCurrency(totalMelt)} gross melt`;
+
+      document.getElementById('stat-dollars-per-hour').textContent = `${formatCurrency(dollarsPerHour)} / hr`;
+      document.getElementById('stat-hours-searched').textContent = `${totalHours.toFixed(1)} hrs logged`;
+
+      // Financial Breakdown Table
+      document.getElementById('table-90-count').textContent = total90.toLocaleString();
+      document.getElementById('table-90-face').textContent = formatCurrency(face90);
+      document.getElementById('table-90-melt').textContent = formatCurrency(melt90);
+
+      document.getElementById('table-40-count').textContent = total40.toLocaleString();
+      document.getElementById('table-40-face').textContent = formatCurrency(face40);
+      document.getElementById('table-40-melt').textContent = formatCurrency(melt40);
+
+      document.getElementById('table-total-count').textContent = totalSilverFound.toLocaleString();
+      document.getElementById('table-total-face').textContent = formatCurrency(totalFaceKept);
+      document.getElementById('table-total-melt').textContent = formatCurrency(totalMelt);
+      document.getElementById('table-net-profit').textContent = formatCurrency(netProfit);
+
+      // Hit Rates
+      const fmtRate = (hits) => totalBoxes > 0 
+        ? `${((hits / totalBoxes) * 100).toFixed(1)}% (${hits.toFixed(1)} bxs)`
+        : '0.0% (0 bxs)';
+
+      document.getElementById('stat-rate-silver').textContent = fmtRate(boxesWithSilver);
+      document.getElementById('stat-rate-90').textContent = fmtRate(boxesWith90);
+      document.getElementById('stat-rate-40').textContent = fmtRate(boxesWith40);
+      document.getElementById('stat-rate-both').textContent = fmtRate(boxesWithBoth);
+      document.getElementById('stat-rate-nifc').textContent = fmtRate(boxesWithNifc);
+
+      // Table Render
+      renderTable(spot);
+    }
+
+    function renderTable(spot) {
+      if (hunts.length === 0) {
+        huntsTbody.innerHTML = `
+          <tr>
+            <td colspan="9" class="py-6 text-center text-slate-500 font-sans text-xs">
+              No hunt entries logged yet. Add your first hunt above.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      huntsTbody.innerHTML = hunts.map((h, index) => {
+        const melt = (h.count90 * ASW_90 * spot) + (h.count40 * ASW_40 * spot);
+        const face = (h.count90 + h.count40) * FACE_VALUE_HALF;
+        const net = melt - face;
+
+        return `
+          <tr class="hover:bg-slate-800/30 transition-colors">
+            <td class="py-2.5 px-3 font-sans text-slate-300 text-xs">${h.date}</td>
+            <td class="py-2.5 px-3 text-right">${h.boxes}</td>
+            <td class="py-2.5 px-3 text-right ${h.count90 > 0 ? 'text-amber-300 font-bold' : 'text-slate-500'}">${h.count90}</td>
+            <td class="py-2.5 px-3 text-right ${h.count40 > 0 ? 'text-cyan-300 font-bold' : 'text-slate-500'}">${h.count40}</td>
+            <td class="py-2.5 px-3 text-right text-slate-400">${h.countNifc || 0}</td>
+            <td class="py-2.5 px-3 text-right text-slate-400">${h.hours}h</td>
+            <td class="py-2.5 px-3 text-right ${net > 0 ? 'text-emerald-400 font-bold' : 'text-slate-500'}">${formatCurrency(net)}</td>
+            <td class="py-2.5 px-3 font-sans text-slate-400 text-xs truncate max-w-[150px]">${escapeHtml(h.notes || '')}</td>
+            <td class="py-2.5 px-3 text-center">
+              <button onclick="removeHunt(${index})" class="text-slate-500 hover:text-rose-400 transition-colors" title="Delete hunt">✕</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    window.removeHunt = function(index) {
+      hunts.splice(index, 1);
+      saveState();
+      calculateAndRender();
+    };
+
+    huntForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      
+      const newHunt = {
+        date: inputDate.value,
+        boxes: parseFloat(inputBoxes.value) || 0,
+        count90: parseInt(input90.value) || 0,
+        count40: parseInt(input40.value) || 0,
+        countNifc: parseInt(inputNifc.value) || 0,
+        hours: parseFloat(inputHours.value) || 0,
+        notes: inputNotes.value.trim()
+      };
+
+      hunts.unshift(newHunt);
+      saveState();
+      calculateAndRender();
+
+      // Reset count fields while preserving date & default box values
+      input90.value = 0;
+      input40.value = 0;
+      inputNifc.value = 0;
+      inputNotes.value = '';
+    });
+
+    spotInput.addEventListener('input', () => {
+      saveState();
+      calculateAndRender();
+    });
+
+    btnClearAll.addEventListener('click', () => {
+      if (confirm('Are you sure you want to delete all logged hunts?')) {
+        hunts = [];
+        saveState();
+        calculateAndRender();
+      }
+    });
+
+    // Initial load
+    calculateAndRender();
+  </script>
+</body>
+</html>
