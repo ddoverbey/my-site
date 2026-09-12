@@ -5,12 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Cultivate • Connection Garden</title>
   
-  <link rel="manifest" href="data:application/manifest+json;base64,eyJuYW1lIjoiQ3VsdGl2YXRlIiwic2hvcnRfbmFtZSI6IkN1bHRpdmF0ZSIsInN0YWJ0X3VybCI6Ii4iLCJkaXNwbGF5Ijoic3RhbmRhbG9uZSItransInRoZW1lX2NvbG9yIjoiIzBiMTIxMCJ9" />
+  <link rel="manifest" href="data:application/manifest+json;base64,eyJuYW1lIjoiQ3VsdGl2YXRlIiwic2hvcnRfbmFtZSI6IkN1bHRpdmF0ZSIsInN0YXJ0X3VybCI6Ii4iLCJkaXNwbGF5Ijoic3RhbmRhbG9uZSItransInRoZW1lX2NvbG9yIjoiIzBiMTIxMCJ9" />
   <meta name="theme-color" content="#0b1210" />
   
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Optional Supabase Client -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   
   <style>
     body {
@@ -69,13 +67,11 @@
           ⚙️
         </button>
         <button 
-          id="btn-auth-header"
           onclick="toggleAuthModal(true)"
-          class="p-2 text-[#9eb3a8] hover:text-[#f4ede4] hover:bg-[#182721]/80 rounded-lg border border-[#23352e] transition-colors text-xs backdrop-blur-sm relative"
-          title="Account & Cloud Sync"
+          class="p-2 text-[#9eb3a8] hover:text-[#f4ede4] hover:bg-[#182721]/80 rounded-lg border border-[#23352e] transition-colors text-xs backdrop-blur-sm"
+          title="Account & Data Portability"
         >
           ☁️
-          <span id="sync-status-dot" class="absolute top-1 right-1 w-2 h-2 rounded-full bg-slate-500"></span>
         </button>
         <button 
           id="btn-roll-dice"
@@ -173,7 +169,7 @@
           </div>
         </div>
 
-        <!-- Avatar Selection: Emoji OR Photo Upload -->
+        <!-- Avatar Selection -->
         <div class="space-y-2 border border-[#283e35] bg-[#0b1210]/60 p-3 rounded-xl">
           <label class="block text-xs font-semibold text-[#a3b8ad] uppercase tracking-wider">Avatar Choice</label>
           <div class="grid grid-cols-2 gap-2">
@@ -313,117 +309,38 @@
     </div>
   </div>
 
-  <!-- AUTH & CLOUD SYNC MODAL -->
+  <!-- DATA & BACKUP MODAL -->
   <div id="auth-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-[#14201b] border border-[#283e35] rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
       <div class="flex justify-between items-center border-b border-[#283e35] pb-3">
-        <h3 class="font-bold text-sm text-[#f4ede4]">Account & Cloud Sync</h3>
+        <h3 class="font-bold text-sm text-[#f4ede4]">Data & Backup</h3>
         <button onclick="toggleAuthModal(false)" class="text-[#8da498] hover:text-[#f4ede4] text-sm">✕</button>
       </div>
 
-      <!-- Logged-In Status -->
-      <div id="auth-view-logged-in" class="hidden space-y-4">
-        <div class="bg-[#0b1210] border border-[#283e35] rounded-xl p-3 text-xs text-[#a3b8ad] space-y-1">
-          <div class="flex items-center justify-between">
-            <span class="text-emerald-400 font-medium flex items-center gap-1.5">
-              <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse"></span> Cloud Synced
-            </span>
-            <span id="auth-current-email" class="text-[#f4ede4] font-mono text-[11px] truncate max-w-[150px]"></span>
-          </div>
-          <p class="text-[11px] text-[#6b8276] pt-1">Your connections and cadences are encrypted and synced to your central account.</p>
+      <div class="bg-[#0b1210] border border-[#283e35] rounded-xl p-3 text-xs text-[#a3b8ad] space-y-1">
+        <div class="font-semibold text-[#f4ede4] flex items-center gap-1.5">
+          <span>🔒</span> Private Local Storage
         </div>
-
-        <button 
-          type="button"
-          onclick="syncToCloud(true)" 
-          class="w-full bg-[#1c2d26] hover:bg-[#253d33] text-teal-300 py-2 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-2 border border-[#2e473d]"
-        >
-          <span>🔄</span> Force Cloud Sync Now
-        </button>
-
-        <button 
-          type="button"
-          onclick="handleLogout()" 
-          class="w-full bg-[#241710] hover:bg-[#342217] text-[#ea580c] py-2 rounded-lg text-xs font-semibold transition-colors border border-[#ea580c]/30"
-        >
-          Sign Out
-        </button>
+        <p>Your connections currently live securely inside your browser's local cache with zero external trackers.</p>
       </div>
 
-      <!-- Logged-Out (Sign In / Sign Up) Form -->
-      <div id="auth-view-logged-out" class="space-y-4">
-        <div class="bg-[#0b1210] border border-[#283e35] rounded-xl p-3 text-xs text-[#a3b8ad]">
-          <p>Create an account to sync your garden across desktop, phone, and tablet.</p>
-        </div>
+      <div class="space-y-2">
+        <button onclick="exportBackup()" class="w-full bg-[#1c2d26] hover:bg-[#253d33] text-emerald-100 py-2 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-2 border border-[#2e473d]">
+          <span>📥</span> Export Backup JSON
+        </button>
 
-        <div class="space-y-3">
-          <div>
-            <label class="block text-xs font-semibold text-[#a3b8ad] uppercase tracking-wider mb-1">Email</label>
-            <input id="auth-email" type="email" placeholder="you@domain.com" class="w-full bg-[#0b1210] border border-[#283e35] rounded-lg px-3 py-2 text-sm text-emerald-100 focus:outline-none focus:border-teal-500" />
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold text-[#a3b8ad] uppercase tracking-wider mb-1">Password</label>
-            <input id="auth-password" type="password" placeholder="••••••••" class="w-full bg-[#0b1210] border border-[#283e35] rounded-lg px-3 py-2 text-sm text-emerald-100 focus:outline-none focus:border-teal-500" />
-          </div>
-
-          <div id="auth-error-msg" class="text-xs text-[#ea580c] hidden"></div>
-
-          <div class="grid grid-cols-2 gap-2 pt-1">
-            <button 
-              type="button" 
-              onclick="handleLogin()" 
-              class="w-full bg-[#115e59] hover:bg-[#0f766e] text-white py-2 rounded-lg text-xs font-semibold transition-colors border border-teal-500/30"
-            >
-              Sign In
-            </button>
-            <button 
-              type="button" 
-              onclick="handleSignUp()" 
-              class="w-full bg-[#1c2d26] hover:bg-[#253d33] text-teal-300 py-2 rounded-lg text-xs font-semibold transition-colors border border-[#2e473d]"
-            >
-              Create Account
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Offline JSON Portability Tools -->
-      <div class="border-t border-[#283e35] pt-3 space-y-2">
-        <div class="text-[11px] text-[#6b8276] uppercase font-semibold">Offline Backup</div>
-        <div class="grid grid-cols-2 gap-2">
-          <button onclick="exportBackup()" class="bg-[#131f1a] hover:bg-[#1c2d26] text-slate-300 py-1.5 rounded-lg text-[11px] transition-colors border border-[#23352e]">
-            📥 Export JSON
-          </button>
-          <label class="bg-[#131f1a] hover:bg-[#1c2d26] text-slate-300 py-1.5 rounded-lg text-[11px] transition-colors border border-[#23352e] text-center cursor-pointer">
-            📤 Import JSON
-            <input type="file" id="import-json-file" accept=".json" class="hidden" onchange="importBackup(event)" />
-          </label>
-        </div>
+        <label class="w-full bg-[#1c2d26] hover:bg-[#253d33] text-emerald-100 py-2 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer border border-[#2e473d]">
+          <span>📤</span> Import Backup JSON
+          <input type="file" id="import-json-file" accept=".json" class="hidden" onchange="importBackup(event)" />
+        </label>
       </div>
     </div>
   </div>
 
   <script>
-    /* =========================================================================
-       SUPABASE CONFIGURATION (Plug in when ready, runs 100% locally if blank)
-       ========================================================================= */
-    const SUPABASE_URL = '';
-    const SUPABASE_ANON_KEY = '';
-    
-    let supabase = null;
-    let currentUser = null;
-
-    if (window.supabase && SUPABASE_URL && SUPABASE_URL.startsWith('https://') && !SUPABASE_URL.includes('YOUR_PROJECT_ID')) {
-      try {
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-      } catch (err) {
-        console.warn('Supabase initialization bypassed:', err);
-      }
-    }
-
-    const STORAGE_KEY = 'cultivate_friends_v5';
-    const SETTINGS_KEY = 'cultivate_settings_v5';
+    // Clean, self-contained local storage key
+    const STORAGE_KEY = 'cultivate_garden_data_v1';
+    const SETTINGS_KEY = 'cultivate_garden_settings_v1';
 
     let cadenceSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || JSON.stringify({
       inner: 7,
@@ -468,11 +385,11 @@
           id: '2',
           name: 'Mom (Example)',
           category: 'Family',
-          tier: 'inner', // 7-day cadence
+          tier: 'inner', // 7-day target
           avatar: '❤️',
           photo: null,
           touches: [
-            // 5 days ago = 28% health (🍁 Autumn Tree)
+            // 5 days ago on 7d cadence = 28% health -> 🍁 Autumn Tree
             { type: 'Hangout', timestamp: now - (5 * DAY), note: 'Sunday family dinner' }
           ]
         },
@@ -484,6 +401,7 @@
           avatar: '🏡',
           photo: null,
           touches: [
+            // 50 days ago on 45d cadence = 0% health -> 🥀 Withered / Dead Bush
             { type: 'Hangout', timestamp: now - (50 * DAY), note: 'Attended housewarming party' }
           ]
         },
@@ -495,13 +413,14 @@
           avatar: '🎓',
           photo: null,
           touches: [
+            // 85 days ago on 90d cadence = 0% health -> 🥀 Withered
             { type: 'Text', timestamp: now - (85 * DAY), note: 'Work and networking check-in email' }
           ]
         }
       ];
     }
 
-    // Force load fresh defaults or restore valid local list
+    // Always ensure fresh default list exists
     let friends = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
     if (!friends || !Array.isArray(friends) || friends.length === 0) {
       friends = getDefaultExamples();
@@ -514,171 +433,12 @@
 
     function saveData() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(friends));
-      if (currentUser && supabase) {
-        syncToCloud(false);
-      }
     }
 
     function saveSettings() {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(cadenceSettings));
-      if (currentUser && supabase) {
-        syncToCloud(false);
-      }
     }
 
-    /* =========================================================================
-       FAIL-SAFE AUTH & CLOUD SYNC
-       ========================================================================= */
-    function initAuth() {
-      if (!supabase) return;
-
-      supabase.auth.getSession().then(({ data }) => {
-        if (data && data.session && data.session.user) {
-          setLoggedInState(data.session.user);
-          loadFromCloud();
-        }
-      }).catch(err => console.warn('Auth check error:', err));
-
-      supabase.auth.onAuthStateChange((event, session) => {
-        if (session && session.user) {
-          setLoggedInState(session.user);
-          if (event === 'SIGNED_IN') {
-            loadFromCloud();
-          }
-        } else {
-          setLoggedOutState();
-        }
-      });
-    }
-
-    function setLoggedInState(user) {
-      currentUser = user;
-      const dot = document.getElementById('sync-status-dot');
-      if (dot) dot.className = 'absolute top-1 right-1 w-2 h-2 rounded-full bg-emerald-400';
-      const emailEl = document.getElementById('auth-current-email');
-      if (emailEl) emailEl.textContent = user.email;
-      
-      const loggedInView = document.getElementById('auth-view-logged-in');
-      const loggedOutView = document.getElementById('auth-view-logged-out');
-      if (loggedInView) loggedInView.classList.remove('hidden');
-      if (loggedOutView) loggedOutView.classList.add('hidden');
-    }
-
-    function setLoggedOutState() {
-      currentUser = null;
-      const dot = document.getElementById('sync-status-dot');
-      if (dot) dot.className = 'absolute top-1 right-1 w-2 h-2 rounded-full bg-slate-500';
-      
-      const loggedInView = document.getElementById('auth-view-logged-in');
-      const loggedOutView = document.getElementById('auth-view-logged-out');
-      if (loggedInView) loggedInView.classList.add('hidden');
-      if (loggedOutView) loggedOutView.classList.remove('hidden');
-    }
-
-    async function handleLogin() {
-      if (!supabase) return alert('Enter your Supabase URL & Key in the code to activate cloud login.');
-      const email = document.getElementById('auth-email').value.trim();
-      const password = document.getElementById('auth-password').value;
-      const errEl = document.getElementById('auth-error-msg');
-      errEl.classList.add('hidden');
-
-      try {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) {
-          errEl.textContent = error.message;
-          errEl.classList.remove('hidden');
-        } else {
-          toggleAuthModal(false);
-        }
-      } catch (e) {
-        errEl.textContent = e.message;
-        errEl.classList.remove('hidden');
-      }
-    }
-
-    async function handleSignUp() {
-      if (!supabase) return alert('Enter your Supabase URL & Key in the code to activate cloud login.');
-      const email = document.getElementById('auth-email').value.trim();
-      const password = document.getElementById('auth-password').value;
-      const errEl = document.getElementById('auth-error-msg');
-      errEl.classList.add('hidden');
-
-      try {
-        const { error } = await supabase.auth.signUp({ email, password });
-        if (error) {
-          errEl.textContent = error.message;
-          errEl.classList.remove('hidden');
-        } else {
-          alert('Account created! Syncing your current garden...');
-          await syncToCloud(true);
-          toggleAuthModal(false);
-        }
-      } catch (e) {
-        errEl.textContent = e.message;
-        errEl.classList.remove('hidden');
-      }
-    }
-
-    async function handleLogout() {
-      if (!supabase) return;
-      await supabase.auth.signOut();
-      setLoggedOutState();
-      toggleAuthModal(false);
-    }
-
-    async function syncToCloud(notify = false) {
-      if (!supabase || !currentUser) return;
-
-      try {
-        const { error } = await supabase.from('user_gardens').upsert({
-          user_id: currentUser.id,
-          friends: friends,
-          cadence_settings: cadenceSettings,
-          updated_at: new Date().toISOString()
-        });
-
-        if (error) {
-          console.error('Cloud Sync Failed:', error);
-          if (notify) alert('Cloud sync error: ' + error.message);
-        } else if (notify) {
-          alert('All connections saved to your cloud account!');
-        }
-      } catch (e) {
-        console.error('Cloud Sync Exception:', e);
-      }
-    }
-
-    async function loadFromCloud() {
-      if (!supabase || !currentUser) return;
-
-      try {
-        const { data, error } = await supabase
-          .from('user_gardens')
-          .select('friends, cadence_settings')
-          .eq('user_id', currentUser.id)
-          .single();
-
-        if (data) {
-          if (data.friends && Array.isArray(data.friends)) {
-            friends = data.friends;
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(friends));
-          }
-          if (data.cadence_settings) {
-            cadenceSettings = data.cadence_settings;
-            localStorage.setItem(SETTINGS_KEY, JSON.stringify(cadenceSettings));
-          }
-          render();
-        } else {
-          await syncToCloud(false);
-        }
-      } catch (e) {
-        console.warn('Cloud load exception:', e);
-      }
-    }
-
-    /* =========================================================================
-       CALCULATIONS & UI RENDERING
-       ========================================================================= */
     function getCadenceDays(tier) {
       return cadenceSettings[tier] || 14;
     }
@@ -739,7 +499,6 @@
         text.textContent = `${averageHealth}% Garden Vitality • Stable`;
         if (icon) icon.textContent = '🌱';
       } else if (averageHealth >= 20) {
-        // Late Fall / Autumn Frost Biome (Terracotta Rust)
         bgColor = '#29160d';
         bar.className = 'h-full bg-[#ea580c] transition-all duration-700';
         text.className = 'text-[11px] font-mono text-[#fdba74]';
@@ -1150,8 +909,7 @@
       return div.innerHTML;
     }
 
-    // Safe launch sequence
-    initAuth();
+    // Launch cleanly
     updateNotificationButton();
     render();
   </script>
