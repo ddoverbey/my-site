@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Kinship • Friend Tracker</title>
+  
+  <!-- Web App Manifest for "Add to Home Screen" -->
+  <link rel="manifest" href="data:application/manifest+json;base64,eyJuYW1lIjoiS2luc2hpcCBUcmFja2VyIiwic2hvcnRfbmFtZSI6IktpbnNoaXAiLCJzdGFydF91cmwiOiIuIiwiZGlzcGxheSI6InN0YW5kYWxvbmUiLCJiYWNrZ3JvdW5kX2NvbG9yIjoiIzAyMDYxNyIsInRoZW1lX2NvbG9yIjoiIzAyMDYxNyJ9" />
+  <meta name="theme-color" content="#020617" />
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Smooth transitions for battery bar */
+    .battery-fill {
+      transition: width 0.4s ease, background-color 0.4s ease;
+    }
+    @keyframes pulse-ring {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.7); }
+      70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(56, 189, 248, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(56, 189, 248, 0); }
+    }
+    .dice-highlight {
+      animation: pulse-ring 1.5s infinite;
+      border-color: #38bdf8 !important;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen p-4 sm:p-6 flex flex-col items-center selection:bg-cyan-500 selection:text-white">
+
+  <main class="w-full max-w-xl space-y-6 pb-20">
+    
+    <!-- Header & Action Bar -->
+    <header class="flex items-center justify-between border-b border-slate-800 pb-4">
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+          <span>🌱</span> Kinship
+        </h1>
+        <p class="text-xs text-slate-400">Zero guilt. Gentle connections.</p>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button 
+          id="btn-roll-dice"
+          onclick="rollTheDice()"
+          class="bg-indigo-950/70 hover:bg-indigo-900 border border-indigo-500/30 text-indigo-300 font-semibold px-3 py-1.5 rounded-lg text-xs transition-colors flex items-center gap-1.5 shadow-sm"
+          title="Pick someone needing connection"
+        >
+          <span>🎲</span> Roll Dice
+        </button>
+        <button 
+          onclick="toggleAddModal(true)"
+          class="bg-cyan-600 hover:bg-cyan-500 text-white font-semibold px-3 py-1.5 rounded-lg text-xs transition-colors flex items-center gap-1 shadow-sm"
+        >
+          <span>+</span> Friend
+        </button>
+      </div>
+    </header>
+
+    <!-- Dice Result Banner (Hidden by default) -->
+    <div id="dice-banner" class="hidden bg-indigo-950/50 border border-indigo-500/40 rounded-xl p-3 flex items-center justify-between text-xs text-indigo-200">
+      <div class="flex items-center gap-2">
+        <span class="text-base">✨</span>
+        <span>The dice chose <strong id="dice-banner-name" class="text-white font-semibold"></strong>! Send a quick hello?</span>
+      </div>
+      <button onclick="dismissDiceBanner()" class="text-indigo-400 hover:text-indigo-200 text-sm px-1">✕</button>
+    </div>
+
+    <!-- Filter / Sort Status Strip -->
+    <div class="flex items-center justify-between text-xs text-slate-400 px-1">
+      <span id="queue-count" class="font-medium">Sorted by lowest charge first</span>
+      <span class="text-[11px] text-slate-500">Decays gracefully over time</span>
+    </div>
+
+    <!-- Who Needs Love Queue (Cards Container) -->
+    <div id="friends-queue" class="space-y-3">
+      <!-- Cards rendered here via JS -->
+    </div>
+  </main>
+
+  <!-- ADD / EDIT FRIEND MODAL -->
+  <div id="friend-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h3 class="font-bold text-sm text-slate-200">Add New Connection</h3>
+        <button onclick="toggleAddModal(false)" class="text-slate-400 hover:text-slate-200 text-sm">✕</button>
+      </div>
+
+      <form id="friend-form" class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Name</label>
+          <input id="input-name" type="text" required placeholder="e.g., Mom, Alex, Sam" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-500" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Avatar / Emoji</label>
+          <input id="input-avatar" type="text" maxlength="2" placeholder="🌱 (Leave blank for initials)" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-500" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Cadence Profile</label>
+          <select id="input-cadence" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-cyan-500">
+            <option value="7">Inner Circle / Mom (Every 7 days)</option>
+            <option value="14" selected>Close Friends (Every 14 days)</option>
+            <option value="45">Wider Network / Dorm Mates (Every 45 days)</option>
+            <option value="90">Quarterly Check-in (Every 90 days)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Last Contact</label>
+          <input id="input-last-contact" type="date" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-cyan-500" />
+        </div>
+
+        <button type="submit" class="w-full bg-cyan-600 hover:bg-cyan-500 font-semibold py-2 rounded-lg text-sm text-white transition-colors mt-2">
+          Save Friend
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- LOG TOUCH MODAL -->
+  <div id="touch-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <div>
+          <h3 class="font-bold text-sm text-slate-200">Log Contact with <span id="touch-modal-name" class="text-cyan-400"></span></h3>
+          <p class="text-[11px] text-slate-500">Recharges battery back to 100%</p>
+        </div>
+        <button onclick="toggleTouchModal(false)" class="text-slate-400 hover:text-slate-200 text-sm">✕</button>
+      </div>
+
+      <form id="touch-form" class="space-y-3">
+        <input type="hidden" id="touch-friend-id" />
+        
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Type of Touch</label>
+          <div class="grid grid-cols-3 gap-2">
+            <label class="flex items-center justify-center gap-1 bg-slate-950 border border-slate-800 py-2 rounded-lg text-xs font-medium cursor-pointer has-[:checked]:border-cyan-500 has-[:checked]:text-cyan-400">
+              <input type="radio" name="touch-type" value="Text" checked class="hidden" />
+              <span>💬 Text</span>
+            </label>
+            <label class="flex items-center justify-center gap-1 bg-slate-950 border border-slate-800 py-2 rounded-lg text-xs font-medium cursor-pointer has-[:checked]:border-cyan-500 has-[:checked]:text-cyan-400">
+              <input type="radio" name="touch-type" value="Call" class="hidden" />
+              <span>📞 Call</span>
+            </label>
+            <label class="flex items-center justify-center gap-1 bg-slate-950 border border-slate-800 py-2 rounded-lg text-xs font-medium cursor-pointer has-[:checked]:border-cyan-500 has-[:checked]:text-cyan-400">
+              <input type="radio" name="touch-type" value="Hangout" class="hidden" />
+              <span>☕ Hangout</span>
+            </label>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Quick Note <span class="text-slate-500 font-normal">(Optional)</span></label>
+          <input id="touch-note" type="text" placeholder="e.g., Talked about his new puppy" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-500" />
+        </div>
+
+        <button type="submit" class="w-full bg-cyan-600 hover:bg-cyan-500 font-semibold py-2 rounded-lg text-sm text-white transition-colors mt-2">
+          Recharge Connection ⚡
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Storage Key
+    const STORAGE_KEY = 'kinship_friends_data';
+
+    // State
+    let friends = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    let expandedCards = new Set();
+    let highlightedId = null;
+
+    // Seed initial mock data if first run so the UI isn't a blank void
+    if (friends.length === 0) {
+      const now = Date.now();
+      const DAY = 1000 * 60 * 60 * 24;
+      friends = [
+        {
+          id: '1',
+          name: 'Mom',
+          avatar: '❤️',
+          cadence: 7,
+          touches: [
+            { type: 'Call', timestamp: now - (5 * DAY), note: 'Checked in on work and weekend plans' }
+          ]
+        },
+        {
+          id: '2',
+          name: 'Guillermo',
+          avatar: '⚡',
+          cadence: 14,
+          touches: [
+            { type: 'Hangout', timestamp: now - (15 * DAY), note: 'Grabbed tacos and talked shop' }
+          ]
+        },
+        {
+          id: '3',
+          name: 'Old Dorm Mates',
+          avatar: '🎓',
+          cadence: 45,
+          touches: [
+            { type: 'Text', timestamp: now - (48 * DAY), note: 'Shared a funny meme in the group chat' }
+          ]
+        }
+      ];
+      saveData();
+    }
+
+    function saveData() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(friends));
+    }
+
+    // Health / Decay Math per Spec:
+    // Health = max(0, 100 - (Days Since Last Contact / Target Cadence) * 100)
+    function calculateHealth(friend) {
+      if (!friend.touches || friend.touches.length === 0) return { health: 0, daysSince: 999 };
+      
+      const lastTouch = friend.touches[0];
+      const now = Date.now();
+      const diffMs = Math.max(0, now - lastTouch.timestamp);
+      const daysSince = diffMs / (1000 * 60 * 60 * 24);
+
+      const health = Math.max(0, Math.min(100, Math.round(100 - (daysSince / friend.cadence) * 100)));
+      return { health, daysSince: Math.floor(daysSince) };
+    }
+
+    // Battery bar styling: Green/Emerald (>60%) -> Amber (25-60%) -> Calm Slate/Muted Grey (0-25%)
+    function getBatteryColor(health) {
+      if (health > 60) return 'bg-emerald-500';
+      if (health > 25) return 'bg-amber-400';
+      return 'bg-slate-600'; // No screaming red alerts; calm grey/slate
+    }
+
+    function render() {
+      const container = document.getElementById('friends-queue');
+
+      if (friends.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-12 border border-dashed border-slate-800 rounded-2xl p-6 text-slate-500 text-sm space-y-2">
+            <div>🌱 No friends added yet.</div>
+            <p class="text-xs text-slate-600">Add your close circle to keep track of connections without streak pressure.</p>
+          </div>
+        `;
+        return;
+      }
+
+      // Sort: Lowest battery health first ("Who Needs Love?" queue)
+      const sorted = [...friends].sort((a, b) => {
+        return calculateHealth(a).health - calculateHealth(b).health;
+      });
+
+      container.innerHTML = sorted.map(friend => {
+        const { health, daysSince } = calculateHealth(friend);
+        const barColor = getBatteryColor(health);
+        const isExpanded = expandedCards.has(friend.id);
+        const isHighlighted = highlightedId === friend.id;
+
+        const avatarDisplay = friend.avatar 
+          ? friend.avatar 
+          : friend.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+
+        const cadenceLabel = friend.cadence === 7 ? 'Every 7d' : friend.cadence === 14 ? 'Every 14d' : `Every ${friend.cadence}d`;
+
+        return `
+          <div 
+            id="card-${friend.id}"
+            class="bg-slate-900 border ${isHighlighted ? 'dice-highlight' : 'border-slate-800/90'} rounded-xl p-4 transition-all duration-200"
+          >
+            <div class="flex items-center justify-between gap-3">
+              <!-- Avatar & Name Area (Click expands history) -->
+              <div class="flex items-center gap-3 cursor-pointer flex-1 min-w-0" onclick="toggleExpand('${friend.id}')">
+                <div class="w-10 h-10 rounded-full bg-slate-800 border border-slate-700/80 flex items-center justify-center text-sm font-bold text-slate-200 shrink-0 select-none">
+                  ${avatarDisplay}
+                </div>
+                <div class="min-w-0">
+                  <div class="flex items-center gap-2">
+                    <span class="font-semibold text-slate-100 text-sm truncate">${escapeHtml(friend.name)}</span>
+                    <span class="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 font-mono">${cadenceLabel}</span>
+                  </div>
+                  <div class="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5">
+                    <span>${daysSince === 0 ? 'Contacted today' : `${daysSince}d ago`}</span>
+                    <span class="text-slate-600">•</span>
+                    <span class="font-mono text-[11px] ${health === 0 ? 'text-slate-500' : 'text-slate-300'}">${health}% charge</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Quick Log Button -->
+              <button 
+                onclick="openTouchModal('${friend.id}')"
+                class="bg-slate-800 hover:bg-slate-700 border border-slate-700/60 text-cyan-400 hover:text-cyan-300 font-medium px-2.5 py-1.5 rounded-lg text-xs transition-colors shrink-0 flex items-center gap-1"
+                title="Log Contact"
+              >
+                <span>+</span> Touch
+              </button>
+            </div>
+
+            <!-- Health Battery Progress Bar -->
+            <div class="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden mt-3 cursor-pointer" onclick="toggleExpand('${friend.id}')">
+              <div class="battery-fill h-full rounded-full ${barColor}" style="width: ${health}%"></div>
+            </div>
+
+            <!-- History Tray (Revealed on click) -->
+            ${isExpanded ? `
+              <div class="mt-4 pt-3 border-t border-slate-800/80 space-y-2 text-xs">
+                <div class="flex justify-between items-center text-slate-400 font-medium text-[11px] uppercase tracking-wider">
+                  <span>Past Connections</span>
+                  <button onclick="removeFriend('${friend.id}')" class="text-rose-400/80 hover:text-rose-300 text-[10px] lowercase transition-colors">remove friend</button>
+                </div>
+
+                ${friend.touches && friend.touches.length > 0 ? `
+                  <div class="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                    ${friend.touches.slice(0, 5).map(touch => `
+                      <div class="flex items-start justify-between bg-slate-950/60 p-2 rounded-lg border border-slate-800/40">
+                        <div>
+                          <div class="flex items-center gap-1.5 font-medium text-slate-300">
+                            <span>${touch.type === 'Call' ? '📞' : touch.type === 'Hangout' ? '☕' : '💬'}</span>
+                            <span>${touch.type}</span>
+                            <span class="text-slate-600 font-mono text-[10px]">${new Date(touch.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                          </div>
+                          ${touch.note ? `<p class="text-slate-400 text-[11px] mt-0.5">${escapeHtml(touch.note)}</p>` : ''}
+                        </div>
+                      </div>
+                    `).join('')}
+                  </div>
+                ` : `
+                  <div class="text-slate-500 text-xs italic">No history logged yet.</div>
+                `}
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Roll The Dice Mechanic
+    function rollTheDice() {
+      // Find friends below 50% health
+      const lowHealthFriends = friends.filter(f => calculateHealth(f).health < 50);
+      
+      const pool = lowHealthFriends.length > 0 ? lowHealthFriends : friends;
+      if (pool.length === 0) return;
+
+      const chosen = pool[Math.floor(Math.random() * pool.length)];
+      highlightedId = chosen.id;
+      expandedCards.add(chosen.id); // Expand their history card automatically
+
+      const banner = document.getElementById('dice-banner');
+      document.getElementById('dice-banner-name').textContent = chosen.name;
+      banner.classList.remove('hidden');
+
+      render();
+
+      // Scroll into view
+      setTimeout(() => {
+        const el = document.getElementById(`card-${chosen.id}`);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 50);
+    }
+
+    function dismissDiceBanner() {
+      highlightedId = null;
+      document.getElementById('dice-banner').classList.add('hidden');
+      render();
+    }
+
+    function toggleExpand(id) {
+      if (expandedCards.has(id)) {
+        expandedCards.delete(id);
+      } else {
+        expandedCards.add(id);
+      }
+      render();
+    }
+
+    function toggleAddModal(show) {
+      const modal = document.getElementById('friend-modal');
+      if (show) {
+        document.getElementById('input-last-contact').value = new Date().toISOString().split('T')[0];
+        modal.classList.remove('hidden');
+      } else {
+        modal.classList.add('hidden');
+        document.getElementById('friend-form').reset();
+      }
+    }
+
+    function openTouchModal(id) {
+      const friend = friends.find(f => f.id === id);
+      if (!friend) return;
+
+      document.getElementById('touch-friend-id').value = id;
+      document.getElementById('touch-modal-name').textContent = friend.name;
+      document.getElementById('touch-note').value = '';
+      document.getElementById('touch-modal').classList.remove('hidden');
+    }
+
+    function toggleTouchModal(show) {
+      const modal = document.getElementById('touch-modal');
+      if (show) {
+        modal.classList.remove('hidden');
+      } else {
+        modal.classList.add('hidden');
+      }
+    }
+
+    function removeFriend(id) {
+      if (confirm('Are you sure you want to remove this connection?')) {
+        friends = friends.filter(f => f.id !== id);
+        saveData();
+        render();
+      }
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Handlers
+    document.getElementById('friend-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const name = document.getElementById('input-name').value.trim();
+      const avatar = document.getElementById('input-avatar').value.trim();
+      const cadence = parseInt(document.getElementById('input-cadence').value, 10);
+      const lastContact = document.getElementById('input-last-contact').value;
+
+      if (!name) return;
+
+      const timestamp = new Date(lastContact + 'T12:00:00').getTime();
+
+      const newFriend = {
+        id: Date.now().toString(),
+        name,
+        avatar,
+        cadence,
+        touches: [{ type: 'Initial', timestamp, note: 'Added to circle' }]
+      };
+
+      friends.push(newFriend);
+      saveData();
+      toggleAddModal(false);
+      render();
+    });
+
+    document.getElementById('touch-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const id = document.getElementById('touch-friend-id').value;
+      const type = document.querySelector('input[name="touch-type"]:checked').value;
+      const note = document.getElementById('touch-note').value.trim();
+
+      const friend = friends.find(f => f.id === id);
+      if (friend) {
+        if (!friend.touches) friend.touches = [];
+        // Add new touch to top of array
+        friend.touches.unshift({
+          type,
+          timestamp: Date.now(),
+          note
+        });
+
+        saveData();
+      }
+
+      toggleTouchModal(false);
+      dismissDiceBanner();
+      render();
+    });
+
+    // Initial render
+    render();
+  </script>
+</body>
+</html>
