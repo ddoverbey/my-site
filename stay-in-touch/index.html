@@ -35,7 +35,7 @@
     }
   </style>
 </head>
-<body id="garden-canvas" class="bg-[#0b1210] text-emerald-50 min-h-screen p-4 sm:p-6 flex flex-col items-center selection:bg-teal-600 selection:text-white">
+<body id="garden-canvas" style="background-color: #1c130d;" class="text-emerald-50 min-h-screen p-4 sm:p-6 flex flex-col items-center selection:bg-teal-600 selection:text-white transition-colors duration-1000">
 
   <main class="w-full max-w-xl space-y-6 pb-20">
     
@@ -474,46 +474,59 @@
       return 'bg-[#3b4c44]';
     }
 
+   // Dynamic environmental background adaptation based on average garden health
     function updateGardenEcosystemTheme(averageHealth) {
       const canvas = document.getElementById('garden-canvas');
       const bar = document.getElementById('average-vitality-bar');
       const text = document.getElementById('average-vitality-text');
       const icon = document.getElementById('garden-weather-icon');
 
+      if (!canvas || !bar || !text) return;
+
       bar.style.width = `${averageHealth}%`;
 
+      let bgColor = '#1c130d'; // fallback late fall
+
       if (averageHealth >= 80) {
-        canvas.style.backgroundColor = '#071611';
+        // Lush Forest Canopy (Deep Emerald Moss)
+        bgColor = '#061a12';
         bar.className = 'h-full bg-emerald-400 transition-all duration-700';
         text.className = 'text-[11px] font-mono text-emerald-300';
         text.textContent = `${averageHealth}% Garden Vitality • Blooming`;
-        icon.textContent = '🌳';
+        if (icon) icon.textContent = '🌳';
       } else if (averageHealth >= 60) {
-        canvas.style.backgroundColor = '#0c1a14';
+        // Deep Evergreen & Spruce
+        bgColor = '#0a2118';
         bar.className = 'h-full bg-teal-500 transition-all duration-700';
         text.className = 'text-[11px] font-mono text-teal-300';
         text.textContent = `${averageHealth}% Garden Vitality • Thriving`;
-        icon.textContent = '🌿';
+        if (icon) icon.textContent = '🌿';
       } else if (averageHealth >= 40) {
-        canvas.style.backgroundColor = '#141912';
-        bar.className = 'h-full bg-[#10b981] transition-all duration-700';
+        // Warm Cedar Wood & Olive Moss
+        bgColor = '#192015';
+        bar.className = 'h-full bg-emerald-500 transition-all duration-700';
         text.className = 'text-[11px] font-mono text-amber-200/80';
         text.textContent = `${averageHealth}% Garden Vitality • Stable`;
-        icon.textContent = '🌱';
+        if (icon) icon.textContent = '🌱';
       } else if (averageHealth >= 20) {
-        // Late Fall / Autumn Frost Biome
-        canvas.style.backgroundColor = '#1c130d';
+        // Late Fall / Autumn Frost Biome (Terracotta Rust)
+        bgColor = '#29160d';
         bar.className = 'h-full bg-[#ea580c] transition-all duration-700';
         text.className = 'text-[11px] font-mono text-[#fdba74]';
         text.textContent = `${averageHealth}% Garden Vitality • Autumn Frost`;
-        icon.textContent = '🍁';
+        if (icon) icon.textContent = '🍁';
       } else {
-        canvas.style.backgroundColor = '#141211';
+        // Winter Peat & Dry Bark
+        bgColor = '#171413';
         bar.className = 'h-full bg-[#4b5563] transition-all duration-700';
         text.className = 'text-[11px] font-mono text-[#9ca3af]';
         text.textContent = `${averageHealth}% Garden Vitality • Winter Drought`;
-        icon.textContent = '🥀';
+        if (icon) icon.textContent = '🥀';
       }
+
+      // Force inline background on html and body with !important override
+      document.documentElement.style.setProperty('background-color', bgColor, 'important');
+      canvas.style.setProperty('background-color', bgColor, 'important');
     }
 
     function setFilter(category) {
