@@ -54,6 +54,20 @@
       </div>
     </nav>
 
+    <!-- Planning Suggestion Banner (Appears on Transition Day before midnight) -->
+    <div id="weekly-plan-prompt-banner" class="hidden bg-amber-950/40 border border-amber-500/40 rounded-xl p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+      <div class="flex items-center gap-2">
+        <span class="text-base">🎯</span>
+        <span class="text-amber-200">Planning Day: Ready to set up your non-negotiables & tactics for <strong id="prompt-banner-week-name" class="text-white">Week 2</strong>?</span>
+      </div>
+      <button 
+        onclick="openNextWeekPlanningModal()" 
+        class="bg-amber-500 hover:bg-amber-400 text-black px-3 py-1 rounded-lg font-bold font-mono text-xs transition-colors"
+      >
+        Set Week Plan →
+      </button>
+    </div>
+
     <!-- Notification Banner -->
     <div id="notification-banner" class="bg-slate-900/90 border border-slate-800 rounded-xl p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
       <div class="flex items-center gap-2">
@@ -157,7 +171,6 @@
               <input id="wiz-chunk-goal" type="text" autocomplete="new-password" data-lpignore="true" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none font-bold" />
             </div>
 
-            <!-- Leading Indicators -->
             <div class="space-y-2">
               <div class="flex items-center justify-between">
                 <label class="font-semibold text-slate-300">Leading Indicators (Action Metric + Target + Cadence)</label>
@@ -166,7 +179,6 @@
               <button type="button" onclick="addIndicatorRow('wiz-lead-container', 'lead')" class="text-xs text-amber-400 hover:text-amber-300 font-semibold font-mono">+ Add Leading Indicator</button>
             </div>
 
-            <!-- Lagging Indicators -->
             <div class="space-y-2 pt-2 border-t border-slate-800/80">
               <div class="flex items-center justify-between">
                 <label class="font-semibold text-slate-300">Lagging Indicators (Result Metric + Target Amount)</label>
@@ -177,7 +189,7 @@
           </div>
         </div>
 
-        <!-- Step 6: Week 1 Tactics (Deletable + Dynamic) -->
+        <!-- Step 6 -->
         <div id="step-6" class="wiz-step space-y-4 hidden">
           <div>
             <div class="flex items-center justify-between">
@@ -203,7 +215,7 @@
           </div>
         </div>
 
-        <!-- Step 7: Catch-Up Day -->
+        <!-- Step 7 -->
         <div id="step-7" class="wiz-step space-y-4 hidden">
           <div>
             <div class="flex items-center justify-between">
@@ -239,7 +251,7 @@
     </section>
 
     <!-- =========================================================================
-         VIEW 2: DAILY EXECUTION WORKSPACE (SIMPLIFIED & FOCUS-FIRST)
+         VIEW 2: DAILY EXECUTION WORKSPACE
          ========================================================================= -->
     <section id="view-daily" class="space-y-4 hidden">
       
@@ -348,10 +360,32 @@
         </div>
       </div>
 
+      <!-- 6. LEADING INDICATORS -->
+      <div class="bg-slate-900/70 border border-slate-800/80 rounded-xl p-4 space-y-3">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+          <span class="text-xs font-bold text-slate-400 uppercase tracking-wider font-mono flex items-center gap-1.5">
+            <span>📈</span> Leading Indicators (Actions)
+          </span>
+          <button onclick="promptNewIndicator('leading')" class="text-[11px] text-amber-400 hover:text-amber-300 font-semibold font-mono">+ Add Ticker</button>
+        </div>
+        <div id="daily-lead-indicators-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs"></div>
+      </div>
+
+      <!-- 7. LAGGING INDICATORS -->
+      <div class="bg-slate-900/70 border border-slate-800/80 rounded-xl p-4 space-y-3">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+          <span class="text-xs font-bold text-slate-400 uppercase tracking-wider font-mono flex items-center gap-1.5">
+            <span>🏁</span> Lagging Indicators (Results)
+          </span>
+          <button onclick="promptNewIndicator('lagging')" class="text-[11px] text-teal-400 hover:text-teal-300 font-semibold font-mono">+ Add Ticker</button>
+        </div>
+        <div id="daily-lag-indicators-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs"></div>
+      </div>
+
     </section>
 
     <!-- =========================================================================
-         VIEW 3: MASTER OVERVIEW (WITH METRICS, TICKERS & CHARTS)
+         VIEW 3: MASTER OVERVIEW DASHBOARD
          ========================================================================= -->
     <section id="view-overview" class="space-y-6 hidden">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
@@ -454,7 +488,6 @@
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 items-center text-center">
-          <!-- Main Quest Pie -->
           <div class="flex flex-col items-center space-y-2">
             <span class="text-xs font-mono text-slate-400">Main Tactics Rate</span>
             <div class="relative w-24 h-24 flex items-center justify-center">
@@ -467,7 +500,6 @@
             <span id="stat-pie-main-sub" class="text-[10px] text-slate-500 font-mono">0 / 0 Tactics</span>
           </div>
 
-          <!-- Side Quest Pie -->
           <div class="flex flex-col items-center space-y-2">
             <span class="text-xs font-mono text-slate-400">Side Quests Cleared</span>
             <div class="relative w-24 h-24 flex items-center justify-center">
@@ -480,7 +512,6 @@
             <span id="stat-pie-side-sub" class="text-[10px] text-slate-500 font-mono">0 / 0 Bonus</span>
           </div>
 
-          <!-- Performance Time Distribution -->
           <div class="flex flex-col items-center space-y-2">
             <span class="text-xs font-mono text-slate-400">Time Blocks Split</span>
             <div id="stat-blocks-conic" class="w-24 h-24 rounded-full border border-slate-800 flex items-center justify-center" style="background: conic-gradient(#f59e0b 0% 33%, #14b8a6 33% 66%, #10b981 66% 100%);">
@@ -531,6 +562,45 @@
       </div>
     </section>
 
+  </div>
+
+  <!-- SPECIALIZED PHASE 6 MODAL (Suggested on Transition Day / Gate on Week Start) -->
+  <div id="next-week-modal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div class="border-b border-slate-800 pb-3 flex items-center justify-between">
+        <div>
+          <span class="text-[10px] font-mono uppercase tracking-wider text-amber-400 font-bold">Weekly Transition</span>
+          <h2 class="text-lg font-bold text-white mt-0.5">Plan <span id="modal-next-week-title">Week 2</span> Goals & Tactics</h2>
+        </div>
+        <button id="btn-close-next-week-modal" onclick="closeNextWeekPlanningModal(false)" class="text-slate-400 hover:text-white text-sm">✕</button>
+      </div>
+
+      <p class="text-xs text-slate-400 leading-relaxed">
+        Before entering your next week, lock in your primary objective and major tactics. Every tactic must start with a verb (Recommended: 2–5 max).
+      </p>
+
+      <form id="next-week-plan-form" onsubmit="saveNextWeekPlan(event)" class="space-y-4 text-xs">
+        <div>
+          <label class="block font-semibold text-amber-300 mb-1">Non-Negotiable Objective for this week</label>
+          <input id="modal-next-week-nonneg" type="text" required placeholder="e.g., Launch marketing landing page & conduct 10 discovery calls" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none" autocomplete="new-password" data-lpignore="true" />
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="font-semibold text-slate-300">Major Tactics for this week</label>
+            <span id="modal-tactics-counter-badge" class="text-[10px] text-slate-500 font-mono">1 item</span>
+          </div>
+          <div id="modal-next-week-tactics-container" class="space-y-2"></div>
+          <button type="button" onclick="addModalTacticRow()" class="mt-2 text-xs text-amber-400 hover:text-amber-300 font-semibold font-mono">+ Add Tactic Row</button>
+        </div>
+
+        <div class="pt-2 border-t border-slate-800 flex items-center justify-end gap-2">
+          <button type="submit" class="w-full bg-amber-500 hover:bg-amber-400 text-black py-2.5 rounded-lg font-bold font-mono transition-colors">
+            Lock in Week Plan 🚀
+          </button>
+        </div>
+      </form>
+    </div>
   </div>
 
   <!-- AUTH MODAL -->
@@ -1197,7 +1267,12 @@
         weekday: 'long', month: 'short', day: 'numeric'
       });
       document.getElementById('daily-view-indicator').textContent = isToday ? '• Today •' : 'Reviewing Log';
-      document.getElementById('daily-banner-week-goal').textContent = state?.week1Goal || state?.keystoneGoal || 'Keep executing daily non-negotiables';
+
+      // Current week objective
+      const timeline = getCycleTimeline();
+      const currentObj = state?.weeklyObjectives?.[timeline.currentWeek] || (timeline.currentWeek === 1 ? state?.week1Goal : '') || state?.keystoneGoal || 'Keep executing daily non-negotiables';
+      document.getElementById('daily-banner-week-title').textContent = `Week ${timeline.currentWeek} Objective`;
+      document.getElementById('daily-banner-week-goal').textContent = currentObj;
 
       if (!state.days) state.days = {};
       if (!state.days[activeDateKey]) {
@@ -1207,16 +1282,134 @@
 
       const dayData = state.days[activeDateKey];
 
-      // Exact requested sequence:
-      // 1. % Main Quest Gauge
-      // 2. Main Quest Tasks
-      // 3. Side Quests Star Rating
-      // 4. Side Quests List
-      // 5. Appointments & Time Blocks
       updateDailyScore();
       renderDailyNonNegRows(dayData.nonneg || []);
       renderDailyOtherRows(dayData.other || []);
       document.getElementById('daily-appts').value = dayData.appts || '';
+      
+      // Tickers
+      renderTickerList('daily-lead-indicators-list', state?.leadingIndicators || [], 'lead');
+      renderTickerList('daily-lag-indicators-list', state?.laggingIndicators || [], 'lag');
+
+      // Check for weekly boundary suggestion/gate
+      evaluateWeeklyPlanningTriggers();
+    }
+
+    /* WEEKLY PLANNING SUGGESTION & GATE LOGIC */
+    function evaluateWeeklyPlanningTriggers() {
+      if (!state || !state.hasCompletedOnboarding) return;
+      const timeline = getCycleTimeline();
+      
+      // Stop after week 12 (week 13 is review)
+      if (timeline.currentWeek >= 12) {
+        document.getElementById('weekly-plan-prompt-banner').classList.add('hidden');
+        return;
+      }
+
+      const nextWeek = timeline.currentWeek + 1;
+      const alreadyPlanned = Boolean(state?.weeklyObjectives?.[nextWeek]) || (state.tactics || []).some(t => String(t.week) === String(nextWeek));
+
+      const now = new Date();
+      const currentDayOfWeek = now.getDay(); // 0 = Sun, 1 = Mon ...
+      const startDay = state.weekStartDay !== undefined ? state.weekStartDay : 1; // 1 = Mon start, 0 = Sun start
+      
+      // Boundary Day (e.g. Sunday if Monday-start, Saturday if Sunday-start)
+      const transitionDay = startDay === 1 ? 0 : 6;
+      const isTransitionDay = currentDayOfWeek === transitionDay;
+      const isNewWeekStartDay = currentDayOfWeek === startDay;
+
+      const promptBanner = document.getElementById('weekly-plan-prompt-banner');
+      document.getElementById('prompt-banner-week-name').textContent = `Week ${nextWeek}`;
+
+      if (!alreadyPlanned) {
+        if (isTransitionDay) {
+          // Suggest banner
+          promptBanner.classList.remove('hidden');
+        } else if (isNewWeekStartDay) {
+          // Gate modal at midnight/morning before daily logging
+          promptBanner.classList.add('hidden');
+          openNextWeekPlanningModal(true);
+        } else {
+          promptBanner.classList.add('hidden');
+        }
+      } else {
+        promptBanner.classList.add('hidden');
+      }
+    }
+
+    function openNextWeekPlanningModal(isMandatoryGate = false) {
+      const timeline = getCycleTimeline();
+      const nextWeek = timeline.currentWeek + 1;
+      if (nextWeek > 12) return;
+
+      document.getElementById('modal-next-week-title').textContent = `Week ${nextWeek}`;
+      document.getElementById('modal-next-week-nonneg').value = state?.weeklyObjectives?.[nextWeek] || '';
+
+      const container = document.getElementById('modal-next-week-tactics-container');
+      container.innerHTML = '';
+      
+      const existingTactics = (state.tactics || []).filter(t => String(t.week) === String(nextWeek));
+      if (existingTactics.length > 0) {
+        existingTactics.forEach(t => addModalTacticRow(t.title));
+      } else {
+        addModalTacticRow('');
+      }
+
+      const closeBtn = document.getElementById('btn-close-next-week-modal');
+      if (isMandatoryGate) {
+        closeBtn.classList.add('hidden');
+      } else {
+        closeBtn.classList.remove('hidden');
+      }
+
+      document.getElementById('next-week-modal').classList.remove('hidden');
+    }
+
+    function closeNextWeekPlanningModal(force = false) {
+      document.getElementById('next-week-modal').classList.add('hidden');
+    }
+
+    function addModalTacticRow(val = '') {
+      const container = document.getElementById('modal-next-week-tactics-container');
+      const div = document.createElement('div');
+      div.className = 'flex items-center gap-2';
+      div.innerHTML = `
+        <input type="text" autocomplete="new-password" data-lpignore="true" value="${escapeHtml(val)}" placeholder="Tactic starting with verb..." class="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none modal-tactic-inp" oninput="checkTacticsCount('modal-next-week-tactics-container', 'modal-tactics-counter-badge')" />
+        <button type="button" onclick="this.parentElement.remove(); checkTacticsCount('modal-next-week-tactics-container', 'modal-tactics-counter-badge');" class="text-slate-600 hover:text-rose-400 px-2 py-1 text-xs">✕</button>
+      `;
+      container.appendChild(div);
+      checkTacticsCount('modal-next-week-tactics-container', 'modal-tactics-counter-badge');
+    }
+
+    function saveNextWeekPlan(e) {
+      e.preventDefault();
+      const timeline = getCycleTimeline();
+      const nextWeek = timeline.currentWeek + 1;
+
+      const nonneg = document.getElementById('modal-next-week-nonneg').value.trim();
+      const inputs = document.querySelectorAll('#modal-next-week-tactics-container .modal-tactic-inp');
+      const tacticTitles = Array.from(inputs).map(i => i.value.trim()).filter(Boolean);
+
+      if (!state.weeklyObjectives) state.weeklyObjectives = {};
+      state.weeklyObjectives[nextWeek] = nonneg;
+
+      // Remove existing tactics for this week to avoid duplication
+      state.tactics = (state.tactics || []).filter(t => String(t.week) !== String(nextWeek));
+
+      tacticTitles.forEach((title, idx) => {
+        state.tactics.push({
+          id: `t_${Date.now()}_w${nextWeek}_${idx}`,
+          title,
+          week: String(nextWeek),
+          done: false
+        });
+      });
+
+      saveState();
+      closeNextWeekPlanningModal(true);
+      document.getElementById('weekly-plan-prompt-banner').classList.add('hidden');
+      alert(`Week ${nextWeek} locked in successfully!`);
+      renderDailyPage();
     }
 
     /* DRAG & DROP REORDERING */
@@ -1405,15 +1598,15 @@
       if (mainPct === 100) {
         circle.setAttribute('class', 'text-emerald-400 score-radial');
         label.textContent = '100% Complete!';
-        label.className = 'text-[10px] font-mono text-emerald-400 font-bold';
+        label.className = 'text-xs font-mono text-emerald-400 font-bold';
       } else if (mainPct >= 85) {
         circle.setAttribute('class', 'text-teal-400 score-radial');
         label.textContent = 'Target Met (85%+)';
-        label.className = 'text-[10px] font-mono text-teal-400 font-bold';
+        label.className = 'text-xs font-mono text-teal-400 font-bold';
       } else {
         circle.setAttribute('class', 'text-amber-500 score-radial');
         label.textContent = 'Action Required';
-        label.className = 'text-[10px] font-mono text-amber-400/80';
+        label.className = 'text-xs font-mono text-amber-400/80';
       }
 
       const otherList = dayData.other || [];
@@ -1439,7 +1632,7 @@
       alert(`+1 ${type.toUpperCase()} block logged for this week!`);
     }
 
-    /* OVERVIEW DASHBOARD & METRICS ENGINE */
+    /* OVERVIEW MANAGEMENT */
     function renderOverviewPage() {
       const timeline = getCycleTimeline();
       document.getElementById('ov-badge-current-week').textContent = timeline.isReviewWeek ? 'Week 13 (Review)' : `Week ${timeline.currentWeek} / 12`;
@@ -1454,13 +1647,15 @@
       renderIndicatorOverviewList('ov-lead-items-container', state?.leadingIndicators || [], 'lead');
       renderIndicatorOverviewList('ov-lag-items-container', state?.laggingIndicators || [], 'lag');
 
-      const tactics = state?.tactics || [];
+      const tactics = (state?.tactics || []).filter(t => String(t.week) === String(timeline.currentWeek));
       const tacticsWarning = document.getElementById('ov-tactics-warning');
       if (tactics.length > 5) tacticsWarning.classList.remove('hidden');
       else tacticsWarning.classList.add('hidden');
 
+      const currentObj = state?.weeklyObjectives?.[timeline.currentWeek] || (timeline.currentWeek === 1 ? state?.week1Goal : '') || state?.keystoneGoal || '';
+      document.getElementById('ov-week-nonneg-text').textContent = currentObj ? `Objective: ${currentObj}` : '';
+
       const tacticsEl = document.getElementById('ov-tactics-full-list');
-      document.getElementById('ov-week-nonneg-text').textContent = state?.week1Goal ? `Objective: ${state.week1Goal}` : '';
       tacticsEl.innerHTML = tactics.map((t, idx) => `
         <div 
           class="flex items-center justify-between p-3 bg-slate-950 border ${t.done ? 'border-slate-800/60 opacity-60' : 'border-slate-800'} rounded-xl transition-colors"
@@ -1478,7 +1673,7 @@
           </div>
           <button onclick="removeOverviewTactic(${idx})" class="text-slate-600 hover:text-rose-400 text-xs px-1">✕</button>
         </div>
-      `).join('') || '<div class="text-slate-600 text-xs py-2">No tactics configured.</div>';
+      `).join('') || '<div class="text-slate-600 text-xs py-2">No tactics configured for this week.</div>';
 
       renderStatsPies();
     }
@@ -1514,7 +1709,7 @@
     function renderIndicatorOverviewList(containerId, list, type) {
       const container = document.getElementById(containerId);
       if (list.length === 0) {
-        container.innerHTML = `<div class="text-slate-600 italic text-[11px]">No ${type} indicators yet.</div>`;
+        container.innerHTML = `<div class="text-slate-600 italic text-[11px]">No ${type} tickers yet.</div>`;
         return;
       }
 
@@ -1550,17 +1745,16 @@
     }
 
     function renderStatsPies() {
-      // 1. Tactics Completion
-      const tactics = state?.tactics || [];
-      const totalTactics = tactics.length;
-      const doneTactics = tactics.filter(t => t.done).length;
+      const timeline = getCycleTimeline();
+      const currentWeekTactics = (state?.tactics || []).filter(t => String(t.week) === String(timeline.currentWeek));
+      const totalTactics = currentWeekTactics.length;
+      const doneTactics = currentWeekTactics.filter(t => t.done).length;
       const mainPct = totalTactics > 0 ? Math.round((doneTactics / totalTactics) * 100) : 0;
 
       document.getElementById('stat-pie-main').style.strokeDashoffset = 100 - mainPct;
       document.getElementById('stat-pie-main-text').textContent = `${mainPct}%`;
       document.getElementById('stat-pie-main-sub').textContent = `${doneTactics} / ${totalTactics} Tactics`;
 
-      // 2. Side Quests Completion (Cumulative)
       let totalSide = 0;
       let doneSide = 0;
       Object.keys(state?.days || {}).forEach(k => {
@@ -1574,7 +1768,6 @@
       document.getElementById('stat-pie-side-text').textContent = `${sidePct}%`;
       document.getElementById('stat-pie-side-sub').textContent = `${doneSide} / ${totalSide} Cleared`;
 
-      // 3. Blocks Breakdown
       const strat = state?.blocks?.strategic || 0;
       const buff = state?.blocks?.buffer || 0;
       const brk = state?.blocks?.breakout || 0;
@@ -1622,10 +1815,11 @@
     }
 
     function promptNewTactic() {
+      const timeline = getCycleTimeline();
       const title = prompt('Enter new tactic (start with a verb):');
       if (!title) return;
       if (!state.tactics) state.tactics = [];
-      state.tactics.push({ id: 't_' + Date.now(), title, week: '1', done: false });
+      state.tactics.push({ id: 't_' + Date.now(), title, week: String(timeline.currentWeek), done: false });
       saveState();
       renderOverviewPage();
     }
