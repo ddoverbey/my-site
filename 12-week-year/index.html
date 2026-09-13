@@ -72,7 +72,7 @@
         <div id="step-1" class="wiz-step space-y-4">
           <div>
             <h2 class="text-xl font-bold text-white">When did your 12-Week Year start?</h2>
-            <p class="text-xs text-slate-400 mt-1">If your cycle started earlier this week, we'll walk you day-by-day to backfill execution.</p>
+            <p class="text-xs text-slate-400 mt-1">If your cycle started earlier this week (e.g., Monday 9/07), we'll walk you day-by-day to backfill execution.</p>
           </div>
           <div class="space-y-3 pt-2">
             <div>
@@ -96,11 +96,11 @@
             <p class="text-xs text-slate-400 mt-1">Brainstorm 5 goals for this year without editing yourself.</p>
           </div>
           <div class="space-y-2 text-xs">
-            <input id="wiz-g1" type="text" autocomplete="off" placeholder="Goal 1" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none" />
-            <input id="wiz-g2" type="text" autocomplete="off" placeholder="Goal 2" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none" />
-            <input id="wiz-g3" type="text" autocomplete="off" placeholder="Goal 3" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none" />
-            <input id="wiz-g4" type="text" autocomplete="off" placeholder="Goal 4" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none" />
-            <input id="wiz-g5" type="text" autocomplete="off" placeholder="Goal 5" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none" />
+            <input id="wiz-g1" type="text" autocomplete="new-password" data-lpignore="true" placeholder="Goal 1" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none" />
+            <input id="wiz-g2" type="text" autocomplete="new-password" data-lpignore="true" placeholder="Goal 2" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none" />
+            <input id="wiz-g3" type="text" autocomplete="new-password" data-lpignore="true" placeholder="Goal 3" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none" />
+            <input id="wiz-g4" type="text" autocomplete="new-password" data-lpignore="true" placeholder="Goal 4" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none" />
+            <input id="wiz-g5" type="text" autocomplete="new-password" data-lpignore="true" placeholder="Goal 5" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none" />
           </div>
         </div>
 
@@ -131,44 +131,56 @@
           </div>
         </div>
 
-        <!-- Step 5 -->
+        <!-- Step 5: Indicators with Frequency Sub-Components -->
         <div id="step-5" class="wiz-step space-y-4 hidden">
           <div>
-            <h2 class="text-xl font-bold text-white">Daily & Weekly Ticker Indicators</h2>
-            <p class="text-xs text-slate-400 mt-1">Add your target metrics. You can increment and tick these up on your daily and weekly pages.</p>
+            <h2 class="text-xl font-bold text-white">Measurable Indicators with Frequency</h2>
+            <p class="text-xs text-slate-400 mt-1">Choose how often each metric applies (Daily, Weekly, or 12-Week Total).</p>
           </div>
-          <div class="space-y-3 text-xs">
+          <div class="space-y-4 text-xs">
             <div>
               <label class="block font-semibold text-amber-400 mb-1">12-Week Target Goal</label>
-              <input id="wiz-chunk-goal" type="text" autocomplete="off" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none font-bold" />
+              <input id="wiz-chunk-goal" type="text" autocomplete="new-password" data-lpignore="true" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none font-bold" />
             </div>
 
-            <div>
-              <div class="flex items-center justify-between mb-1">
-                <label class="font-semibold text-slate-300">Leading Indicators (Action Metric & Target)</label>
-                <span class="text-[10px] text-slate-500">Target (e.g. per day or week)</span>
+            <!-- Leading Indicators with Frequency -->
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <label class="font-semibold text-slate-300">Leading Indicators (Actions you control)</label>
+                <span class="text-[10px] text-slate-500">Name + Target + Frequency</span>
               </div>
               <div id="wiz-lead-container" class="space-y-2">
-                <div class="flex gap-2">
-                  <input type="text" autocomplete="off" placeholder="Indicator name (e.g. Outreach calls)" class="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none ind-name" />
-                  <input type="number" placeholder="Target" value="5" class="w-24 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-slate-200 focus:border-amber-500 outline-none font-mono ind-target" />
+                <div class="flex flex-wrap sm:flex-nowrap gap-2 items-center bg-slate-950/60 p-2 rounded-xl border border-slate-800">
+                  <input type="text" placeholder="e.g. Cold emails sent" class="flex-1 min-w-[140px] bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-slate-200 focus:border-amber-500 outline-none ind-name" autocomplete="new-password" data-lpignore="true" />
+                  <input type="number" placeholder="Target" value="5" class="w-20 bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-slate-200 focus:border-amber-500 outline-none font-mono ind-target" />
+                  <select class="w-28 bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-slate-300 focus:border-amber-500 outline-none font-mono ind-freq">
+                    <option value="daily" selected>Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="total">12WY Total</option>
+                  </select>
                 </div>
               </div>
-              <button type="button" onclick="addIndicatorRow('wiz-lead-container')" class="text-xs text-amber-400 hover:text-amber-300 mt-1 font-semibold">+ Add Leading Ticker</button>
+              <button type="button" onclick="addIndicatorRow('wiz-lead-container')" class="text-xs text-amber-400 hover:text-amber-300 font-semibold font-mono">+ Add Leading Indicator</button>
             </div>
 
-            <div>
-              <div class="flex items-center justify-between mb-1">
-                <label class="font-semibold text-slate-300">Lagging Indicators (Result Metric & Target)</label>
-                <span class="text-[10px] text-slate-500">Target</span>
+            <!-- Lagging Indicators with Frequency -->
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <label class="font-semibold text-slate-300">Lagging Indicators (Results measured)</label>
+                <span class="text-[10px] text-slate-500">Name + Target + Frequency</span>
               </div>
               <div id="wiz-lag-container" class="space-y-2">
-                <div class="flex gap-2">
-                  <input type="text" autocomplete="off" placeholder="Indicator name (e.g. Signups)" class="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none ind-name" />
-                  <input type="number" placeholder="Target" value="2" class="w-24 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-slate-200 focus:border-amber-500 outline-none font-mono ind-target" />
+                <div class="flex flex-wrap sm:flex-nowrap gap-2 items-center bg-slate-950/60 p-2 rounded-xl border border-slate-800">
+                  <input type="text" placeholder="e.g. New signups" class="flex-1 min-w-[140px] bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-slate-200 focus:border-amber-500 outline-none ind-name" autocomplete="new-password" data-lpignore="true" />
+                  <input type="number" placeholder="Target" value="2" class="w-20 bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-slate-200 focus:border-amber-500 outline-none font-mono ind-target" />
+                  <select class="w-28 bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-slate-300 focus:border-amber-500 outline-none font-mono ind-freq">
+                    <option value="daily">Daily</option>
+                    <option value="weekly" selected>Weekly</option>
+                    <option value="total">12WY Total</option>
+                  </select>
                 </div>
               </div>
-              <button type="button" onclick="addIndicatorRow('wiz-lag-container')" class="text-xs text-amber-400 hover:text-amber-300 mt-1 font-semibold">+ Add Lagging Ticker</button>
+              <button type="button" onclick="addIndicatorRow('wiz-lag-container')" class="text-xs text-amber-400 hover:text-amber-300 font-semibold font-mono">+ Add Lagging Indicator</button>
             </div>
           </div>
         </div>
@@ -185,7 +197,7 @@
           <div class="space-y-3 text-xs">
             <div>
               <label class="block font-semibold text-amber-300 mb-1">Week 1 Non-Negotiable Objective</label>
-              <input id="wiz-w1-nonneg" type="text" autocomplete="off" placeholder="e.g., Finalize data models and deploy prototype" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none font-medium" />
+              <input id="wiz-w1-nonneg" type="text" autocomplete="new-password" data-lpignore="true" placeholder="e.g., Finalize data models and deploy prototype" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none font-medium" />
             </div>
 
             <div>
@@ -194,7 +206,7 @@
                 <span id="wiz-tactics-counter-badge" class="text-[10px] text-slate-500 font-mono">1 item (Rec: 2–5)</span>
               </div>
               <div id="wiz-w1-tactics-container" class="space-y-1.5">
-                <input type="text" autocomplete="off" oninput="handleAutoRow(this, 'wiz-w1-tactics-container'); checkTacticsCount('wiz-w1-tactics-container', 'wiz-tactics-counter-badge');" placeholder="Tactic starting with verb..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none" />
+                <input type="text" autocomplete="new-password" data-lpignore="true" oninput="handleAutoRow(this, 'wiz-w1-tactics-container'); checkTacticsCount('wiz-w1-tactics-container', 'wiz-tactics-counter-badge');" placeholder="Tactic starting with verb..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none" />
               </div>
             </div>
           </div>
@@ -223,7 +235,7 @@
             <div>
               <label class="block font-semibold text-slate-300 mb-1">Side Quests: Other Tasks (Optional)</label>
               <div id="catchup-other-container" class="space-y-1.5">
-                <input type="text" autocomplete="off" oninput="handleAutoRow(this, 'catchup-other-container')" placeholder="Secondary task..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none" />
+                <input type="text" autocomplete="new-password" data-lpignore="true" oninput="handleAutoRow(this, 'catchup-other-container')" placeholder="Secondary task..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none" />
               </div>
             </div>
           </div>
@@ -242,11 +254,11 @@
     </section>
 
     <!-- =========================================================================
-         VIEW 2: DAILY EXECUTION WORKSPACE (SIMPLIFIED & FOCUS-FIRST)
+         VIEW 2: DAILY EXECUTION WORKSPACE (CLEAN, PROMINENT & SIMPLE)
          ========================================================================= -->
     <section id="view-daily" class="space-y-4 hidden">
       
-      <!-- 1. Week Objective Anchor Banner -->
+      <!-- 1. Week Goal Banner Anchor -->
       <div class="bg-gradient-to-r from-slate-900 via-slate-900 to-amber-950/20 border border-slate-800 rounded-xl p-3.5 flex items-center justify-between shadow-sm">
         <div class="space-y-0.5 min-w-0">
           <div class="text-[10px] font-bold uppercase tracking-wider text-amber-400 font-mono flex items-center gap-1.5">
@@ -311,7 +323,7 @@
 
       </div>
 
-      <!-- 3. PRIMARY HERO: DAILY NON-NEGOTIABLES (BIG & PROMINENT) -->
+      <!-- 3. PRIMARY FOCUS: DAILY NON-NEGOTIABLES (LARGE & BOLD) -->
       <div class="bg-slate-900 border-2 border-slate-800/90 rounded-2xl p-5 sm:p-6 space-y-4 shadow-xl">
         <div class="flex flex-wrap items-center justify-between border-b border-slate-800 pb-3 gap-2">
           <div class="flex items-center gap-2">
@@ -323,7 +335,6 @@
           <span id="daily-nonneg-warning" class="hidden text-[10px] font-mono text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded font-bold">⚠️ 6+ items — Focus dilution risk</span>
         </div>
 
-        <!-- High-contrast, large non-negotiable checklist -->
         <div id="daily-nonneg-container" class="space-y-3 text-sm"></div>
       </div>
 
@@ -365,13 +376,13 @@
         </div>
       </div>
 
-      <!-- 6. BOTTOM: STREAMLINED LEADING & LAGGING TICKERS -->
+      <!-- 6. BOTTOM: STREAMLINED DAILY INDICATOR TICKERS -->
       <div class="bg-slate-900/70 border border-slate-800/80 rounded-xl p-4 space-y-3">
         <div class="flex items-center justify-between border-b border-slate-800 pb-2">
           <span class="text-xs font-bold text-slate-400 uppercase tracking-wider font-mono flex items-center gap-1.5">
-            <span>📈</span> Metric Tickers (Daily / Weekly)
+            <span>📈</span> Daily Tracked Indicators
           </span>
-          <button onclick="promptNewIndicator('leading')" class="text-[11px] text-amber-400 hover:text-amber-300 font-semibold font-mono">+ Add Ticker</button>
+          <button onclick="promptNewIndicator('leading', 'daily')" class="text-[11px] text-amber-400 hover:text-amber-300 font-semibold font-mono">+ Add Ticker</button>
         </div>
         <div id="daily-indicators-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs"></div>
       </div>
@@ -438,7 +449,7 @@
         </div>
       </div>
 
-      <!-- Manage & Measure Indicators on Overview -->
+      <!-- Manage & Measure Indicators on Overview with Frequency Badges -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
         <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-3">
           <div class="flex items-center justify-between border-b border-slate-800 pb-2">
@@ -547,7 +558,11 @@
       </div>
 
       <div id="auth-view-logged-out" class="space-y-4">
-        <div class="space-y-3">
+        <form onsubmit="return false;" autocomplete="off" class="space-y-3">
+          <!-- Hidden inputs prevent browsers from mapping credentials to page lists -->
+          <input type="text" style="display:none" />
+          <input type="password" style="display:none" />
+
           <div>
             <label class="block text-xs font-semibold text-[#a3b8ad] uppercase tracking-wider mb-1">Email</label>
             <input id="auth-email" type="email" placeholder="you@domain.com" class="w-full bg-[#0b1210] border border-[#283e35] rounded-lg px-3 py-2 text-sm text-emerald-100 focus:outline-none focus:border-teal-500" />
@@ -565,7 +580,7 @@
               Create Account
             </button>
           </div>
-        </div>
+        </form>
       </div>
 
       <!-- JSON File Backup in Modal -->
@@ -588,7 +603,7 @@
     const SUPABASE_URL = 'https://mrgdthihogxrqsfnknxd.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1yZ2R0aGlob2d4cnFzZm5rbnhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyNDk4NTYsImV4cCI6MjEwNDgyNTg1Nn0.1fwcaGPGrzUut3zng2NNkYZt7hUguhKPhfqYyu8MA3s';
 
-    const STORAGE_KEY = 'twelve_week_year_v8';
+    const STORAGE_KEY = 'twelve_week_year_v9';
     const AUTH_SESSION_KEY = 'twelve_week_cloud_session';
 
     function getLocalTodayDate() {
@@ -610,6 +625,7 @@
 
     function recoverState() {
       const candidateKeys = [
+        'twelve_week_year_v9',
         'twelve_week_year_v8',
         'twelve_week_year_v7',
         'twelve_week_year_v6',
@@ -643,7 +659,7 @@
     }
 
     /* =========================================================================
-       JSON BACKUP / EXPORT / IMPORT
+       DIRECT JSON BACKUP / EXPORT / IMPORT
        ========================================================================= */
     function downloadBackupJSON() {
       if (!state) return alert('No active plan data found to export.');
@@ -810,7 +826,7 @@
     }
 
     /* =========================================================================
-       DYNAMIC ROWS & STAR RATING MECHANICS
+       DYNAMIC ROWS, FREQUENCY & STAR RATING MECHANICS
        ========================================================================= */
     function handleAutoRow(inputEl, containerId) {
       const container = document.getElementById(containerId);
@@ -820,11 +836,8 @@
       if (isLast && inputEl.value.trim() !== '') {
         const newInput = document.createElement('input');
         newInput.type = 'text';
-        newInput.autocomplete = 'off';
-        newInput.autocorrect = 'off';
-        newInput.autocapitalize = 'sentences';
-        newInput.spellcheck = false;
-        newInput.name = 'task_input_' + Date.now();
+        newInput.autocomplete = 'new-password';
+        newInput.setAttribute('data-lpignore', 'true');
         newInput.className = inputEl.className;
         newInput.placeholder = inputEl.placeholder;
         newInput.oninput = () => {
@@ -855,10 +868,16 @@
     function addIndicatorRow(containerId) {
       const container = document.getElementById(containerId);
       const div = document.createElement('div');
-      div.className = 'flex gap-2';
+      div.className = 'flex flex-wrap sm:flex-nowrap gap-2 items-center bg-slate-950/60 p-2 rounded-xl border border-slate-800';
       div.innerHTML = `
-        <input type="text" autocomplete="off" placeholder="Indicator name" class="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none ind-name" />
-        <input type="number" placeholder="Target" value="5" class="w-24 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-slate-200 focus:border-amber-500 outline-none font-mono ind-target" />
+        <input type="text" autocomplete="new-password" data-lpignore="true" placeholder="Indicator name" class="flex-1 min-w-[140px] bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-slate-200 focus:border-amber-500 outline-none ind-name" />
+        <input type="number" placeholder="Target" value="5" class="w-20 bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-slate-200 focus:border-amber-500 outline-none font-mono ind-target" />
+        <select class="w-28 bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-slate-300 focus:border-amber-500 outline-none font-mono ind-freq">
+          <option value="daily" selected>Daily</option>
+          <option value="weekly">Weekly</option>
+          <option value="total">12WY Total</option>
+        </select>
+        <button type="button" onclick="this.parentElement.remove()" class="text-slate-600 hover:text-rose-400 px-1 text-xs">✕</button>
       `;
       container.appendChild(div);
     }
@@ -870,8 +889,9 @@
       for (let r of rows) {
         const name = r.querySelector('.ind-name')?.value.trim();
         const target = parseFloat(r.querySelector('.ind-target')?.value) || 0;
+        const frequency = r.querySelector('.ind-freq')?.value || 'daily';
         if (name) {
-          res.push({ id: 'ind_' + Math.random().toString(36).substr(2, 9), name, target, current: 0 });
+          res.push({ id: 'ind_' + Math.random().toString(36).substr(2, 9), name, target, frequency, current: 0 });
         }
       }
       return res;
@@ -1042,7 +1062,7 @@
       div.className = 'flex items-center gap-2 bg-slate-950 border border-slate-800 p-2.5 rounded-xl';
       div.innerHTML = `
         <input type="checkbox" ${done ? 'checked' : ''} class="w-4 h-4 rounded text-amber-500 bg-slate-900 border-slate-700 cursor-pointer c-done" />
-        <input type="text" autocomplete="off" name="catchup_${Date.now()}" value="${escapeHtml(text)}" placeholder="Action starting with verb..." onkeydown="handleCatchupKey(event, this)" class="bg-transparent flex-1 outline-none text-slate-200 c-text" />
+        <input type="text" autocomplete="new-password" data-lpignore="true" value="${escapeHtml(text)}" placeholder="Action starting with verb..." onkeydown="handleCatchupKey(event, this)" class="bg-transparent flex-1 outline-none text-slate-200 c-text" />
       `;
       container.appendChild(div);
     }
@@ -1136,7 +1156,7 @@
       // 4. Appointments & Time Blocks
       document.getElementById('daily-appts').value = dayData.appts || '';
 
-      // 5. Bottom: Metric Tickers
+      // 5. Bottom: Metric Tickers (Filtered to Daily metrics)
       renderDailyIndicators();
     }
 
@@ -1144,6 +1164,8 @@
       const container = document.getElementById('daily-indicators-list');
       const leads = state?.leadingIndicators || [];
       const lags = state?.laggingIndicators || [];
+      
+      // Filter primarily for daily frequency (or show weekly with frequency badge)
       const combined = [
         ...leads.map(i => ({ ...i, type: 'lead' })),
         ...lags.map(i => ({ ...i, type: 'lag' }))
@@ -1157,7 +1179,10 @@
       container.innerHTML = combined.map(item => `
         <div class="bg-slate-950/80 border border-slate-800 p-2 rounded-xl flex items-center justify-between">
           <div class="min-w-0 pr-2">
-            <span class="text-[9px] font-mono uppercase font-bold ${item.type === 'lead' ? 'text-amber-400' : 'text-teal-400'}">${item.type === 'lead' ? 'Lead' : 'Lag'}</span>
+            <div class="flex items-center gap-1.5">
+              <span class="text-[9px] font-mono uppercase font-bold ${item.type === 'lead' ? 'text-amber-400' : 'text-teal-400'}">${item.type === 'lead' ? 'Lead' : 'Lag'}</span>
+              <span class="text-[9px] font-mono uppercase px-1 rounded bg-slate-900 text-slate-400">${item.frequency || 'daily'}</span>
+            </div>
             <div class="font-medium text-slate-200 truncate cursor-pointer hover:text-amber-300 text-xs" onclick="editIndicatorName('${item.id}')">${escapeHtml(item.name)}</div>
           </div>
           <div class="flex items-center gap-1 shrink-0 bg-slate-900 border border-slate-800 px-1.5 py-0.5 rounded-lg">
@@ -1216,7 +1241,7 @@
       }
     }
 
-    // NON-NEGOTIABLES (PROMINENT HERO DESIGN + AUTOFILL PREVENTION)
+    // NON-NEGOTIABLES (HERO COMPONENT WITH HARDENED AUTOFILL PROTECTION)
     function renderDailyNonNegRows(list) {
       const container = document.getElementById('daily-nonneg-container');
       container.innerHTML = '';
@@ -1233,18 +1258,17 @@
         div.className = 'flex items-center gap-3 bg-slate-950 border border-slate-800 p-3.5 rounded-xl shadow-sm hover:border-slate-700 transition-colors';
         div.innerHTML = `
           <input type="checkbox" ${item.done ? 'checked' : ''} onchange="toggleNonNegDone(${idx})" class="w-5 h-5 rounded text-amber-500 bg-slate-900 border-slate-700 cursor-pointer shrink-0" />
-          <input type="text" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" name="nonneg_${idx}_${Date.now()}" value="${escapeHtml(item.text)}" oninput="editNonNegText(${idx}, this.value)" class="bg-transparent flex-1 text-slate-100 outline-none text-sm font-semibold tracking-wide ${item.done ? 'line-through text-slate-500' : ''}" />
+          <input type="text" autocomplete="new-password" data-lpignore="true" value="${escapeHtml(item.text)}" oninput="editNonNegText(${idx}, this.value)" class="bg-transparent flex-1 text-slate-100 outline-none text-sm font-semibold tracking-wide ${item.done ? 'line-through text-slate-500' : ''}" />
           <button onclick="removeNonNeg(${idx})" class="text-slate-600 hover:text-rose-400 px-1 text-xs">✕</button>
         `;
         container.appendChild(div);
       });
 
-      // Big, actionable empty row at the bottom
       const emptyRow = document.createElement('div');
       emptyRow.className = 'flex items-center gap-3 bg-slate-950/40 border border-dashed border-slate-800 p-3.5 rounded-xl';
       emptyRow.innerHTML = `
         <span class="text-slate-600 text-sm px-1 font-bold">+</span>
-        <input type="text" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" name="new_nonneg_entry" placeholder="Type non-negotiable action... (Press Enter to add)" onkeydown="handleAddNewNonNeg(event, this)" class="bg-transparent flex-1 text-slate-200 outline-none text-sm font-medium" />
+        <input type="text" autocomplete="new-password" data-lpignore="true" placeholder="Type non-negotiable action... (Press Enter to add)" onkeydown="handleAddNewNonNeg(event, this)" class="bg-transparent flex-1 text-slate-200 outline-none text-sm font-medium" />
       `;
       container.appendChild(emptyRow);
     }
@@ -1275,7 +1299,7 @@
       renderDailyPage();
     }
 
-    // SIDE QUESTS (OTHER TO-DOS WITH AUTOFILL PREVENTION)
+    // SIDE QUESTS (OTHER TO-DOS WITH AUTOFILL BYPASS)
     function renderDailyOtherRows(otherList) {
       const container = document.getElementById('daily-other-tasks-container');
       container.innerHTML = '';
@@ -1285,7 +1309,7 @@
         row.className = 'flex items-center gap-2 bg-slate-950 border border-slate-800 p-2.5 rounded-xl';
         row.innerHTML = `
           <input type="checkbox" ${item.done ? 'checked' : ''} onchange="toggleOtherDone(${idx})" class="w-4 h-4 rounded text-purple-500 bg-slate-900 border-slate-700 cursor-pointer shrink-0" />
-          <input type="text" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" name="sq_${idx}_${Date.now()}" value="${escapeHtml(item.text)}" oninput="editOtherText(${idx}, this.value)" class="bg-transparent flex-1 text-slate-200 outline-none text-xs ${item.done ? 'line-through text-slate-500' : ''}" />
+          <input type="text" autocomplete="new-password" data-lpignore="true" value="${escapeHtml(item.text)}" oninput="editOtherText(${idx}, this.value)" class="bg-transparent flex-1 text-slate-200 outline-none text-xs ${item.done ? 'line-through text-slate-500' : ''}" />
           <span class="text-[10px] text-purple-400 font-mono">Side Quest</span>
           <button onclick="removeOtherTask(${idx})" class="text-slate-600 hover:text-rose-400 px-1 text-xs">✕</button>
         `;
@@ -1296,7 +1320,7 @@
       newRow.className = 'flex items-center gap-2 bg-slate-950/60 border border-dashed border-slate-800 p-2.5 rounded-xl';
       newRow.innerHTML = `
         <span class="text-slate-600 text-xs px-1">+</span>
-        <input type="text" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" name="sidequest_new_entry" placeholder="Add secondary side quest..." onkeydown="handleAddNewOtherOnEnter(event, this)" class="bg-transparent flex-1 text-slate-300 outline-none text-xs" />
+        <input type="text" autocomplete="new-password" data-lpignore="true" placeholder="Add secondary side quest..." onkeydown="handleAddNewOtherOnEnter(event, this)" class="bg-transparent flex-1 text-slate-300 outline-none text-xs" />
       `;
       container.appendChild(newRow);
     }
@@ -1342,7 +1366,7 @@
     function updateDailyScore() {
       const dayData = state?.days?.[activeDateKey] || { nonneg: [], other: [] };
 
-      // 1. Main Quest Score (Pure non-negotiables)
+      // 1. Main Quest Score
       const validNonNeg = (dayData.nonneg || []).filter(t => t.text.trim() !== '');
       const totalCount = validNonNeg.length;
       const doneCount = validNonNeg.filter(t => t.done).length;
@@ -1469,7 +1493,10 @@
       container.innerHTML = list.map((item, idx) => `
         <div class="bg-slate-950 border border-slate-800 p-2.5 rounded-xl flex items-center justify-between">
           <div class="min-w-0 pr-2">
-            <span class="font-medium text-slate-200 truncate block cursor-pointer hover:text-amber-300" onclick="editIndicatorName('${item.id}')">${escapeHtml(item.name)}</span>
+            <div class="flex items-center gap-1.5">
+              <span class="font-medium text-slate-200 truncate block cursor-pointer hover:text-amber-300" onclick="editIndicatorName('${item.id}')">${escapeHtml(item.name)}</span>
+              <span class="text-[9px] font-mono uppercase px-1 rounded bg-slate-900 text-slate-400">${item.frequency || 'daily'}</span>
+            </div>
             <span class="text-[10px] text-slate-500 cursor-pointer hover:text-white" onclick="editIndicatorValues('${item.id}')">Target: ${item.target} (click to edit)</span>
           </div>
           <div class="flex items-center gap-1.5 shrink-0">
@@ -1482,12 +1509,13 @@
       `).join('');
     }
 
-    function promptNewIndicator(type) {
+    function promptNewIndicator(type, defaultFreq = 'daily') {
       const name = prompt(`Enter ${type} ticker name:`);
       if (!name) return;
       const target = parseFloat(prompt(`Enter target number for "${name}":`, "5")) || 5;
+      const freq = prompt(`Choose frequency (daily, weekly, total):`, defaultFreq) || defaultFreq;
 
-      const newInd = { id: 'ind_' + Math.random().toString(36).substr(2, 9), name, target, current: 0 };
+      const newInd = { id: 'ind_' + Math.random().toString(36).substr(2, 9), name, target, frequency: freq.toLowerCase(), current: 0 };
       if (type === 'leading') {
         if (!state.leadingIndicators) state.leadingIndicators = [];
         state.leadingIndicators.push(newInd);
