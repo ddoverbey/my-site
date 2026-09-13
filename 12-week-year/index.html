@@ -135,7 +135,7 @@
         <div id="step-5" class="wiz-step space-y-4 hidden">
           <div>
             <h2 class="text-xl font-bold text-white">Measurable Indicators</h2>
-            <p class="text-xs text-slate-400 mt-1">Add your targets. You can increment and measure these directly on both your Daily and Overview pages.</p>
+            <p class="text-xs text-slate-400 mt-1">Add your targets. You can increment and track these on both your Daily and Overview pages.</p>
           </div>
           <div class="space-y-3 text-xs">
             <div>
@@ -180,7 +180,7 @@
               <h2 class="text-xl font-bold text-white">Week 1 Tactics (Main Quest)</h2>
               <span class="text-[10px] font-mono text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded">Recommended: 2–5 max</span>
             </div>
-            <p class="text-xs text-slate-400 mt-1">Actions starting with verbs. Focus on your highest-leverage priorities.</p>
+            <p class="text-xs text-slate-400 mt-1">Actions starting with verbs. Keep typing below to add additional tactics.</p>
           </div>
           <div class="space-y-3 text-xs">
             <div>
@@ -200,7 +200,7 @@
           </div>
         </div>
 
-        <!-- Step 7: Day-By-Day Backfill Catch-Up -->
+        <!-- Step 7 -->
         <div id="step-7" class="wiz-step space-y-4 hidden">
           <div>
             <div class="flex items-center justify-between">
@@ -208,7 +208,7 @@
               <span id="catchup-day-step" class="text-[11px] font-mono text-slate-500">Day 1 of 6</span>
             </div>
             <h2 id="catchup-title" class="text-xl font-bold text-white mt-1">What did you execute?</h2>
-            <p class="text-xs text-slate-400 mt-0.5">Enter your non-negotiables for this day. Recommended: 2–5 per day.</p>
+            <p class="text-xs text-slate-400 mt-0.5">Enter non-negotiables for this day. Recommended: 2–5 per day.</p>
           </div>
 
           <div class="space-y-3 text-xs">
@@ -607,7 +607,7 @@
       return new Date(y, m - 1, d);
     }
 
-    // MULTI-VERSION RECOVERY: Look back across all keys so nothing is ever lost
+    // MULTI-VERSION RECOVERY: Look back across all previous keys to preserve prior inputs
     function recoverState() {
       const candidateKeys = [
         'twelve_week_year_v7',
@@ -1525,10 +1525,8 @@
       return d.innerHTML;
     }
 
-    // Default start date to 9/07
     document.getElementById('wiz-start-date').value = '2026-09-07';
 
-    // Start in Daily if finished before, otherwise Guide
     updateAuthUI();
     if (cloudSession) loadFromCloud();
 
