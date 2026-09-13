@@ -84,7 +84,7 @@
           <span>🎲</span> Roll Dice
         </button>
         <button 
-          onclick="toggleAddModal(true)"
+          onclick="openAddModal()"
           class="bg-[#115e59] hover:bg-[#0f766e] text-white font-semibold px-3 py-1.5 rounded-lg text-xs transition-colors flex items-center gap-1 shadow-sm border border-teal-500/30"
         >
           <span>+</span> Add
@@ -139,11 +139,13 @@
   <div id="friend-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-[#14201b] border border-[#283e35] rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-center border-b border-[#283e35] pb-3">
-        <h3 class="font-bold text-sm text-[#f4ede4]">Add Connection</h3>
-        <button onclick="toggleAddModal(false)" class="text-[#8da498] hover:text-[#f4ede4] text-sm">✕</button>
+        <h3 id="friend-modal-title" class="font-bold text-sm text-[#f4ede4]">Add Connection</h3>
+        <button onclick="toggleFriendModal(false)" class="text-[#8da498] hover:text-[#f4ede4] text-sm">✕</button>
       </div>
 
       <form id="friend-form" class="space-y-3">
+        <input type="hidden" id="edit-friend-id" />
+        
         <div>
           <label class="block text-xs font-semibold text-[#a3b8ad] uppercase tracking-wider mb-1">Name</label>
           <input id="input-name" type="text" required placeholder="Full name or nickname" class="w-full bg-[#0b1210] border border-[#283e35] rounded-lg px-3 py-2 text-sm text-emerald-100 focus:outline-none focus:border-teal-500" />
@@ -184,15 +186,25 @@
               <input id="input-photo" type="file" accept="image/*" class="w-full text-xs text-[#8da498] file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-[#1c2d26] file:text-emerald-200 hover:file:bg-[#253d33] cursor-pointer" />
             </div>
           </div>
+          
+          <!-- Photo preview & removal (shows when photo exists) -->
+          <div id="photo-preview-box" class="hidden items-center justify-between pt-1 border-t border-[#283e35]">
+            <div class="flex items-center gap-2">
+              <img id="photo-preview-img" src="" alt="Preview" class="w-8 h-8 rounded-full object-cover border border-[#2e473d]" />
+              <span class="text-[11px] text-[#8da498]">Custom photo active</span>
+            </div>
+            <button type="button" onclick="removeActivePhoto()" class="text-xs text-[#ea580c] hover:text-[#fed7aa]">Remove</button>
+          </div>
+          
           <input type="hidden" id="input-photo-base64" />
         </div>
 
         <div>
-          <label class="block text-xs font-semibold text-[#a3b8ad] uppercase tracking-wider mb-1">Last Interaction Date</label>
+          <label id="input-date-label" class="block text-xs font-semibold text-[#a3b8ad] uppercase tracking-wider mb-1">Last Interaction Date</label>
           <input id="input-last-contact" type="date" required class="w-full bg-[#0b1210] border border-[#283e35] rounded-lg px-3 py-2 text-sm text-emerald-100 focus:outline-none focus:border-teal-500" />
         </div>
 
-        <button type="submit" class="w-full bg-[#115e59] hover:bg-[#0f766e] font-semibold py-2 rounded-lg text-sm text-white transition-colors mt-2 border border-teal-500/30">
+        <button id="friend-submit-btn" type="submit" class="w-full bg-[#115e59] hover:bg-[#0f766e] font-semibold py-2 rounded-lg text-sm text-white transition-colors mt-2 border border-teal-500/30">
           Plant Seed
         </button>
       </form>
@@ -405,7 +417,6 @@
   <script>
     /* =========================================================================
        SUPABASE CONFIGURATION
-       (Paste your Project URL & Anon Key below when ready. Runs 100% locally if blank!)
        ========================================================================= */
     const SUPABASE_URL = 'https://mrgdthihogxrqsfnknxd.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1yZ2R0aGlob2d4cnFzZm5rbnhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyNDk4NTYsImV4cCI6MjEwNDgyNTg1Nn0.1fwcaGPGrzUut3zng2NNkYZt7hUguhKPhfqYyu8MA3s';
@@ -513,7 +524,7 @@
     }
 
     /* =========================================================================
-       NATIVE REST AUTH & CLOUD SYNC (Zero third-party script crashes)
+       NATIVE REST AUTH & CLOUD SYNC
        ========================================================================= */
     let cloudSession = JSON.parse(localStorage.getItem(AUTH_SESSION_KEY) || 'null');
 
@@ -671,7 +682,6 @@
             }
             render();
           } else {
-            // First time login: migrate local state to cloud
             await syncToCloud(false);
           }
         }
@@ -743,7 +753,6 @@
         text.textContent = `${averageHealth}% Garden Vitality • Stable`;
         if (icon) icon.textContent = '🌱';
       } else if (averageHealth >= 20) {
-        // Late Fall / Autumn Frost (Terracotta Rust)
         bgColor = '#29160d';
         bar.className = 'h-full bg-[#ea580c] transition-all duration-700';
         text.className = 'text-[11px] font-mono text-[#fdba74]';
@@ -868,7 +877,14 @@
               <div class="mt-4 pt-3 border-t border-[#23352e] space-y-2 text-xs">
                 <div class="flex justify-between items-center text-[#8da498] font-medium text-[11px] uppercase tracking-wider">
                   <span>Connection Journal</span>
-                  <button onclick="removeFriend('${friend.id}')" class="text-[#ea580c] hover:text-[#fed7aa] text-[10px] lowercase transition-colors">remove connection</button>
+                  <div class="flex items-center gap-3">
+                    <button onclick="openEditModal('${friend.id}')" class="text-teal-300 hover:text-teal-200 text-[10px] transition-colors flex items-center gap-0.5">
+                      <span>✏️</span> edit
+                    </button>
+                    <button onclick="removeFriend('${friend.id}')" class="text-[#ea580c] hover:text-[#fed7aa] text-[10px] lowercase transition-colors">
+                      remove
+                    </button>
+                  </div>
                 </div>
 
                 ${friend.touches && friend.touches.length > 0 ? `
@@ -907,16 +923,27 @@
       }
     }
 
+    // Photo input conversion to Base64
     document.getElementById('input-photo').addEventListener('change', function(e) {
       const file = e.target.files[0];
       if (file) {
         const reader = new FileReader();
         reader.onload = function(evt) {
           document.getElementById('input-photo-base64').value = evt.target.result;
+          document.getElementById('photo-preview-img').src = evt.target.result;
+          document.getElementById('photo-preview-box').classList.remove('hidden');
+          document.getElementById('photo-preview-box').classList.add('flex');
         };
         reader.readAsDataURL(file);
       }
     });
+
+    function removeActivePhoto() {
+      document.getElementById('input-photo-base64').value = '';
+      document.getElementById('input-photo').value = '';
+      document.getElementById('photo-preview-box').classList.add('hidden');
+      document.getElementById('photo-preview-box').classList.remove('flex');
+    }
 
     function rollTheDice() {
       const lowHealth = friends.filter(f => calculateHealth(f).health < 50);
@@ -951,16 +978,56 @@
       render();
     }
 
-    function toggleAddModal(show) {
+    /* Modal Controls */
+    function toggleFriendModal(show) {
       const modal = document.getElementById('friend-modal');
-      if (show) {
-        document.getElementById('input-last-contact').value = new Date().toISOString().split('T')[0];
-        document.getElementById('input-photo-base64').value = '';
-        modal.classList.remove('hidden');
+      if (show) modal.classList.remove('hidden');
+      else modal.classList.add('hidden');
+    }
+
+    function openAddModal() {
+      document.getElementById('friend-modal-title').textContent = 'Add Connection';
+      document.getElementById('friend-submit-btn').textContent = 'Plant Seed';
+      document.getElementById('input-date-label').textContent = 'Last Interaction Date';
+      document.getElementById('edit-friend-id').value = '';
+      document.getElementById('friend-form').reset();
+      document.getElementById('input-last-contact').value = new Date().toISOString().split('T')[0];
+      removeActivePhoto();
+      toggleFriendModal(true);
+    }
+
+    function openEditModal(id) {
+      const friend = friends.find(f => f.id === id);
+      if (!friend) return;
+
+      document.getElementById('friend-modal-title').textContent = `Edit ${friend.name}`;
+      document.getElementById('friend-submit-btn').textContent = 'Save Changes';
+      document.getElementById('input-date-label').textContent = 'Latest Interaction Date';
+      document.getElementById('edit-friend-id').value = friend.id;
+      
+      document.getElementById('input-name').value = friend.name;
+      document.getElementById('input-category').value = friend.category || 'Friends';
+      document.getElementById('input-cadence-tier').value = friend.tier || 'close';
+      document.getElementById('input-avatar').value = friend.avatar || '';
+
+      if (friend.photo) {
+        document.getElementById('input-photo-base64').value = friend.photo;
+        document.getElementById('photo-preview-img').src = friend.photo;
+        document.getElementById('photo-preview-box').classList.remove('hidden');
+        document.getElementById('photo-preview-box').classList.add('flex');
       } else {
-        modal.classList.add('hidden');
-        document.getElementById('friend-form').reset();
+        removeActivePhoto();
       }
+
+      // Pre-fill latest touch date
+      if (friend.touches && friend.touches.length > 0) {
+        const lastDate = new Date(friend.touches[0].timestamp).toISOString().split('T')[0];
+        document.getElementById('input-last-contact').value = lastDate;
+      } else {
+        document.getElementById('input-last-contact').value = new Date().toISOString().split('T')[0];
+      }
+
+      toggleFriendModal(true);
     }
 
     function toggleSettingsModal(show) {
@@ -1001,30 +1068,52 @@
       }
     }
 
+    // Add / Edit Form submission handler
     document.getElementById('friend-form').addEventListener('submit', (e) => {
       e.preventDefault();
+      const editId = document.getElementById('edit-friend-id').value;
       const name = document.getElementById('input-name').value.trim();
       const category = document.getElementById('input-category').value;
       const tier = document.getElementById('input-cadence-tier').value;
       const avatar = document.getElementById('input-avatar').value.trim();
       const photo = document.getElementById('input-photo-base64').value || null;
-      const lastContact = document.getElementById('input-last-contact').value;
+      const contactDate = document.getElementById('input-last-contact').value;
 
       if (!name) return;
-      const timestamp = new Date(lastContact + 'T12:00:00').getTime();
+      const timestamp = new Date(contactDate + 'T12:00:00').getTime();
 
-      friends.push({
-        id: Date.now().toString(),
-        name,
-        category,
-        tier,
-        avatar: avatar || '🌱',
-        photo,
-        touches: [{ type: 'Hangout', timestamp, note: 'Initial connection logged' }]
-      });
+      if (editId) {
+        // Edit existing friend
+        const friend = friends.find(f => f.id === editId);
+        if (friend) {
+          friend.name = name;
+          friend.category = category;
+          friend.tier = tier;
+          friend.avatar = avatar || '🌱';
+          friend.photo = photo;
+
+          // If the date was modified, reflect it on the most recent touch
+          if (friend.touches && friend.touches.length > 0) {
+            friend.touches[0].timestamp = timestamp;
+          } else {
+            friend.touches = [{ type: 'Hangout', timestamp, note: 'Interaction updated' }];
+          }
+        }
+      } else {
+        // Add new friend
+        friends.push({
+          id: Date.now().toString(),
+          name,
+          category,
+          tier,
+          avatar: avatar || '🌱',
+          photo,
+          touches: [{ type: 'Hangout', timestamp, note: 'Initial connection planted' }]
+        });
+      }
 
       saveData();
-      toggleAddModal(false);
+      toggleFriendModal(false);
       render();
     });
 
@@ -1154,7 +1243,7 @@
       return div.innerHTML;
     }
 
-    // Initialize cleanly
+    // Launch sequence
     updateAuthUI();
     updateNotificationButton();
     render();
