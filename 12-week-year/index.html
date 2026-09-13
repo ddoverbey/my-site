@@ -52,6 +52,30 @@
       </div>
     </nav>
 
+    <!-- Notification Opt-In Banner -->
+    <div id="notification-banner" class="bg-slate-900/90 border border-slate-800 rounded-xl p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+      <div class="flex items-center gap-2">
+        <span class="text-base">🔔</span>
+        <span id="notification-status-text" class="text-slate-300">Enable local reminders for 8:30 AM tactical plan & 8:30 PM 85% goal pacing.</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <button 
+          id="btn-test-notif" 
+          onclick="testNotification()" 
+          class="hidden text-[11px] text-slate-400 hover:text-white underline font-mono"
+        >
+          Test Alert
+        </button>
+        <button 
+          id="btn-enable-notif" 
+          onclick="requestNotificationPermission()" 
+          class="bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 px-3 py-1 rounded-lg text-xs font-semibold font-mono transition-colors"
+        >
+          Enable Alerts
+        </button>
+      </div>
+    </div>
+
     <!-- =========================================================================
          VIEW 1: GUIDE / SETUP
          ========================================================================= -->
@@ -72,7 +96,7 @@
         <div id="step-1" class="wiz-step space-y-4">
           <div>
             <h2 class="text-xl font-bold text-white">When did your 12-Week Year start?</h2>
-            <p class="text-xs text-slate-400 mt-1">If your cycle started earlier this week (e.g., Monday 9/07), we'll walk you day-by-day to backfill execution.</p>
+            <p class="text-xs text-slate-400 mt-1">If your cycle started earlier this week, we'll walk you day-by-day to backfill execution.</p>
           </div>
           <div class="space-y-3 pt-2">
             <div>
@@ -131,7 +155,7 @@
           </div>
         </div>
 
-        <!-- Step 5: Indicators with Frequency Sub-Components -->
+        <!-- Step 5 -->
         <div id="step-5" class="wiz-step space-y-4 hidden">
           <div>
             <h2 class="text-xl font-bold text-white">Measurable Indicators with Frequency</h2>
@@ -143,7 +167,6 @@
               <input id="wiz-chunk-goal" type="text" autocomplete="new-password" data-lpignore="true" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none font-bold" />
             </div>
 
-            <!-- Leading Indicators with Frequency -->
             <div class="space-y-2">
               <div class="flex items-center justify-between">
                 <label class="font-semibold text-slate-300">Leading Indicators (Actions you control)</label>
@@ -163,7 +186,6 @@
               <button type="button" onclick="addIndicatorRow('wiz-lead-container')" class="text-xs text-amber-400 hover:text-amber-300 font-semibold font-mono">+ Add Leading Indicator</button>
             </div>
 
-            <!-- Lagging Indicators with Frequency -->
             <div class="space-y-2">
               <div class="flex items-center justify-between">
                 <label class="font-semibold text-slate-300">Lagging Indicators (Results measured)</label>
@@ -258,7 +280,7 @@
          ========================================================================= -->
     <section id="view-daily" class="space-y-4 hidden">
       
-      <!-- 1. Week Goal Banner Anchor -->
+      <!-- 1. Week Objective Anchor Banner -->
       <div class="bg-gradient-to-r from-slate-900 via-slate-900 to-amber-950/20 border border-slate-800 rounded-xl p-3.5 flex items-center justify-between shadow-sm">
         <div class="space-y-0.5 min-w-0">
           <div class="text-[10px] font-bold uppercase tracking-wider text-amber-400 font-mono flex items-center gap-1.5">
@@ -559,7 +581,6 @@
 
       <div id="auth-view-logged-out" class="space-y-4">
         <form onsubmit="return false;" autocomplete="off" class="space-y-3">
-          <!-- Hidden inputs prevent browsers from mapping credentials to page lists -->
           <input type="text" style="display:none" />
           <input type="password" style="display:none" />
 
@@ -654,12 +675,15 @@
     let activeDateKey = formatDateKey(getLocalTodayDate());
 
     function saveState() {
+      if (!state.timezone) {
+        state.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
       syncToCloud(false);
     }
 
     /* =========================================================================
-       DIRECT JSON BACKUP / EXPORT / IMPORT
+       JSON BACKUP / EXPORT / IMPORT
        ========================================================================= */
     function downloadBackupJSON() {
       if (!state) return alert('No active plan data found to export.');
@@ -1143,20 +1167,10 @@
 
       const dayData = state.days[activeDateKey];
 
-      // Exact requested order:
-      // 1. Gauges
       updateDailyScore();
-
-      // 2. Primary Focus: Non-Negotiables
       renderDailyNonNegRows(dayData.nonneg || []);
-
-      // 3. Side Quests (Other To-Dos)
       renderDailyOtherRows(dayData.other || []);
-
-      // 4. Appointments & Time Blocks
       document.getElementById('daily-appts').value = dayData.appts || '';
-
-      // 5. Bottom: Metric Tickers (Filtered to Daily metrics)
       renderDailyIndicators();
     }
 
@@ -1165,7 +1179,6 @@
       const leads = state?.leadingIndicators || [];
       const lags = state?.laggingIndicators || [];
       
-      // Filter primarily for daily frequency (or show weekly with frequency badge)
       const combined = [
         ...leads.map(i => ({ ...i, type: 'lead' })),
         ...lags.map(i => ({ ...i, type: 'lag' }))
@@ -1558,6 +1571,126 @@
     }
 
     /* =========================================================================
+       LOCAL TIMEZONE NOTIFICATION ENGINE
+       ========================================================================= */
+    function updateNotificationUI() {
+      const btn = document.getElementById('btn-enable-notif');
+      const testBtn = document.getElementById('btn-test-notif');
+      const statusText = document.getElementById('notification-status-text');
+
+      if (!('Notification' in window)) {
+        statusText.textContent = 'System notifications not supported in this browser.';
+        btn.classList.add('hidden');
+        return;
+      }
+
+      if (Notification.permission === 'granted') {
+        statusText.textContent = 'Smart reminders active: 8:30 AM Brief, 8:30 PM 85% pacing, & Sunday Review.';
+        btn.textContent = 'Alerts Active ✓';
+        btn.classList.replace('text-amber-300', 'text-emerald-400');
+        btn.classList.replace('bg-amber-500/10', 'bg-emerald-500/10');
+        btn.classList.replace('border-amber-500/30', 'border-emerald-500/30');
+        testBtn.classList.remove('hidden');
+      } else if (Notification.permission === 'denied') {
+        statusText.textContent = 'Alerts are blocked in your browser settings.';
+        btn.textContent = 'Blocked';
+        btn.classList.replace('text-amber-300', 'text-slate-500');
+      }
+    }
+
+    function requestNotificationPermission() {
+      if (!('Notification' in window)) return;
+      Notification.requestPermission().then(permission => {
+        updateNotificationUI();
+        if (permission === 'granted') {
+          testNotification();
+          saveState();
+        }
+      });
+    }
+
+    function testNotification() {
+      sendNotification("⚡ 12-Week Year Reminder", "Notifications are active! You will get daily pacing alerts at 8:30 AM & 8:30 PM.");
+    }
+
+    function sendNotification(title, body) {
+      if (!('Notification' in window) || Notification.permission !== 'granted') return;
+      try {
+        new Notification(title, {
+          body,
+          icon: 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>'
+        });
+      } catch(e) {
+        console.warn('Notification trigger error:', e);
+      }
+    }
+
+    // Runs once a minute in the background tab to check time thresholds
+    let lastNotifiedHour = null;
+    function checkNotificationTriggers() {
+      if (!('Notification' in window) || Notification.permission !== 'granted') return;
+      const now = new Date();
+      const hour = now.getHours();
+      const minute = now.getMinutes();
+      const dayOfWeek = now.getDay(); // 0 = Sunday
+
+      // Only evaluate during the 8:30 window (8:30 AM and 8:30 PM)
+      const isMorningBrief = hour === 8 && minute === 30;
+      const isEveningPacing = hour === 20 && minute === 30;
+      const isSundayReview = dayOfWeek === 0 && hour === 18 && minute === 0;
+
+      const currentTriggerKey = `${now.toDateString()}_${hour}_${minute}`;
+      if (lastNotifiedHour === currentTriggerKey) return;
+
+      const todayData = state?.days?.[formatDateKey(getLocalTodayDate())] || { nonneg: [], other: [] };
+      const nonNeg = (todayData.nonneg || []).filter(t => t.text.trim() !== '');
+      const totalNN = nonNeg.length;
+      const doneNN = nonNeg.filter(t => t.done).length;
+      const mainPct = totalNN > 0 ? Math.round((doneNN / totalNN) * 100) : 0;
+
+      // 1. Morning Brief (8:30 AM)
+      if (isMorningBrief) {
+        if (totalNN === 0 || doneNN === 0) {
+          sendNotification("🎯 Morning Tactical Brief", "Lock in your 2–5 daily non-negotiables before the day pulls you into reactive mode.");
+          lastNotifiedHour = currentTriggerKey;
+        }
+      }
+
+      // 2. Evening Pacing Alert (8:30 PM)
+      if (isEveningPacing) {
+        if (mainPct < 85 && totalNN > 0) {
+          const remaining = totalNN - doneNN;
+          sendNotification(`⚡ Action Required: Main Quest at ${mainPct}%`, `Complete ${remaining} more non-negotiable${remaining === 1 ? '' : 's'} to hit your 85% execution standard tonight.`);
+          lastNotifiedHour = currentTriggerKey;
+        } else if (mainPct >= 85) {
+          // Side quest nudge if close to next star
+          const other = todayData.other || [];
+          const totalOther = other.length;
+          const doneOther = other.filter(o => o.done).length;
+          if (totalOther > 0) {
+            const sqPct = Math.round((doneOther / totalOther) * 100);
+            if (sqPct >= 30 && sqPct < 60) {
+              sendNotification("⭐ Side Quest Progress", "You're close to a ★★ Silver Star tonight! Complete your secondary tasks to level up.");
+              lastNotifiedHour = currentTriggerKey;
+            } else if (sqPct >= 60 && sqPct < 80) {
+              sendNotification("🌟 Gold Star Within Reach!", "Knock out your remaining side quests tonight to claim ★★★ Gold!");
+              lastNotifiedHour = currentTriggerKey;
+            }
+          }
+        }
+      }
+
+      // 3. Sunday Weekly Review (Sunday 6:00 PM)
+      if (isSundayReview) {
+        sendNotification("📊 Weekly Tactical Review", "Sunday review time: Score your execution, reflect on lessons, and set your next week's objective.");
+        lastNotifiedHour = currentTriggerKey;
+      }
+    }
+
+    // Check notification rules every 30 seconds
+    setInterval(checkNotificationTriggers, 30000);
+
+    /* =========================================================================
        REVIEW & ROUTING
        ========================================================================= */
     function saveReview() {
@@ -1608,6 +1741,7 @@
     document.getElementById('wiz-start-date').value = '2026-09-07';
 
     updateAuthUI();
+    updateNotificationUI();
     if (cloudSession) loadFromCloud();
 
     if (!state || !state.hasCompletedOnboarding) {
