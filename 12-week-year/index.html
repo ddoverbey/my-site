@@ -836,9 +836,10 @@
       
       const freqSelect = type === 'lead' ? `
         <select class="w-28 bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-slate-300 focus:border-amber-500 outline-none font-mono ind-freq">
-          <option value="daily" ${item.frequency === 'daily' ? 'selected' : ''}>Daily</option>
-          <option value="weekly" ${item.frequency === 'weekly' ? 'selected' : ''}>Weekly</option>
-          <option value="na" ${item.frequency === 'na' ? 'selected' : ''}>N/A</option>
+          <option value="daily">Daily</option>
+          <option value="weekly">Weekly</option>
+          <option value="total">12WY Total</option>
+          <option value="na">N/A</option>
         </select>
       ` : '';
 
@@ -1578,7 +1579,7 @@
       
       let freq = 'na';
       if (type === 'leading') {
-        const choice = prompt(`Choose cadence (daily, weekly, na):`, "daily");
+        const choice = prompt(`Choose cadence (daily, weekly, total, na):`, "daily");
         freq = choice ? choice.toLowerCase() : 'daily';
       }
 
