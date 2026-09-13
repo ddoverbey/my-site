@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>12-Week Year • Command Center</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .score-radial {
+      transition: stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen p-4 sm:p-6 flex flex-col items-center selection:bg-amber-500 selection:text-black">
+
+  <main class="w-full max-w-4xl space-y-6 pb-24">
+    
+    <!-- Top Header -->
+    <header class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="text-xl">⚡</span>
+          <h1 class="text-2xl font-bold tracking-tight text-white font-mono">12-WEEK YEAR</h1>
+          <span id="badge-current-week" class="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs px-2 py-0.5 rounded font-mono font-bold">Week 1 / 12</span>
+        </div>
+        <p id="cycle-dates-label" class="text-xs text-slate-400 mt-1 font-mono">Loading cycle timeline...</p>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button 
+          onclick="toggleVisionModal(true)"
+          class="bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
+          title="Review Long-Term & 3-Year Vision"
+        >
+          👁️ <span class="hidden sm:inline">Vision</span>
+        </button>
+        <button 
+          onclick="togglePlanModal(true)"
+          class="bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
+          title="Edit 12-Week Goals & Tactics"
+        >
+          🎯 <span class="hidden sm:inline">Edit Plan</span>
+        </button>
+        <button 
+          onclick="toggleSettingsModal(true)"
+          class="bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-slate-200 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-colors"
+          title="Settings & Dates"
+        >
+          ⚙️
+        </button>
+      </div>
+    </header>
+
+    <!-- Keystone Goal Bar -->
+    <section class="bg-gradient-to-r from-slate-900 via-slate-900 to-amber-950/20 border border-slate-800 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg">
+      <div class="space-y-0.5 min-w-0">
+        <div class="flex items-center gap-2">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400 font-mono">The 1 Big Goal</span>
+          <span id="label-cycle-days" class="text-[10px] text-slate-500 font-mono">Day 1 of 84</span>
+        </div>
+        <h2 id="display-keystone-goal" class="text-lg font-bold text-slate-100 truncate">Define your Keystone Goal...</h2>
+        <p id="display-keystone-why" class="text-xs text-slate-400 truncate italic">"Why: Connect your vision to the price of inaction."</p>
+      </div>
+      <button 
+        onclick="togglePlanModal(true)" 
+        class="bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 px-3 py-1.5 rounded-lg text-xs font-semibold shrink-0 transition-colors self-start sm:self-auto"
+      >
+        Refine Goal
+      </button>
+    </section>
+
+    <!-- Execution Engine Grid: Scorecard & Performance Time Blocks -->
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+      
+      <!-- Weekly Execution Scorecard (Target: 85%+) -->
+      <section class="md:col-span-5 bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col justify-between shadow-sm">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div>
+            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider font-mono">Weekly Scorecard</h3>
+            <p class="text-[11px] text-slate-500">Execution over results • Target: 85%+</p>
+          </div>
+          <span id="score-status-badge" class="text-xs font-bold font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400">Pacing</span>
+        </div>
+
+        <!-- Center Gauge -->
+        <div class="flex items-center justify-center my-4 gap-6">
+          <div class="relative w-28 h-28 flex items-center justify-center">
+            <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+              <path class="text-slate-800" stroke-width="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              <path id="score-circle-bar" class="text-amber-400 score-radial" stroke-width="3.5" stroke-dasharray="100, 100" stroke-dashoffset="100" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+            </svg>
+            <div class="absolute flex flex-col items-center">
+              <span id="score-percentage" class="text-2xl font-black font-mono text-white">0%</span>
+              <span class="text-[9px] uppercase font-mono text-slate-500 tracking-wider">Executed</span>
+            </div>
+          </div>
+
+          <div class="space-y-1 text-xs">
+            <div class="text-slate-400">Done: <span id="score-completed-count" class="font-bold text-white font-mono">0</span> / <span id="score-total-count" class="font-mono">0</span></div>
+            <div class="text-slate-400">Weekly Target: <span class="font-bold text-amber-400 font-mono">85%</span></div>
+            <p class="text-[10px] text-slate-500 pt-1 leading-tight">"Effort doesn't count. You either hit 85% or you don't."</p>
+          </div>
+        </div>
+
+        <!-- Sunday / Monday Review Action -->
+        <button 
+          onclick="toggleReviewModal(true)" 
+          class="w-full bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 py-2 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
+        >
+          <span>📝</span> Weekly Review & WAM Report
+        </button>
+      </section>
+
+      <!-- The Performance Time System Blocks -->
+      <section class="md:col-span-7 bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col justify-between shadow-sm">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div>
+            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider font-mono">Performance Time Blocks</h3>
+            <p class="text-[11px] text-slate-500">Protect the deep work that drives the 85%</p>
+          </div>
+          <span class="text-[11px] text-slate-500 font-mono">Logged this week</span>
+        </div>
+
+        <div class="grid grid-cols-3 gap-3 my-3">
+          <!-- Strategic Block -->
+          <div class="bg-slate-950 border border-slate-800/90 rounded-xl p-3 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between">
+                <span class="text-sm">🎯</span>
+                <span id="count-strategic" class="text-xs font-mono font-bold text-amber-400">0</span>
+              </div>
+              <div class="font-bold text-xs text-slate-200 mt-1">Strategic</div>
+              <div class="text-[10px] text-slate-500 leading-tight mt-0.5">3h deep focus on critical goals</div>
+            </div>
+            <button onclick="logBlock('strategic')" class="mt-2 text-[10px] font-semibold bg-slate-800 hover:bg-slate-700 py-1 rounded text-slate-300 transition-colors">+ Log Block</button>
+          </div>
+
+          <!-- Buffer Block -->
+          <div class="bg-slate-950 border border-slate-800/90 rounded-xl p-3 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between">
+                <span class="text-sm">📥</span>
+                <span id="count-buffer" class="text-xs font-mono font-bold text-teal-400">0</span>
+              </div>
+              <div class="font-bold text-xs text-slate-200 mt-1">Buffer</div>
+              <div class="text-[10px] text-slate-500 leading-tight mt-0.5">30-60m reactive email/admin</div>
+            </div>
+            <button onclick="logBlock('buffer')" class="mt-2 text-[10px] font-semibold bg-slate-800 hover:bg-slate-700 py-1 rounded text-slate-300 transition-colors">+ Log Block</button>
+          </div>
+
+          <!-- Breakout Block -->
+          <div class="bg-slate-950 border border-slate-800/90 rounded-xl p-3 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between">
+                <span class="text-sm">🍃</span>
+                <span id="count-breakout" class="text-xs font-mono font-bold text-emerald-400">0</span>
+              </div>
+              <div class="font-bold text-xs text-slate-200 mt-1">Breakout</div>
+              <div class="text-[10px] text-slate-500 leading-tight mt-0.5">3h rest / recharge away from work</div>
+            </div>
+            <button onclick="logBlock('breakout')" class="mt-2 text-[10px] font-semibold bg-slate-800 hover:bg-slate-700 py-1 rounded text-slate-300 transition-colors">+ Log Block</button>
+          </div>
+        </div>
+
+        <div class="text-[11px] text-slate-500 flex items-center justify-between pt-1 border-t border-slate-800/80">
+          <span>Target: 1-2 Strategic, 1 Breakout / wk</span>
+          <button onclick="resetBlocks()" class="text-slate-600 hover:text-rose-400 text-[10px]">Clear blocks</button>
+        </div>
+      </section>
+    </div>
+
+    <!-- Active Week Tactics & Daily Focus -->
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+      
+      <!-- Left: This Week's Actionable Tactics (Must start with a verb) -->
+      <section class="md:col-span-7 bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4 shadow-sm">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div>
+            <h2 class="text-xs font-bold text-slate-300 uppercase tracking-wider font-mono flex items-center gap-1.5">
+              <span>📋</span> <span id="label-tactics-header">Tactics for Week 1</span>
+            </h2>
+            <p class="text-[11px] text-slate-500">Only actions scheduled for this exact week count toward the 85%.</p>
+          </div>
+          <button onclick="openAddTacticModal()" class="text-xs bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-1 rounded font-medium transition-colors">
+            + Tactic
+          </button>
+        </div>
+
+        <!-- Tactics List Container -->
+        <div id="tactics-container" class="space-y-2">
+          <!-- Dynamically populated -->
+        </div>
+      </section>
+
+      <!-- Right: Today's Non-Negotiable Top 3 -->
+      <section class="md:col-span-5 bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4 shadow-sm flex flex-col justify-between">
+        <div class="space-y-3">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div>
+              <h2 class="text-xs font-bold text-slate-300 uppercase tracking-wider font-mono flex items-center gap-1.5">
+                <span>🔥</span> Today's Top 3 Non-Negotiables
+              </h2>
+              <p class="text-[11px] text-slate-500">The 3 things you must execute today.</p>
+            </div>
+            <span id="display-today-weekday" class="text-xs font-mono text-amber-400 font-bold">Today</span>
+          </div>
+
+          <!-- Top 3 Daily Form Inputs -->
+          <div class="space-y-2 text-xs">
+            <div class="flex items-center gap-2 bg-slate-950 border border-slate-800 p-2.5 rounded-lg">
+              <input type="checkbox" id="daily-check-1" onchange="saveDailyTasks()" class="w-4 h-4 rounded border-slate-700 text-amber-500 focus:ring-0 bg-slate-900 cursor-pointer" />
+              <input type="text" id="daily-text-1" oninput="saveDailyTasks()" placeholder="1. Action starting with verb..." class="bg-transparent flex-1 text-slate-200 outline-none text-xs" />
+            </div>
+            <div class="flex items-center gap-2 bg-slate-950 border border-slate-800 p-2.5 rounded-lg">
+              <input type="checkbox" id="daily-check-2" onchange="saveDailyTasks()" class="w-4 h-4 rounded border-slate-700 text-amber-500 focus:ring-0 bg-slate-900 cursor-pointer" />
+              <input type="text" id="daily-text-2" oninput="saveDailyTasks()" placeholder="2. Action starting with verb..." class="bg-transparent flex-1 text-slate-200 outline-none text-xs" />
+            </div>
+            <div class="flex items-center gap-2 bg-slate-950 border border-slate-800 p-2.5 rounded-lg">
+              <input type="checkbox" id="daily-check-3" onchange="saveDailyTasks()" class="w-4 h-4 rounded border-slate-700 text-amber-500 focus:ring-0 bg-slate-900 cursor-pointer" />
+              <input type="text" id="daily-text-3" oninput="saveDailyTasks()" placeholder="3. Action starting with verb..." class="bg-transparent flex-1 text-slate-200 outline-none text-xs" />
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-slate-950/60 border border-slate-800 p-3 rounded-xl mt-4 space-y-1 text-[11px] text-slate-400">
+          <div class="font-bold text-slate-300 font-mono uppercase text-[10px]">Emotional Cycle of Change</div>
+          <p id="label-emotional-cycle">Stage: Uninformed Optimism (Excitement is high, resistance is coming).</p>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- MODAL 1: VISION (The Emotional Connection) -->
+  <div id="modal-vision" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-5 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <div>
+          <h3 class="font-bold text-sm text-slate-100 font-mono">The Emotional Connection (Vision)</h3>
+          <p class="text-[11px] text-slate-500">Connect daily pain and action to audaciously meaningful outcomes.</p>
+        </div>
+        <button onclick="toggleVisionModal(false)" class="text-slate-400 hover:text-slate-200 text-sm">✕</button>
+      </div>
+
+      <form id="vision-form" class="space-y-4 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-300 uppercase tracking-wider mb-1">Aspirational Vision (Long-Term / Audacious)</label>
+          <textarea id="input-vision-long" rows="3" placeholder="What does an audacious, meaningful life look like 5-10 years out?" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-amber-500 outline-none leading-relaxed"></textarea>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-300 uppercase tracking-wider mb-1">3-Year Vision</label>
+          <textarea id="input-vision-3yr" rows="3" placeholder="Based on that long-term aspiration, what must exist 3 years from today?" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-amber-500 outline-none leading-relaxed"></textarea>
+        </div>
+
+        <button type="submit" class="w-full bg-amber-500 hover:bg-amber-400 font-bold text-black py-2 rounded-lg transition-colors">
+          Save Vision
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 2: 12-WEEK PLAN & KEYSTONE GOAL -->
+  <div id="modal-plan" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-5 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <div>
+          <h3 class="font-bold text-sm text-slate-100 font-mono">12-Week Goals & The Keystone</h3>
+          <p class="text-[11px] text-slate-500">Not doing everything. Attacking the 1 goal that changes everything.</p>
+        </div>
+        <button onclick="togglePlanModal(false)" class="text-slate-400 hover:text-slate-200 text-sm">✕</button>
+      </div>
+
+      <form id="plan-form" class="space-y-3.5 text-xs">
+        <div>
+          <label class="block font-semibold text-amber-400 uppercase tracking-wider mb-1">The One Keystone Goal (Specific & Measurable)</label>
+          <input id="input-keystone-goal" type="text" required placeholder="e.g., Ship MVP and acquire first 20 paid users" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none font-bold" />
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Why do you want this specific goal?</label>
+          <textarea id="input-keystone-why" rows="2" placeholder="The deep emotional driver..." class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:border-amber-500 outline-none"></textarea>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-rose-400 mb-1">Cost of Inaction (What happens if you don't attempt this?)</label>
+          <textarea id="input-keystone-inaction" rows="2" placeholder="Stagnation, lost momentum, regret..." class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:border-amber-500 outline-none"></textarea>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 pt-1">
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1">Leading Indicator (Action)</label>
+            <input id="input-lead-ind" type="text" placeholder="e.g., 10 outreach emails / day" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-slate-200 focus:border-amber-500 outline-none" />
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1">Lagging Indicator (Result)</label>
+            <input id="input-lag-ind" type="text" placeholder="e.g., $2,000 MRR" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-slate-200 focus:border-amber-500 outline-none" />
+          </div>
+        </div>
+
+        <button type="submit" class="w-full bg-amber-500 hover:bg-amber-400 font-bold text-black py-2 rounded-lg transition-colors mt-2">
+          Save 12-Week Strategy
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 3: ADD / EDIT TACTIC -->
+  <div id="modal-tactic" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h3 class="font-bold text-sm text-slate-100 font-mono">Add Execution Tactic</h3>
+        <button onclick="toggleTacticModal(false)" class="text-slate-400 hover:text-slate-200 text-sm">✕</button>
+      </div>
+
+      <form id="tactic-form" class="space-y-3 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-300 uppercase tracking-wider mb-1">Tactic (Must start with a VERB)</label>
+          <input id="input-tactic-title" type="text" required placeholder="e.g., Deploy auth endpoint to production" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none" />
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-300 uppercase tracking-wider mb-1">Assigned Week</label>
+          <select id="input-tactic-week" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none">
+            <option value="current">Active Week (Current)</option>
+            <option value="recurring">Recurring (Every Single Week)</option>
+            <option value="1">Week 1</option>
+            <option value="2">Week 2</option>
+            <option value="3">Week 3</option>
+            <option value="4">Week 4</option>
+            <option value="5">Week 5</option>
+            <option value="6">Week 6</option>
+            <option value="7">Week 7</option>
+            <option value="8">Week 8</option>
+            <option value="9">Week 9</option>
+            <option value="10">Week 10</option>
+            <option value="11">Week 11</option>
+            <option value="12">Week 12</option>
+          </select>
+        </div>
+
+        <button type="submit" class="w-full bg-amber-500 hover:bg-amber-400 font-bold text-black py-2 rounded-lg transition-colors mt-1">
+          Lock in Tactic
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 4: WEEKLY REVIEW & WAM (Sunday Routine) -->
+  <div id="modal-review" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-5 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <div>
+          <h3 class="font-bold text-sm text-slate-100 font-mono">Weekly Review & Accountability</h3>
+          <p class="text-[11px] text-slate-500">Every Sunday/Monday: Review, score, and plan before starting the week.</p>
+        </div>
+        <button onclick="toggleReviewModal(false)" class="text-slate-400 hover:text-slate-200 text-sm">✕</button>
+      </div>
+
+      <form id="review-form" class="space-y-3.5 text-xs">
+        <div>
+          <label class="block font-semibold text-emerald-400 mb-1">What are you most proud of accomplishing this week?</label>
+          <textarea id="input-review-proud" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:border-amber-500 outline-none"></textarea>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-rose-400 mb-1">What was challenging or where did execution slip?</label>
+          <textarea id="input-review-challenges" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:border-amber-500 outline-none"></textarea>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">What did you learn about your process?</label>
+          <textarea id="input-review-learn" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:border-amber-500 outline-none"></textarea>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-amber-300 mb-1">Friend Encouragement Prompt: If a good friend had a week like this, what would you tell them to spur them on?</label>
+          <textarea id="input-review-friend" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:border-amber-500 outline-none"></textarea>
+        </div>
+
+        <button type="submit" class="w-full bg-amber-500 hover:bg-amber-400 font-bold text-black py-2 rounded-lg transition-colors mt-2">
+          Save Weekly Review
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 5: TIMELINE & SETTINGS -->
+  <div id="modal-settings" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h3 class="font-bold text-sm text-slate-100 font-mono">12-Week Settings</h3>
+        <button onclick="toggleSettingsModal(false)" class="text-slate-400 hover:text-slate-200 text-sm">✕</button>
+      </div>
+
+      <form id="settings-form" class="space-y-3.5 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">12-Week Cycle Start Date</label>
+          <input id="input-cycle-start" type="date" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none font-mono" />
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">First Day of the Week</label>
+          <select id="input-week-start-day" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none">
+            <option value="1">Monday (Standard Work Week)</option>
+            <option value="0">Sunday (Traditional Planning Day)</option>
+          </select>
+        </div>
+
+        <div class="pt-2 border-t border-slate-800 space-y-2">
+          <button type="button" onclick="exportData()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 py-1.5 rounded-lg text-xs font-semibold transition-colors">
+            📥 Backup JSON Export
+          </button>
+          <button type="button" onclick="resetToExampleCycle()" class="w-full text-slate-500 hover:text-rose-400 py-1 text-[11px] transition-colors">
+            Reset to Sample 12WY Setup
+          </button>
+        </div>
+
+        <button type="submit" class="w-full bg-amber-500 hover:bg-amber-400 font-bold text-black py-2 rounded-lg transition-colors mt-2">
+          Save Settings
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    /* =========================================================================
+       12-WEEK YEAR LOCAL ENGINE
+       ========================================================================= */
+    const STORAGE_KEY = 'twelve_week_year_data_v1';
+
+    function getLocalTodayString() {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      const d = String(now.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    function getDefault12WY() {
+      // Default to starting this week's Monday
+      const now = new Date();
+      const day = now.getDay();
+      const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+      const startMonday = new Date(now.setDate(diff));
+
+      return {
+        startDate: getLocalTodayString(),
+        weekStartDay: 1, // 1 = Monday, 0 = Sunday
+        vision: {
+          aspirational: 'Build independent engineering projects, achieve location freedom, and create high-leverage products.',
+          threeYear: 'Operating sustainable software and hardware products while maintaining top physical health.'
+        },
+        plan: {
+          keystoneGoal: 'Ship MVP and sign first 10 beta testers',
+          why: 'To transition from ideation to shipping validated, customer-facing code.',
+          costOfInaction: 'Wasted months rebuilding features in isolation with zero market feedback.',
+          leadIndicator: '10 direct tester conversations per week',
+          lagIndicator: '10 signed-up active teams'
+        },
+        tactics: [
+          { id: 't1', title: 'Outline schema and critical database models', week: 'recurring', doneWeeks: [] },
+          { id: 't2', title: 'Deploy functional prototype to production', week: '1', doneWeeks: [] },
+          { id: 't3', title: 'Direct-message 20 target users for discovery calls', week: '1', doneWeeks: [] },
+          { id: 't4', title: 'Schedule 3-hour Strategic Deep Work Block on calendar', week: 'recurring', doneWeeks: [] }
+        ],
+        dailyTasks: {
+          date: getLocalTodayString(),
+          task1: { text: 'Draft user onboarding email flow', done: false },
+          task2: { text: 'Complete 3-hour Strategic Block on core engine', done: false },
+          task3: { text: 'Send 5 beta invites', done: false }
+        },
+        reviews: {},
+        blocks: {
+          strategic: 0,
+          buffer: 0,
+          breakout: 0
+        }
+      };
+    }
+
+    let state = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+    if (!state) {
+      state = getDefault12WY();
+      saveState();
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    /* =========================================================================
+       DATE & CYCLE CALCULATIONS
+       ========================================================================= */
+    function getCycleTimeline() {
+      const [y, m, d] = state.startDate.split('-').map(Number);
+      const start = new Date(y, m - 1, d, 0, 0, 0);
+      const now = new Date();
+      
+      const diffTime = now.getTime() - start.getTime();
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      
+      // Calculate current week (1-12, or 13 for review)
+      let currentWeek = Math.floor(diffDays / 7) + 1;
+      if (currentWeek < 1) currentWeek = 1;
+
+      // End date is 12 weeks (84 days) from start
+      const endDate = new Date(start.getTime() + (84 * 24 * 60 * 60 * 1000));
+      
+      return {
+        currentWeek,
+        currentDay: Math.max(1, Math.min(84, diffDays + 1)),
+        isReviewWeek: currentWeek >= 13,
+        startDateFormatted: start.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }),
+        endDateFormatted: endDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+      };
+    }
+
+    function getEmotionalCycleDescription(week) {
+      if (week <= 2) return 'Stage 1: Uninformed Optimism (Excitement is high, resistance hasn\'t hit yet).';
+      if (week <= 5) return 'Stage 2: Informed Pessimism (Reality is setting in; work feels heavier).';
+      if (week <= 8) return 'Stage 3: Valley of Despair (Crucial turning point: lean on tactics over feelings!).';
+      if (week <= 11) return 'Stage 4: Informed Optimism (Momentum is building, finish line in sight).';
+      return 'Stage 5: Success & Fulfillment (13th Week assessment & celebration).';
+    }
+
+    /* =========================================================================
+       UI RENDERING
+       ========================================================================= */
+    function render() {
+      const timeline = getCycleTimeline();
+
+      // Header Timeline
+      const weekBadge = document.getElementById('badge-current-week');
+      if (timeline.isReviewWeek) {
+        weekBadge.textContent = 'Week 13 / 13 (Review Week)';
+        weekBadge.className = 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs px-2 py-0.5 rounded font-mono font-bold';
+      } else {
+        weekBadge.textContent = `Week ${timeline.currentWeek} / 12`;
+        weekBadge.className = 'bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs px-2 py-0.5 rounded font-mono font-bold';
+      }
+
+      document.getElementById('cycle-dates-label').textContent = `${timeline.startDateFormatted} → ${timeline.endDateFormatted} (${84 - timeline.currentDay} days remaining)`;
+      document.getElementById('label-cycle-days').textContent = `Day ${timeline.currentDay} of 84`;
+
+      // Keystone Goal Box
+      document.getElementById('display-keystone-goal').textContent = state.plan.keystoneGoal || 'Click to set Keystone Goal';
+      document.getElementById('display-keystone-why').textContent = state.plan.why ? `Why: ${state.plan.why}` : 'Define your why...';
+
+      // Emotional Stage
+      document.getElementById('label-emotional-cycle').textContent = getEmotionalCycleDescription(timeline.currentWeek);
+
+      // Render Tactics assigned to the current week (or recurring)
+      renderTactics(timeline.currentWeek);
+
+      // Render Time Blocks
+      document.getElementById('count-strategic').textContent = state.blocks.strategic || 0;
+      document.getElementById('count-buffer').textContent = state.blocks.buffer || 0;
+      document.getElementById('count-breakout').textContent = state.blocks.breakout || 0;
+
+      // Render Daily Tasks
+      renderDailyTasks();
+    }
+
+    function renderTactics(currentWeek) {
+      const container = document.getElementById('tactics-container');
+      document.getElementById('label-tactics-header').textContent = `Tactics for Week ${currentWeek}`;
+
+      // Filter tactics that belong to this week OR are recurring
+      const activeTactics = state.tactics.filter(t => t.week === 'recurring' || parseInt(t.week) === currentWeek);
+
+      if (activeTactics.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-6 border border-dashed border-slate-800 rounded-xl text-slate-500 text-xs space-y-1 font-mono">
+            <div>No tactics assigned to Week ${currentWeek}.</div>
+            <button onclick="openAddTacticModal()" class="text-amber-400 hover:underline text-xs mt-1">+ Add first tactic for this week</button>
+          </div>
+        `;
+        updateScorecard(0, 0);
+        return;
+      }
+
+      let completedCount = 0;
+
+      container.innerHTML = activeTactics.map(tactic => {
+        const isDone = (tactic.doneWeeks || []).includes(currentWeek);
+        if (isDone) completedCount++;
+
+        return `
+          <div class="flex items-center justify-between p-3 bg-slate-950 border ${isDone ? 'border-slate-800/60 opacity-60' : 'border-slate-800'} rounded-xl transition-all">
+            <label class="flex items-center gap-3 cursor-pointer flex-1 min-w-0">
+              <input 
+                type="checkbox" 
+                ${isDone ? 'checked' : ''} 
+                onchange="toggleTacticStatus('${tactic.id}', ${currentWeek})" 
+                class="w-4 h-4 rounded border-slate-700 text-amber-500 focus:ring-0 bg-slate-900 cursor-pointer shrink-0"
+              />
+              <span class="text-xs ${isDone ? 'line-through text-slate-500' : 'text-slate-200'} font-medium truncate">${escapeHtml(tactic.title)}</span>
+            </label>
+
+            <div class="flex items-center gap-2 shrink-0 ml-2">
+              <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-400">
+                ${tactic.week === 'recurring' ? 'Recurring' : `Wk ${tactic.week}`}
+              </span>
+              <button onclick="removeTactic('${tactic.id}')" class="text-slate-600 hover:text-rose-400 text-xs px-1">✕</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      updateScorecard(completedCount, activeTactics.length);
+    }
+
+    function updateScorecard(done, total) {
+      const percentage = total > 0 ? Math.round((done / total) * 100) : 0;
+      
+      document.getElementById('score-percentage').textContent = `${percentage}%`;
+      document.getElementById('score-completed-count').textContent = done;
+      document.getElementById('score-total-count').textContent = total;
+
+      // Update radial gauge
+      const circle = document.getElementById('score-circle-bar');
+      const offset = 100 - percentage;
+      circle.style.strokeDashoffset = offset;
+
+      const badge = document.getElementById('score-status-badge');
+      if (percentage >= 85) {
+        circle.setAttribute('class', 'text-emerald-400 score-radial');
+        badge.textContent = 'Crushing It (85%+)';
+        badge.className = 'text-xs font-bold font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+      } else if (percentage >= 60) {
+        circle.setAttribute('class', 'text-amber-400 score-radial');
+        badge.textContent = 'In Range (Pacing)';
+        badge.className = 'text-xs font-bold font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30';
+      } else {
+        circle.setAttribute('class', 'text-slate-500 score-radial');
+        badge.textContent = 'Action Required';
+        badge.className = 'text-xs font-bold font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700';
+      }
+    }
+
+    function toggleTacticStatus(tacticId, currentWeek) {
+      const tactic = state.tactics.find(t => t.id === tacticId);
+      if (!tactic) return;
+
+      if (!tactic.doneWeeks) tactic.doneWeeks = [];
+      const idx = tactic.doneWeeks.indexOf(currentWeek);
+
+      if (idx > -1) {
+        tactic.doneWeeks.splice(idx, 1);
+      } else {
+        tactic.doneWeeks.push(currentWeek);
+      }
+
+      saveState();
+      render();
+    }
+
+    function removeTactic(tacticId) {
+      if (confirm('Delete this tactic from your plan?')) {
+        state.tactics = state.tactics.filter(t => t.id !== tacticId);
+        saveState();
+        render();
+      }
+    }
+
+    /* =========================================================================
+       DAILY TASKS AUTO-REFRESH
+       ========================================================================= */
+    function renderDailyTasks() {
+      const todayStr = getLocalTodayString();
+      const todayDate = new Date();
+      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      document.getElementById('display-today-weekday').textContent = days[todayDate.getDay()];
+
+      // Daily rollover check
+      if (!state.dailyTasks || state.dailyTasks.date !== todayStr) {
+        state.dailyTasks = {
+          date: todayStr,
+          task1: { text: state.dailyTasks?.task1?.done ? '' : (state.dailyTasks?.task1?.text || ''), done: false },
+          task2: { text: state.dailyTasks?.task2?.done ? '' : (state.dailyTasks?.task2?.text || ''), done: false },
+          task3: { text: state.dailyTasks?.task3?.done ? '' : (state.dailyTasks?.task3?.text || ''), done: false }
+        };
+        saveState();
+      }
+
+      document.getElementById('daily-text-1').value = state.dailyTasks.task1.text || '';
+      document.getElementById('daily-check-1').checked = state.dailyTasks.task1.done || false;
+
+      document.getElementById('daily-text-2').value = state.dailyTasks.task2.text || '';
+      document.getElementById('daily-check-2').checked = state.dailyTasks.task2.done || false;
+
+      document.getElementById('daily-text-3').value = state.dailyTasks.task3.text || '';
+      document.getElementById('daily-check-3').checked = state.dailyTasks.task3.done || false;
+    }
+
+    function saveDailyTasks() {
+      state.dailyTasks.task1 = {
+        text: document.getElementById('daily-text-1').value,
+        done: document.getElementById('daily-check-1').checked
+      };
+      state.dailyTasks.task2 = {
+        text: document.getElementById('daily-text-2').value,
+        done: document.getElementById('daily-check-2').checked
+      };
+      state.dailyTasks.task3 = {
+        text: document.getElementById('daily-text-3').value,
+        done: document.getElementById('daily-check-3').checked
+      };
+      saveState();
+    }
+
+    /* =========================================================================
+       PERFORMANCE TIME SYSTEM BLOCKS
+       ========================================================================= */
+    function logBlock(type) {
+      if (!state.blocks) state.blocks = { strategic: 0, buffer: 0, breakout: 0 };
+      state.blocks[type] = (state.blocks[type] || 0) + 1;
+      saveState();
+      render();
+    }
+
+    function resetBlocks() {
+      if (confirm('Reset your logged blocks for the week?')) {
+        state.blocks = { strategic: 0, buffer: 0, breakout: 0 };
+        saveState();
+        render();
+      }
+    }
+
+    /* =========================================================================
+       MODAL HANDLERS
+       ========================================================================= */
+    function toggleVisionModal(show) {
+      const modal = document.getElementById('modal-vision');
+      if (show) {
+        document.getElementById('input-vision-long').value = state.vision?.aspirational || '';
+        document.getElementById('input-vision-3yr').value = state.vision?.threeYear || '';
+        modal.classList.remove('hidden');
+      } else {
+        modal.classList.add('hidden');
+      }
+    }
+
+    function togglePlanModal(show) {
+      const modal = document.getElementById('modal-plan');
+      if (show) {
+        document.getElementById('input-keystone-goal').value = state.plan?.keystoneGoal || '';
+        document.getElementById('input-keystone-why').value = state.plan?.why || '';
+        document.getElementById('input-keystone-inaction').value = state.plan?.costOfInaction || '';
+        document.getElementById('input-lead-ind').value = state.plan?.leadIndicator || '';
+        document.getElementById('input-lag-ind').value = state.plan?.lagIndicator || '';
+        modal.classList.remove('hidden');
+      } else {
+        modal.classList.add('hidden');
+      }
+    }
+
+    function toggleTacticModal(show) {
+      document.getElementById('modal-tactic').classList.toggle('hidden', !show);
+    }
+
+    function openAddTacticModal() {
+      document.getElementById('tactic-form').reset();
+      toggleTacticModal(true);
+    }
+
+    function toggleReviewModal(show) {
+      const modal = document.getElementById('modal-review');
+      if (show) {
+        const currentWeek = getCycleTimeline().currentWeek;
+        const currentRev = state.reviews?.[currentWeek] || {};
+        document.getElementById('input-review-proud').value = currentRev.proud || '';
+        document.getElementById('input-review-challenges').value = currentRev.challenges || '';
+        document.getElementById('input-review-learn').value = currentRev.learn || '';
+        document.getElementById('input-review-friend').value = currentRev.friend || '';
+        modal.classList.remove('hidden');
+      } else {
+        modal.classList.add('hidden');
+      }
+    }
+
+    function toggleSettingsModal(show) {
+      const modal = document.getElementById('modal-settings');
+      if (show) {
+        document.getElementById('input-cycle-start').value = state.startDate;
+        document.getElementById('input-week-start-day').value = state.weekStartDay ?? 1;
+        modal.classList.remove('hidden');
+      } else {
+        modal.classList.add('hidden');
+      }
+    }
+
+    /* =========================================================================
+       FORM SUBMISSIONS
+       ========================================================================= */
+    document.getElementById('vision-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      state.vision = {
+        aspirational: document.getElementById('input-vision-long').value.trim(),
+        threeYear: document.getElementById('input-vision-3yr').value.trim()
+      };
+      saveState();
+      toggleVisionModal(false);
+      render();
+    });
+
+    document.getElementById('plan-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      state.plan = {
+        keystoneGoal: document.getElementById('input-keystone-goal').value.trim(),
+        why: document.getElementById('input-keystone-why').value.trim(),
+        costOfInaction: document.getElementById('input-keystone-inaction').value.trim(),
+        leadIndicator: document.getElementById('input-lead-ind').value.trim(),
+        lagIndicator: document.getElementById('input-lag-ind').value.trim()
+      };
+      saveState();
+      togglePlanModal(false);
+      render();
+    });
+
+    document.getElementById('tactic-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const title = document.getElementById('input-tactic-title').value.trim();
+      let week = document.getElementById('input-tactic-week').value;
+
+      if (week === 'current') {
+        week = String(getCycleTimeline().currentWeek);
+      }
+
+      state.tactics.push({
+        id: 't_' + Date.now(),
+        title,
+        week,
+        doneWeeks: []
+      });
+
+      saveState();
+      toggleTacticModal(false);
+      render();
+    });
+
+    document.getElementById('review-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const currentWeek = getCycleTimeline().currentWeek;
+      if (!state.reviews) state.reviews = {};
+
+      state.reviews[currentWeek] = {
+        proud: document.getElementById('input-review-proud').value.trim(),
+        challenges: document.getElementById('input-review-challenges').value.trim(),
+        learn: document.getElementById('input-review-learn').value.trim(),
+        friend: document.getElementById('input-review-friend').value.trim(),
+        timestamp: Date.now()
+      };
+
+      saveState();
+      toggleReviewModal(false);
+      alert(`Week ${currentWeek} Review logged successfully!`);
+      render();
+    });
+
+    document.getElementById('settings-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      state.startDate = document.getElementById('input-cycle-start').value;
+      state.weekStartDay = parseInt(document.getElementById('input-week-start-day').value, 10);
+      saveState();
+      toggleSettingsModal(false);
+      render();
+    });
+
+    function exportData() {
+      const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `12wy_plan_${getLocalTodayString()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function resetToExampleCycle() {
+      if (confirm('Reset to standard sample 12-Week Year plan?')) {
+        state = getDefault12WY();
+        saveState();
+        toggleSettingsModal(false);
+        render();
+      }
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Launch cleanly
+    render();
+  </script>
+</body>
+</html>
