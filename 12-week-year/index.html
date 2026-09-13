@@ -6,1049 +6,970 @@
   <title>12-Week Year • Planner & Command Center</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    .score-radial {
-      transition: stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-    }
+    .score-radial { transition: stroke-dashoffset 0.5s ease; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen p-4 sm:p-6 flex flex-col items-center selection:bg-amber-500 selection:text-black">
+<body class="bg-slate-950 text-slate-100 min-h-screen p-3 sm:p-6 flex flex-col items-center selection:bg-amber-500 selection:text-black">
 
-  <!-- =========================================================================
-       SECTION 1: THE GUIDED WIZARD (Walks user step-by-step through methodology)
-       ========================================================================= -->
-  <div id="onboarding-container" class="w-full max-w-xl my-auto py-8 space-y-6">
+  <div class="w-full max-w-3xl space-y-4 pb-24">
     
-    <!-- Progress Header -->
-    <div class="space-y-2">
-      <div class="flex items-center justify-between text-xs font-mono text-slate-400">
-        <span class="flex items-center gap-1 text-amber-400 font-bold"><span>⚡</span> 12-WEEK YEAR BUILDER</span>
-        <span id="wizard-step-counter">Step 1 of 7</span>
-      </div>
-      <div class="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden border border-slate-800">
-        <div id="wizard-progress-bar" class="bg-amber-500 h-full transition-all duration-300" style="width: 14%"></div>
-      </div>
-    </div>
-
-    <!-- Step Card Container -->
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-2xl space-y-6">
-      
-      <!-- STEP 1: TIMELINE -->
-      <div id="step-1" class="wizard-step space-y-4">
-        <div class="space-y-1">
-          <span class="text-xs font-mono text-amber-400 uppercase tracking-wider font-bold">Phase 1 • Timeline</span>
-          <h2 class="text-xl font-bold text-white">When is your 12-Week Year?</h2>
-          <p class="text-xs text-slate-400 leading-relaxed">
-            In a 12-Week Year, there are no 365-day deadlines to encourage procrastination. Every week counts like a month; every day counts like a week.
-          </p>
-        </div>
-
-        <div class="space-y-3 pt-2">
-          <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1">Cycle Start Date</label>
-            <input id="wiz-start-date" type="date" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:border-amber-500 outline-none font-mono" />
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1">First Day of the Week</label>
-            <select id="wiz-start-day" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:border-amber-500 outline-none">
-              <option value="1">Monday (Standard Work Week)</option>
-              <option value="0">Sunday (Traditional Planning Day)</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <!-- STEP 2: 5 GOALS BRAINSTORM -->
-      <div id="step-2" class="wizard-step space-y-4 hidden">
-        <div class="space-y-1">
-          <span class="text-xs font-mono text-amber-400 uppercase tracking-wider font-bold">Phase 2 • Ideation</span>
-          <h2 class="text-xl font-bold text-white">What are 5 goals on your mind?</h2>
-          <p class="text-xs text-slate-400 leading-relaxed">
-            Brainstorm 5 goals you want to tackle this year. Don't censor yourself—we are going to ruthlessly prioritize in the next step.
-          </p>
-        </div>
-
-        <div class="space-y-2 pt-1 text-xs">
-          <input id="wiz-goal-1" type="text" placeholder="Goal 1 (e.g., Launch web app MVP and sign 10 users)" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none" />
-          <input id="wiz-goal-2" type="text" placeholder="Goal 2 (e.g., Deadlift 405 lbs and run a 5k)" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none" />
-          <input id="wiz-goal-3" type="text" placeholder="Goal 3 (e.g., Record and release 4-song EP)" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none" />
-          <input id="wiz-goal-4" type="text" placeholder="Goal 4 (e.g., Save $5,000 emergency fund)" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none" />
-          <input id="wiz-goal-5" type="text" placeholder="Goal 5 (e.g., Read 6 technical books)" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none" />
-        </div>
-      </div>
-
-      <!-- STEP 3: THE ONE BIG GOAL -->
-      <div id="step-3" class="wizard-step space-y-4 hidden">
-        <div class="space-y-1">
-          <span class="text-xs font-mono text-amber-400 uppercase tracking-wider font-bold">Phase 3 • Ruthless Focus</span>
-          <h2 class="text-xl font-bold text-white">Which ONE will have the biggest impact?</h2>
-          <p class="text-xs text-slate-400 leading-relaxed">
-            The 12-Week Year is <strong>not about working on everything in your life</strong>. It's about attacking 1 big goal that creates massive leverage. Choose the single keystone goal below:
-          </p>
-        </div>
-
-        <div id="wiz-radio-goals" class="space-y-2 pt-2 text-xs">
-          <!-- Dynamically populated from Step 2 inputs -->
-        </div>
-      </div>
-
-      <!-- STEP 4: THE EMOTIONAL CONNECTION -->
-      <div id="step-4" class="wizard-step space-y-4 hidden">
-        <div class="space-y-1">
-          <span class="text-xs font-mono text-amber-400 uppercase tracking-wider font-bold">Phase 4 • The Emotional Connection</span>
-          <h2 class="text-xl font-bold text-white">Connect the goal to reality</h2>
-          <p class="text-xs text-slate-400 leading-relaxed">
-            Willpower runs out. Execution requires deep emotional clarity so you don't quit during the "Valley of Despair".
-          </p>
-        </div>
-
-        <div class="space-y-3 pt-1 text-xs">
-          <div>
-            <label class="block font-semibold text-slate-300 mb-1">Why do you want this specific goal?</label>
-            <textarea id="wiz-why" rows="3" placeholder="What does achieving this unlock for your freedom, confidence, or future?" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-amber-500 outline-none leading-relaxed"></textarea>
-          </div>
-
-          <div>
-            <label class="block font-semibold text-rose-400 mb-1">What happens if you don't reach or attempt this goal?</label>
-            <textarea id="wiz-inaction" rows="3" placeholder="The cost of inaction: stagnation, regret, another year gone..." class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-amber-500 outline-none leading-relaxed"></textarea>
-          </div>
-        </div>
-      </div>
-
-      <!-- STEP 5: 12-WEEK SEGMENTS -->
-      <div id="step-5" class="wizard-step space-y-4 hidden">
-        <div class="space-y-1">
-          <span class="text-xs font-mono text-amber-400 uppercase tracking-wider font-bold">Phase 5 • Scope & Chunking</span>
-          <h2 class="text-xl font-bold text-white">Scope to the next 12 weeks</h2>
-          <p class="text-xs text-slate-400 leading-relaxed">
-            If your big goal is too large for 12 weeks, break it into four 12-week segments. What is the <strong>exact segment</strong> you will finish in this upcoming 12 weeks?
-          </p>
-        </div>
-
-        <div class="space-y-3 pt-1 text-xs">
-          <div>
-            <label class="block font-semibold text-slate-300 mb-1">Your 12-Week Target Chunk (Specific, Measurable, Stretch)</label>
-            <input id="wiz-chunk-goal" type="text" placeholder="e.g., Complete core feature set and deploy to production" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none font-bold" />
-          </div>
-
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block font-semibold text-slate-300 mb-1">Leading Indicator (Action you control)</label>
-              <input id="wiz-lead" type="text" placeholder="e.g., Code 2 hrs daily / 10 calls wk" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none" />
-            </div>
-            <div>
-              <label class="block font-semibold text-slate-300 mb-1">Lagging Indicator (Result)</label>
-              <input id="wiz-lag" type="text" placeholder="e.g., Live URL, $1k revenue" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- STEP 6: WEEK 1 TACTICAL PLAN -->
-      <div id="step-6" class="wizard-step space-y-4 hidden">
-        <div class="space-y-1">
-          <span class="text-xs font-mono text-amber-400 uppercase tracking-wider font-bold">Phase 6 • Week 1 Tactical Plan</span>
-          <h2 class="text-xl font-bold text-white">Break down Week 1</h2>
-          <p class="text-xs text-slate-400 leading-relaxed">
-            Tactics drive attainment. <strong>Every tactic must start with a verb</strong> and be realistic for Week 1.
-          </p>
-        </div>
-
-        <div class="space-y-3 pt-1 text-xs">
-          <div>
-            <label class="block font-semibold text-amber-300 mb-1">What is Week 1's non-negotiable goal?</label>
-            <input id="wiz-w1-nonneg" type="text" placeholder="e.g., Finalize data models and deploy working prototype" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none" />
-          </div>
-
-          <div class="space-y-2">
-            <label class="block font-semibold text-slate-300">Tactics / Key To-dos for Week 1 (Start with verbs)</label>
-            <input id="wiz-w1-t1" type="text" placeholder="Tactic 1 (e.g., Draft schema and test user login)" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none" />
-            <input id="wiz-w1-t2" type="text" placeholder="Tactic 2 (e.g., Schedule 3-hour Strategic Focus Block)" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none" />
-            <input id="wiz-w1-t3" type="text" placeholder="Tactic 3 (e.g., Reach out to 5 potential early testers)" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none" />
-          </div>
-        </div>
-      </div>
-
-      <!-- STEP 7: DAY 1 BATTLE PLAN -->
-      <div id="step-7" class="wizard-step space-y-4 hidden">
-        <div class="space-y-1">
-          <span class="text-xs font-mono text-amber-400 uppercase tracking-wider font-bold">Phase 7 • Day 1 Execution</span>
-          <h2 class="text-xl font-bold text-white">What 3 things must you do today?</h2>
-          <p class="text-xs text-slate-400 leading-relaxed">
-            Look at this week's plan. What 3 non-negotiables must get done today to drive the weekly goal?
-          </p>
-        </div>
-
-        <div class="space-y-3 pt-1 text-xs">
-          <div class="space-y-2">
-            <label class="block font-semibold text-amber-400">Today's Top 3 Non-Negotiables</label>
-            <input id="wiz-d1-t1" type="text" placeholder="1. Action starting with verb..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none font-medium" />
-            <input id="wiz-d1-t2" type="text" placeholder="2. Action starting with verb..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none font-medium" />
-            <input id="wiz-d1-t3" type="text" placeholder="3. Action starting with verb..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none font-medium" />
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-            <div>
-              <label class="block font-semibold text-slate-400 mb-1">Other To-dos (Optional)</label>
-              <textarea id="wiz-d1-other" rows="2" placeholder="Secondary chores..." class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200 focus:border-amber-500 outline-none"></textarea>
-            </div>
-            <div>
-              <label class="block font-semibold text-slate-400 mb-1">Appointments / Calendar Commitments</label>
-              <textarea id="wiz-d1-appts" rows="2" placeholder="2:00 PM Team sync..." class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200 focus:border-amber-500 outline-none"></textarea>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Navigation Buttons -->
-      <div class="flex items-center justify-between pt-4 border-t border-slate-800">
-        <button id="btn-wiz-prev" onclick="prevStep()" class="px-4 py-2 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition-colors invisible">
-          ← Back
-        </button>
-        <button id="btn-wiz-next" onclick="nextStep()" class="bg-amber-500 hover:bg-amber-400 font-bold text-black px-6 py-2 rounded-lg text-xs transition-colors">
-          Next Step →
-        </button>
-      </div>
-
-    </div>
-  </div>
-
-
-  <!-- =========================================================================
-       SECTION 2: THE REVEALED MASTER DASHBOARD (Shown once user completes steps)
-       ========================================================================= -->
-  <main id="dashboard-container" class="w-full max-w-4xl space-y-6 pb-24 hidden">
-    
-    <!-- Top Header -->
-    <header class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
-      <div>
-        <div class="flex items-center gap-2">
-          <span class="text-xl">⚡</span>
-          <h1 class="text-2xl font-bold tracking-tight text-white font-mono">12-WEEK YEAR</h1>
-          <span id="badge-current-week" class="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs px-2 py-0.5 rounded font-mono font-bold">Week 1 / 12</span>
-        </div>
-        <p id="cycle-dates-label" class="text-xs text-slate-400 mt-1 font-mono">Loading cycle timeline...</p>
-      </div>
-
+    <!-- Top Persistent Navigation Bar -->
+    <nav id="app-nav" class="flex items-center justify-between border-b border-slate-800 pb-3">
       <div class="flex items-center gap-2">
-        <button 
-          onclick="startWalkthroughAgain()" 
-          class="bg-slate-900 hover:bg-slate-800 border border-slate-800 text-amber-400 hover:text-amber-300 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
-          title="Re-open Step-by-Step Setup Guide"
-        >
-          <span>📖</span> Setup Guide
-        </button>
-        <button 
-          onclick="toggleReviewModal(true)" 
-          class="bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
-          title="Sunday / Monday Review"
-        >
-          <span>📝</span> Weekly Review
-        </button>
-        <button 
-          onclick="toggleSettingsModal(true)" 
-          class="bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-slate-200 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-colors"
-          title="Settings & Dates"
-        >
-          ⚙️
-        </button>
+        <span class="text-lg">⚡</span>
+        <span class="font-mono font-bold text-sm tracking-wider text-white">12-WEEK YEAR</span>
+        <span id="nav-week-badge" class="text-[11px] font-mono font-bold bg-amber-500/10 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded">Wk 1</span>
       </div>
-    </header>
 
-    <!-- Keystone Goal Bar -->
-    <section class="bg-gradient-to-r from-slate-900 via-slate-900 to-amber-950/20 border border-slate-800 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg">
-      <div class="space-y-0.5 min-w-0">
-        <div class="flex items-center gap-2">
-          <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400 font-mono">The 1 Big Goal</span>
-          <span id="label-cycle-days" class="text-[10px] text-slate-500 font-mono">Day 1 of 84</span>
-        </div>
-        <h2 id="display-keystone-goal" class="text-lg font-bold text-slate-100 truncate">Define your Keystone Goal...</h2>
-        <p id="display-keystone-why" class="text-xs text-slate-400 truncate italic">"Why: Connect your vision to the price of inaction."</p>
+      <!-- View Switcher -->
+      <div class="flex items-center gap-1 bg-slate-900 border border-slate-800 p-1 rounded-xl text-xs">
+        <button onclick="switchView('daily')" id="tab-daily" class="px-3 py-1 rounded-lg font-semibold transition-colors bg-amber-500 text-black">Today</button>
+        <button onclick="switchView('overview')" id="tab-overview" class="px-3 py-1 rounded-lg font-semibold text-slate-400 hover:text-white transition-colors">Overview</button>
+        <button onclick="switchView('review')" id="tab-review" class="px-3 py-1 rounded-lg font-semibold text-slate-400 hover:text-white transition-colors">Review</button>
+        <button onclick="switchView('guide')" id="tab-guide" class="px-3 py-1 rounded-lg font-semibold text-slate-400 hover:text-white transition-colors">Guide</button>
       </div>
-      <button 
-        onclick="startWalkthroughAgain(3)" 
-        class="bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 px-3 py-1.5 rounded-lg text-xs font-semibold shrink-0 transition-colors self-start sm:self-auto"
-      >
-        Edit Goal
-      </button>
+    </nav>
+
+
+    <!-- =========================================================================
+         VIEW 1: THE GUIDED INTERACTIVE WALKTHROUGH (Default when new, accessible anytime)
+         ========================================================================= -->
+    <section id="view-guide" class="py-4 space-y-5">
+      <!-- Wizard Progress Header -->
+      <div class="space-y-1.5">
+        <div class="flex items-center justify-between text-xs font-mono text-slate-400">
+          <span id="wiz-phase-title" class="text-amber-400 font-bold uppercase">Phase 1: Timeline</span>
+          <span id="wiz-step-counter">Step 1 of 7</span>
+        </div>
+        <div class="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden border border-slate-800">
+          <div id="wiz-progress-bar" class="bg-amber-500 h-full transition-all duration-300" style="width: 14%"></div>
+        </div>
+      </div>
+
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-8 shadow-2xl space-y-5">
+        
+        <!-- STEP 1: DATES -->
+        <div id="step-1" class="wiz-step space-y-4">
+          <div>
+            <h2 class="text-xl font-bold text-white">When did/does your 12-Week Year start?</h2>
+            <p class="text-xs text-slate-400 mt-1">If your cycle already started earlier this week (e.g. Monday 9/07), we'll walk you day-by-day to catch up so your scores are accurate.</p>
+          </div>
+          <div class="space-y-3 pt-2">
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Cycle Start Date</label>
+              <input id="wiz-start-date" type="date" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:border-amber-500 outline-none font-mono" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">First Day of the Week</label>
+              <select id="wiz-start-day" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:border-amber-500 outline-none">
+                <option value="1">Monday (Standard Work Week)</option>
+                <option value="0">Sunday (Traditional Planning Day)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 2: 5 GOALS -->
+        <div id="step-2" class="wiz-step space-y-4 hidden">
+          <div>
+            <h2 class="text-xl font-bold text-white">List 5 goals on your mind</h2>
+            <p class="text-xs text-slate-400 mt-1">Brainstorm 5 goals you want to tackle this year or the rest of the year. Don't edit yourself yet.</p>
+          </div>
+          <div class="space-y-2 text-xs">
+            <input id="wiz-g1" type="text" placeholder="Goal 1 (e.g., Ship MVP and acquire 10 active customers)" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none" />
+            <input id="wiz-g2" type="text" placeholder="Goal 2 (e.g., Deadlift 405 lbs and run 5k in under 24 min)" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none" />
+            <input id="wiz-g3" type="text" placeholder="Goal 3 (e.g., Finish recording 4-song music project)" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none" />
+            <input id="wiz-g4" type="text" placeholder="Goal 4 (e.g., Save $5,000 emergency fund)" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none" />
+            <input id="wiz-g5" type="text" placeholder="Goal 5 (e.g., Read 6 books on engineering architecture)" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none" />
+          </div>
+        </div>
+
+        <!-- STEP 3: PICK KEYSTONE -->
+        <div id="step-3" class="wiz-step space-y-4 hidden">
+          <div>
+            <h2 class="text-xl font-bold text-white">Which ONE will have the biggest impact?</h2>
+            <p class="text-xs text-slate-400 mt-1">The 12-Week Year is <strong>not about working on everything in your life</strong>, but attacking 1 big keystone goal that creates massive leverage.</p>
+          </div>
+          <div id="wiz-goal-radio-group" class="space-y-2 text-xs"></div>
+        </div>
+
+        <!-- STEP 4: EMOTIONAL CONNECTION -->
+        <div id="step-4" class="wiz-step space-y-4 hidden">
+          <div>
+            <h2 class="text-xl font-bold text-white">The Emotional Connection</h2>
+            <p class="text-xs text-slate-400 mt-1">Willpower is fragile. You need deep emotional clarity so you don't stall during the "Valley of Despair".</p>
+          </div>
+          <div class="space-y-3 text-xs">
+            <div>
+              <label class="block font-semibold text-slate-300 mb-1">Why do you want this specific goal?</label>
+              <textarea id="wiz-why" rows="3" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-amber-500 outline-none leading-relaxed" placeholder="What does reaching this goal unlock for your life, independence, or confidence?"></textarea>
+            </div>
+            <div>
+              <label class="block font-semibold text-rose-400 mb-1">Cost of Inaction: What happens if you don't reach or attempt this?</label>
+              <textarea id="wiz-inaction" rows="3" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-amber-500 outline-none leading-relaxed" placeholder="The painful reality of inaction: another year of regret, staying stuck..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 5: 12-WEEK CHUNK & MULTI-INDICATORS -->
+        <div id="step-5" class="wiz-step space-y-4 hidden">
+          <div>
+            <h2 class="text-xl font-bold text-white">12-Week Scope & Indicators</h2>
+            <p class="text-xs text-slate-400 mt-1">If your big goal is too large, break it into four 12-week segments. What is the exact segment for this upcoming cycle?</p>
+          </div>
+          <div class="space-y-3 text-xs">
+            <div>
+              <label class="block font-semibold text-amber-400 mb-1">12-Week Target Chunk (Realistic Stretch)</label>
+              <input id="wiz-chunk-goal" type="text" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none font-bold" />
+            </div>
+
+            <!-- Dynamic Leading Indicators (Infinite Rows) -->
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <label class="font-semibold text-slate-300">Leading Indicators (Daily/Weekly actions you 100% control)</label>
+                <span class="text-[10px] text-slate-500">Auto-adds new line</span>
+              </div>
+              <div id="wiz-lead-container" class="space-y-1.5">
+                <input type="text" oninput="handleAutoRow(this, 'wiz-lead-container')" placeholder="e.g., Code 2 hours every morning" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none" />
+              </div>
+            </div>
+
+            <!-- Dynamic Lagging Indicators (Infinite Rows) -->
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <label class="font-semibold text-slate-300">Lagging Indicators (Results measured)</label>
+                <span class="text-[10px] text-slate-500">Auto-adds new line</span>
+              </div>
+              <div id="wiz-lag-container" class="space-y-1.5">
+                <input type="text" oninput="handleAutoRow(this, 'wiz-lag-container')" placeholder="e.g., Working live URL deployed" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 6: WEEK 1 TACTICS & CHECKLISTS -->
+        <div id="step-6" class="wiz-step space-y-4 hidden">
+          <div>
+            <h2 class="text-xl font-bold text-white">Week 1 Tactical Plan</h2>
+            <p class="text-xs text-slate-400 mt-1">Tactics are the actions that drive attainment. <strong>Every tactic must start with a verb</strong>.</p>
+          </div>
+          <div class="space-y-3 text-xs">
+            <div>
+              <label class="block font-semibold text-amber-300 mb-1">What is this week's non-negotiable goal?</label>
+              <input id="wiz-w1-nonneg" type="text" placeholder="e.g., Finalize data models and deploy initial prototype" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none font-medium" />
+            </div>
+
+            <div class="space-y-2">
+              <label class="block font-semibold text-slate-300">Major Week 1 Tactics (Top 3)</label>
+              <input id="wiz-w1-t1" type="text" placeholder="Tactic 1 (Start with a verb)" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none" />
+              <input id="wiz-w1-t2" type="text" placeholder="Tactic 2 (Start with a verb)" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none" />
+              <input id="wiz-w1-t3" type="text" placeholder="Tactic 3 (Start with a verb)" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none" />
+            </div>
+
+            <!-- Dynamic Additional Weekly Checklists -->
+            <div>
+              <label class="block font-semibold text-slate-300 mb-1">Additional Weekly Checklists / To-Dos (Optional)</label>
+              <div id="wiz-w1-other-container" class="space-y-1.5">
+                <input type="text" oninput="handleAutoRow(this, 'wiz-w1-other-container')" placeholder="Additional weekly task..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 7: CATCH-UP & DAY-BY-DAY LOGGING -->
+        <div id="step-7" class="wiz-step space-y-4 hidden">
+          <div>
+            <div class="flex items-center justify-between">
+              <span id="catchup-date-badge" class="text-xs font-mono font-bold text-amber-400">Monday, Sep 7</span>
+              <span id="catchup-day-step" class="text-[11px] font-mono text-slate-500">Day 1 of 6</span>
+            </div>
+            <h2 id="catchup-title" class="text-xl font-bold text-white mt-1">What did you accomplish?</h2>
+            <p class="text-xs text-slate-400 mt-0.5">Enter your Top 3 and mark what was completed so your execution scores start completely genuine.</p>
+          </div>
+
+          <div class="space-y-3 text-xs">
+            <div class="space-y-2">
+              <label class="block font-semibold text-amber-400">Top 3 Non-Negotiables for this day</label>
+              
+              <div class="flex items-center gap-2 bg-slate-950 border border-slate-800 p-2 rounded-lg">
+                <input id="catchup-c1" type="checkbox" class="w-4 h-4 rounded text-amber-500 bg-slate-900 border-slate-700 cursor-pointer" />
+                <input id="catchup-t1" type="text" placeholder="1. Action starting with verb..." class="bg-transparent flex-1 outline-none text-slate-200" />
+              </div>
+              <div class="flex items-center gap-2 bg-slate-950 border border-slate-800 p-2 rounded-lg">
+                <input id="catchup-c2" type="checkbox" class="w-4 h-4 rounded text-amber-500 bg-slate-900 border-slate-700 cursor-pointer" />
+                <input id="catchup-t2" type="text" placeholder="2. Action starting with verb..." class="bg-transparent flex-1 outline-none text-slate-200" />
+              </div>
+              <div class="flex items-center gap-2 bg-slate-950 border border-slate-800 p-2 rounded-lg">
+                <input id="catchup-c3" type="checkbox" class="w-4 h-4 rounded text-amber-500 bg-slate-900 border-slate-700 cursor-pointer" />
+                <input id="catchup-t3" type="text" placeholder="3. Action starting with verb..." class="bg-transparent flex-1 outline-none text-slate-200" />
+              </div>
+            </div>
+
+            <!-- Dynamic Other To-Dos -->
+            <div>
+              <label class="block font-semibold text-slate-300 mb-1">Other Tasks for this day (Optional)</label>
+              <div id="catchup-other-container" class="space-y-1.5">
+                <input type="text" oninput="handleAutoRow(this, 'catchup-other-container')" placeholder="Secondary task..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Wizard Navigation -->
+        <div class="flex items-center justify-between pt-4 border-t border-slate-800">
+          <button id="btn-wiz-prev" onclick="prevWizStep()" class="px-4 py-2 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition-colors invisible">
+            ← Back
+          </button>
+          <button id="btn-wiz-next" onclick="nextWizStep()" class="bg-amber-500 hover:bg-amber-400 font-bold text-black px-6 py-2 rounded-lg text-xs transition-colors">
+            Next Step →
+          </button>
+        </div>
+
+      </div>
     </section>
 
-    <!-- Execution Engine Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+
+    <!-- =========================================================================
+         VIEW 2: THE DAILY EXECUTION PAGE (THE PRIMARY WORKSPACE AFTER ONBOARDING)
+         ========================================================================= -->
+    <section id="view-daily" class="space-y-4 hidden">
       
-      <!-- Weekly Execution Scorecard (Target: 85%+) -->
-      <section class="md:col-span-5 bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col justify-between shadow-sm">
-        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-          <div>
-            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider font-mono">Weekly Scorecard</h3>
-            <p class="text-[11px] text-slate-500">Execution over results • Target: 85%+</p>
+      <!-- Week Goal Banner Anchor -->
+      <div class="bg-gradient-to-r from-slate-900 via-slate-900 to-amber-950/20 border border-slate-800 rounded-xl p-4 flex items-center justify-between shadow-sm">
+        <div class="space-y-0.5 min-w-0">
+          <div class="text-[10px] font-bold uppercase tracking-wider text-amber-400 font-mono flex items-center gap-1.5">
+            <span>🎯</span> <span id="daily-banner-week-title">Week 1 Non-Negotiable</span>
           </div>
-          <span id="score-status-badge" class="text-xs font-bold font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400">Pacing</span>
+          <div id="daily-banner-week-goal" class="text-sm sm:text-base font-bold text-slate-100 truncate">Ship MVP to initial users</div>
         </div>
-
-        <!-- Center Gauge -->
-        <div class="flex items-center justify-center my-4 gap-6">
-          <div class="relative w-28 h-28 flex items-center justify-center">
-            <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-              <path class="text-slate-800" stroke-width="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-              <path id="score-circle-bar" class="text-amber-400 score-radial" stroke-width="3.5" stroke-dasharray="100, 100" stroke-dashoffset="100" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-            </svg>
-            <div class="absolute flex flex-col items-center">
-              <span id="score-percentage" class="text-2xl font-black font-mono text-white">0%</span>
-              <span class="text-[9px] uppercase font-mono text-slate-500 tracking-wider">Executed</span>
-            </div>
-          </div>
-
-          <div class="space-y-1 text-xs">
-            <div class="text-slate-400">Done: <span id="score-completed-count" class="font-bold text-white font-mono">0</span> / <span id="score-total-count" class="font-mono">0</span></div>
-            <div class="text-slate-400">Weekly Target: <span class="font-bold text-amber-400 font-mono">85%</span></div>
-            <p class="text-[10px] text-slate-500 pt-1 leading-tight">"Effort doesn't count. You either hit 85% or you don't."</p>
-          </div>
-        </div>
-
-        <button 
-          onclick="toggleReviewModal(true)" 
-          class="w-full bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 py-2 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
-        >
-          <span>📝</span> Week <span id="btn-review-week-label">1</span> Review & WAM Report
+        <button onclick="switchView('overview')" class="text-xs text-slate-400 hover:text-amber-300 font-mono transition-colors shrink-0 ml-3">
+          12WY Overview →
         </button>
-      </section>
+      </div>
 
-      <!-- The Performance Time System Blocks -->
-      <section class="md:col-span-7 bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col justify-between shadow-sm">
+      <!-- Date Controller Bar -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center justify-between text-xs">
+        <button onclick="navigateDay(-1)" class="p-1 text-slate-400 hover:text-white transition-colors">← Prev Day</button>
+        <div class="text-center">
+          <div id="daily-view-date" class="font-bold text-slate-100 font-mono text-sm">Saturday, Sep 12</div>
+          <span id="daily-view-indicator" class="text-[10px] text-amber-400 font-mono font-medium">Today</span>
+        </div>
+        <button onclick="navigateDay(1)" class="p-1 text-slate-400 hover:text-white transition-colors">Next Day →</button>
+      </div>
+
+      <!-- Today's Execution Score Card (Turns Green at 85%, Bright Emerald at 100%) -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex items-center justify-between shadow-lg">
+        <div>
+          <span class="text-[11px] font-mono uppercase tracking-wider text-slate-400 font-semibold">Daily Execution Score</span>
+          <div class="flex items-baseline gap-2 mt-1">
+            <span id="daily-score-pct" class="text-3xl font-black font-mono text-white">0%</span>
+            <span id="daily-score-label" class="text-xs font-mono text-slate-400">Action Required</span>
+          </div>
+          <p class="text-[10px] text-slate-500 mt-1">85%+ turns green • 100% turns bright emerald</p>
+        </div>
+
+        <!-- Radial Gauge -->
+        <div class="relative w-16 h-16 flex items-center justify-center shrink-0">
+          <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+            <path class="text-slate-800" stroke-width="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+            <path id="daily-score-circle" class="text-amber-400 score-radial" stroke-width="3.5" stroke-dasharray="100, 100" stroke-dashoffset="100" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+          </svg>
+          <span id="daily-score-count" class="absolute font-mono text-[10px] font-bold text-slate-300">0/3</span>
+        </div>
+      </div>
+
+      <!-- Top 3 Critical Tasks -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3 shadow-sm">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+          <span class="text-xs font-bold text-amber-400 uppercase tracking-wider font-mono flex items-center gap-1.5">
+            <span>🔥</span> Top 3 Non-Negotiables
+          </span>
+          <span class="text-[11px] text-slate-500">Actions starting with verbs</span>
+        </div>
+
+        <div class="space-y-2.5 text-xs">
+          <div class="flex items-center gap-3 bg-slate-950 border border-slate-800 p-3 rounded-xl">
+            <input type="checkbox" id="d-task-c1" onchange="updateDailyItem()" class="w-4 h-4 rounded text-amber-500 bg-slate-900 border-slate-700 cursor-pointer shrink-0" />
+            <input type="text" id="d-task-t1" oninput="updateDailyItem()" placeholder="1. Highest leverage action today..." class="bg-transparent flex-1 text-slate-200 outline-none text-xs font-medium" />
+          </div>
+          <div class="flex items-center gap-3 bg-slate-950 border border-slate-800 p-3 rounded-xl">
+            <input type="checkbox" id="d-task-c2" onchange="updateDailyItem()" class="w-4 h-4 rounded text-amber-500 bg-slate-900 border-slate-700 cursor-pointer shrink-0" />
+            <input type="text" id="d-task-t2" oninput="updateDailyItem()" placeholder="2. Second non-negotiable action..." class="bg-transparent flex-1 text-slate-200 outline-none text-xs font-medium" />
+          </div>
+          <div class="flex items-center gap-3 bg-slate-950 border border-slate-800 p-3 rounded-xl">
+            <input type="checkbox" id="d-task-c3" onchange="updateDailyItem()" class="w-4 h-4 rounded text-amber-500 bg-slate-900 border-slate-700 cursor-pointer shrink-0" />
+            <input type="text" id="d-task-t3" oninput="updateDailyItem()" placeholder="3. Third non-negotiable action..." class="bg-transparent flex-1 text-slate-200 outline-none text-xs font-medium" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Other To-Dos (Dynamic Rows with Checkboxes) -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3 shadow-sm">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+          <span class="text-xs font-bold text-slate-300 uppercase tracking-wider font-mono">Other To-Dos</span>
+          <span class="text-[10px] text-slate-500">Type in row to add next</span>
+        </div>
+        <div id="daily-other-tasks-container" class="space-y-2 text-xs"></div>
+      </div>
+
+      <!-- Appointments & Performance Time Blocks -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <!-- Appointments -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-2">
+          <span class="text-xs font-bold text-slate-300 uppercase tracking-wider font-mono">Appointments / Calendar</span>
+          <textarea id="daily-appts" oninput="saveCurrentDay()" rows="3" placeholder="e.g. 2:00 PM Strategy call..." class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-200 outline-none leading-relaxed"></textarea>
+        </div>
+
+        <!-- Performance Time Quick Tally -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-2 flex flex-col justify-between">
+          <div>
+            <span class="text-xs font-bold text-slate-300 uppercase tracking-wider font-mono">Log Time Blocks Today</span>
+            <p class="text-[10px] text-slate-500">Protect strategic focus</p>
+          </div>
+          <div class="grid grid-cols-3 gap-2 text-center pt-1">
+            <button onclick="logBlockToday('strategic')" class="bg-slate-950 border border-slate-800 hover:border-amber-500 p-2 rounded-lg text-[10px] font-semibold text-slate-300">
+              <span class="block text-sm">🎯</span> +Strategic
+            </button>
+            <button onclick="logBlockToday('buffer')" class="bg-slate-950 border border-slate-800 hover:border-teal-500 p-2 rounded-lg text-[10px] font-semibold text-slate-300">
+              <span class="block text-sm">📥</span> +Buffer
+            </button>
+            <button onclick="logBlockToday('breakout')" class="bg-slate-950 border border-slate-800 hover:border-emerald-500 p-2 rounded-lg text-[10px] font-semibold text-slate-300">
+              <span class="block text-sm">🍃</span> +Breakout
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+
+    <!-- =========================================================================
+         VIEW 3: 12-WEEK OVERVIEW / MASTER DASHBOARD
+         ========================================================================= -->
+    <section id="view-overview" class="space-y-6 hidden">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-sm">
         <div class="flex items-center justify-between border-b border-slate-800 pb-3">
           <div>
-            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider font-mono">Performance Time Blocks</h3>
-            <p class="text-[11px] text-slate-500">Protect the deep work that drives the 85%</p>
+            <span class="text-xs font-mono font-bold text-amber-400 uppercase">The Keystone Strategy</span>
+            <h2 id="ov-keystone-goal" class="text-lg font-bold text-white">Keystone Goal</h2>
           </div>
-          <span class="text-[11px] text-slate-500 font-mono">Logged this week</span>
+          <button onclick="switchView('guide')" class="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg text-slate-300">Open Setup Guide →</button>
         </div>
 
-        <div class="grid grid-cols-3 gap-3 my-3">
-          <!-- Strategic Block -->
-          <div class="bg-slate-950 border border-slate-800/90 rounded-xl p-3 flex flex-col justify-between">
-            <div>
-              <div class="flex items-center justify-between">
-                <span class="text-sm">🎯</span>
-                <span id="count-strategic" class="text-xs font-mono font-bold text-amber-400">0</span>
-              </div>
-              <div class="font-bold text-xs text-slate-200 mt-1">Strategic</div>
-              <div class="text-[10px] text-slate-500 leading-tight mt-0.5">3h deep focus on critical goals</div>
-            </div>
-            <button onclick="logBlock('strategic')" class="mt-2 text-[10px] font-semibold bg-slate-800 hover:bg-slate-700 py-1 rounded text-slate-300 transition-colors">+ Log Block</button>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+          <div class="bg-slate-950 p-3 rounded-xl border border-slate-800/80 space-y-1">
+            <span class="font-bold text-slate-400 uppercase text-[10px]">Why</span>
+            <p id="ov-why" class="text-slate-300"></p>
           </div>
-
-          <!-- Buffer Block -->
-          <div class="bg-slate-950 border border-slate-800/90 rounded-xl p-3 flex flex-col justify-between">
-            <div>
-              <div class="flex items-center justify-between">
-                <span class="text-sm">📥</span>
-                <span id="count-buffer" class="text-xs font-mono font-bold text-teal-400">0</span>
-              </div>
-              <div class="font-bold text-xs text-slate-200 mt-1">Buffer</div>
-              <div class="text-[10px] text-slate-500 leading-tight mt-0.5">30-60m reactive email/admin</div>
-            </div>
-            <button onclick="logBlock('buffer')" class="mt-2 text-[10px] font-semibold bg-slate-800 hover:bg-slate-700 py-1 rounded text-slate-300 transition-colors">+ Log Block</button>
-          </div>
-
-          <!-- Breakout Block -->
-          <div class="bg-slate-950 border border-slate-800/90 rounded-xl p-3 flex flex-col justify-between">
-            <div>
-              <div class="flex items-center justify-between">
-                <span class="text-sm">🍃</span>
-                <span id="count-breakout" class="text-xs font-mono font-bold text-emerald-400">0</span>
-              </div>
-              <div class="font-bold text-xs text-slate-200 mt-1">Breakout</div>
-              <div class="text-[10px] text-slate-500 leading-tight mt-0.5">3h recharge away from work</div>
-            </div>
-            <button onclick="logBlock('breakout')" class="mt-2 text-[10px] font-semibold bg-slate-800 hover:bg-slate-700 py-1 rounded text-slate-300 transition-colors">+ Log Block</button>
+          <div class="bg-slate-950 p-3 rounded-xl border border-slate-800/80 space-y-1">
+            <span class="font-bold text-rose-400 uppercase text-[10px]">Cost of Inaction</span>
+            <p id="ov-inaction" class="text-slate-300"></p>
           </div>
         </div>
 
-        <div class="text-[11px] text-slate-500 flex items-center justify-between pt-1 border-t border-slate-800/80">
-          <span>Target: 1-2 Strategic, 1 Breakout / wk</span>
-          <button onclick="resetBlocks()" class="text-slate-600 hover:text-rose-400 text-[10px]">Clear blocks</button>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs pt-1">
+          <div>
+            <span class="font-bold text-slate-300 block mb-1">Leading Indicators (Action)</span>
+            <ul id="ov-lead-list" class="space-y-1 text-slate-400 font-mono text-[11px] list-disc list-inside"></ul>
+          </div>
+          <div>
+            <span class="font-bold text-slate-300 block mb-1">Lagging Indicators (Results)</span>
+            <ul id="ov-lag-list" class="space-y-1 text-slate-400 font-mono text-[11px] list-disc list-inside"></ul>
+          </div>
         </div>
-      </section>
-    </div>
+      </div>
 
-    <!-- Active Week Tactics & Daily Focus -->
-    <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
-      
-      <!-- Left: This Week's Actionable Tactics -->
-      <section class="md:col-span-7 bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4 shadow-sm">
+      <!-- Weekly Tactical Scoreboard -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
         <div class="flex items-center justify-between border-b border-slate-800 pb-3">
           <div>
-            <h2 class="text-xs font-bold text-slate-300 uppercase tracking-wider font-mono flex items-center gap-1.5">
-              <span>📋</span> <span id="label-tactics-header">Tactics for Week 1</span>
-            </h2>
-            <p id="label-week-nonnegotiable" class="text-[11px] text-amber-400 font-medium truncate max-w-sm"></p>
+            <h3 class="text-xs font-bold text-slate-300 uppercase font-mono">Tactical Plan</h3>
+            <p class="text-[11px] text-slate-500">Weekly actions driving your 12-week goal</p>
           </div>
-          <button onclick="openAddTacticModal()" class="text-xs bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-1 rounded font-medium transition-colors">
-            + Tactic
+        </div>
+        <div id="ov-tactics-list" class="space-y-2 text-xs"></div>
+      </div>
+    </section>
+
+
+    <!-- =========================================================================
+         VIEW 4: SUNDAY / MONDAY WEEKLY REVIEW & WAM
+         ========================================================================= -->
+    <section id="view-review" class="space-y-6 hidden">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-5 shadow-2xl">
+        <div class="border-b border-slate-800 pb-3">
+          <span class="text-xs font-mono font-bold text-amber-400 uppercase">Weekly Cadence</span>
+          <h2 class="text-xl font-bold text-white mt-0.5">Week <span id="rev-week-num">1</span> Review & Accountability</h2>
+          <p class="text-xs text-slate-400 mt-1">Review your results every Sunday or Monday before opening the next week.</p>
+        </div>
+
+        <div class="space-y-4 text-xs">
+          <div>
+            <label class="block font-semibold text-emerald-400 mb-1">What are you most proud of accomplishing this week?</label>
+            <textarea id="rev-proud" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-amber-500 outline-none"></textarea>
+          </div>
+          <div>
+            <label class="block font-semibold text-rose-400 mb-1">What was challenging or where did execution slip?</label>
+            <textarea id="rev-challenges" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-amber-500 outline-none"></textarea>
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1">What did you learn about your process?</label>
+            <textarea id="rev-learn" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-amber-500 outline-none"></textarea>
+          </div>
+          <div>
+            <label class="block font-semibold text-amber-300 mb-1">Spurring a Friend: If a good friend had a week like this, what would you tell them?</label>
+            <textarea id="rev-friend" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-amber-500 outline-none"></textarea>
+          </div>
+          <button onclick="saveReview()" class="w-full bg-amber-500 hover:bg-amber-400 text-black font-bold py-2.5 rounded-lg transition-colors">
+            Lock In Weekly Review
           </button>
         </div>
-
-        <div id="tactics-container" class="space-y-2"></div>
-      </section>
-
-      <!-- Right: Today's Non-Negotiable Top 3 & Planner Notes -->
-      <section class="md:col-span-5 bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4 shadow-sm flex flex-col justify-between">
-        <div class="space-y-3">
-          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-            <div>
-              <h2 class="text-xs font-bold text-slate-300 uppercase tracking-wider font-mono flex items-center gap-1.5">
-                <span>🔥</span> Today's Battle Plan
-              </h2>
-              <p class="text-[11px] text-slate-500">The 3 critical actions to move the needle today.</p>
-            </div>
-            <span id="display-today-weekday" class="text-xs font-mono text-amber-400 font-bold">Today</span>
-          </div>
-
-          <!-- Top 3 Daily Form Inputs -->
-          <div class="space-y-2 text-xs">
-            <div class="flex items-center gap-2 bg-slate-950 border border-slate-800 p-2.5 rounded-lg">
-              <input type="checkbox" id="daily-check-1" onchange="saveDailyTasks()" class="w-4 h-4 rounded border-slate-700 text-amber-500 focus:ring-0 bg-slate-900 cursor-pointer" />
-              <input type="text" id="daily-text-1" oninput="saveDailyTasks()" placeholder="1. Action starting with verb..." class="bg-transparent flex-1 text-slate-200 outline-none text-xs" />
-            </div>
-            <div class="flex items-center gap-2 bg-slate-950 border border-slate-800 p-2.5 rounded-lg">
-              <input type="checkbox" id="daily-check-2" onchange="saveDailyTasks()" class="w-4 h-4 rounded border-slate-700 text-amber-500 focus:ring-0 bg-slate-900 cursor-pointer" />
-              <input type="text" id="daily-text-2" oninput="saveDailyTasks()" placeholder="2. Action starting with verb..." class="bg-transparent flex-1 text-slate-200 outline-none text-xs" />
-            </div>
-            <div class="flex items-center gap-2 bg-slate-950 border border-slate-800 p-2.5 rounded-lg">
-              <input type="checkbox" id="daily-check-3" onchange="saveDailyTasks()" class="w-4 h-4 rounded border-slate-700 text-amber-500 focus:ring-0 bg-slate-900 cursor-pointer" />
-              <input type="text" id="daily-text-3" oninput="saveDailyTasks()" placeholder="3. Action starting with verb..." class="bg-transparent flex-1 text-slate-200 outline-none text-xs" />
-            </div>
-          </div>
-
-          <!-- Secondary Chores & Calendar Appointments -->
-          <div class="pt-2 border-t border-slate-800 space-y-2 text-xs">
-            <div>
-              <span class="text-[10px] uppercase font-semibold text-slate-400">Other To-dos</span>
-              <textarea id="daily-text-other" oninput="saveDailyTasks()" rows="2" placeholder="Secondary chores..." class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-300 outline-none text-[11px] mt-1"></textarea>
-            </div>
-            <div>
-              <span class="text-[10px] uppercase font-semibold text-slate-400">Appointments</span>
-              <textarea id="daily-text-appts" oninput="saveDailyTasks()" rows="2" placeholder="Time-bound commitments..." class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-300 outline-none text-[11px] mt-1"></textarea>
-            </div>
-          </div>
-        </div>
-
-        <div class="bg-slate-950/60 border border-slate-800 p-3 rounded-xl mt-4 space-y-1 text-[11px] text-slate-400">
-          <div class="font-bold text-slate-300 font-mono uppercase text-[10px]">Emotional Cycle of Change</div>
-          <p id="label-emotional-cycle">Stage: Uninformed Optimism.</p>
-        </div>
-      </section>
-
-    </div>
-  </main>
-
-  <!-- MODALS -->
-  <!-- ADD TACTIC MODAL -->
-  <div id="modal-tactic" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
-      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-        <h3 class="font-bold text-sm text-slate-100 font-mono">Add Execution Tactic</h3>
-        <button onclick="toggleTacticModal(false)" class="text-slate-400 hover:text-slate-200 text-sm">✕</button>
       </div>
+    </section>
 
-      <form id="tactic-form" class="space-y-3 text-xs">
-        <div>
-          <label class="block font-semibold text-slate-300 uppercase tracking-wider mb-1">Tactic (Must start with a VERB)</label>
-          <input id="input-tactic-title" type="text" required placeholder="e.g., Deploy auth endpoint to production" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none" />
-        </div>
-
-        <div>
-          <label class="block font-semibold text-slate-300 uppercase tracking-wider mb-1">Assigned Week</label>
-          <select id="input-tactic-week" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none">
-            <option value="current">Active Week (Current)</option>
-            <option value="recurring">Recurring (Every Single Week)</option>
-            <option value="1">Week 1</option>
-            <option value="2">Week 2</option>
-            <option value="3">Week 3</option>
-            <option value="4">Week 4</option>
-            <option value="5">Week 5</option>
-            <option value="6">Week 6</option>
-            <option value="7">Week 7</option>
-            <option value="8">Week 8</option>
-            <option value="9">Week 9</option>
-            <option value="10">Week 10</option>
-            <option value="11">Week 11</option>
-            <option value="12">Week 12</option>
-          </select>
-        </div>
-
-        <button type="submit" class="w-full bg-amber-500 hover:bg-amber-400 font-bold text-black py-2 rounded-lg transition-colors mt-1">
-          Lock in Tactic
-        </button>
-      </form>
-    </div>
-  </div>
-
-  <!-- WEEKLY REVIEW MODAL -->
-  <div id="modal-review" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-5 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
-      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-        <div>
-          <h3 class="font-bold text-sm text-slate-100 font-mono">Week <span id="modal-review-week-title">1</span> Review & WAM</h3>
-          <p class="text-[11px] text-slate-500">Sunday/Monday accountability before the next week starts.</p>
-        </div>
-        <button onclick="toggleReviewModal(false)" class="text-slate-400 hover:text-slate-200 text-sm">✕</button>
-      </div>
-
-      <form id="review-form" class="space-y-3.5 text-xs">
-        <div>
-          <label class="block font-semibold text-emerald-400 mb-1">What are you most proud of accomplishing this week?</label>
-          <textarea id="input-review-proud" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:border-amber-500 outline-none"></textarea>
-        </div>
-
-        <div>
-          <label class="block font-semibold text-rose-400 mb-1">What was challenging or where did execution slip?</label>
-          <textarea id="input-review-challenges" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:border-amber-500 outline-none"></textarea>
-        </div>
-
-        <div>
-          <label class="block font-semibold text-slate-300 mb-1">What did you learn about your process?</label>
-          <textarea id="input-review-learn" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:border-amber-500 outline-none"></textarea>
-        </div>
-
-        <div>
-          <label class="block font-semibold text-amber-300 mb-1">Spurring a Friend: If a good friend had a week like this, what would you tell them?</label>
-          <textarea id="input-review-friend" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:border-amber-500 outline-none"></textarea>
-        </div>
-
-        <button type="submit" class="w-full bg-amber-500 hover:bg-amber-400 font-bold text-black py-2 rounded-lg transition-colors mt-2">
-          Save Weekly Review
-        </button>
-      </form>
-    </div>
-  </div>
-
-  <!-- SETTINGS MODAL -->
-  <div id="modal-settings" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
-      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-        <h3 class="font-bold text-sm text-slate-100 font-mono">12-Week Settings</h3>
-        <button onclick="toggleSettingsModal(false)" class="text-slate-400 hover:text-slate-200 text-sm">✕</button>
-      </div>
-
-      <form id="settings-form" class="space-y-3.5 text-xs">
-        <div>
-          <label class="block font-semibold text-slate-300 mb-1">Cycle Start Date</label>
-          <input id="input-cycle-start" type="date" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none font-mono" />
-        </div>
-
-        <div>
-          <label class="block font-semibold text-slate-300 mb-1">First Day of the Week</label>
-          <select id="input-week-start-day" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none">
-            <option value="1">Monday (Standard)</option>
-            <option value="0">Sunday (Planning Day)</option>
-          </select>
-        </div>
-
-        <div class="pt-2 border-t border-slate-800 space-y-2">
-          <button type="button" onclick="exportData()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 py-1.5 rounded-lg text-xs font-semibold transition-colors">
-            📥 Export Backup JSON
-          </button>
-        </div>
-
-        <button type="submit" class="w-full bg-amber-500 hover:bg-amber-400 font-bold text-black py-2 rounded-lg transition-colors mt-2">
-          Save Settings
-        </button>
-      </form>
-    </div>
   </div>
 
   <script>
-    const STORAGE_KEY = 'twelve_week_year_v2';
-    let currentStep = 1;
-    const TOTAL_STEPS = 7;
+    const STORAGE_KEY = 'twelve_week_year_v4';
 
-    function getLocalTodayString() {
-      const now = new Date();
-      const y = now.getFullYear();
-      const m = String(now.getMonth() + 1).padStart(2, '0');
-      const d = String(now.getDate()).padStart(2, '0');
+    function getLocalTodayDate() {
+      const d = new Date();
+      return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    }
+
+    function formatDateKey(dateObj) {
+      const y = dateObj.getFullYear();
+      const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const d = String(dateObj.getDate()).padStart(2, '0');
       return `${y}-${m}-${d}`;
     }
 
+    function parseDateKey(keyStr) {
+      const [y, m, d] = keyStr.split('-').map(Number);
+      return new Date(y, m - 1, d);
+    }
+
     let state = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-
-    /* =========================================================================
-       WIZARD CONTROLLER
-       ========================================================================= */
-    function updateWizardProgress() {
-      const pct = (currentStep / TOTAL_STEPS) * 100;
-      document.getElementById('wizard-progress-bar').style.width = `${pct}%`;
-      document.getElementById('wizard-step-counter').textContent = `Step ${currentStep} of ${TOTAL_STEPS}`;
-      document.getElementById('btn-wiz-prev').style.visibility = currentStep === 1 ? 'hidden' : 'visible';
-
-      if (currentStep === TOTAL_STEPS) {
-        document.getElementById('btn-wiz-next').textContent = 'Enter My 12-Week Year 🚀';
-      } else {
-        document.getElementById('btn-wiz-next').textContent = 'Next Step →';
-      }
-
-      // Hide all steps, show current
-      for (let i = 1; i <= TOTAL_STEPS; i++) {
-        const el = document.getElementById(`step-${i}`);
-        if (el) el.classList.toggle('hidden', i !== currentStep);
-      }
-    }
-
-    function nextStep() {
-      // Step 2 -> Step 3 transition: build radio list of user's 5 goals
-      if (currentStep === 2) {
-        const g1 = document.getElementById('wiz-goal-1').value.trim();
-        const g2 = document.getElementById('wiz-goal-2').value.trim();
-        const g3 = document.getElementById('wiz-goal-3').value.trim();
-        const g4 = document.getElementById('wiz-goal-4').value.trim();
-        const g5 = document.getElementById('wiz-goal-5').value.trim();
-        
-        const goals = [g1, g2, g3, g4, g5].filter(Boolean);
-        if (goals.length === 0) {
-          return alert('Please write at least one goal to continue.');
-        }
-
-        const radioContainer = document.getElementById('wiz-radio-goals');
-        radioContainer.innerHTML = goals.map((g, idx) => `
-          <label class="flex items-center gap-3 p-3 bg-slate-950 border border-slate-800 rounded-xl cursor-pointer hover:border-amber-500/50 has-[:checked]:border-amber-500 has-[:checked]:bg-amber-950/20">
-            <input type="radio" name="keystone_pick" value="${escapeHtml(g)}" ${idx === 0 ? 'checked' : ''} class="w-4 h-4 text-amber-500 focus:ring-0 bg-slate-900" />
-            <span class="text-slate-200 font-medium">${escapeHtml(g)}</span>
-          </label>
-        `).join('');
-      }
-
-      // Step 3 -> Step 4 transition: populate Step 5 default chunk with selected goal
-      if (currentStep === 3) {
-        const picked = document.querySelector('input[name="keystone_pick"]:checked');
-        if (picked && !document.getElementById('wiz-chunk-goal').value) {
-          document.getElementById('wiz-chunk-goal').value = picked.value;
-        }
-      }
-
-      if (currentStep < TOTAL_STEPS) {
-        currentStep++;
-        updateWizardProgress();
-      } else {
-        finishOnboarding();
-      }
-    }
-
-    function prevStep() {
-      if (currentStep > 1) {
-        currentStep--;
-        updateWizardProgress();
-      }
-    }
-
-    function finishOnboarding() {
-      const pickedGoal = document.querySelector('input[name="keystone_pick"]:checked')?.value || document.getElementById('wiz-goal-1').value;
-
-      state = {
-        hasCompletedOnboarding: true,
-        startDate: document.getElementById('wiz-start-date').value || getLocalTodayString(),
-        weekStartDay: parseInt(document.getElementById('wiz-start-day').value, 10),
-        plan: {
-          keystoneGoal: document.getElementById('wiz-chunk-goal').value || pickedGoal,
-          originalCandidateGoal: pickedGoal,
-          why: document.getElementById('wiz-why').value.trim(),
-          costOfInaction: document.getElementById('wiz-inaction').value.trim(),
-          leadIndicator: document.getElementById('wiz-lead').value.trim(),
-          lagIndicator: document.getElementById('wiz-lag').value.trim(),
-          week1Goal: document.getElementById('wiz-w1-nonneg').value.trim()
-        },
-        tactics: [
-          { id: 't1', title: document.getElementById('wiz-w1-t1').value.trim() || 'Schedule 3-hour Strategic Focus Block', week: '1', doneWeeks: [] },
-          { id: 't2', title: document.getElementById('wiz-w1-t2').value.trim() || 'Execute critical core project deliverable', week: '1', doneWeeks: [] },
-          { id: 't3', title: document.getElementById('wiz-w1-t3').value.trim() || 'Review weekly metrics against 85% execution target', week: 'recurring', doneWeeks: [] }
-        ].filter(t => Boolean(t.title)),
-        dailyTasks: {
-          date: getLocalTodayString(),
-          task1: { text: document.getElementById('wiz-d1-t1').value.trim() || 'Complete 3-hour Strategic Deep Work Block', done: false },
-          task2: { text: document.getElementById('wiz-d1-t2').value.trim() || 'Process email/reactive tasks in 30-min Buffer Block', done: false },
-          task3: { text: document.getElementById('wiz-d1-t3').value.trim() || 'Review leading indicator progress', done: false },
-          other: document.getElementById('wiz-d1-other').value.trim(),
-          appts: document.getElementById('wiz-d1-appts').value.trim()
-        },
-        reviews: {},
-        blocks: { strategic: 0, buffer: 0, breakout: 0 }
-      };
-
-      saveState();
-      showDashboard();
-    }
-
-    function startWalkthroughAgain(startAtStep = 1) {
-      currentStep = startAtStep;
-      document.getElementById('onboarding-container').classList.remove('hidden');
-      document.getElementById('dashboard-container').classList.add('hidden');
-      updateWizardProgress();
-    }
-
-    function showDashboard() {
-      document.getElementById('onboarding-container').classList.add('hidden');
-      document.getElementById('dashboard-container').classList.remove('hidden');
-      renderDashboard();
-    }
+    let activeDateKey = formatDateKey(getLocalTodayDate());
 
     function saveState() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     }
 
     /* =========================================================================
-       CYCLE TIMELINE MATH
+       DYNAMIC AUTO-ROW GENERATOR
+       Spawns an empty input whenever the last input in a container is typed into
        ========================================================================= */
-    function getCycleTimeline() {
-      const [y, m, d] = state.startDate.split('-').map(Number);
-      const start = new Date(y, m - 1, d, 0, 0, 0);
-      const now = new Date();
-      
-      const diffTime = now.getTime() - start.getTime();
-      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-      
-      let currentWeek = Math.floor(diffDays / 7) + 1;
-      if (currentWeek < 1) currentWeek = 1;
+    function handleAutoRow(inputEl, containerId) {
+      const container = document.getElementById(containerId);
+      const inputs = container.querySelectorAll('input');
+      const isLast = inputEl === inputs[inputs.length - 1];
 
-      const endDate = new Date(start.getTime() + (84 * 24 * 60 * 60 * 1000));
-      
-      return {
-        currentWeek,
-        currentDay: Math.max(1, Math.min(84, diffDays + 1)),
-        isReviewWeek: currentWeek >= 13,
-        startDateFormatted: start.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }),
-        endDateFormatted: endDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
-      };
+      if (isLast && inputEl.value.trim() !== '') {
+        const newInput = document.createElement('input');
+        newInput.type = 'text';
+        newInput.className = inputEl.className;
+        newInput.placeholder = inputEl.placeholder;
+        newInput.oninput = () => handleAutoRow(newInput, containerId);
+        container.appendChild(newInput);
+      }
     }
 
-    function getEmotionalCycleDescription(week) {
-      if (week <= 2) return 'Stage 1: Uninformed Optimism (Excitement is high, resistance hasn\'t hit yet).';
-      if (week <= 5) return 'Stage 2: Informed Pessimism (Reality is setting in; work feels heavier).';
-      if (week <= 8) return 'Stage 3: Valley of Despair (Crucial turning point: lean on tactics over feelings!).';
-      if (week <= 11) return 'Stage 4: Informed Optimism (Momentum is building, finish line in sight).';
-      return 'Stage 5: Success & Fulfillment (13th Week assessment & celebration).';
+    function collectAutoRows(containerId) {
+      const container = document.getElementById(containerId);
+      if (!container) return [];
+      const inputs = container.querySelectorAll('input');
+      return Array.from(inputs).map(i => i.value.trim()).filter(Boolean);
+    }
+
+    function populateAutoRows(containerId, list) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      container.innerHTML = '';
+      
+      const safeList = list && list.length > 0 ? list : [''];
+      safeList.forEach((val) => {
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none';
+        input.placeholder = 'Add new item...';
+        input.value = val;
+        input.oninput = () => handleAutoRow(input, containerId);
+        container.appendChild(input);
+      });
+
+      // Ensure last empty one exists
+      const inputs = container.querySelectorAll('input');
+      if (inputs.length === 0 || inputs[inputs.length - 1].value.trim() !== '') {
+        const emptyInput = document.createElement('input');
+        emptyInput.type = 'text';
+        emptyInput.className = 'w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none';
+        emptyInput.placeholder = 'Add new item...';
+        emptyInput.oninput = () => handleAutoRow(emptyInput, containerId);
+        container.appendChild(emptyInput);
+      }
     }
 
     /* =========================================================================
-       DASHBOARD RENDERER
+       WIZARD / GUIDE CONTROLLER
        ========================================================================= */
-    function renderDashboard() {
+    let wizStep = 1;
+    let catchupDates = [];
+    let catchupIndex = 0;
+
+    function populateGuideWithExistingData() {
       if (!state) return;
-      const timeline = getCycleTimeline();
+      if (state.startDate) document.getElementById('wiz-start-date').value = state.startDate;
+      if (state.weekStartDay !== undefined) document.getElementById('wiz-start-day').value = state.weekStartDay;
 
-      // Timeline badge
-      const weekBadge = document.getElementById('badge-current-week');
-      if (timeline.isReviewWeek) {
-        weekBadge.textContent = 'Week 13 / 13 (Review Week)';
-        weekBadge.className = 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs px-2 py-0.5 rounded font-mono font-bold';
-      } else {
-        weekBadge.textContent = `Week ${timeline.currentWeek} / 12`;
-        weekBadge.className = 'bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs px-2 py-0.5 rounded font-mono font-bold';
+      if (state.goalsCandidate && state.goalsCandidate.length >= 5) {
+        document.getElementById('wiz-g1').value = state.goalsCandidate[0] || '';
+        document.getElementById('wiz-g2').value = state.goalsCandidate[1] || '';
+        document.getElementById('wiz-g3').value = state.goalsCandidate[2] || '';
+        document.getElementById('wiz-g4').value = state.goalsCandidate[3] || '';
+        document.getElementById('wiz-g5').value = state.goalsCandidate[4] || '';
       }
 
-      document.getElementById('cycle-dates-label').textContent = `${timeline.startDateFormatted} → ${timeline.endDateFormatted} (${84 - timeline.currentDay} days remaining)`;
-      document.getElementById('label-cycle-days').textContent = `Day ${timeline.currentDay} of 84`;
+      document.getElementById('wiz-why').value = state.why || '';
+      document.getElementById('wiz-inaction').value = state.inaction || '';
+      document.getElementById('wiz-chunk-goal').value = state.keystoneGoal || '';
+      document.getElementById('wiz-w1-nonneg').value = state.week1Goal || '';
 
-      // Keystone Goal
-      document.getElementById('display-keystone-goal').textContent = state.plan.keystoneGoal || 'Keystone Goal';
-      document.getElementById('display-keystone-why').textContent = state.plan.why ? `Why: ${state.plan.why}` : 'Connect your vision...';
+      populateAutoRows('wiz-lead-container', state.leadingIndicators);
+      populateAutoRows('wiz-lag-container', state.laggingIndicators);
 
-      // Week Non-Negotiable
-      const nonNegLabel = document.getElementById('label-week-nonnegotiable');
-      if (state.plan.week1Goal && timeline.currentWeek === 1) {
-        nonNegLabel.textContent = `Non-negotiable: ${state.plan.week1Goal}`;
-      } else {
-        nonNegLabel.textContent = '';
+      if (state.tactics && state.tactics.length > 0) {
+        document.getElementById('wiz-w1-t1').value = state.tactics[0]?.title || '';
+        document.getElementById('wiz-w1-t2').value = state.tactics[1]?.title || '';
+        document.getElementById('wiz-w1-t3').value = state.tactics[2]?.title || '';
+        const others = state.tactics.slice(3).map(t => t.title);
+        populateAutoRows('wiz-w1-other-container', others);
       }
-
-      document.getElementById('label-emotional-cycle').textContent = getEmotionalCycleDescription(timeline.currentWeek);
-      document.getElementById('btn-review-week-label').textContent = timeline.currentWeek;
-
-      // Render Tactics & Scorecard
-      renderTactics(timeline.currentWeek);
-
-      // Render Blocks
-      document.getElementById('count-strategic').textContent = state.blocks?.strategic || 0;
-      document.getElementById('count-buffer').textContent = state.blocks?.buffer || 0;
-      document.getElementById('count-breakout').textContent = state.blocks?.breakout || 0;
-
-      // Render Daily Tasks
-      renderDailyTasks();
     }
 
-    function renderTactics(currentWeek) {
-      const container = document.getElementById('tactics-container');
-      document.getElementById('label-tactics-header').textContent = `Tactics for Week ${currentWeek}`;
+    function updateWizardUI() {
+      document.getElementById('btn-wiz-prev').style.visibility = wizStep === 1 ? 'hidden' : 'visible';
+      document.getElementById('wiz-step-counter').textContent = `Step ${wizStep} of 7`;
+      document.getElementById('wiz-progress-bar').style.width = `${(wizStep / 7) * 100}%`;
 
-      const activeTactics = state.tactics.filter(t => t.week === 'recurring' || parseInt(t.week) === currentWeek);
+      for (let i = 1; i <= 7; i++) {
+        const el = document.getElementById(`step-${i}`);
+        if (el) el.classList.toggle('hidden', i !== wizStep);
+      }
 
-      if (activeTactics.length === 0) {
-        container.innerHTML = `
-          <div class="text-center py-6 border border-dashed border-slate-800 rounded-xl text-slate-500 text-xs space-y-1 font-mono">
-            <div>No tactics assigned to Week ${currentWeek}.</div>
-            <button onclick="openAddTacticModal()" class="text-amber-400 hover:underline text-xs mt-1">+ Add first tactic for this week</button>
-          </div>
-        `;
-        updateScorecard(0, 0);
+      const titles = [
+        'Phase 1: Timeline',
+        'Phase 2: Ideation (5 Goals)',
+        'Phase 3: The Keystone Goal',
+        'Phase 4: Emotional Connection',
+        'Phase 5: Scope & Indicators',
+        'Phase 6: Week 1 Tactics',
+        'Phase 7: Catch-Up & Daily Execution'
+      ];
+      document.getElementById('wiz-phase-title').textContent = titles[wizStep - 1] || '';
+    }
+
+    function nextWizStep() {
+      if (wizStep === 2) {
+        const goals = [
+          document.getElementById('wiz-g1').value.trim(),
+          document.getElementById('wiz-g2').value.trim(),
+          document.getElementById('wiz-g3').value.trim(),
+          document.getElementById('wiz-g4').value.trim(),
+          document.getElementById('wiz-g5').value.trim()
+        ].filter(Boolean);
+
+        if (goals.length === 0) return alert('Please write at least 1 goal.');
+
+        const group = document.getElementById('wiz-goal-radio-group');
+        group.innerHTML = goals.map((g, idx) => `
+          <label class="flex items-center gap-3 p-3 bg-slate-950 border border-slate-800 rounded-xl cursor-pointer hover:border-amber-500/50 has-[:checked]:border-amber-500">
+            <input type="radio" name="wiz_keystone_radio" value="${escapeHtml(g)}" ${idx === 0 ? 'checked' : ''} class="w-4 h-4 text-amber-500 focus:ring-0 bg-slate-900" />
+            <span class="text-slate-200 font-medium">${escapeHtml(g)}</span>
+          </label>
+        `).join('');
+      }
+
+      if (wizStep === 3) {
+        const picked = document.querySelector('input[name="wiz_keystone_radio"]:checked')?.value;
+        if (picked && !document.getElementById('wiz-chunk-goal').value) {
+          document.getElementById('wiz-chunk-goal').value = picked;
+        }
+      }
+
+      if (wizStep === 6) {
+        // Build catch-up loop from cycle start date through today
+        const startDateStr = document.getElementById('wiz-start-date').value || formatDateKey(getLocalTodayDate());
+        const start = parseDateKey(startDateStr);
+        const today = getLocalTodayDate();
+
+        catchupDates = [];
+        let cur = new Date(start);
+        while (cur <= today) {
+          catchupDates.push(new Date(cur));
+          cur.setDate(cur.getDate() + 1);
+        }
+
+        // If cycle starts in future, just use today
+        if (catchupDates.length === 0) {
+          catchupDates.push(new Date(today));
+        }
+
+        catchupIndex = 0;
+        loadCatchupStep();
+        wizStep = 7;
+        updateWizardUI();
         return;
       }
 
-      let completedCount = 0;
+      if (wizStep === 7) {
+        saveCatchupCurrentDay();
+        if (catchupIndex < catchupDates.length - 1) {
+          catchupIndex++;
+          loadCatchupStep();
+          return;
+        } else {
+          finishWizard();
+          return;
+        }
+      }
 
-      container.innerHTML = activeTactics.map(tactic => {
-        const isDone = (tactic.doneWeeks || []).includes(currentWeek);
-        if (isDone) completedCount++;
-
-        return `
-          <div class="flex items-center justify-between p-3 bg-slate-950 border ${isDone ? 'border-slate-800/60 opacity-60' : 'border-slate-800'} rounded-xl transition-all">
-            <label class="flex items-center gap-3 cursor-pointer flex-1 min-w-0">
-              <input 
-                type="checkbox" 
-                ${isDone ? 'checked' : ''} 
-                onchange="toggleTacticStatus('${tactic.id}', ${currentWeek})" 
-                class="w-4 h-4 rounded border-slate-700 text-amber-500 focus:ring-0 bg-slate-900 cursor-pointer shrink-0"
-              />
-              <span class="text-xs ${isDone ? 'line-through text-slate-500' : 'text-slate-200'} font-medium truncate">${escapeHtml(tactic.title)}</span>
-            </label>
-
-            <div class="flex items-center gap-2 shrink-0 ml-2">
-              <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-400">
-                ${tactic.week === 'recurring' ? 'Recurring' : `Wk ${tactic.week}`}
-              </span>
-              <button onclick="removeTactic('${tactic.id}')" class="text-slate-600 hover:text-rose-400 text-xs px-1">✕</button>
-            </div>
-          </div>
-        `;
-      }).join('');
-
-      updateScorecard(completedCount, activeTactics.length);
-    }
-
-    function updateScorecard(done, total) {
-      const percentage = total > 0 ? Math.round((done / total) * 100) : 0;
-      
-      document.getElementById('score-percentage').textContent = `${percentage}%`;
-      document.getElementById('score-completed-count').textContent = done;
-      document.getElementById('score-total-count').textContent = total;
-
-      const circle = document.getElementById('score-circle-bar');
-      const offset = 100 - percentage;
-      circle.style.strokeDashoffset = offset;
-
-      const badge = document.getElementById('score-status-badge');
-      if (percentage >= 85) {
-        circle.setAttribute('class', 'text-emerald-400 score-radial');
-        badge.textContent = 'Crushing It (85%+)';
-        badge.className = 'text-xs font-bold font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
-      } else if (percentage >= 60) {
-        circle.setAttribute('class', 'text-amber-400 score-radial');
-        badge.textContent = 'In Range (Pacing)';
-        badge.className = 'text-xs font-bold font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30';
-      } else {
-        circle.setAttribute('class', 'text-slate-500 score-radial');
-        badge.textContent = 'Action Required';
-        badge.className = 'text-xs font-bold font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700';
+      if (wizStep < 6) {
+        wizStep++;
+        updateWizardUI();
       }
     }
 
-    function toggleTacticStatus(tacticId, currentWeek) {
-      const tactic = state.tactics.find(t => t.id === tacticId);
-      if (!tactic) return;
+    function prevWizStep() {
+      if (wizStep === 7 && catchupIndex > 0) {
+        catchupIndex--;
+        loadCatchupStep();
+        return;
+      }
+      if (wizStep > 1) {
+        wizStep--;
+        updateWizardUI();
+      }
+    }
 
-      if (!tactic.doneWeeks) tactic.doneWeeks = [];
-      const idx = tactic.doneWeeks.indexOf(currentWeek);
+    function loadCatchupStep() {
+      const d = catchupDates[catchupIndex];
+      const dKey = formatDateKey(d);
+      const isToday = dKey === formatDateKey(getLocalTodayDate());
 
-      if (idx > -1) tactic.doneWeeks.splice(idx, 1);
-      else tactic.doneWeeks.push(currentWeek);
+      document.getElementById('catchup-date-badge').textContent = d.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+      document.getElementById('catchup-day-step').textContent = `Day ${catchupIndex + 1} of ${catchupDates.length}`;
+      document.getElementById('catchup-title').textContent = isToday ? "What must you execute TODAY?" : `What did you accomplish on ${d.toLocaleDateString(undefined, { weekday: 'long' })}?`;
+
+      document.getElementById('btn-wiz-next').textContent = (catchupIndex === catchupDates.length - 1) ? "Launch Daily Page 🚀" : "Next Day →";
+
+      // Restore if already saved in state
+      const existing = state?.days?.[dKey];
+      document.getElementById('catchup-t1').value = existing?.top3?.[0]?.text || '';
+      document.getElementById('catchup-c1').checked = existing?.top3?.[0]?.done || false;
+      document.getElementById('catchup-t2').value = existing?.top3?.[1]?.text || '';
+      document.getElementById('catchup-c2').checked = existing?.top3?.[1]?.done || false;
+      document.getElementById('catchup-t3').value = existing?.top3?.[2]?.text || '';
+      document.getElementById('catchup-c3').checked = existing?.top3?.[2]?.done || false;
+
+      const otherList = existing?.other?.map(o => o.text) || [];
+      populateAutoRows('catchup-other-container', otherList);
+    }
+
+    function saveCatchupCurrentDay() {
+      if (!state) state = {};
+      if (!state.days) state.days = {};
+      const d = catchupDates[catchupIndex];
+      const dKey = formatDateKey(d);
+
+      state.days[dKey] = {
+        top3: [
+          { text: document.getElementById('catchup-t1').value.trim(), done: document.getElementById('catchup-c1').checked },
+          { text: document.getElementById('catchup-t2').value.trim(), done: document.getElementById('catchup-c2').checked },
+          { text: document.getElementById('catchup-t3').value.trim(), done: document.getElementById('catchup-c3').checked }
+        ],
+        other: collectAutoRows('catchup-other-container').map(t => ({ text: t, done: false })),
+        appts: ''
+      };
+      saveState();
+    }
+
+    function finishWizard() {
+      state.hasCompletedOnboarding = true;
+      state.startDate = document.getElementById('wiz-start-date').value || formatDateKey(getLocalTodayDate());
+      state.weekStartDay = parseInt(document.getElementById('wiz-start-day').value, 10);
+      
+      state.goalsCandidate = [
+        document.getElementById('wiz-g1').value.trim(),
+        document.getElementById('wiz-g2').value.trim(),
+        document.getElementById('wiz-g3').value.trim(),
+        document.getElementById('wiz-g4').value.trim(),
+        document.getElementById('wiz-g5').value.trim()
+      ];
+
+      state.keystoneGoal = document.getElementById('wiz-chunk-goal').value.trim();
+      state.why = document.getElementById('wiz-why').value.trim();
+      state.inaction = document.getElementById('wiz-inaction').value.trim();
+      state.leadingIndicators = collectAutoRows('wiz-lead-container');
+      state.laggingIndicators = collectAutoRows('wiz-lag-container');
+      state.week1Goal = document.getElementById('wiz-w1-nonneg').value.trim();
+      
+      const w1Tactics = [
+        document.getElementById('wiz-w1-t1').value.trim(),
+        document.getElementById('wiz-w1-t2').value.trim(),
+        document.getElementById('wiz-w1-t3').value.trim(),
+        ...collectAutoRows('wiz-w1-other-container')
+      ].filter(Boolean);
+
+      state.tactics = w1Tactics.map((t, idx) => ({
+        id: 't_' + Date.now() + '_' + idx,
+        title: t,
+        week: '1',
+        done: false
+      }));
 
       saveState();
-      renderDashboard();
-    }
-
-    function removeTactic(tacticId) {
-      if (confirm('Delete this tactic from your plan?')) {
-        state.tactics = state.tactics.filter(t => t.id !== tacticId);
-        saveState();
-        renderDashboard();
-      }
+      activeDateKey = formatDateKey(getLocalTodayDate());
+      switchView('daily');
     }
 
     /* =========================================================================
-       DAILY TASKS AUTO-REFRESH
+       DAILY PAGE EXECUTION
        ========================================================================= */
-    function renderDailyTasks() {
-      const todayStr = getLocalTodayString();
-      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-      document.getElementById('display-today-weekday').textContent = days[new Date().getDay()];
+    function renderDailyPage() {
+      const targetDate = parseDateKey(activeDateKey);
+      const isToday = activeDateKey === formatDateKey(getLocalTodayDate());
 
-      if (!state.dailyTasks || state.dailyTasks.date !== todayStr) {
-        state.dailyTasks = {
-          date: todayStr,
-          task1: { text: state.dailyTasks?.task1?.done ? '' : (state.dailyTasks?.task1?.text || ''), done: false },
-          task2: { text: state.dailyTasks?.task2?.done ? '' : (state.dailyTasks?.task2?.text || ''), done: false },
-          task3: { text: state.dailyTasks?.task3?.done ? '' : (state.dailyTasks?.task3?.text || ''), done: false },
-          other: state.dailyTasks?.other || '',
-          appts: state.dailyTasks?.appts || ''
+      document.getElementById('daily-view-date').textContent = targetDate.toLocaleDateString(undefined, {
+        weekday: 'long', month: 'short', day: 'numeric'
+      });
+      document.getElementById('daily-view-indicator').textContent = isToday ? '• Today •' : 'Browsing Calendar Day';
+      document.getElementById('daily-banner-week-goal').textContent = state.week1Goal || state.keystoneGoal || 'Execute daily non-negotiables';
+
+      if (!state.days) state.days = {};
+      if (!state.days[activeDateKey]) {
+        state.days[activeDateKey] = {
+          top3: [{ text: '', done: false }, { text: '', done: false }, { text: '', done: false }],
+          other: [],
+          appts: ''
         };
         saveState();
       }
 
-      document.getElementById('daily-text-1').value = state.dailyTasks.task1.text || '';
-      document.getElementById('daily-check-1').checked = state.dailyTasks.task1.done || false;
+      const dayData = state.days[activeDateKey];
 
-      document.getElementById('daily-text-2').value = state.dailyTasks.task2.text || '';
-      document.getElementById('daily-check-2').checked = state.dailyTasks.task2.done || false;
+      for (let i = 0; i < 3; i++) {
+        const item = dayData.top3[i] || { text: '', done: false };
+        document.getElementById(`d-task-t${i+1}`).value = item.text;
+        document.getElementById(`d-task-c${i+1}`).checked = item.done;
+      }
 
-      document.getElementById('daily-text-3').value = state.dailyTasks.task3.text || '';
-      document.getElementById('daily-check-3').checked = state.dailyTasks.task3.done || false;
-
-      document.getElementById('daily-text-other').value = state.dailyTasks.other || '';
-      document.getElementById('daily-text-appts').value = state.dailyTasks.appts || '';
+      document.getElementById('daily-appts').value = dayData.appts || '';
+      renderDailyOtherRows(dayData.other || []);
+      updateDailyScore();
     }
 
-    function saveDailyTasks() {
-      state.dailyTasks.task1 = {
-        text: document.getElementById('daily-text-1').value,
-        done: document.getElementById('daily-check-1').checked
-      };
-      state.dailyTasks.task2 = {
-        text: document.getElementById('daily-text-2').value,
-        done: document.getElementById('daily-check-2').checked
-      };
-      state.dailyTasks.task3 = {
-        text: document.getElementById('daily-text-3').value,
-        done: document.getElementById('daily-check-3').checked
-      };
-      state.dailyTasks.other = document.getElementById('daily-text-other').value;
-      state.dailyTasks.appts = document.getElementById('daily-text-appts').value;
+    function renderDailyOtherRows(otherList) {
+      const container = document.getElementById('daily-other-tasks-container');
+      container.innerHTML = '';
+
+      otherList.forEach((item, idx) => {
+        const row = document.createElement('div');
+        row.className = 'flex items-center gap-2 bg-slate-950 border border-slate-800 p-2.5 rounded-xl';
+        row.innerHTML = `
+          <input type="checkbox" ${item.done ? 'checked' : ''} onchange="toggleOtherDone(${idx})" class="w-4 h-4 rounded text-amber-500 bg-slate-900 border-slate-700 cursor-pointer shrink-0" />
+          <input type="text" value="${escapeHtml(item.text)}" oninput="editOtherText(${idx}, this.value)" class="bg-transparent flex-1 text-slate-200 outline-none text-xs ${item.done ? 'line-through text-slate-500' : ''}" />
+          <button onclick="removeOtherTask(${idx})" class="text-slate-600 hover:text-rose-400 px-1 text-xs">✕</button>
+        `;
+        container.appendChild(row);
+      });
+
+      const newRow = document.createElement('div');
+      newRow.className = 'flex items-center gap-2 bg-slate-950/60 border border-dashed border-slate-800 p-2.5 rounded-xl';
+      newRow.innerHTML = `
+        <span class="text-slate-600 text-xs px-1">+</span>
+        <input type="text" placeholder="Add secondary to-do..." onkeydown="handleAddNewOtherOnEnter(event, this)" class="bg-transparent flex-1 text-slate-300 outline-none text-xs" />
+      `;
+      container.appendChild(newRow);
+    }
+
+    function handleAddNewOtherOnEnter(e, inputEl) {
+      if (e.key === 'Enter' && inputEl.value.trim() !== '') {
+        if (!state.days[activeDateKey].other) state.days[activeDateKey].other = [];
+        state.days[activeDateKey].other.push({ text: inputEl.value.trim(), done: false });
+        saveState();
+        renderDailyPage();
+      }
+    }
+
+    function toggleOtherDone(idx) {
+      state.days[activeDateKey].other[idx].done = !state.days[activeDateKey].other[idx].done;
+      saveState();
+      renderDailyPage();
+    }
+
+    function editOtherText(idx, val) {
+      state.days[activeDateKey].other[idx].text = val;
       saveState();
     }
 
-    function logBlock(type) {
+    function removeOtherTask(idx) {
+      state.days[activeDateKey].other.splice(idx, 1);
+      saveState();
+      renderDailyPage();
+    }
+
+    function updateDailyItem() {
+      const dayData = state.days[activeDateKey];
+      dayData.top3 = [
+        { text: document.getElementById('d-task-t1').value, done: document.getElementById('d-task-c1').checked },
+        { text: document.getElementById('d-task-t2').value, done: document.getElementById('d-task-c2').checked },
+        { text: document.getElementById('d-task-t3').value, done: document.getElementById('d-task-c3').checked }
+      ];
+      saveState();
+      updateDailyScore();
+    }
+
+    function saveCurrentDay() {
+      state.days[activeDateKey].appts = document.getElementById('daily-appts').value;
+      saveState();
+    }
+
+    function navigateDay(offset) {
+      const cur = parseDateKey(activeDateKey);
+      cur.setDate(cur.getDate() + offset);
+      activeDateKey = formatDateKey(cur);
+      renderDailyPage();
+    }
+
+    function updateDailyScore() {
+      const dayData = state.days[activeDateKey];
+      const validTop3 = dayData.top3.filter(t => t.text.trim() !== '');
+      const totalCount = validTop3.length;
+      const doneCount = validTop3.filter(t => t.done).length;
+
+      const pct = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
+      document.getElementById('daily-score-pct').textContent = `${pct}%`;
+      document.getElementById('daily-score-count').textContent = `${doneCount}/${totalCount}`;
+
+      const circle = document.getElementById('daily-score-circle');
+      circle.style.strokeDashoffset = 100 - pct;
+
+      const label = document.getElementById('daily-score-label');
+      if (pct === 100) {
+        circle.setAttribute('class', 'text-emerald-400 score-radial');
+        label.textContent = '100% Execution!';
+        label.className = 'text-xs font-mono text-emerald-400 font-bold';
+      } else if (pct >= 85) {
+        circle.setAttribute('class', 'text-teal-400 score-radial');
+        label.textContent = 'Target Hit (85%+)';
+        label.className = 'text-xs font-mono text-teal-400 font-bold';
+      } else {
+        circle.setAttribute('class', 'text-amber-500 score-radial');
+        label.textContent = 'Action Required';
+        label.className = 'text-xs font-mono text-amber-400/80';
+      }
+    }
+
+    function logBlockToday(type) {
       if (!state.blocks) state.blocks = { strategic: 0, buffer: 0, breakout: 0 };
       state.blocks[type] = (state.blocks[type] || 0) + 1;
       saveState();
-      renderDashboard();
+      alert(`+1 ${type.toUpperCase()} block logged!`);
     }
 
-    function resetBlocks() {
-      if (confirm('Reset your logged blocks for the week?')) {
-        state.blocks = { strategic: 0, buffer: 0, breakout: 0 };
-        saveState();
-        renderDashboard();
-      }
+    /* =========================================================================
+       OVERVIEW & REVIEW
+       ========================================================================= */
+    function renderOverviewPage() {
+      document.getElementById('ov-keystone-goal').textContent = state.keystoneGoal || 'None set';
+      document.getElementById('ov-why').textContent = state.why || 'None';
+      document.getElementById('ov-inaction').textContent = state.inaction || 'None';
+
+      const leadEl = document.getElementById('ov-lead-list');
+      leadEl.innerHTML = (state.leadingIndicators || []).map(i => `<li>${escapeHtml(i)}</li>`).join('') || '<li class="text-slate-600">None</li>';
+
+      const lagEl = document.getElementById('ov-lag-list');
+      lagEl.innerHTML = (state.laggingIndicators || []).map(i => `<li>${escapeHtml(i)}</li>`).join('') || '<li class="text-slate-600">None</li>';
+
+      const tacticsEl = document.getElementById('ov-tactics-list');
+      tacticsEl.innerHTML = (state.tactics || []).map((t, idx) => `
+        <div class="flex items-center justify-between p-2.5 bg-slate-950 border border-slate-800 rounded-lg">
+          <label class="flex items-center gap-2 cursor-pointer flex-1">
+            <input type="checkbox" ${t.done ? 'checked' : ''} onchange="toggleOverviewTactic(${idx})" class="w-4 h-4 text-amber-500 rounded bg-slate-900 border-slate-700 cursor-pointer" />
+            <span class="text-xs ${t.done ? 'line-through text-slate-500' : 'text-slate-200'} font-medium">${escapeHtml(t.title)}</span>
+          </label>
+          <span class="text-[10px] font-mono text-slate-500">Wk ${t.week}</span>
+        </div>
+      `).join('') || '<div class="text-slate-600 text-xs">No tactics logged.</div>';
     }
 
-    /* Modals */
-    function toggleTacticModal(show) {
-      document.getElementById('modal-tactic').classList.toggle('hidden', !show);
+    function toggleOverviewTactic(idx) {
+      state.tactics[idx].done = !state.tactics[idx].done;
+      saveState();
+      renderOverviewPage();
     }
 
-    function openAddTacticModal() {
-      document.getElementById('tactic-form').reset();
-      toggleTacticModal(true);
+    function saveReview() {
+      if (!state.reviews) state.reviews = {};
+      state.reviews[1] = {
+        proud: document.getElementById('rev-proud').value,
+        challenges: document.getElementById('rev-challenges').value,
+        learn: document.getElementById('rev-learn').value,
+        friend: document.getElementById('rev-friend').value
+      };
+      saveState();
+      alert('Weekly review saved!');
+      switchView('daily');
     }
 
-    function toggleReviewModal(show) {
-      const modal = document.getElementById('modal-review');
-      if (show) {
-        const currentWeek = getCycleTimeline().currentWeek;
-        document.getElementById('modal-review-week-title').textContent = currentWeek;
-        const currentRev = state.reviews?.[currentWeek] || {};
-        document.getElementById('input-review-proud').value = currentRev.proud || '';
-        document.getElementById('input-review-challenges').value = currentRev.challenges || '';
-        document.getElementById('input-review-learn').value = currentRev.learn || '';
-        document.getElementById('input-review-friend').value = currentRev.friend || '';
-        modal.classList.remove('hidden');
-      } else {
-        modal.classList.add('hidden');
-      }
-    }
+    /* =========================================================================
+       VIEW ROUTER
+       ========================================================================= */
+    function switchView(viewName) {
+      const views = ['guide', 'daily', 'overview', 'review'];
+      views.forEach(v => {
+        const el = document.getElementById(`view-${v}`);
+        if (el) el.classList.toggle('hidden', v !== viewName);
 
-    function toggleSettingsModal(show) {
-      const modal = document.getElementById('modal-settings');
-      if (show) {
-        document.getElementById('input-cycle-start').value = state.startDate;
-        document.getElementById('input-week-start-day').value = state.weekStartDay ?? 1;
-        modal.classList.remove('hidden');
-      } else {
-        modal.classList.add('hidden');
-      }
-    }
-
-    /* Modal Form Submissions */
-    document.getElementById('tactic-form').addEventListener('submit', (e) => {
-      e.preventDefault();
-      const title = document.getElementById('input-tactic-title').value.trim();
-      let week = document.getElementById('input-tactic-week').value;
-
-      if (week === 'current') {
-        week = String(getCycleTimeline().currentWeek);
-      }
-
-      state.tactics.push({
-        id: 't_' + Date.now(),
-        title,
-        week,
-        doneWeeks: []
+        const tab = document.getElementById(`tab-${v}`);
+        if (tab) {
+          if (v === viewName) {
+            tab.className = 'px-3 py-1 rounded-lg font-semibold transition-colors bg-amber-500 text-black';
+          } else {
+            tab.className = 'px-3 py-1 rounded-lg font-semibold text-slate-400 hover:text-white transition-colors';
+          }
+        }
       });
 
-      saveState();
-      toggleTacticModal(false);
-      renderDashboard();
-    });
-
-    document.getElementById('review-form').addEventListener('submit', (e) => {
-      e.preventDefault();
-      const currentWeek = getCycleTimeline().currentWeek;
-      if (!state.reviews) state.reviews = {};
-
-      state.reviews[currentWeek] = {
-        proud: document.getElementById('input-review-proud').value.trim(),
-        challenges: document.getElementById('input-review-challenges').value.trim(),
-        learn: document.getElementById('input-review-learn').value.trim(),
-        friend: document.getElementById('input-review-friend').value.trim(),
-        timestamp: Date.now()
-      };
-
-      saveState();
-      toggleReviewModal(false);
-      alert(`Week ${currentWeek} Review logged successfully!`);
-      renderDashboard();
-    });
-
-    document.getElementById('settings-form').addEventListener('submit', (e) => {
-      e.preventDefault();
-      state.startDate = document.getElementById('input-cycle-start').value;
-      state.weekStartDay = parseInt(document.getElementById('input-week-start-day').value, 10);
-      saveState();
-      toggleSettingsModal(false);
-      renderDashboard();
-    });
-
-    function exportData() {
-      const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `12wy_plan_${getLocalTodayString()}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
+      if (viewName === 'daily') renderDailyPage();
+      if (viewName === 'overview') renderOverviewPage();
+      if (viewName === 'guide') {
+        populateGuideWithExistingData();
+        updateWizardUI();
+      }
     }
 
-    function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
+    function escapeHtml(str) {
+      const d = document.createElement('div');
+      d.textContent = str || '';
+      return d.innerHTML;
     }
 
-    // Launch Logic: If completed before, show Dashboard directly; otherwise run Wizard
-    document.getElementById('wiz-start-date').value = getLocalTodayString();
-    
-    if (state && state.hasCompletedOnboarding) {
-      showDashboard();
+    // Default start date field to Monday 9/07
+    document.getElementById('wiz-start-date').value = '2026-09-07';
+
+    // INITIALIZATION:
+    // If user hasn't finished the guide yet, start directly in the Guide.
+    // If they HAVE finished it, land directly on Daily.
+    if (!state || !state.hasCompletedOnboarding) {
+      state = { hasCompletedOnboarding: false };
+      wizStep = 1;
+      switchView('guide');
     } else {
-      updateWizardProgress();
+      switchView('daily');
     }
   </script>
 </body>
