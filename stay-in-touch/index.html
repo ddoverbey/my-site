@@ -67,11 +67,13 @@
           ⚙️
         </button>
         <button 
+          id="btn-auth-header"
           onclick="toggleAuthModal(true)"
-          class="p-2 text-[#9eb3a8] hover:text-[#f4ede4] hover:bg-[#182721]/80 rounded-lg border border-[#23352e] transition-colors text-xs backdrop-blur-sm"
-          title="Account & Data Portability"
+          class="p-2 text-[#9eb3a8] hover:text-[#f4ede4] hover:bg-[#182721]/80 rounded-lg border border-[#23352e] transition-colors text-xs backdrop-blur-sm relative"
+          title="Account & Cloud Sync"
         >
           ☁️
+          <span id="sync-status-dot" class="absolute top-1 right-1 w-2 h-2 rounded-full bg-slate-500"></span>
         </button>
         <button 
           id="btn-roll-dice"
@@ -309,38 +311,108 @@
     </div>
   </div>
 
-  <!-- DATA & BACKUP MODAL -->
+  <!-- ACCOUNT & CLOUD SYNC MODAL -->
   <div id="auth-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-[#14201b] border border-[#283e35] rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
       <div class="flex justify-between items-center border-b border-[#283e35] pb-3">
-        <h3 class="font-bold text-sm text-[#f4ede4]">Data & Backup</h3>
+        <h3 class="font-bold text-sm text-[#f4ede4]">Account & Cloud Sync</h3>
         <button onclick="toggleAuthModal(false)" class="text-[#8da498] hover:text-[#f4ede4] text-sm">✕</button>
       </div>
 
-      <div class="bg-[#0b1210] border border-[#283e35] rounded-xl p-3 text-xs text-[#a3b8ad] space-y-1">
-        <div class="font-semibold text-[#f4ede4] flex items-center gap-1.5">
-          <span>🔒</span> Private Local Storage
+      <!-- Logged-In View -->
+      <div id="auth-view-logged-in" class="hidden space-y-4">
+        <div class="bg-[#0b1210] border border-[#283e35] rounded-xl p-3 text-xs text-[#a3b8ad] space-y-1">
+          <div class="flex items-center justify-between">
+            <span class="text-emerald-400 font-medium flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse"></span> Cloud Active
+            </span>
+            <span id="auth-current-email" class="text-[#f4ede4] font-mono text-[11px] truncate max-w-[150px]"></span>
+          </div>
+          <p class="text-[11px] text-[#6b8276] pt-1">Your connections and cadences are encrypted and synced to your cloud account.</p>
         </div>
-        <p>Your connections currently live securely inside your browser's local cache with zero external trackers.</p>
-      </div>
 
-      <div class="space-y-2">
-        <button onclick="exportBackup()" class="w-full bg-[#1c2d26] hover:bg-[#253d33] text-emerald-100 py-2 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-2 border border-[#2e473d]">
-          <span>📥</span> Export Backup JSON
+        <button 
+          type="button"
+          onclick="syncToCloud(true)" 
+          class="w-full bg-[#1c2d26] hover:bg-[#253d33] text-teal-300 py-2 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-2 border border-[#2e473d]"
+        >
+          <span>🔄</span> Force Cloud Sync Now
         </button>
 
-        <label class="w-full bg-[#1c2d26] hover:bg-[#253d33] text-emerald-100 py-2 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer border border-[#2e473d]">
-          <span>📤</span> Import Backup JSON
-          <input type="file" id="import-json-file" accept=".json" class="hidden" onchange="importBackup(event)" />
-        </label>
+        <button 
+          type="button"
+          onclick="handleLogout()" 
+          class="w-full bg-[#241710] hover:bg-[#342217] text-[#ea580c] py-2 rounded-lg text-xs font-semibold transition-colors border border-[#ea580c]/30"
+        >
+          Sign Out
+        </button>
+      </div>
+
+      <!-- Logged-Out View -->
+      <div id="auth-view-logged-out" class="space-y-4">
+        <div class="bg-[#0b1210] border border-[#283e35] rounded-xl p-3 text-xs text-[#a3b8ad]">
+          <p>Sign in with your central account to sync your garden across phone, tablet, and desktop.</p>
+        </div>
+
+        <div class="space-y-3">
+          <div>
+            <label class="block text-xs font-semibold text-[#a3b8ad] uppercase tracking-wider mb-1">Email</label>
+            <input id="auth-email" type="email" placeholder="you@domain.com" class="w-full bg-[#0b1210] border border-[#283e35] rounded-lg px-3 py-2 text-sm text-emerald-100 focus:outline-none focus:border-teal-500" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-[#a3b8ad] uppercase tracking-wider mb-1">Password</label>
+            <input id="auth-password" type="password" placeholder="••••••••" class="w-full bg-[#0b1210] border border-[#283e35] rounded-lg px-3 py-2 text-sm text-emerald-100 focus:outline-none focus:border-teal-500" />
+          </div>
+
+          <div id="auth-error-msg" class="text-xs text-[#ea580c] hidden"></div>
+
+          <div class="grid grid-cols-2 gap-2 pt-1">
+            <button 
+              type="button" 
+              onclick="handleLogin()" 
+              class="w-full bg-[#115e59] hover:bg-[#0f766e] text-white py-2 rounded-lg text-xs font-semibold transition-colors border border-teal-500/30"
+            >
+              Sign In
+            </button>
+            <button 
+              type="button" 
+              onclick="handleSignUp()" 
+              class="w-full bg-[#1c2d26] hover:bg-[#253d33] text-teal-300 py-2 rounded-lg text-xs font-semibold transition-colors border border-[#2e473d]"
+            >
+              Create Account
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Offline JSON Portability Tools -->
+      <div class="border-t border-[#283e35] pt-3 space-y-2">
+        <div class="text-[11px] text-[#6b8276] uppercase font-semibold">Offline Backup (No account required)</div>
+        <div class="grid grid-cols-2 gap-2">
+          <button onclick="exportBackup()" class="bg-[#131f1a] hover:bg-[#1c2d26] text-slate-300 py-1.5 rounded-lg text-[11px] transition-colors border border-[#23352e]">
+            📥 Export JSON
+          </button>
+          <label class="bg-[#131f1a] hover:bg-[#1c2d26] text-slate-300 py-1.5 rounded-lg text-[11px] transition-colors border border-[#23352e] text-center cursor-pointer">
+            📤 Import JSON
+            <input type="file" id="import-json-file" accept=".json" class="hidden" onchange="importBackup(event)" />
+          </label>
+        </div>
       </div>
     </div>
   </div>
 
   <script>
-    // Clean, self-contained local storage key
+    /* =========================================================================
+       SUPABASE CONFIGURATION
+       (Paste your Project URL & Anon Key below when ready. Runs 100% locally if blank!)
+       ========================================================================= */
+    const SUPABASE_URL = 'https://mrgdthihogxrqsfnknxd.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1yZ2R0aGlob2d4cnFzZm5rbnhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyNDk4NTYsImV4cCI6MjEwNDgyNTg1Nn0.1fwcaGPGrzUut3zng2NNkYZt7hUguhKPhfqYyu8MA3s';
+
     const STORAGE_KEY = 'cultivate_garden_data_v1';
     const SETTINGS_KEY = 'cultivate_garden_settings_v1';
+    const AUTH_SESSION_KEY = 'cultivate_cloud_session';
 
     let cadenceSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || JSON.stringify({
       inner: 7,
@@ -389,7 +461,7 @@
           avatar: '❤️',
           photo: null,
           touches: [
-            // 5 days ago on 7d cadence = 28% health -> 🍁 Autumn Tree
+            // 5 days ago on 7d cadence = ~28% health -> 🍁 Autumn Tree
             { type: 'Hangout', timestamp: now - (5 * DAY), note: 'Sunday family dinner' }
           ]
         },
@@ -420,7 +492,6 @@
       ];
     }
 
-    // Always ensure fresh default list exists
     let friends = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
     if (!friends || !Array.isArray(friends) || friends.length === 0) {
       friends = getDefaultExamples();
@@ -433,12 +504,185 @@
 
     function saveData() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(friends));
+      syncToCloud(false);
     }
 
     function saveSettings() {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(cadenceSettings));
+      syncToCloud(false);
     }
 
+    /* =========================================================================
+       NATIVE REST AUTH & CLOUD SYNC (Zero third-party script crashes)
+       ========================================================================= */
+    let cloudSession = JSON.parse(localStorage.getItem(AUTH_SESSION_KEY) || 'null');
+
+    function updateAuthUI() {
+      const dot = document.getElementById('sync-status-dot');
+      const loggedInView = document.getElementById('auth-view-logged-in');
+      const loggedOutView = document.getElementById('auth-view-logged-out');
+      const emailEl = document.getElementById('auth-current-email');
+
+      if (cloudSession && cloudSession.user) {
+        if (dot) dot.className = 'absolute top-1 right-1 w-2 h-2 rounded-full bg-emerald-400';
+        if (emailEl) emailEl.textContent = cloudSession.user.email;
+        if (loggedInView) loggedInView.classList.remove('hidden');
+        if (loggedOutView) loggedOutView.classList.add('hidden');
+      } else {
+        if (dot) dot.className = 'absolute top-1 right-1 w-2 h-2 rounded-full bg-slate-500';
+        if (loggedInView) loggedInView.classList.add('hidden');
+        if (loggedOutView) loggedOutView.classList.remove('hidden');
+      }
+    }
+
+    async function handleLogin() {
+      if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+        return alert('Add your Supabase URL & Anon Key in the script to activate accounts.');
+      }
+
+      const email = document.getElementById('auth-email').value.trim();
+      const password = document.getElementById('auth-password').value;
+      const errEl = document.getElementById('auth-error-msg');
+      errEl.classList.add('hidden');
+
+      try {
+        const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY
+          },
+          body: JSON.stringify({ email, password })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error_description || data.msg || data.message || 'Login failed');
+
+        cloudSession = data;
+        localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(cloudSession));
+        updateAuthUI();
+        await loadFromCloud();
+        toggleAuthModal(false);
+      } catch (err) {
+        errEl.textContent = err.message;
+        errEl.classList.remove('hidden');
+      }
+    }
+
+    async function handleSignUp() {
+      if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+        return alert('Add your Supabase URL & Anon Key in the script to activate accounts.');
+      }
+
+      const email = document.getElementById('auth-email').value.trim();
+      const password = document.getElementById('auth-password').value;
+      const errEl = document.getElementById('auth-error-msg');
+      errEl.classList.add('hidden');
+
+      try {
+        const res = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY
+          },
+          body: JSON.stringify({ email, password })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.msg || data.message || 'Sign up failed');
+
+        if (data.session) {
+          cloudSession = data.session;
+          localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(cloudSession));
+          updateAuthUI();
+          await syncToCloud(true);
+        } else {
+          alert('Account created! If email confirmations are enabled in your Supabase dashboard, check your inbox to confirm.');
+        }
+        toggleAuthModal(false);
+      } catch (err) {
+        errEl.textContent = err.message;
+        errEl.classList.remove('hidden');
+      }
+    }
+
+    function handleLogout() {
+      cloudSession = null;
+      localStorage.removeItem(AUTH_SESSION_KEY);
+      updateAuthUI();
+      toggleAuthModal(false);
+    }
+
+    async function syncToCloud(notify = false) {
+      if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !cloudSession || !cloudSession.access_token) return;
+
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/cultivate_gardens`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${cloudSession.access_token}`,
+            'Prefer': 'resolution=merge-duplicates'
+          },
+          body: JSON.stringify({
+            user_id: cloudSession.user.id,
+            friends: friends,
+            cadence_settings: cadenceSettings,
+            updated_at: new Date().toISOString()
+          })
+        });
+
+        if (!res.ok) {
+          const errData = await res.json();
+          console.warn('Sync failed:', errData);
+          if (notify) alert('Sync error: ' + (errData.message || 'Failed'));
+        } else if (notify) {
+          alert('Garden safely synced to cloud!');
+        }
+      } catch (e) {
+        console.warn('Sync network error:', e);
+      }
+    }
+
+    async function loadFromCloud() {
+      if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !cloudSession || !cloudSession.access_token) return;
+
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/cultivate_gardens?user_id=eq.${cloudSession.user.id}&select=*`, {
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${cloudSession.access_token}`
+          }
+        });
+
+        if (res.ok) {
+          const records = await res.json();
+          if (records && records.length > 0) {
+            const row = records[0];
+            if (row.friends && Array.isArray(row.friends)) {
+              friends = row.friends;
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(friends));
+            }
+            if (row.cadence_settings) {
+              cadenceSettings = row.cadence_settings;
+              localStorage.setItem(SETTINGS_KEY, JSON.stringify(cadenceSettings));
+            }
+            render();
+          } else {
+            // First time login: migrate local state to cloud
+            await syncToCloud(false);
+          }
+        }
+      } catch (e) {
+        console.warn('Load cloud error:', e);
+      }
+    }
+
+    /* =========================================================================
+       CALCULATIONS & UI RENDERING
+       ========================================================================= */
     function getCadenceDays(tier) {
       return cadenceSettings[tier] || 14;
     }
@@ -499,6 +743,7 @@
         text.textContent = `${averageHealth}% Garden Vitality • Stable`;
         if (icon) icon.textContent = '🌱';
       } else if (averageHealth >= 20) {
+        // Late Fall / Autumn Frost (Terracotta Rust)
         bgColor = '#29160d';
         bar.className = 'h-full bg-[#ea580c] transition-all duration-700';
         text.className = 'text-[11px] font-mono text-[#fdba74]';
@@ -909,9 +1154,13 @@
       return div.innerHTML;
     }
 
-    // Launch cleanly
+    // Initialize cleanly
+    updateAuthUI();
     updateNotificationButton();
     render();
+    if (cloudSession) {
+      loadFromCloud();
+    }
   </script>
 </body>
 </html>
