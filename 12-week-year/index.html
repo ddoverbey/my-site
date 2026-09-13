@@ -6,7 +6,7 @@
   <title>12-Week Year • Command Center</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    .score-radial { transition: stroke-dashoffset 0.5s ease; }
+    .score-radial { transition: stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
@@ -15,7 +15,7 @@
 
   <div class="w-full max-w-4xl space-y-4 pb-24">
     
-    <!-- Persistent Top Bar -->
+    <!-- Top Persistent Navigation Bar -->
     <nav id="app-nav" class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
       <div class="flex items-center gap-2">
         <span class="text-lg">⚡</span>
@@ -24,6 +24,7 @@
       </div>
 
       <div class="flex items-center gap-2">
+        <!-- View Switcher -->
         <div class="flex items-center gap-1 bg-slate-900 border border-slate-800 p-1 rounded-xl text-xs">
           <button onclick="switchView('daily')" id="tab-daily" class="px-3 py-1 rounded-lg font-semibold transition-colors bg-amber-500 text-black">Today</button>
           <button onclick="switchView('overview')" id="tab-overview" class="px-3 py-1 rounded-lg font-semibold text-slate-400 hover:text-white transition-colors">Overview</button>
@@ -31,6 +32,7 @@
           <button onclick="switchView('guide')" id="tab-guide" class="px-3 py-1 rounded-lg font-semibold text-slate-400 hover:text-white transition-colors">Guide</button>
         </div>
 
+        <!-- Account & Cloud Sync Modal Trigger -->
         <button 
           id="btn-auth-header" 
           onclick="toggleAuthModal(true)" 
@@ -43,8 +45,9 @@
       </div>
     </nav>
 
+
     <!-- =========================================================================
-         VIEW 1: GUIDE / SETUP
+         VIEW 1: THE GUIDED INTERACTIVE WALKTHROUGH
          ========================================================================= -->
     <section id="view-guide" class="py-4 space-y-5">
       <div class="space-y-1.5">
@@ -59,11 +62,11 @@
 
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-8 shadow-2xl space-y-5">
         
-        <!-- Step 1 -->
+        <!-- STEP 1: DATES -->
         <div id="step-1" class="wiz-step space-y-4">
           <div>
-            <h2 class="text-xl font-bold text-white">When did your 12-Week Year start?</h2>
-            <p class="text-xs text-slate-400 mt-1">If your cycle started earlier this week (e.g., Monday 9/07), we'll walk you day-by-day to backfill execution.</p>
+            <h2 class="text-xl font-bold text-white">When did/does your 12-Week Year start?</h2>
+            <p class="text-xs text-slate-400 mt-1">If your cycle already started earlier this week (e.g. Monday 9/07), we'll walk you day-by-day to catch up so your scores are accurate.</p>
           </div>
           <div class="space-y-3 pt-2">
             <div>
@@ -73,146 +76,148 @@
             <div>
               <label class="block text-xs font-semibold text-slate-300 mb-1">First Day of the Week</label>
               <select id="wiz-start-day" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:border-amber-500 outline-none">
-                <option value="1">Monday (Standard)</option>
-                <option value="0">Sunday (Planning Day)</option>
+                <option value="1">Monday (Standard Work Week)</option>
+                <option value="0">Sunday (Traditional Planning Day)</option>
               </select>
             </div>
           </div>
         </div>
 
-        <!-- Step 2 -->
+        <!-- STEP 2: 5 GOALS -->
         <div id="step-2" class="wiz-step space-y-4 hidden">
           <div>
             <h2 class="text-xl font-bold text-white">List 5 goals on your mind</h2>
-            <p class="text-xs text-slate-400 mt-1">Brainstorm 5 goals for this year without editing yourself.</p>
+            <p class="text-xs text-slate-400 mt-1">Brainstorm 5 goals you want to tackle this year or the rest of the year. Don't edit yourself yet.</p>
           </div>
           <div class="space-y-2 text-xs">
-            <input id="wiz-g1" type="text" placeholder="Goal 1" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none" />
-            <input id="wiz-g2" type="text" placeholder="Goal 2" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none" />
-            <input id="wiz-g3" type="text" placeholder="Goal 3" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none" />
-            <input id="wiz-g4" type="text" placeholder="Goal 4" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none" />
-            <input id="wiz-g5" type="text" placeholder="Goal 5" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none" />
+            <input id="wiz-g1" type="text" placeholder="Goal 1 (e.g., Ship MVP and acquire 10 active customers)" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none" />
+            <input id="wiz-g2" type="text" placeholder="Goal 2 (e.g., Deadlift 405 lbs and run 5k in under 24 min)" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none" />
+            <input id="wiz-g3" type="text" placeholder="Goal 3 (e.g., Finish recording 4-song music project)" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none" />
+            <input id="wiz-g4" type="text" placeholder="Goal 4 (e.g., Save $5,000 emergency fund)" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none" />
+            <input id="wiz-g5" type="text" placeholder="Goal 5 (e.g., Read 6 books on engineering architecture)" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none" />
           </div>
         </div>
 
-        <!-- Step 3 -->
+        <!-- STEP 3: PICK KEYSTONE -->
         <div id="step-3" class="wiz-step space-y-4 hidden">
           <div>
-            <h2 class="text-xl font-bold text-white">Select The ONE Big Goal</h2>
-            <p class="text-xs text-slate-400 mt-1">Which single goal will create the highest leverage in your life?</p>
+            <h2 class="text-xl font-bold text-white">Which ONE will have the biggest impact?</h2>
+            <p class="text-xs text-slate-400 mt-1">The 12-Week Year is <strong>not about working on everything in your life</strong>, but attacking 1 big keystone goal that creates massive leverage.</p>
           </div>
           <div id="wiz-goal-radio-group" class="space-y-2 text-xs"></div>
         </div>
 
-        <!-- Step 4 -->
+        <!-- STEP 4: EMOTIONAL CONNECTION -->
         <div id="step-4" class="wiz-step space-y-4 hidden">
           <div>
             <h2 class="text-xl font-bold text-white">The Emotional Connection</h2>
-            <p class="text-xs text-slate-400 mt-1">Anchor your discipline in reality.</p>
+            <p class="text-xs text-slate-400 mt-1">Willpower is fragile. You need deep emotional clarity so you don't stall during the "Valley of Despair".</p>
           </div>
           <div class="space-y-3 text-xs">
             <div>
               <label class="block font-semibold text-slate-300 mb-1">Why do you want this specific goal?</label>
-              <textarea id="wiz-why" rows="3" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-amber-500 outline-none leading-relaxed"></textarea>
+              <textarea id="wiz-why" rows="3" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-amber-500 outline-none leading-relaxed" placeholder="What does reaching this goal unlock for your life, independence, or confidence?"></textarea>
             </div>
             <div>
               <label class="block font-semibold text-rose-400 mb-1">Cost of Inaction: What happens if you don't reach or attempt this?</label>
-              <textarea id="wiz-inaction" rows="3" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-amber-500 outline-none leading-relaxed"></textarea>
+              <textarea id="wiz-inaction" rows="3" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-amber-500 outline-none leading-relaxed" placeholder="The painful reality of inaction: another year of regret, staying stuck..."></textarea>
             </div>
           </div>
         </div>
 
-        <!-- Step 5 -->
+        <!-- STEP 5: 12-WEEK CHUNK & MULTI-INDICATORS -->
         <div id="step-5" class="wiz-step space-y-4 hidden">
           <div>
-            <h2 class="text-xl font-bold text-white">Measurable Indicators</h2>
-            <p class="text-xs text-slate-400 mt-1">Add your targets. You can increment and measure these directly on both your Daily and Overview pages.</p>
+            <h2 class="text-xl font-bold text-white">12-Week Scope & Indicators</h2>
+            <p class="text-xs text-slate-400 mt-1">Define your specific 12-week goal chunk and multiple leading/lagging indicators.</p>
           </div>
           <div class="space-y-3 text-xs">
             <div>
-              <label class="block font-semibold text-amber-400 mb-1">12-Week Target Goal</label>
+              <label class="block font-semibold text-amber-400 mb-1">12-Week Target Chunk (Realistic Stretch)</label>
               <input id="wiz-chunk-goal" type="text" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none font-bold" />
             </div>
 
             <div>
               <div class="flex items-center justify-between mb-1">
-                <label class="font-semibold text-slate-300">Leading Indicators (Action Metric & Target)</label>
-                <span class="text-[10px] text-slate-500">Name + Target Number</span>
+                <label class="font-semibold text-slate-300">Leading Indicators (Actions you 100% control)</label>
+                <span class="text-[10px] text-slate-500">Auto-adds new line</span>
               </div>
-              <div id="wiz-lead-container" class="space-y-2">
-                <div class="flex gap-2">
-                  <input type="text" placeholder="Indicator name (e.g. Outreach emails)" class="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none ind-name" />
-                  <input type="number" placeholder="Target" value="10" class="w-24 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-slate-200 focus:border-amber-500 outline-none font-mono ind-target" />
-                </div>
+              <div id="wiz-lead-container" class="space-y-1.5">
+                <input type="text" oninput="handleAutoRow(this, 'wiz-lead-container')" placeholder="e.g., Code 2 hours every morning" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none" />
               </div>
-              <button type="button" onclick="addIndicatorRow('wiz-lead-container')" class="text-xs text-amber-400 hover:text-amber-300 mt-1 font-semibold">+ Add Leading Indicator</button>
             </div>
 
             <div>
               <div class="flex items-center justify-between mb-1">
-                <label class="font-semibold text-slate-300">Lagging Indicators (Result Metric & Target)</label>
-                <span class="text-[10px] text-slate-500">Name + Target Number</span>
+                <label class="font-semibold text-slate-300">Lagging Indicators (Results measured)</label>
+                <span class="text-[10px] text-slate-500">Auto-adds new line</span>
               </div>
-              <div id="wiz-lag-container" class="space-y-2">
-                <div class="flex gap-2">
-                  <input type="text" placeholder="Indicator name (e.g. Paying Users)" class="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none ind-name" />
-                  <input type="number" placeholder="Target" value="5" class="w-24 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-slate-200 focus:border-amber-500 outline-none font-mono ind-target" />
-                </div>
+              <div id="wiz-lag-container" class="space-y-1.5">
+                <input type="text" oninput="handleAutoRow(this, 'wiz-lag-container')" placeholder="e.g., Working live URL deployed" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none" />
               </div>
-              <button type="button" onclick="addIndicatorRow('wiz-lag-container')" class="text-xs text-amber-400 hover:text-amber-300 mt-1 font-semibold">+ Add Lagging Indicator</button>
             </div>
           </div>
         </div>
 
-        <!-- Step 6 -->
+        <!-- STEP 6: WEEK 1 TACTICS & CHECKLISTS -->
         <div id="step-6" class="wiz-step space-y-4 hidden">
           <div>
-            <div class="flex items-center justify-between">
-              <h2 class="text-xl font-bold text-white">Week 1 Tactics (Main Quest)</h2>
-              <span class="text-[10px] font-mono text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded">Recommended: 2–5 max</span>
-            </div>
-            <p class="text-xs text-slate-400 mt-1">Actions starting with verbs. Focus on your highest-leverage priorities.</p>
+            <h2 class="text-xl font-bold text-white">Week 1 Tactical Plan</h2>
+            <p class="text-xs text-slate-400 mt-1">Tactics are the actions that drive attainment. <strong>Every tactic must start with a verb</strong>.</p>
           </div>
           <div class="space-y-3 text-xs">
             <div>
-              <label class="block font-semibold text-amber-300 mb-1">Week 1 Non-Negotiable Objective</label>
-              <input id="wiz-w1-nonneg" type="text" placeholder="e.g., Finalize data models and deploy prototype" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none font-medium" />
+              <label class="block font-semibold text-amber-300 mb-1">What is this week's non-negotiable goal?</label>
+              <input id="wiz-w1-nonneg" type="text" placeholder="e.g., Finalize data models and deploy initial prototype" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none font-medium" />
+            </div>
+
+            <div class="space-y-2">
+              <label class="block font-semibold text-slate-300">Major Week 1 Tactics (Top 3)</label>
+              <input id="wiz-w1-t1" type="text" placeholder="Tactic 1 (Start with a verb)" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none" />
+              <input id="wiz-w1-t2" type="text" placeholder="Tactic 2 (Start with a verb)" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none" />
+              <input id="wiz-w1-t3" type="text" placeholder="Tactic 3 (Start with a verb)" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none" />
             </div>
 
             <div>
-              <div class="flex items-center justify-between mb-1">
-                <label class="font-semibold text-slate-300">Major Week 1 Tactics</label>
-                <span id="wiz-tactics-counter-badge" class="text-[10px] text-slate-500 font-mono">1 item</span>
-              </div>
-              <div id="wiz-w1-tactics-container" class="space-y-1.5">
-                <input type="text" oninput="handleAutoRow(this, 'wiz-w1-tactics-container'); checkTacticsCount('wiz-w1-tactics-container', 'wiz-tactics-counter-badge');" placeholder="Tactic starting with verb..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none" />
+              <label class="block font-semibold text-slate-300 mb-1">Additional Weekly Checklists / To-Dos (Optional)</label>
+              <div id="wiz-w1-other-container" class="space-y-1.5">
+                <input type="text" oninput="handleAutoRow(this, 'wiz-w1-other-container')" placeholder="Additional weekly task..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none" />
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Step 7: Day-By-Day Backfill Catch-Up -->
+        <!-- STEP 7: CATCH-UP & DAY-BY-DAY LOGGING -->
         <div id="step-7" class="wiz-step space-y-4 hidden">
           <div>
             <div class="flex items-center justify-between">
               <span id="catchup-date-badge" class="text-xs font-mono font-bold text-amber-400">Monday, Sep 7</span>
               <span id="catchup-day-step" class="text-[11px] font-mono text-slate-500">Day 1 of 6</span>
             </div>
-            <h2 id="catchup-title" class="text-xl font-bold text-white mt-1">What did you execute?</h2>
-            <p class="text-xs text-slate-400 mt-0.5">Enter your non-negotiables for this day. Recommended: 2–5 per day.</p>
+            <h2 id="catchup-title" class="text-xl font-bold text-white mt-1">What did you accomplish?</h2>
+            <p class="text-xs text-slate-400 mt-0.5">Enter your Top 3 and mark what was completed so your execution scores start completely genuine.</p>
           </div>
 
           <div class="space-y-3 text-xs">
-            <div>
-              <div class="flex items-center justify-between mb-1">
-                <label class="font-semibold text-amber-400">Main Quest: Non-Negotiable Goals</label>
-                <span class="text-[10px] text-slate-500 font-mono">Recommended: 2–5 max</span>
+            <div class="space-y-2">
+              <label class="block font-semibold text-amber-400">Top 3 Non-Negotiables for this day</label>
+              
+              <div class="flex items-center gap-2 bg-slate-950 border border-slate-800 p-2 rounded-lg">
+                <input id="catchup-c1" type="checkbox" class="w-4 h-4 rounded text-amber-500 bg-slate-900 border-slate-700 cursor-pointer" />
+                <input id="catchup-t1" type="text" placeholder="1. Action starting with verb..." class="bg-transparent flex-1 outline-none text-slate-200" />
               </div>
-              <div id="catchup-nonneg-container" class="space-y-2"></div>
+              <div class="flex items-center gap-2 bg-slate-950 border border-slate-800 p-2 rounded-lg">
+                <input id="catchup-c2" type="checkbox" class="w-4 h-4 rounded text-amber-500 bg-slate-900 border-slate-700 cursor-pointer" />
+                <input id="catchup-t2" type="text" placeholder="2. Action starting with verb..." class="bg-transparent flex-1 outline-none text-slate-200" />
+              </div>
+              <div class="flex items-center gap-2 bg-slate-950 border border-slate-800 p-2 rounded-lg">
+                <input id="catchup-c3" type="checkbox" class="w-4 h-4 rounded text-amber-500 bg-slate-900 border-slate-700 cursor-pointer" />
+                <input id="catchup-t3" type="text" placeholder="3. Action starting with verb..." class="bg-transparent flex-1 outline-none text-slate-200" />
+              </div>
             </div>
 
             <div>
-              <label class="block font-semibold text-slate-300 mb-1">Side Quests: Other Tasks (Optional)</label>
+              <label class="block font-semibold text-slate-300 mb-1">Other Tasks for this day (Optional)</label>
               <div id="catchup-other-container" class="space-y-1.5">
                 <input type="text" oninput="handleAutoRow(this, 'catchup-other-container')" placeholder="Secondary task..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none" />
               </div>
@@ -220,6 +225,7 @@
           </div>
         </div>
 
+        <!-- Wizard Navigation -->
         <div class="flex items-center justify-between pt-4 border-t border-slate-800">
           <button id="btn-wiz-prev" onclick="prevWizStep()" class="px-4 py-2 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition-colors invisible">
             ← Back
@@ -232,25 +238,26 @@
       </div>
     </section>
 
+
     <!-- =========================================================================
-         VIEW 2: DAILY EXECUTION WORKSPACE
+         VIEW 2: THE DAILY EXECUTION PAGE (PRIMARY WORKSPACE)
          ========================================================================= -->
     <section id="view-daily" class="space-y-4 hidden">
       
-      <!-- Week Objective Anchor Banner -->
+      <!-- Week Goal Banner Anchor -->
       <div class="bg-gradient-to-r from-slate-900 via-slate-900 to-amber-950/20 border border-slate-800 rounded-xl p-4 flex items-center justify-between shadow-sm">
         <div class="space-y-0.5 min-w-0">
           <div class="text-[10px] font-bold uppercase tracking-wider text-amber-400 font-mono flex items-center gap-1.5">
-            <span>🎯</span> <span id="daily-banner-week-title">Week 1 Objective</span>
+            <span>🎯</span> <span id="daily-banner-week-title">Week 1 Non-Negotiable</span>
           </div>
-          <div id="daily-banner-week-goal" class="text-sm sm:text-base font-bold text-slate-100 truncate">Ship MVP</div>
+          <div id="daily-banner-week-goal" class="text-sm sm:text-base font-bold text-slate-100 truncate">Ship MVP to initial users</div>
         </div>
         <button onclick="switchView('overview')" class="text-xs text-slate-400 hover:text-amber-300 font-mono transition-colors shrink-0 ml-3">
           12WY Overview →
         </button>
       </div>
 
-      <!-- Date Controller -->
+      <!-- Date Controller Bar -->
       <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center justify-between text-xs">
         <button onclick="navigateDay(-1)" class="p-1 text-slate-400 hover:text-white transition-colors">← Prev Day</button>
         <div class="text-center">
@@ -260,91 +267,65 @@
         <button onclick="navigateDay(1)" class="p-1 text-slate-400 hover:text-white transition-colors">Next Day →</button>
       </div>
 
-      <!-- Execution Gauges: Main Quest (85% Target) + Side Quest Star Rating -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        
-        <!-- Main Quest Score Gauge -->
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-between shadow-lg">
-          <div>
-            <div class="text-[10px] font-mono uppercase tracking-wider text-amber-400 font-bold">Main Quest Score</div>
-            <div class="flex items-baseline gap-2 mt-0.5">
-              <span id="daily-score-pct" class="text-3xl font-black font-mono text-white">0%</span>
-              <span id="daily-score-label" class="text-xs font-mono text-slate-400">Pacing</span>
-            </div>
-            <p class="text-[10px] text-slate-500 mt-0.5">Non-negotiables only • 85%+ Target</p>
+      <!-- Today's Execution Score Card -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex items-center justify-between shadow-lg">
+        <div>
+          <span class="text-[11px] font-mono uppercase tracking-wider text-slate-400 font-semibold">Daily Execution Score</span>
+          <div class="flex items-baseline gap-2 mt-1">
+            <span id="daily-score-pct" class="text-3xl font-black font-mono text-white">0%</span>
+            <span id="daily-score-label" class="text-xs font-mono text-slate-400">Action Required</span>
           </div>
-
-          <div class="relative w-14 h-14 flex items-center justify-center shrink-0">
-            <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-              <path class="text-slate-800" stroke-width="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-              <path id="daily-score-circle" class="text-amber-400 score-radial" stroke-width="3.5" stroke-dasharray="100, 100" stroke-dashoffset="100" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-            </svg>
-            <span id="daily-score-count" class="absolute font-mono text-[9px] font-bold text-slate-300">0/0</span>
-          </div>
+          <p class="text-[10px] text-slate-500 mt-1">85%+ turns green • 100% turns bright emerald</p>
         </div>
 
-        <!-- Side Quest Star Rating Card -->
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-between shadow-lg">
-          <div>
-            <div class="text-[10px] font-mono uppercase tracking-wider text-purple-400 font-bold">Side Quest Stars</div>
-            <div class="flex items-center gap-2 mt-0.5">
-              <span id="daily-stars-display" class="text-xl tracking-wider text-slate-600">☆☆☆</span>
-              <span id="daily-stars-badge" class="text-xs font-mono font-bold text-slate-400">None</span>
-            </div>
-            <p class="text-[10px] text-slate-500 mt-0.5">★ (30%) • ★★ (60%) • ★★★ (80%+ Gold)</p>
-          </div>
-
-          <div class="text-right">
-            <span id="daily-stars-ratio" class="font-mono text-xs font-bold text-purple-300">0/0 done</span>
-            <span class="block text-[9px] text-slate-500 uppercase font-mono">Secondary</span>
-          </div>
+        <div class="relative w-16 h-16 flex items-center justify-center shrink-0">
+          <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+            <path class="text-slate-800" stroke-width="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+            <path id="daily-score-circle" class="text-amber-400 score-radial" stroke-width="3.5" stroke-dasharray="100, 100" stroke-dashoffset="100" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+          </svg>
+          <span id="daily-score-count" class="absolute font-mono text-[10px] font-bold text-slate-300">0/3</span>
         </div>
-
       </div>
 
-      <!-- Interactive Leading & Lagging Counters on Daily View -->
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
+      <!-- Top 3 Critical Tasks -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3 shadow-sm">
         <div class="flex items-center justify-between border-b border-slate-800 pb-2">
           <span class="text-xs font-bold text-amber-400 uppercase tracking-wider font-mono flex items-center gap-1.5">
-            <span>📈</span> Measure Indicators (Click + / - to track)
+            <span>🔥</span> Top 3 Non-Negotiables
           </span>
-          <button onclick="switchView('overview')" class="text-[10px] text-slate-400 hover:text-white underline">Manage All</button>
+          <span class="text-[11px] text-slate-500">Actions starting with verbs</span>
         </div>
-        <div id="daily-indicators-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs"></div>
-      </div>
 
-      <!-- Non-Negotiable Goals (Main Quest) -->
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3 shadow-sm">
-        <div class="flex flex-wrap items-center justify-between border-b border-slate-800 pb-2 gap-2">
-          <div class="flex items-center gap-2">
-            <span class="text-xs font-bold text-amber-400 uppercase tracking-wider font-mono flex items-center gap-1.5">
-              <span>🔥</span> Main Quest: Non-Negotiables
-            </span>
-            <span class="text-[10px] font-mono text-slate-400 bg-slate-800 px-2 py-0.5 rounded">Recommended: 2–5 max</span>
+        <div class="space-y-2.5 text-xs">
+          <div class="flex items-center gap-3 bg-slate-950 border border-slate-800 p-3 rounded-xl">
+            <input type="checkbox" id="d-task-c1" onchange="updateDailyItem()" class="w-4 h-4 rounded text-amber-500 bg-slate-900 border-slate-700 cursor-pointer shrink-0" />
+            <input type="text" id="d-task-t1" oninput="updateDailyItem()" placeholder="1. Highest leverage action today..." class="bg-transparent flex-1 text-slate-200 outline-none text-xs font-medium" />
           </div>
-          <span id="daily-nonneg-warning" class="hidden text-[10px] font-mono text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded">⚠️ 6+ items — Focus dilution risk</span>
+          <div class="flex items-center gap-3 bg-slate-950 border border-slate-800 p-3 rounded-xl">
+            <input type="checkbox" id="d-task-c2" onchange="updateDailyItem()" class="w-4 h-4 rounded text-amber-500 bg-slate-900 border-slate-700 cursor-pointer shrink-0" />
+            <input type="text" id="d-task-t2" oninput="updateDailyItem()" placeholder="2. Second non-negotiable action..." class="bg-transparent flex-1 text-slate-200 outline-none text-xs font-medium" />
+          </div>
+          <div class="flex items-center gap-3 bg-slate-950 border border-slate-800 p-3 rounded-xl">
+            <input type="checkbox" id="d-task-c3" onchange="updateDailyItem()" class="w-4 h-4 rounded text-amber-500 bg-slate-900 border-slate-700 cursor-pointer shrink-0" />
+            <input type="text" id="d-task-t3" oninput="updateDailyItem()" placeholder="3. Third non-negotiable action..." class="bg-transparent flex-1 text-slate-200 outline-none text-xs font-medium" />
+          </div>
         </div>
-
-        <div id="daily-nonneg-container" class="space-y-2 text-xs"></div>
       </div>
 
-      <!-- Other / Secondary Tasks (Side Quests) -->
+      <!-- Other To-Dos (Dynamic Rows with Checkboxes) -->
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3 shadow-sm">
         <div class="flex items-center justify-between border-b border-slate-800 pb-2">
-          <div class="flex items-center gap-2">
-            <span class="text-xs font-bold text-purple-300 uppercase tracking-wider font-mono">Side Quests (Optional Extras)</span>
-            <span class="text-[10px] text-purple-400 font-mono font-medium">Powers your Star Rating</span>
-          </div>
-          <span class="text-[10px] text-slate-500">Type to spawn next</span>
+          <span class="text-xs font-bold text-slate-300 uppercase tracking-wider font-mono">Other To-Dos</span>
+          <span class="text-[10px] text-slate-500">Type in row to add next</span>
         </div>
         <div id="daily-other-tasks-container" class="space-y-2 text-xs"></div>
       </div>
 
-      <!-- Appointments & Performance Time -->
+      <!-- Appointments & Performance Time Blocks -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-2">
           <span class="text-xs font-bold text-slate-300 uppercase tracking-wider font-mono">Appointments / Calendar</span>
-          <textarea id="daily-appts" oninput="saveCurrentDay()" rows="3" placeholder="e.g. 2:00 PM Call..." class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-200 outline-none leading-relaxed"></textarea>
+          <textarea id="daily-appts" oninput="saveCurrentDay()" rows="3" placeholder="e.g. 2:00 PM Strategy call..." class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-200 outline-none leading-relaxed"></textarea>
         </div>
 
         <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-2 flex flex-col justify-between">
@@ -368,115 +349,193 @@
 
     </section>
 
+
     <!-- =========================================================================
-         VIEW 3: MASTER OVERVIEW
+         VIEW 3: THE MASTER OVERVIEW DASHBOARD
          ========================================================================= -->
     <section id="view-overview" class="space-y-6 hidden">
+      
+      <!-- Cycle Timeline Header Banner -->
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
         <div>
           <div class="flex items-center gap-2">
             <h2 class="text-2xl font-bold tracking-tight text-white font-mono">12-WEEK CYCLE</h2>
             <span id="ov-badge-current-week" class="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs px-2 py-0.5 rounded font-mono font-bold">Week 1 / 12</span>
           </div>
-          <p id="ov-cycle-dates-label" class="text-xs text-slate-400 mt-1 font-mono"></p>
+          <p id="ov-cycle-dates-label" class="text-xs text-slate-400 mt-1 font-mono">Loading cycle timeline...</p>
         </div>
         <div class="flex items-center gap-2">
           <button onclick="switchView('daily')" class="bg-amber-500 hover:bg-amber-400 text-black px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">
             ← Back to Daily
           </button>
           <button onclick="switchView('guide')" class="bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors">
-            Edit Guide
+            Edit Strategy
           </button>
         </div>
       </div>
 
+      <!-- Keystone Goal Card -->
       <section class="bg-gradient-to-r from-slate-900 via-slate-900 to-amber-950/20 border border-slate-800 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg">
         <div class="space-y-0.5 min-w-0">
           <div class="flex items-center gap-2">
             <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400 font-mono">The 1 Big Goal</span>
             <span id="ov-label-cycle-days" class="text-[10px] text-slate-500 font-mono">Day 1 of 84</span>
           </div>
-          <h3 id="ov-keystone-goal-text" class="text-lg font-bold text-slate-100 truncate"></h3>
-          <p id="ov-keystone-why-text" class="text-xs text-slate-400 truncate italic"></p>
+          <h3 id="ov-keystone-goal-text" class="text-lg font-bold text-slate-100 truncate">Loading Keystone Goal...</h3>
+          <p id="ov-keystone-why-text" class="text-xs text-slate-400 truncate italic">Why: Connect your vision...</p>
         </div>
+        <button onclick="switchView('guide')" class="bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 px-3 py-1.5 rounded-lg text-xs font-semibold shrink-0 transition-colors">
+          Refine Goal
+        </button>
       </section>
 
-      <!-- Weekly Side Quest Star Summary & Total 12WY Record -->
+      <!-- Strategy & Emotional Connection Cards -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-        <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 flex items-center justify-between">
-          <div>
-            <span class="text-[10px] font-mono uppercase tracking-wider text-purple-400 font-bold">This Week's Side Quests</span>
-            <div class="flex items-center gap-2 mt-1">
-              <span id="ov-week-stars-display" class="text-2xl text-slate-600">☆☆☆</span>
-              <span id="ov-week-stars-badge" class="font-bold text-slate-400 text-xs">None</span>
+        <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-1.5">
+          <span class="font-bold text-slate-400 uppercase text-[10px] tracking-wider">The "Why" Behind The Goal</span>
+          <p id="ov-why-full" class="text-slate-300 leading-relaxed"></p>
+        </div>
+        <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-1.5">
+          <span class="font-bold text-rose-400 uppercase text-[10px] tracking-wider">Cost of Inaction</span>
+          <p id="ov-inaction-full" class="text-slate-300 leading-relaxed"></p>
+        </div>
+      </div>
+
+      <!-- Indicators Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+        <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-2">
+          <span class="font-bold text-slate-300 uppercase tracking-wider text-[11px] block">Leading Indicators (Process)</span>
+          <ul id="ov-lead-list-full" class="space-y-1 text-slate-400 font-mono text-[11px] list-disc list-inside"></ul>
+        </div>
+        <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-2">
+          <span class="font-bold text-slate-300 uppercase tracking-wider text-[11px] block">Lagging Indicators (Results)</span>
+          <ul id="ov-lag-list-full" class="space-y-1 text-slate-400 font-mono text-[11px] list-disc list-inside"></ul>
+        </div>
+      </div>
+
+      <!-- Execution Scorecard & Time Blocks -->
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+        
+        <!-- Weekly Execution Scorecard -->
+        <div class="md:col-span-5 bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col justify-between shadow-sm">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div>
+              <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider font-mono">Weekly Scorecard</h3>
+              <p class="text-[11px] text-slate-500">Execution over results • Target: 85%+</p>
             </div>
-            <span id="ov-week-stars-ratio" class="text-[11px] text-slate-400 mt-0.5 block font-mono">0 / 0 cleared across all days</span>
+            <span id="ov-score-status-badge" class="text-xs font-bold font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400">Pacing</span>
           </div>
-          <div class="text-right font-mono">
-            <span class="text-xl font-black text-purple-300" id="ov-week-stars-pct">0%</span>
-            <span class="block text-[9px] text-slate-500 uppercase">Clear Rate</span>
+
+          <!-- Center Radial Gauge -->
+          <div class="flex items-center justify-center my-4 gap-6">
+            <div class="relative w-28 h-28 flex items-center justify-center">
+              <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                <path class="text-slate-800" stroke-width="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                <path id="ov-score-circle-bar" class="text-amber-400 score-radial" stroke-width="3.5" stroke-dasharray="100, 100" stroke-dashoffset="100" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              </svg>
+              <div class="absolute flex flex-col items-center">
+                <span id="ov-score-percentage" class="text-2xl font-black font-mono text-white">0%</span>
+                <span class="text-[9px] uppercase font-mono text-slate-500 tracking-wider">Executed</span>
+              </div>
+            </div>
+
+            <div class="space-y-1 text-xs">
+              <div class="text-slate-400">Done: <span id="ov-score-completed-count" class="font-bold text-white font-mono">0</span> / <span id="ov-score-total-count" class="font-mono">0</span></div>
+              <div class="text-slate-400">Target: <span class="font-bold text-amber-400 font-mono">85%</span></div>
+              <p class="text-[10px] text-slate-500 pt-1 leading-tight">"You either hit 85% or you don't."</p>
+            </div>
+          </div>
+
+          <button onclick="switchView('review')" class="w-full bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 py-2 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1.5">
+            <span>📝</span> Weekly Review & WAM Report
+          </button>
+        </div>
+
+        <!-- Performance Time Blocks -->
+        <div class="md:col-span-7 bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col justify-between shadow-sm">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div>
+              <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider font-mono">Performance Time Blocks</h3>
+              <p class="text-[11px] text-slate-500">Protect the deep work driving the 85%</p>
+            </div>
+            <span class="text-[11px] text-slate-500 font-mono">Logged this week</span>
+          </div>
+
+          <div class="grid grid-cols-3 gap-3 my-3">
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between">
+                  <span class="text-sm">🎯</span>
+                  <span id="ov-count-strategic" class="text-xs font-mono font-bold text-amber-400">0</span>
+                </div>
+                <div class="font-bold text-xs text-slate-200 mt-1">Strategic</div>
+                <div class="text-[10px] text-slate-500 leading-tight mt-0.5">3h deep focus</div>
+              </div>
+              <button onclick="logBlockOverview('strategic')" class="mt-2 text-[10px] font-semibold bg-slate-800 hover:bg-slate-700 py-1 rounded text-slate-300 transition-colors">+ Log</button>
+            </div>
+
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between">
+                  <span class="text-sm">📥</span>
+                  <span id="ov-count-buffer" class="text-xs font-mono font-bold text-teal-400">0</span>
+                </div>
+                <div class="font-bold text-xs text-slate-200 mt-1">Buffer</div>
+                <div class="text-[10px] text-slate-500 leading-tight mt-0.5">30-60m admin</div>
+              </div>
+              <button onclick="logBlockOverview('buffer')" class="mt-2 text-[10px] font-semibold bg-slate-800 hover:bg-slate-700 py-1 rounded text-slate-300 transition-colors">+ Log</button>
+            </div>
+
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between">
+                  <span class="text-sm">🍃</span>
+                  <span id="ov-count-breakout" class="text-xs font-mono font-bold text-emerald-400">0</span>
+                </div>
+                <div class="font-bold text-xs text-slate-200 mt-1">Breakout</div>
+                <div class="text-[10px] text-slate-500 leading-tight mt-0.5">3h recharge</div>
+              </div>
+              <button onclick="logBlockOverview('breakout')" class="mt-2 text-[10px] font-semibold bg-slate-800 hover:bg-slate-700 py-1 rounded text-slate-300 transition-colors">+ Log</button>
+            </div>
+          </div>
+
+          <div class="text-[11px] text-slate-500 flex items-center justify-between pt-1 border-t border-slate-800/80">
+            <span>Target: 1-2 Strategic, 1 Breakout / wk</span>
+            <button onclick="resetBlocksOverview()" class="text-slate-600 hover:text-rose-400 text-[10px]">Reset tallies</button>
           </div>
         </div>
 
-        <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 flex items-center justify-between">
-          <div>
-            <span class="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-bold">Total 12WY Side Quests Cleared</span>
-            <div class="text-2xl font-black text-amber-400 font-mono mt-1" id="ov-total-sidequests-count">0</div>
-            <p class="text-[10px] text-slate-500 mt-0.5">Cumulative bonus items completed all cycle</p>
-          </div>
-          <span class="text-3xl">🏆</span>
-        </div>
       </div>
 
-      <!-- Manage & Measure Indicators on Overview -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-        <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-3">
-          <div class="flex items-center justify-between border-b border-slate-800 pb-2">
-            <span class="font-bold text-slate-300 uppercase tracking-wider text-[11px]">Leading Indicators</span>
-            <button onclick="promptNewIndicator('leading')" class="text-amber-400 hover:text-amber-300 text-xs font-semibold">+ Add</button>
-          </div>
-          <div id="ov-lead-items-container" class="space-y-2"></div>
-        </div>
-
-        <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-3">
-          <div class="flex items-center justify-between border-b border-slate-800 pb-2">
-            <span class="font-bold text-slate-300 uppercase tracking-wider text-[11px]">Lagging Indicators</span>
-            <button onclick="promptNewIndicator('lagging')" class="text-amber-400 hover:text-amber-300 text-xs font-semibold">+ Add</button>
-          </div>
-          <div id="ov-lag-items-container" class="space-y-2"></div>
-        </div>
-      </div>
-
-      <!-- Weekly Tactical Scoreboard -->
+      <!-- Weekly Tactics Scorecard List -->
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
-        <div class="flex flex-wrap items-center justify-between border-b border-slate-800 pb-3 gap-2">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
           <div>
-            <div class="flex items-center gap-2">
-              <h3 class="text-xs font-bold text-slate-300 uppercase font-mono">Weekly Main Quest Tactics</h3>
-              <span class="text-[10px] font-mono text-slate-400 bg-slate-800 px-2 py-0.5 rounded">Recommended: 2–5 max</span>
-            </div>
-            <p id="ov-week-nonneg-text" class="text-[11px] text-amber-400 font-medium truncate mt-0.5"></p>
+            <h3 class="text-xs font-bold text-slate-300 uppercase font-mono flex items-center gap-1.5">
+              <span>📋</span> <span id="ov-tactics-header-title">Tactics for Week 1</span>
+            </h3>
+            <p id="ov-week-nonneg-text" class="text-[11px] text-amber-400 font-medium truncate"></p>
           </div>
-          <div class="flex items-center gap-2">
-            <span id="ov-tactics-warning" class="hidden text-[10px] font-mono text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded">⚠️ 6+ items — Focus dilution risk</span>
-            <button onclick="promptNewTactic()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded">
-              + Add Tactic
-            </button>
-          </div>
+          <button onclick="switchView('guide')" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded">
+            + Edit Tactics
+          </button>
         </div>
         <div id="ov-tactics-full-list" class="space-y-2 text-xs"></div>
       </div>
+
     </section>
 
+
     <!-- =========================================================================
-         VIEW 4: SUNDAY / MONDAY REVIEW
+         VIEW 4: SUNDAY / MONDAY WEEKLY REVIEW & WAM
          ========================================================================= -->
     <section id="view-review" class="space-y-6 hidden">
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-5 shadow-2xl">
         <div class="border-b border-slate-800 pb-3 flex items-center justify-between">
           <div>
             <span class="text-xs font-mono font-bold text-amber-400 uppercase">Weekly Cadence</span>
-            <h2 class="text-xl font-bold text-white mt-0.5">Week <span id="rev-week-num">1</span> Review</h2>
+            <h2 class="text-xl font-bold text-white mt-0.5">Week <span id="rev-week-num">1</span> Review & Accountability</h2>
+            <p class="text-xs text-slate-400 mt-1">Review your results every Sunday or Monday before opening the next week.</p>
           </div>
           <button onclick="switchView('daily')" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg">
             ← Back to Daily
@@ -497,7 +556,7 @@
             <textarea id="rev-learn" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-amber-500 outline-none"></textarea>
           </div>
           <div>
-            <label class="block font-semibold text-amber-300 mb-1">Spurring a Friend: What would you tell them?</label>
+            <label class="block font-semibold text-amber-300 mb-1">Spurring a Friend: If a good friend had a week like this, what would you tell them?</label>
             <textarea id="rev-friend" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-amber-500 outline-none"></textarea>
           </div>
           <button onclick="saveReview()" class="w-full bg-amber-500 hover:bg-amber-400 text-black font-bold py-2.5 rounded-lg transition-colors">
@@ -509,7 +568,9 @@
 
   </div>
 
-  <!-- AUTH MODAL -->
+  <!-- =========================================================================
+       MODAL: ACCOUNT & SUPABASE CLOUD SYNC
+       ========================================================================= -->
   <div id="auth-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-[#14201b] border border-[#283e35] rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
       <div class="flex justify-between items-center border-b border-[#283e35] pb-3">
@@ -517,6 +578,7 @@
         <button onclick="toggleAuthModal(false)" class="text-[#8da498] hover:text-[#f4ede4] text-sm">✕</button>
       </div>
 
+      <!-- Logged-In View -->
       <div id="auth-view-logged-in" class="hidden space-y-4">
         <div class="bg-[#0b1210] border border-[#283e35] rounded-xl p-3 text-xs text-[#a3b8ad] space-y-1">
           <div class="flex items-center justify-between">
@@ -525,46 +587,88 @@
             </span>
             <span id="auth-current-email" class="text-[#f4ede4] font-mono text-[11px] truncate max-w-[150px]"></span>
           </div>
-          <p class="text-[11px] text-[#6b8276] pt-1">Your 12WY plan, daily tasks, and indicators are synced to Supabase.</p>
+          <p class="text-[11px] text-[#6b8276] pt-1">Your 12-week year plan, daily items, and reviews are synced to your cloud account.</p>
         </div>
 
-        <button type="button" onclick="syncToCloud(true)" class="w-full bg-[#1c2d26] hover:bg-[#253d33] text-teal-300 py-2 rounded-lg text-xs font-semibold transition-colors border border-[#2e473d]">
-          🔄 Force Sync Now
+        <button 
+          type="button"
+          onclick="syncToCloud(true)" 
+          class="w-full bg-[#1c2d26] hover:bg-[#253d33] text-teal-300 py-2 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-2 border border-[#2e473d]"
+        >
+          <span>🔄</span> Force Cloud Sync Now
         </button>
-        <button type="button" onclick="handleLogout()" class="w-full bg-[#241710] hover:bg-[#342217] text-[#ea580c] py-2 rounded-lg text-xs font-semibold transition-colors border border-[#ea580c]/30">
+
+        <button 
+          type="button"
+          onclick="handleLogout()" 
+          class="w-full bg-[#241710] hover:bg-[#342217] text-[#ea580c] py-2 rounded-lg text-xs font-semibold transition-colors border border-[#ea580c]/30"
+        >
           Sign Out
         </button>
       </div>
 
+      <!-- Logged-Out View -->
       <div id="auth-view-logged-out" class="space-y-4">
+        <div class="bg-[#0b1210] border border-[#283e35] rounded-xl p-3 text-xs text-[#a3b8ad]">
+          <p>Sign in with your central account to sync your 12-Week Year plan across phone, tablet, and desktop.</p>
+        </div>
+
         <div class="space-y-3">
           <div>
             <label class="block text-xs font-semibold text-[#a3b8ad] uppercase tracking-wider mb-1">Email</label>
             <input id="auth-email" type="email" placeholder="you@domain.com" class="w-full bg-[#0b1210] border border-[#283e35] rounded-lg px-3 py-2 text-sm text-emerald-100 focus:outline-none focus:border-teal-500" />
           </div>
+
           <div>
             <label class="block text-xs font-semibold text-[#a3b8ad] uppercase tracking-wider mb-1">Password</label>
             <input id="auth-password" type="password" placeholder="••••••••" class="w-full bg-[#0b1210] border border-[#283e35] rounded-lg px-3 py-2 text-sm text-emerald-100 focus:outline-none focus:border-teal-500" />
           </div>
+
           <div id="auth-error-msg" class="text-xs text-[#ea580c] hidden"></div>
+
           <div class="grid grid-cols-2 gap-2 pt-1">
-            <button type="button" onclick="handleLogin()" class="w-full bg-[#115e59] hover:bg-[#0f766e] text-white py-2 rounded-lg text-xs font-semibold transition-colors border border-teal-500/30">
+            <button 
+              type="button" 
+              onclick="handleLogin()" 
+              class="w-full bg-[#115e59] hover:bg-[#0f766e] text-white py-2 rounded-lg text-xs font-semibold transition-colors border border-teal-500/30"
+            >
               Sign In
             </button>
-            <button type="button" onclick="handleSignUp()" class="w-full bg-[#1c2d26] hover:bg-[#253d33] text-teal-300 py-2 rounded-lg text-xs font-semibold transition-colors border border-[#2e473d]">
+            <button 
+              type="button" 
+              onclick="handleSignUp()" 
+              class="w-full bg-[#1c2d26] hover:bg-[#253d33] text-teal-300 py-2 rounded-lg text-xs font-semibold transition-colors border border-[#2e473d]"
+            >
               Create Account
             </button>
           </div>
+        </div>
+      </div>
+
+      <!-- Offline JSON Portability Tools -->
+      <div class="border-t border-[#283e35] pt-3 space-y-2">
+        <div class="text-[11px] text-[#6b8276] uppercase font-semibold">Offline Backup</div>
+        <div class="grid grid-cols-2 gap-2">
+          <button onclick="exportData()" class="bg-[#131f1a] hover:bg-[#1c2d26] text-slate-300 py-1.5 rounded-lg text-[11px] transition-colors border border-[#23352e]">
+            📥 Export JSON
+          </button>
+          <label class="bg-[#131f1a] hover:bg-[#1c2d26] text-slate-300 py-1.5 rounded-lg text-[11px] transition-colors border border-[#23352e] text-center cursor-pointer">
+            📤 Import JSON
+            <input type="file" id="import-json-file" accept=".json" class="hidden" onchange="importData(event)" />
+          </label>
         </div>
       </div>
     </div>
   </div>
 
   <script>
+    /* =========================================================================
+       SUPABASE CONFIGURATION & CONSTANTS
+       ========================================================================= */
     const SUPABASE_URL = 'https://mrgdthihogxrqsfnknxd.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1yZ2R0aGlob2d4cnFzZm5rbnhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyNDk4NTYsImV4cCI6MjEwNDgyNTg1Nn0.1fwcaGPGrzUut3zng2NNkYZt7hUguhKPhfqYyu8MA3s';
 
-    const STORAGE_KEY = 'twelve_week_year_v7';
+    const STORAGE_KEY = 'twelve_week_year_v5';
     const AUTH_SESSION_KEY = 'twelve_week_cloud_session';
 
     function getLocalTodayDate() {
@@ -593,7 +697,7 @@
     }
 
     /* =========================================================================
-       CLOUD SYNC
+       NATIVE REST SUPABASE AUTH & CLOUD SYNC
        ========================================================================= */
     let cloudSession = JSON.parse(localStorage.getItem(AUTH_SESSION_KEY) || 'null');
 
@@ -603,23 +707,27 @@
 
     function updateAuthUI() {
       const dot = document.getElementById('sync-status-dot');
-      const inView = document.getElementById('auth-view-logged-in');
-      const outView = document.getElementById('auth-view-logged-out');
+      const loggedInView = document.getElementById('auth-view-logged-in');
+      const loggedOutView = document.getElementById('auth-view-logged-out');
       const emailEl = document.getElementById('auth-current-email');
 
       if (cloudSession && cloudSession.user) {
         if (dot) dot.className = 'absolute top-1 right-1 w-2 h-2 rounded-full bg-emerald-400';
         if (emailEl) emailEl.textContent = cloudSession.user.email;
-        if (inView) inView.classList.remove('hidden');
-        if (outView) outView.classList.add('hidden');
+        if (loggedInView) loggedInView.classList.remove('hidden');
+        if (loggedOutView) loggedOutView.classList.add('hidden');
       } else {
         if (dot) dot.className = 'absolute top-1 right-1 w-2 h-2 rounded-full bg-slate-500';
-        if (inView) inView.classList.add('hidden');
-        if (outView) outView.classList.remove('hidden');
+        if (loggedInView) loggedInView.classList.add('hidden');
+        if (loggedOutView) loggedOutView.classList.remove('hidden');
       }
     }
 
     async function handleLogin() {
+      if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+        return alert('Supabase credentials not configured.');
+      }
+
       const email = document.getElementById('auth-email').value.trim();
       const password = document.getElementById('auth-password').value;
       const errEl = document.getElementById('auth-error-msg');
@@ -628,9 +736,13 @@
       try {
         const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY },
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY
+          },
           body: JSON.stringify({ email, password })
         });
+
         const data = await res.json();
         if (!res.ok) throw new Error(data.error_description || data.msg || data.message || 'Login failed');
 
@@ -646,6 +758,10 @@
     }
 
     async function handleSignUp() {
+      if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+        return alert('Supabase credentials not configured.');
+      }
+
       const email = document.getElementById('auth-email').value.trim();
       const password = document.getElementById('auth-password').value;
       const errEl = document.getElementById('auth-error-msg');
@@ -654,9 +770,13 @@
       try {
         const res = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY },
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY
+          },
           body: JSON.stringify({ email, password })
         });
+
         const data = await res.json();
         if (!res.ok) throw new Error(data.msg || data.message || 'Sign up failed');
 
@@ -666,7 +786,7 @@
           updateAuthUI();
           await syncToCloud(true);
         } else {
-          alert('Account created! Check email if verification is required.');
+          alert('Account created! Please check your email for confirmation if enabled on your project.');
         }
         toggleAuthModal(false);
       } catch (err) {
@@ -684,6 +804,7 @@
 
     async function syncToCloud(notify = false) {
       if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !cloudSession || !cloudSession.access_token) return;
+
       try {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/twelve_week_plans`, {
           method: 'POST',
@@ -699,33 +820,53 @@
             updated_at: new Date().toISOString()
           })
         });
-        if (notify && res.ok) alert('Synced to cloud!');
+
+        if (!res.ok) {
+          const errData = await res.json();
+          console.warn('Sync failed:', errData);
+          if (notify) alert('Sync error: ' + (errData.message || 'Failed'));
+        } else if (notify) {
+          alert('12-Week Year successfully synced to cloud!');
+        }
       } catch (e) {
-        console.warn('Sync error:', e);
+        console.warn('Sync network error:', e);
       }
     }
 
     async function loadFromCloud() {
       if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !cloudSession || !cloudSession.access_token) return;
+
       try {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/twelve_week_plans?user_id=eq.${cloudSession.user.id}&select=*`, {
-          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${cloudSession.access_token}` }
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${cloudSession.access_token}`
+          }
         });
+
         if (res.ok) {
           const records = await res.json();
           if (records && records.length > 0 && records[0].state) {
             state = records[0].state;
             localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-            switchView(state.hasCompletedOnboarding ? 'daily' : 'guide');
+            
+            if (state.hasCompletedOnboarding) {
+              switchView('daily');
+            } else {
+              switchView('guide');
+            }
+          } else {
+            // First login: upload existing local state
+            await syncToCloud(false);
           }
         }
       } catch (e) {
-        console.warn('Cloud load error:', e);
+        console.warn('Load cloud error:', e);
       }
     }
 
     /* =========================================================================
-       DYNAMIC ROW & STAR RATING MECHANICS
+       DYNAMIC AUTO-ROW GENERATOR
        ========================================================================= */
     function handleAutoRow(inputEl, containerId) {
       const container = document.getElementById(containerId);
@@ -737,68 +878,47 @@
         newInput.type = 'text';
         newInput.className = inputEl.className;
         newInput.placeholder = inputEl.placeholder;
-        newInput.oninput = () => {
-          handleAutoRow(newInput, containerId);
-          if (containerId === 'wiz-w1-tactics-container') {
-            checkTacticsCount('wiz-w1-tactics-container', 'wiz-tactics-counter-badge');
-          }
-        };
+        newInput.oninput = () => handleAutoRow(newInput, containerId);
         container.appendChild(newInput);
       }
     }
 
-    function checkTacticsCount(containerId, badgeId) {
+    function collectAutoRows(containerId) {
       const container = document.getElementById(containerId);
-      const badge = document.getElementById(badgeId);
-      const filled = Array.from(container.querySelectorAll('input')).filter(i => i.value.trim() !== '').length;
-      if (badge) {
-        if (filled > 5) {
-          badge.textContent = `⚠️ ${filled} items (Focus dilution risk)`;
-          badge.className = 'text-[10px] text-amber-400 font-mono font-bold';
-        } else {
-          badge.textContent = `${filled} item${filled === 1 ? '' : 's'} (Rec: 2–5)`;
-          badge.className = 'text-[10px] text-slate-500 font-mono';
-        }
+      if (!container) return [];
+      const inputs = container.querySelectorAll('input');
+      return Array.from(inputs).map(i => i.value.trim()).filter(Boolean);
+    }
+
+    function populateAutoRows(containerId, list) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      container.innerHTML = '';
+      
+      const safeList = list && list.length > 0 ? list : [''];
+      safeList.forEach((val) => {
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none';
+        input.placeholder = 'Add new item...';
+        input.value = val;
+        input.oninput = () => handleAutoRow(input, containerId);
+        container.appendChild(input);
+      });
+
+      const inputs = container.querySelectorAll('input');
+      if (inputs.length === 0 || inputs[inputs.length - 1].value.trim() !== '') {
+        const emptyInput = document.createElement('input');
+        emptyInput.type = 'text';
+        emptyInput.className = 'w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none';
+        emptyInput.placeholder = 'Add new item...';
+        emptyInput.oninput = () => handleAutoRow(emptyInput, containerId);
+        container.appendChild(emptyInput);
       }
-    }
-
-    function addIndicatorRow(containerId) {
-      const container = document.getElementById(containerId);
-      const div = document.createElement('div');
-      div.className = 'flex gap-2';
-      div.innerHTML = `
-        <input type="text" placeholder="Indicator name" class="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none ind-name" />
-        <input type="number" placeholder="Target" value="10" class="w-24 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-slate-200 focus:border-amber-500 outline-none font-mono ind-target" />
-      `;
-      container.appendChild(div);
-    }
-
-    function collectIndicators(containerId) {
-      const container = document.getElementById(containerId);
-      const rows = container.children;
-      const res = [];
-      for (let r of rows) {
-        const name = r.querySelector('.ind-name')?.value.trim();
-        const target = parseFloat(r.querySelector('.ind-target')?.value) || 0;
-        if (name) {
-          res.push({ id: 'ind_' + Math.random().toString(36).substr(2, 9), name, target, current: 0 });
-        }
-      }
-      return res;
-    }
-
-    // Side Quest Star Rating Evaluation
-    function getStarRating(done, total) {
-      if (total === 0) return { stars: '☆☆☆', badge: 'None', color: 'text-slate-500', pct: 0 };
-      const pct = Math.round((done / total) * 100);
-      if (pct >= 80) return { stars: '★★★', badge: 'Gold (Complete)', color: 'text-amber-400', pct };
-      if (pct >= 60) return { stars: '★★☆', badge: 'Silver', color: 'text-slate-300', pct };
-      if (pct >= 30) return { stars: '★☆☆', badge: 'Bronze', color: 'text-amber-600', pct };
-      return { stars: '☆☆☆', badge: 'Started', color: 'text-slate-500', pct };
     }
 
     /* =========================================================================
-       TIMELINE CALCULATIONS
+       TIMELINE & WEEK CALCULATIONS
        ========================================================================= */
     function getCycleTimeline() {
       const startDateStr = state?.startDate || formatDateKey(getLocalTodayDate());
@@ -824,11 +944,41 @@
     }
 
     /* =========================================================================
-       WIZARD ENGINE
+       WIZARD CONTROLLER
        ========================================================================= */
     let wizStep = 1;
     let catchupDates = [];
     let catchupIndex = 0;
+
+    function populateGuideWithExistingData() {
+      if (!state) return;
+      if (state.startDate) document.getElementById('wiz-start-date').value = state.startDate;
+      if (state.weekStartDay !== undefined) document.getElementById('wiz-start-day').value = state.weekStartDay;
+
+      if (state.goalsCandidate && state.goalsCandidate.length >= 5) {
+        document.getElementById('wiz-g1').value = state.goalsCandidate[0] || '';
+        document.getElementById('wiz-g2').value = state.goalsCandidate[1] || '';
+        document.getElementById('wiz-g3').value = state.goalsCandidate[2] || '';
+        document.getElementById('wiz-g4').value = state.goalsCandidate[3] || '';
+        document.getElementById('wiz-g5').value = state.goalsCandidate[4] || '';
+      }
+
+      document.getElementById('wiz-why').value = state.why || '';
+      document.getElementById('wiz-inaction').value = state.inaction || '';
+      document.getElementById('wiz-chunk-goal').value = state.keystoneGoal || '';
+      document.getElementById('wiz-w1-nonneg').value = state.week1Goal || '';
+
+      populateAutoRows('wiz-lead-container', state.leadingIndicators);
+      populateAutoRows('wiz-lag-container', state.laggingIndicators);
+
+      if (state.tactics && state.tactics.length > 0) {
+        document.getElementById('wiz-w1-t1').value = state.tactics[0]?.title || '';
+        document.getElementById('wiz-w1-t2').value = state.tactics[1]?.title || '';
+        document.getElementById('wiz-w1-t3').value = state.tactics[2]?.title || '';
+        const others = state.tactics.slice(3).map(t => t.title);
+        populateAutoRows('wiz-w1-other-container', others);
+      }
+    }
 
     function updateWizardUI() {
       document.getElementById('btn-wiz-prev').style.visibility = wizStep === 1 ? 'hidden' : 'visible';
@@ -841,9 +991,13 @@
       }
 
       const titles = [
-        'Phase 1: Timeline', 'Phase 2: Ideation', 'Phase 3: The Keystone Goal',
-        'Phase 4: Emotional Connection', 'Phase 5: Scope & Indicators',
-        'Phase 6: Week 1 Tactics', 'Phase 7: Catch-Up & Daily Execution'
+        'Phase 1: Timeline',
+        'Phase 2: Ideation (5 Goals)',
+        'Phase 3: The Keystone Goal',
+        'Phase 4: Emotional Connection',
+        'Phase 5: Scope & Indicators',
+        'Phase 6: Week 1 Tactics',
+        'Phase 7: Catch-Up & Daily Execution'
       ];
       document.getElementById('wiz-phase-title').textContent = titles[wizStep - 1] || '';
     }
@@ -888,7 +1042,9 @@
           cur.setDate(cur.getDate() + 1);
         }
 
-        if (catchupDates.length === 0) catchupDates.push(new Date(today));
+        if (catchupDates.length === 0) {
+          catchupDates.push(new Date(today));
+        }
 
         catchupIndex = 0;
         loadCatchupStep();
@@ -934,36 +1090,20 @@
 
       document.getElementById('catchup-date-badge').textContent = d.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
       document.getElementById('catchup-day-step').textContent = `Day ${catchupIndex + 1} of ${catchupDates.length}`;
-      document.getElementById('catchup-title').textContent = isToday ? "What must you execute TODAY?" : `What did you execute on ${d.toLocaleDateString(undefined, { weekday: 'long' })}?`;
+      document.getElementById('catchup-title').textContent = isToday ? "What must you execute TODAY?" : `What did you accomplish on ${d.toLocaleDateString(undefined, { weekday: 'long' })}?`;
 
-      document.getElementById('btn-wiz-next').textContent = (catchupIndex === catchupDates.length - 1) ? "Launch Daily Workspace 🚀" : "Next Day →";
+      document.getElementById('btn-wiz-next').textContent = (catchupIndex === catchupDates.length - 1) ? "Launch Daily Page 🚀" : "Next Day →";
 
-      const existing = state?.days?.[dKey]?.nonneg || [];
-      const container = document.getElementById('catchup-nonneg-container');
-      container.innerHTML = '';
+      const existing = state?.days?.[dKey];
+      document.getElementById('catchup-t1').value = existing?.top3?.[0]?.text || '';
+      document.getElementById('catchup-c1').checked = existing?.top3?.[0]?.done || false;
+      document.getElementById('catchup-t2').value = existing?.top3?.[1]?.text || '';
+      document.getElementById('catchup-c2').checked = existing?.top3?.[1]?.done || false;
+      document.getElementById('catchup-t3').value = existing?.top3?.[2]?.text || '';
+      document.getElementById('catchup-c3').checked = existing?.top3?.[2]?.done || false;
 
-      const items = existing.length > 0 ? existing : [{ text: '', done: false }];
-      items.forEach(item => addCatchupRow(item.text, item.done));
-      addCatchupRow('', false);
-    }
-
-    function addCatchupRow(text = '', done = false) {
-      const container = document.getElementById('catchup-nonneg-container');
-      const div = document.createElement('div');
-      div.className = 'flex items-center gap-2 bg-slate-950 border border-slate-800 p-2.5 rounded-xl';
-      div.innerHTML = `
-        <input type="checkbox" ${done ? 'checked' : ''} class="w-4 h-4 rounded text-amber-500 bg-slate-900 border-slate-700 cursor-pointer c-done" />
-        <input type="text" value="${escapeHtml(text)}" placeholder="Action starting with verb..." onkeydown="handleCatchupKey(event, this)" class="bg-transparent flex-1 outline-none text-slate-200 c-text" />
-      `;
-      container.appendChild(div);
-    }
-
-    function handleCatchupKey(e, el) {
-      if (e.key === 'Enter' && el.value.trim() !== '') {
-        addCatchupRow('', false);
-        const inputs = document.querySelectorAll('#catchup-nonneg-container .c-text');
-        inputs[inputs.length - 1]?.focus();
-      }
+      const otherList = existing?.other?.map(o => o.text) || [];
+      populateAutoRows('catchup-other-container', otherList);
     }
 
     function saveCatchupCurrentDay() {
@@ -972,17 +1112,13 @@
       const d = catchupDates[catchupIndex];
       const dKey = formatDateKey(d);
 
-      const rows = document.querySelectorAll('#catchup-nonneg-container > div');
-      const nonneg = [];
-      rows.forEach(r => {
-        const text = r.querySelector('.c-text').value.trim();
-        const done = r.querySelector('.c-done').checked;
-        if (text) nonneg.push({ text, done });
-      });
-
       state.days[dKey] = {
-        nonneg,
-        other: Array.from(document.querySelectorAll('#catchup-other-container input')).map(i => i.value.trim()).filter(Boolean).map(t => ({ text: t, done: false })),
+        top3: [
+          { text: document.getElementById('catchup-t1').value.trim(), done: document.getElementById('catchup-c1').checked },
+          { text: document.getElementById('catchup-t2').value.trim(), done: document.getElementById('catchup-c2').checked },
+          { text: document.getElementById('catchup-t3').value.trim(), done: document.getElementById('catchup-c3').checked }
+        ],
+        other: collectAutoRows('catchup-other-container').map(t => ({ text: t, done: false })),
         appts: ''
       };
       saveState();
@@ -992,15 +1128,30 @@
       state.hasCompletedOnboarding = true;
       state.startDate = document.getElementById('wiz-start-date').value || formatDateKey(getLocalTodayDate());
       state.weekStartDay = parseInt(document.getElementById('wiz-start-day').value, 10);
+      
+      state.goalsCandidate = [
+        document.getElementById('wiz-g1').value.trim(),
+        document.getElementById('wiz-g2').value.trim(),
+        document.getElementById('wiz-g3').value.trim(),
+        document.getElementById('wiz-g4').value.trim(),
+        document.getElementById('wiz-g5').value.trim()
+      ];
+
       state.keystoneGoal = document.getElementById('wiz-chunk-goal').value.trim();
       state.why = document.getElementById('wiz-why').value.trim();
       state.inaction = document.getElementById('wiz-inaction').value.trim();
-      state.leadingIndicators = collectIndicators('wiz-lead-container');
-      state.laggingIndicators = collectIndicators('wiz-lag-container');
+      state.leadingIndicators = collectAutoRows('wiz-lead-container');
+      state.laggingIndicators = collectAutoRows('wiz-lag-container');
       state.week1Goal = document.getElementById('wiz-w1-nonneg').value.trim();
+      
+      const w1Tactics = [
+        document.getElementById('wiz-w1-t1').value.trim(),
+        document.getElementById('wiz-w1-t2').value.trim(),
+        document.getElementById('wiz-w1-t3').value.trim(),
+        ...collectAutoRows('wiz-w1-other-container')
+      ].filter(Boolean);
 
-      const tacticsInputs = document.querySelectorAll('#wiz-w1-tactics-container input');
-      state.tactics = Array.from(tacticsInputs).map(i => i.value.trim()).filter(Boolean).map((t, idx) => ({
+      state.tactics = w1Tactics.map((t, idx) => ({
         id: 't_' + Date.now() + '_' + idx,
         title: t,
         week: '1',
@@ -1013,7 +1164,7 @@
     }
 
     /* =========================================================================
-       DAILY WORKSPACE: SEPARATE MAIN QUEST & SIDE QUEST STAR RATING
+       DAILY PAGE EXECUTION
        ========================================================================= */
     function renderDailyPage() {
       const targetDate = parseDateKey(activeDateKey);
@@ -1022,123 +1173,30 @@
       document.getElementById('daily-view-date').textContent = targetDate.toLocaleDateString(undefined, {
         weekday: 'long', month: 'short', day: 'numeric'
       });
-      document.getElementById('daily-view-indicator').textContent = isToday ? '• Today •' : 'Reviewing Log';
-      document.getElementById('daily-banner-week-goal').textContent = state.week1Goal || state.keystoneGoal || 'Keep executing daily non-negotiables';
+      document.getElementById('daily-view-indicator').textContent = isToday ? '• Today •' : 'Browsing Calendar Day';
+      document.getElementById('daily-banner-week-goal').textContent = state.week1Goal || state.keystoneGoal || 'Execute daily non-negotiables';
 
       if (!state.days) state.days = {};
       if (!state.days[activeDateKey]) {
-        state.days[activeDateKey] = { nonneg: [], other: [], appts: '' };
+        state.days[activeDateKey] = {
+          top3: [{ text: '', done: false }, { text: '', done: false }, { text: '', done: false }],
+          other: [],
+          appts: ''
+        };
         saveState();
       }
 
       const dayData = state.days[activeDateKey];
 
-      renderDailyIndicators();
-      renderDailyNonNegRows(dayData.nonneg || []);
-      renderDailyOtherRows(dayData.other || []);
+      for (let i = 0; i < 3; i++) {
+        const item = dayData.top3[i] || { text: '', done: false };
+        document.getElementById(`d-task-t${i+1}`).value = item.text;
+        document.getElementById(`d-task-c${i+1}`).checked = item.done;
+      }
+
       document.getElementById('daily-appts').value = dayData.appts || '';
-
+      renderDailyOtherRows(dayData.other || []);
       updateDailyScore();
-    }
-
-    function renderDailyIndicators() {
-      const container = document.getElementById('daily-indicators-list');
-      const leads = state.leadingIndicators || [];
-      const lags = state.laggingIndicators || [];
-      const combined = [
-        ...leads.map(i => ({ ...i, type: 'lead' })),
-        ...lags.map(i => ({ ...i, type: 'lag' }))
-      ];
-
-      if (combined.length === 0) {
-        container.innerHTML = '<div class="text-slate-500 italic text-[11px] col-span-2">No indicators configured yet. Add them in the Overview page.</div>';
-        return;
-      }
-
-      container.innerHTML = combined.map(item => `
-        <div class="bg-slate-950 border border-slate-800 p-2.5 rounded-xl flex items-center justify-between">
-          <div class="min-w-0 pr-2">
-            <span class="text-[9px] font-mono uppercase font-bold ${item.type === 'lead' ? 'text-amber-400' : 'text-teal-400'}">${item.type === 'lead' ? 'Lead' : 'Lag'}</span>
-            <div class="font-medium text-slate-200 truncate">${escapeHtml(item.name)}</div>
-          </div>
-          <div class="flex items-center gap-1.5 shrink-0 bg-slate-900 border border-slate-800 px-2 py-1 rounded-lg">
-            <button onclick="adjustIndicator('${item.id}', -1)" class="w-5 h-5 flex items-center justify-center text-slate-400 hover:text-white font-bold bg-slate-800 rounded">-</button>
-            <span class="font-mono font-bold text-slate-100 text-xs px-1">${item.current || 0} / ${item.target}</span>
-            <button onclick="adjustIndicator('${item.id}', 1)" class="w-5 h-5 flex items-center justify-center text-amber-400 hover:text-amber-300 font-bold bg-slate-800 rounded">+</button>
-          </div>
-        </div>
-      `).join('');
-    }
-
-    function adjustIndicator(id, delta) {
-      let found = (state.leadingIndicators || []).find(i => i.id === id);
-      if (!found) found = (state.laggingIndicators || []).find(i => i.id === id);
-      if (found) {
-        found.current = Math.max(0, (found.current || 0) + delta);
-        saveState();
-        renderDailyIndicators();
-        if (!document.getElementById('view-overview').classList.contains('hidden')) {
-          renderOverviewPage();
-        }
-      }
-    }
-
-    function renderDailyNonNegRows(list) {
-      const container = document.getElementById('daily-nonneg-container');
-      container.innerHTML = '';
-
-      // Check 2-5 warning guardrail
-      const warningEl = document.getElementById('daily-nonneg-warning');
-      if (list.length > 5) {
-        warningEl.classList.remove('hidden');
-      } else {
-        warningEl.classList.add('hidden');
-      }
-
-      list.forEach((item, idx) => {
-        const div = document.createElement('div');
-        div.className = 'flex items-center gap-3 bg-slate-950 border border-slate-800 p-3 rounded-xl';
-        div.innerHTML = `
-          <input type="checkbox" ${item.done ? 'checked' : ''} onchange="toggleNonNegDone(${idx})" class="w-4 h-4 rounded text-amber-500 bg-slate-900 border-slate-700 cursor-pointer shrink-0" />
-          <input type="text" value="${escapeHtml(item.text)}" oninput="editNonNegText(${idx}, this.value)" class="bg-transparent flex-1 text-slate-200 outline-none text-xs font-medium ${item.done ? 'line-through text-slate-500' : ''}" />
-          <button onclick="removeNonNeg(${idx})" class="text-slate-600 hover:text-rose-400 px-1 text-xs">✕</button>
-        `;
-        container.appendChild(div);
-      });
-
-      const emptyRow = document.createElement('div');
-      emptyRow.className = 'flex items-center gap-3 bg-slate-950/60 border border-dashed border-slate-800 p-3 rounded-xl';
-      emptyRow.innerHTML = `
-        <span class="text-slate-600 text-xs px-0.5">+</span>
-        <input type="text" placeholder="Add non-negotiable action... (Press Enter)" onkeydown="handleAddNewNonNeg(event, this)" class="bg-transparent flex-1 text-slate-300 outline-none text-xs font-medium" />
-      `;
-      container.appendChild(emptyRow);
-    }
-
-    function handleAddNewNonNeg(e, inputEl) {
-      if (e.key === 'Enter' && inputEl.value.trim() !== '') {
-        if (!state.days[activeDateKey].nonneg) state.days[activeDateKey].nonneg = [];
-        state.days[activeDateKey].nonneg.push({ text: inputEl.value.trim(), done: false });
-        saveState();
-        renderDailyPage();
-      }
-    }
-
-    function toggleNonNegDone(idx) {
-      state.days[activeDateKey].nonneg[idx].done = !state.days[activeDateKey].nonneg[idx].done;
-      saveState();
-      renderDailyPage();
-    }
-
-    function editNonNegText(idx, val) {
-      state.days[activeDateKey].nonneg[idx].text = val;
-      saveState();
-    }
-
-    function removeNonNeg(idx) {
-      state.days[activeDateKey].nonneg.splice(idx, 1);
-      saveState();
-      renderDailyPage();
     }
 
     function renderDailyOtherRows(otherList) {
@@ -1149,9 +1207,8 @@
         const row = document.createElement('div');
         row.className = 'flex items-center gap-2 bg-slate-950 border border-slate-800 p-2.5 rounded-xl';
         row.innerHTML = `
-          <input type="checkbox" ${item.done ? 'checked' : ''} onchange="toggleOtherDone(${idx})" class="w-4 h-4 rounded text-purple-500 bg-slate-900 border-slate-700 cursor-pointer shrink-0" />
+          <input type="checkbox" ${item.done ? 'checked' : ''} onchange="toggleOtherDone(${idx})" class="w-4 h-4 rounded text-amber-500 bg-slate-900 border-slate-700 cursor-pointer shrink-0" />
           <input type="text" value="${escapeHtml(item.text)}" oninput="editOtherText(${idx}, this.value)" class="bg-transparent flex-1 text-slate-200 outline-none text-xs ${item.done ? 'line-through text-slate-500' : ''}" />
-          <span class="text-[10px] text-purple-400 font-mono">Side Quest</span>
           <button onclick="removeOtherTask(${idx})" class="text-slate-600 hover:text-rose-400 px-1 text-xs">✕</button>
         `;
         container.appendChild(row);
@@ -1161,7 +1218,7 @@
       newRow.className = 'flex items-center gap-2 bg-slate-950/60 border border-dashed border-slate-800 p-2.5 rounded-xl';
       newRow.innerHTML = `
         <span class="text-slate-600 text-xs px-1">+</span>
-        <input type="text" placeholder="Add secondary side quest..." onkeydown="handleAddNewOtherOnEnter(event, this)" class="bg-transparent flex-1 text-slate-300 outline-none text-xs" />
+        <input type="text" placeholder="Add secondary to-do..." onkeydown="handleAddNewOtherOnEnter(event, this)" class="bg-transparent flex-1 text-slate-300 outline-none text-xs" />
       `;
       container.appendChild(newRow);
     }
@@ -1192,6 +1249,17 @@
       renderDailyPage();
     }
 
+    function updateDailyItem() {
+      const dayData = state.days[activeDateKey];
+      dayData.top3 = [
+        { text: document.getElementById('d-task-t1').value, done: document.getElementById('d-task-c1').checked },
+        { text: document.getElementById('d-task-t2').value, done: document.getElementById('d-task-c2').checked },
+        { text: document.getElementById('d-task-t3').value, done: document.getElementById('d-task-c3').checked }
+      ];
+      saveState();
+      updateDailyScore();
+    }
+
     function saveCurrentDay() {
       state.days[activeDateKey].appts = document.getElementById('daily-appts').value;
       saveState();
@@ -1206,25 +1274,23 @@
 
     function updateDailyScore() {
       const dayData = state.days[activeDateKey];
+      const validTop3 = dayData.top3.filter(t => t.text.trim() !== '');
+      const totalCount = validTop3.length;
+      const doneCount = validTop3.filter(t => t.done).length;
 
-      // 1. Main Quest Score (Purely non-negotiables, strict 85% rule)
-      const validNonNeg = (dayData.nonneg || []).filter(t => t.text.trim() !== '');
-      const totalCount = validNonNeg.length;
-      const doneCount = validNonNeg.filter(t => t.done).length;
-      const mainPct = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
-
-      document.getElementById('daily-score-pct').textContent = `${mainPct}%`;
+      const pct = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
+      document.getElementById('daily-score-pct').textContent = `${pct}%`;
       document.getElementById('daily-score-count').textContent = `${doneCount}/${totalCount}`;
 
       const circle = document.getElementById('daily-score-circle');
-      circle.style.strokeDashoffset = 100 - mainPct;
+      circle.style.strokeDashoffset = 100 - pct;
 
       const label = document.getElementById('daily-score-label');
-      if (mainPct === 100) {
+      if (pct === 100) {
         circle.setAttribute('class', 'text-emerald-400 score-radial');
-        label.textContent = '100% Flawless!';
+        label.textContent = '100% Execution!';
         label.className = 'text-xs font-mono text-emerald-400 font-bold';
-      } else if (mainPct >= 85) {
+      } else if (pct >= 85) {
         circle.setAttribute('class', 'text-teal-400 score-radial');
         label.textContent = 'Target Hit (85%+)';
         label.className = 'text-xs font-mono text-teal-400 font-bold';
@@ -1233,156 +1299,80 @@
         label.textContent = 'Action Required';
         label.className = 'text-xs font-mono text-amber-400/80';
       }
-
-      // 2. Side Quest 3-Star Rating (Completely separate from Main Quest score)
-      const otherList = dayData.other || [];
-      const otherTotal = otherList.length;
-      const otherDone = otherList.filter(o => o.done).length;
-
-      const starData = getStarRating(otherDone, otherTotal);
-      const starDisplay = document.getElementById('daily-stars-display');
-      starDisplay.textContent = starData.stars;
-      starDisplay.className = `text-xl tracking-wider ${starData.color}`;
-
-      const starBadge = document.getElementById('daily-stars-badge');
-      starBadge.textContent = starData.badge;
-      starBadge.className = `text-xs font-mono font-bold ${starData.color}`;
-
-      document.getElementById('daily-stars-ratio').textContent = `${otherDone}/${otherTotal} done (${starData.pct}%)`;
     }
 
     function logBlockToday(type) {
       if (!state.blocks) state.blocks = { strategic: 0, buffer: 0, breakout: 0 };
       state.blocks[type] = (state.blocks[type] || 0) + 1;
       saveState();
-      alert(`+1 ${type.toUpperCase()} block logged for this week!`);
+      alert(`+1 ${type.toUpperCase()} block logged!`);
     }
 
     /* =========================================================================
-       OVERVIEW MANAGEMENT: INDICATORS, TACTICS & TOTAL SIDE QUESTS
+       MASTER OVERVIEW DASHBOARD ENGINE
        ========================================================================= */
     function renderOverviewPage() {
       const timeline = getCycleTimeline();
-      document.getElementById('ov-badge-current-week').textContent = timeline.isReviewWeek ? 'Week 13 (Review)' : `Week ${timeline.currentWeek} / 12`;
+
+      document.getElementById('ov-badge-current-week').textContent = timeline.isReviewWeek 
+        ? 'Week 13 / 13 (Review Week)' 
+        : `Week ${timeline.currentWeek} / 12`;
       document.getElementById('ov-cycle-dates-label').textContent = `${timeline.startDateFormatted} → ${timeline.endDateFormatted} (${84 - timeline.currentDay} days remaining)`;
       document.getElementById('ov-label-cycle-days').textContent = `Day ${timeline.currentDay} of 84`;
 
       document.getElementById('ov-keystone-goal-text').textContent = state.keystoneGoal || 'Keystone Goal';
-      document.getElementById('ov-keystone-why-text').textContent = state.why ? `Why: ${state.why}` : '';
+      document.getElementById('ov-keystone-why-text').textContent = state.why ? `Why: ${state.why}` : 'Connect your vision...';
+      document.getElementById('ov-why-full').textContent = state.why || 'None specified';
+      document.getElementById('ov-inaction-full').textContent = state.inaction || 'None specified';
 
-      // Calculate Weekly Side Quest Stars (across all days recorded this week)
-      calculateWeeklySideQuestStats();
+      const leadList = document.getElementById('ov-lead-list-full');
+      leadList.innerHTML = (state.leadingIndicators || []).map(i => `<li>${escapeHtml(i)}</li>`).join('') || '<li class="text-slate-600">None</li>';
 
-      // Leading / Lagging
-      renderIndicatorOverviewList('ov-lead-items-container', state.leadingIndicators || [], 'leading');
-      renderIndicatorOverviewList('ov-lag-items-container', state.laggingIndicators || [], 'lagging');
+      const lagList = document.getElementById('ov-lag-list-full');
+      lagList.innerHTML = (state.laggingIndicators || []).map(i => `<li>${escapeHtml(i)}</li>`).join('') || '<li class="text-slate-600">None</li>';
 
-      // Tactics & 2-5 warning guardrail
-      const tactics = state.tactics || [];
-      const tacticsWarning = document.getElementById('ov-tactics-warning');
-      if (tactics.length > 5) {
-        tacticsWarning.classList.remove('hidden');
+      document.getElementById('ov-count-strategic').textContent = state.blocks?.strategic || 0;
+      document.getElementById('ov-count-buffer').textContent = state.blocks?.buffer || 0;
+      document.getElementById('ov-count-breakout').textContent = state.blocks?.breakout || 0;
+
+      document.getElementById('ov-tactics-header-title').textContent = `Tactics for Week ${timeline.currentWeek}`;
+      document.getElementById('ov-week-nonneg-text').textContent = state.week1Goal ? `Non-negotiable: ${state.week1Goal}` : '';
+
+      const activeTactics = state.tactics || [];
+      const totalTactics = activeTactics.length;
+      const doneTactics = activeTactics.filter(t => t.done).length;
+      const weeklyPct = totalTactics > 0 ? Math.round((doneTactics / totalTactics) * 100) : 0;
+
+      document.getElementById('ov-score-percentage').textContent = `${weeklyPct}%`;
+      document.getElementById('ov-score-completed-count').textContent = doneTactics;
+      document.getElementById('ov-score-total-count').textContent = totalTactics;
+      document.getElementById('ov-score-circle-bar').style.strokeDashoffset = 100 - weeklyPct;
+
+      const badge = document.getElementById('ov-score-status-badge');
+      if (weeklyPct >= 85) {
+        document.getElementById('ov-score-circle-bar').setAttribute('class', 'text-emerald-400 score-radial');
+        badge.textContent = 'Crushing It (85%+)';
+        badge.className = 'text-xs font-bold font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+      } else if (weeklyPct >= 60) {
+        document.getElementById('ov-score-circle-bar').setAttribute('class', 'text-amber-400 score-radial');
+        badge.textContent = 'In Range (Pacing)';
+        badge.className = 'text-xs font-bold font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30';
       } else {
-        tacticsWarning.classList.add('hidden');
+        document.getElementById('ov-score-circle-bar').setAttribute('class', 'text-slate-500 score-radial');
+        badge.textContent = 'Action Required';
+        badge.className = 'text-xs font-bold font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700';
       }
 
       const tacticsEl = document.getElementById('ov-tactics-full-list');
-      document.getElementById('ov-week-nonneg-text').textContent = state.week1Goal ? `Objective: ${state.week1Goal}` : '';
-      tacticsEl.innerHTML = tactics.map((t, idx) => `
-        <div class="flex items-center justify-between p-3 bg-slate-950 border ${t.done ? 'border-slate-800/60 opacity-60' : 'border-slate-800'} rounded-xl">
+      tacticsEl.innerHTML = activeTactics.map((t, idx) => `
+        <div class="flex items-center justify-between p-3 bg-slate-950 border ${t.done ? 'border-slate-800/60 opacity-60' : 'border-slate-800'} rounded-xl transition-all">
           <label class="flex items-center gap-3 cursor-pointer flex-1">
             <input type="checkbox" ${t.done ? 'checked' : ''} onchange="toggleOverviewTactic(${idx})" class="w-4 h-4 text-amber-500 rounded bg-slate-900 border-slate-700 cursor-pointer shrink-0" />
             <span class="text-xs ${t.done ? 'line-through text-slate-500' : 'text-slate-200'} font-medium">${escapeHtml(t.title)}</span>
           </label>
-          <button onclick="removeOverviewTactic(${idx})" class="text-slate-600 hover:text-rose-400 text-xs px-1">✕</button>
+          <span class="text-[10px] font-mono text-slate-500">Wk ${t.week || 1}</span>
         </div>
-      `).join('') || '<div class="text-slate-600 text-xs py-2">No tactics configured.</div>';
-    }
-
-    function calculateWeeklySideQuestStats() {
-      let weekOtherTotal = 0;
-      let weekOtherDone = 0;
-      let cycleOtherDone = 0;
-
-      // Scan all stored days
-      Object.keys(state?.days || {}).forEach(dKey => {
-        const dObj = state.days[dKey];
-        (dObj.other || []).forEach(item => {
-          if (item.done) cycleOtherDone++;
-          // Rough week check: can also check exact week timeline
-          weekOtherTotal++;
-          if (item.done) weekOtherDone++;
-        });
-      });
-
-      const starData = getStarRating(weekOtherDone, weekOtherTotal);
-      const starDisp = document.getElementById('ov-week-stars-display');
-      starDisp.textContent = starData.stars;
-      starDisp.className = `text-2xl ${starData.color}`;
-
-      const starBadge = document.getElementById('ov-week-stars-badge');
-      starBadge.textContent = starData.badge;
-      starBadge.className = `font-bold text-xs ${starData.color}`;
-
-      document.getElementById('ov-week-stars-ratio').textContent = `${weekOtherDone} / ${weekOtherTotal} cleared this week`;
-      document.getElementById('ov-week-stars-pct').textContent = `${starData.pct}%`;
-      document.getElementById('ov-total-sidequests-count').textContent = cycleOtherDone;
-    }
-
-    function renderIndicatorOverviewList(containerId, list, type) {
-      const container = document.getElementById(containerId);
-      if (list.length === 0) {
-        container.innerHTML = `<div class="text-slate-600 italic text-[11px]">No ${type} indicators yet.</div>`;
-        return;
-      }
-
-      container.innerHTML = list.map((item, idx) => `
-        <div class="bg-slate-950 border border-slate-800 p-2.5 rounded-xl flex items-center justify-between">
-          <div class="min-w-0 pr-2">
-            <span class="font-medium text-slate-200 truncate block">${escapeHtml(item.name)}</span>
-            <span class="text-[10px] text-slate-500">Target: ${item.target}</span>
-          </div>
-          <div class="flex items-center gap-1.5 shrink-0">
-            <button onclick="adjustIndicator('${item.id}', -1)" class="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-white font-bold bg-slate-900 border border-slate-800 rounded">-</button>
-            <span class="font-mono font-bold text-amber-400 text-xs px-1">${item.current || 0}</span>
-            <button onclick="adjustIndicator('${item.id}', 1)" class="w-6 h-6 flex items-center justify-center text-amber-400 hover:text-amber-300 font-bold bg-slate-900 border border-slate-800 rounded">+</button>
-            <button onclick="deleteIndicator('${type}', ${idx})" class="text-slate-600 hover:text-rose-400 text-xs ml-1">✕</button>
-          </div>
-        </div>
-      `).join('');
-    }
-
-    function promptNewIndicator(type) {
-      const name = prompt(`Enter new ${type} indicator name:`);
-      if (!name) return;
-      const target = parseFloat(prompt(`Enter numeric target for "${name}":`, "10")) || 10;
-
-      const newInd = { id: 'ind_' + Math.random().toString(36).substr(2, 9), name, target, current: 0 };
-      if (type === 'leading') {
-        if (!state.leadingIndicators) state.leadingIndicators = [];
-        state.leadingIndicators.push(newInd);
-      } else {
-        if (!state.laggingIndicators) state.laggingIndicators = [];
-        state.laggingIndicators.push(newInd);
-      }
-      saveState();
-      renderOverviewPage();
-    }
-
-    function deleteIndicator(type, idx) {
-      if (type === 'leading') state.leadingIndicators.splice(idx, 1);
-      else state.laggingIndicators.splice(idx, 1);
-      saveState();
-      renderOverviewPage();
-    }
-
-    function promptNewTactic() {
-      const title = prompt('Enter new tactic (start with a verb):');
-      if (!title) return;
-      if (!state.tactics) state.tactics = [];
-      state.tactics.push({ id: 't_' + Date.now(), title, week: '1', done: false });
-      saveState();
-      renderOverviewPage();
+      `).join('') || '<div class="text-slate-600 text-xs py-4 text-center border border-dashed border-slate-800 rounded-xl">No tactics logged yet.</div>';
     }
 
     function toggleOverviewTactic(idx) {
@@ -1391,14 +1381,23 @@
       renderOverviewPage();
     }
 
-    function removeOverviewTactic(idx) {
-      state.tactics.splice(idx, 1);
+    function logBlockOverview(type) {
+      if (!state.blocks) state.blocks = { strategic: 0, buffer: 0, breakout: 0 };
+      state.blocks[type] = (state.blocks[type] || 0) + 1;
       saveState();
       renderOverviewPage();
     }
 
+    function resetBlocksOverview() {
+      if (confirm('Reset your logged block tallies for the week?')) {
+        state.blocks = { strategic: 0, buffer: 0, breakout: 0 };
+        saveState();
+        renderOverviewPage();
+      }
+    }
+
     /* =========================================================================
-       REVIEW & ROUTING
+       REVIEW PAGE
        ========================================================================= */
     function saveReview() {
       const timeline = getCycleTimeline();
@@ -1407,13 +1406,51 @@
         proud: document.getElementById('rev-proud').value,
         challenges: document.getElementById('rev-challenges').value,
         learn: document.getElementById('rev-learn').value,
-        friend: document.getElementById('rev-friend').value
+        friend: document.getElementById('rev-friend').value,
+        timestamp: Date.now()
       };
       saveState();
-      alert(`Week ${timeline.currentWeek} review saved!`);
+      alert(`Week ${timeline.currentWeek} review locked in!`);
       switchView('daily');
     }
 
+    /* =========================================================================
+       BACKUP EXPORT / IMPORT
+       ========================================================================= */
+    function exportData() {
+      const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `12wy_backup_${formatDateKey(getLocalTodayDate())}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importData(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = JSON.parse(e.target.result);
+          if (data && data.hasCompletedOnboarding !== undefined) {
+            state = data;
+            saveState();
+            alert('Plan successfully imported!');
+            toggleAuthModal(false);
+            switchView(state.hasCompletedOnboarding ? 'daily' : 'guide');
+          }
+        } catch (err) {
+          alert('Invalid backup JSON file.');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    /* =========================================================================
+       VIEW ROUTER
+       ========================================================================= */
     function switchView(viewName) {
       const views = ['guide', 'daily', 'overview', 'review'];
       views.forEach(v => {
@@ -1430,13 +1467,19 @@
         }
       });
 
+      // Update Header badge
       const timeline = getCycleTimeline();
       const badge = document.getElementById('nav-week-badge');
-      if (badge) badge.textContent = timeline.isReviewWeek ? 'Wk 13 (Review)' : `Wk ${timeline.currentWeek} / 12`;
+      if (badge) {
+        badge.textContent = timeline.isReviewWeek ? 'Wk 13 / 13' : `Wk ${timeline.currentWeek} / 12`;
+      }
 
       if (viewName === 'daily') renderDailyPage();
       if (viewName === 'overview') renderOverviewPage();
-      if (viewName === 'guide') updateWizardUI();
+      if (viewName === 'guide') {
+        populateGuideWithExistingData();
+        updateWizardUI();
+      }
     }
 
     function escapeHtml(str) {
@@ -1445,10 +1488,14 @@
       return d.innerHTML;
     }
 
+    // Default start date field to Monday 9/07
     document.getElementById('wiz-start-date').value = '2026-09-07';
 
+    // INITIALIZATION LOGIC:
     updateAuthUI();
-    if (cloudSession) loadFromCloud();
+    if (cloudSession) {
+      loadFromCloud();
+    }
 
     if (!state || !state.hasCompletedOnboarding) {
       state = { hasCompletedOnboarding: false };
