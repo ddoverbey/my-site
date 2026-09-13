@@ -72,7 +72,7 @@
         <div id="step-1" class="wiz-step space-y-4">
           <div>
             <h2 class="text-xl font-bold text-white">When did your 12-Week Year start?</h2>
-            <p class="text-xs text-slate-400 mt-1">If your cycle started earlier this week (e.g., Monday 9/07), we'll walk you day-by-day to backfill execution.</p>
+            <p class="text-xs text-slate-400 mt-1">If your cycle started earlier this week, we'll walk you day-by-day to backfill execution.</p>
           </div>
           <div class="space-y-3 pt-2">
             <div>
@@ -96,11 +96,11 @@
             <p class="text-xs text-slate-400 mt-1">Brainstorm 5 goals for this year without editing yourself.</p>
           </div>
           <div class="space-y-2 text-xs">
-            <input id="wiz-g1" type="text" placeholder="Goal 1" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none" />
-            <input id="wiz-g2" type="text" placeholder="Goal 2" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none" />
-            <input id="wiz-g3" type="text" placeholder="Goal 3" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none" />
-            <input id="wiz-g4" type="text" placeholder="Goal 4" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none" />
-            <input id="wiz-g5" type="text" placeholder="Goal 5" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none" />
+            <input id="wiz-g1" type="text" autocomplete="off" placeholder="Goal 1" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none" />
+            <input id="wiz-g2" type="text" autocomplete="off" placeholder="Goal 2" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none" />
+            <input id="wiz-g3" type="text" autocomplete="off" placeholder="Goal 3" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none" />
+            <input id="wiz-g4" type="text" autocomplete="off" placeholder="Goal 4" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none" />
+            <input id="wiz-g5" type="text" autocomplete="off" placeholder="Goal 5" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none" />
           </div>
         </div>
 
@@ -140,7 +140,7 @@
           <div class="space-y-3 text-xs">
             <div>
               <label class="block font-semibold text-amber-400 mb-1">12-Week Target Goal</label>
-              <input id="wiz-chunk-goal" type="text" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none font-bold" />
+              <input id="wiz-chunk-goal" type="text" autocomplete="off" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none font-bold" />
             </div>
 
             <div>
@@ -150,7 +150,7 @@
               </div>
               <div id="wiz-lead-container" class="space-y-2">
                 <div class="flex gap-2">
-                  <input type="text" placeholder="Indicator name (e.g. Outreach calls)" class="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none ind-name" />
+                  <input type="text" autocomplete="off" placeholder="Indicator name (e.g. Outreach calls)" class="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none ind-name" />
                   <input type="number" placeholder="Target" value="5" class="w-24 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-slate-200 focus:border-amber-500 outline-none font-mono ind-target" />
                 </div>
               </div>
@@ -164,7 +164,7 @@
               </div>
               <div id="wiz-lag-container" class="space-y-2">
                 <div class="flex gap-2">
-                  <input type="text" placeholder="Indicator name (e.g. Signups)" class="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none ind-name" />
+                  <input type="text" autocomplete="off" placeholder="Indicator name (e.g. Signups)" class="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none ind-name" />
                   <input type="number" placeholder="Target" value="2" class="w-24 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-slate-200 focus:border-amber-500 outline-none font-mono ind-target" />
                 </div>
               </div>
@@ -185,7 +185,7 @@
           <div class="space-y-3 text-xs">
             <div>
               <label class="block font-semibold text-amber-300 mb-1">Week 1 Non-Negotiable Objective</label>
-              <input id="wiz-w1-nonneg" type="text" placeholder="e.g., Finalize data models and deploy prototype" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none font-medium" />
+              <input id="wiz-w1-nonneg" type="text" autocomplete="off" placeholder="e.g., Finalize data models and deploy prototype" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none font-medium" />
             </div>
 
             <div>
@@ -194,13 +194,13 @@
                 <span id="wiz-tactics-counter-badge" class="text-[10px] text-slate-500 font-mono">1 item (Rec: 2–5)</span>
               </div>
               <div id="wiz-w1-tactics-container" class="space-y-1.5">
-                <input type="text" oninput="handleAutoRow(this, 'wiz-w1-tactics-container'); checkTacticsCount('wiz-w1-tactics-container', 'wiz-tactics-counter-badge');" placeholder="Tactic starting with verb..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none" />
+                <input type="text" autocomplete="off" oninput="handleAutoRow(this, 'wiz-w1-tactics-container'); checkTacticsCount('wiz-w1-tactics-container', 'wiz-tactics-counter-badge');" placeholder="Tactic starting with verb..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none" />
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Step 7: Day-By-Day Backfill Catch-Up -->
+        <!-- Step 7 -->
         <div id="step-7" class="wiz-step space-y-4 hidden">
           <div>
             <div class="flex items-center justify-between">
@@ -223,7 +223,7 @@
             <div>
               <label class="block font-semibold text-slate-300 mb-1">Side Quests: Other Tasks (Optional)</label>
               <div id="catchup-other-container" class="space-y-1.5">
-                <input type="text" oninput="handleAutoRow(this, 'catchup-other-container')" placeholder="Secondary task..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none" />
+                <input type="text" autocomplete="off" oninput="handleAutoRow(this, 'catchup-other-container')" placeholder="Secondary task..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none" />
               </div>
             </div>
           </div>
@@ -242,12 +242,12 @@
     </section>
 
     <!-- =========================================================================
-         VIEW 2: DAILY EXECUTION WORKSPACE (CLEAN & METRICS-FOCUSED)
+         VIEW 2: DAILY EXECUTION WORKSPACE (SIMPLIFIED & FOCUS-FIRST)
          ========================================================================= -->
     <section id="view-daily" class="space-y-4 hidden">
       
       <!-- 1. Week Objective Anchor Banner -->
-      <div class="bg-gradient-to-r from-slate-900 via-slate-900 to-amber-950/20 border border-slate-800 rounded-xl p-4 flex items-center justify-between shadow-sm">
+      <div class="bg-gradient-to-r from-slate-900 via-slate-900 to-amber-950/20 border border-slate-800 rounded-xl p-3.5 flex items-center justify-between shadow-sm">
         <div class="space-y-0.5 min-w-0">
           <div class="text-[10px] font-bold uppercase tracking-wider text-amber-400 font-mono flex items-center gap-1.5">
             <span>🎯</span> <span id="daily-banner-week-title">Week 1 Objective</span>
@@ -260,30 +260,30 @@
       </div>
 
       <!-- Date Controller Bar -->
-      <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center justify-between text-xs">
-        <button onclick="navigateDay(-1)" class="p-1 text-slate-400 hover:text-white transition-colors">← Prev Day</button>
+      <div class="bg-slate-900/80 border border-slate-800/80 rounded-xl px-3 py-2 flex items-center justify-between text-xs">
+        <button onclick="navigateDay(-1)" class="p-1 text-slate-400 hover:text-white transition-colors">← Prev</button>
         <div class="text-center">
-          <div id="daily-view-date" class="font-bold text-slate-100 font-mono text-sm">Saturday, Sep 12</div>
-          <span id="daily-view-indicator" class="text-[10px] text-amber-400 font-mono font-medium">Today</span>
+          <span id="daily-view-date" class="font-bold text-slate-100 font-mono text-xs sm:text-sm">Saturday, Sep 12</span>
+          <span id="daily-view-indicator" class="text-[10px] text-amber-400 font-mono font-medium ml-1.5">• Today •</span>
         </div>
-        <button onclick="navigateDay(1)" class="p-1 text-slate-400 hover:text-white transition-colors">Next Day →</button>
+        <button onclick="navigateDay(1)" class="p-1 text-slate-400 hover:text-white transition-colors">Next →</button>
       </div>
 
       <!-- 2. Side-by-Side: 85% Main Quest Progress & Star Progress -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div class="grid grid-cols-2 gap-3">
         
         <!-- Main Quest 85% Progress -->
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-between shadow-lg">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5 flex items-center justify-between shadow-sm">
           <div>
-            <div class="text-[10px] font-mono uppercase tracking-wider text-amber-400 font-bold">Main Quest Score</div>
-            <div class="flex items-baseline gap-2 mt-0.5">
-              <span id="daily-score-pct" class="text-3xl font-black font-mono text-white">0%</span>
-              <span id="daily-score-label" class="text-xs font-mono text-slate-400">Action Required</span>
+            <div class="text-[10px] font-mono uppercase tracking-wider text-amber-400 font-bold">Main Quest</div>
+            <div class="flex items-baseline gap-1.5 mt-0.5">
+              <span id="daily-score-pct" class="text-2xl font-black font-mono text-white">0%</span>
+              <span id="daily-score-label" class="text-[10px] font-mono text-slate-400">Pacing</span>
             </div>
-            <p class="text-[10px] text-slate-500 mt-0.5">Non-negotiables only • 85%+ Target</p>
+            <p class="text-[9px] text-slate-500 mt-0.5">Target: 85%+</p>
           </div>
 
-          <div class="relative w-14 h-14 flex items-center justify-center shrink-0">
+          <div class="relative w-12 h-12 flex items-center justify-center shrink-0">
             <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
               <path class="text-slate-800" stroke-width="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
               <path id="daily-score-circle" class="text-amber-400 score-radial" stroke-width="3.5" stroke-dasharray="100, 100" stroke-dashoffset="100" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
@@ -293,86 +293,87 @@
         </div>
 
         <!-- Side Quest Star Progress -->
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-between shadow-lg">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5 flex items-center justify-between shadow-sm">
           <div>
-            <div class="text-[10px] font-mono uppercase tracking-wider text-purple-400 font-bold">Side Quest Stars</div>
-            <div class="flex items-center gap-2 mt-0.5">
-              <span id="daily-stars-display" class="text-xl tracking-wider text-slate-600">☆☆☆</span>
-              <span id="daily-stars-badge" class="text-xs font-mono font-bold text-slate-400">None</span>
+            <div class="text-[10px] font-mono uppercase tracking-wider text-purple-400 font-bold">Side Quests</div>
+            <div class="flex items-center gap-1.5 mt-0.5">
+              <span id="daily-stars-display" class="text-lg tracking-wider text-slate-600">☆☆☆</span>
+              <span id="daily-stars-badge" class="text-[10px] font-mono font-bold text-slate-400">None</span>
             </div>
-            <p class="text-[10px] text-slate-500 mt-0.5">★ (30%) • ★★ (60%) • ★★★ (80%+ Gold)</p>
+            <p class="text-[9px] text-slate-500 mt-0.5">★ 30% • ★★ 60% • ★★★ 80%</p>
           </div>
 
           <div class="text-right">
-            <span id="daily-stars-ratio" class="font-mono text-xs font-bold text-purple-300">0/0 done</span>
-            <span class="block text-[9px] text-slate-500 uppercase font-mono">Bonus Items</span>
+            <span id="daily-stars-ratio" class="font-mono text-[11px] font-bold text-purple-300">0/0</span>
+            <span class="block text-[9px] text-slate-500 uppercase font-mono">Bonus</span>
           </div>
         </div>
 
       </div>
 
-      <!-- 3. Non-Negotiables (Main Quest) -->
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3 shadow-sm">
-        <div class="flex flex-wrap items-center justify-between border-b border-slate-800 pb-2 gap-2">
+      <!-- 3. PRIMARY HERO: DAILY NON-NEGOTIABLES (BIG & PROMINENT) -->
+      <div class="bg-slate-900 border-2 border-slate-800/90 rounded-2xl p-5 sm:p-6 space-y-4 shadow-xl">
+        <div class="flex flex-wrap items-center justify-between border-b border-slate-800 pb-3 gap-2">
           <div class="flex items-center gap-2">
-            <span class="text-xs font-bold text-amber-400 uppercase tracking-wider font-mono flex items-center gap-1.5">
-              <span>🔥</span> Main Quest: Daily Non-Negotiables
+            <span class="text-sm font-bold text-amber-400 uppercase tracking-wider font-mono flex items-center gap-1.5">
+              <span>🔥</span> Today's Non-Negotiables
             </span>
-            <span class="text-[10px] font-mono text-slate-400 bg-slate-800 px-2 py-0.5 rounded">Recommended: 2–5 max</span>
+            <span class="text-[10px] font-mono text-slate-400 bg-slate-800 px-2 py-0.5 rounded">Target: 2–5 actions</span>
           </div>
-          <span id="daily-nonneg-warning" class="hidden text-[10px] font-mono text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded">⚠️ 6+ items — Focus dilution risk</span>
+          <span id="daily-nonneg-warning" class="hidden text-[10px] font-mono text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded font-bold">⚠️ 6+ items — Focus dilution risk</span>
         </div>
 
-        <div id="daily-nonneg-container" class="space-y-2 text-xs"></div>
+        <!-- High-contrast, large non-negotiable checklist -->
+        <div id="daily-nonneg-container" class="space-y-3 text-sm"></div>
       </div>
 
-      <!-- 4. Simple Leading & Lagging Indicators Tickers -->
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
-        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
-          <span class="text-xs font-bold text-amber-400 uppercase tracking-wider font-mono flex items-center gap-1.5">
-            <span>📈</span> Leading & Lagging Metric Tickers
-          </span>
-          <button onclick="promptNewIndicator('leading')" class="text-xs text-amber-400 hover:text-amber-300 font-semibold font-mono">+ Add Ticker</button>
-        </div>
-        <div id="daily-indicators-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs"></div>
-      </div>
-
-      <!-- 5. Side Quests (Optional Extras Checklist) -->
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3 shadow-sm">
+      <!-- 4. SECONDARY: SIDE QUESTS (OTHER TO-DOS) -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-4 space-y-3">
         <div class="flex items-center justify-between border-b border-slate-800 pb-2">
           <div class="flex items-center gap-2">
             <span class="text-xs font-bold text-purple-300 uppercase tracking-wider font-mono">Side Quests (Optional Extras)</span>
-            <span class="text-[10px] text-purple-400 font-mono font-medium">Powers your Star Rating</span>
+            <span class="text-[10px] text-purple-400 font-mono font-medium">Earns Star Rating</span>
           </div>
           <span class="text-[10px] text-slate-500">Type to spawn next</span>
         </div>
         <div id="daily-other-tasks-container" class="space-y-2 text-xs"></div>
       </div>
 
-      <!-- Appointments & Performance Time -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-2">
-          <span class="text-xs font-bold text-slate-300 uppercase tracking-wider font-mono">Appointments / Calendar</span>
-          <textarea id="daily-appts" oninput="saveCurrentDay()" rows="3" placeholder="e.g. 2:00 PM Call..." class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-200 outline-none leading-relaxed"></textarea>
+      <!-- 5. APPOINTMENTS & TIME BLOCKS -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3.5 space-y-2">
+          <span class="text-xs font-bold text-slate-400 uppercase tracking-wider font-mono">Appointments / Calendar</span>
+          <textarea id="daily-appts" oninput="saveCurrentDay()" rows="2" placeholder="e.g. 2:00 PM Strategy Call..." class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-200 outline-none leading-relaxed"></textarea>
         </div>
 
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-2 flex flex-col justify-between">
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3.5 space-y-2 flex flex-col justify-between">
           <div>
-            <span class="text-xs font-bold text-slate-300 uppercase tracking-wider font-mono">Log Time Blocks Today</span>
-            <p class="text-[10px] text-slate-500">Protect strategic focus</p>
+            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider font-mono">Performance Time</span>
+            <p class="text-[10px] text-slate-500">Log uninterrupted blocks</p>
           </div>
-          <div class="grid grid-cols-3 gap-2 text-center pt-1">
-            <button onclick="logBlockToday('strategic')" class="bg-slate-950 border border-slate-800 hover:border-amber-500 p-2 rounded-lg text-[10px] font-semibold text-slate-300">
-              <span class="block text-sm">🎯</span> +Strategic
+          <div class="grid grid-cols-3 gap-2 text-center">
+            <button onclick="logBlockToday('strategic')" class="bg-slate-950 border border-slate-800 hover:border-amber-500 p-1.5 rounded-lg text-[10px] font-semibold text-slate-300">
+              <span class="block text-sm">🎯</span> Strategic
             </button>
-            <button onclick="logBlockToday('buffer')" class="bg-slate-950 border border-slate-800 hover:border-teal-500 p-2 rounded-lg text-[10px] font-semibold text-slate-300">
-              <span class="block text-sm">📥</span> +Buffer
+            <button onclick="logBlockToday('buffer')" class="bg-slate-950 border border-slate-800 hover:border-teal-500 p-1.5 rounded-lg text-[10px] font-semibold text-slate-300">
+              <span class="block text-sm">📥</span> Buffer
             </button>
-            <button onclick="logBlockToday('breakout')" class="bg-slate-950 border border-slate-800 hover:border-emerald-500 p-2 rounded-lg text-[10px] font-semibold text-slate-300">
-              <span class="block text-sm">🍃</span> +Breakout
+            <button onclick="logBlockToday('breakout')" class="bg-slate-950 border border-slate-800 hover:border-emerald-500 p-1.5 rounded-lg text-[10px] font-semibold text-slate-300">
+              <span class="block text-sm">🍃</span> Breakout
             </button>
           </div>
         </div>
+      </div>
+
+      <!-- 6. BOTTOM: STREAMLINED LEADING & LAGGING TICKERS -->
+      <div class="bg-slate-900/70 border border-slate-800/80 rounded-xl p-4 space-y-3">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+          <span class="text-xs font-bold text-slate-400 uppercase tracking-wider font-mono flex items-center gap-1.5">
+            <span>📈</span> Metric Tickers (Daily / Weekly)
+          </span>
+          <button onclick="promptNewIndicator('leading')" class="text-[11px] text-amber-400 hover:text-amber-300 font-semibold font-mono">+ Add Ticker</button>
+        </div>
+        <div id="daily-indicators-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs"></div>
       </div>
 
     </section>
@@ -607,7 +608,6 @@
       return new Date(y, m - 1, d);
     }
 
-    // MULTI-VERSION RECOVERY: Scans all historical localStorage keys so progress is never lost
     function recoverState() {
       const candidateKeys = [
         'twelve_week_year_v8',
@@ -643,7 +643,7 @@
     }
 
     /* =========================================================================
-       DIRECT JSON BACKUP / EXPORT / IMPORT
+       JSON BACKUP / EXPORT / IMPORT
        ========================================================================= */
     function downloadBackupJSON() {
       if (!state) return alert('No active plan data found to export.');
@@ -820,6 +820,11 @@
       if (isLast && inputEl.value.trim() !== '') {
         const newInput = document.createElement('input');
         newInput.type = 'text';
+        newInput.autocomplete = 'off';
+        newInput.autocorrect = 'off';
+        newInput.autocapitalize = 'sentences';
+        newInput.spellcheck = false;
+        newInput.name = 'task_input_' + Date.now();
         newInput.className = inputEl.className;
         newInput.placeholder = inputEl.placeholder;
         newInput.oninput = () => {
@@ -852,7 +857,7 @@
       const div = document.createElement('div');
       div.className = 'flex gap-2';
       div.innerHTML = `
-        <input type="text" placeholder="Indicator name" class="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none ind-name" />
+        <input type="text" autocomplete="off" placeholder="Indicator name" class="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none ind-name" />
         <input type="number" placeholder="Target" value="5" class="w-24 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-slate-200 focus:border-amber-500 outline-none font-mono ind-target" />
       `;
       container.appendChild(div);
@@ -875,9 +880,9 @@
     function getStarRating(done, total) {
       if (total === 0) return { stars: '☆☆☆', badge: 'None', color: 'text-slate-500', pct: 0 };
       const pct = Math.round((done / total) * 100);
-      if (pct >= 80) return { stars: '★★★', badge: 'Gold (Complete)', color: 'text-amber-400', pct };
-      if (pct >= 60) return { stars: '★★☆', badge: 'Silver', color: 'text-slate-300', pct };
-      if (pct >= 30) return { stars: '★☆☆', badge: 'Bronze', color: 'text-amber-600', pct };
+      if (pct >= 80) return { stars: '★★★', badge: 'Gold (80%+)', color: 'text-amber-400', pct };
+      if (pct >= 60) return { stars: '★★☆', badge: 'Silver (60%)', color: 'text-slate-300', pct };
+      if (pct >= 30) return { stars: '★☆☆', badge: 'Bronze (30%)', color: 'text-amber-600', pct };
       return { stars: '☆☆☆', badge: 'Started', color: 'text-slate-500', pct };
     }
 
@@ -1037,7 +1042,7 @@
       div.className = 'flex items-center gap-2 bg-slate-950 border border-slate-800 p-2.5 rounded-xl';
       div.innerHTML = `
         <input type="checkbox" ${done ? 'checked' : ''} class="w-4 h-4 rounded text-amber-500 bg-slate-900 border-slate-700 cursor-pointer c-done" />
-        <input type="text" value="${escapeHtml(text)}" placeholder="Action starting with verb..." onkeydown="handleCatchupKey(event, this)" class="bg-transparent flex-1 outline-none text-slate-200 c-text" />
+        <input type="text" autocomplete="off" name="catchup_${Date.now()}" value="${escapeHtml(text)}" placeholder="Action starting with verb..." onkeydown="handleCatchupKey(event, this)" class="bg-transparent flex-1 outline-none text-slate-200 c-text" />
       `;
       container.appendChild(div);
     }
@@ -1098,7 +1103,7 @@
     }
 
     /* =========================================================================
-       DAILY WORKSPACE: CLEAN, TARGET-ORDERED WORKSPACE
+       DAILY WORKSPACE: HIGH FOCUS HIERARCHY
        ========================================================================= */
     function renderDailyPage() {
       const targetDate = parseDateKey(activeDateKey);
@@ -1118,20 +1123,21 @@
 
       const dayData = state.days[activeDateKey];
 
-      // Render in exact requested hierarchy:
-      // 1. Gauges (Main 85% Quest + Side Quest Stars)
+      // Exact requested order:
+      // 1. Gauges
       updateDailyScore();
 
-      // 2. Main Quest Non-Negotiables
+      // 2. Primary Focus: Non-Negotiables
       renderDailyNonNegRows(dayData.nonneg || []);
 
-      // 3. Simple Indicator Tickers
-      renderDailyIndicators();
-
-      // 4. Side Quests (Other To-Dos)
+      // 3. Side Quests (Other To-Dos)
       renderDailyOtherRows(dayData.other || []);
 
+      // 4. Appointments & Time Blocks
       document.getElementById('daily-appts').value = dayData.appts || '';
+
+      // 5. Bottom: Metric Tickers
+      renderDailyIndicators();
     }
 
     function renderDailyIndicators() {
@@ -1144,20 +1150,20 @@
       ];
 
       if (combined.length === 0) {
-        container.innerHTML = '<div class="text-slate-500 italic text-[11px] col-span-2">No metric tickers added. Click "+ Add Ticker" above to start measuring.</div>';
+        container.innerHTML = '<div class="text-slate-500 italic text-[11px] col-span-2">No metric tickers added. Click "+ Add Ticker" to start measuring.</div>';
         return;
       }
 
       container.innerHTML = combined.map(item => `
-        <div class="bg-slate-950 border border-slate-800 p-2.5 rounded-xl flex items-center justify-between">
+        <div class="bg-slate-950/80 border border-slate-800 p-2 rounded-xl flex items-center justify-between">
           <div class="min-w-0 pr-2">
             <span class="text-[9px] font-mono uppercase font-bold ${item.type === 'lead' ? 'text-amber-400' : 'text-teal-400'}">${item.type === 'lead' ? 'Lead' : 'Lag'}</span>
-            <div class="font-medium text-slate-200 truncate cursor-pointer hover:text-amber-300" onclick="editIndicatorName('${item.id}')">${escapeHtml(item.name)}</div>
+            <div class="font-medium text-slate-200 truncate cursor-pointer hover:text-amber-300 text-xs" onclick="editIndicatorName('${item.id}')">${escapeHtml(item.name)}</div>
           </div>
-          <div class="flex items-center gap-1.5 shrink-0 bg-slate-900 border border-slate-800 px-2 py-1 rounded-lg">
-            <button onclick="adjustIndicator('${item.id}', -1)" class="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-white font-bold bg-slate-800 rounded">-</button>
-            <span class="font-mono font-bold text-slate-100 text-xs px-1 cursor-pointer hover:text-amber-400" onclick="editIndicatorValues('${item.id}')" title="Click to set count/target">${item.current || 0} / ${item.target}</span>
-            <button onclick="adjustIndicator('${item.id}', 1)" class="w-6 h-6 flex items-center justify-center text-amber-400 hover:text-amber-300 font-bold bg-slate-800 rounded">+</button>
+          <div class="flex items-center gap-1 shrink-0 bg-slate-900 border border-slate-800 px-1.5 py-0.5 rounded-lg">
+            <button onclick="adjustIndicator('${item.id}', -1)" class="w-5 h-5 flex items-center justify-center text-slate-400 hover:text-white font-bold bg-slate-800 rounded">-</button>
+            <span class="font-mono font-bold text-slate-100 text-xs px-1 cursor-pointer hover:text-amber-400" onclick="editIndicatorValues('${item.id}')" title="Click to edit values">${item.current || 0} / ${item.target}</span>
+            <button onclick="adjustIndicator('${item.id}', 1)" class="w-5 h-5 flex items-center justify-center text-amber-400 hover:text-amber-300 font-bold bg-slate-800 rounded">+</button>
           </div>
         </div>
       `).join('');
@@ -1210,11 +1216,11 @@
       }
     }
 
+    // NON-NEGOTIABLES (PROMINENT HERO DESIGN + AUTOFILL PREVENTION)
     function renderDailyNonNegRows(list) {
       const container = document.getElementById('daily-nonneg-container');
       container.innerHTML = '';
 
-      // 2-5 Guardrail Indicator
       const warningEl = document.getElementById('daily-nonneg-warning');
       if (list.length > 5) {
         warningEl.classList.remove('hidden');
@@ -1224,20 +1230,21 @@
 
       list.forEach((item, idx) => {
         const div = document.createElement('div');
-        div.className = 'flex items-center gap-3 bg-slate-950 border border-slate-800 p-3 rounded-xl';
+        div.className = 'flex items-center gap-3 bg-slate-950 border border-slate-800 p-3.5 rounded-xl shadow-sm hover:border-slate-700 transition-colors';
         div.innerHTML = `
-          <input type="checkbox" ${item.done ? 'checked' : ''} onchange="toggleNonNegDone(${idx})" class="w-4 h-4 rounded text-amber-500 bg-slate-900 border-slate-700 cursor-pointer shrink-0" />
-          <input type="text" value="${escapeHtml(item.text)}" oninput="editNonNegText(${idx}, this.value)" class="bg-transparent flex-1 text-slate-200 outline-none text-xs font-medium ${item.done ? 'line-through text-slate-500' : ''}" />
+          <input type="checkbox" ${item.done ? 'checked' : ''} onchange="toggleNonNegDone(${idx})" class="w-5 h-5 rounded text-amber-500 bg-slate-900 border-slate-700 cursor-pointer shrink-0" />
+          <input type="text" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" name="nonneg_${idx}_${Date.now()}" value="${escapeHtml(item.text)}" oninput="editNonNegText(${idx}, this.value)" class="bg-transparent flex-1 text-slate-100 outline-none text-sm font-semibold tracking-wide ${item.done ? 'line-through text-slate-500' : ''}" />
           <button onclick="removeNonNeg(${idx})" class="text-slate-600 hover:text-rose-400 px-1 text-xs">✕</button>
         `;
         container.appendChild(div);
       });
 
+      // Big, actionable empty row at the bottom
       const emptyRow = document.createElement('div');
-      emptyRow.className = 'flex items-center gap-3 bg-slate-950/60 border border-dashed border-slate-800 p-3 rounded-xl';
+      emptyRow.className = 'flex items-center gap-3 bg-slate-950/40 border border-dashed border-slate-800 p-3.5 rounded-xl';
       emptyRow.innerHTML = `
-        <span class="text-slate-600 text-xs px-0.5">+</span>
-        <input type="text" placeholder="Add non-negotiable action... (Press Enter to spawn next)" onkeydown="handleAddNewNonNeg(event, this)" class="bg-transparent flex-1 text-slate-300 outline-none text-xs font-medium" />
+        <span class="text-slate-600 text-sm px-1 font-bold">+</span>
+        <input type="text" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" name="new_nonneg_entry" placeholder="Type non-negotiable action... (Press Enter to add)" onkeydown="handleAddNewNonNeg(event, this)" class="bg-transparent flex-1 text-slate-200 outline-none text-sm font-medium" />
       `;
       container.appendChild(emptyRow);
     }
@@ -1268,6 +1275,7 @@
       renderDailyPage();
     }
 
+    // SIDE QUESTS (OTHER TO-DOS WITH AUTOFILL PREVENTION)
     function renderDailyOtherRows(otherList) {
       const container = document.getElementById('daily-other-tasks-container');
       container.innerHTML = '';
@@ -1277,7 +1285,7 @@
         row.className = 'flex items-center gap-2 bg-slate-950 border border-slate-800 p-2.5 rounded-xl';
         row.innerHTML = `
           <input type="checkbox" ${item.done ? 'checked' : ''} onchange="toggleOtherDone(${idx})" class="w-4 h-4 rounded text-purple-500 bg-slate-900 border-slate-700 cursor-pointer shrink-0" />
-          <input type="text" value="${escapeHtml(item.text)}" oninput="editOtherText(${idx}, this.value)" class="bg-transparent flex-1 text-slate-200 outline-none text-xs ${item.done ? 'line-through text-slate-500' : ''}" />
+          <input type="text" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" name="sq_${idx}_${Date.now()}" value="${escapeHtml(item.text)}" oninput="editOtherText(${idx}, this.value)" class="bg-transparent flex-1 text-slate-200 outline-none text-xs ${item.done ? 'line-through text-slate-500' : ''}" />
           <span class="text-[10px] text-purple-400 font-mono">Side Quest</span>
           <button onclick="removeOtherTask(${idx})" class="text-slate-600 hover:text-rose-400 px-1 text-xs">✕</button>
         `;
@@ -1288,7 +1296,7 @@
       newRow.className = 'flex items-center gap-2 bg-slate-950/60 border border-dashed border-slate-800 p-2.5 rounded-xl';
       newRow.innerHTML = `
         <span class="text-slate-600 text-xs px-1">+</span>
-        <input type="text" placeholder="Add secondary side quest..." onkeydown="handleAddNewOtherOnEnter(event, this)" class="bg-transparent flex-1 text-slate-300 outline-none text-xs" />
+        <input type="text" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" name="sidequest_new_entry" placeholder="Add secondary side quest..." onkeydown="handleAddNewOtherOnEnter(event, this)" class="bg-transparent flex-1 text-slate-300 outline-none text-xs" />
       `;
       container.appendChild(newRow);
     }
@@ -1334,7 +1342,7 @@
     function updateDailyScore() {
       const dayData = state?.days?.[activeDateKey] || { nonneg: [], other: [] };
 
-      // 1. Main Quest Score (Purely non-negotiables, strict 85% rule)
+      // 1. Main Quest Score (Pure non-negotiables)
       const validNonNeg = (dayData.nonneg || []).filter(t => t.text.trim() !== '');
       const totalCount = validNonNeg.length;
       const doneCount = validNonNeg.filter(t => t.done).length;
@@ -1349,19 +1357,19 @@
       const label = document.getElementById('daily-score-label');
       if (mainPct === 100) {
         circle.setAttribute('class', 'text-emerald-400 score-radial');
-        label.textContent = '100% Flawless!';
-        label.className = 'text-xs font-mono text-emerald-400 font-bold';
+        label.textContent = '100% Complete!';
+        label.className = 'text-[10px] font-mono text-emerald-400 font-bold';
       } else if (mainPct >= 85) {
         circle.setAttribute('class', 'text-teal-400 score-radial');
-        label.textContent = 'Target Hit (85%+)';
-        label.className = 'text-xs font-mono text-teal-400 font-bold';
+        label.textContent = 'Target Met (85%+)';
+        label.className = 'text-[10px] font-mono text-teal-400 font-bold';
       } else {
         circle.setAttribute('class', 'text-amber-500 score-radial');
         label.textContent = 'Action Required';
-        label.className = 'text-xs font-mono text-amber-400/80';
+        label.className = 'text-[10px] font-mono text-amber-400/80';
       }
 
-      // 2. Side Quest 3-Star Rating (Separated from Main Quest score)
+      // 2. Side Quest 3-Star Rating
       const otherList = dayData.other || [];
       const otherTotal = otherList.length;
       const otherDone = otherList.filter(o => o.done).length;
@@ -1369,13 +1377,13 @@
       const starData = getStarRating(otherDone, otherTotal);
       const starDisplay = document.getElementById('daily-stars-display');
       starDisplay.textContent = starData.stars;
-      starDisplay.className = `text-xl tracking-wider ${starData.color}`;
+      starDisplay.className = `text-lg tracking-wider ${starData.color}`;
 
       const starBadge = document.getElementById('daily-stars-badge');
       starBadge.textContent = starData.badge;
-      starBadge.className = `text-xs font-mono font-bold ${starData.color}`;
+      starBadge.className = `text-[10px] font-mono font-bold ${starData.color}`;
 
-      document.getElementById('daily-stars-ratio').textContent = `${otherDone}/${otherTotal} done (${starData.pct}%)`;
+      document.getElementById('daily-stars-ratio').textContent = `${otherDone}/${otherTotal} (${starData.pct}%)`;
     }
 
     function logBlockToday(type) {
