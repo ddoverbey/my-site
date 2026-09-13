@@ -16,28 +16,40 @@
   <div class="w-full max-w-4xl space-y-4 pb-24">
     
     <!-- Top Persistent Navigation Bar -->
-    <nav id="app-nav" class="flex items-center justify-between border-b border-slate-800 pb-3">
+    <nav id="app-nav" class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
       <div class="flex items-center gap-2">
         <span class="text-lg">⚡</span>
         <span class="font-mono font-bold text-sm tracking-wider text-white">12-WEEK YEAR</span>
         <span id="nav-week-badge" class="text-[11px] font-mono font-bold bg-amber-500/10 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded">Wk 1 / 12</span>
       </div>
 
-      <!-- View Switcher -->
-      <div class="flex items-center gap-1 bg-slate-900 border border-slate-800 p-1 rounded-xl text-xs">
-        <button onclick="switchView('daily')" id="tab-daily" class="px-3 py-1 rounded-lg font-semibold transition-colors bg-amber-500 text-black">Today</button>
-        <button onclick="switchView('overview')" id="tab-overview" class="px-3 py-1 rounded-lg font-semibold text-slate-400 hover:text-white transition-colors">Overview</button>
-        <button onclick="switchView('review')" id="tab-review" class="px-3 py-1 rounded-lg font-semibold text-slate-400 hover:text-white transition-colors">Review</button>
-        <button onclick="switchView('guide')" id="tab-guide" class="px-3 py-1 rounded-lg font-semibold text-slate-400 hover:text-white transition-colors">Guide</button>
+      <div class="flex items-center gap-2">
+        <!-- View Switcher -->
+        <div class="flex items-center gap-1 bg-slate-900 border border-slate-800 p-1 rounded-xl text-xs">
+          <button onclick="switchView('daily')" id="tab-daily" class="px-3 py-1 rounded-lg font-semibold transition-colors bg-amber-500 text-black">Today</button>
+          <button onclick="switchView('overview')" id="tab-overview" class="px-3 py-1 rounded-lg font-semibold text-slate-400 hover:text-white transition-colors">Overview</button>
+          <button onclick="switchView('review')" id="tab-review" class="px-3 py-1 rounded-lg font-semibold text-slate-400 hover:text-white transition-colors">Review</button>
+          <button onclick="switchView('guide')" id="tab-guide" class="px-3 py-1 rounded-lg font-semibold text-slate-400 hover:text-white transition-colors">Guide</button>
+        </div>
+
+        <!-- Account & Cloud Sync Modal Trigger -->
+        <button 
+          id="btn-auth-header" 
+          onclick="toggleAuthModal(true)" 
+          class="bg-slate-900 hover:bg-slate-800 border border-slate-800 p-2 rounded-xl text-xs font-semibold transition-colors relative flex items-center justify-center text-slate-300"
+          title="Account & Cloud Sync"
+        >
+          <span>☁️</span>
+          <span id="sync-status-dot" class="absolute top-1 right-1 w-2 h-2 rounded-full bg-slate-500"></span>
+        </button>
       </div>
     </nav>
 
 
     <!-- =========================================================================
-         VIEW 1: THE GUIDED INTERACTIVE WALKTHROUGH (Default when new, accessible anytime)
+         VIEW 1: THE GUIDED INTERACTIVE WALKTHROUGH
          ========================================================================= -->
     <section id="view-guide" class="py-4 space-y-5">
-      <!-- Wizard Progress Header -->
       <div class="space-y-1.5">
         <div class="flex items-center justify-between text-xs font-mono text-slate-400">
           <span id="wiz-phase-title" class="text-amber-400 font-bold uppercase">Phase 1: Timeline</span>
@@ -125,10 +137,9 @@
               <input id="wiz-chunk-goal" type="text" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none font-bold" />
             </div>
 
-            <!-- Dynamic Leading Indicators -->
             <div>
               <div class="flex items-center justify-between mb-1">
-                <label class="font-semibold text-slate-300">Leading Indicators (Daily/Weekly actions you control)</label>
+                <label class="font-semibold text-slate-300">Leading Indicators (Actions you 100% control)</label>
                 <span class="text-[10px] text-slate-500">Auto-adds new line</span>
               </div>
               <div id="wiz-lead-container" class="space-y-1.5">
@@ -136,7 +147,6 @@
               </div>
             </div>
 
-            <!-- Dynamic Lagging Indicators -->
             <div>
               <div class="flex items-center justify-between mb-1">
                 <label class="font-semibold text-slate-300">Lagging Indicators (Results measured)</label>
@@ -153,7 +163,7 @@
         <div id="step-6" class="wiz-step space-y-4 hidden">
           <div>
             <h2 class="text-xl font-bold text-white">Week 1 Tactical Plan</h2>
-            <p class="text-xs text-slate-400 mt-1">Tactics drive attainment. <strong>Every tactic must start with a verb</strong>.</p>
+            <p class="text-xs text-slate-400 mt-1">Tactics are the actions that drive attainment. <strong>Every tactic must start with a verb</strong>.</p>
           </div>
           <div class="space-y-3 text-xs">
             <div>
@@ -168,9 +178,8 @@
               <input id="wiz-w1-t3" type="text" placeholder="Tactic 3 (Start with a verb)" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none" />
             </div>
 
-            <!-- Dynamic Additional Weekly Checklists -->
             <div>
-              <label class="block font-semibold text-slate-300 mb-1">Additional Weekly Checklists (Optional)</label>
+              <label class="block font-semibold text-slate-300 mb-1">Additional Weekly Checklists / To-Dos (Optional)</label>
               <div id="wiz-w1-other-container" class="space-y-1.5">
                 <input type="text" oninput="handleAutoRow(this, 'wiz-w1-other-container')" placeholder="Additional weekly task..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none" />
               </div>
@@ -207,7 +216,6 @@
               </div>
             </div>
 
-            <!-- Dynamic Other To-Dos -->
             <div>
               <label class="block font-semibold text-slate-300 mb-1">Other Tasks for this day (Optional)</label>
               <div id="catchup-other-container" class="space-y-1.5">
@@ -259,7 +267,7 @@
         <button onclick="navigateDay(1)" class="p-1 text-slate-400 hover:text-white transition-colors">Next Day →</button>
       </div>
 
-      <!-- Today's Execution Score Card (Turns Green at 85%, Bright Emerald at 100%) -->
+      <!-- Today's Execution Score Card -->
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex items-center justify-between shadow-lg">
         <div>
           <span class="text-[11px] font-mono uppercase tracking-wider text-slate-400 font-semibold">Daily Execution Score</span>
@@ -270,7 +278,6 @@
           <p class="text-[10px] text-slate-500 mt-1">85%+ turns green • 100% turns bright emerald</p>
         </div>
 
-        <!-- Radial Gauge -->
         <div class="relative w-16 h-16 flex items-center justify-center shrink-0">
           <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
             <path class="text-slate-800" stroke-width="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
@@ -316,13 +323,11 @@
 
       <!-- Appointments & Performance Time Blocks -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <!-- Appointments -->
         <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-2">
           <span class="text-xs font-bold text-slate-300 uppercase tracking-wider font-mono">Appointments / Calendar</span>
           <textarea id="daily-appts" oninput="saveCurrentDay()" rows="3" placeholder="e.g. 2:00 PM Strategy call..." class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-200 outline-none leading-relaxed"></textarea>
         </div>
 
-        <!-- Performance Time Quick Tally -->
         <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-2 flex flex-col justify-between">
           <div>
             <span class="text-xs font-bold text-slate-300 uppercase tracking-wider font-mono">Log Time Blocks Today</span>
@@ -346,7 +351,7 @@
 
 
     <!-- =========================================================================
-         VIEW 3: THE RESTORED MASTER OVERVIEW DASHBOARD
+         VIEW 3: THE MASTER OVERVIEW DASHBOARD
          ========================================================================= -->
     <section id="view-overview" class="space-y-6 hidden">
       
@@ -411,7 +416,7 @@
       <!-- Execution Scorecard & Time Blocks -->
       <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
         
-        <!-- Weekly Execution Scorecard (Target: 85%+) -->
+        <!-- Weekly Execution Scorecard -->
         <div class="md:col-span-5 bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col justify-between shadow-sm">
           <div class="flex items-center justify-between border-b border-slate-800 pb-3">
             <div>
@@ -563,8 +568,108 @@
 
   </div>
 
+  <!-- =========================================================================
+       MODAL: ACCOUNT & SUPABASE CLOUD SYNC
+       ========================================================================= -->
+  <div id="auth-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-[#14201b] border border-[#283e35] rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-[#283e35] pb-3">
+        <h3 class="font-bold text-sm text-[#f4ede4]">Account & Cloud Sync</h3>
+        <button onclick="toggleAuthModal(false)" class="text-[#8da498] hover:text-[#f4ede4] text-sm">✕</button>
+      </div>
+
+      <!-- Logged-In View -->
+      <div id="auth-view-logged-in" class="hidden space-y-4">
+        <div class="bg-[#0b1210] border border-[#283e35] rounded-xl p-3 text-xs text-[#a3b8ad] space-y-1">
+          <div class="flex items-center justify-between">
+            <span class="text-emerald-400 font-medium flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse"></span> Cloud Active
+            </span>
+            <span id="auth-current-email" class="text-[#f4ede4] font-mono text-[11px] truncate max-w-[150px]"></span>
+          </div>
+          <p class="text-[11px] text-[#6b8276] pt-1">Your 12-week year plan, daily items, and reviews are synced to your cloud account.</p>
+        </div>
+
+        <button 
+          type="button"
+          onclick="syncToCloud(true)" 
+          class="w-full bg-[#1c2d26] hover:bg-[#253d33] text-teal-300 py-2 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-2 border border-[#2e473d]"
+        >
+          <span>🔄</span> Force Cloud Sync Now
+        </button>
+
+        <button 
+          type="button"
+          onclick="handleLogout()" 
+          class="w-full bg-[#241710] hover:bg-[#342217] text-[#ea580c] py-2 rounded-lg text-xs font-semibold transition-colors border border-[#ea580c]/30"
+        >
+          Sign Out
+        </button>
+      </div>
+
+      <!-- Logged-Out View -->
+      <div id="auth-view-logged-out" class="space-y-4">
+        <div class="bg-[#0b1210] border border-[#283e35] rounded-xl p-3 text-xs text-[#a3b8ad]">
+          <p>Sign in with your central account to sync your 12-Week Year plan across phone, tablet, and desktop.</p>
+        </div>
+
+        <div class="space-y-3">
+          <div>
+            <label class="block text-xs font-semibold text-[#a3b8ad] uppercase tracking-wider mb-1">Email</label>
+            <input id="auth-email" type="email" placeholder="you@domain.com" class="w-full bg-[#0b1210] border border-[#283e35] rounded-lg px-3 py-2 text-sm text-emerald-100 focus:outline-none focus:border-teal-500" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-[#a3b8ad] uppercase tracking-wider mb-1">Password</label>
+            <input id="auth-password" type="password" placeholder="••••••••" class="w-full bg-[#0b1210] border border-[#283e35] rounded-lg px-3 py-2 text-sm text-emerald-100 focus:outline-none focus:border-teal-500" />
+          </div>
+
+          <div id="auth-error-msg" class="text-xs text-[#ea580c] hidden"></div>
+
+          <div class="grid grid-cols-2 gap-2 pt-1">
+            <button 
+              type="button" 
+              onclick="handleLogin()" 
+              class="w-full bg-[#115e59] hover:bg-[#0f766e] text-white py-2 rounded-lg text-xs font-semibold transition-colors border border-teal-500/30"
+            >
+              Sign In
+            </button>
+            <button 
+              type="button" 
+              onclick="handleSignUp()" 
+              class="w-full bg-[#1c2d26] hover:bg-[#253d33] text-teal-300 py-2 rounded-lg text-xs font-semibold transition-colors border border-[#2e473d]"
+            >
+              Create Account
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Offline JSON Portability Tools -->
+      <div class="border-t border-[#283e35] pt-3 space-y-2">
+        <div class="text-[11px] text-[#6b8276] uppercase font-semibold">Offline Backup</div>
+        <div class="grid grid-cols-2 gap-2">
+          <button onclick="exportData()" class="bg-[#131f1a] hover:bg-[#1c2d26] text-slate-300 py-1.5 rounded-lg text-[11px] transition-colors border border-[#23352e]">
+            📥 Export JSON
+          </button>
+          <label class="bg-[#131f1a] hover:bg-[#1c2d26] text-slate-300 py-1.5 rounded-lg text-[11px] transition-colors border border-[#23352e] text-center cursor-pointer">
+            📤 Import JSON
+            <input type="file" id="import-json-file" accept=".json" class="hidden" onchange="importData(event)" />
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
+    /* =========================================================================
+       SUPABASE CONFIGURATION & CONSTANTS
+       ========================================================================= */
+    const SUPABASE_URL = 'https://mrgdthihogxrqsfnknxd.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1yZ2R0aGlob2d4cnFzZm5rbnhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyNDk4NTYsImV4cCI6MjEwNDgyNTg1Nn0.1fwcaGPGrzUut3zng2NNkYZt7hUguhKPhfqYyu8MA3s';
+
     const STORAGE_KEY = 'twelve_week_year_v5';
+    const AUTH_SESSION_KEY = 'twelve_week_cloud_session';
 
     function getLocalTodayDate() {
       const d = new Date();
@@ -588,6 +693,176 @@
 
     function saveState() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      syncToCloud(false);
+    }
+
+    /* =========================================================================
+       NATIVE REST SUPABASE AUTH & CLOUD SYNC
+       ========================================================================= */
+    let cloudSession = JSON.parse(localStorage.getItem(AUTH_SESSION_KEY) || 'null');
+
+    function toggleAuthModal(show) {
+      document.getElementById('auth-modal').classList.toggle('hidden', !show);
+    }
+
+    function updateAuthUI() {
+      const dot = document.getElementById('sync-status-dot');
+      const loggedInView = document.getElementById('auth-view-logged-in');
+      const loggedOutView = document.getElementById('auth-view-logged-out');
+      const emailEl = document.getElementById('auth-current-email');
+
+      if (cloudSession && cloudSession.user) {
+        if (dot) dot.className = 'absolute top-1 right-1 w-2 h-2 rounded-full bg-emerald-400';
+        if (emailEl) emailEl.textContent = cloudSession.user.email;
+        if (loggedInView) loggedInView.classList.remove('hidden');
+        if (loggedOutView) loggedOutView.classList.add('hidden');
+      } else {
+        if (dot) dot.className = 'absolute top-1 right-1 w-2 h-2 rounded-full bg-slate-500';
+        if (loggedInView) loggedInView.classList.add('hidden');
+        if (loggedOutView) loggedOutView.classList.remove('hidden');
+      }
+    }
+
+    async function handleLogin() {
+      if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+        return alert('Supabase credentials not configured.');
+      }
+
+      const email = document.getElementById('auth-email').value.trim();
+      const password = document.getElementById('auth-password').value;
+      const errEl = document.getElementById('auth-error-msg');
+      errEl.classList.add('hidden');
+
+      try {
+        const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY
+          },
+          body: JSON.stringify({ email, password })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error_description || data.msg || data.message || 'Login failed');
+
+        cloudSession = data;
+        localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(cloudSession));
+        updateAuthUI();
+        await loadFromCloud();
+        toggleAuthModal(false);
+      } catch (err) {
+        errEl.textContent = err.message;
+        errEl.classList.remove('hidden');
+      }
+    }
+
+    async function handleSignUp() {
+      if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+        return alert('Supabase credentials not configured.');
+      }
+
+      const email = document.getElementById('auth-email').value.trim();
+      const password = document.getElementById('auth-password').value;
+      const errEl = document.getElementById('auth-error-msg');
+      errEl.classList.add('hidden');
+
+      try {
+        const res = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY
+          },
+          body: JSON.stringify({ email, password })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.msg || data.message || 'Sign up failed');
+
+        if (data.session) {
+          cloudSession = data.session;
+          localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(cloudSession));
+          updateAuthUI();
+          await syncToCloud(true);
+        } else {
+          alert('Account created! Please check your email for confirmation if enabled on your project.');
+        }
+        toggleAuthModal(false);
+      } catch (err) {
+        errEl.textContent = err.message;
+        errEl.classList.remove('hidden');
+      }
+    }
+
+    function handleLogout() {
+      cloudSession = null;
+      localStorage.removeItem(AUTH_SESSION_KEY);
+      updateAuthUI();
+      toggleAuthModal(false);
+    }
+
+    async function syncToCloud(notify = false) {
+      if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !cloudSession || !cloudSession.access_token) return;
+
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/twelve_week_plans`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${cloudSession.access_token}`,
+            'Prefer': 'resolution=merge-duplicates'
+          },
+          body: JSON.stringify({
+            user_id: cloudSession.user.id,
+            state: state,
+            updated_at: new Date().toISOString()
+          })
+        });
+
+        if (!res.ok) {
+          const errData = await res.json();
+          console.warn('Sync failed:', errData);
+          if (notify) alert('Sync error: ' + (errData.message || 'Failed'));
+        } else if (notify) {
+          alert('12-Week Year successfully synced to cloud!');
+        }
+      } catch (e) {
+        console.warn('Sync network error:', e);
+      }
+    }
+
+    async function loadFromCloud() {
+      if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !cloudSession || !cloudSession.access_token) return;
+
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/twelve_week_plans?user_id=eq.${cloudSession.user.id}&select=*`, {
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${cloudSession.access_token}`
+          }
+        });
+
+        if (res.ok) {
+          const records = await res.json();
+          if (records && records.length > 0 && records[0].state) {
+            state = records[0].state;
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            
+            if (state.hasCompletedOnboarding) {
+              switchView('daily');
+            } else {
+              switchView('guide');
+            }
+          } else {
+            // First login: upload existing local state
+            await syncToCloud(false);
+          }
+        }
+      } catch (e) {
+        console.warn('Load cloud error:', e);
+      }
     }
 
     /* =========================================================================
@@ -737,7 +1012,7 @@
           document.getElementById('wiz-g5').value.trim()
         ].filter(Boolean);
 
-        if (goals.length === 0) return alert('Please write at least 1 goal.');
+        if (goals.length === 0) return alert('Please enter at least 1 goal.');
 
         const group = document.getElementById('wiz-goal-radio-group');
         group.innerHTML = goals.map((g, idx) => `
@@ -1039,32 +1314,27 @@
     function renderOverviewPage() {
       const timeline = getCycleTimeline();
 
-      // Cycle header & badges
       document.getElementById('ov-badge-current-week').textContent = timeline.isReviewWeek 
         ? 'Week 13 / 13 (Review Week)' 
         : `Week ${timeline.currentWeek} / 12`;
       document.getElementById('ov-cycle-dates-label').textContent = `${timeline.startDateFormatted} → ${timeline.endDateFormatted} (${84 - timeline.currentDay} days remaining)`;
       document.getElementById('ov-label-cycle-days').textContent = `Day ${timeline.currentDay} of 84`;
 
-      // Keystone goal & why
       document.getElementById('ov-keystone-goal-text').textContent = state.keystoneGoal || 'Keystone Goal';
       document.getElementById('ov-keystone-why-text').textContent = state.why ? `Why: ${state.why}` : 'Connect your vision...';
       document.getElementById('ov-why-full').textContent = state.why || 'None specified';
       document.getElementById('ov-inaction-full').textContent = state.inaction || 'None specified';
 
-      // Indicators
       const leadList = document.getElementById('ov-lead-list-full');
       leadList.innerHTML = (state.leadingIndicators || []).map(i => `<li>${escapeHtml(i)}</li>`).join('') || '<li class="text-slate-600">None</li>';
 
       const lagList = document.getElementById('ov-lag-list-full');
       lagList.innerHTML = (state.laggingIndicators || []).map(i => `<li>${escapeHtml(i)}</li>`).join('') || '<li class="text-slate-600">None</li>';
 
-      // Blocks
       document.getElementById('ov-count-strategic').textContent = state.blocks?.strategic || 0;
       document.getElementById('ov-count-buffer').textContent = state.blocks?.buffer || 0;
       document.getElementById('ov-count-breakout').textContent = state.blocks?.breakout || 0;
 
-      // Tactics List & Weekly Scorecard Gauge
       document.getElementById('ov-tactics-header-title').textContent = `Tactics for Week ${timeline.currentWeek}`;
       document.getElementById('ov-week-nonneg-text').textContent = state.week1Goal ? `Non-negotiable: ${state.week1Goal}` : '';
 
@@ -1093,7 +1363,6 @@
         badge.className = 'text-xs font-bold font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700';
       }
 
-      // Render full tactics checklist
       const tacticsEl = document.getElementById('ov-tactics-full-list');
       tacticsEl.innerHTML = activeTactics.map((t, idx) => `
         <div class="flex items-center justify-between p-3 bg-slate-950 border ${t.done ? 'border-slate-800/60 opacity-60' : 'border-slate-800'} rounded-xl transition-all">
@@ -1146,6 +1415,40 @@
     }
 
     /* =========================================================================
+       BACKUP EXPORT / IMPORT
+       ========================================================================= */
+    function exportData() {
+      const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `12wy_backup_${formatDateKey(getLocalTodayDate())}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importData(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = JSON.parse(e.target.result);
+          if (data && data.hasCompletedOnboarding !== undefined) {
+            state = data;
+            saveState();
+            alert('Plan successfully imported!');
+            toggleAuthModal(false);
+            switchView(state.hasCompletedOnboarding ? 'daily' : 'guide');
+          }
+        } catch (err) {
+          alert('Invalid backup JSON file.');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    /* =========================================================================
        VIEW ROUTER
        ========================================================================= */
     function switchView(viewName) {
@@ -1163,6 +1466,13 @@
           }
         }
       });
+
+      // Update Header badge
+      const timeline = getCycleTimeline();
+      const badge = document.getElementById('nav-week-badge');
+      if (badge) {
+        badge.textContent = timeline.isReviewWeek ? 'Wk 13 / 13' : `Wk ${timeline.currentWeek} / 12`;
+      }
 
       if (viewName === 'daily') renderDailyPage();
       if (viewName === 'overview') renderOverviewPage();
@@ -1182,8 +1492,11 @@
     document.getElementById('wiz-start-date').value = '2026-09-07';
 
     // INITIALIZATION LOGIC:
-    // If onboarding is NOT completed, open directly in the Guide.
-    // If onboarding IS completed, land directly on Daily.
+    updateAuthUI();
+    if (cloudSession) {
+      loadFromCloud();
+    }
+
     if (!state || !state.hasCompletedOnboarding) {
       state = { hasCompletedOnboarding: false };
       wizStep = 1;
