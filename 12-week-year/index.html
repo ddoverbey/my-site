@@ -28,6 +28,7 @@
       <div class="flex items-center gap-2">
         <div class="flex items-center gap-1 bg-slate-900 border border-slate-800 p-1 rounded-xl text-xs">
           <button onclick="switchView('daily')" id="tab-daily" class="px-3 py-1 rounded-lg font-semibold transition-colors bg-amber-500 text-black">Today</button>
+          <button onclick="switchView('week')" id="tab-week" class="px-3 py-1 rounded-lg font-semibold text-slate-400 hover:text-white transition-colors">This Week</button>
           <button onclick="switchView('overview')" id="tab-overview" class="px-3 py-1 rounded-lg font-semibold text-slate-400 hover:text-white transition-colors">Overview</button>
           <button onclick="switchView('review')" id="tab-review" class="px-3 py-1 rounded-lg font-semibold text-slate-400 hover:text-white transition-colors">Review</button>
           <button onclick="switchView('guide')" id="tab-guide" class="px-3 py-1 rounded-lg font-semibold text-slate-400 hover:text-white transition-colors">Guide</button>
@@ -275,7 +276,7 @@
           </div>
           <div id="daily-banner-week-goal" class="text-sm sm:text-base font-bold text-slate-100 truncate">Ship MVP</div>
         </div>
-        <button onclick="switchView('overview')" class="text-xs text-slate-400 hover:text-amber-300 font-mono transition-colors shrink-0 ml-3">12WY Overview →</button>
+        <button onclick="switchView('week')" class="text-xs text-slate-400 hover:text-amber-300 font-mono transition-colors shrink-0 ml-3">This Week →</button>
       </div>
 
       <!-- Date Controller Bar -->
@@ -380,7 +381,88 @@
     </section>
 
     <!-- =========================================================================
-         VIEW 3: MASTER OVERVIEW DASHBOARD
+         VIEW 3: THIS WEEK DASHBOARD
+         ========================================================================= -->
+    <section id="view-week" class="space-y-6 hidden">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <h2 class="text-2xl font-bold tracking-tight text-white font-mono">THIS WEEK</h2>
+            <span id="wk-badge-current-week" class="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs px-2 py-0.5 rounded font-mono font-bold">Week 1 / 12</span>
+          </div>
+          <p id="wk-dates-label" class="text-xs text-slate-400 mt-1 font-mono"></p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="switchView('daily')" class="bg-amber-500 hover:bg-amber-400 text-black px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">← Back to Daily</button>
+          <button onclick="switchView('overview')" class="bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors">12WY Overview →</button>
+        </div>
+      </div>
+
+      <!-- Weekly Tactical Scoreboard -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
+        <div class="flex flex-wrap items-center justify-between border-b border-slate-800 pb-3 gap-2">
+          <div>
+            <div class="flex items-center gap-2">
+              <h3 class="text-xs font-bold text-slate-300 uppercase font-mono">Weekly Main Quest Tactics</h3>
+              <span class="text-[10px] font-mono text-slate-400 bg-slate-800 px-2 py-0.5 rounded">Recommended: 2-5 max</span>
+            </div>
+            <p id="wk-week-nonneg-text" class="text-[11px] text-amber-400 font-medium truncate mt-0.5"></p>
+          </div>
+          <div class="flex items-center gap-2">
+            <span id="wk-tactics-warning" class="hidden text-[10px] font-mono text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded">⚠️ 6+ items - Focus dilution risk</span>
+            <button onclick="promptNewTactic()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded">+ Add Tactic</button>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+          <div class="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 flex items-center justify-between">
+            <div>
+              <span class="block text-[9px] uppercase tracking-wider font-mono text-slate-500">Weekly Non-Negotiables</span>
+              <span id="wk-weekly-nonneg-pct" class="font-mono text-xl font-black text-slate-200">0%</span>
+              <span id="wk-weekly-nonneg-count" class="ml-1 text-[10px] font-mono text-slate-500">0 / 0 done</span>
+            </div>
+            <div class="relative w-14 h-14 flex items-center justify-center shrink-0">
+              <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                <path class="text-slate-800" stroke-width="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                <path id="wk-weekly-nonneg-circle" class="text-slate-500 score-radial" stroke-width="3.5" stroke-dasharray="100, 100" stroke-dashoffset="100" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              </svg>
+            </div>
+          </div>
+          <div class="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 flex items-center justify-between">
+            <div>
+              <span class="block text-[9px] uppercase tracking-wider font-mono text-slate-500">Daily Average</span>
+              <span id="wk-daily-average-pct" class="font-mono text-xl font-black text-slate-200">0%</span>
+              <span id="wk-daily-average-count" class="ml-1 text-[10px] font-mono text-slate-500">0 logged days</span>
+            </div>
+            <div class="relative w-14 h-14 flex items-center justify-center shrink-0">
+              <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                <path class="text-slate-800" stroke-width="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                <path id="wk-daily-average-circle" class="text-slate-500 score-radial" stroke-width="3.5" stroke-dasharray="100, 100" stroke-dashoffset="100" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              </svg>
+            </div>
+          </div>
+        </div>
+        <div id="wk-tactics-full-list" class="space-y-2 text-xs"></div>
+      </div>
+
+      <!-- Weekly Side Quest Star Summary -->
+      <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
+        <div>
+          <span class="text-[10px] font-mono uppercase tracking-wider text-purple-400 font-bold">This Week's Side Quests</span>
+          <div class="flex items-center gap-2 mt-1">
+            <span id="wk-week-stars-display" class="text-2xl text-slate-600">☆☆☆</span>
+            <span id="wk-week-stars-badge" class="font-bold text-slate-400 text-xs">None</span>
+          </div>
+          <span id="wk-week-stars-ratio" class="text-[11px] text-slate-400 mt-0.5 block font-mono">0 / 0 cleared this week</span>
+        </div>
+        <div class="text-right font-mono">
+          <span class="text-xl font-black text-purple-300" id="wk-week-stars-pct">0%</span>
+          <span class="block text-[9px] text-slate-500 uppercase">Clear Rate</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================================
+         VIEW 4: MASTER OVERVIEW DASHBOARD (Full 12-Week Cycle)
          ========================================================================= -->
     <section id="view-overview" class="space-y-6 hidden">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
@@ -408,74 +490,22 @@
         </div>
       </section>
 
-      <!-- Weekly Tactical Scoreboard -->
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
-        <div class="flex flex-wrap items-center justify-between border-b border-slate-800 pb-3 gap-2">
-          <div>
-            <div class="flex items-center gap-2">
-              <h3 class="text-xs font-bold text-slate-300 uppercase font-mono">Weekly Main Quest Tactics</h3>
-              <span class="text-[10px] font-mono text-slate-400 bg-slate-800 px-2 py-0.5 rounded">Recommended: 2-5 max</span>
-            </div>
-            <p id="ov-week-nonneg-text" class="text-[11px] text-amber-400 font-medium truncate mt-0.5"></p>
-          </div>
-          <div class="flex items-center gap-2">
-            <span id="ov-tactics-warning" class="hidden text-[10px] font-mono text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded">⚠️ 6+ items - Focus dilution risk</span>
-            <button onclick="promptNewTactic()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded">+ Add Tactic</button>
-          </div>
-        </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-          <div class="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 flex items-center justify-between">
-            <div>
-              <span class="block text-[9px] uppercase tracking-wider font-mono text-slate-500">Weekly Non-Negotiables</span>
-              <span id="ov-weekly-nonneg-pct" class="font-mono text-xl font-black text-slate-200">0%</span>
-              <span id="ov-weekly-nonneg-count" class="ml-1 text-[10px] font-mono text-slate-500">0 / 0 done</span>
-            </div>
-            <div class="relative w-14 h-14 flex items-center justify-center shrink-0">
-              <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                <path class="text-slate-800" stroke-width="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                <path id="ov-weekly-nonneg-circle" class="text-slate-500 score-radial" stroke-width="3.5" stroke-dasharray="100, 100" stroke-dashoffset="100" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-              </svg>
-            </div>
-          </div>
-          <div class="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 flex items-center justify-between">
-            <div>
-              <span class="block text-[9px] uppercase tracking-wider font-mono text-slate-500">Daily Average</span>
-              <span id="ov-daily-average-pct" class="font-mono text-xl font-black text-slate-200">0%</span>
-              <span id="ov-daily-average-count" class="ml-1 text-[10px] font-mono text-slate-500">0 logged days</span>
-            </div>
-            <div class="relative w-14 h-14 flex items-center justify-center shrink-0">
-              <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                <path class="text-slate-800" stroke-width="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                <path id="ov-daily-average-circle" class="text-slate-500 score-radial" stroke-width="3.5" stroke-dasharray="100, 100" stroke-dashoffset="100" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-              </svg>
-            </div>
-          </div>
-        </div>
-        <div id="ov-tactics-full-list" class="space-y-2 text-xs"></div>
-      </div>
-
-      <!-- Weekly Side Quest Star Summary & Total 12WY Record -->
+      <!-- 12-Week Totals -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
         <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 flex items-center justify-between">
           <div>
-            <span class="text-[10px] font-mono uppercase tracking-wider text-purple-400 font-bold">This Week's Side Quests</span>
-            <div class="flex items-center gap-2 mt-1">
-              <span id="ov-week-stars-display" class="text-2xl text-slate-600">☆☆☆</span>
-              <span id="ov-week-stars-badge" class="font-bold text-slate-400 text-xs">None</span>
-            </div>
-            <span id="ov-week-stars-ratio" class="text-[11px] text-slate-400 mt-0.5 block font-mono">0 / 0 cleared across all days</span>
+            <span class="text-[10px] font-mono uppercase tracking-wider text-amber-400 font-bold">12WY Main Quest Completion</span>
+            <div class="text-2xl font-black text-amber-300 font-mono mt-1" id="ov-total-nonneg-pct">0%</div>
+            <p id="ov-total-nonneg-count" class="text-[10px] text-slate-500 mt-0.5">0 / 0 non-negotiables done</p>
           </div>
-          <div class="text-right font-mono">
-            <span class="text-xl font-black text-purple-300" id="ov-week-stars-pct">0%</span>
-            <span class="block text-[9px] text-slate-500 uppercase">Clear Rate</span>
-          </div>
+          <span class="text-3xl">🔥</span>
         </div>
 
         <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 flex items-center justify-between">
           <div>
-            <span class="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-bold">Total 12WY Side Quests Cleared</span>
-            <div class="text-2xl font-black text-amber-400 font-mono mt-1" id="ov-total-sidequests-count">0</div>
-            <p class="text-[10px] text-slate-500 mt-0.5">Cumulative bonus items completed all cycle</p>
+            <span class="text-[10px] font-mono uppercase tracking-wider text-purple-400 font-bold">12WY Side Quests Cleared</span>
+            <div class="text-2xl font-black text-purple-300 font-mono mt-1" id="ov-total-sidequests-count">0</div>
+            <p id="ov-total-sidequests-sub" class="text-[10px] text-slate-500 mt-0.5">0 / 0 bonus items completed</p>
           </div>
           <span class="text-3xl">🏆</span>
         </div>
@@ -550,7 +580,7 @@
     </section>
 
     <!-- =========================================================================
-         VIEW 4: SUNDAY / MONDAY REVIEW
+         VIEW 5: SUNDAY / MONDAY REVIEW
          ========================================================================= -->
     <section id="view-review" class="space-y-6 hidden">
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-5 shadow-2xl">
@@ -1579,7 +1609,8 @@
         const [moved] = list.splice(srcIndex, 1);
         list.splice(dropIndex, 0, moved);
         saveState();
-        if (listType === 'tactics' || listType === 'lead' || listType === 'lag') renderOverviewPage();
+        if (listType === 'tactics') renderWeekPage();
+        else if (listType === 'lead' || listType === 'lag') renderOverviewPage();
         else renderDailyPage();
       }
       draggedItemInfo = null;
@@ -1768,7 +1799,7 @@
       alert(`+1 ${type.toUpperCase()} block logged for this week!`);
     }
 
-    /* OVERVIEW MANAGEMENT */
+    /* OVERVIEW MANAGEMENT (Full 12-Week Cycle) */
     function renderOverviewPage() {
       const timeline = getCycleTimeline();
       document.getElementById('ov-badge-current-week').textContent = timeline.isReviewWeek ? 'Week 13 (Review)' : `Week ${timeline.currentWeek} / 12`;
@@ -1778,21 +1809,61 @@
       document.getElementById('ov-keystone-goal-text').textContent = state?.keystoneGoal || 'Keystone Goal';
       document.getElementById('ov-keystone-why-text').textContent = state?.why ? `Why: ${state.why}` : '';
 
-      calculateWeeklySideQuestStats();
-      renderWeeklyNonNegStats(timeline);
+      calculateCycleTotals();
 
       renderIndicatorOverviewList('ov-lead-items-container', state?.leadingIndicators || [], 'lead');
       renderIndicatorOverviewList('ov-lag-items-container', state?.laggingIndicators || [], 'lag');
 
+      renderStatsPies();
+    }
+
+    function calculateCycleTotals() {
+      let totalNonNeg = 0;
+      let doneNonNeg = 0;
+      let totalOther = 0;
+      let doneOther = 0;
+
+      Object.values(state?.days || {}).forEach(day => {
+        const tasks = (day.nonneg || []).filter(t => t.text.trim() !== '');
+        totalNonNeg += tasks.length;
+        doneNonNeg += tasks.filter(t => t.done).length;
+
+        const other = day.other || [];
+        totalOther += other.length;
+        doneOther += other.filter(o => o.done).length;
+      });
+
+      const nonNegPct = totalNonNeg > 0 ? Math.round((doneNonNeg / totalNonNeg) * 100) : 0;
+      document.getElementById('ov-total-nonneg-pct').textContent = `${nonNegPct}%`;
+      document.getElementById('ov-total-nonneg-count').textContent = `${doneNonNeg} / ${totalNonNeg} non-negotiables done`;
+      document.getElementById('ov-total-sidequests-count').textContent = doneOther;
+      document.getElementById('ov-total-sidequests-sub').textContent = `${doneOther} / ${totalOther} bonus items completed`;
+    }
+
+    /* THIS WEEK MANAGEMENT */
+    function renderWeekPage() {
+      const timeline = getCycleTimeline();
+      const cycleStart = parseDateKey(state?.startDate || formatDateKey(getLocalTodayDate()));
+      const weekStart = new Date(cycleStart);
+      weekStart.setDate(weekStart.getDate() + ((timeline.currentWeek - 1) * 7));
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 6);
+
+      document.getElementById('wk-badge-current-week').textContent = timeline.isReviewWeek ? 'Week 13 (Review)' : `Week ${timeline.currentWeek} / 12`;
+      document.getElementById('wk-dates-label').textContent = `${weekStart.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} → ${weekEnd.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
+
+      calculateWeeklySideQuestStats(timeline, weekStart, weekEnd);
+      renderWeeklyNonNegStats(timeline, weekStart, weekEnd);
+
       const tactics = (state?.tactics || []).filter(t => String(t.week) === String(timeline.currentWeek));
-      const tacticsWarning = document.getElementById('ov-tactics-warning');
+      const tacticsWarning = document.getElementById('wk-tactics-warning');
       if (tactics.length > 5) tacticsWarning.classList.remove('hidden');
       else tacticsWarning.classList.add('hidden');
 
       const currentObj = state?.weeklyObjectives?.[timeline.currentWeek] || (timeline.currentWeek === 1 ? state?.week1Goal : '') || state?.keystoneGoal || '';
-      document.getElementById('ov-week-nonneg-text').textContent = currentObj ? `Objective: ${currentObj}` : '';
+      document.getElementById('wk-week-nonneg-text').textContent = currentObj ? `Objective: ${currentObj}` : '';
 
-      const tacticsEl = document.getElementById('ov-tactics-full-list');
+      const tacticsEl = document.getElementById('wk-tactics-full-list');
       tacticsEl.innerHTML = tactics.map((t, idx) => `
         <div 
           class="flex items-center justify-between p-3 bg-slate-950 border ${t.done ? 'border-slate-800/60 opacity-60' : 'border-slate-800'} rounded-xl transition-colors"
@@ -1811,45 +1882,35 @@
           <button onclick="removeOverviewTactic(${idx})" class="text-slate-600 hover:text-rose-400 text-xs px-1">✕</button>
         </div>
       `).join('') || '<div class="text-slate-600 text-xs py-2">No tactics configured.</div>';
-
-      renderStatsPies();
     }
 
-    function calculateWeeklySideQuestStats() {
+    function calculateWeeklySideQuestStats(timeline, weekStart, weekEnd) {
       let weekOtherTotal = 0;
       let weekOtherDone = 0;
-      let cycleOtherDone = 0;
 
-      Object.keys(state?.days || {}).forEach(dKey => {
-        const dObj = state.days[dKey];
+      Object.entries(state?.days || {}).forEach(([dKey, dObj]) => {
+        const date = parseDateKey(dKey);
+        if (date < weekStart || date > weekEnd) return;
         (dObj.other || []).forEach(item => {
-          if (item.done) cycleOtherDone++;
           weekOtherTotal++;
           if (item.done) weekOtherDone++;
         });
       });
 
       const starData = getStarRating(weekOtherDone, weekOtherTotal);
-      const starDisp = document.getElementById('ov-week-stars-display');
+      const starDisp = document.getElementById('wk-week-stars-display');
       starDisp.textContent = starData.stars;
       starDisp.className = `text-2xl ${starData.color}`;
 
-      const starBadge = document.getElementById('ov-week-stars-badge');
+      const starBadge = document.getElementById('wk-week-stars-badge');
       starBadge.textContent = starData.badge;
       starBadge.className = `font-bold text-xs ${starData.color}`;
 
-      document.getElementById('ov-week-stars-ratio').textContent = `${weekOtherDone} / ${weekOtherTotal} cleared this week`;
-      document.getElementById('ov-week-stars-pct').textContent = `${starData.pct}%`;
-      document.getElementById('ov-total-sidequests-count').textContent = cycleOtherDone;
+      document.getElementById('wk-week-stars-ratio').textContent = `${weekOtherDone} / ${weekOtherTotal} cleared this week`;
+      document.getElementById('wk-week-stars-pct').textContent = `${starData.pct}%`;
     }
 
-    function renderWeeklyNonNegStats(timeline) {
-      const cycleStart = parseDateKey(state?.startDate || formatDateKey(getLocalTodayDate()));
-      const weekStart = new Date(cycleStart);
-      weekStart.setDate(weekStart.getDate() + ((timeline.currentWeek - 1) * 7));
-      const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekEnd.getDate() + 7);
-
+    function renderWeeklyNonNegStats(timeline, weekStart, weekEnd) {
       let totalTasks = 0;
       let completedTasks = 0;
       let totalDailyPct = 0;
@@ -1857,7 +1918,7 @@
 
       Object.entries(state?.days || {}).forEach(([dateKey, day]) => {
         const date = parseDateKey(dateKey);
-        if (date < weekStart || date >= weekEnd) return;
+        if (date < weekStart || date > weekEnd) return;
 
         const tasks = (day.nonneg || []).filter(task => task.text.trim() !== '');
         if (tasks.length === 0) return;
@@ -1871,10 +1932,10 @@
 
       const weeklyPct = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
       const dailyAverage = loggedDays > 0 ? Math.round(totalDailyPct / loggedDays) : 0;
-      const weeklyPctEl = document.getElementById('ov-weekly-nonneg-pct');
-      const dailyAverageEl = document.getElementById('ov-daily-average-pct');
-      const weeklyCircle = document.getElementById('ov-weekly-nonneg-circle');
-      const dailyAverageCircle = document.getElementById('ov-daily-average-circle');
+      const weeklyPctEl = document.getElementById('wk-weekly-nonneg-pct');
+      const dailyAverageEl = document.getElementById('wk-daily-average-pct');
+      const weeklyCircle = document.getElementById('wk-weekly-nonneg-circle');
+      const dailyAverageCircle = document.getElementById('wk-daily-average-circle');
       const weeklyColorClass = getTickerColorClass(weeklyPct, 100);
       const dailyAverageColorClass = getTickerColorClass(dailyAverage, 100);
 
@@ -1886,8 +1947,8 @@
       weeklyCircle.setAttribute('class', `${weeklyColorClass} score-radial`);
       dailyAverageCircle.style.strokeDashoffset = 100 - dailyAverage;
       dailyAverageCircle.setAttribute('class', `${dailyAverageColorClass} score-radial`);
-      document.getElementById('ov-weekly-nonneg-count').textContent = `${completedTasks} / ${totalTasks} done`;
-      document.getElementById('ov-daily-average-count').textContent = `${loggedDays} logged day${loggedDays === 1 ? '' : 's'}`;
+      document.getElementById('wk-weekly-nonneg-count').textContent = `${completedTasks} / ${totalTasks} done`;
+      document.getElementById('wk-daily-average-count').textContent = `${loggedDays} logged day${loggedDays === 1 ? '' : 's'}`;
     }
 
     function renderIndicatorOverviewList(containerId, list, type) {
@@ -1929,10 +1990,9 @@
     }
 
     function renderStatsPies() {
-      const timeline = getCycleTimeline();
-      const currentWeekTactics = (state?.tactics || []).filter(t => String(t.week) === String(timeline.currentWeek));
-      const totalTactics = currentWeekTactics.length;
-      const doneTactics = currentWeekTactics.filter(t => t.done).length;
+      const allTactics = state?.tactics || [];
+      const totalTactics = allTactics.length;
+      const doneTactics = allTactics.filter(t => t.done).length;
       const mainPct = totalTactics > 0 ? Math.round((doneTactics / totalTactics) * 100) : 0;
 
       document.getElementById('stat-pie-main').style.strokeDashoffset = 100 - mainPct;
@@ -2005,7 +2065,7 @@
       if (!state.tactics) state.tactics = [];
       state.tactics.push({ id: 't_' + Date.now(), title, week: String(timeline.currentWeek), done: false });
       saveState();
-      renderOverviewPage();
+      renderWeekPage();
     }
 
     function toggleOverviewTactic(idx) {
@@ -2015,7 +2075,7 @@
       if (targetTactic) {
         targetTactic.done = !targetTactic.done;
         saveState();
-        renderOverviewPage();
+        renderWeekPage();
       }
     }
 
@@ -2026,7 +2086,7 @@
       if (targetTactic) {
         state.tactics = state.tactics.filter(t => t.id !== targetTactic.id);
         saveState();
-        renderOverviewPage();
+        renderWeekPage();
       }
     }
 
@@ -2205,7 +2265,7 @@
     }
 
     function switchView(viewName) {
-      const views = ['guide', 'daily', 'overview', 'review'];
+      const views = ['guide', 'daily', 'week', 'overview', 'review'];
       views.forEach(v => {
         const el = document.getElementById(`view-${v}`);
         if (el) el.classList.toggle('hidden', v !== viewName);
@@ -2225,6 +2285,7 @@
       if (badge) badge.textContent = timeline.isReviewWeek ? 'Wk 13 (Review)' : `Wk ${timeline.currentWeek} / 12`;
 
       if (viewName === 'daily') renderDailyPage();
+      if (viewName === 'week') renderWeekPage();
       if (viewName === 'overview') renderOverviewPage();
       if (viewName === 'guide') {
         populateGuideWithExistingData();
