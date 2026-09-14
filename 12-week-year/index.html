@@ -364,6 +364,11 @@
             <span class="text-xs font-bold text-slate-400 uppercase tracking-wider font-mono">Performance Time</span>
             <p class="text-[10px] text-slate-500">Log uninterrupted blocks</p>
           </div>
+          <div class="space-y-1 text-[9px] leading-relaxed text-slate-500">
+            <p><span class="font-semibold text-amber-400">Strategic:</span> Three hours for strategic, money-making work.</p>
+            <p><span class="font-semibold text-teal-400">Buffer:</span> 30-60 minutes for low-value activities.</p>
+            <p><span class="font-semibold text-emerald-400">Breakout:</span> At least 3 hours away from work to refresh and reinvigorate.</p>
+          </div>
           <div class="grid grid-cols-3 gap-2 text-center">
             <button onclick="logBlockToday('strategic')" class="bg-slate-950 border border-slate-800 hover:border-amber-500 p-1.5 rounded-lg text-[10px] font-semibold text-slate-300"><span class="block text-sm">🎯</span> Strategic</button>
             <button onclick="logBlockToday('buffer')" class="bg-slate-950 border border-slate-800 hover:border-teal-500 p-1.5 rounded-lg text-[10px] font-semibold text-slate-300"><span class="block text-sm">📥</span> Buffer</button>
@@ -402,6 +407,35 @@
           <p id="ov-keystone-why-text" class="text-xs text-slate-400 truncate italic"></p>
         </div>
       </section>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center justify-between">
+          <div>
+            <span class="block text-[9px] uppercase tracking-wider font-mono text-slate-500">Weekly Non-Negotiables</span>
+            <span id="ov-weekly-nonneg-pct" class="font-mono text-xl font-black text-slate-200">0%</span>
+            <span id="ov-weekly-nonneg-count" class="ml-1 text-[10px] font-mono text-slate-500">0 / 0 done</span>
+          </div>
+          <div class="relative w-14 h-14 flex items-center justify-center shrink-0">
+            <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+              <path class="text-slate-800" stroke-width="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              <path id="ov-weekly-nonneg-circle" class="text-slate-500 score-radial" stroke-width="3.5" stroke-dasharray="100, 100" stroke-dashoffset="100" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+            </svg>
+          </div>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center justify-between">
+          <div>
+            <span class="block text-[9px] uppercase tracking-wider font-mono text-slate-500">Daily Average</span>
+            <span id="ov-daily-average-pct" class="font-mono text-xl font-black text-slate-200">0%</span>
+            <span id="ov-daily-average-count" class="ml-1 text-[10px] font-mono text-slate-500">0 logged days</span>
+          </div>
+          <div class="relative w-14 h-14 flex items-center justify-center shrink-0">
+            <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+              <path class="text-slate-800" stroke-width="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              <path id="ov-daily-average-circle" class="text-slate-500 score-radial" stroke-width="3.5" stroke-dasharray="100, 100" stroke-dashoffset="100" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+            </svg>
+          </div>
+        </div>
+      </div>
 
       <!-- Weekly Side Quest Star Summary & Total 12WY Record -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
@@ -462,18 +496,6 @@
           <div class="flex items-center gap-2">
             <span id="ov-tactics-warning" class="hidden text-[10px] font-mono text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded">⚠️ 6+ items — Focus dilution risk</span>
             <button onclick="promptNewTactic()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded">+ Add Tactic</button>
-          </div>
-        </div>
-        <div class="grid grid-cols-2 gap-2 text-xs">
-          <div class="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
-            <span class="block text-[9px] uppercase tracking-wider font-mono text-slate-500">Weekly Non-Negotiables</span>
-            <span id="ov-weekly-nonneg-pct" class="font-mono text-lg font-black text-slate-200">0%</span>
-            <span id="ov-weekly-nonneg-count" class="ml-1 text-[10px] font-mono text-slate-500">0 / 0 done</span>
-          </div>
-          <div class="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
-            <span class="block text-[9px] uppercase tracking-wider font-mono text-slate-500">Daily Average</span>
-            <span id="ov-daily-average-pct" class="font-mono text-lg font-black text-slate-200">0%</span>
-            <span id="ov-daily-average-count" class="ml-1 text-[10px] font-mono text-slate-500">0 logged days</span>
           </div>
         </div>
         <div id="ov-tactics-full-list" class="space-y-2 text-xs"></div>
@@ -1847,11 +1869,19 @@
       const dailyAverage = loggedDays > 0 ? Math.round(totalDailyPct / loggedDays) : 0;
       const weeklyPctEl = document.getElementById('ov-weekly-nonneg-pct');
       const dailyAverageEl = document.getElementById('ov-daily-average-pct');
+      const weeklyCircle = document.getElementById('ov-weekly-nonneg-circle');
+      const dailyAverageCircle = document.getElementById('ov-daily-average-circle');
+      const weeklyColorClass = getTickerColorClass(weeklyPct, 100);
+      const dailyAverageColorClass = getTickerColorClass(dailyAverage, 100);
 
       weeklyPctEl.textContent = `${weeklyPct}%`;
-      weeklyPctEl.className = `font-mono text-lg ${getTickerColorClass(weeklyPct, 100)}`;
+      weeklyPctEl.className = `font-mono text-xl ${weeklyColorClass}`;
       dailyAverageEl.textContent = `${dailyAverage}%`;
-      dailyAverageEl.className = `font-mono text-lg ${getTickerColorClass(dailyAverage, 100)}`;
+      dailyAverageEl.className = `font-mono text-xl ${dailyAverageColorClass}`;
+      weeklyCircle.style.strokeDashoffset = 100 - weeklyPct;
+      weeklyCircle.setAttribute('class', `${weeklyColorClass} score-radial`);
+      dailyAverageCircle.style.strokeDashoffset = 100 - dailyAverage;
+      dailyAverageCircle.setAttribute('class', `${dailyAverageColorClass} score-radial`);
       document.getElementById('ov-weekly-nonneg-count').textContent = `${completedTasks} / ${totalTasks} done`;
       document.getElementById('ov-daily-average-count').textContent = `${loggedDays} logged day${loggedDays === 1 ? '' : 's'}`;
     }
