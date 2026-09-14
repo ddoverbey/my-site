@@ -33,13 +33,13 @@
           <button onclick="switchView('guide')" id="tab-guide" class="px-3 py-1 rounded-lg font-semibold text-slate-400 hover:text-white transition-colors">Guide</button>
         </div>
 
-        <!-- Settings Modal Trigger -->
+        <!-- 1-Click JSON Backup -->
         <button 
-          onclick="toggleSettingsModal(true)" 
-          class="bg-slate-900 hover:bg-slate-800 border border-slate-800 p-2 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center text-slate-300 hover:text-amber-400"
-          title="Settings & Reminders"
+          onclick="downloadBackupJSON()" 
+          class="bg-slate-900 hover:bg-slate-800 border border-slate-800 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1 text-slate-300 hover:text-amber-400"
+          title="Download Backup JSON"
         >
-          <span>⚙️</span>
+          <span>📥</span> <span class="hidden sm:inline">JSON</span>
         </button>
 
         <button 
@@ -58,7 +58,7 @@
     <div id="notification-banner" class="bg-slate-900/90 border border-slate-800 rounded-xl p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
       <div class="flex items-center gap-2">
         <span class="text-base">🔔</span>
-        <span id="notification-status-text" class="text-slate-300">Enable local reminders for tactical briefings & pacing alerts.</span>
+        <span id="notification-status-text" class="text-slate-300">Enable local reminders for 8:30 AM tactical plan & 8:30 PM 85% goal pacing.</span>
       </div>
       <div class="flex items-center gap-2">
         <button id="btn-test-notif" onclick="testNotification()" class="hidden text-[11px] text-slate-400 hover:text-white underline font-mono">Test Alert</button>
@@ -239,7 +239,7 @@
     </section>
 
     <!-- =========================================================================
-         VIEW 2: DAILY EXECUTION WORKSPACE
+         VIEW 2: DAILY EXECUTION WORKSPACE (CLEAN, PROMINENT & SIMPLE)
          ========================================================================= -->
     <section id="view-daily" class="space-y-4 hidden">
       
@@ -529,37 +529,6 @@
 
   </div>
 
-  <!-- SETTINGS MODAL -->
-  <div id="settings-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-[#14201b] border border-[#283e35] rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
-      <div class="flex justify-between items-center border-b border-[#283e35] pb-3">
-        <h3 class="font-bold text-sm text-[#f4ede4]">Settings & Reminders</h3>
-        <button onclick="toggleSettingsModal(false)" class="text-[#8da498] hover:text-[#f4ede4] text-sm">✕</button>
-      </div>
-
-      <div class="space-y-3 text-xs text-slate-300">
-        <p class="text-slate-400 leading-relaxed">System notifications run in your browser. Ensure alerts are permitted.</p>
-        <button type="button" onclick="requestNotificationPermission()" class="w-full bg-[#1c2d26] hover:bg-[#253d33] text-teal-300 py-2 rounded-lg font-semibold transition-colors border border-[#2e473d]">
-          🔔 Request / Enable Browser Notifications
-        </button>
-        <button type="button" onclick="testNotification()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 py-2 rounded-lg font-semibold transition-colors">
-          ⚡ Send Test Notification Now
-        </button>
-      </div>
-
-      <div class="border-t border-[#283e35] pt-3 space-y-2">
-        <div class="text-[11px] text-[#6b8276] uppercase font-semibold">Data Backup</div>
-        <div class="grid grid-cols-2 gap-2">
-          <button onclick="downloadBackupJSON()" class="bg-[#131f1a] hover:bg-[#1c2d26] text-slate-300 py-1.5 rounded-lg text-[11px] transition-colors border border-[#23352e]">📥 Export JSON</button>
-          <label class="bg-[#131f1a] hover:bg-[#1c2d26] text-slate-300 py-1.5 rounded-lg text-[11px] transition-colors border border-[#23352e] text-center cursor-pointer">
-            📤 Import JSON
-            <input type="file" id="import-json-file-set" accept=".json" class="hidden" onchange="importBackupJSON(event); toggleSettingsModal(false);" />
-          </label>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- SPECIALIZED PHASE 6 MODAL -->
   <div id="next-week-modal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
@@ -568,7 +537,7 @@
           <span class="text-[10px] font-mono uppercase tracking-wider text-amber-400 font-bold">Weekly Transition</span>
           <h2 class="text-lg font-bold text-white mt-0.5">Plan <span id="modal-next-week-title">Week 2</span> Goals & Tactics</h2>
         </div>
-        <button id="btn-close-next-week-modal" onclick="closeNextWeekPlanningModal()" class="text-slate-400 hover:text-white text-sm">✕</button>
+        <button id="btn-close-next-week-modal" onclick="closeNextWeekPlanningModal(false)" class="text-slate-400 hover:text-white text-sm">✕</button>
       </div>
 
       <p class="text-xs text-slate-400 leading-relaxed">
@@ -642,6 +611,18 @@
           </div>
         </form>
       </div>
+
+      <!-- JSON File Backup in Modal -->
+      <div class="border-t border-[#283e35] pt-3 space-y-2">
+        <div class="text-[11px] text-[#6b8276] uppercase font-semibold">Offline File Backup</div>
+        <div class="grid grid-cols-2 gap-2">
+          <button onclick="downloadBackupJSON()" class="bg-[#131f1a] hover:bg-[#1c2d26] text-slate-300 py-1.5 rounded-lg text-[11px] transition-colors border border-[#23352e]">📥 Export JSON</button>
+          <label class="bg-[#131f1a] hover:bg-[#1c2d26] text-slate-300 py-1.5 rounded-lg text-[11px] transition-colors border border-[#23352e] text-center cursor-pointer">
+            📤 Import JSON
+            <input type="file" id="import-json-file" accept=".json" class="hidden" onchange="importBackupJSON(event)" />
+          </label>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -649,7 +630,7 @@
     const SUPABASE_URL = 'https://mrgdthihogxrqsfnknxd.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1yZ2R0aGlob2d4cnFzZm5rbnhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyNDk4NTYsImV4cCI6MjEwNDgyNTg1Nn0.1fwcaGPGrzUut3zng2NNkYZt7hUguhKPhfqYyu8MA3s';
 
-    const STORAGE_KEY = 'twelve_week_year_v14';
+    const STORAGE_KEY = 'twelve_week_year_v13';
     const AUTH_SESSION_KEY = 'twelve_week_cloud_session';
 
     function getLocalTodayDate() {
@@ -679,9 +660,10 @@
 
     function recoverState() {
       const candidateKeys = [
-        'twelve_week_year_v14', 'twelve_week_year_v13', 'twelve_week_year_v12', 'twelve_week_year_v11',
-        'twelve_week_year_v10', 'twelve_week_year_v9', 'twelve_week_year_v8', 'twelve_week_year_v7',
-        'twelve_week_year_v6', 'twelve_week_year_v5', 'twelve_week_year_v4', 'twelve_week_year_v3'
+        'twelve_week_year_v13', 'twelve_week_year_v12', 'twelve_week_year_v11', 'twelve_week_year_v10',
+        'twelve_week_year_v9', 'twelve_week_year_v8', 'twelve_week_year_v7',
+        'twelve_week_year_v6', 'twelve_week_year_v5', 'twelve_week_year_v4',
+        'twelve_week_year_v3', 'twelve_week_year_v2', 'twelve_week_year_v1'
       ];
       for (const k of candidateKeys) {
         const item = localStorage.getItem(k);
@@ -706,10 +688,6 @@
       }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
       syncToCloud(false);
-    }
-
-    function toggleSettingsModal(show) {
-      document.getElementById('settings-modal').classList.toggle('hidden', !show);
     }
 
     /* JSON BACKUP */
@@ -1246,6 +1224,7 @@
         done: false
       }));
 
+      // Replace or append current week tactics
       state.tactics = (state.tactics || []).filter(t => String(t.week) !== String(timeline.currentWeek)).concat(newTactics);
 
       saveState();
@@ -1253,7 +1232,7 @@
       switchView('daily');
     }
 
-    /* DAILY WORKSPACE (NO TICKERS, STRICT HIERARCHY) */
+    /* DAILY WORKSPACE (STRICT ORDERING: NO TICKERS) */
     function renderDailyPage() {
       const targetDate = parseDateKey(activeDateKey);
       const isToday = activeDateKey === formatDateKey(getLocalTodayDate());
@@ -1276,12 +1255,12 @@
 
       const dayData = state.days[activeDateKey];
 
-      // Exact ordered layout:
+      // Exact requested hierarchical layout:
       // 1. % Main Quest Gauge
       // 2. Main Quest Tasks
       // 3. Side Quests Star Rating
       // 4. Side Quests List
-      // 5. Appointments & Time Blocks
+      // 5. Appointments & Time Blocks (Indicators removed entirely from Daily)
       updateDailyScore();
       renderDailyNonNegRows(dayData.nonneg || []);
       renderDailyOtherRows(dayData.other || []);
@@ -1513,7 +1492,7 @@
       alert(`+1 ${type.toUpperCase()} block logged for this week!`);
     }
 
-    /* OVERVIEW MANAGEMENT */
+    /* OVERVIEW MANAGEMENT & BOUNDARY TRIGGERS */
     function evaluateWeeklyPlanningTriggers() {
       if (!state || !state.hasCompletedOnboarding) return;
       const timeline = getCycleTimeline();
@@ -1528,8 +1507,9 @@
 
       const now = new Date();
       const currentDayOfWeek = now.getDay();
-      const startDay = state.weekStartDay !== undefined ? state.weekStartDay : 1;
+      const startDay = state.weekStartDay !== undefined ? state.weekStartDay : 1; // 1 = Monday, 0 = Sunday
       
+      // Planning Day is the day right before the week starts (Sunday if Monday start, Saturday if Sunday start)
       const transitionDay = startDay === 1 ? 0 : 6;
       const isTransitionDay = currentDayOfWeek === transitionDay;
       const isNewWeekStartDay = currentDayOfWeek === startDay;
@@ -1549,6 +1529,80 @@
       } else {
         promptBanner.classList.add('hidden');
       }
+    }
+
+    function openNextWeekPlanningModal(isMandatoryGate = false) {
+      const timeline = getCycleTimeline();
+      const nextWeek = timeline.currentWeek + 1;
+      if (nextWeek > 12) return;
+
+      document.getElementById('modal-next-week-title').textContent = `Week ${nextWeek}`;
+      document.getElementById('modal-next-week-nonneg').value = state?.weeklyObjectives?.[nextWeek] || '';
+
+      const container = document.getElementById('modal-next-week-tactics-container');
+      container.innerHTML = '';
+      
+      const existingTactics = (state.tactics || []).filter(t => String(t.week) === String(nextWeek));
+      if (existingTactics.length > 0) {
+        existingTactics.forEach(t => addModalTacticRow(t.title));
+      } else {
+        addModalTacticRow('');
+      }
+
+      const closeBtn = document.getElementById('btn-close-next-week-modal');
+      if (isMandatoryGate) {
+        closeBtn.classList.add('hidden');
+      } else {
+        closeBtn.classList.remove('hidden');
+      }
+
+      document.getElementById('next-week-modal').classList.remove('hidden');
+    }
+
+    function closeNextWeekPlanningModal() {
+      document.getElementById('next-week-modal').classList.add('hidden');
+    }
+
+    function addModalTacticRow(val = '') {
+      const container = document.getElementById('modal-next-week-tactics-container');
+      const div = document.createElement('div');
+      div.className = 'flex items-center gap-2';
+      div.innerHTML = `
+        <input type="text" autocomplete="new-password" data-lpignore="true" value="${escapeHtml(val)}" placeholder="Tactic starting with verb..." class="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none modal-tactic-inp" oninput="checkTacticsCount('modal-next-week-tactics-container', 'modal-tactics-counter-badge')" />
+        <button type="button" onclick="this.parentElement.remove(); checkTacticsCount('modal-next-week-tactics-container', 'modal-tactics-counter-badge');" class="text-slate-600 hover:text-rose-400 px-2 py-1 text-xs">✕</button>
+      `;
+      container.appendChild(div);
+      checkTacticsCount('modal-next-week-tactics-container', 'modal-tactics-counter-badge');
+    }
+
+    function saveNextWeekPlan(e) {
+      e.preventDefault();
+      const timeline = getCycleTimeline();
+      const nextWeek = timeline.currentWeek + 1;
+
+      const nonneg = document.getElementById('modal-next-week-nonneg').value.trim();
+      const inputs = document.querySelectorAll('#modal-next-week-tactics-container .modal-tactic-inp');
+      const tacticTitles = Array.from(inputs).map(i => i.value.trim()).filter(Boolean);
+
+      if (!state.weeklyObjectives) state.weeklyObjectives = {};
+      state.weeklyObjectives[nextWeek] = nonneg;
+
+      state.tactics = (state.tactics || []).filter(t => String(t.week) !== String(nextWeek));
+
+      tacticTitles.forEach((title, idx) => {
+        state.tactics.push({
+          id: `t_${Date.now()}_w${nextWeek}_${idx}`,
+          title,
+          week: String(nextWeek),
+          done: false
+        });
+      });
+
+      saveState();
+      closeNextWeekPlanningModal();
+      document.getElementById('weekly-plan-prompt-banner').classList.add('hidden');
+      alert(`Week ${nextWeek} locked in successfully!`);
+      renderDailyPage();
     }
 
     function renderOverviewPage() {
