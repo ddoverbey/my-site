@@ -1438,46 +1438,52 @@
         return;
       }
 
-      const nextWeek = timeline.currentWeek + 1;
-      const alreadyPlanned = Boolean(state?.weeklyObjectives?.[nextWeek]) || (state.tactics || []).some(t => String(t.week) === String(nextWeek));
+      // Upcoming week: suggested proactively on the last day of the current week
+      const upcomingWeek = timeline.currentWeek + 1;
+      const upcomingPlanned = Boolean(state?.weeklyObjectives?.[upcomingWeek]) || (state.tactics || []).some(t => String(t.week) === String(upcomingWeek));
+
+      // Current week: must be planned before proceeding if it was missed
+      const thisWeek = timeline.currentWeek;
+      const thisWeekPlanned = thisWeek === 1 || Boolean(state?.weeklyObjectives?.[thisWeek]) || (state.tactics || []).some(t => String(t.week) === String(thisWeek));
 
       const now = new Date();
       const currentDayOfWeek = now.getDay();
       const startDay = state.weekStartDay !== undefined ? state.weekStartDay : 1;
-      
+
       const transitionDay = startDay === 1 ? 0 : 6;
       const isTransitionDay = currentDayOfWeek === transitionDay;
       const isNewWeekStartDay = currentDayOfWeek === startDay;
 
       const promptBanner = document.getElementById('weekly-plan-prompt-banner');
-      document.getElementById('prompt-banner-week-name').textContent = `Week ${nextWeek}`;
+      document.getElementById('prompt-banner-week-name').textContent = `Week ${upcomingWeek}`;
 
-      if (!alreadyPlanned) {
-        if (isTransitionDay) {
-          promptBanner.classList.remove('hidden');
-        } else if (isNewWeekStartDay) {
-          promptBanner.classList.add('hidden');
-          openNextWeekPlanningModal(true);
-        } else {
-          promptBanner.classList.add('hidden');
-        }
+      if (isTransitionDay && !upcomingPlanned) {
+        promptBanner.classList.remove('hidden');
       } else {
         promptBanner.classList.add('hidden');
       }
+
+      if (isNewWeekStartDay && !thisWeekPlanned) {
+        openNextWeekPlanningModal(thisWeek, true);
+      }
     }
 
-    function openNextWeekPlanningModal(isMandatoryGate = false) {
-      const timeline = getCycleTimeline();
-      const nextWeek = timeline.currentWeek + 1;
-      if (nextWeek > 12) return;
+    let activePlanningWeek = null;
 
-      document.getElementById('modal-next-week-title').textContent = `Week ${nextWeek}`;
-      document.getElementById('modal-next-week-nonneg').value = state?.weeklyObjectives?.[nextWeek] || '';
+    function openNextWeekPlanningModal(weekNum, isMandatoryGate = false) {
+      const timeline = getCycleTimeline();
+      const targetWeek = weekNum !== undefined ? weekNum : timeline.currentWeek + 1;
+      if (targetWeek > 12) return;
+
+      activePlanningWeek = targetWeek;
+
+      document.getElementById('modal-next-week-title').textContent = `Week ${targetWeek}`;
+      document.getElementById('modal-next-week-nonneg').value = state?.weeklyObjectives?.[targetWeek] || '';
 
       const container = document.getElementById('modal-next-week-tactics-container');
       container.innerHTML = '';
       
-      const existingTactics = (state.tactics || []).filter(t => String(t.week) === String(nextWeek));
+      const existingTactics = (state.tactics || []).filter(t => String(t.week) === String(targetWeek));
       if (existingTactics.length > 0) {
         existingTactics.forEach(t => addModalTacticRow(t.title));
       } else {
@@ -1512,23 +1518,22 @@
 
     function saveNextWeekPlan(e) {
       e.preventDefault();
-      const timeline = getCycleTimeline();
-      const nextWeek = timeline.currentWeek + 1;
+      const targetWeek = activePlanningWeek || (getCycleTimeline().currentWeek + 1);
 
       const nonneg = document.getElementById('modal-next-week-nonneg').value.trim();
       const inputs = document.querySelectorAll('#modal-next-week-tactics-container .modal-tactic-inp');
       const tacticTitles = Array.from(inputs).map(i => i.value.trim()).filter(Boolean);
 
       if (!state.weeklyObjectives) state.weeklyObjectives = {};
-      state.weeklyObjectives[nextWeek] = nonneg;
+      state.weeklyObjectives[targetWeek] = nonneg;
 
-      state.tactics = (state.tactics || []).filter(t => String(t.week) !== String(nextWeek));
+      state.tactics = (state.tactics || []).filter(t => String(t.week) !== String(targetWeek));
 
       tacticTitles.forEach((title, idx) => {
         state.tactics.push({
-          id: `t_${Date.now()}_w${nextWeek}_${idx}`,
+          id: `t_${Date.now()}_w${targetWeek}_${idx}`,
           title,
-          week: String(nextWeek),
+          week: String(targetWeek),
           done: false
         });
       });
@@ -1536,7 +1541,7 @@
       saveState();
       closeNextWeekPlanningModal();
       document.getElementById('weekly-plan-prompt-banner').classList.add('hidden');
-      alert(`Week ${nextWeek} locked in successfully!`);
+      alert(`Week ${targetWeek} locked in successfully!`);
       renderDailyPage();
     }
 
