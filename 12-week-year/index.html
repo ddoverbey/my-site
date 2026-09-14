@@ -33,13 +33,13 @@
           <button onclick="switchView('guide')" id="tab-guide" class="px-3 py-1 rounded-lg font-semibold text-slate-400 hover:text-white transition-colors">Guide</button>
         </div>
 
-        <!-- 1-Click JSON Backup -->
+        <!-- Settings Modal Trigger -->
         <button 
-          onclick="downloadBackupJSON()" 
-          class="bg-slate-900 hover:bg-slate-800 border border-slate-800 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1 text-slate-300 hover:text-amber-400"
-          title="Download Backup JSON"
+          onclick="toggleSettingsModal(true)" 
+          class="bg-slate-900 hover:bg-slate-800 border border-slate-800 p-2 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center text-slate-300 hover:text-amber-400"
+          title="Settings & Reminders"
         >
-          <span>📥</span> <span class="hidden sm:inline">JSON</span>
+          <span>⚙️</span>
         </button>
 
         <button 
@@ -54,16 +54,15 @@
       </div>
     </nav>
 
-    <!-- Notification Banner (Dismissible + Auto-Hides on Enable) -->
-    <div id="notification-banner" class="hidden bg-slate-900/90 border border-slate-800 rounded-xl p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+    <!-- Notification Banner -->
+    <div id="notification-banner" class="bg-slate-900/90 border border-slate-800 rounded-xl p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
       <div class="flex items-center gap-2">
         <span class="text-base">🔔</span>
         <span id="notification-status-text" class="text-slate-300">Enable local reminders for tactical briefings & pacing alerts.</span>
       </div>
-      <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2">
         <button id="btn-test-notif" onclick="testNotification()" class="hidden text-[11px] text-slate-400 hover:text-white underline font-mono">Test Alert</button>
         <button id="btn-enable-notif" onclick="requestNotificationPermission()" class="bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 px-3 py-1 rounded-lg text-xs font-semibold font-mono transition-colors">Enable Alerts</button>
-        <button onclick="dismissNotificationBanner()" class="text-slate-500 hover:text-slate-300 text-sm px-1 font-bold" title="Dismiss">✕</button>
       </div>
     </div>
 
@@ -516,7 +515,7 @@
             <textarea id="rev-challenges" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-amber-500 outline-none"></textarea>
           </div>
           <div>
-            <label class="block font-semibold text-slate-300 mb-1">What did you learn about process?</label>
+            <label class="block font-semibold text-slate-300 mb-1">What did you learn about your process?</label>
             <textarea id="rev-learn" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-amber-500 outline-none"></textarea>
           </div>
           <div>
@@ -528,6 +527,37 @@
       </div>
     </section>
 
+  </div>
+
+  <!-- SETTINGS MODAL -->
+  <div id="settings-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-[#14201b] border border-[#283e35] rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-[#283e35] pb-3">
+        <h3 class="font-bold text-sm text-[#f4ede4]">Settings & Reminders</h3>
+        <button onclick="toggleSettingsModal(false)" class="text-[#8da498] hover:text-[#f4ede4] text-sm">✕</button>
+      </div>
+
+      <div class="space-y-3 text-xs text-slate-300">
+        <p class="text-slate-400 leading-relaxed">System notifications run in your browser. Ensure alerts are permitted.</p>
+        <button type="button" onclick="requestNotificationPermission()" class="w-full bg-[#1c2d26] hover:bg-[#253d33] text-teal-300 py-2 rounded-lg font-semibold transition-colors border border-[#2e473d]">
+          🔔 Request / Enable Browser Notifications
+        </button>
+        <button type="button" onclick="testNotification()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 py-2 rounded-lg font-semibold transition-colors">
+          ⚡ Send Test Notification Now
+        </button>
+      </div>
+
+      <div class="border-t border-[#283e35] pt-3 space-y-2">
+        <div class="text-[11px] text-[#6b8276] uppercase font-semibold">Data Backup</div>
+        <div class="grid grid-cols-2 gap-2">
+          <button onclick="downloadBackupJSON()" class="bg-[#131f1a] hover:bg-[#1c2d26] text-slate-300 py-1.5 rounded-lg text-[11px] transition-colors border border-[#23352e]">📥 Export JSON</button>
+          <label class="bg-[#131f1a] hover:bg-[#1c2d26] text-slate-300 py-1.5 rounded-lg text-[11px] transition-colors border border-[#23352e] text-center cursor-pointer">
+            📤 Import JSON
+            <input type="file" id="import-json-file-set" accept=".json" class="hidden" onchange="importBackupJSON(event); toggleSettingsModal(false);" />
+          </label>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- SPECIALIZED PHASE 6 MODAL -->
@@ -612,18 +642,6 @@
           </div>
         </form>
       </div>
-
-      <!-- JSON File Backup in Modal -->
-      <div class="border-t border-[#283e35] pt-3 space-y-2">
-        <div class="text-[11px] text-[#6b8276] uppercase font-semibold">Offline File Backup</div>
-        <div class="grid grid-cols-2 gap-2">
-          <button onclick="downloadBackupJSON()" class="bg-[#131f1a] hover:bg-[#1c2d26] text-slate-300 py-1.5 rounded-lg text-[11px] transition-colors border border-[#23352e]">📥 Export JSON</button>
-          <label class="bg-[#131f1a] hover:bg-[#1c2d26] text-slate-300 py-1.5 rounded-lg text-[11px] transition-colors border border-[#23352e] text-center cursor-pointer">
-            📤 Import JSON
-            <input type="file" id="import-json-file" accept=".json" class="hidden" onchange="importBackupJSON(event)" />
-          </label>
-        </div>
-      </div>
     </div>
   </div>
 
@@ -631,7 +649,7 @@
     const SUPABASE_URL = 'https://mrgdthihogxrqsfnknxd.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1yZ2R0aGlob2d4cnFzZm5rbnhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyNDk4NTYsImV4cCI6MjEwNDgyNTg1Nn0.1fwcaGPGrzUut3zng2NNkYZt7hUguhKPhfqYyu8MA3s';
 
-    const STORAGE_KEY = 'twelve_week_year_v15';
+    const STORAGE_KEY = 'twelve_week_year_v14';
     const AUTH_SESSION_KEY = 'twelve_week_cloud_session';
 
     function getLocalTodayDate() {
@@ -661,9 +679,9 @@
 
     function recoverState() {
       const candidateKeys = [
-        'twelve_week_year_v15', 'twelve_week_year_v14', 'twelve_week_year_v13', 'twelve_week_year_v12',
-        'twelve_week_year_v11', 'twelve_week_year_v10', 'twelve_week_year_v9', 'twelve_week_year_v8',
-        'twelve_week_year_v7', 'twelve_week_year_v6', 'twelve_week_year_v5', 'twelve_week_year_v4', 'twelve_week_year_v3'
+        'twelve_week_year_v14', 'twelve_week_year_v13', 'twelve_week_year_v12', 'twelve_week_year_v11',
+        'twelve_week_year_v10', 'twelve_week_year_v9', 'twelve_week_year_v8', 'twelve_week_year_v7',
+        'twelve_week_year_v6', 'twelve_week_year_v5', 'twelve_week_year_v4', 'twelve_week_year_v3'
       ];
       for (const k of candidateKeys) {
         const item = localStorage.getItem(k);
@@ -688,6 +706,10 @@
       }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
       syncToCloud(false);
+    }
+
+    function toggleSettingsModal(show) {
+      document.getElementById('settings-modal').classList.toggle('hidden', !show);
     }
 
     /* JSON BACKUP */
@@ -1231,7 +1253,7 @@
       switchView('daily');
     }
 
-    /* DAILY WORKSPACE */
+    /* DAILY WORKSPACE (NO TICKERS, STRICT HIERARCHY) */
     function renderDailyPage() {
       const targetDate = parseDateKey(activeDateKey);
       const isToday = activeDateKey === formatDateKey(getLocalTodayDate());
@@ -1254,6 +1276,12 @@
 
       const dayData = state.days[activeDateKey];
 
+      // Exact ordered layout:
+      // 1. % Main Quest Gauge
+      // 2. Main Quest Tasks
+      // 3. Side Quests Star Rating
+      // 4. Side Quests List
+      // 5. Appointments & Time Blocks
       updateDailyScore();
       renderDailyNonNegRows(dayData.nonneg || []);
       renderDailyOtherRows(dayData.other || []);
@@ -1736,26 +1764,29 @@
       }
     }
 
-    /* NOTIFICATIONS & DISMISSAL */
-    function dismissNotificationBanner() {
-      const banner = document.getElementById('notification-banner');
-      if (banner) banner.classList.add('hidden');
-      localStorage.setItem('twelve_week_dismiss_notif', 'true');
-    }
-
+    /* NOTIFICATIONS */
     function updateNotificationUI() {
-      const banner = document.getElementById('notification-banner');
-      const dismissed = localStorage.getItem('twelve_week_dismiss_notif') === 'true';
-      
+      const btn = document.getElementById('btn-enable-notif');
+      const testBtn = document.getElementById('btn-test-notif');
+      const statusText = document.getElementById('notification-status-text');
+
       if (!('Notification' in window)) {
-        if (banner) banner.classList.add('hidden');
+        statusText.textContent = 'System notifications not supported in this browser.';
+        btn.classList.add('hidden');
         return;
       }
 
       if (Notification.permission === 'granted') {
-        if (banner) banner.classList.add('hidden'); // auto-hide when enabled!
-      } else if (!dismissed) {
-        if (banner) banner.classList.remove('hidden');
+        statusText.textContent = 'Smart reminders active: 8:30 AM Brief, 8:30 PM 85% pacing, & Sunday Review.';
+        btn.textContent = 'Alerts Active ✓';
+        btn.classList.replace('text-amber-300', 'text-emerald-400');
+        btn.classList.replace('bg-amber-500/10', 'bg-emerald-500/10');
+        btn.classList.replace('border-amber-500/30', 'border-emerald-500/30');
+        testBtn.classList.remove('hidden');
+      } else if (Notification.permission === 'denied') {
+        statusText.textContent = 'Alerts are blocked in your browser settings.';
+        btn.textContent = 'Blocked';
+        btn.classList.replace('text-amber-300', 'text-slate-500');
       }
     }
 
