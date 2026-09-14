@@ -459,6 +459,20 @@
           <span class="block text-[9px] text-slate-500 uppercase">Clear Rate</span>
         </div>
       </div>
+
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+        <div class="flex items-center justify-between gap-2 border-b border-slate-800 pb-3">
+          <div>
+            <span class="text-[10px] font-mono uppercase tracking-wider text-purple-400 font-bold">Weekly Side Quest Log</span>
+            <p class="text-[11px] text-slate-500 mt-0.5">Track the bonus wins that move your week forward.</p>
+          </div>
+        </div>
+        <div id="wk-sidequest-list" class="space-y-2 text-xs"></div>
+        <div class="flex items-center gap-2 bg-slate-950 border border-dashed border-slate-800 rounded-xl p-2.5">
+          <span class="text-slate-600 text-xs px-1">+</span>
+          <input id="wk-sidequest-input" type="text" autocomplete="new-password" data-lpignore="true" placeholder="Add a side quest for this week..." onkeydown="handleAddWeeklySideQuest(event, this)" class="bg-transparent flex-1 text-slate-200 outline-none text-xs" />
+        </div>
+      </div>
     </section>
 
     <!-- =========================================================================
@@ -1276,16 +1290,44 @@
 
     function addCatchupRow(containerId, text = '', done = false, isSideQuest = false) {
       const container = document.getElementById(containerId);
+      if (!container) return;
+
       const div = document.createElement('div');
       div.className = 'flex items-center gap-2 bg-slate-950 border border-slate-800 p-2.5 rounded-xl';
-      
-      const deleteBtn = isSideQuest ? `<button type="button" onclick="this.parentElement.remove()" class="text-slate-600 hover:text-rose-400 px-1 text-xs">✕</button>` : '';
 
-      div.innerHTML = `
-        <input type="checkbox" ${done ? 'checked' : ''} class="w-4 h-4 rounded ${isSideQuest ? 'text-purple-500' : 'text-amber-500'} bg-slate-900 border-slate-700 cursor-pointer c-done" />
-        <input type="text" autocomplete="new-password" data-lpignore="true" value="${escapeHtml(text)}" placeholder="${isSideQuest ? 'Side quest task...' : 'Non-negotiable action...'}" onkeydown="handleCatchupKey(event, this, '${containerId}', ${isSideQuest})" class="bg-transparent flex-1 outline-none text-slate-200 c-text" />
-        ${deleteBtn}
-      `;
+      const uniqueSuffix = `${containerId}-${Math.random().toString(36).slice(2, 10)}`;
+
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.checked = !!done;
+      checkbox.className = `w-4 h-4 rounded ${isSideQuest ? 'text-purple-500' : 'text-amber-500'} bg-slate-900 border-slate-700 cursor-pointer c-done`;
+      checkbox.id = `${uniqueSuffix}-done`;
+      checkbox.name = `${uniqueSuffix}-done`;
+      div.appendChild(checkbox);
+
+      const textInput = document.createElement('input');
+      textInput.type = 'text';
+      textInput.value = text || '';
+      textInput.placeholder = isSideQuest ? 'Side quest task...' : 'Non-negotiable action...';
+      textInput.autocomplete = 'off';
+      textInput.autocapitalize = 'off';
+      textInput.spellcheck = false;
+      textInput.dataset.lpignore = 'true';
+      textInput.className = 'bg-transparent flex-1 outline-none text-slate-200 c-text';
+      textInput.id = `${uniqueSuffix}-text`;
+      textInput.name = `${uniqueSuffix}-text`;
+      textInput.onkeydown = (e) => handleCatchupKey(e, textInput, containerId, isSideQuest);
+      div.appendChild(textInput);
+
+      if (isSideQuest) {
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.className = 'text-slate-600 hover:text-rose-400 px-1 text-xs';
+        deleteBtn.textContent = '✕';
+        deleteBtn.onclick = () => div.remove();
+        div.appendChild(deleteBtn);
+      }
+
       container.appendChild(div);
     }
 
@@ -1633,21 +1675,57 @@
         div.ondragover = handleDragOver;
         div.ondrop = (e) => handleDrop(e, 'nonneg', idx);
 
-        div.innerHTML = `
-          <span class="grab-handle text-slate-700 hover:text-slate-400 select-none text-xs">⠿</span>
-          <input type="checkbox" ${item.done ? 'checked' : ''} onchange="toggleNonNegDone(${idx})" class="w-5 h-5 rounded text-amber-500 bg-slate-900 border-slate-700 cursor-pointer shrink-0" />
-          <input type="text" autocomplete="new-password" data-lpignore="true" value="${escapeHtml(item.text)}" oninput="editNonNegText(${idx}, this.value)" class="bg-transparent flex-1 text-slate-100 outline-none text-sm font-semibold tracking-wide ${item.done ? 'line-through text-slate-500' : ''}" />
-          <button onclick="removeNonNeg(${idx})" class="text-slate-600 hover:text-rose-400 px-1 text-xs">✕</button>
-        `;
+        const grab = document.createElement('span');
+        grab.className = 'grab-handle text-slate-700 hover:text-slate-400 select-none text-xs';
+        grab.textContent = '⠿';
+        div.appendChild(grab);
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = !!item.done;
+        checkbox.onchange = () => toggleNonNegDone(idx);
+        checkbox.className = 'w-5 h-5 rounded text-amber-500 bg-slate-900 border-slate-700 cursor-pointer shrink-0';
+        div.appendChild(checkbox);
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.autocomplete = 'off';
+        input.autocapitalize = 'off';
+        input.spellcheck = false;
+        input.dataset.lpignore = 'true';
+        input.value = item.text || '';
+        input.oninput = (e) => editNonNegText(idx, e.target.value);
+        input.className = `bg-transparent flex-1 text-slate-100 outline-none text-sm font-semibold tracking-wide ${item.done ? 'line-through text-slate-500' : ''}`;
+        div.appendChild(input);
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.onclick = () => removeNonNeg(idx);
+        removeBtn.className = 'text-slate-600 hover:text-rose-400 px-1 text-xs';
+        removeBtn.textContent = '✕';
+        div.appendChild(removeBtn);
+
         container.appendChild(div);
       });
 
       const emptyRow = document.createElement('div');
       emptyRow.className = 'flex items-center gap-3 bg-slate-950/40 border border-dashed border-slate-800 p-3.5 rounded-xl';
-      emptyRow.innerHTML = `
-        <span class="text-slate-600 text-sm px-1 font-bold">+</span>
-        <input type="text" autocomplete="new-password" data-lpignore="true" placeholder="Type non-negotiable action... (Press Enter to add)" onkeydown="handleAddNewNonNeg(event, this)" class="bg-transparent flex-1 text-slate-200 outline-none text-sm font-medium" />
-      `;
+
+      const emptyPlus = document.createElement('span');
+      emptyPlus.className = 'text-slate-600 text-sm px-1 font-bold';
+      emptyPlus.textContent = '+';
+      emptyRow.appendChild(emptyPlus);
+
+      const emptyInput = document.createElement('input');
+      emptyInput.type = 'text';
+      emptyInput.autocomplete = 'off';
+      emptyInput.autocapitalize = 'off';
+      emptyInput.spellcheck = false;
+      emptyInput.dataset.lpignore = 'true';
+      emptyInput.placeholder = 'Type non-negotiable action... (Press Enter to add)';
+      emptyInput.onkeydown = (e) => handleAddNewNonNeg(e, emptyInput);
+      emptyInput.className = 'bg-transparent flex-1 text-slate-200 outline-none text-sm font-medium';
+      emptyRow.appendChild(emptyInput);
       container.appendChild(emptyRow);
     }
 
@@ -1690,22 +1768,62 @@
         row.ondragover = handleDragOver;
         row.ondrop = (e) => handleDrop(e, 'other', idx);
 
-        row.innerHTML = `
-          <span class="grab-handle text-slate-700 hover:text-slate-400 select-none text-xs">⠿</span>
-          <input type="checkbox" ${item.done ? 'checked' : ''} onchange="toggleOtherDone(${idx})" class="w-4 h-4 rounded text-purple-500 bg-slate-900 border-slate-700 cursor-pointer shrink-0" />
-          <input type="text" autocomplete="new-password" data-lpignore="true" value="${escapeHtml(item.text)}" oninput="editOtherText(${idx}, this.value)" class="bg-transparent flex-1 text-slate-200 outline-none text-xs ${item.done ? 'line-through text-slate-500' : ''}" />
-          <span class="text-[10px] text-purple-400 font-mono">Side Quest</span>
-          <button onclick="removeOtherTask(${idx})" class="text-slate-600 hover:text-rose-400 px-1 text-xs">✕</button>
-        `;
+        const grab = document.createElement('span');
+        grab.className = 'grab-handle text-slate-700 hover:text-slate-400 select-none text-xs';
+        grab.textContent = '⠿';
+        row.appendChild(grab);
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = !!item.done;
+        checkbox.onchange = () => toggleOtherDone(idx);
+        checkbox.className = 'w-4 h-4 rounded text-purple-500 bg-slate-900 border-slate-700 cursor-pointer shrink-0';
+        row.appendChild(checkbox);
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.autocomplete = 'off';
+        input.autocapitalize = 'off';
+        input.spellcheck = false;
+        input.dataset.lpignore = 'true';
+        input.value = item.text || '';
+        input.oninput = (e) => editOtherText(idx, e.target.value);
+        input.className = `bg-transparent flex-1 text-slate-200 outline-none text-xs ${item.done ? 'line-through text-slate-500' : ''}`;
+        row.appendChild(input);
+
+        const label = document.createElement('span');
+        label.className = 'text-[10px] text-purple-400 font-mono';
+        label.textContent = 'Side Quest';
+        row.appendChild(label);
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.onclick = () => removeOtherTask(idx);
+        removeBtn.className = 'text-slate-600 hover:text-rose-400 px-1 text-xs';
+        removeBtn.textContent = '✕';
+        row.appendChild(removeBtn);
+
         container.appendChild(row);
       });
 
       const newRow = document.createElement('div');
       newRow.className = 'flex items-center gap-2 bg-slate-950/60 border border-dashed border-slate-800 p-2.5 rounded-xl';
-      newRow.innerHTML = `
-        <span class="text-slate-600 text-xs px-1">+</span>
-        <input type="text" autocomplete="new-password" data-lpignore="true" placeholder="Add secondary side quest..." onkeydown="handleAddNewOtherOnEnter(event, this)" class="bg-transparent flex-1 text-slate-300 outline-none text-xs" />
-      `;
+
+      const plus = document.createElement('span');
+      plus.className = 'text-slate-600 text-xs px-1';
+      plus.textContent = '+';
+      newRow.appendChild(plus);
+
+      const newInput = document.createElement('input');
+      newInput.type = 'text';
+      newInput.autocomplete = 'off';
+      newInput.autocapitalize = 'off';
+      newInput.spellcheck = false;
+      newInput.dataset.lpignore = 'true';
+      newInput.placeholder = 'Add secondary side quest...';
+      newInput.onkeydown = (e) => handleAddNewOtherOnEnter(e, newInput);
+      newInput.className = 'bg-transparent flex-1 text-slate-300 outline-none text-xs';
+      newRow.appendChild(newInput);
       container.appendChild(newRow);
     }
 
@@ -1854,6 +1972,7 @@
 
       calculateWeeklySideQuestStats(timeline, weekStart, weekEnd);
       renderWeeklyNonNegStats(timeline, weekStart, weekEnd);
+      renderWeeklySideQuestList(weekStart, weekEnd);
 
       const tactics = (state?.tactics || []).filter(t => String(t.week) === String(timeline.currentWeek));
       const tacticsWarning = document.getElementById('wk-tactics-warning');
@@ -1882,6 +2001,106 @@
           <button onclick="removeOverviewTactic(${idx})" class="text-slate-600 hover:text-rose-400 text-xs px-1">✕</button>
         </div>
       `).join('') || '<div class="text-slate-600 text-xs py-2">No tactics configured.</div>';
+    }
+
+    function renderWeeklySideQuestList(weekStart, weekEnd) {
+      const allEntries = [];
+      Object.entries(state?.days || {}).forEach(([dateKey, day]) => {
+        const date = parseDateKey(dateKey);
+        if (date < weekStart || date > weekEnd) return;
+
+        (day.other || []).forEach((item, idx) => {
+          if (!item || !item.text || item.text.trim() === '') return;
+          allEntries.push({ dateKey, idx, text: item.text, done: !!item.done });
+        });
+      });
+
+      const container = document.getElementById('wk-sidequest-list');
+      if (!container) return;
+
+      if (allEntries.length === 0) {
+        container.innerHTML = '<div class="text-slate-600 text-xs py-2">No side quests logged for this week yet.</div>';
+        return;
+      }
+
+      container.innerHTML = '';
+      allEntries.forEach(({ dateKey, idx, text, done }) => {
+        const shortDate = parseDateKey(dateKey).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+
+        const row = document.createElement('div');
+        row.className = `flex items-center gap-2 bg-slate-950 border ${done ? 'border-slate-800/70 opacity-70' : 'border-slate-800'} rounded-xl p-2.5`;
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = !!done;
+        checkbox.onchange = () => toggleWeeklySideQuest(dateKey, idx);
+        checkbox.className = 'w-4 h-4 rounded text-purple-500 bg-slate-900 border-slate-700 cursor-pointer shrink-0';
+        row.appendChild(checkbox);
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = text;
+        input.autocomplete = 'off';
+        input.autocapitalize = 'off';
+        input.spellcheck = false;
+        input.dataset.lpignore = 'true';
+        input.name = `wk-sidequest-${dateKey}-${idx}`;
+        input.oninput = (e) => editWeeklySideQuest(dateKey, idx, e.target.value);
+        input.className = `bg-transparent flex-1 text-slate-200 outline-none text-xs ${done ? 'line-through text-slate-500' : ''}`;
+        row.appendChild(input);
+
+        const badge = document.createElement('span');
+        badge.className = 'text-[9px] text-purple-400 font-mono bg-purple-500/10 px-1.5 py-0.5 rounded';
+        badge.textContent = shortDate;
+        row.appendChild(badge);
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.onclick = () => removeWeeklySideQuest(dateKey, idx);
+        removeBtn.className = 'text-slate-600 hover:text-rose-400 px-1 text-xs';
+        removeBtn.textContent = '✕';
+        row.appendChild(removeBtn);
+
+        container.appendChild(row);
+      });
+    }
+
+    function handleAddWeeklySideQuest(e, inputEl) {
+      if (e.key !== 'Enter') return;
+      const text = inputEl.value.trim();
+      if (!text) return;
+
+      if (!state) state = {};
+      if (!state.days) state.days = {};
+
+      const targetDateKey = activeDateKey || formatDateKey(getLocalTodayDate());
+
+      if (!state.days[targetDateKey]) state.days[targetDateKey] = { nonneg: [], other: [], appts: '' };
+      if (!state.days[targetDateKey].other) state.days[targetDateKey].other = [];
+      state.days[targetDateKey].other.push({ text, done: false });
+      saveState();
+      inputEl.value = '';
+      renderWeekPage();
+    }
+
+    function toggleWeeklySideQuest(dateKey, idx) {
+      if (!state || !state.days || !state.days[dateKey]?.other?.[idx]) return;
+      state.days[dateKey].other[idx].done = !state.days[dateKey].other[idx].done;
+      saveState();
+      renderWeekPage();
+    }
+
+    function editWeeklySideQuest(dateKey, idx, val) {
+      if (!state || !state.days || !state.days[dateKey]?.other?.[idx]) return;
+      state.days[dateKey].other[idx].text = val;
+      saveState();
+    }
+
+    function removeWeeklySideQuest(dateKey, idx) {
+      if (!state || !state.days || !state.days[dateKey]?.other?.[idx]) return;
+      state.days[dateKey].other.splice(idx, 1);
+      saveState();
+      renderWeekPage();
     }
 
     function calculateWeeklySideQuestStats(timeline, weekStart, weekEnd) {
