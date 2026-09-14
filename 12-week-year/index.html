@@ -464,6 +464,18 @@
             <button onclick="promptNewTactic()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded">+ Add Tactic</button>
           </div>
         </div>
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <div class="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
+            <span class="block text-[9px] uppercase tracking-wider font-mono text-slate-500">Weekly Non-Negotiables</span>
+            <span id="ov-weekly-nonneg-pct" class="font-mono text-lg font-black text-slate-200">0%</span>
+            <span id="ov-weekly-nonneg-count" class="ml-1 text-[10px] font-mono text-slate-500">0 / 0 done</span>
+          </div>
+          <div class="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
+            <span class="block text-[9px] uppercase tracking-wider font-mono text-slate-500">Daily Average</span>
+            <span id="ov-daily-average-pct" class="font-mono text-lg font-black text-slate-200">0%</span>
+            <span id="ov-daily-average-count" class="ml-1 text-[10px] font-mono text-slate-500">0 logged days</span>
+          </div>
+        </div>
         <div id="ov-tactics-full-list" class="space-y-2 text-xs"></div>
       </div>
 
@@ -1741,6 +1753,7 @@
       document.getElementById('ov-keystone-why-text').textContent = state?.why ? `Why: ${state.why}` : '';
 
       calculateWeeklySideQuestStats();
+      renderWeeklyNonNegStats(timeline);
 
       renderIndicatorOverviewList('ov-lead-items-container', state?.leadingIndicators || [], 'lead');
       renderIndicatorOverviewList('ov-lag-items-container', state?.laggingIndicators || [], 'lag');
@@ -1802,6 +1815,45 @@
       document.getElementById('ov-week-stars-ratio').textContent = `${weekOtherDone} / ${weekOtherTotal} cleared this week`;
       document.getElementById('ov-week-stars-pct').textContent = `${starData.pct}%`;
       document.getElementById('ov-total-sidequests-count').textContent = cycleOtherDone;
+    }
+
+    function renderWeeklyNonNegStats(timeline) {
+      const cycleStart = parseDateKey(state?.startDate || formatDateKey(getLocalTodayDate()));
+      const weekStart = new Date(cycleStart);
+      weekStart.setDate(weekStart.getDate() + ((timeline.currentWeek - 1) * 7));
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 7);
+
+      let totalTasks = 0;
+      let completedTasks = 0;
+      let totalDailyPct = 0;
+      let loggedDays = 0;
+
+      Object.entries(state?.days || {}).forEach(([dateKey, day]) => {
+        const date = parseDateKey(dateKey);
+        if (date < weekStart || date >= weekEnd) return;
+
+        const tasks = (day.nonneg || []).filter(task => task.text.trim() !== '');
+        if (tasks.length === 0) return;
+
+        const completed = tasks.filter(task => task.done).length;
+        totalTasks += tasks.length;
+        completedTasks += completed;
+        totalDailyPct += (completed / tasks.length) * 100;
+        loggedDays++;
+      });
+
+      const weeklyPct = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+      const dailyAverage = loggedDays > 0 ? Math.round(totalDailyPct / loggedDays) : 0;
+      const weeklyPctEl = document.getElementById('ov-weekly-nonneg-pct');
+      const dailyAverageEl = document.getElementById('ov-daily-average-pct');
+
+      weeklyPctEl.textContent = `${weeklyPct}%`;
+      weeklyPctEl.className = `font-mono text-lg ${getTickerColorClass(weeklyPct, 100)}`;
+      dailyAverageEl.textContent = `${dailyAverage}%`;
+      dailyAverageEl.className = `font-mono text-lg ${getTickerColorClass(dailyAverage, 100)}`;
+      document.getElementById('ov-weekly-nonneg-count').textContent = `${completedTasks} / ${totalTasks} done`;
+      document.getElementById('ov-daily-average-count').textContent = `${loggedDays} logged day${loggedDays === 1 ? '' : 's'}`;
     }
 
     function renderIndicatorOverviewList(containerId, list, type) {
