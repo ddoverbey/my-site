@@ -43,6 +43,15 @@
         </button>
 
         <button 
+          id="btn-settings" 
+          onclick="toggleSettingsModal(true)" 
+          class="bg-slate-900 hover:bg-slate-800 border border-slate-800 p-2 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center text-slate-300"
+          title="Alert Settings"
+        >
+          <span>⚙️</span>
+        </button>
+
+        <button 
           id="btn-auth-header" 
           onclick="toggleAuthModal(true)" 
           class="bg-slate-900 hover:bg-slate-800 border border-slate-800 p-2 rounded-xl text-xs font-semibold transition-colors relative flex items-center justify-center text-slate-300"
@@ -77,6 +86,7 @@
       <div class="flex items-center gap-2">
         <button id="btn-test-notif" onclick="testNotification()" class="hidden text-[11px] text-slate-400 hover:text-white underline font-mono">Test Alert</button>
         <button id="btn-enable-notif" onclick="requestNotificationPermission()" class="bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 px-3 py-1 rounded-lg text-xs font-semibold font-mono transition-colors">Enable Alerts</button>
+        <button onclick="dismissNotificationBanner()" class="text-slate-500 hover:text-white text-xs px-1" title="Dismiss">✕</button>
       </div>
     </div>
 
@@ -362,28 +372,6 @@
         </div>
       </div>
 
-      <!-- 6. LEADING INDICATORS -->
-      <div class="bg-slate-900/70 border border-slate-800/80 rounded-xl p-4 space-y-3">
-        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
-          <span class="text-xs font-bold text-slate-400 uppercase tracking-wider font-mono flex items-center gap-1.5">
-            <span>📈</span> Leading Indicators (Actions)
-          </span>
-          <button onclick="promptNewIndicator('leading')" class="text-[11px] text-amber-400 hover:text-amber-300 font-semibold font-mono">+ Add Ticker</button>
-        </div>
-        <div id="daily-lead-indicators-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs"></div>
-      </div>
-
-      <!-- 7. LAGGING INDICATORS -->
-      <div class="bg-slate-900/70 border border-slate-800/80 rounded-xl p-4 space-y-3">
-        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
-          <span class="text-xs font-bold text-slate-400 uppercase tracking-wider font-mono flex items-center gap-1.5">
-            <span>🏁</span> Lagging Indicators (Results)
-          </span>
-          <button onclick="promptNewIndicator('lagging')" class="text-[11px] text-teal-400 hover:text-teal-300 font-semibold font-mono">+ Add Ticker</button>
-        </div>
-        <div id="daily-lag-indicators-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs"></div>
-      </div>
-
     </section>
 
     <!-- =========================================================================
@@ -600,6 +588,46 @@
             Lock in Week Plan 🚀
           </button>
         </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- SETTINGS MODAL -->
+  <div id="settings-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h3 class="font-bold text-sm text-white">⚙️ Alert Settings</h3>
+        <button onclick="toggleSettingsModal(false)" class="text-slate-400 hover:text-white text-sm">✕</button>
+      </div>
+
+      <p class="text-[11px] text-slate-500 leading-relaxed">Choose which local reminders fire and at what time. Alerts only work while this browser tab has notification permission granted.</p>
+
+      <form onsubmit="saveSettings(event)" class="space-y-3 text-xs">
+        <div class="space-y-1.5">
+          <label class="flex items-center justify-between bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
+            <span class="font-semibold text-slate-300">🎯 Morning Tactical Brief</span>
+            <input type="checkbox" id="settings-morning-enabled" class="w-4 h-4 text-amber-500 rounded bg-slate-900 border-slate-700 cursor-pointer" />
+          </label>
+          <input type="time" id="settings-morning-time" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none font-mono" />
+        </div>
+
+        <div class="space-y-1.5">
+          <label class="flex items-center justify-between bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
+            <span class="font-semibold text-slate-300">⚡ Evening 85% Pacing</span>
+            <input type="checkbox" id="settings-evening-enabled" class="w-4 h-4 text-amber-500 rounded bg-slate-900 border-slate-700 cursor-pointer" />
+          </label>
+          <input type="time" id="settings-evening-time" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none font-mono" />
+        </div>
+
+        <div class="space-y-1.5">
+          <label class="flex items-center justify-between bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
+            <span class="font-semibold text-slate-300">📊 Sunday Weekly Review</span>
+            <input type="checkbox" id="settings-review-enabled" class="w-4 h-4 text-amber-500 rounded bg-slate-900 border-slate-700 cursor-pointer" />
+          </label>
+          <input type="time" id="settings-review-time" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none font-mono" />
+        </div>
+
+        <button type="submit" class="w-full bg-amber-500 hover:bg-amber-400 text-black font-bold py-2.5 rounded-lg transition-colors">Save Settings</button>
       </form>
     </div>
   </div>
@@ -1284,10 +1312,6 @@
       renderDailyNonNegRows(dayData.nonneg || []);
       renderDailyOtherRows(dayData.other || []);
       document.getElementById('daily-appts').value = dayData.appts || '';
-      
-      // Leading and Lagging tickers at the bottom of Daily View
-      renderTickerList('daily-lead-indicators-list', state?.leadingIndicators || [], 'lead');
-      renderTickerList('daily-lag-indicators-list', state?.laggingIndicators || [], 'lag');
 
       evaluateWeeklyPlanningTriggers();
     }
@@ -1921,10 +1945,56 @@
     }
 
     /* NOTIFICATIONS */
+    /* NOTIFICATION SETTINGS */
+    const DEFAULT_NOTIF_SETTINGS = {
+      morning: { enabled: true, time: '08:30' },
+      evening: { enabled: true, time: '20:30' },
+      review: { enabled: true, time: '18:00' }
+    };
+
+    function getNotifSettings() {
+      return state?.notifSettings || DEFAULT_NOTIF_SETTINGS;
+    }
+
+    function toggleSettingsModal(show) {
+      if (show) populateSettingsForm();
+      document.getElementById('settings-modal').classList.toggle('hidden', !show);
+    }
+
+    function populateSettingsForm() {
+      const s = getNotifSettings();
+      document.getElementById('settings-morning-enabled').checked = s.morning.enabled;
+      document.getElementById('settings-morning-time').value = s.morning.time;
+      document.getElementById('settings-evening-enabled').checked = s.evening.enabled;
+      document.getElementById('settings-evening-time').value = s.evening.time;
+      document.getElementById('settings-review-enabled').checked = s.review.enabled;
+      document.getElementById('settings-review-time').value = s.review.time;
+    }
+
+    function saveSettings(e) {
+      e.preventDefault();
+      if (!state) state = {};
+      state.notifSettings = {
+        morning: { enabled: document.getElementById('settings-morning-enabled').checked, time: document.getElementById('settings-morning-time').value || '08:30' },
+        evening: { enabled: document.getElementById('settings-evening-enabled').checked, time: document.getElementById('settings-evening-time').value || '20:30' },
+        review: { enabled: document.getElementById('settings-review-enabled').checked, time: document.getElementById('settings-review-time').value || '18:00' }
+      };
+      saveState();
+      toggleSettingsModal(false);
+    }
+
+    function dismissNotificationBanner() {
+      if (!state) state = {};
+      state.notifBannerDismissed = true;
+      saveState();
+      document.getElementById('notification-banner').classList.add('hidden');
+    }
+
     function updateNotificationUI() {
       const btn = document.getElementById('btn-enable-notif');
       const testBtn = document.getElementById('btn-test-notif');
       const statusText = document.getElementById('notification-status-text');
+      const banner = document.getElementById('notification-banner');
 
       if (!('Notification' in window)) {
         statusText.textContent = 'System notifications not supported in this browser.';
@@ -1932,14 +2002,14 @@
         return;
       }
 
-      if (Notification.permission === 'granted') {
-        statusText.textContent = 'Smart reminders active: 8:30 AM Brief, 8:30 PM 85% pacing, & Sunday Review.';
-        btn.textContent = 'Alerts Active ✓';
-        btn.classList.replace('text-amber-300', 'text-emerald-400');
-        btn.classList.replace('bg-amber-500/10', 'bg-emerald-500/10');
-        btn.classList.replace('border-amber-500/30', 'border-emerald-500/30');
-        testBtn.classList.remove('hidden');
-      } else if (Notification.permission === 'denied') {
+      // Once enabled (or explicitly dismissed), the banner stays out of the way.
+      if (Notification.permission === 'granted' || state?.notifBannerDismissed) {
+        banner.classList.add('hidden');
+        return;
+      }
+      banner.classList.remove('hidden');
+
+      if (Notification.permission === 'denied') {
         statusText.textContent = 'Alerts are blocked in your browser settings.';
         btn.textContent = 'Blocked';
         btn.classList.replace('text-amber-300', 'text-slate-500');
@@ -1958,7 +2028,7 @@
     }
 
     function testNotification() {
-      sendNotification("⚡ 12-Week Year Reminder", "Notifications active! Pacing alerts set for 8:30 AM & 8:30 PM.");
+      sendNotification("⚡ 12-Week Year Reminder", "Notifications active! Adjust times anytime in Settings ⚙️.");
     }
 
     function sendNotification(title, body) {
@@ -1976,14 +2046,16 @@
     let lastNotifiedHour = null;
     function checkNotificationTriggers() {
       if (!('Notification' in window) || Notification.permission !== 'granted') return;
+      const settings = getNotifSettings();
       const now = new Date();
       const hour = now.getHours();
       const minute = now.getMinutes();
       const dayOfWeek = now.getDay();
+      const nowHHMM = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 
-      const isMorningBrief = hour === 8 && minute === 30;
-      const isEveningPacing = hour === 20 && minute === 30;
-      const isSundayReview = dayOfWeek === 0 && hour === 18 && minute === 0;
+      const isMorningBrief = settings.morning.enabled && nowHHMM === settings.morning.time;
+      const isEveningPacing = settings.evening.enabled && nowHHMM === settings.evening.time;
+      const isSundayReview = settings.review.enabled && dayOfWeek === 0 && nowHHMM === settings.review.time;
 
       const currentTriggerKey = `${now.toDateString()}_${hour}_${minute}`;
       if (lastNotifiedHour === currentTriggerKey) return;
