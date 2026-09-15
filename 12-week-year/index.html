@@ -824,11 +824,14 @@
     let activeDateKey = formatDateKey(getLocalTodayDate());
 
     function saveState() {
+      if (!state) state = {};
       if (!state.timezone) {
         state.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
       }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      syncToCloud(false);
+      if (cloudSession && cloudSession.access_token) {
+        syncToCloud(false);
+      }
     }
 
     /* JSON BACKUP */
@@ -907,6 +910,10 @@
         cloudSession = data;
         localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(cloudSession));
         updateAuthUI();
+
+        if (state && Object.keys(state).length > 0) {
+          await syncToCloud(false);
+        }
         await loadFromCloud();
         toggleAuthModal(false);
       } catch (err) {
@@ -952,33 +959,74 @@
       toggleAuthModal(false);
     }
 
+    function getCloudUserId() {
+      return cloudSession?.user?.id || cloudSession?.user_id || null;
+    }
+
     async function syncToCloud(notify = false) {
-      if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !cloudSession || !cloudSession.access_token) return;
+      const userId = getCloudUserId();
+      if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !cloudSession || !cloudSession.access_token || !userId) {
+        if (notify) alert('Please sign in to sync with Supabase.');
+        return false;
+      }
+
       try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/twelve_week_plans`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${cloudSession.access_token}`,
-            'Prefer': 'resolution=merge-duplicates'
-          },
-          body: JSON.stringify({
-            user_id: cloudSession.user.id,
-            state: state,
-            updated_at: new Date().toISOString()
-          })
+        const tableUrl = `${SUPABASE_URL}/rest/v1/twelve_week_plans`;
+        const headers = {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${cloudSession.access_token}`,
+          'Prefer': 'return=representation'
+        };
+
+        const existingRes = await fetch(`${tableUrl}?user_id=eq.${encodeURIComponent(userId)}&select=id,updated_at`, {
+          headers
         });
-        if (notify && res.ok) alert('Synced to cloud!');
+        const existing = existingRes.ok ? await existingRes.json() : [];
+
+        const payload = {
+          user_id: userId,
+          state: state,
+          updated_at: new Date().toISOString()
+        };
+
+        let res;
+        if (existing && existing.length > 0) {
+          const rowId = existing[0].id;
+          res = await fetch(`${tableUrl}?id=eq.${encodeURIComponent(rowId)}`, {
+            method: 'PATCH',
+            headers,
+            body: JSON.stringify(payload)
+          });
+        } else {
+          res = await fetch(tableUrl, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(payload)
+          });
+        }
+
+        if (!res.ok) {
+          const text = await res.text();
+          console.warn('Cloud sync failed:', res.status, text);
+          if (notify) alert('Cloud sync failed. Please check your Supabase table and policies.');
+          return false;
+        }
+
+        if (notify) alert('Synced to cloud!');
+        return true;
       } catch (e) {
         console.warn('Sync error:', e);
+        if (notify) alert('Cloud sync error. Please try again.');
+        return false;
       }
     }
 
     async function loadFromCloud() {
-      if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !cloudSession || !cloudSession.access_token) return;
+      const userId = getCloudUserId();
+      if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !cloudSession || !cloudSession.access_token || !userId) return;
       try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/twelve_week_plans?user_id=eq.${cloudSession.user.id}&select=*`, {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/twelve_week_plans?user_id=eq.${encodeURIComponent(userId)}&select=*&order=updated_at.desc&limit=1`, {
           headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${cloudSession.access_token}` }
         });
         if (res.ok) {
@@ -986,7 +1034,11 @@
           if (records && records.length > 0 && records[0].state) {
             state = records[0].state;
             localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-            switchView(state.hasCompletedOnboarding ? 'daily' : 'guide');
+            if (state.hasCompletedOnboarding) {
+              switchView('daily');
+            } else {
+              switchView('guide');
+            }
           }
         }
       } catch (e) {
