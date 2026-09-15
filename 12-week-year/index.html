@@ -902,6 +902,18 @@
       }
     }
 
+    function hasMeaningfulLocalState() {
+      if (!state || typeof state !== 'object') return false;
+      if (state.hasCompletedOnboarding) return true;
+      if (state.days && Object.keys(state.days).length > 0) return true;
+      if (state.weeklyObjectives && Object.keys(state.weeklyObjectives).length > 0) return true;
+      if (state.leadingIndicators && state.leadingIndicators.length > 0) return true;
+      if (state.laggingIndicators && state.laggingIndicators.length > 0) return true;
+      if (state.tactics && state.tactics.length > 0) return true;
+      if (state.why || state.inaction || state.keystoneGoal || state.week1Goal) return true;
+      return false;
+    }
+
     async function handleLogin() {
       const email = document.getElementById('auth-email').value.trim();
       const password = document.getElementById('auth-password').value;
@@ -921,10 +933,10 @@
         localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(cloudSession));
         updateAuthUI();
 
-        if (state && Object.keys(state).length > 0) {
+        const loadedFromCloud = await loadFromCloud();
+        if (!loadedFromCloud && hasMeaningfulLocalState()) {
           await syncToCloud(false);
         }
-        await loadFromCloud();
         toggleAuthModal(false);
       } catch (err) {
         errEl.textContent = err.message;
@@ -951,7 +963,11 @@
           cloudSession = data.session;
           localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(cloudSession));
           updateAuthUI();
-          await syncToCloud(true);
+
+          const loadedFromCloud = await loadFromCloud();
+          if (!loadedFromCloud && hasMeaningfulLocalState()) {
+            await syncToCloud(true);
+          }
         } else {
           alert('Account created! Check email if verification is required.');
         }
@@ -1034,7 +1050,7 @@
 
     async function loadFromCloud() {
       const userId = getCloudUserId();
-      if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !cloudSession || !cloudSession.access_token || !userId) return;
+      if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !cloudSession || !cloudSession.access_token || !userId) return false;
       try {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/twelve_week_plans?user_id=eq.${encodeURIComponent(userId)}&select=*&order=updated_at.desc&limit=1`, {
           headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${cloudSession.access_token}` }
@@ -1049,11 +1065,13 @@
             } else {
               switchView('guide');
             }
+            return true;
           }
         }
       } catch (e) {
         console.warn('Cloud load error:', e);
       }
+      return false;
     }
 
     /* DYNAMIC ROWS & INDICATORS */
