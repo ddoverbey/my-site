@@ -914,6 +914,13 @@
       return false;
     }
 
+    function normalizeCloudSession(raw) {
+      if (!raw) return null;
+      const session = raw.session && raw.session.access_token ? raw.session : raw;
+      if (!session.user && raw.user) session.user = raw.user;
+      return session;
+    }
+
     async function handleLogin() {
       const email = document.getElementById('auth-email').value.trim();
       const password = document.getElementById('auth-password').value;
@@ -929,7 +936,10 @@
         const data = await res.json();
         if (!res.ok) throw new Error(data.error_description || data.msg || data.message || 'Login failed');
 
-        cloudSession = data;
+        cloudSession = normalizeCloudSession(data);
+        if (!cloudSession || !cloudSession.access_token) {
+          throw new Error('Login response missing session data.');
+        }
         localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(cloudSession));
         updateAuthUI();
 
@@ -959,8 +969,11 @@
         const data = await res.json();
         if (!res.ok) throw new Error(data.msg || data.message || 'Sign up failed');
 
-        if (data.session) {
-          cloudSession = data.session;
+        if (data.session || data.user) {
+          cloudSession = normalizeCloudSession(data);
+          if (!cloudSession || !cloudSession.access_token) {
+            throw new Error('Signup response missing session data.');
+          }
           localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(cloudSession));
           updateAuthUI();
 
