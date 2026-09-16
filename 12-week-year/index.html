@@ -921,6 +921,26 @@
       return session;
     }
 
+    async function resolveCloudUser(session) {
+      if (!session?.access_token) return false;
+      if (session.user?.id) return true;
+
+      const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      });
+      const data = await res.json();
+      if (!res.ok || !data?.id) {
+        throw new Error(data?.message || data?.error_description || 'Could not resolve the signed-in user.');
+      }
+
+      session.user = data;
+      localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session));
+      return true;
+    }
+
     async function handleLogin() {
       const email = document.getElementById('auth-email').value.trim();
       const password = document.getElementById('auth-password').value;
@@ -940,6 +960,7 @@
         if (!cloudSession || !cloudSession.access_token) {
           throw new Error('Login response missing session data.');
         }
+        await resolveCloudUser(cloudSession);
         localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(cloudSession));
         updateAuthUI();
 
@@ -974,6 +995,7 @@
           if (!cloudSession || !cloudSession.access_token) {
             throw new Error('Signup response missing session data.');
           }
+          await resolveCloudUser(cloudSession);
           localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(cloudSession));
           updateAuthUI();
 
@@ -1085,6 +1107,17 @@
         console.warn('Cloud load error:', e);
       }
       return false;
+    }
+
+    async function initializeCloudSession() {
+      if (!cloudSession?.access_token) return;
+      try {
+        await resolveCloudUser(cloudSession);
+        updateAuthUI();
+        await loadFromCloud();
+      } catch (e) {
+        console.warn('Cloud session initialization failed:', e);
+      }
     }
 
     /* DYNAMIC ROWS & INDICATORS */
@@ -2615,7 +2648,7 @@
 
     updateAuthUI();
     updateNotificationUI();
-    if (cloudSession) loadFromCloud();
+    initializeCloudSession();
 
     if (!state || !state.hasCompletedOnboarding) {
       if (!state) state = { hasCompletedOnboarding: false };
