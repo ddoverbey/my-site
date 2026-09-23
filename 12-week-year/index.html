@@ -1024,6 +1024,60 @@
       return cloudSession?.user?.id || cloudSession?.user_id || null;
     }
 
+    function isCloudSessionExpired(session) {
+      if (!session?.expires_at) return false;
+      // expires_at is a unix timestamp (seconds); refresh a bit early to avoid race conditions.
+      return (Date.now() / 1000) >= (session.expires_at - 60);
+    }
+
+    async function refreshCloudSession() {
+      if (!cloudSession?.refresh_token) throw new Error('No refresh token available; please sign in again.');
+
+      const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY },
+        body: JSON.stringify({ refresh_token: cloudSession.refresh_token })
+      });
+      const data = await res.json();
+      if (!res.ok || !data?.access_token) {
+        cloudSession = null;
+        localStorage.removeItem(AUTH_SESSION_KEY);
+        updateAuthUI();
+        throw new Error(data?.error_description || data?.message || 'Session expired. Please sign in again.');
+      }
+
+      const previousUser = cloudSession.user;
+      cloudSession = normalizeCloudSession(data);
+      if (!cloudSession.user && previousUser) cloudSession.user = previousUser;
+      localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(cloudSession));
+      updateAuthUI();
+      return cloudSession;
+    }
+
+    async function ensureFreshCloudSession() {
+      if (!cloudSession?.access_token) return null;
+      if (isCloudSessionExpired(cloudSession)) {
+        await refreshCloudSession();
+      }
+      return cloudSession;
+    }
+
+    // Wraps fetch with an auth header, refreshing/retrying once on 401 (expired token).
+    async function authorizedFetch(url, options = {}) {
+      await ensureFreshCloudSession();
+      const withAuthHeaders = () => ({
+        ...options,
+        headers: { ...(options.headers || {}), 'Authorization': `Bearer ${cloudSession.access_token}` }
+      });
+
+      let res = await fetch(url, withAuthHeaders());
+      if (res.status === 401) {
+        await refreshCloudSession();
+        res = await fetch(url, withAuthHeaders());
+      }
+      return res;
+    }
+
     async function syncToCloud(notify = false) {
       const userId = getCloudUserId();
       if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !cloudSession || !cloudSession.access_token || !userId) {
@@ -1036,11 +1090,10 @@
         const headers = {
           'Content-Type': 'application/json',
           'apikey': SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${cloudSession.access_token}`,
           'Prefer': 'return=representation'
         };
 
-        const existingRes = await fetch(`${tableUrl}?user_id=eq.${encodeURIComponent(userId)}&select=id,updated_at`, {
+        const existingRes = await authorizedFetch(`${tableUrl}?user_id=eq.${encodeURIComponent(userId)}&select=id,updated_at`, {
           headers
         });
         const existing = existingRes.ok ? await existingRes.json() : [];
@@ -1054,13 +1107,13 @@
         let res;
         if (existing && existing.length > 0) {
           const rowId = existing[0].id;
-          res = await fetch(`${tableUrl}?id=eq.${encodeURIComponent(rowId)}`, {
+          res = await authorizedFetch(`${tableUrl}?id=eq.${encodeURIComponent(rowId)}`, {
             method: 'PATCH',
             headers,
             body: JSON.stringify(payload)
           });
         } else {
-          res = await fetch(tableUrl, {
+          res = await authorizedFetch(tableUrl, {
             method: 'POST',
             headers,
             body: JSON.stringify(payload)
@@ -1070,7 +1123,7 @@
         if (!res.ok) {
           const text = await res.text();
           console.warn('Cloud sync failed:', res.status, text);
-          if (notify) alert('Cloud sync failed. Please check your Supabase table and policies.');
+          if (notify) alert(`Cloud sync failed (status ${res.status}). Please check your Supabase table and policies.`);
           return false;
         }
 
@@ -1078,7 +1131,7 @@
         return true;
       } catch (e) {
         console.warn('Sync error:', e);
-        if (notify) alert('Cloud sync error. Please try again.');
+        if (notify) alert(e.message || 'Cloud sync error. Please try again.');
         return false;
       }
     }
@@ -1087,8 +1140,8 @@
       const userId = getCloudUserId();
       if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !cloudSession || !cloudSession.access_token || !userId) return false;
       try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/twelve_week_plans?user_id=eq.${encodeURIComponent(userId)}&select=*&order=updated_at.desc&limit=1`, {
-          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${cloudSession.access_token}` }
+        const res = await authorizedFetch(`${SUPABASE_URL}/rest/v1/twelve_week_plans?user_id=eq.${encodeURIComponent(userId)}&select=*&order=updated_at.desc&limit=1`, {
+          headers: { 'apikey': SUPABASE_ANON_KEY }
         });
         if (res.ok) {
           const records = await res.json();
