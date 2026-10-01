@@ -649,13 +649,17 @@
           </div>
           <div class="flex items-center gap-2">
             <button id="btn-review-prev" onclick="selectReviewWeek(-1)" aria-label="Previous review week" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-lg">←</button>
+            <select id="review-week-select" onchange="selectReviewWeekNumber(this.value)" aria-label="Choose a completed week to review" class="max-w-32 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-slate-200"></select>
             <span id="review-week-status" class="text-[10px] font-mono text-slate-400"></span>
             <button id="btn-review-next" onclick="selectReviewWeek(1)" aria-label="Next review week" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-lg">→</button>
             <button onclick="switchView('daily')" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg">← Back to Daily</button>
           </div>
         </div>
 
-        <div class="space-y-4 text-xs">
+        <div id="review-not-available" class="hidden text-sm text-slate-300 py-3">
+          Your first weekly review will be available after the current cycle week ends.
+        </div>
+        <div id="review-form" class="space-y-4 text-xs">
           <div>
             <label class="block font-semibold text-emerald-400 mb-1">What are you most proud of accomplishing this week?</label>
             <textarea id="rev-proud" oninput="saveReviewDraft()" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-amber-500 outline-none"></textarea>
@@ -669,12 +673,19 @@
             <textarea id="rev-learn" oninput="saveReviewDraft()" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-amber-500 outline-none"></textarea>
           </div>
           <div>
-            <label class="block font-semibold text-amber-300 mb-1">Spurring a Friend: What would you tell them?</label>
+            <label class="block font-semibold text-amber-300 mb-1">What would you tell a friend who had a week like yours?</label>
             <textarea id="rev-friend" oninput="saveReviewDraft()" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-amber-500 outline-none"></textarea>
           </div>
           <button onclick="saveReview()" class="w-full bg-amber-500 hover:bg-amber-400 text-black font-bold py-2.5 rounded-lg transition-colors">Save Weekly Review</button>
         </div>
       </div>
+      <section id="review-history" class="hidden border-t border-slate-800 pt-4 space-y-3" aria-labelledby="review-history-heading">
+        <div class="flex items-center justify-between">
+          <h3 id="review-history-heading" class="text-xs font-bold text-slate-300 uppercase font-mono">Past Weekly Reviews</h3>
+          <span id="review-history-count" class="text-[10px] text-slate-500 font-mono"></span>
+        </div>
+        <div id="review-history-list" class="space-y-2"></div>
+      </section>
     </section>
 
   </div>
@@ -747,7 +758,7 @@
 
         <div class="space-y-1.5">
           <label class="flex items-center justify-between bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
-            <span class="font-semibold text-slate-300">📊 Sunday Weekly Review</span>
+            <span class="font-semibold text-slate-300">📊 Weekly Review</span>
             <input type="checkbox" id="settings-review-enabled" class="w-4 h-4 text-amber-500 rounded bg-slate-900 border-slate-700 cursor-pointer" />
           </label>
           <input type="time" id="settings-review-time" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none font-mono" />
@@ -2673,11 +2684,10 @@
       const settings = getNotifSettings();
       const hour = now.getHours();
       const minute = now.getMinutes();
-      const dayOfWeek = now.getDay();
       const nowHHMM = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
       const isMorningBrief = settings.morning.enabled && nowHHMM === settings.morning.time;
       const isEveningPacing = settings.evening.enabled && nowHHMM === settings.evening.time;
-      const isSundayReview = settings.review.enabled && dayOfWeek === 0 && nowHHMM === settings.review.time;
+      const isWeeklyReview = settings.review.enabled && isCycleWeekEndToday() && nowHHMM === settings.review.time;
       const currentTriggerKey = `${now.toDateString()}_${hour}_${minute}`;
       if (lastNotifiedHour === currentTriggerKey) return;
 
@@ -2716,8 +2726,8 @@
         }
       }
 
-      if (isSundayReview) {
-        sendNotification("📊 Weekly Tactical Review", "Sunday review time: Score your execution, reflect on lessons, and set your next week's objective.");
+      if (isWeeklyReview) {
+        sendNotification("📊 Weekly Tactical Review", "Review your execution, capture what you learned, and set up for the week ahead.");
         lastNotifiedHour = currentTriggerKey;
       }
     }
@@ -2728,25 +2738,32 @@
     let selectedReviewWeek = null;
     let reviewDraftSaveTimeout = null;
 
-    function getLatestReviewableWeek() {
-      const timeline = getCycleTimeline();
-      const currentWeek = Math.min(timeline.currentWeek, 12);
-      const transitionDay = state?.weekStartDay === 0 ? 6 : 0;
-      const isWeekEnd = getLocalTodayDate().getDay() === transitionDay;
-      return Math.max(0, Math.min(12, currentWeek - (isWeekEnd ? 0 : 1)));
+    function isCycleWeekEndToday() {
+      const startDate = parseDateKey(state?.startDate || formatDateKey(getLocalTodayDate()));
+      const today = getLocalTodayDate();
+      const elapsedDays = Math.floor((Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()) - Date.UTC(startDate.getFullYear(), startDate.getMonth(), startDate.getDate())) / 86400000);
+      return elapsedDays >= 0 && elapsedDays < 84 && elapsedDays % 7 === 6;
     }
 
-    function getNextUnreviewedWeek() {
+    function getLatestReviewableWeek() {
+      const startDate = parseDateKey(state?.startDate || formatDateKey(getLocalTodayDate()));
+      const today = getLocalTodayDate();
+      const elapsedDays = Math.floor((Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()) - Date.UTC(startDate.getFullYear(), startDate.getMonth(), startDate.getDate())) / 86400000);
+      if (elapsedDays < 0) return 0;
+
+      const currentWeek = Math.floor(elapsedDays / 7) + 1;
+      return Math.min(12, currentWeek - (isCycleWeekEndToday() ? 0 : 1));
+    }
+
+    function getReviewPromptWeek() {
       const latestReviewableWeek = getLatestReviewableWeek();
-      for (let week = 1; week <= latestReviewableWeek; week++) {
-        if (!state?.reviews?.[week]) return week;
-      }
-      return null;
+      if (latestReviewableWeek < 1 || state?.reviews?.[latestReviewableWeek]) return null;
+      return latestReviewableWeek;
     }
 
     function evaluateWeeklyReviewPrompt() {
       const banner = document.getElementById('weekly-review-prompt-banner');
-      const week = getNextUnreviewedWeek();
+      const week = getReviewPromptWeek();
       if (!week) {
         banner.classList.add('hidden');
         return;
@@ -2757,7 +2774,7 @@
     }
 
     function openWeeklyReview() {
-      selectedReviewWeek = getNextUnreviewedWeek() || Math.max(1, getLatestReviewableWeek());
+      selectedReviewWeek = getReviewPromptWeek() || getLatestReviewableWeek();
       switchView('review');
     }
 
@@ -2808,39 +2825,103 @@
 
     function renderReviewPage() {
       const latestReviewableWeek = getLatestReviewableWeek();
-      const maxWeek = Math.max(1, latestReviewableWeek);
-      const nextUnreviewedWeek = getNextUnreviewedWeek();
-      if (selectedReviewWeek === null) {
-        selectedReviewWeek = nextUnreviewedWeek || maxWeek;
+      const hasReviewableWeeks = latestReviewableWeek > 0;
+      const maxWeek = Math.max(0, latestReviewableWeek);
+      if (selectedReviewWeek === null || selectedReviewWeek > maxWeek) selectedReviewWeek = maxWeek || null;
+      if (selectedReviewWeek !== null) selectedReviewWeek = Math.max(1, Math.min(maxWeek, selectedReviewWeek));
+
+      document.getElementById('review-form').classList.toggle('hidden', !hasReviewableWeeks);
+      document.getElementById('review-not-available').classList.toggle('hidden', hasReviewableWeeks);
+      document.getElementById('rev-week-num').textContent = selectedReviewWeek || '—';
+      document.getElementById('btn-review-prev').disabled = !hasReviewableWeeks || selectedReviewWeek <= 1;
+      document.getElementById('btn-review-next').disabled = !hasReviewableWeeks || selectedReviewWeek >= maxWeek;
+
+      const weekSelect = document.getElementById('review-week-select');
+      weekSelect.innerHTML = hasReviewableWeeks
+        ? Array.from({ length: maxWeek }, (_, index) => {
+            const week = index + 1;
+            return `<option value="${week}" ${week === selectedReviewWeek ? 'selected' : ''}>Week ${week}</option>`;
+          }).join('')
+        : '<option value="">No completed weeks</option>';
+      weekSelect.disabled = !hasReviewableWeeks;
+
+      if (hasReviewableWeeks) {
+        const draft = state?.reviewDrafts?.[selectedReviewWeek];
+        const savedReview = state?.reviews?.[selectedReviewWeek];
+        setReviewFormValues(draft || savedReview || {});
+        document.getElementById('review-week-status').textContent = draft
+          ? 'Draft'
+          : savedReview ? 'Saved' : 'Not saved';
+      } else {
+        setReviewFormValues({});
+        document.getElementById('review-week-status').textContent = '';
       }
-      selectedReviewWeek = Math.max(1, Math.min(maxWeek, selectedReviewWeek));
 
-      document.getElementById('rev-week-num').textContent = selectedReviewWeek;
-      document.getElementById('btn-review-prev').disabled = selectedReviewWeek <= 1;
-      document.getElementById('btn-review-next').disabled = selectedReviewWeek >= maxWeek;
+      renderReviewHistory(maxWeek);
+    }
 
-      const draft = state?.reviewDrafts?.[selectedReviewWeek];
-      const savedReview = state?.reviews?.[selectedReviewWeek];
-      setReviewFormValues(draft || savedReview || {});
-      document.getElementById('review-week-status').textContent = draft
-        ? 'Draft'
-        : savedReview ? 'Saved' : 'Not saved';
+    function renderReviewHistory(maxWeek) {
+      const section = document.getElementById('review-history');
+      const container = document.getElementById('review-history-list');
+      const count = document.getElementById('review-history-count');
+      section.classList.toggle('hidden', maxWeek < 1);
+      count.textContent = `${maxWeek} week${maxWeek === 1 ? '' : 's'}`;
+
+      const cycleStart = parseDateKey(state?.startDate || formatDateKey(getLocalTodayDate()));
+      container.innerHTML = Array.from({ length: maxWeek }, (_, index) => maxWeek - index).map(week => {
+        const start = new Date(cycleStart);
+        start.setDate(start.getDate() + ((week - 1) * 7));
+        const end = new Date(start);
+        end.setDate(end.getDate() + 6);
+        const dateLabel = `${start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} – ${end.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`;
+        const saved = state?.reviews?.[week];
+        const draft = state?.reviewDrafts?.[week];
+        const status = saved ? 'Saved' : draft ? 'Draft' : 'Not saved';
+        const values = saved || draft;
+        const responseMarkup = values
+          ? [
+              ['Proud of', values.proud],
+              ['Challenges', values.challenges],
+              ['Learned', values.learn],
+              ['Advice', values.friend]
+            ].filter(([, value]) => value?.trim()).map(([label, value]) => `<p class="text-slate-400"><span class="text-slate-300">${label}:</span> ${escapeHtml(value)}</p>`).join('')
+          : '<p class="text-slate-500">No review saved yet.</p>';
+
+        return `<details class="border-b border-slate-800 py-2">
+          <summary class="cursor-pointer list-none flex items-center justify-between gap-3 text-xs">
+            <span class="font-semibold text-slate-200">Week ${week} <span class="ml-2 text-slate-500 font-normal">${dateLabel}</span></span>
+            <span class="shrink-0 font-mono ${saved ? 'text-emerald-400' : draft ? 'text-amber-300' : 'text-slate-500'}">${status}</span>
+          </summary>
+          <div class="pt-2 space-y-2 text-xs">
+            ${responseMarkup}
+            <button onclick="selectReviewWeekNumber(${week})" class="text-amber-400 hover:text-amber-300 font-semibold">Open or edit Week ${week} →</button>
+          </div>
+        </details>`;
+      }).join('');
     }
 
     function selectReviewWeek(offset) {
-      saveReviewDraft(true);
-      const maxWeek = Math.max(1, getLatestReviewableWeek());
-      selectedReviewWeek = Math.max(1, Math.min(maxWeek, selectedReviewWeek + offset));
+      selectReviewWeekNumber(selectedReviewWeek + offset);
+    }
+
+    function selectReviewWeekNumber(week) {
+      const nextWeek = Number(week);
+      const maxWeek = getLatestReviewableWeek();
+      if (!Number.isInteger(nextWeek) || nextWeek < 1 || nextWeek > maxWeek) return;
+      if (selectedReviewWeek !== null && selectedReviewWeek !== nextWeek) saveReviewDraft(true);
+      selectedReviewWeek = nextWeek;
       renderReviewPage();
     }
 
     function saveReview() {
+      if (selectedReviewWeek === null || selectedReviewWeek > getLatestReviewableWeek()) return;
       clearTimeout(reviewDraftSaveTimeout);
       if (!state.reviews) state.reviews = {};
       state.reviews[selectedReviewWeek] = getReviewFormValues();
       if (state.reviewDrafts) delete state.reviewDrafts[selectedReviewWeek];
       saveState();
       document.getElementById('review-week-status').textContent = 'Saved';
+      renderReviewHistory(getLatestReviewableWeek());
       evaluateWeeklyReviewPrompt();
     }
 
