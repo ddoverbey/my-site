@@ -25,7 +25,7 @@
         <span id="nav-week-badge" class="text-[11px] font-mono font-bold bg-amber-500/10 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded">Wk 1 / 12</span>
       </div>
 
-      <div class="flex items-center gap-2">
+      <div class="flex flex-wrap items-center justify-end gap-2 min-w-0">
         <div class="flex items-center gap-1 bg-slate-900 border border-slate-800 p-1 rounded-xl text-xs">
           <button onclick="switchView('daily')" id="tab-daily" class="px-3 py-1 rounded-lg font-semibold transition-colors bg-amber-500 text-black">Today</button>
           <button onclick="switchView('week')" id="tab-week" class="px-3 py-1 rounded-lg font-semibold text-slate-400 hover:text-white transition-colors">This Week</button>
@@ -410,6 +410,17 @@
         </div>
       </div>
 
+      <section id="daily-hourly-planner" class="hidden space-y-3 border-t border-slate-800 pt-4" aria-labelledby="daily-hourly-heading">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 id="daily-hourly-heading" class="text-xs font-bold text-slate-300 uppercase font-mono">Hourly Plan</h3>
+            <p class="text-[10px] text-slate-500">Add simple time blocks to this day.</p>
+          </div>
+          <span id="hourly-planner-date" class="text-[10px] text-slate-400 font-mono"></span>
+        </div>
+        <div id="daily-hourly-grid" class="divide-y divide-slate-800 border-y border-slate-800"></div>
+      </section>
+
     </section>
 
     <!-- =========================================================================
@@ -479,6 +490,14 @@
         </div>
         <div id="wk-tactics-full-list" class="space-y-2 text-xs"></div>
       </div>
+
+      <section class="space-y-3 border-t border-slate-800 pt-4" aria-labelledby="wk-calendar-heading">
+        <div class="flex items-center justify-between">
+          <h3 id="wk-calendar-heading" class="text-xs font-bold text-slate-300 uppercase font-mono">Week Calendar</h3>
+          <span class="text-[10px] text-slate-500">Select a day to open it</span>
+        </div>
+        <div id="wk-calendar" class="grid grid-cols-7 gap-1.5 sm:gap-2"></div>
+      </section>
 
       <section class="space-y-3" aria-labelledby="wk-nonneg-heading">
         <div class="flex items-center justify-between border-b border-slate-800 pb-2">
@@ -568,6 +587,19 @@
           <span class="text-3xl">🏆</span>
         </div>
       </div>
+
+      <section class="space-y-3 border-t border-slate-800 pt-4" aria-labelledby="cycle-calendar-heading">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h3 id="cycle-calendar-heading" class="text-xs font-bold text-slate-300 uppercase font-mono">12-Week Progress Calendar</h3>
+          <div class="flex items-center gap-3 text-[10px] text-slate-400" aria-label="Daily completion colors">
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-rose-500"></span>0%</span>
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-amber-400"></span>1–84%</span>
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-emerald-500"></span>85%+</span>
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-slate-800"></span>No tasks</span>
+          </div>
+        </div>
+        <div id="ov-cycle-calendar" class="space-y-2"></div>
+      </section>
 
       <!-- Manage & Measure Indicators on Overview with Frequency Badges -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
@@ -688,6 +720,12 @@
       </section>
     </section>
 
+  </div>
+
+  <div id="daily-bottom-tabs" class="hidden fixed bottom-3 left-1/2 -translate-x-1/2 z-40">
+    <button id="btn-hourly-planner-tab" onclick="toggleHourlyPlanner()" aria-expanded="false" aria-controls="daily-hourly-planner" class="bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-100 px-4 py-2 rounded-full text-xs font-semibold shadow-lg">
+      <span aria-hidden="true">▦</span> <span id="hourly-planner-tab-label">Hourly planner</span>
+    </button>
   </div>
 
   <!-- SPECIALIZED PHASE 6 MODAL (Suggested on Transition Day / Gate on Week Start) -->
@@ -1676,9 +1714,174 @@
       renderDailyNonNegRows(dayData.nonneg || []);
       renderDailyOtherRows(dayData.other || []);
       document.getElementById('daily-appts').value = dayData.appts || '';
+      renderHourlyPlanner();
 
       evaluateWeeklyPlanningTriggers();
       evaluateWeeklyReviewPrompt();
+    }
+
+    function getDayProgress(dateKey) {
+      const tasks = (state?.days?.[dateKey]?.nonneg || []).filter(task => task.text?.trim());
+      const done = tasks.filter(task => task.done).length;
+      return {
+        total: tasks.length,
+        done,
+        pct: tasks.length ? Math.round((done / tasks.length) * 100) : null
+      };
+    }
+
+    function getProgressColorClass(progress) {
+      if (progress.pct === null) return 'bg-slate-900 border-slate-800 text-slate-300';
+      if (progress.pct === 0) return 'bg-rose-950 border-rose-800 text-rose-200';
+      if (progress.pct < 85) return 'bg-amber-950 border-amber-700 text-amber-100';
+      return 'bg-emerald-950 border-emerald-700 text-emerald-100';
+    }
+
+    function renderCycleCalendar() {
+      const container = document.getElementById('ov-cycle-calendar');
+      const cycleStart = parseDateKey(state?.startDate || formatDateKey(getLocalTodayDate()));
+      const weekdays = Array.from({ length: 7 }, (_, offset) => {
+        const date = new Date(cycleStart);
+        date.setDate(date.getDate() + offset);
+        return date.toLocaleDateString(undefined, { weekday: 'short' });
+      });
+
+      container.innerHTML = Array.from({ length: 12 }, (_, weekIndex) => {
+        const weekStart = new Date(cycleStart);
+        weekStart.setDate(weekStart.getDate() + (weekIndex * 7));
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekEnd.getDate() + 6);
+        const weekLabel = `${weekStart.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} – ${weekEnd.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`;
+        const days = weekdays.map((weekday, dayIndex) => {
+          const date = new Date(weekStart);
+          date.setDate(date.getDate() + dayIndex);
+          const dateKey = formatDateKey(date);
+          const progress = getDayProgress(dateKey);
+          const current = dateKey === formatDateKey(getLocalTodayDate());
+          const dateLabel = date.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+          const resultLabel = progress.pct === null ? 'No tasks' : `${progress.pct}% complete`;
+          return `<button type="button" onclick="openDailyDate('${dateKey}')" title="${dateLabel}: ${resultLabel}" aria-label="${dateLabel}: ${resultLabel}" class="min-w-0 border rounded-md px-0.5 py-1.5 text-center ${getProgressColorClass(progress)} ${current ? 'ring-2 ring-white ring-offset-1 ring-offset-slate-950' : ''}">
+            <span class="block text-[9px] text-slate-400 sm:hidden">${weekday.slice(0, 1)}</span>
+            <span class="hidden sm:block text-[9px] text-slate-400">${weekday}</span>
+            <span class="block text-xs font-bold font-mono">${date.getDate()}</span>
+            <span class="block text-[8px] leading-none text-current/70">${progress.pct === null ? '—' : `${progress.pct}%`}</span>
+          </button>`;
+        }).join('');
+
+        return `<div class="grid grid-cols-[3.5rem_repeat(7,minmax(0,1fr))] items-center gap-1.5 sm:gap-2">
+          <span class="text-[9px] font-mono text-slate-500">W${weekIndex + 1}<span class="hidden sm:inline"> · ${weekLabel}</span></span>
+          ${days}
+        </div>`;
+      }).join('');
+    }
+
+    function formatHourLabel(hour) {
+      return new Date(2000, 0, 1, hour).toLocaleTimeString(undefined, { hour: 'numeric' });
+    }
+
+    let hourlyPlannerOpen = false;
+    let activeTimeBlockStart = null;
+    let activeTimeBlockId = null;
+
+    function toggleHourlyPlanner() {
+      hourlyPlannerOpen = !hourlyPlannerOpen;
+      const planner = document.getElementById('daily-hourly-planner');
+      const button = document.getElementById('btn-hourly-planner-tab');
+      planner.classList.toggle('hidden', !hourlyPlannerOpen);
+      button.setAttribute('aria-expanded', String(hourlyPlannerOpen));
+      document.getElementById('hourly-planner-tab-label').textContent = hourlyPlannerOpen ? 'Close hourly planner' : 'Hourly planner';
+      if (hourlyPlannerOpen) {
+        renderHourlyPlanner();
+        planner.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+
+    function openTimeBlockForm(start, id = null) {
+      activeTimeBlockStart = start;
+      activeTimeBlockId = id;
+      renderHourlyPlanner();
+      document.getElementById('hourly-block-title')?.focus();
+    }
+
+    function closeTimeBlockForm() {
+      activeTimeBlockStart = null;
+      activeTimeBlockId = null;
+      renderHourlyPlanner();
+    }
+
+    function saveTimeBlock(event) {
+      event.preventDefault();
+      const title = document.getElementById('hourly-block-title').value.trim();
+      if (!title) return;
+
+      if (!state.days[activeDateKey].timeBlocks) state.days[activeDateKey].timeBlocks = [];
+      const duration = Number(document.getElementById('hourly-block-duration').value) || 1;
+      const existing = state.days[activeDateKey].timeBlocks.find(block => block.id === activeTimeBlockId);
+      if (existing) {
+        existing.title = title;
+        existing.duration = duration;
+      } else {
+        state.days[activeDateKey].timeBlocks.push({
+          id: `block_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+          start: activeTimeBlockStart,
+          title,
+          duration
+        });
+      }
+
+      state.days[activeDateKey].timeBlocks.sort((first, second) => first.start.localeCompare(second.start));
+      activeTimeBlockStart = null;
+      activeTimeBlockId = null;
+      saveState();
+      renderHourlyPlanner();
+    }
+
+    function deleteTimeBlock(id) {
+      const blocks = state?.days?.[activeDateKey]?.timeBlocks;
+      if (!blocks) return;
+      state.days[activeDateKey].timeBlocks = blocks.filter(block => block.id !== id);
+      saveState();
+      renderHourlyPlanner();
+    }
+
+    function renderHourlyPlanner() {
+      const dateLabel = parseDateKey(activeDateKey).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+      document.getElementById('hourly-planner-date').textContent = dateLabel;
+      const blocks = state?.days?.[activeDateKey]?.timeBlocks || [];
+      const grid = document.getElementById('daily-hourly-grid');
+
+      grid.innerHTML = Array.from({ length: 17 }, (_, index) => {
+        const hour = index + 6;
+        const start = `${String(hour).padStart(2, '0')}:00`;
+        const hourBlocks = blocks.filter(block => block.start === start);
+        const formMarkup = activeTimeBlockStart === start ? (() => {
+          const editing = blocks.find(block => block.id === activeTimeBlockId);
+          const duration = editing?.duration || 1;
+          return `<form onsubmit="saveTimeBlock(event)" class="flex flex-wrap items-center gap-2 py-2">
+            <input id="hourly-block-title" type="text" required maxlength="100" value="${escapeHtml(editing?.title || '')}" placeholder="What are you planning?" class="min-w-0 flex-1 bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 outline-none focus:border-teal-500" />
+            <select id="hourly-block-duration" aria-label="Block duration" class="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-200">
+              ${[1, 2, 3, 4].map(value => `<option value="${value}" ${duration === value ? 'selected' : ''}>${value}h</option>`).join('')}
+            </select>
+            <button type="submit" class="bg-teal-500 hover:bg-teal-400 text-slate-950 px-2.5 py-1.5 rounded-lg text-xs font-bold">Save</button>
+            <button type="button" onclick="closeTimeBlockForm()" class="text-slate-400 hover:text-white px-1 text-xs">Cancel</button>
+          </form>`;
+        })() : '';
+        const blocksMarkup = hourBlocks.map(block => `
+          <div class="flex items-center justify-between gap-2 my-1 bg-teal-950/70 border border-teal-800 rounded-lg px-2.5 py-1.5">
+            <span class="min-w-0 truncate text-xs text-teal-100">${escapeHtml(block.title)} <span class="text-[10px] text-teal-400">${block.duration || 1}h</span></span>
+            <span class="flex shrink-0 gap-2">
+              <button type="button" onclick="openTimeBlockForm('${start}', '${block.id}')" aria-label="Edit ${escapeHtml(block.title)}" class="text-slate-400 hover:text-white text-[10px]">Edit</button>
+              <button type="button" onclick="deleteTimeBlock('${block.id}')" aria-label="Delete ${escapeHtml(block.title)}" class="text-slate-400 hover:text-rose-300 text-[10px]">Remove</button>
+            </span>
+          </div>
+        `).join('');
+        const addButton = activeTimeBlockStart === start ? '' : `<button type="button" onclick="openTimeBlockForm('${start}')" class="text-[10px] text-slate-500 hover:text-teal-300">+ Block</button>`;
+
+        return `<div class="grid grid-cols-[3.5rem_1fr] gap-2 min-h-12 py-1.5">
+          <span class="pt-1 text-[10px] font-mono text-slate-500">${formatHourLabel(hour)}</span>
+          <div class="min-w-0">${blocksMarkup}${formMarkup}${addButton}</div>
+        </div>`;
+      }).join('');
     }
 
     function renderTickerList(containerId, list, type) {
@@ -1697,6 +1900,7 @@
             ondragstart="handleDragStart(event, '${type}', ${idx})" 
             ondragover="handleDragOver(event)" 
             ondrop="handleDrop(event, '${type}', ${idx})"
+
           >
             <div class="flex items-center gap-2 min-w-0 pr-2">
               <span class="grab-handle text-slate-700 hover:text-slate-400 select-none text-xs">⠿</span>
@@ -2185,6 +2389,7 @@
       document.getElementById('ov-keystone-why-text').textContent = state?.why ? `Why: ${state.why}` : '';
 
       calculateCycleTotals();
+      renderCycleCalendar();
 
       renderIndicatorOverviewList('ov-lead-items-container', state?.leadingIndicators || [], 'lead');
       renderIndicatorOverviewList('ov-lag-items-container', state?.laggingIndicators || [], 'lag');
@@ -2228,6 +2433,25 @@
     function openDailyDate(dateKey) {
       activeDateKey = dateKey;
       switchView('daily');
+    }
+
+    function renderWeekCalendar(weekStart) {
+      const container = document.getElementById('wk-calendar');
+      container.innerHTML = Array.from({ length: 7 }, (_, index) => {
+        const date = new Date(weekStart);
+        date.setDate(date.getDate() + index);
+        const dateKey = formatDateKey(date);
+        const progress = getDayProgress(dateKey);
+        const weekday = date.toLocaleDateString(undefined, { weekday: 'short' });
+        const dateLabel = date.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+        const resultLabel = progress.pct === null ? 'No tasks' : `${progress.pct}% complete`;
+        const current = dateKey === formatDateKey(getLocalTodayDate());
+        return `<button type="button" onclick="openDailyDate('${dateKey}')" title="${dateLabel}: ${resultLabel}" aria-label="${dateLabel}: ${resultLabel}" class="min-w-0 border rounded-lg px-1 py-2 text-center ${getProgressColorClass(progress)} ${current ? 'ring-2 ring-white ring-offset-1 ring-offset-slate-950' : ''}">
+          <span class="block text-[9px] text-slate-400">${weekday}</span>
+          <span class="block text-sm font-bold font-mono">${date.getDate()}</span>
+          <span class="block text-[9px]">${progress.pct === null ? '—' : `${progress.pct}%`}</span>
+        </button>`;
+      }).join('');
     }
 
     function toggleWeeklyNonNeg(dateKey, index) {
@@ -2281,6 +2505,7 @@
       document.querySelector('[onclick="navigateCycleWeek(-1)"]').disabled = selectedCycleWeek <= 1;
       document.querySelector('[onclick="navigateCycleWeek(1)"]').disabled = selectedCycleWeek >= currentWeek;
 
+      renderWeekCalendar(weekStart);
       calculateWeeklySideQuestStats(timeline, weekStart, weekEnd);
       renderWeeklyNonNegStats(timeline, weekStart, weekEnd);
       renderWeeklySideQuestList(weekStart, weekEnd);
@@ -2945,6 +3170,14 @@
       });
 
       const timeline = getCycleTimeline();
+      const dailyTabs = document.getElementById('daily-bottom-tabs');
+      dailyTabs.classList.toggle('hidden', viewName !== 'daily');
+      if (viewName !== 'daily') {
+        hourlyPlannerOpen = false;
+        document.getElementById('daily-hourly-planner').classList.add('hidden');
+        document.getElementById('btn-hourly-planner-tab').setAttribute('aria-expanded', 'false');
+        document.getElementById('hourly-planner-tab-label').textContent = 'Hourly planner';
+      }
       const badge = document.getElementById('nav-week-badge');
       if (badge) badge.textContent = timeline.isReviewWeek ? 'Wk 13 (Review)' : `Wk ${timeline.currentWeek} / 12`;
 
