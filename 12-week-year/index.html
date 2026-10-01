@@ -97,6 +97,19 @@
       </button>
     </div>
 
+    <div id="weekly-review-prompt-banner" class="hidden bg-emerald-950/40 border border-emerald-500/40 rounded-xl p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+      <div class="flex items-center gap-2">
+        <span class="text-base">📊</span>
+        <span class="text-emerald-200">Weekly Review: Reflect on <strong id="review-prompt-week-name" class="text-white">Week 1</strong>.</span>
+      </div>
+      <button
+        onclick="openWeeklyReview()"
+        class="bg-emerald-400 hover:bg-emerald-300 text-black px-3 py-1 rounded-lg font-bold font-mono text-xs transition-colors"
+      >
+        Review Week →
+      </button>
+    </div>
+
     <!-- Notification Banner -->
     <div id="notification-banner" class="bg-slate-900/90 border border-slate-800 rounded-xl p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
       <div class="flex items-center gap-2">
@@ -634,27 +647,32 @@
             <span class="text-xs font-mono font-bold text-amber-400 uppercase">Weekly Cadence</span>
             <h2 class="text-xl font-bold text-white mt-0.5">Week <span id="rev-week-num">1</span> Review</h2>
           </div>
-          <button onclick="switchView('daily')" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg">← Back to Daily</button>
+          <div class="flex items-center gap-2">
+            <button id="btn-review-prev" onclick="selectReviewWeek(-1)" aria-label="Previous review week" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-lg">←</button>
+            <span id="review-week-status" class="text-[10px] font-mono text-slate-400"></span>
+            <button id="btn-review-next" onclick="selectReviewWeek(1)" aria-label="Next review week" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-lg">→</button>
+            <button onclick="switchView('daily')" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg">← Back to Daily</button>
+          </div>
         </div>
 
         <div class="space-y-4 text-xs">
           <div>
             <label class="block font-semibold text-emerald-400 mb-1">What are you most proud of accomplishing this week?</label>
-            <textarea id="rev-proud" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-amber-500 outline-none"></textarea>
+            <textarea id="rev-proud" oninput="saveReviewDraft()" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-amber-500 outline-none"></textarea>
           </div>
           <div>
             <label class="block font-semibold text-rose-400 mb-1">What was challenging or where did execution slip?</label>
-            <textarea id="rev-challenges" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-amber-500 outline-none"></textarea>
+            <textarea id="rev-challenges" oninput="saveReviewDraft()" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-amber-500 outline-none"></textarea>
           </div>
           <div>
             <label class="block font-semibold text-slate-300 mb-1">What did you learn about your process?</label>
-            <textarea id="rev-learn" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-amber-500 outline-none"></textarea>
+            <textarea id="rev-learn" oninput="saveReviewDraft()" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-amber-500 outline-none"></textarea>
           </div>
           <div>
             <label class="block font-semibold text-amber-300 mb-1">Spurring a Friend: What would you tell them?</label>
-            <textarea id="rev-friend" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-amber-500 outline-none"></textarea>
+            <textarea id="rev-friend" oninput="saveReviewDraft()" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-amber-500 outline-none"></textarea>
           </div>
-          <button onclick="saveReview()" class="w-full bg-amber-500 hover:bg-amber-400 text-black font-bold py-2.5 rounded-lg transition-colors">Lock In Weekly Review</button>
+          <button onclick="saveReview()" class="w-full bg-amber-500 hover:bg-amber-400 text-black font-bold py-2.5 rounded-lg transition-colors">Save Weekly Review</button>
         </div>
       </div>
     </section>
@@ -987,7 +1005,10 @@
         updateAuthUI();
 
         const loadedFromCloud = await loadFromCloud();
-          if (!loadedFromCloud && cloudHydrationComplete && hasMeaningfulLocalState()) {
+        if (loadedFromCloud) {
+          switchView(state.hasCompletedOnboarding ? 'daily' : 'guide');
+        }
+        if (!loadedFromCloud && cloudHydrationComplete && hasMeaningfulLocalState()) {
           await syncToCloud(false);
         }
         toggleAuthModal(false);
@@ -1022,6 +1043,9 @@
           updateAuthUI();
 
           const loadedFromCloud = await loadFromCloud();
+          if (loadedFromCloud) {
+            switchView(state.hasCompletedOnboarding ? 'daily' : 'guide');
+          }
           if (!loadedFromCloud && cloudHydrationComplete && hasMeaningfulLocalState()) {
             await syncToCloud(true);
           }
@@ -1172,11 +1196,6 @@
           if (records && records.length > 0 && records[0].state) {
             state = records[0].state;
             localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-            if (state.hasCompletedOnboarding) {
-              switchView('daily');
-            } else {
-              switchView('guide');
-            }
             return true;
           }
         }
@@ -1193,13 +1212,13 @@
       }
 
       const button = document.getElementById('btn-refresh-cloud');
+      const activeView = document.querySelector('section[id^="view-"]:not(.hidden)')?.id.replace('view-', '') || 'daily';
       button.disabled = true;
       button.classList.add('opacity-50');
       try {
         const loaded = await loadFromCloud();
         if (loaded) {
-          const activeView = document.querySelector('section[id^="view-"]:not(.hidden)')?.id.replace('view-', '') || 'daily';
-          switchView(activeView);
+          switchView(activeView, false);
           alert('Latest cloud data loaded.');
         } else if (cloudHydrationComplete) {
           alert('No cloud plan was found for this account. Your current local data was kept.');
@@ -1648,6 +1667,7 @@
       document.getElementById('daily-appts').value = dayData.appts || '';
 
       evaluateWeeklyPlanningTriggers();
+      evaluateWeeklyReviewPrompt();
     }
 
     function renderTickerList(containerId, list, type) {
@@ -1954,10 +1974,12 @@
 
     function handleAddNewNonNeg(e, inputEl) {
       if (e.key === 'Enter' && inputEl.value.trim() !== '') {
+        e.preventDefault();
         if (!state.days[activeDateKey].nonneg) state.days[activeDateKey].nonneg = [];
         state.days[activeDateKey].nonneg.push({ text: inputEl.value.trim(), done: false });
         saveState();
         renderDailyPage();
+        document.querySelector('#daily-nonneg-container > div:last-child input')?.focus();
       }
     }
 
@@ -2051,10 +2073,12 @@
 
     function handleAddNewOtherOnEnter(e, inputEl) {
       if (e.key === 'Enter' && inputEl.value.trim() !== '') {
+        e.preventDefault();
         if (!state.days[activeDateKey].other) state.days[activeDateKey].other = [];
         state.days[activeDateKey].other.push({ text: inputEl.value.trim(), done: false });
         saveState();
         renderDailyPage();
+        document.querySelector('#daily-other-tasks-container > div:last-child input')?.focus();
       }
     }
 
@@ -2701,21 +2725,129 @@
     setInterval(checkNotificationTriggers, 30000);
 
     /* REVIEW & ROUTING */
-    function saveReview() {
+    let selectedReviewWeek = null;
+    let reviewDraftSaveTimeout = null;
+
+    function getLatestReviewableWeek() {
       const timeline = getCycleTimeline();
-      if (!state.reviews) state.reviews = {};
-      state.reviews[timeline.currentWeek] = {
+      const currentWeek = Math.min(timeline.currentWeek, 12);
+      const transitionDay = state?.weekStartDay === 0 ? 6 : 0;
+      const isWeekEnd = getLocalTodayDate().getDay() === transitionDay;
+      return Math.max(0, Math.min(12, currentWeek - (isWeekEnd ? 0 : 1)));
+    }
+
+    function getNextUnreviewedWeek() {
+      const latestReviewableWeek = getLatestReviewableWeek();
+      for (let week = 1; week <= latestReviewableWeek; week++) {
+        if (!state?.reviews?.[week]) return week;
+      }
+      return null;
+    }
+
+    function evaluateWeeklyReviewPrompt() {
+      const banner = document.getElementById('weekly-review-prompt-banner');
+      const week = getNextUnreviewedWeek();
+      if (!week) {
+        banner.classList.add('hidden');
+        return;
+      }
+
+      document.getElementById('review-prompt-week-name').textContent = `Week ${week}`;
+      banner.classList.remove('hidden');
+    }
+
+    function openWeeklyReview() {
+      selectedReviewWeek = getNextUnreviewedWeek() || Math.max(1, getLatestReviewableWeek());
+      switchView('review');
+    }
+
+    function getReviewFormValues() {
+      return {
         proud: document.getElementById('rev-proud').value,
         challenges: document.getElementById('rev-challenges').value,
         learn: document.getElementById('rev-learn').value,
         friend: document.getElementById('rev-friend').value
       };
-      saveState();
-      alert(`Week ${timeline.currentWeek} review saved!`);
-      switchView('daily');
     }
 
-    function switchView(viewName) {
+    function setReviewFormValues(values = {}) {
+      document.getElementById('rev-proud').value = values.proud || '';
+      document.getElementById('rev-challenges').value = values.challenges || '';
+      document.getElementById('rev-learn').value = values.learn || '';
+      document.getElementById('rev-friend').value = values.friend || '';
+    }
+
+    function saveReviewDraft(immediate = false) {
+      if (selectedReviewWeek === null) return;
+      const values = getReviewFormValues();
+      clearTimeout(reviewDraftSaveTimeout);
+
+      const savedReview = state?.reviews?.[selectedReviewWeek];
+      if (savedReview && JSON.stringify(savedReview) === JSON.stringify(values)) {
+        if (state.reviewDrafts) delete state.reviewDrafts[selectedReviewWeek];
+        document.getElementById('review-week-status').textContent = 'Saved';
+        return;
+      }
+
+      if (!Object.values(values).some(value => value.trim()) && !state?.reviewDrafts?.[selectedReviewWeek]) {
+        document.getElementById('review-week-status').textContent = 'Not saved';
+        return;
+      }
+
+      document.getElementById('review-week-status').textContent = 'Draft';
+
+      const persistDraft = () => {
+        if (!state.reviewDrafts) state.reviewDrafts = {};
+        state.reviewDrafts[selectedReviewWeek] = values;
+        saveState();
+      };
+
+      if (immediate) persistDraft();
+      else reviewDraftSaveTimeout = setTimeout(persistDraft, 500);
+    }
+
+    function renderReviewPage() {
+      const latestReviewableWeek = getLatestReviewableWeek();
+      const maxWeek = Math.max(1, latestReviewableWeek);
+      const nextUnreviewedWeek = getNextUnreviewedWeek();
+      if (selectedReviewWeek === null) {
+        selectedReviewWeek = nextUnreviewedWeek || maxWeek;
+      }
+      selectedReviewWeek = Math.max(1, Math.min(maxWeek, selectedReviewWeek));
+
+      document.getElementById('rev-week-num').textContent = selectedReviewWeek;
+      document.getElementById('btn-review-prev').disabled = selectedReviewWeek <= 1;
+      document.getElementById('btn-review-next').disabled = selectedReviewWeek >= maxWeek;
+
+      const draft = state?.reviewDrafts?.[selectedReviewWeek];
+      const savedReview = state?.reviews?.[selectedReviewWeek];
+      setReviewFormValues(draft || savedReview || {});
+      document.getElementById('review-week-status').textContent = draft
+        ? 'Draft'
+        : savedReview ? 'Saved' : 'Not saved';
+    }
+
+    function selectReviewWeek(offset) {
+      saveReviewDraft(true);
+      const maxWeek = Math.max(1, getLatestReviewableWeek());
+      selectedReviewWeek = Math.max(1, Math.min(maxWeek, selectedReviewWeek + offset));
+      renderReviewPage();
+    }
+
+    function saveReview() {
+      clearTimeout(reviewDraftSaveTimeout);
+      if (!state.reviews) state.reviews = {};
+      state.reviews[selectedReviewWeek] = getReviewFormValues();
+      if (state.reviewDrafts) delete state.reviewDrafts[selectedReviewWeek];
+      saveState();
+      document.getElementById('review-week-status').textContent = 'Saved';
+      evaluateWeeklyReviewPrompt();
+    }
+
+    function switchView(viewName, preserveReviewDraft = true) {
+      if (preserveReviewDraft && viewName !== 'review' && !document.getElementById('view-review').classList.contains('hidden')) {
+        saveReviewDraft(true);
+      }
       const views = ['guide', 'daily', 'week', 'overview', 'review'];
       views.forEach(v => {
         const el = document.getElementById(`view-${v}`);
@@ -2738,6 +2870,7 @@
       if (viewName === 'daily') renderDailyPage();
       if (viewName === 'week') renderWeekPage();
       if (viewName === 'overview') renderOverviewPage();
+      if (viewName === 'review') renderReviewPage();
       if (viewName === 'guide') {
         populateGuideWithExistingData();
         updateWizardUI();
