@@ -468,6 +468,7 @@
           </div>
           <div class="flex items-center gap-2">
             <span id="wk-tactics-warning" class="hidden text-[10px] font-mono text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded">⚠️ 6+ items - Focus dilution risk</span>
+            <button onclick="openNextWeekPlanningModal(selectedCycleWeek, false)" class="text-xs bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 px-2.5 py-1 rounded">Edit Week Plan</button>
             <button onclick="promptNewTactic()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded">+ Add Tactic</button>
           </div>
         </div>
@@ -753,12 +754,12 @@
       <div class="border-b border-slate-800 pb-3 flex items-center justify-between">
         <div>
           <span class="text-[10px] font-mono uppercase tracking-wider text-amber-400 font-bold">Weekly Transition</span>
-          <h2 class="text-lg font-bold text-white mt-0.5">Plan <span id="modal-next-week-title">Week 2</span> Goals & Tactics</h2>
+          <h2 class="text-lg font-bold text-white mt-0.5"><span id="modal-week-action">Plan</span> <span id="modal-next-week-title">Week 2</span> Goals & Tactics</h2>
         </div>
         <button id="btn-close-next-week-modal" onclick="closeNextWeekPlanningModal(false)" class="text-slate-400 hover:text-white text-sm">✕</button>
       </div>
 
-      <p class="text-xs text-slate-400 leading-relaxed">
+      <p id="modal-week-plan-description" class="text-xs text-slate-400 leading-relaxed">
         Before entering your next week, lock in your primary objective and major tactics. Every tactic must start with a verb (Recommended: 2–5 max).
       </p>
 
@@ -779,7 +780,7 @@
 
         <div class="pt-2 border-t border-slate-800 flex items-center justify-end gap-2">
           <button type="submit" class="w-full bg-amber-500 hover:bg-amber-400 text-black py-2.5 rounded-lg font-bold font-mono transition-colors">
-            Lock in Week Plan 🚀
+            <span id="modal-week-save-label">Lock in Week Plan</span>
           </button>
         </div>
       </form>
@@ -2024,17 +2025,23 @@
     function openNextWeekPlanningModal(weekNum, isMandatoryGate = false) {
       const timeline = getCycleTimeline();
       const targetWeek = weekNum !== undefined ? weekNum : timeline.currentWeek + 1;
-      if (targetWeek > 12) return;
+      if (targetWeek < 1 || targetWeek > 12 || targetWeek > Math.min(12, timeline.currentWeek) + 1) return;
 
       activePlanningWeek = targetWeek;
 
       document.getElementById('modal-next-week-title').textContent = `Week ${targetWeek}`;
+      const isEditing = targetWeek <= Math.min(12, timeline.currentWeek);
+      document.getElementById('modal-week-action').textContent = isEditing ? 'Edit' : 'Plan';
+      document.getElementById('modal-week-plan-description').textContent = isEditing
+        ? 'Update this week’s objective and tactics. Completed tactics that remain unchanged will stay checked.'
+        : 'Before entering your next week, lock in its primary objective and major tactics. Every tactic must start with a verb (Recommended: 2–5 max).';
+      document.getElementById('modal-week-save-label').textContent = isEditing ? 'Save Week Plan' : 'Lock in Week Plan';
       document.getElementById('modal-next-week-nonneg').value = state?.weeklyObjectives?.[targetWeek] || '';
 
       const container = document.getElementById('modal-next-week-tactics-container');
       container.innerHTML = '';
       
-      const existingTactics = (state.tactics || []).filter(t => String(t.week) === String(targetWeek));
+      const existingTactics = (state?.tactics || []).filter(t => String(t.week) === String(targetWeek));
       if (existingTactics.length > 0) {
         existingTactics.forEach(t => addModalTacticRow(t.title));
       } else {
@@ -2069,7 +2076,7 @@
 
     function saveNextWeekPlan(e) {
       e.preventDefault();
-      const targetWeek = activePlanningWeek || (getCycleTimeline().currentWeek + 1);
+      const targetWeek = activePlanningWeek || selectedCycleWeek || (getCycleTimeline().currentWeek + 1);
 
       const nonneg = document.getElementById('modal-next-week-nonneg').value.trim();
       const inputs = document.querySelectorAll('#modal-next-week-tactics-container .modal-tactic-inp');
@@ -2077,11 +2084,15 @@
 
       if (!state.weeklyObjectives) state.weeklyObjectives = {};
       state.weeklyObjectives[targetWeek] = nonneg;
+      if (targetWeek === 1) state.week1Goal = nonneg;
 
+      const previousTactics = (state.tactics || []).filter(t => String(t.week) === String(targetWeek));
+      const unchangedByTitle = new Map(previousTactics.map(tactic => [tactic.title, tactic]));
       state.tactics = (state.tactics || []).filter(t => String(t.week) !== String(targetWeek));
 
       tacticTitles.forEach((title, idx) => {
-        state.tactics.push({
+        const existing = unchangedByTitle.get(title);
+        state.tactics.push(existing || {
           id: `t_${Date.now()}_w${targetWeek}_${idx}`,
           title,
           week: String(targetWeek),
@@ -2092,8 +2103,13 @@
       saveState();
       closeNextWeekPlanningModal();
       document.getElementById('weekly-plan-prompt-banner').classList.add('hidden');
-      alert(`Week ${targetWeek} locked in successfully!`);
-      renderDailyPage();
+      document.getElementById('next-week-plan-form').reset();
+      if (document.getElementById('view-week').classList.contains('hidden')) {
+        alert(`Week ${targetWeek} plan saved.`);
+        renderDailyPage();
+      } else {
+        renderWeekPage();
+      }
     }
 
     /* DRAG & DROP REORDERING */
@@ -2922,11 +2938,11 @@
     }
 
     function promptNewTactic() {
-      const timeline = getCycleTimeline();
+      const targetWeek = selectedCycleWeek ?? getCycleTimeline().currentWeek;
       const title = prompt('Enter new tactic (start with a verb):');
       if (!title) return;
       if (!state.tactics) state.tactics = [];
-      state.tactics.push({ id: 't_' + Date.now(), title, week: String(timeline.currentWeek), done: false });
+      state.tactics.push({ id: 't_' + Date.now(), title, week: String(targetWeek), done: false });
       saveState();
       renderWeekPage();
     }
