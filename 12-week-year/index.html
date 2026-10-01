@@ -395,6 +395,7 @@
         <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3.5 space-y-2 flex flex-col justify-between">
           <div>
             <span class="text-xs font-bold text-slate-400 uppercase tracking-wider font-mono">Performance Time</span>
+            <p id="performance-day-label" class="text-[10px] text-slate-500"></p>
             <p class="text-[10px] text-slate-500">Log uninterrupted blocks</p>
           </div>
           <div class="space-y-1 text-[9px] leading-relaxed text-slate-500">
@@ -403,10 +404,20 @@
             <p><span class="font-semibold text-emerald-400">Breakout:</span> At least 3 hours away from work to refresh and reinvigorate.</p>
           </div>
           <div class="grid grid-cols-3 gap-2 text-center">
-            <button onclick="logBlockToday('strategic')" class="bg-slate-950 border border-slate-800 hover:border-amber-500 p-1.5 rounded-lg text-[10px] font-semibold text-slate-300"><span class="block text-sm">🎯</span> Strategic</button>
-            <button onclick="logBlockToday('buffer')" class="bg-slate-950 border border-slate-800 hover:border-teal-500 p-1.5 rounded-lg text-[10px] font-semibold text-slate-300"><span class="block text-sm">📥</span> Buffer</button>
-            <button onclick="logBlockToday('breakout')" class="bg-slate-950 border border-slate-800 hover:border-emerald-500 p-1.5 rounded-lg text-[10px] font-semibold text-slate-300"><span class="block text-sm">🍃</span> Breakout</button>
+            <button onclick="openPerformanceTimeEntry('strategic')" class="bg-slate-950 border border-slate-800 hover:border-amber-500 p-1.5 rounded-lg text-[10px] font-semibold text-slate-300"><span class="block text-sm">🎯</span> Strategic</button>
+            <button onclick="openPerformanceTimeEntry('buffer')" class="bg-slate-950 border border-slate-800 hover:border-teal-500 p-1.5 rounded-lg text-[10px] font-semibold text-slate-300"><span class="block text-sm">📥</span> Buffer</button>
+            <button onclick="openPerformanceTimeEntry('breakout')" class="bg-slate-950 border border-slate-800 hover:border-emerald-500 p-1.5 rounded-lg text-[10px] font-semibold text-slate-300"><span class="block text-sm">🍃</span> Breakout</button>
           </div>
+          <form id="daily-performance-form" onsubmit="savePerformanceTimeEntry(event)" class="hidden space-y-2 border-t border-slate-800 pt-2">
+            <label id="daily-performance-form-label" for="daily-performance-time" class="block text-[10px] font-semibold text-slate-300"></label>
+            <div class="flex items-center gap-2">
+              <input id="daily-performance-time" type="time" class="min-w-0 flex-1 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-slate-200 outline-none focus:border-teal-500" />
+              <button type="submit" class="bg-teal-500 hover:bg-teal-400 text-slate-950 px-3 py-1.5 rounded-lg text-xs font-bold">Log block</button>
+              <button type="button" onclick="closePerformanceTimeEntry()" class="text-slate-400 hover:text-white px-1 text-xs">Cancel</button>
+            </div>
+            <p class="text-[9px] text-slate-500">Time is optional. The block will be saved to the selected day.</p>
+          </form>
+          <div id="daily-performance-log" class="space-y-1 text-[10px]"></div>
         </div>
       </div>
 
@@ -497,6 +508,14 @@
           <span class="text-[10px] text-slate-500">Select a day to open it</span>
         </div>
         <div id="wk-calendar" class="grid grid-cols-7 gap-1.5 sm:gap-2"></div>
+      </section>
+
+      <section class="space-y-3 border-t border-slate-800 pt-4" aria-labelledby="wk-performance-heading">
+        <div class="flex items-center justify-between">
+          <h3 id="wk-performance-heading" class="text-xs font-bold text-slate-300 uppercase font-mono">Performance Time</h3>
+          <span id="wk-performance-count" class="text-[10px] text-slate-500 font-mono"></span>
+        </div>
+        <div id="wk-performance-log" class="space-y-2 text-xs"></div>
       </section>
 
       <section class="space-y-3" aria-labelledby="wk-nonneg-heading">
@@ -1714,6 +1733,8 @@
       renderDailyNonNegRows(dayData.nonneg || []);
       renderDailyOtherRows(dayData.other || []);
       document.getElementById('daily-appts').value = dayData.appts || '';
+      document.getElementById('performance-day-label').textContent = `Selected day: ${targetDate.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}`;
+      renderDailyPerformanceLog(dayData.performanceBlocks || []);
       renderHourlyPlanner();
 
       evaluateWeeklyPlanningTriggers();
@@ -2372,10 +2393,7 @@
     }
 
     function logBlockToday(type) {
-      if (!state.blocks) state.blocks = { strategic: 0, buffer: 0, breakout: 0 };
-      state.blocks[type] = (state.blocks[type] || 0) + 1;
-      saveState();
-      alert(`+1 ${type.toUpperCase()} block logged for this week!`);
+      openPerformanceTimeEntry(type);
     }
 
     /* OVERVIEW MANAGEMENT (Full 12-Week Cycle) */
@@ -2446,12 +2464,127 @@
         const dateLabel = date.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
         const resultLabel = progress.pct === null ? 'No tasks' : `${progress.pct}% complete`;
         const current = dateKey === formatDateKey(getLocalTodayDate());
+        const performanceBlocks = state?.days?.[dateKey]?.performanceBlocks || [];
+        const performanceLabels = performanceBlocks.slice(0, 2).map(block => {
+          const code = getPerformanceShortLabel(block.type);
+          const text = block.time ? formatPerformanceTime(block.time, true) : code;
+          return `<span class="rounded px-0.5 text-[8px] ${getPerformanceColorClass(block.type)}" title="${getPerformanceTypeName(block.type)}${block.time ? ` at ${formatPerformanceTime(block.time)}` : ''}">${text}</span>`;
+        }).join('');
+        const moreBlocks = performanceBlocks.length > 2 ? `<span class="text-[8px] text-slate-400">+${performanceBlocks.length - 2}</span>` : '';
         return `<button type="button" onclick="openDailyDate('${dateKey}')" title="${dateLabel}: ${resultLabel}" aria-label="${dateLabel}: ${resultLabel}" class="min-w-0 border rounded-lg px-1 py-2 text-center ${getProgressColorClass(progress)} ${current ? 'ring-2 ring-white ring-offset-1 ring-offset-slate-950' : ''}">
           <span class="block text-[9px] text-slate-400">${weekday}</span>
           <span class="block text-sm font-bold font-mono">${date.getDate()}</span>
           <span class="block text-[9px]">${progress.pct === null ? '—' : `${progress.pct}%`}</span>
+          <span class="flex min-h-3 justify-center gap-0.5">${performanceLabels}${moreBlocks}</span>
         </button>`;
       }).join('');
+    }
+
+    const PERFORMANCE_TYPE_NAMES = {
+      strategic: 'Strategic',
+      buffer: 'Buffer',
+      breakout: 'Breakout'
+    };
+
+    function getPerformanceTypeName(type) {
+      return PERFORMANCE_TYPE_NAMES[type] || 'Performance';
+    }
+
+    function getPerformanceShortLabel(type) {
+      return { strategic: 'S', buffer: 'B', breakout: 'R' }[type] || 'P';
+    }
+
+    function getPerformanceColorClass(type) {
+      return {
+        strategic: 'bg-amber-500/20 text-amber-300',
+        buffer: 'bg-teal-500/20 text-teal-300',
+        breakout: 'bg-emerald-500/20 text-emerald-300'
+      }[type] || 'bg-slate-700 text-slate-200';
+    }
+
+    function formatPerformanceTime(time, compact = false) {
+      if (!time) return '';
+      const [hour, minute] = time.split(':').map(Number);
+      const formatted = new Date(2000, 0, 1, hour, minute).toLocaleTimeString(undefined, {
+        hour: 'numeric',
+        minute: compact ? undefined : '2-digit'
+      });
+      return compact ? formatted.replace(':00', '').replace(' ', '').toLowerCase() : formatted;
+    }
+
+    let activePerformanceType = null;
+
+    function openPerformanceTimeEntry(type) {
+      activePerformanceType = type;
+      document.getElementById('daily-performance-form-label').textContent = `Log a ${getPerformanceTypeName(type)} block for ${parseDateKey(activeDateKey).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`;
+      document.getElementById('daily-performance-time').value = '';
+      document.getElementById('daily-performance-form').classList.remove('hidden');
+    }
+
+    function closePerformanceTimeEntry() {
+      activePerformanceType = null;
+      document.getElementById('daily-performance-form').classList.add('hidden');
+    }
+
+    function savePerformanceTimeEntry(event) {
+      event.preventDefault();
+      if (!activePerformanceType) return;
+      const day = state.days[activeDateKey];
+      if (!day.performanceBlocks) day.performanceBlocks = [];
+      day.performanceBlocks.push({
+        id: `perf_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        type: activePerformanceType,
+        time: document.getElementById('daily-performance-time').value || ''
+      });
+      day.performanceBlocks.sort((first, second) => (first.time || '99:99').localeCompare(second.time || '99:99'));
+      saveState();
+      closePerformanceTimeEntry();
+      renderDailyPerformanceLog(day.performanceBlocks);
+      if (!document.getElementById('view-week').classList.contains('hidden')) renderWeekPage();
+      if (!document.getElementById('view-overview').classList.contains('hidden')) renderOverviewPage();
+    }
+
+    function removePerformanceTimeEntry(dateKey, id) {
+      const day = state?.days?.[dateKey];
+      if (!day?.performanceBlocks) return;
+      day.performanceBlocks = day.performanceBlocks.filter(block => block.id !== id);
+      saveState();
+      if (dateKey === activeDateKey) renderDailyPerformanceLog(day.performanceBlocks);
+      if (!document.getElementById('view-week').classList.contains('hidden')) renderWeekPage();
+      if (!document.getElementById('view-overview').classList.contains('hidden')) renderOverviewPage();
+    }
+
+    function renderDailyPerformanceLog(blocks) {
+      const container = document.getElementById('daily-performance-log');
+      container.innerHTML = blocks.map(block => `
+        <div class="flex items-center justify-between gap-2 border-t border-slate-800 pt-1.5">
+          <span class="min-w-0 truncate ${getPerformanceColorClass(block.type)} rounded px-1.5 py-0.5">${getPerformanceTypeName(block.type)}${block.time ? ` · ${formatPerformanceTime(block.time)}` : ' · Time not set'}</span>
+          <button type="button" onclick="removePerformanceTimeEntry('${activeDateKey}', '${block.id}')" aria-label="Remove ${getPerformanceTypeName(block.type)} block" class="shrink-0 text-slate-500 hover:text-rose-300">Remove</button>
+        </div>
+      `).join('');
+    }
+
+    function renderWeeklyPerformanceLog(weekStart, weekEnd) {
+      const container = document.getElementById('wk-performance-log');
+      let count = 0;
+      const rows = [];
+      const day = new Date(weekStart);
+      while (day <= weekEnd) {
+        const dateKey = formatDateKey(day);
+        const blocks = state?.days?.[dateKey]?.performanceBlocks || [];
+        count += blocks.length;
+        if (blocks.length) {
+          const dateLabel = day.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+          rows.push(`<div class="flex flex-wrap items-center gap-2 border-b border-slate-800 py-1.5">
+            <span class="w-20 shrink-0 text-slate-400">${dateLabel}</span>
+            ${blocks.map(block => `<span class="rounded px-1.5 py-0.5 ${getPerformanceColorClass(block.type)}">${getPerformanceTypeName(block.type)} · ${block.time ? formatPerformanceTime(block.time) : 'Time not set'}</span>`).join('')}
+          </div>`);
+        }
+        day.setDate(day.getDate() + 1);
+      }
+
+      document.getElementById('wk-performance-count').textContent = `${count} block${count === 1 ? '' : 's'}`;
+      container.innerHTML = rows.join('') || '<p class="text-[11px] text-slate-500">No performance time logged for this week.</p>';
     }
 
     function toggleWeeklyNonNeg(dateKey, index) {
@@ -2506,6 +2639,7 @@
       document.querySelector('[onclick="navigateCycleWeek(1)"]').disabled = selectedCycleWeek >= currentWeek;
 
       renderWeekCalendar(weekStart);
+      renderWeeklyPerformanceLog(weekStart, weekEnd);
       calculateWeeklySideQuestStats(timeline, weekStart, weekEnd);
       renderWeeklyNonNegStats(timeline, weekStart, weekEnd);
       renderWeeklySideQuestList(weekStart, weekEnd);
@@ -2729,9 +2863,21 @@
       document.getElementById('stat-pie-side-text').textContent = `${sidePct}%`;
       document.getElementById('stat-pie-side-sub').textContent = `${doneSide} / ${totalSide} Cleared`;
 
-      const strat = state?.blocks?.strategic || 0;
-      const buff = state?.blocks?.buffer || 0;
-      const brk = state?.blocks?.breakout || 0;
+      let strat = 0;
+      let buff = 0;
+      let brk = 0;
+      Object.values(state?.days || {}).forEach(day => {
+        (day.performanceBlocks || []).forEach(block => {
+          if (block.type === 'strategic') strat++;
+          else if (block.type === 'buffer') buff++;
+          else if (block.type === 'breakout') brk++;
+        });
+      });
+      if (strat + buff + brk === 0) {
+        strat = state?.blocks?.strategic || 0;
+        buff = state?.blocks?.buffer || 0;
+        brk = state?.blocks?.breakout || 0;
+      }
       const totalBlocks = strat + buff + brk;
       document.getElementById('stat-blocks-total').textContent = totalBlocks;
 
