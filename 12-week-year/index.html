@@ -53,6 +53,15 @@
           <span>📥</span> <span class="hidden sm:inline">JSON</span>
         </button>
 
+        <button
+          id="btn-refresh-cloud"
+          onclick="refreshCloudData()"
+          class="bg-slate-900 hover:bg-slate-800 border border-slate-800 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1 text-slate-300 hover:text-amber-400"
+          title="Refresh data from cloud"
+        >
+          <span>↻</span> <span class="hidden sm:inline">Refresh</span>
+        </button>
+
         <button 
           id="btn-settings" 
           onclick="toggleSettingsModal(true)" 
@@ -401,6 +410,10 @@
             <span id="wk-badge-current-week" class="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs px-2 py-0.5 rounded font-mono font-bold">Week 1 / 12</span>
           </div>
           <p id="wk-dates-label" class="text-xs text-slate-400 mt-1 font-mono"></p>
+          <div class="flex items-center gap-1 mt-2">
+            <button onclick="navigateCycleWeek(-1)" aria-label="Previous week" title="Previous week" class="bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 px-2.5 py-1 rounded-lg text-sm">←</button>
+            <button onclick="navigateCycleWeek(1)" aria-label="Next week" title="Next week" class="bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 px-2.5 py-1 rounded-lg text-sm">→</button>
+          </div>
         </div>
         <div class="flex items-center gap-2">
           <button onclick="switchView('daily')" class="bg-amber-500 hover:bg-amber-400 text-black px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">← Back to Daily</button>
@@ -453,6 +466,14 @@
         </div>
         <div id="wk-tactics-full-list" class="space-y-2 text-xs"></div>
       </div>
+
+      <section class="space-y-3" aria-labelledby="wk-nonneg-heading">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+          <h3 id="wk-nonneg-heading" class="text-xs font-bold text-amber-400 uppercase font-mono">Weekly Non-Negotiables</h3>
+          <span class="text-[10px] text-slate-500">Select a day to backfill tasks</span>
+        </div>
+        <div id="wk-nonneg-checklist" class="space-y-3 text-xs"></div>
+      </section>
 
       <!-- Weekly Side Quest Star Summary -->
       <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
@@ -839,7 +860,7 @@
         state.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
       }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      if (cloudSession && cloudSession.access_token) {
+      if (cloudHydrationComplete && cloudSession && cloudSession.access_token) {
         syncToCloud(false);
       }
     }
@@ -879,6 +900,7 @@
 
     /* CLOUD SYNC */
     let cloudSession = JSON.parse(localStorage.getItem(AUTH_SESSION_KEY) || 'null');
+    let cloudHydrationComplete = false;
 
     function toggleAuthModal(show) {
       document.getElementById('auth-modal').classList.toggle('hidden', !show);
@@ -965,7 +987,7 @@
         updateAuthUI();
 
         const loadedFromCloud = await loadFromCloud();
-        if (!loadedFromCloud && hasMeaningfulLocalState()) {
+          if (!loadedFromCloud && cloudHydrationComplete && hasMeaningfulLocalState()) {
           await syncToCloud(false);
         }
         toggleAuthModal(false);
@@ -1000,7 +1022,7 @@
           updateAuthUI();
 
           const loadedFromCloud = await loadFromCloud();
-          if (!loadedFromCloud && hasMeaningfulLocalState()) {
+          if (!loadedFromCloud && cloudHydrationComplete && hasMeaningfulLocalState()) {
             await syncToCloud(true);
           }
         } else {
@@ -1015,6 +1037,7 @@
 
     function handleLogout() {
       cloudSession = null;
+      cloudHydrationComplete = false;
       localStorage.removeItem(AUTH_SESSION_KEY);
       updateAuthUI();
       toggleAuthModal(false);
@@ -1145,6 +1168,7 @@
         });
         if (res.ok) {
           const records = await res.json();
+          cloudHydrationComplete = true;
           if (records && records.length > 0 && records[0].state) {
             state = records[0].state;
             localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -1160,6 +1184,32 @@
         console.warn('Cloud load error:', e);
       }
       return false;
+    }
+
+    async function refreshCloudData() {
+      if (!cloudSession?.access_token) {
+        alert('Sign in to refresh data from the cloud.');
+        return;
+      }
+
+      const button = document.getElementById('btn-refresh-cloud');
+      button.disabled = true;
+      button.classList.add('opacity-50');
+      try {
+        const loaded = await loadFromCloud();
+        if (loaded) {
+          const activeView = document.querySelector('section[id^="view-"]:not(.hidden)')?.id.replace('view-', '') || 'daily';
+          switchView(activeView);
+          alert('Latest cloud data loaded.');
+        } else if (cloudHydrationComplete) {
+          alert('No cloud plan was found for this account. Your current local data was kept.');
+        } else {
+          alert('Could not refresh cloud data. Your current data was kept.');
+        }
+      } finally {
+        button.disabled = false;
+        button.classList.remove('opacity-50');
+      }
     }
 
     async function initializeCloudSession() {
@@ -1611,7 +1661,7 @@
         const colorClass = getTickerColorClass(item.current, item.target);
         return `
           <div 
-            class="bg-slate-950/80 border border-slate-800 p-2.5 rounded-xl flex items-center justify-between group transition-colors"
+            class="bg-slate-950 border border-slate-800 p-2.5 rounded-xl flex items-center justify-between transition-colors"
             draggable="true" 
             ondragstart="handleDragStart(event, '${type}', ${idx})" 
             ondragover="handleDragOver(event)" 
@@ -1619,13 +1669,19 @@
           >
             <div class="flex items-center gap-2 min-w-0 pr-2">
               <span class="grab-handle text-slate-700 hover:text-slate-400 select-none text-xs">⠿</span>
-              ${item.frequency ? `<span class="text-[9px] font-mono uppercase px-1 rounded bg-slate-900 text-slate-400">${item.frequency}</span>` : ''}
-              <span class="font-medium text-slate-200 text-xs truncate cursor-pointer hover:text-amber-300" onclick="editIndicatorName('${item.id}')">${escapeHtml(item.name)}:</span>
+              <div class="min-w-0">
+                <div class="flex items-center gap-1.5">
+                  <span class="font-medium text-slate-200 truncate block cursor-pointer hover:text-amber-300" onclick="editIndicatorName('${item.id}')">${escapeHtml(item.name)}</span>
+                  ${item.frequency && type === 'lead' ? `<span class="text-[9px] font-mono uppercase px-1 rounded bg-slate-900 text-slate-400">${item.frequency}</span>` : ''}
+                </div>
+                <span class="text-[10px] text-slate-500 cursor-pointer hover:text-white" onclick="editIndicatorValues('${item.id}')">Target: ${item.target} (click to edit)</span>
+              </div>
             </div>
-            <div class="flex items-center gap-1 shrink-0 bg-slate-900 border border-slate-800 px-2 py-1 rounded-lg">
-              <span class="font-mono text-xs ${colorClass} px-1 cursor-pointer select-none" onclick="editIndicatorValues('${item.id}')" title="Target: ${item.target}">${item.current || 0}</span>
-              <button onclick="adjustIndicator('${item.id}', -1)" class="w-5 h-5 flex items-center justify-center text-slate-400 hover:text-white font-bold bg-slate-800 rounded text-xs">-</button>
-              <button onclick="adjustIndicator('${item.id}', 1)" class="w-5 h-5 flex items-center justify-center text-amber-400 hover:text-amber-300 font-bold bg-slate-800 rounded text-xs">+</button>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <span class="font-mono text-xs ${colorClass} px-1 cursor-pointer" onclick="editIndicatorValues('${item.id}')">${item.current || 0}</span>
+              <button onclick="adjustIndicator('${item.id}', -1)" class="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-white font-bold bg-slate-900 border border-slate-800 rounded text-xs">-</button>
+              <button onclick="adjustIndicator('${item.id}', 1)" class="w-6 h-6 flex items-center justify-center text-amber-400 hover:text-amber-300 font-bold bg-slate-900 border border-slate-800 rounded text-xs">+</button>
+              <button onclick="deleteIndicator('${type}', ${idx})" class="text-slate-600 hover:text-rose-400 text-xs ml-1">✕</button>
             </div>
           </div>
         `;
@@ -1683,38 +1739,26 @@
     function evaluateWeeklyPlanningTriggers() {
       if (!state || !state.hasCompletedOnboarding) return;
       const timeline = getCycleTimeline();
-      
-      if (timeline.currentWeek >= 12) {
-        document.getElementById('weekly-plan-prompt-banner').classList.add('hidden');
+      const thisWeek = Math.min(timeline.currentWeek, 12);
+      const promptBanner = document.getElementById('weekly-plan-prompt-banner');
+
+      if (timeline.currentWeek > 12) {
+        promptBanner.classList.add('hidden');
         return;
       }
 
-      // Upcoming week: suggested proactively on the last day of the current week
-      const upcomingWeek = timeline.currentWeek + 1;
+      const upcomingWeek = thisWeek + 1;
       const upcomingPlanned = Boolean(state?.weeklyObjectives?.[upcomingWeek]) || (state.tactics || []).some(t => String(t.week) === String(upcomingWeek));
-
-      // Current week: must be planned before proceeding if it was missed
-      const thisWeek = timeline.currentWeek;
-      const thisWeekPlanned = thisWeek === 1 || Boolean(state?.weeklyObjectives?.[thisWeek]) || (state.tactics || []).some(t => String(t.week) === String(thisWeek));
-
-      const now = new Date();
-      const currentDayOfWeek = now.getDay();
+      const thisWeekPlanned = Boolean(state?.weeklyObjectives?.[thisWeek]) || (thisWeek === 1 && Boolean(state?.week1Goal));
+      const currentDayOfWeek = new Date().getDay();
       const startDay = state.weekStartDay !== undefined ? state.weekStartDay : 1;
-
       const transitionDay = startDay === 1 ? 0 : 6;
-      const isTransitionDay = currentDayOfWeek === transitionDay;
-      const isNewWeekStartDay = currentDayOfWeek === startDay;
 
-      const promptBanner = document.getElementById('weekly-plan-prompt-banner');
       document.getElementById('prompt-banner-week-name').textContent = `Week ${upcomingWeek}`;
+      promptBanner.classList.toggle('hidden', !(thisWeek < 12 && currentDayOfWeek === transitionDay && !upcomingPlanned));
 
-      if (isTransitionDay && !upcomingPlanned) {
-        promptBanner.classList.remove('hidden');
-      } else {
-        promptBanner.classList.add('hidden');
-      }
-
-      if (isNewWeekStartDay && !thisWeekPlanned) {
+      const planningModal = document.getElementById('next-week-modal');
+      if (!thisWeekPlanned && planningModal.classList.contains('hidden')) {
         openNextWeekPlanningModal(thisWeek, true);
       }
     }
@@ -1823,7 +1867,7 @@
       else if (listType === 'lag') list = state.laggingIndicators;
       else if (listType === 'tactics') {
         const timeline = getCycleTimeline();
-        list = (state.tactics || []).filter(t => String(t.week) === String(timeline.currentWeek));
+        list = (state.tactics || []).filter(t => String(t.week) === String(selectedCycleWeek ?? getCycleTimeline().currentWeek));
       }
 
       if (list && list[srcIndex]) {
@@ -1961,12 +2005,11 @@
 
         const input = document.createElement('input');
         input.type = 'text';
+        input.value = item.text || '';
         input.autocomplete = 'off';
         input.autocapitalize = 'off';
         input.spellcheck = false;
         input.dataset.lpignore = 'true';
-        input.value = item.text || '';
-        input.oninput = (e) => editOtherText(idx, e.target.value);
         input.className = `bg-transparent flex-1 text-slate-200 outline-none text-xs ${item.done ? 'line-through text-slate-500' : ''}`;
         row.appendChild(input);
 
@@ -2138,27 +2181,82 @@
     }
 
     /* THIS WEEK MANAGEMENT */
+    let selectedCycleWeek = null;
+
+    function navigateCycleWeek(offset) {
+      const currentWeek = Math.min(12, getCycleTimeline().currentWeek);
+      if (selectedCycleWeek === null) selectedCycleWeek = currentWeek;
+      selectedCycleWeek = Math.max(1, Math.min(currentWeek, selectedCycleWeek + offset));
+      renderWeekPage();
+    }
+
+    function openDailyDate(dateKey) {
+      activeDateKey = dateKey;
+      switchView('daily');
+    }
+
+    function toggleWeeklyNonNeg(dateKey, index) {
+      const task = state?.days?.[dateKey]?.nonneg?.[index];
+      if (!task) return;
+      task.done = !task.done;
+      saveState();
+      renderWeekPage();
+    }
+
+    function renderWeeklyNonNegChecklist(weekStart, weekEnd) {
+      const container = document.getElementById('wk-nonneg-checklist');
+      const daySections = [];
+      const day = new Date(weekStart);
+
+      while (day <= weekEnd) {
+        const dateKey = formatDateKey(day);
+        const tasks = (state?.days?.[dateKey]?.nonneg || [])
+          .map((task, index) => ({ task, index }))
+          .filter(({ task }) => task.text?.trim());
+        const dateLabel = day.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+        const taskMarkup = tasks.length
+          ? tasks.map(({ task, index }) => `
+              <label class="flex items-center gap-2 rounded-lg bg-slate-950 px-3 py-2 ${task.done ? 'text-slate-500' : 'text-slate-200'}">
+                <input type="checkbox" ${task.done ? 'checked' : ''} onchange="toggleWeeklyNonNeg('${dateKey}', ${index})" class="w-4 h-4 rounded text-amber-500 bg-slate-900 border-slate-700 cursor-pointer" />
+                <span class="${task.done ? 'line-through' : ''}">${escapeHtml(task.text)}</span>
+              </label>
+            `).join('')
+          : `<div class="flex items-center justify-between rounded-lg bg-slate-900/60 px-3 py-2 text-slate-500"><span>No non-negotiables logged</span><button onclick="openDailyDate('${dateKey}')" class="text-amber-400 hover:text-amber-300">Review day →</button></div>`;
+
+        daySections.push(`<div class="space-y-1.5"><div class="flex items-center justify-between"><h4 class="font-semibold text-slate-300">${dateLabel}</h4>${tasks.length ? `<button onclick="openDailyDate('${dateKey}')" class="text-[10px] text-slate-500 hover:text-amber-300">Edit day</button>` : ''}</div><div class="space-y-1">${taskMarkup}</div></div>`);
+        day.setDate(day.getDate() + 1);
+      }
+      container.innerHTML = daySections.join('');
+    }
+
     function renderWeekPage() {
       const timeline = getCycleTimeline();
+      const currentWeek = Math.min(12, timeline.currentWeek);
+      if (selectedCycleWeek === null) selectedCycleWeek = currentWeek;
+      selectedCycleWeek = Math.min(selectedCycleWeek, currentWeek);
+
       const cycleStart = parseDateKey(state?.startDate || formatDateKey(getLocalTodayDate()));
       const weekStart = new Date(cycleStart);
-      weekStart.setDate(weekStart.getDate() + ((timeline.currentWeek - 1) * 7));
+      weekStart.setDate(weekStart.getDate() + ((selectedCycleWeek - 1) * 7));
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekEnd.getDate() + 6);
 
-      document.getElementById('wk-badge-current-week').textContent = timeline.isReviewWeek ? 'Week 13 (Review)' : `Week ${timeline.currentWeek} / 12`;
+      document.getElementById('wk-badge-current-week').textContent = `Week ${selectedCycleWeek} / 12${selectedCycleWeek === currentWeek ? ' • Current' : ''}`;
       document.getElementById('wk-dates-label').textContent = `${weekStart.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} → ${weekEnd.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
+      document.querySelector('[onclick="navigateCycleWeek(-1)"]').disabled = selectedCycleWeek <= 1;
+      document.querySelector('[onclick="navigateCycleWeek(1)"]').disabled = selectedCycleWeek >= currentWeek;
 
       calculateWeeklySideQuestStats(timeline, weekStart, weekEnd);
       renderWeeklyNonNegStats(timeline, weekStart, weekEnd);
       renderWeeklySideQuestList(weekStart, weekEnd);
+      renderWeeklyNonNegChecklist(weekStart, weekEnd);
 
-      const tactics = (state?.tactics || []).filter(t => String(t.week) === String(timeline.currentWeek));
+      const tactics = (state?.tactics || []).filter(t => String(t.week) === String(selectedCycleWeek ?? getCycleTimeline().currentWeek));
       const tacticsWarning = document.getElementById('wk-tactics-warning');
       if (tactics.length > 5) tacticsWarning.classList.remove('hidden');
       else tacticsWarning.classList.add('hidden');
 
-      const currentObj = state?.weeklyObjectives?.[timeline.currentWeek] || (timeline.currentWeek === 1 ? state?.week1Goal : '') || state?.keystoneGoal || '';
+      const currentObj = state?.weeklyObjectives?.[selectedCycleWeek] || (selectedCycleWeek === 1 ? state?.week1Goal : '') || state?.keystoneGoal || '';
       document.getElementById('wk-week-nonneg-text').textContent = currentObj ? `Objective: ${currentObj}` : '';
 
       const tacticsEl = document.getElementById('wk-tactics-full-list');
@@ -2174,7 +2272,7 @@
             <span class="grab-handle text-slate-700 hover:text-slate-400 select-none text-xs">⠿</span>
             <label class="flex items-center gap-3 cursor-pointer flex-1 min-w-0">
               <input type="checkbox" ${t.done ? 'checked' : ''} onchange="toggleOverviewTactic(${idx})" class="w-4 h-4 text-amber-500 rounded bg-slate-900 border-slate-700 cursor-pointer shrink-0" />
-              <span class="text-xs ${t.done ? 'line-through text-slate-500' : 'text-slate-200'} font-medium truncate">${escapeHtml(t.title)}</span>
+              <span class="${t.done ? 'line-through' : ''}">${escapeHtml(t.title)}</span>
             </label>
           </div>
           <button onclick="removeOverviewTactic(${idx})" class="text-slate-600 hover:text-rose-400 text-xs px-1">✕</button>
@@ -2182,130 +2280,91 @@
       `).join('') || '<div class="text-slate-600 text-xs py-2">No tactics configured.</div>';
     }
 
-    function renderWeeklySideQuestList(weekStart, weekEnd) {
-      const allEntries = [];
+    function calculateWeeklySideQuestStats(timeline, weekStart, weekEnd) {
+      let total = 0;
+      let done = 0;
       Object.entries(state?.days || {}).forEach(([dateKey, day]) => {
         const date = parseDateKey(dateKey);
         if (date < weekStart || date > weekEnd) return;
+        (day.other || []).forEach(item => {
+          total++;
+          if (item.done) done++;
+        });
+      });
 
-        (day.other || []).forEach((item, idx) => {
-          if (!item || !item.text || item.text.trim() === '') return;
-          allEntries.push({ dateKey, idx, text: item.text, done: !!item.done });
+      const rating = getStarRating(done, total);
+      const display = document.getElementById('wk-week-stars-display');
+      display.textContent = rating.stars;
+      display.className = `text-2xl ${rating.color}`;
+      const badge = document.getElementById('wk-week-stars-badge');
+      badge.textContent = rating.badge;
+      badge.className = `font-bold text-xs ${rating.color}`;
+      document.getElementById('wk-week-stars-ratio').textContent = `${done} / ${total} cleared this week`;
+      document.getElementById('wk-week-stars-pct').textContent = `${rating.pct}%`;
+    }
+
+    function renderWeeklySideQuestList(weekStart, weekEnd) {
+      const entries = [];
+      Object.entries(state?.days || {}).forEach(([dateKey, day]) => {
+        const date = parseDateKey(dateKey);
+        if (date < weekStart || date > weekEnd) return;
+        (day.other || []).forEach((item, index) => {
+          if (item?.text?.trim()) entries.push({ dateKey, index, item });
         });
       });
 
       const container = document.getElementById('wk-sidequest-list');
-      if (!container) return;
-
-      if (allEntries.length === 0) {
+      if (entries.length === 0) {
         container.innerHTML = '<div class="text-slate-600 text-xs py-2">No side quests logged for this week yet.</div>';
         return;
       }
 
-      container.innerHTML = '';
-      allEntries.forEach(({ dateKey, idx, text, done }) => {
-        const shortDate = parseDateKey(dateKey).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-
-        const row = document.createElement('div');
-        row.className = `flex items-center gap-2 bg-slate-950 border ${done ? 'border-slate-800/70 opacity-70' : 'border-slate-800'} rounded-xl p-2.5`;
-
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.checked = !!done;
-        checkbox.onchange = () => toggleWeeklySideQuest(dateKey, idx);
-        checkbox.className = 'w-4 h-4 rounded text-purple-500 bg-slate-900 border-slate-700 cursor-pointer shrink-0';
-        row.appendChild(checkbox);
-
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.value = text;
-        input.autocomplete = 'off';
-        input.autocapitalize = 'off';
-        input.spellcheck = false;
-        input.dataset.lpignore = 'true';
-        input.name = `wk-sidequest-${dateKey}-${idx}`;
-        input.oninput = (e) => editWeeklySideQuest(dateKey, idx, e.target.value);
-        input.className = `bg-transparent flex-1 text-slate-200 outline-none text-xs ${done ? 'line-through text-slate-500' : ''}`;
-        row.appendChild(input);
-
-        const badge = document.createElement('span');
-        badge.className = 'text-[9px] text-purple-400 font-mono bg-purple-500/10 px-1.5 py-0.5 rounded';
-        badge.textContent = shortDate;
-        row.appendChild(badge);
-
-        const removeBtn = document.createElement('button');
-        removeBtn.type = 'button';
-        removeBtn.onclick = () => removeWeeklySideQuest(dateKey, idx);
-        removeBtn.className = 'text-slate-600 hover:text-rose-400 px-1 text-xs';
-        removeBtn.textContent = '✕';
-        row.appendChild(removeBtn);
-
-        container.appendChild(row);
-      });
+      container.innerHTML = entries.map(({ dateKey, index, item }) => {
+        const dateLabel = parseDateKey(dateKey).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+        return `<div class="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl p-2.5">
+          <input type="checkbox" ${item.done ? 'checked' : ''} onchange="toggleWeeklySideQuest('${dateKey}', ${index})" class="w-4 h-4 rounded text-purple-500 bg-slate-900 border-slate-700 cursor-pointer" />
+          <input type="text" value="${escapeHtml(item.text)}" oninput="editWeeklySideQuest('${dateKey}', ${index}, this.value)" class="bg-transparent flex-1 text-slate-200 outline-none text-xs ${item.done ? 'line-through text-slate-500' : ''}" />
+          <span class="text-[9px] text-purple-400 font-mono">${dateLabel}</span>
+          <button onclick="removeWeeklySideQuest('${dateKey}', ${index})" class="text-slate-600 hover:text-rose-400 px-1 text-xs">✕</button>
+        </div>`;
+      }).join('');
     }
 
     function handleAddWeeklySideQuest(e, inputEl) {
       if (e.key !== 'Enter') return;
       const text = inputEl.value.trim();
       if (!text) return;
-
-      if (!state) state = {};
+      const dateKey = activeDateKey || formatDateKey(getLocalTodayDate());
       if (!state.days) state.days = {};
-
-      const targetDateKey = activeDateKey || formatDateKey(getLocalTodayDate());
-
-      if (!state.days[targetDateKey]) state.days[targetDateKey] = { nonneg: [], other: [], appts: '' };
-      if (!state.days[targetDateKey].other) state.days[targetDateKey].other = [];
-      state.days[targetDateKey].other.push({ text, done: false });
+      if (!state.days[dateKey]) state.days[dateKey] = { nonneg: [], other: [], appts: '' };
+      if (!state.days[dateKey].other) state.days[dateKey].other = [];
+      state.days[dateKey].other.push({ text, done: false });
       saveState();
       inputEl.value = '';
       renderWeekPage();
     }
 
-    function toggleWeeklySideQuest(dateKey, idx) {
-      if (!state || !state.days || !state.days[dateKey]?.other?.[idx]) return;
-      state.days[dateKey].other[idx].done = !state.days[dateKey].other[idx].done;
+    function toggleWeeklySideQuest(dateKey, index) {
+      const item = state?.days?.[dateKey]?.other?.[index];
+      if (!item) return;
+      item.done = !item.done;
       saveState();
       renderWeekPage();
     }
 
-    function editWeeklySideQuest(dateKey, idx, val) {
-      if (!state || !state.days || !state.days[dateKey]?.other?.[idx]) return;
-      state.days[dateKey].other[idx].text = val;
+    function editWeeklySideQuest(dateKey, index, value) {
+      const item = state?.days?.[dateKey]?.other?.[index];
+      if (!item) return;
+      item.text = value;
       saveState();
     }
 
-    function removeWeeklySideQuest(dateKey, idx) {
-      if (!state || !state.days || !state.days[dateKey]?.other?.[idx]) return;
-      state.days[dateKey].other.splice(idx, 1);
+    function removeWeeklySideQuest(dateKey, index) {
+      const items = state?.days?.[dateKey]?.other;
+      if (!items) return;
+      items.splice(index, 1);
       saveState();
       renderWeekPage();
-    }
-
-    function calculateWeeklySideQuestStats(timeline, weekStart, weekEnd) {
-      let weekOtherTotal = 0;
-      let weekOtherDone = 0;
-
-      Object.entries(state?.days || {}).forEach(([dKey, dObj]) => {
-        const date = parseDateKey(dKey);
-        if (date < weekStart || date > weekEnd) return;
-        (dObj.other || []).forEach(item => {
-          weekOtherTotal++;
-          if (item.done) weekOtherDone++;
-        });
-      });
-
-      const starData = getStarRating(weekOtherDone, weekOtherTotal);
-      const starDisp = document.getElementById('wk-week-stars-display');
-      starDisp.textContent = starData.stars;
-      starDisp.className = `text-2xl ${starData.color}`;
-
-      const starBadge = document.getElementById('wk-week-stars-badge');
-      starBadge.textContent = starData.badge;
-      starBadge.className = `font-bold text-xs ${starData.color}`;
-
-      document.getElementById('wk-week-stars-ratio').textContent = `${weekOtherDone} / ${weekOtherTotal} cleared this week`;
-      document.getElementById('wk-week-stars-pct').textContent = `${starData.pct}%`;
     }
 
     function renderWeeklyNonNegStats(timeline, weekStart, weekEnd) {
@@ -2467,8 +2526,8 @@
     }
 
     function toggleOverviewTactic(idx) {
-      const timeline = getCycleTimeline();
-      const currentTactics = (state?.tactics || []).filter(t => String(t.week) === String(timeline.currentWeek));
+      const week = selectedCycleWeek ?? getCycleTimeline().currentWeek;
+      const currentTactics = (state?.tactics || []).filter(t => String(t.week) === String(week));
       const targetTactic = currentTactics[idx];
       if (targetTactic) {
         targetTactic.done = !targetTactic.done;
@@ -2478,8 +2537,8 @@
     }
 
     function removeOverviewTactic(idx) {
-      const timeline = getCycleTimeline();
-      const currentTactics = (state?.tactics || []).filter(t => String(t.week) === String(timeline.currentWeek));
+      const week = selectedCycleWeek ?? getCycleTimeline().currentWeek;
+      const currentTactics = (state?.tactics || []).filter(t => String(t.week) === String(week));
       const targetTactic = currentTactics[idx];
       if (targetTactic) {
         state.tactics = state.tactics.filter(t => t.id !== targetTactic.id);
@@ -2515,92 +2574,86 @@
       document.getElementById('settings-review-time').value = s.review.time;
     }
 
-    function saveSettings(e) {
-      e.preventDefault();
-      if (!state) state = {};
+    function saveSettings(event) {
+      event.preventDefault();
       state.notifSettings = {
-        morning: { enabled: document.getElementById('settings-morning-enabled').checked, time: document.getElementById('settings-morning-time').value || '08:30' },
-        evening: { enabled: document.getElementById('settings-evening-enabled').checked, time: document.getElementById('settings-evening-time').value || '20:30' },
-        review: { enabled: document.getElementById('settings-review-enabled').checked, time: document.getElementById('settings-review-time').value || '18:00' }
+        morning: {
+          enabled: document.getElementById('settings-morning-enabled').checked,
+          time: document.getElementById('settings-morning-time').value
+        },
+        evening: {
+          enabled: document.getElementById('settings-evening-enabled').checked,
+          time: document.getElementById('settings-evening-time').value
+        },
+        review: {
+          enabled: document.getElementById('settings-review-enabled').checked,
+          time: document.getElementById('settings-review-time').value
+        }
       };
       saveState();
       toggleSettingsModal(false);
     }
 
-    function dismissNotificationBanner() {
-      if (!state) state = {};
-      state.notifBannerDismissed = true;
-      saveState();
-      document.getElementById('notification-banner').classList.add('hidden');
-    }
-
     function updateNotificationUI() {
-      const btn = document.getElementById('btn-enable-notif');
-      const testBtn = document.getElementById('btn-test-notif');
-      const statusText = document.getElementById('notification-status-text');
       const banner = document.getElementById('notification-banner');
+      const status = document.getElementById('notification-status-text');
+      const enableButton = document.getElementById('btn-enable-notif');
+      const testButton = document.getElementById('btn-test-notif');
+      const permission = 'Notification' in window ? Notification.permission : 'unsupported';
 
-      if (!('Notification' in window)) {
-        statusText.textContent = 'System notifications not supported in this browser.';
-        btn.classList.add('hidden');
-        return;
+      if (permission === 'granted') {
+        status.textContent = 'Local reminders are enabled for this browser.';
+        enableButton.classList.add('hidden');
+        testButton.classList.remove('hidden');
+      } else if (permission === 'unsupported') {
+        status.textContent = 'This browser does not support local notifications.';
+        enableButton.classList.add('hidden');
+        testButton.classList.add('hidden');
+      } else {
+        status.textContent = permission === 'denied'
+          ? 'Notifications are blocked in this browser. Allow them in browser settings to enable reminders.'
+          : 'Enable local reminders for 8:30 AM tactical plan & 8:30 PM 85% goal pacing.';
+        enableButton.classList.remove('hidden');
+        testButton.classList.add('hidden');
       }
 
-      // Once enabled (or explicitly dismissed), the banner stays out of the way.
-      if (Notification.permission === 'granted' || state?.notifBannerDismissed) {
-        banner.classList.add('hidden');
-        return;
-      }
-      banner.classList.remove('hidden');
-
-      if (Notification.permission === 'denied') {
-        statusText.textContent = 'Alerts are blocked in your browser settings.';
-        btn.textContent = 'Blocked';
-        btn.classList.replace('text-amber-300', 'text-slate-500');
-      }
+      banner.classList.toggle('hidden', localStorage.getItem('twelve_week_notification_banner_dismissed') === 'true');
     }
 
-    function requestNotificationPermission() {
-      if (!('Notification' in window)) return;
-      Notification.requestPermission().then(permission => {
-        updateNotificationUI();
-        if (permission === 'granted') {
-          testNotification();
-          saveState();
-        }
-      });
+    function dismissNotificationBanner() {
+      localStorage.setItem('twelve_week_notification_banner_dismissed', 'true');
+      updateNotificationUI();
     }
 
-    function testNotification() {
-      sendNotification("⚡ 12-Week Year Reminder", "Notifications active! Adjust times anytime in Settings ⚙️.");
+    async function requestNotificationPermission() {
+      if (!('Notification' in window)) return updateNotificationUI();
+      await Notification.requestPermission();
+      updateNotificationUI();
     }
 
     function sendNotification(title, body) {
-      if (!('Notification' in window) || Notification.permission !== 'granted') return;
-      try {
-        new Notification(title, {
-          body,
-          icon: 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>'
-        });
-      } catch(e) {
-        console.warn('Notification trigger error:', e);
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification(title, { body });
       }
     }
 
+    function testNotification() {
+      sendNotification('12-Week Year reminder test', 'Local reminders are working.');
+    }
+
     let lastNotifiedHour = null;
+
     function checkNotificationTriggers() {
       if (!('Notification' in window) || Notification.permission !== 'granted') return;
-      const settings = getNotifSettings();
       const now = new Date();
+      const settings = getNotifSettings();
       const hour = now.getHours();
       const minute = now.getMinutes();
       const dayOfWeek = now.getDay();
       const nowHHMM = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
-
       const isMorningBrief = settings.morning.enabled && nowHHMM === settings.morning.time;
       const isEveningPacing = settings.evening.enabled && nowHHMM === settings.evening.time;
       const isSundayReview = settings.review.enabled && dayOfWeek === 0 && nowHHMM === settings.review.time;
-
       const currentTriggerKey = `${now.toDateString()}_${hour}_${minute}`;
       if (lastNotifiedHour === currentTriggerKey) return;
 
@@ -2699,17 +2752,21 @@
 
     document.getElementById('wiz-start-date').value = '2026-09-07';
 
-    updateAuthUI();
-    updateNotificationUI();
-    initializeCloudSession();
+    async function initializeApp() {
+      updateAuthUI();
+      updateNotificationUI();
+      await initializeCloudSession();
 
-    if (!state || !state.hasCompletedOnboarding) {
-      if (!state) state = { hasCompletedOnboarding: false };
-      wizStep = 1;
-      switchView('guide');
-    } else {
-      switchView('daily');
+      if (!state || !state.hasCompletedOnboarding) {
+        if (!state) state = { hasCompletedOnboarding: false };
+        wizStep = 1;
+        switchView('guide');
+      } else {
+        switchView('daily');
+      }
     }
+
+    initializeApp();
   </script>
 </body>
 </html>
