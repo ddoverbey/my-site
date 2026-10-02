@@ -762,6 +762,23 @@
     </div>
   </div>
 
+  <div id="weekly-review-modal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden" role="dialog" aria-modal="true" aria-labelledby="weekly-review-modal-title">
+    <div class="bg-slate-900 border border-emerald-800/70 rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl">
+      <div class="flex items-start justify-between gap-3 border-b border-slate-800 pb-3">
+        <div>
+          <span class="text-[10px] font-mono uppercase tracking-wider text-emerald-400 font-bold">Weekly Review</span>
+          <h2 id="weekly-review-modal-title" class="text-lg font-bold text-white mt-0.5">Review Week <span id="weekly-review-modal-week">1</span></h2>
+        </div>
+        <button type="button" onclick="dismissWeeklyReviewPrompt()" aria-label="Close weekly review reminder" class="text-slate-400 hover:text-white text-sm">✕</button>
+      </div>
+      <p class="text-sm text-slate-300">Your week is complete. Take a few minutes to capture what went well, what was difficult, and what you learned.</p>
+      <div class="flex items-center justify-end gap-2">
+        <button type="button" onclick="dismissWeeklyReviewPrompt()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 rounded-lg text-xs font-semibold">Later</button>
+        <button type="button" onclick="openWeeklyReview()" class="bg-emerald-400 hover:bg-emerald-300 text-slate-950 px-3 py-2 rounded-lg text-xs font-bold">Review now</button>
+      </div>
+    </div>
+  </div>
+
   <!-- SETTINGS MODAL -->
   <div id="settings-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
@@ -2046,6 +2063,7 @@
 
     function closeNextWeekPlanningModal() {
       document.getElementById('next-week-modal').classList.add('hidden');
+      evaluateWeeklyReviewPrompt();
     }
 
     function addModalTacticRow(val = '') {
@@ -3110,6 +3128,7 @@
     /* REVIEW & ROUTING */
     let selectedReviewWeek = null;
     let reviewDraftSaveTimeout = null;
+    let reviewPromptShownThisLoad = false;
 
     function isCycleWeekEndToday() {
       const startDate = parseDateKey(state?.startDate || formatDateKey(getLocalTodayDate()));
@@ -3136,17 +3155,33 @@
 
     function evaluateWeeklyReviewPrompt() {
       const banner = document.getElementById('weekly-review-prompt-banner');
+      const modal = document.getElementById('weekly-review-modal');
       const week = getReviewPromptWeek();
       if (!week) {
         banner.classList.add('hidden');
+        modal.classList.add('hidden');
         return;
       }
 
       document.getElementById('review-prompt-week-name').textContent = `Week ${week}`;
+      document.getElementById('weekly-review-modal-week').textContent = week;
       banner.classList.remove('hidden');
+
+      const planningModalOpen = !document.getElementById('next-week-modal').classList.contains('hidden');
+      if (!reviewPromptShownThisLoad && !planningModalOpen) {
+        reviewPromptShownThisLoad = true;
+        modal.classList.remove('hidden');
+      }
+    }
+
+    function dismissWeeklyReviewPrompt() {
+      document.getElementById('weekly-review-modal').classList.add('hidden');
+      reviewPromptShownThisLoad = true;
     }
 
     function openWeeklyReview() {
+      document.getElementById('weekly-review-modal').classList.add('hidden');
+      reviewPromptShownThisLoad = true;
       selectedReviewWeek = getReviewPromptWeek() || getLatestReviewableWeek();
       switchView('review');
     }
