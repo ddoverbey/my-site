@@ -564,24 +564,36 @@
 
       <!-- 12-Week Totals -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-        <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 flex items-center justify-between">
+        <button type="button" onclick="toggleCycleTaskDetails('nonneg')" aria-expanded="false" aria-controls="ov-nonneg-detail" class="w-full text-left bg-slate-900 hover:bg-slate-800/80 p-4 rounded-xl border border-slate-800 flex items-center justify-between transition-colors">
           <div>
             <span class="text-[10px] font-mono uppercase tracking-wider text-amber-400 font-bold">12WY Main Quest Completion</span>
             <div class="text-2xl font-black text-amber-300 font-mono mt-1" id="ov-total-nonneg-pct">0%</div>
             <p id="ov-total-nonneg-count" class="text-[10px] text-slate-500 mt-0.5">0 / 0 non-negotiables done</p>
+            <span class="mt-1 block text-[9px] text-slate-500">View completed tasks ↓</span>
           </div>
           <span class="text-3xl">🔥</span>
-        </div>
+        </button>
 
-        <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 flex items-center justify-between">
+        <button type="button" onclick="toggleCycleTaskDetails('sidequests')" aria-expanded="false" aria-controls="ov-sidequest-detail" class="w-full text-left bg-slate-900 hover:bg-slate-800/80 p-4 rounded-xl border border-slate-800 flex items-center justify-between transition-colors">
           <div>
             <span class="text-[10px] font-mono uppercase tracking-wider text-purple-400 font-bold">12WY Side Quests Cleared</span>
             <div class="text-2xl font-black text-purple-300 font-mono mt-1" id="ov-total-sidequests-count">0</div>
             <p id="ov-total-sidequests-sub" class="text-[10px] text-slate-500 mt-0.5">0 / 0 bonus items completed</p>
+            <span class="mt-1 block text-[9px] text-slate-500">View completed tasks ↓</span>
           </div>
           <span class="text-3xl">🏆</span>
-        </div>
+        </button>
       </div>
+
+      <section id="ov-nonneg-detail" class="hidden border-t border-slate-800 pt-3 space-y-2" aria-labelledby="ov-nonneg-detail-heading">
+        <h3 id="ov-nonneg-detail-heading" class="text-xs font-bold text-amber-400 uppercase font-mono">Completed Non-Negotiables</h3>
+        <div id="ov-nonneg-detail-list" class="space-y-1.5 text-xs"></div>
+      </section>
+
+      <section id="ov-sidequest-detail" class="hidden border-t border-slate-800 pt-3 space-y-2" aria-labelledby="ov-sidequest-detail-heading">
+        <h3 id="ov-sidequest-detail-heading" class="text-xs font-bold text-purple-300 uppercase font-mono">Completed Side Quests</h3>
+        <div id="ov-sidequest-detail-list" class="space-y-1.5 text-xs"></div>
+      </section>
 
       <section class="space-y-3 border-t border-slate-800 pt-4" aria-labelledby="cycle-calendar-heading">
         <div class="flex flex-wrap items-center justify-between gap-2">
@@ -1403,6 +1415,26 @@
       return 'text-emerald-400 font-black';
     }
 
+    function getIndicatorTargetToDate(item) {
+      const target = Number(item.target) || 0;
+      const frequency = item.frequency || 'daily';
+      const cycleDay = getCycleTimeline().currentDay;
+      if (frequency === 'daily') return target * cycleDay;
+      if (frequency === 'weekly') return Math.ceil((target * cycleDay) / 7);
+      if (frequency === 'na') return null;
+      return target;
+    }
+
+    function getIndicatorTargetLabel(item) {
+      const frequency = item.frequency || 'daily';
+      const target = getIndicatorTargetToDate(item);
+      if (target === null) return 'Target: N/A';
+      if (frequency === 'daily' || frequency === 'weekly') {
+        return `Target to date: ${target} (${item.target}/${frequency === 'daily' ? 'day' : 'week'})`;
+      }
+      return `12-week target: ${target}`;
+    }
+
     function getStarRating(done, total) {
       if (total === 0) return { stars: '☆☆☆', badge: 'None', color: 'text-slate-500', pct: 0 };
       const pct = Math.round((done / total) * 100);
@@ -1917,7 +1949,8 @@
       }
 
       container.innerHTML = list.map((item, idx) => {
-        const colorClass = getTickerColorClass(item.current, item.target);
+        const colorClass = getTickerColorClass(item.current, getIndicatorTargetToDate(item));
+        const targetLabel = getIndicatorTargetLabel(item);
         return `
           <div 
             class="bg-slate-950 border border-slate-800 p-2.5 rounded-xl flex items-center justify-between transition-colors"
@@ -1934,7 +1967,7 @@
                   <span class="font-medium text-slate-200 truncate block cursor-pointer hover:text-amber-300" onclick="editIndicatorName('${item.id}')">${escapeHtml(item.name)}</span>
                   ${item.frequency && type === 'lead' ? `<span class="text-[9px] font-mono uppercase px-1 rounded bg-slate-900 text-slate-400">${item.frequency}</span>` : ''}
                 </div>
-                <span class="text-[10px] text-slate-500 cursor-pointer hover:text-white" onclick="editIndicatorValues('${item.id}')">Target: ${item.target} (click to edit)</span>
+                <span class="text-[10px] text-slate-500 cursor-pointer hover:text-white" onclick="editIndicatorValues('${item.id}')">${targetLabel} (click to edit)</span>
               </div>
             </div>
             <div class="flex items-center gap-1.5 shrink-0">
@@ -2439,26 +2472,77 @@
     }
 
     function calculateCycleTotals() {
-      let totalNonNeg = 0;
-      let doneNonNeg = 0;
-      let totalOther = 0;
-      let doneOther = 0;
-
-      Object.values(state?.days || {}).forEach(day => {
-        const tasks = (day.nonneg || []).filter(t => t.text.trim() !== '');
-        totalNonNeg += tasks.length;
-        doneNonNeg += tasks.filter(t => t.done).length;
-
-        const other = day.other || [];
-        totalOther += other.length;
-        doneOther += other.filter(o => o.done).length;
-      });
-
-      const nonNegPct = totalNonNeg > 0 ? Math.round((doneNonNeg / totalNonNeg) * 100) : 0;
+      const totals = getCycleTaskSummary();
+      const nonNegPct = totals.nonneg.total > 0 ? Math.round((totals.nonneg.done / totals.nonneg.total) * 100) : 0;
       document.getElementById('ov-total-nonneg-pct').textContent = `${nonNegPct}%`;
-      document.getElementById('ov-total-nonneg-count').textContent = `${doneNonNeg} / ${totalNonNeg} non-negotiables done`;
-      document.getElementById('ov-total-sidequests-count').textContent = doneOther;
-      document.getElementById('ov-total-sidequests-sub').textContent = `${doneOther} / ${totalOther} bonus items completed`;
+      document.getElementById('ov-total-nonneg-count').textContent = `${totals.nonneg.done} / ${totals.nonneg.total} non-negotiables done`;
+      document.getElementById('ov-total-sidequests-count').textContent = totals.sidequests.done;
+      document.getElementById('ov-total-sidequests-sub').textContent = `${totals.sidequests.done} / ${totals.sidequests.total} bonus items completed`;
+      renderCycleTaskDetails(totals);
+    }
+
+    function getCycleDateRange() {
+      const startDateKey = state?.startDate || formatDateKey(getLocalTodayDate());
+      const cycleEnd = parseDateKey(startDateKey);
+      cycleEnd.setDate(cycleEnd.getDate() + 84);
+      return { startDateKey, endDateKey: formatDateKey(cycleEnd) };
+    }
+
+    function isDateInCycle(dateKey, cycleRange = getCycleDateRange()) {
+      return dateKey >= cycleRange.startDateKey && dateKey < cycleRange.endDateKey;
+    }
+
+    function getCycleTaskSummary() {
+      const cycleRange = getCycleDateRange();
+      const summary = {
+        nonneg: { total: 0, done: 0, items: [] },
+        sidequests: { total: 0, done: 0, items: [] }
+      };
+
+      Object.entries(state?.days || {}).sort(([first], [second]) => first.localeCompare(second)).forEach(([dateKey, day]) => {
+        if (!isDateInCycle(dateKey, cycleRange)) return;
+        (day.nonneg || []).filter(task => task.text?.trim()).forEach(task => {
+          summary.nonneg.total++;
+          if (task.done) {
+            summary.nonneg.done++;
+            summary.nonneg.items.push({ dateKey, text: task.text });
+          }
+        });
+        (day.other || []).filter(task => task.text?.trim()).forEach(task => {
+          summary.sidequests.total++;
+          if (task.done) {
+            summary.sidequests.done++;
+            summary.sidequests.items.push({ dateKey, text: task.text });
+          }
+        });
+      });
+      return summary;
+    }
+
+    function renderCycleTaskDetails(totals) {
+      const nonnegList = document.getElementById('ov-nonneg-detail-list');
+      const sidequestList = document.getElementById('ov-sidequest-detail-list');
+      nonnegList.innerHTML = totals.nonneg.items.map(item => `
+        <div class="flex items-start gap-2 rounded-lg bg-slate-900/70 px-3 py-2">
+          <span class="shrink-0 text-[10px] font-mono text-slate-500">${parseDateKey(item.dateKey).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+          <span class="text-slate-200">${escapeHtml(item.text)}</span>
+        </div>
+      `).join('') || '<p class="text-xs text-slate-500">No non-negotiables completed in this cycle yet.</p>';
+      sidequestList.innerHTML = totals.sidequests.items.map(item => `
+        <div class="flex items-start gap-2 rounded-lg bg-slate-900/70 px-3 py-2">
+          <span class="shrink-0 text-[10px] font-mono text-slate-500">${parseDateKey(item.dateKey).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+          <span class="text-slate-200">${escapeHtml(item.text)}</span>
+        </div>
+      `).join('') || '<p class="text-xs text-slate-500">No side quests cleared in this cycle yet.</p>';
+    }
+
+    function toggleCycleTaskDetails(type) {
+      const isNonneg = type === 'nonneg';
+      const panel = document.getElementById(isNonneg ? 'ov-nonneg-detail' : 'ov-sidequest-detail');
+      const button = document.getElementById(isNonneg ? 'ov-total-nonneg-pct' : 'ov-total-sidequests-count').closest('button');
+      const isOpening = panel.classList.contains('hidden');
+      panel.classList.toggle('hidden', !isOpening);
+      button.setAttribute('aria-expanded', String(isOpening));
     }
 
     /* THIS WEEK MANAGEMENT */
@@ -2830,7 +2914,8 @@
       }
 
       container.innerHTML = list.map((item, idx) => {
-        const colorClass = getTickerColorClass(item.current, item.target);
+        const colorClass = getTickerColorClass(item.current, getIndicatorTargetToDate(item));
+        const targetLabel = getIndicatorTargetLabel(item);
         return `
           <div 
             class="bg-slate-950 border border-slate-800 p-2.5 rounded-xl flex items-center justify-between transition-colors"
@@ -2846,7 +2931,7 @@
                   <span class="font-medium text-slate-200 truncate block cursor-pointer hover:text-amber-300" onclick="editIndicatorName('${item.id}')">${escapeHtml(item.name)}</span>
                   ${item.frequency && type === 'lead' ? `<span class="text-[9px] font-mono uppercase px-1 rounded bg-slate-900 text-slate-400">${item.frequency}</span>` : ''}
                 </div>
-                <span class="text-[10px] text-slate-500 cursor-pointer hover:text-white" onclick="editIndicatorValues('${item.id}')">Target: ${item.target} (click to edit)</span>
+                <span class="text-[10px] text-slate-500 cursor-pointer hover:text-white" onclick="editIndicatorValues('${item.id}')">${targetLabel} (click to edit)</span>
               </div>
             </div>
             <div class="flex items-center gap-1.5 shrink-0">
@@ -2861,7 +2946,7 @@
     }
 
     function renderStatsPies() {
-      const allTactics = state?.tactics || [];
+      const allTactics = (state?.tactics || []).filter(tactic => Number(tactic.week) >= 1 && Number(tactic.week) <= 12);
       const totalTactics = allTactics.length;
       const doneTactics = allTactics.filter(t => t.done).length;
       const mainPct = totalTactics > 0 ? Math.round((doneTactics / totalTactics) * 100) : 0;
@@ -2872,8 +2957,10 @@
 
       let totalSide = 0;
       let doneSide = 0;
-      Object.keys(state?.days || {}).forEach(k => {
-        (state.days[k].other || []).forEach(o => {
+      const cycleRange = getCycleDateRange();
+      Object.entries(state?.days || {}).forEach(([dateKey, day]) => {
+        if (!isDateInCycle(dateKey, cycleRange)) return;
+        (day.other || []).forEach(o => {
           totalSide++;
           if (o.done) doneSide++;
         });
@@ -2886,7 +2973,8 @@
       let strat = 0;
       let buff = 0;
       let brk = 0;
-      Object.values(state?.days || {}).forEach(day => {
+      Object.entries(state?.days || {}).forEach(([dateKey, day]) => {
+        if (!isDateInCycle(dateKey, cycleRange)) return;
         getDayPerformanceEntries(day).forEach(block => {
           if (block.type === 'strategic') strat++;
           else if (block.type === 'buffer') buff++;
