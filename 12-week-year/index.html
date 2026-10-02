@@ -385,49 +385,24 @@
         <div id="daily-other-tasks-container" class="space-y-2 text-xs"></div>
       </div>
 
-      <!-- 5. APPOINTMENTS & TIME BLOCKS -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3.5 space-y-2">
+      <!-- 5. APPOINTMENTS -->
+      <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3.5 space-y-2">
           <span class="text-xs font-bold text-slate-400 uppercase tracking-wider font-mono">Appointments / Calendar</span>
           <textarea id="daily-appts" oninput="saveCurrentDay()" rows="2" placeholder="e.g. 2:00 PM Strategy Call..." class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-200 outline-none leading-relaxed"></textarea>
-        </div>
-
-        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3.5 space-y-2 flex flex-col justify-between">
-          <div>
-            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider font-mono">Performance Time</span>
-            <p id="performance-day-label" class="text-[10px] text-slate-500"></p>
-            <p class="text-[10px] text-slate-500">Log uninterrupted blocks</p>
-          </div>
-          <div class="space-y-1 text-[9px] leading-relaxed text-slate-500">
-            <p><span class="font-semibold text-amber-400">Strategic:</span> Three hours for strategic, money-making work.</p>
-            <p><span class="font-semibold text-teal-400">Buffer:</span> 30-60 minutes for low-value activities.</p>
-            <p><span class="font-semibold text-emerald-400">Breakout:</span> At least 3 hours away from work to refresh and reinvigorate.</p>
-          </div>
-          <div class="grid grid-cols-3 gap-2 text-center">
-            <button onclick="openPerformanceTimeEntry('strategic')" class="bg-slate-950 border border-slate-800 hover:border-amber-500 p-1.5 rounded-lg text-[10px] font-semibold text-slate-300"><span class="block text-sm">🎯</span> Strategic</button>
-            <button onclick="openPerformanceTimeEntry('buffer')" class="bg-slate-950 border border-slate-800 hover:border-teal-500 p-1.5 rounded-lg text-[10px] font-semibold text-slate-300"><span class="block text-sm">📥</span> Buffer</button>
-            <button onclick="openPerformanceTimeEntry('breakout')" class="bg-slate-950 border border-slate-800 hover:border-emerald-500 p-1.5 rounded-lg text-[10px] font-semibold text-slate-300"><span class="block text-sm">🍃</span> Breakout</button>
-          </div>
-          <form id="daily-performance-form" onsubmit="savePerformanceTimeEntry(event)" class="hidden space-y-2 border-t border-slate-800 pt-2">
-            <label id="daily-performance-form-label" for="daily-performance-time" class="block text-[10px] font-semibold text-slate-300"></label>
-            <div class="flex items-center gap-2">
-              <input id="daily-performance-time" type="time" class="min-w-0 flex-1 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-slate-200 outline-none focus:border-teal-500" />
-              <button type="submit" class="bg-teal-500 hover:bg-teal-400 text-slate-950 px-3 py-1.5 rounded-lg text-xs font-bold">Log block</button>
-              <button type="button" onclick="closePerformanceTimeEntry()" class="text-slate-400 hover:text-white px-1 text-xs">Cancel</button>
-            </div>
-            <p class="text-[9px] text-slate-500">Time is optional. The block will be saved to the selected day.</p>
-          </form>
-          <div id="daily-performance-log" class="space-y-1 text-[10px]"></div>
-        </div>
       </div>
 
       <section id="daily-hourly-planner" class="hidden space-y-3 border-t border-slate-800 pt-4" aria-labelledby="daily-hourly-heading">
         <div class="flex items-center justify-between">
           <div>
-            <h3 id="daily-hourly-heading" class="text-xs font-bold text-slate-300 uppercase font-mono">Hourly Plan</h3>
-            <p class="text-[10px] text-slate-500">Add simple time blocks to this day.</p>
+            <h3 id="daily-hourly-heading" class="text-xs font-bold text-slate-300 uppercase font-mono">Hourly Calendar & Performance Time</h3>
+            <p class="text-[10px] text-slate-500">Choose “+ Block” in a time row. That row sets the start time.</p>
           </div>
           <span id="hourly-planner-date" class="text-[10px] text-slate-400 font-mono"></span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[10px] text-slate-400">
+          <p><span class="font-semibold text-amber-300">Strategic:</span> Three hours for strategic, high-value work.</p>
+          <p><span class="font-semibold text-teal-300">Buffer:</span> 30–60 minutes for low-value activities.</p>
+          <p><span class="font-semibold text-emerald-300">Breakout:</span> At least three hours away from work to refresh and reinvigorate.</p>
         </div>
         <div id="daily-hourly-grid" class="divide-y divide-slate-800 border-y border-slate-800"></div>
       </section>
@@ -1734,8 +1709,6 @@
       renderDailyNonNegRows(dayData.nonneg || []);
       renderDailyOtherRows(dayData.other || []);
       document.getElementById('daily-appts').value = dayData.appts || '';
-      document.getElementById('performance-day-label').textContent = `Selected day: ${targetDate.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}`;
-      renderDailyPerformanceLog(dayData.performanceBlocks || []);
       renderHourlyPlanner();
 
       evaluateWeeklyPlanningTriggers();
@@ -1834,7 +1807,8 @@
     function saveTimeBlock(event) {
       event.preventDefault();
       const title = document.getElementById('hourly-block-title').value.trim();
-      if (!title) return;
+      const performanceType = document.getElementById('hourly-block-type').value;
+      if (!title || !performanceType) return;
 
       if (!state.days[activeDateKey].timeBlocks) state.days[activeDateKey].timeBlocks = [];
       const duration = Number(document.getElementById('hourly-block-duration').value) || 1;
@@ -1842,12 +1816,14 @@
       if (existing) {
         existing.title = title;
         existing.duration = duration;
+        existing.performanceType = performanceType;
       } else {
         state.days[activeDateKey].timeBlocks.push({
           id: `block_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
           start: activeTimeBlockStart,
           title,
-          duration
+          duration,
+          performanceType
         });
       }
 
@@ -1876,11 +1852,21 @@
         const hour = index + 6;
         const start = `${String(hour).padStart(2, '0')}:00`;
         const hourBlocks = blocks.filter(block => block.start === start);
+        const startLabel = formatHourLabel(hour);
         const formMarkup = activeTimeBlockStart === start ? (() => {
           const editing = blocks.find(block => block.id === activeTimeBlockId);
           const duration = editing?.duration || 1;
           return `<form onsubmit="saveTimeBlock(event)" class="flex flex-wrap items-center gap-2 py-2">
-            <input id="hourly-block-title" type="text" required maxlength="100" value="${escapeHtml(editing?.title || '')}" placeholder="What are you planning?" class="min-w-0 flex-1 bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 outline-none focus:border-teal-500" />
+            <span class="w-full text-[10px] font-semibold text-slate-300">Block starts at ${startLabel}</span>
+            <label class="sr-only" for="hourly-block-title">Activity</label>
+            <input id="hourly-block-title" type="text" required maxlength="100" value="${escapeHtml(editing?.title || '')}" placeholder="Activity, e.g. Draft project proposal" class="min-w-0 flex-1 bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 outline-none focus:border-teal-500" />
+            <label class="sr-only" for="hourly-block-type">Performance category</label>
+            <select id="hourly-block-type" required aria-label="Performance category" class="min-w-0 flex-1 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-200 outline-none focus:border-teal-500">
+              <option value="" ${editing?.performanceType ? '' : 'selected'} disabled>Choose category</option>
+              <option value="strategic" ${editing?.performanceType === 'strategic' ? 'selected' : ''}>Strategic · high-value work</option>
+              <option value="buffer" ${editing?.performanceType === 'buffer' ? 'selected' : ''}>Buffer · low-value tasks</option>
+              <option value="breakout" ${editing?.performanceType === 'breakout' ? 'selected' : ''}>Breakout · time away from work</option>
+            </select>
             <select id="hourly-block-duration" aria-label="Block duration" class="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-200">
               ${[1, 2, 3, 4].map(value => `<option value="${value}" ${duration === value ? 'selected' : ''}>${value}h</option>`).join('')}
             </select>
@@ -1889,8 +1875,8 @@
           </form>`;
         })() : '';
         const blocksMarkup = hourBlocks.map(block => `
-          <div class="flex items-center justify-between gap-2 my-1 bg-teal-950/70 border border-teal-800 rounded-lg px-2.5 py-1.5">
-            <span class="min-w-0 truncate text-xs text-teal-100">${escapeHtml(block.title)} <span class="text-[10px] text-teal-400">${block.duration || 1}h</span></span>
+          <div class="flex items-center justify-between gap-2 my-1 ${block.performanceType ? getPerformanceColorClass(block.performanceType) : 'bg-slate-800 text-slate-200'} border border-slate-700 rounded-lg px-2.5 py-1.5">
+            <span class="min-w-0 truncate text-xs">${block.performanceType ? `<span class="font-semibold">${getPerformanceTypeName(block.performanceType)}:</span> ` : ''}${escapeHtml(block.title)} <span class="text-[10px] opacity-75">${block.duration || 1}h</span></span>
             <span class="flex shrink-0 gap-2">
               <button type="button" onclick="openTimeBlockForm('${start}', '${block.id}')" aria-label="Edit ${escapeHtml(block.title)}" class="text-slate-400 hover:text-white text-[10px]">Edit</button>
               <button type="button" onclick="deleteTimeBlock('${block.id}')" aria-label="Delete ${escapeHtml(block.title)}" class="text-slate-400 hover:text-rose-300 text-[10px]">Remove</button>
@@ -2415,10 +2401,6 @@
       document.getElementById('daily-stars-ratio').textContent = `${otherDone}/${otherTotal} done (${starData.pct}%)`;
     }
 
-    function logBlockToday(type) {
-      openPerformanceTimeEntry(type);
-    }
-
     /* OVERVIEW MANAGEMENT (Full 12-Week Cycle) */
     function renderOverviewPage() {
       const timeline = getCycleTimeline();
@@ -2499,6 +2481,26 @@
       switchView('daily');
     }
 
+    function getDayPerformanceEntries(day) {
+      const scheduled = (day?.timeBlocks || [])
+        .filter(block => block.performanceType)
+        .map(block => ({
+          id: block.id,
+          type: block.performanceType,
+          title: block.title,
+          time: block.start || '',
+          duration: block.duration || 1
+        }));
+      const legacy = (day?.performanceBlocks || []).map(block => ({
+        id: block.id,
+        type: block.type,
+        title: getPerformanceTypeName(block.type),
+        time: block.time || '',
+        duration: 1
+      }));
+      return [...scheduled, ...legacy].sort((first, second) => (first.time || '99:99').localeCompare(second.time || '99:99'));
+    }
+
     function renderWeekCalendar(weekStart) {
       const container = document.getElementById('wk-calendar');
       container.innerHTML = Array.from({ length: 7 }, (_, index) => {
@@ -2510,10 +2512,9 @@
         const dateLabel = date.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
         const resultLabel = progress.pct === null ? 'No tasks' : `${progress.pct}% complete`;
         const current = dateKey === formatDateKey(getLocalTodayDate());
-        const performanceBlocks = state?.days?.[dateKey]?.performanceBlocks || [];
+        const performanceBlocks = getDayPerformanceEntries(state?.days?.[dateKey]);
         const performanceLabels = performanceBlocks.slice(0, 2).map(block => {
-          const code = getPerformanceShortLabel(block.type);
-          const text = block.time ? formatPerformanceTime(block.time, true) : code;
+          const text = block.time ? formatPerformanceTime(block.time, true) : getPerformanceShortLabel(block.type);
           return `<span class="rounded px-0.5 text-[8px] ${getPerformanceColorClass(block.type)}" title="${getPerformanceTypeName(block.type)}${block.time ? ` at ${formatPerformanceTime(block.time)}` : ''}">${text}</span>`;
         }).join('');
         const moreBlocks = performanceBlocks.length > 2 ? `<span class="text-[8px] text-slate-400">+${performanceBlocks.length - 2}</span>` : '';
@@ -2558,58 +2559,6 @@
       return compact ? formatted.replace(':00', '').replace(' ', '').toLowerCase() : formatted;
     }
 
-    let activePerformanceType = null;
-
-    function openPerformanceTimeEntry(type) {
-      activePerformanceType = type;
-      document.getElementById('daily-performance-form-label').textContent = `Log a ${getPerformanceTypeName(type)} block for ${parseDateKey(activeDateKey).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`;
-      document.getElementById('daily-performance-time').value = '';
-      document.getElementById('daily-performance-form').classList.remove('hidden');
-    }
-
-    function closePerformanceTimeEntry() {
-      activePerformanceType = null;
-      document.getElementById('daily-performance-form').classList.add('hidden');
-    }
-
-    function savePerformanceTimeEntry(event) {
-      event.preventDefault();
-      if (!activePerformanceType) return;
-      const day = state.days[activeDateKey];
-      if (!day.performanceBlocks) day.performanceBlocks = [];
-      day.performanceBlocks.push({
-        id: `perf_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-        type: activePerformanceType,
-        time: document.getElementById('daily-performance-time').value || ''
-      });
-      day.performanceBlocks.sort((first, second) => (first.time || '99:99').localeCompare(second.time || '99:99'));
-      saveState();
-      closePerformanceTimeEntry();
-      renderDailyPerformanceLog(day.performanceBlocks);
-      if (!document.getElementById('view-week').classList.contains('hidden')) renderWeekPage();
-      if (!document.getElementById('view-overview').classList.contains('hidden')) renderOverviewPage();
-    }
-
-    function removePerformanceTimeEntry(dateKey, id) {
-      const day = state?.days?.[dateKey];
-      if (!day?.performanceBlocks) return;
-      day.performanceBlocks = day.performanceBlocks.filter(block => block.id !== id);
-      saveState();
-      if (dateKey === activeDateKey) renderDailyPerformanceLog(day.performanceBlocks);
-      if (!document.getElementById('view-week').classList.contains('hidden')) renderWeekPage();
-      if (!document.getElementById('view-overview').classList.contains('hidden')) renderOverviewPage();
-    }
-
-    function renderDailyPerformanceLog(blocks) {
-      const container = document.getElementById('daily-performance-log');
-      container.innerHTML = blocks.map(block => `
-        <div class="flex items-center justify-between gap-2 border-t border-slate-800 pt-1.5">
-          <span class="min-w-0 truncate ${getPerformanceColorClass(block.type)} rounded px-1.5 py-0.5">${getPerformanceTypeName(block.type)}${block.time ? ` · ${formatPerformanceTime(block.time)}` : ' · Time not set'}</span>
-          <button type="button" onclick="removePerformanceTimeEntry('${activeDateKey}', '${block.id}')" aria-label="Remove ${getPerformanceTypeName(block.type)} block" class="shrink-0 text-slate-500 hover:text-rose-300">Remove</button>
-        </div>
-      `).join('');
-    }
-
     function renderWeeklyPerformanceLog(weekStart, weekEnd) {
       const container = document.getElementById('wk-performance-log');
       let count = 0;
@@ -2617,13 +2566,13 @@
       const day = new Date(weekStart);
       while (day <= weekEnd) {
         const dateKey = formatDateKey(day);
-        const blocks = state?.days?.[dateKey]?.performanceBlocks || [];
+        const blocks = getDayPerformanceEntries(state?.days?.[dateKey]);
         count += blocks.length;
         if (blocks.length) {
           const dateLabel = day.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
           rows.push(`<div class="flex flex-wrap items-center gap-2 border-b border-slate-800 py-1.5">
             <span class="w-20 shrink-0 text-slate-400">${dateLabel}</span>
-            ${blocks.map(block => `<span class="rounded px-1.5 py-0.5 ${getPerformanceColorClass(block.type)}">${getPerformanceTypeName(block.type)} · ${block.time ? formatPerformanceTime(block.time) : 'Time not set'}</span>`).join('')}
+            ${blocks.map(block => `<span class="rounded px-1.5 py-0.5 ${getPerformanceColorClass(block.type)}">${getPerformanceTypeName(block.type)}: ${escapeHtml(block.title)} · ${block.time ? formatPerformanceTime(block.time) : 'Time not set'} · ${block.duration}h</span>`).join('')}
           </div>`);
         }
         day.setDate(day.getDate() + 1);
@@ -2920,7 +2869,7 @@
       let buff = 0;
       let brk = 0;
       Object.values(state?.days || {}).forEach(day => {
-        (day.performanceBlocks || []).forEach(block => {
+        getDayPerformanceEntries(day).forEach(block => {
           if (block.type === 'strategic') strat++;
           else if (block.type === 'buffer') buff++;
           else if (block.type === 'breakout') brk++;
