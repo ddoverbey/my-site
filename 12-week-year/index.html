@@ -416,7 +416,7 @@
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
         <div>
           <div class="flex items-center gap-2">
-            <h2 class="text-2xl font-bold tracking-tight text-white font-mono">THIS WEEK</h2>
+            <h2 id="wk-title" class="text-2xl font-bold tracking-tight text-white font-mono">THIS WEEK</h2>
             <span id="wk-badge-current-week" class="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs px-2 py-0.5 rounded font-mono font-bold">Week 1 / 12</span>
           </div>
           <p id="wk-dates-label" class="text-xs text-slate-400 mt-1 font-mono"></p>
@@ -2091,6 +2091,11 @@
         closeBtn.classList.remove('hidden');
       }
 
+      const reviewModal = document.getElementById('weekly-review-modal');
+      if (!reviewModal.classList.contains('hidden')) {
+        reviewModal.classList.add('hidden');
+        reviewPromptShownThisLoad = false;
+      }
       document.getElementById('next-week-modal').classList.remove('hidden');
     }
 
@@ -2138,8 +2143,8 @@
       });
 
       saveState();
-      closeNextWeekPlanningModal();
       document.getElementById('weekly-plan-prompt-banner').classList.add('hidden');
+      closeNextWeekPlanningModal();
       document.getElementById('next-week-plan-form').reset();
       if (document.getElementById('view-week').classList.contains('hidden')) {
         alert(`Week ${targetWeek} plan saved.`);
@@ -2723,6 +2728,7 @@
       const currentWeek = Math.min(12, timeline.currentWeek);
       if (selectedCycleWeek === null) selectedCycleWeek = currentWeek;
       selectedCycleWeek = Math.min(selectedCycleWeek, currentWeek);
+      document.getElementById('wk-title').textContent = selectedCycleWeek === currentWeek ? 'THIS WEEK' : `WEEK ${selectedCycleWeek}`;
 
       const cycleStart = parseDateKey(state?.startDate || formatDateKey(getLocalTodayDate()));
       const weekStart = new Date(cycleStart);
@@ -3236,9 +3242,16 @@
     }
 
     function getReviewPromptWeek() {
-      const latestReviewableWeek = getLatestReviewableWeek();
-      if (latestReviewableWeek < 1 || state?.reviews?.[latestReviewableWeek]) return null;
-      return latestReviewableWeek;
+      for (let week = getLatestReviewableWeek(); week >= 1; week--) {
+        if (!isWeeklyReviewComplete(state?.reviews?.[week])) return week;
+      }
+      return null;
+    }
+
+    function isWeeklyReviewComplete(review) {
+      if (!review || typeof review !== 'object') return false;
+      if (review.completedAt) return true;
+      return ['proud', 'challenges', 'learn', 'friend'].every(field => typeof review[field] === 'string' && review[field].trim());
     }
 
     function evaluateWeeklyReviewPrompt() {
@@ -3256,7 +3269,13 @@
       banner.classList.remove('hidden');
 
       const planningModalOpen = !document.getElementById('next-week-modal').classList.contains('hidden');
-      if (!reviewPromptShownThisLoad && !planningModalOpen) {
+      const planningPromptVisible = !document.getElementById('weekly-plan-prompt-banner').classList.contains('hidden');
+      if (planningModalOpen || planningPromptVisible) {
+        if (!modal.classList.contains('hidden')) reviewPromptShownThisLoad = false;
+        modal.classList.add('hidden');
+        return;
+      }
+      if (!reviewPromptShownThisLoad) {
         reviewPromptShownThisLoad = true;
         modal.classList.remove('hidden');
       }
@@ -3296,7 +3315,9 @@
       clearTimeout(reviewDraftSaveTimeout);
 
       const savedReview = state?.reviews?.[selectedReviewWeek];
-      if (savedReview && JSON.stringify(savedReview) === JSON.stringify(values)) {
+      const savedValuesMatch = savedReview && ['proud', 'challenges', 'learn', 'friend']
+        .every(field => (savedReview[field] || '') === values[field]);
+      if (isWeeklyReviewComplete(savedReview) && savedValuesMatch) {
         if (state.reviewDrafts) delete state.reviewDrafts[selectedReviewWeek];
         document.getElementById('review-week-status').textContent = 'Saved';
         return;
@@ -3347,7 +3368,7 @@
         setReviewFormValues(draft || savedReview || {});
         document.getElementById('review-week-status').textContent = draft
           ? 'Draft'
-          : savedReview ? 'Saved' : 'Not saved';
+          : isWeeklyReviewComplete(savedReview) ? 'Saved' : savedReview ? 'Draft' : 'Not saved';
       } else {
         setReviewFormValues({});
         document.getElementById('review-week-status').textContent = '';
@@ -3372,7 +3393,8 @@
         const dateLabel = `${start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} – ${end.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`;
         const saved = state?.reviews?.[week];
         const draft = state?.reviewDrafts?.[week];
-        const status = saved ? 'Saved' : draft ? 'Draft' : 'Not saved';
+        const complete = isWeeklyReviewComplete(saved);
+        const status = complete ? 'Saved' : draft || saved ? 'Draft' : 'Not saved';
         const values = saved || draft;
         const responseMarkup = values
           ? [
@@ -3386,7 +3408,7 @@
         return `<details class="border-b border-slate-800 py-2">
           <summary class="cursor-pointer list-none flex items-center justify-between gap-3 text-xs">
             <span class="font-semibold text-slate-200">Week ${week} <span class="ml-2 text-slate-500 font-normal">${dateLabel}</span></span>
-            <span class="shrink-0 font-mono ${saved ? 'text-emerald-400' : draft ? 'text-amber-300' : 'text-slate-500'}">${status}</span>
+            <span class="shrink-0 font-mono ${complete ? 'text-emerald-400' : draft || saved ? 'text-amber-300' : 'text-slate-500'}">${status}</span>
           </summary>
           <div class="pt-2 space-y-2 text-xs">
             ${responseMarkup}
@@ -3412,8 +3434,17 @@
     function saveReview() {
       if (selectedReviewWeek === null || selectedReviewWeek > getLatestReviewableWeek()) return;
       clearTimeout(reviewDraftSaveTimeout);
+      const values = getReviewFormValues();
+      const isComplete = ['proud', 'challenges', 'learn', 'friend'].every(field => values[field].trim());
+      if (!isComplete) {
+        if (!state.reviewDrafts) state.reviewDrafts = {};
+        state.reviewDrafts[selectedReviewWeek] = values;
+        saveState();
+        document.getElementById('review-week-status').textContent = 'Draft · complete all reflections to finish';
+        return;
+      }
       if (!state.reviews) state.reviews = {};
-      state.reviews[selectedReviewWeek] = getReviewFormValues();
+      state.reviews[selectedReviewWeek] = { ...values, completedAt: new Date().toISOString() };
       if (state.reviewDrafts) delete state.reviewDrafts[selectedReviewWeek];
       saveState();
       document.getElementById('review-week-status').textContent = 'Saved';
