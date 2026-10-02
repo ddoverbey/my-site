@@ -2114,6 +2114,7 @@
 
     /* DRAG & DROP REORDERING */
     let draggedItemInfo = null;
+    let editingWeeklyTacticId = null;
 
     function handleDragStart(e, listType, index) {
       draggedItemInfo = { listType, index };
@@ -2137,17 +2138,23 @@
       else if (listType === 'other') list = state.days[activeDateKey].other;
       else if (listType === 'lead') list = state.leadingIndicators;
       else if (listType === 'lag') list = state.laggingIndicators;
-      else if (listType === 'tactics') {
-        const timeline = getCycleTimeline();
-        list = (state.tactics || []).filter(t => String(t.week) === String(selectedCycleWeek ?? getCycleTimeline().currentWeek));
-      }
-
-      if (list && list[srcIndex]) {
+      if (listType === 'tactics') {
+        const weekTactics = (state.tactics || []).filter(t => String(t.week) === String(selectedCycleWeek ?? getCycleTimeline().currentWeek));
+        const sourceTactic = weekTactics[srcIndex];
+        const targetTactic = weekTactics[dropIndex];
+        if (sourceTactic && targetTactic) {
+          const sourceStateIndex = state.tactics.indexOf(sourceTactic);
+          const [moved] = state.tactics.splice(sourceStateIndex, 1);
+          const targetStateIndex = state.tactics.indexOf(targetTactic);
+          state.tactics.splice(targetStateIndex, 0, moved);
+          saveState();
+          renderWeekPage();
+        }
+      } else if (list && list[srcIndex]) {
         const [moved] = list.splice(srcIndex, 1);
         list.splice(dropIndex, 0, moved);
         saveState();
-        if (listType === 'tactics') renderWeekPage();
-        else if (listType === 'lead' || listType === 'lag') renderOverviewPage();
+        if (listType === 'lead' || listType === 'lag') renderOverviewPage();
         else renderDailyPage();
       }
       draggedItemInfo = null;
@@ -2457,6 +2464,29 @@
     /* THIS WEEK MANAGEMENT */
     let selectedCycleWeek = null;
 
+    function editWeeklyTactic(id) {
+      editingWeeklyTacticId = id;
+      renderWeekPage();
+      document.getElementById('weekly-tactic-edit-input')?.focus();
+    }
+
+    function cancelWeeklyTacticEdit() {
+      editingWeeklyTacticId = null;
+      renderWeekPage();
+    }
+
+    function saveWeeklyTacticEdit(event, id) {
+      event.preventDefault();
+      const title = document.getElementById('weekly-tactic-edit-input').value.trim();
+      if (!title) return;
+      const tactic = (state?.tactics || []).find(item => item.id === id && String(item.week) === String(selectedCycleWeek));
+      if (!tactic) return;
+      tactic.title = title;
+      editingWeeklyTacticId = null;
+      saveState();
+      renderWeekPage();
+    }
+
     function navigateCycleWeek(offset) {
       const currentWeek = Math.min(12, getCycleTimeline().currentWeek);
       if (selectedCycleWeek === null) selectedCycleWeek = currentWeek;
@@ -2670,24 +2700,31 @@
       document.getElementById('wk-week-nonneg-text').textContent = currentObj ? `Objective: ${currentObj}` : '';
 
       const tacticsEl = document.getElementById('wk-tactics-full-list');
-      tacticsEl.innerHTML = tactics.map((t, idx) => `
-        <div 
-          class="flex items-center justify-between p-3 bg-slate-950 border ${t.done ? 'border-slate-800/60 opacity-60' : 'border-slate-800'} rounded-xl transition-colors"
-          draggable="true" 
-          ondragstart="handleDragStart(event, 'tactics', ${idx})" 
-          ondragover="handleDragOver(event)" 
-          ondrop="handleDrop(event, 'tactics', ${idx})"
-        >
-          <div class="flex items-center gap-3 flex-1 min-w-0">
-            <span class="grab-handle text-slate-700 hover:text-slate-400 select-none text-xs">⠿</span>
-            <label class="flex items-center gap-3 cursor-pointer flex-1 min-w-0">
-              <input type="checkbox" ${t.done ? 'checked' : ''} onchange="toggleOverviewTactic(${idx})" class="w-4 h-4 text-amber-500 rounded bg-slate-900 border-slate-700 cursor-pointer shrink-0" />
-              <span class="${t.done ? 'line-through' : ''}">${escapeHtml(t.title)}</span>
-            </label>
-          </div>
-          <button onclick="removeOverviewTactic(${idx})" class="text-slate-600 hover:text-rose-400 text-xs px-1">✕</button>
-        </div>
-      `).join('') || '<div class="text-slate-600 text-xs py-2">No tactics configured.</div>';
+      tacticsEl.innerHTML = tactics.map((t, idx) => editingWeeklyTacticId === t.id
+        ? `<form onsubmit="saveWeeklyTacticEdit(event, '${t.id}')" class="flex items-center gap-2 p-2 bg-slate-950 border border-amber-500/50 rounded-xl">
+            <input id="weekly-tactic-edit-input" type="text" required maxlength="160" value="${escapeHtml(t.title)}" aria-label="Edit weekly tactic" class="min-w-0 flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 outline-none focus:border-amber-500" />
+            <button type="submit" class="bg-amber-500 hover:bg-amber-400 text-black px-2.5 py-1.5 rounded-lg text-xs font-bold">Save</button>
+            <button type="button" onclick="cancelWeeklyTacticEdit()" class="text-slate-400 hover:text-white px-1 text-xs">Cancel</button>
+          </form>`
+        : `<div
+            class="flex items-center justify-between p-3 bg-slate-950 border ${t.done ? 'border-slate-800/60 opacity-60' : 'border-slate-800'} rounded-xl transition-colors"
+            draggable="true"
+            ondragstart="handleDragStart(event, 'tactics', ${idx})"
+            ondragover="handleDragOver(event)"
+            ondrop="handleDrop(event, 'tactics', ${idx})"
+            ondragend="draggedItemInfo = null"
+          >
+            <div class="flex items-center gap-3 flex-1 min-w-0">
+              <span class="grab-handle text-slate-700 hover:text-slate-400 select-none text-xs" aria-label="Drag to reorder">⠿</span>
+              <label class="flex items-center gap-3 cursor-pointer flex-1 min-w-0">
+                <input type="checkbox" ${t.done ? 'checked' : ''} onchange="toggleOverviewTactic(${idx})" class="w-4 h-4 text-amber-500 rounded bg-slate-900 border-slate-700 cursor-pointer shrink-0" />
+                <span class="${t.done ? 'line-through' : ''}">${escapeHtml(t.title)}</span>
+              </label>
+            </div>
+            <button type="button" onclick="editWeeklyTactic('${t.id}')" aria-label="Edit tactic ${escapeHtml(t.title)}" class="text-slate-400 hover:text-amber-300 text-xs px-1">Edit</button>
+            <button type="button" onclick="removeOverviewTactic(${idx})" aria-label="Delete tactic ${escapeHtml(t.title)}" class="text-slate-600 hover:text-rose-400 text-xs px-1">✕</button>
+          </div>`
+      ).join('') || '<div class="text-slate-600 text-xs py-2">No tactics configured.</div>';
     }
 
     function calculateWeeklySideQuestStats(timeline, weekStart, weekEnd) {
