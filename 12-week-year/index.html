@@ -314,12 +314,13 @@
       </div>
 
       <!-- Date Controller Bar -->
-      <div class="bg-slate-900/80 border border-slate-800/80 rounded-xl px-3 py-2 flex items-center justify-between text-xs">
+      <div class="bg-slate-900/80 border border-slate-800/80 rounded-xl px-3 py-2 grid grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-2 text-xs">
         <button onclick="navigateDay(-1)" class="p-1 text-slate-400 hover:text-white transition-colors">← Prev</button>
         <div class="text-center">
           <span id="daily-view-date" class="font-bold text-slate-100 font-mono text-xs sm:text-sm">Saturday, Sep 12</span>
           <span id="daily-view-indicator" class="text-[10px] text-amber-400 font-mono font-medium ml-1.5">• Today •</span>
         </div>
+        <button id="btn-go-today" onclick="goToToday()" aria-label="Go to today" title="Go to today" class="rounded-md border border-slate-700 px-2 py-1 text-slate-300 hover:border-amber-400 hover:text-amber-300 disabled:opacity-40 disabled:cursor-default">Today</button>
         <button onclick="navigateDay(1)" class="p-1 text-slate-400 hover:text-white transition-colors">Next →</button>
       </div>
 
@@ -717,7 +718,7 @@
             <label class="block font-semibold text-amber-300 mb-1">What would you tell a friend who had a week like yours?</label>
             <textarea id="rev-friend" oninput="saveReviewDraft()" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-amber-500 outline-none"></textarea>
           </div>
-          <button onclick="saveReview()" class="w-full bg-amber-500 hover:bg-amber-400 text-black font-bold py-2.5 rounded-lg transition-colors">Save Weekly Review</button>
+          <button type="button" onclick="finishWeeklyReview()" class="w-full bg-amber-500 hover:bg-amber-400 text-black font-bold py-2.5 rounded-lg transition-colors">Done</button>
         </div>
       </div>
       <section id="review-history" class="hidden border-t border-slate-800 pt-4 space-y-3" aria-labelledby="review-history-heading">
@@ -1742,6 +1743,7 @@
         weekday: 'long', month: 'short', day: 'numeric'
       });
       document.getElementById('daily-view-indicator').textContent = isToday ? '• Today •' : 'Reviewing Log';
+      document.getElementById('btn-go-today').disabled = isToday;
 
       const timeline = getCycleTimeline();
       const currentObj = state?.weeklyObjectives?.[timeline.currentWeek] || (timeline.currentWeek === 1 ? state?.week1Goal : '') || state?.keystoneGoal || 'Keep executing daily non-negotiables';
@@ -2411,6 +2413,11 @@
       const cur = parseDateKey(activeDateKey);
       cur.setDate(cur.getDate() + offset);
       activeDateKey = formatDateKey(cur);
+      renderDailyPage();
+    }
+
+    function goToToday() {
+      activeDateKey = formatDateKey(getLocalTodayDate());
       renderDailyPage();
     }
 
@@ -3374,16 +3381,38 @@
         return;
       }
 
-      document.getElementById('review-week-status').textContent = 'Draft';
+      document.getElementById('review-week-status').textContent = 'Saving…';
 
       const persistDraft = () => {
-        if (!state.reviewDrafts) state.reviewDrafts = {};
-        state.reviewDrafts[selectedReviewWeek] = values;
-        saveState();
+        persistReviewValues(selectedReviewWeek, values);
+        renderReviewHistory(getLatestReviewableWeek());
+        evaluateWeeklyReviewPrompt();
       };
 
       if (immediate) persistDraft();
       else reviewDraftSaveTimeout = setTimeout(persistDraft, 500);
+    }
+
+    function persistReviewValues(week, values) {
+      const isComplete = ['proud', 'challenges', 'learn', 'friend'].every(field => values[field].trim());
+      if (isComplete) {
+        if (!state.reviews) state.reviews = {};
+        state.reviews[week] = {
+          ...values,
+          completedAt: state.reviews[week]?.completedAt || new Date().toISOString()
+        };
+        if (state.reviewDrafts) delete state.reviewDrafts[week];
+        document.getElementById('review-week-status').textContent = 'Saved';
+      } else {
+        if (Object.values(values).some(value => value.trim())) {
+          if (!state.reviewDrafts) state.reviewDrafts = {};
+          state.reviewDrafts[week] = values;
+        } else if (state.reviewDrafts) {
+          delete state.reviewDrafts[week];
+        }
+        document.getElementById('review-week-status').textContent = 'Draft';
+      }
+      saveState();
     }
 
     function renderReviewPage() {
@@ -3478,25 +3507,16 @@
       renderReviewPage();
     }
 
-    function saveReview() {
-      if (selectedReviewWeek === null || selectedReviewWeek > getLatestReviewableWeek()) return;
-      clearTimeout(reviewDraftSaveTimeout);
-      const values = getReviewFormValues();
-      const isComplete = ['proud', 'challenges', 'learn', 'friend'].every(field => values[field].trim());
-      if (!isComplete) {
-        if (!state.reviewDrafts) state.reviewDrafts = {};
-        state.reviewDrafts[selectedReviewWeek] = values;
-        saveState();
-        document.getElementById('review-week-status').textContent = 'Draft · complete all reflections to finish';
-        return;
+    function finishWeeklyReview() {
+      if (selectedReviewWeek !== null && selectedReviewWeek <= getLatestReviewableWeek()) {
+        const values = getReviewFormValues();
+        clearTimeout(reviewDraftSaveTimeout);
+        persistReviewValues(selectedReviewWeek, values);
+        renderReviewHistory(getLatestReviewableWeek());
+        evaluateWeeklyReviewPrompt();
       }
-      if (!state.reviews) state.reviews = {};
-      state.reviews[selectedReviewWeek] = { ...values, completedAt: new Date().toISOString() };
-      if (state.reviewDrafts) delete state.reviewDrafts[selectedReviewWeek];
-      saveState();
-      document.getElementById('review-week-status').textContent = 'Saved';
-      renderReviewHistory(getLatestReviewableWeek());
-      evaluateWeeklyReviewPrompt();
+      activeDateKey = formatDateKey(getLocalTodayDate());
+      switchView('daily', false);
     }
 
     function switchView(viewName, preserveReviewDraft = true) {
