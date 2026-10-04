@@ -618,36 +618,58 @@
         <div id="ov-sidequest-detail-list" class="space-y-1.5 text-xs"></div>
       </section>
 
-      <section class="space-y-3 border-t border-slate-800 pt-4" aria-labelledby="cycle-calendar-heading">
-        <div class="flex flex-wrap items-center justify-between gap-2">
+      <section class="border-t border-slate-800 pt-3" aria-labelledby="cycle-calendar-heading">
+        <button id="btn-toggle-ov-calendar" type="button" aria-expanded="false" aria-controls="ov-cycle-calendar-panel" onclick="toggleOverviewSection('ov-cycle-calendar-panel', 'btn-toggle-ov-calendar', 'ov-calendar-chevron')" class="flex w-full items-center justify-between gap-3 py-1 text-left hover:text-slate-200">
           <h3 id="cycle-calendar-heading" class="text-xs font-bold text-slate-300 uppercase font-mono">12-Week Progress Calendar</h3>
-          <div class="flex items-center gap-3 text-[10px] text-slate-400" aria-label="Daily completion colors">
-            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-rose-500"></span>0%</span>
-            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-amber-400"></span>1–84%</span>
-            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-emerald-500"></span>85%+</span>
-            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-slate-800"></span>No tasks</span>
+          <span id="ov-calendar-chevron" aria-hidden="true" class="shrink-0 text-slate-400">▾</span>
+        </button>
+        <div id="ov-cycle-calendar-panel" class="hidden space-y-3 pt-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <span class="text-[10px] font-bold text-slate-400 uppercase font-mono">Daily completion</span>
+            <div class="flex items-center gap-3 text-[10px] text-slate-400" aria-label="Daily completion colors">
+              <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-rose-500"></span>0%</span>
+              <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-amber-400"></span>1–84%</span>
+              <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-emerald-500"></span>85%+</span>
+              <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-slate-800"></span>No tasks</span>
+            </div>
           </div>
+          <div id="ov-cycle-calendar" class="space-y-2"></div>
         </div>
-        <div id="ov-cycle-calendar" class="space-y-2"></div>
       </section>
 
       <!-- Manage & Measure Indicators on Overview with Frequency Badges -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-        <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-3">
-          <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+      <div class="space-y-2 text-xs">
+        <section class="border-t border-slate-800 pt-3">
+          <button id="btn-toggle-ov-leading" type="button" aria-expanded="false" aria-controls="ov-leading-panel" onclick="toggleOverviewSection('ov-leading-panel', 'btn-toggle-ov-leading', 'ov-leading-chevron')" class="flex w-full items-center justify-between gap-3 py-1 text-left hover:text-slate-200">
             <span class="font-bold text-slate-300 uppercase tracking-wider text-[11px]">Leading Indicator Tickers</span>
-            <button onclick="promptNewIndicator('leading')" class="text-amber-400 hover:text-amber-300 text-xs font-semibold">+ Add</button>
+            <span id="ov-leading-chevron" aria-hidden="true" class="shrink-0 text-slate-400">▾</span>
+          </button>
+          <div id="ov-leading-panel" class="hidden pt-3">
+            <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-3">
+              <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                <span class="font-bold text-slate-300 uppercase tracking-wider text-[11px]">Leading indicators</span>
+                <button onclick="promptNewIndicator('leading')" class="text-amber-400 hover:text-amber-300 text-xs font-semibold">+ Add</button>
+              </div>
+              <div id="ov-lead-items-container" class="space-y-2"></div>
+            </div>
           </div>
-          <div id="ov-lead-items-container" class="space-y-2"></div>
-        </div>
+        </section>
 
-        <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-3">
-          <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+        <section class="border-t border-slate-800 pt-3">
+          <button id="btn-toggle-ov-lagging" type="button" aria-expanded="false" aria-controls="ov-lagging-panel" onclick="toggleOverviewSection('ov-lagging-panel', 'btn-toggle-ov-lagging', 'ov-lagging-chevron')" class="flex w-full items-center justify-between gap-3 py-1 text-left hover:text-slate-200">
             <span class="font-bold text-slate-300 uppercase tracking-wider text-[11px]">Lagging Indicator Tickers</span>
-            <button onclick="promptNewIndicator('lagging')" class="text-teal-400 hover:text-teal-300 text-xs font-semibold">+ Add</button>
+            <span id="ov-lagging-chevron" aria-hidden="true" class="shrink-0 text-slate-400">▾</span>
+          </button>
+          <div id="ov-lagging-panel" class="hidden pt-3">
+            <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-3">
+              <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                <span class="font-bold text-slate-300 uppercase tracking-wider text-[11px]">Lagging indicators</span>
+                <button onclick="promptNewIndicator('lagging')" class="text-teal-400 hover:text-teal-300 text-xs font-semibold">+ Add</button>
+              </div>
+              <div id="ov-lag-items-container" class="space-y-2"></div>
+            </div>
           </div>
-          <div id="ov-lag-items-container" class="space-y-2"></div>
-        </div>
+        </section>
       </div>
 
       <!-- STATS SECTION -->
@@ -1897,6 +1919,7 @@
     }
 
     let editingQuickTimeBlockId = null;
+    let quickTimeEditorLocation = 'performance';
 
     function quickAddPerformanceBlock(type) {
       if (!state.days[activeDateKey].timeBlocks) state.days[activeDateKey].timeBlocks = [];
@@ -1909,14 +1932,38 @@
       };
       state.days[activeDateKey].timeBlocks.push(block);
       editingQuickTimeBlockId = block.id;
+      quickTimeEditorLocation = 'performance';
       saveState();
       renderPerformanceQuickLog();
       renderHourlyPlanner();
     }
 
-    function toggleQuickTimeEditor(id) {
-      editingQuickTimeBlockId = editingQuickTimeBlockId === id ? null : id;
+    function toggleQuickTimeEditor(id, location = 'performance') {
+      if (editingQuickTimeBlockId === id && quickTimeEditorLocation === location) {
+        editingQuickTimeBlockId = null;
+      } else {
+        editingQuickTimeBlockId = id;
+        quickTimeEditorLocation = location;
+      }
       renderPerformanceQuickLog();
+      renderHourlyPlanner();
+    }
+
+    function closeQuickTimeEditor(id) {
+      if (editingQuickTimeBlockId !== id) return;
+      editingQuickTimeBlockId = null;
+      renderPerformanceQuickLog();
+      renderHourlyPlanner();
+    }
+
+    function renderQuickTimeEditor(block) {
+      return `<form onsubmit="saveQuickTimeBlock(event, '${block.id}')" class="flex flex-wrap items-center gap-2 rounded-lg border border-slate-800 bg-slate-950/70 p-2">
+        <label for="quick-block-start" class="text-[10px] text-slate-400">Optional start time</label>
+        <input id="quick-block-start" type="time" step="3600" value="${escapeHtml(block.start || '')}" class="rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-200" />
+        <button type="submit" class="rounded-md bg-teal-500 px-2.5 py-1 text-[10px] font-bold text-slate-950">${block.start ? 'Update time' : 'Set time'}</button>
+        ${block.start ? `<button type="button" onclick="removeQuickTimeBlock('${block.id}')" class="text-[10px] text-slate-400 hover:text-white">Remove time</button>` : ''}
+        <button type="button" onclick="closeQuickTimeEditor('${block.id}')" class="text-[10px] text-slate-400 hover:text-white">Close</button>
+      </form>`;
     }
 
     function saveQuickTimeBlock(event, id) {
@@ -1959,19 +2006,13 @@
       }).join('');
 
       const editing = blocks.find(block => block.id === editingQuickTimeBlockId);
-      if (!editing) {
+      if (!editing || quickTimeEditorLocation !== 'performance') {
         editor.innerHTML = '';
         editor.classList.add('hidden');
         return;
       }
 
-      editor.innerHTML = `<form onsubmit="saveQuickTimeBlock(event, '${editing.id}')" class="flex flex-wrap items-center gap-2 rounded-lg border border-slate-800 bg-slate-950/70 p-2">
-        <label for="quick-block-start" class="text-[10px] text-slate-400">Optional start time</label>
-        <input id="quick-block-start" type="time" step="3600" value="${escapeHtml(editing.start || '')}" class="rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-200" />
-        <button type="submit" class="rounded-md bg-teal-500 px-2.5 py-1 text-[10px] font-bold text-slate-950">${editing.start ? 'Update time' : 'Set time'}</button>
-        ${editing.start ? `<button type="button" onclick="removeQuickTimeBlock('${editing.id}')" class="text-[10px] text-slate-400 hover:text-white">Remove time</button>` : ''}
-        <button type="button" onclick="toggleQuickTimeEditor('${editing.id}')" class="text-[10px] text-slate-400 hover:text-white">Close</button>
-      </form>`;
+      editor.innerHTML = renderQuickTimeEditor(editing);
       editor.classList.remove('hidden');
     }
 
@@ -2046,6 +2087,29 @@
       renderHourlyPlanner();
     }
 
+    function renderHourlyBlockForm(start, block = null) {
+      const startHour = Number(start.split(':')[0]);
+      const maxDuration = 24 - startHour;
+      const performanceType = block?.performanceType || 'strategic';
+      const duration = Math.min(Number(block?.duration) || getDefaultPerformanceDuration(performanceType), maxDuration);
+      return `<form onsubmit="saveTimeBlock(event)" class="flex min-h-full flex-wrap content-start items-center gap-2 rounded-lg border border-teal-400 bg-slate-950 p-2">
+        <span class="w-full text-[10px] font-semibold text-slate-300">Block starts at ${formatBlockClockTime(startHour * 60)}</span>
+        <label class="sr-only" for="hourly-block-title">Activity</label>
+        <input id="hourly-block-title" type="text" maxlength="100" value="${escapeHtml(block?.title || '')}" placeholder="Optional activity" class="min-w-0 flex-1 bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 outline-none focus:border-teal-500" />
+        <label class="sr-only" for="hourly-block-type">Performance category</label>
+        <select id="hourly-block-type" required onchange="updateTimeBlockDurationDefault()" aria-label="Performance category" class="min-w-0 flex-1 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-200 outline-none focus:border-teal-500">
+          <option value="strategic" ${performanceType === 'strategic' ? 'selected' : ''}>Strategic · high-value work</option>
+          <option value="buffer" ${performanceType === 'buffer' ? 'selected' : ''}>Buffer · low-value tasks</option>
+          <option value="breakout" ${performanceType === 'breakout' ? 'selected' : ''}>Breakout · time away from work</option>
+        </select>
+        <label class="flex items-center gap-1 text-[10px] text-slate-400">Duration
+          <input id="hourly-block-duration" type="number" min="0.5" max="${maxDuration}" step="0.5" value="${duration}" aria-label="Block duration in hours" class="w-16 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-200" />h
+        </label>
+        <button type="submit" class="bg-teal-500 hover:bg-teal-400 text-slate-950 px-2.5 py-1.5 rounded-lg text-xs font-bold">Save</button>
+        <button type="button" onclick="closeTimeBlockForm()" class="text-slate-400 hover:text-white px-1 text-xs">Cancel</button>
+      </form>`;
+    }
+
     function renderHourlyPlanner() {
       const dateLabel = parseDateKey(activeDateKey).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
       document.getElementById('hourly-planner-date').textContent = dateLabel;
@@ -2053,24 +2117,26 @@
       const grid = document.getElementById('daily-hourly-grid');
       const unscheduledBlocks = blocks.filter(block => !block.start);
       const unscheduledMarkup = unscheduledBlocks.length
-        ? `<div class="space-y-1 border-b border-slate-800 py-2"><h4 class="text-[10px] font-mono uppercase text-slate-500">Unscheduled blocks</h4>${unscheduledBlocks.map(block => `<button type="button" onclick="toggleQuickTimeEditor('${block.id}')" class="mr-1 rounded-md px-2 py-1 text-[10px] ${getPerformanceColorClass(block.performanceType)}">${getPerformanceTypeName(block.performanceType)} · ${formatTimeBlockDuration(block.duration)} · Add time</button>`).join('')}</div>`
+        ? `<div class="space-y-1 border-b border-slate-800 py-2"><h4 class="text-[10px] font-mono uppercase text-slate-500">Unscheduled blocks</h4>${unscheduledBlocks.map(block => `<button type="button" onclick="toggleQuickTimeEditor('${block.id}', 'hourly')" class="mr-1 rounded-md px-2 py-1 text-[10px] ${getPerformanceColorClass(block.performanceType)}">${getPerformanceTypeName(block.performanceType)} · ${formatTimeBlockDuration(block.duration)} · Add time</button>`).join('')}</div>`
         : '';
       const rows = Array.from({ length: 17 }, (_, index) => {
         const hour = index + 6;
         const start = `${String(hour).padStart(2, '0')}:00`;
         const rowStartMinutes = hour * 60;
-        const rowStart = (index * 2) + 1;
+        const rowStart = index + 1;
         const occupied = blocks.some(block => {
           const blockStart = getTimeBlockStartMinutes(block);
           const blockEnd = getTimeBlockEndMinutes(block);
           return blockStart !== null && blockStart < rowStartMinutes + 60 && blockEnd > rowStartMinutes;
         });
-        const addButton = occupied || activeTimeBlockStart === start
-          ? ''
-          : `<button type="button" onclick="openTimeBlockForm('${start}')" class="flex h-full items-center py-1 text-left text-[10px] text-slate-500 hover:text-teal-300">+ Block</button>`;
+        const addButton = activeTimeBlockStart === start
+          ? renderHourlyBlockForm(start)
+          : occupied
+            ? ''
+            : `<button type="button" onclick="openTimeBlockForm('${start}')" class="flex h-full items-center py-1 text-left text-[10px] text-slate-500 hover:text-teal-300">+ Block</button>`;
 
-        return `<span style="grid-column:1;grid-row:${rowStart}/span 2" class="border-b border-slate-800 pt-1 text-[10px] font-mono text-slate-500">${formatHourLabel(hour)}</span>
-          <div style="grid-column:2;grid-row:${rowStart}/span 2" class="min-w-0 border-b border-slate-800">${addButton}</div>`;
+        return `<span style="grid-column:1;grid-row:${rowStart}" class="border-b border-slate-800 pt-1 text-[10px] font-mono text-slate-500">${formatHourLabel(hour)}</span>
+          <div style="grid-column:2;grid-row:${rowStart}" class="min-w-0 border-b border-slate-800">${addButton}</div>`;
       }).join('');
 
       const scheduledMarkup = blocks.filter(block => block.start).map(block => {
@@ -2078,29 +2144,13 @@
         const startHour = Math.floor(startMinutes / 60);
         if (startHour < 6 || startHour > 22) return '';
         const minuteOffset = startMinutes % 60;
-        const rowStart = ((startHour - 6) * 2) + (minuteOffset >= 30 ? 2 : 1);
-        const rowSpan = Math.max(1, Math.ceil((Number(block.duration) || 1) * 2));
+        const rowStart = startHour - 5;
+        const rowSpan = Math.max(1, Math.ceil((minuteOffset / 60) + (Number(block.duration) || 1)));
         const endMinutes = getTimeBlockEndMinutes(block);
         const isEditing = activeTimeBlockId === block.id && activeTimeBlockStart === block.start;
         const duration = block.duration || getDefaultPerformanceDuration(block.performanceType);
-        const maxDuration = 24 - startHour;
         const content = isEditing
-          ? `<form onsubmit="saveTimeBlock(event)" class="flex h-full flex-wrap content-start items-center gap-2 rounded-lg border border-teal-400 bg-slate-950 p-2">
-              <span class="w-full text-[10px] font-semibold text-slate-300">Block starts at ${formatBlockClockTime(startMinutes)}</span>
-              <label class="sr-only" for="hourly-block-title">Activity</label>
-              <input id="hourly-block-title" type="text" maxlength="100" value="${escapeHtml(block.title || '')}" placeholder="Optional activity" class="min-w-0 flex-1 bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 outline-none focus:border-teal-500" />
-              <label class="sr-only" for="hourly-block-type">Performance category</label>
-              <select id="hourly-block-type" required onchange="updateTimeBlockDurationDefault()" aria-label="Performance category" class="min-w-0 flex-1 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-200 outline-none focus:border-teal-500">
-                <option value="strategic" ${block.performanceType === 'strategic' ? 'selected' : ''}>Strategic · high-value work</option>
-                <option value="buffer" ${block.performanceType === 'buffer' ? 'selected' : ''}>Buffer · low-value tasks</option>
-                <option value="breakout" ${block.performanceType === 'breakout' ? 'selected' : ''}>Breakout · time away from work</option>
-              </select>
-              <label class="flex items-center gap-1 text-[10px] text-slate-400">Duration
-                <input id="hourly-block-duration" type="number" min="0.5" max="${maxDuration}" step="0.5" value="${Math.min(duration, maxDuration)}" aria-label="Block duration in hours" class="w-16 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-200" />h
-              </label>
-              <button type="submit" class="bg-teal-500 hover:bg-teal-400 text-slate-950 px-2.5 py-1.5 rounded-lg text-xs font-bold">Save</button>
-              <button type="button" onclick="closeTimeBlockForm()" class="text-slate-400 hover:text-white px-1 text-xs">Cancel</button>
-            </form>`
+          ? renderHourlyBlockForm(block.start, block)
           : `<div class="flex h-full min-h-0 flex-col justify-between gap-1 overflow-hidden rounded-lg border border-slate-700 px-2 py-1 ${getPerformanceColorClass(block.performanceType)}">
               <span class="min-w-0 truncate text-xs"><span class="font-semibold">${getPerformanceTypeName(block.performanceType)}:</span>${block.title ? ` ${escapeHtml(block.title)}` : ''}</span>
               <span class="text-[10px]">${formatBlockClockTime(startMinutes)}–${formatBlockClockTime(endMinutes)} · ${formatTimeBlockDuration(duration)}</span>
@@ -2112,7 +2162,12 @@
         return `<div style="grid-column:2;grid-row:${rowStart}/span ${rowSpan};z-index:1" class="min-h-0 py-0.5">${content}</div>`;
       }).join('');
 
-      grid.innerHTML = `${unscheduledMarkup}<div class="grid grid-cols-[3.5rem_minmax(0,1fr)]" style="grid-template-rows:repeat(34,minmax(1.25rem,auto))">${rows}${scheduledMarkup}</div>`;
+      const editingQuickBlock = blocks.find(block => block.id === editingQuickTimeBlockId);
+      const hourlyEditorMarkup = editingQuickBlock && quickTimeEditorLocation === 'hourly' && !editingQuickBlock.start
+        ? `<div id="daily-hourly-quick-time-editor" class="border-b border-slate-800 py-2">${renderQuickTimeEditor(editingQuickBlock)}</div>`
+        : '';
+
+      grid.innerHTML = `${unscheduledMarkup}${hourlyEditorMarkup}<div class="grid grid-cols-[3.5rem_minmax(0,1fr)]" style="grid-template-rows:repeat(17,minmax(3rem,auto))">${rows}${scheduledMarkup}</div>`;
     }
 
     function renderTickerList(containerId, list, type) {
@@ -2793,6 +2848,16 @@
       const isOpening = panel.classList.contains('hidden');
       panel.classList.toggle('hidden', !isOpening);
       button.setAttribute('aria-expanded', String(isOpening));
+    }
+
+    function toggleOverviewSection(panelId, buttonId, chevronId) {
+      const panel = document.getElementById(panelId);
+      const button = document.getElementById(buttonId);
+      const chevron = document.getElementById(chevronId);
+      const isOpening = panel.classList.contains('hidden');
+      panel.classList.toggle('hidden', !isOpening);
+      button.setAttribute('aria-expanded', String(isOpening));
+      chevron.textContent = isOpening ? '▴' : '▾';
     }
 
     /* THIS WEEK MANAGEMENT */
