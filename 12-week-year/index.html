@@ -103,6 +103,8 @@
         <span class="text-emerald-200">Weekly Review: Reflect on <strong id="review-prompt-week-name" class="text-white">Week 1</strong>.</span>
       </div>
       <button
+        id="weekly-review-prompt-action"
+        type="button"
         onclick="openWeeklyReview()"
         class="bg-emerald-400 hover:bg-emerald-300 text-black px-3 py-1 rounded-lg font-bold font-mono text-xs transition-colors"
       >
@@ -3223,6 +3225,7 @@
     let selectedReviewWeek = null;
     let reviewDraftSaveTimeout = null;
     let reviewPromptShownThisLoad = false;
+    let reviewOverviewReturnWeek = null;
 
     function isCycleWeekEndToday() {
       const startDate = parseDateKey(state?.startDate || formatDateKey(getLocalTodayDate()));
@@ -3264,7 +3267,7 @@
         return;
       }
 
-      document.getElementById('review-prompt-week-name').textContent = `Week ${week}`;
+      updateWeeklyReviewPromptAction(week);
       document.getElementById('weekly-review-modal-week').textContent = week;
       banner.classList.remove('hidden');
 
@@ -3279,6 +3282,49 @@
         reviewPromptShownThisLoad = true;
         modal.classList.remove('hidden');
       }
+    }
+
+    function updateWeeklyReviewPromptAction(fallbackWeek = getReviewPromptWeek()) {
+      const button = document.getElementById('weekly-review-prompt-action');
+      const reviewViewActive = !document.getElementById('view-review').classList.contains('hidden');
+      const weekViewActive = !document.getElementById('view-week').classList.contains('hidden');
+      const reviewWeek = reviewViewActive && selectedReviewWeek !== null
+        ? selectedReviewWeek
+        : weekViewActive && reviewOverviewReturnWeek !== null
+          ? reviewOverviewReturnWeek
+          : fallbackWeek;
+
+      if (reviewWeek === null) return;
+      document.getElementById('review-prompt-week-name').textContent = `Week ${reviewWeek}`;
+      if (reviewViewActive) {
+        button.textContent = `See what you did Week ${reviewWeek}`;
+      } else if (weekViewActive && reviewOverviewReturnWeek !== null) {
+        button.textContent = `Back to Week ${reviewWeek} Review`;
+      } else {
+        button.textContent = 'Review Week →';
+      }
+      button.onclick = handleWeeklyReviewPromptAction;
+    }
+
+    function handleWeeklyReviewPromptAction() {
+      const reviewViewActive = !document.getElementById('view-review').classList.contains('hidden');
+      const weekViewActive = !document.getElementById('view-week').classList.contains('hidden');
+
+      if (reviewViewActive && selectedReviewWeek !== null) {
+        reviewOverviewReturnWeek = selectedReviewWeek;
+        selectedCycleWeek = selectedReviewWeek;
+        switchView('week');
+        return;
+      }
+
+      if (weekViewActive && reviewOverviewReturnWeek !== null) {
+        selectedReviewWeek = reviewOverviewReturnWeek;
+        reviewOverviewReturnWeek = null;
+        switchView('review');
+        return;
+      }
+
+      openWeeklyReview();
     }
 
     function dismissWeeklyReviewPrompt() {
@@ -3375,6 +3421,7 @@
       }
 
       renderReviewHistory(maxWeek);
+      updateWeeklyReviewPromptAction();
     }
 
     function renderReviewHistory(maxWeek) {
@@ -3456,6 +3503,7 @@
       if (preserveReviewDraft && viewName !== 'review' && !document.getElementById('view-review').classList.contains('hidden')) {
         saveReviewDraft(true);
       }
+      if (viewName !== 'review' && viewName !== 'week') reviewOverviewReturnWeek = null;
       const views = ['guide', 'daily', 'week', 'overview', 'review'];
       views.forEach(v => {
         const el = document.getElementById(`view-${v}`);
@@ -3491,6 +3539,7 @@
         populateGuideWithExistingData();
         updateWizardUI();
       }
+      updateWeeklyReviewPromptAction();
     }
 
     function escapeHtml(str) {
