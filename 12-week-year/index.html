@@ -389,16 +389,16 @@
         <div id="daily-other-tasks-container" class="space-y-2 text-xs"></div>
       </div>
 
-      <!-- 5. APPOINTMENTS -->
+        <!-- 5. NOTES -->
       <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3.5 space-y-2">
-          <span class="text-xs font-bold text-slate-400 uppercase tracking-wider font-mono">Appointments / Calendar</span>
-          <textarea id="daily-appts" oninput="saveCurrentDay()" rows="2" placeholder="e.g. 2:00 PM Strategy Call..." class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-200 outline-none leading-relaxed"></textarea>
+          <label for="daily-appts" class="block text-xs font-bold text-slate-400 uppercase tracking-wider font-mono">Notes</label>
+          <textarea id="daily-appts" oninput="saveCurrentDay()" rows="2" placeholder="Add notes for this day..." class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-200 outline-none leading-relaxed"></textarea>
       </div>
 
       <section id="daily-hourly-planner" class="hidden space-y-3 border-t border-slate-800 pt-4" aria-labelledby="daily-hourly-heading">
         <div class="flex items-center justify-between">
           <div>
-            <h3 id="daily-hourly-heading" class="text-xs font-bold text-slate-300 uppercase font-mono">Hourly Calendar & Performance Time</h3>
+            <h3 id="daily-hourly-heading" class="text-xs font-bold text-slate-300 uppercase font-mono">Appointments/Calendar</h3>
             <p class="text-[10px] text-slate-500">Choose “+ Block” in a time row. That row sets the start time.</p>
           </div>
           <span id="hourly-planner-date" class="text-[10px] text-slate-400 font-mono"></span>
@@ -1833,6 +1833,41 @@
       return new Date(2000, 0, 1, hour).toLocaleTimeString(undefined, { hour: 'numeric' });
     }
 
+    function formatBlockClockTime(totalMinutes) {
+      const minutesInDay = 24 * 60;
+      const normalizedMinutes = ((totalMinutes % minutesInDay) + minutesInDay) % minutesInDay;
+      const date = new Date(2000, 0, 1, Math.floor(normalizedMinutes / 60), normalizedMinutes % 60);
+      return date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+    }
+
+    function getTimeBlockStartMinutes(block) {
+      const [hour, minute] = (block.start || '06:00').split(':').map(Number);
+      return (hour * 60) + minute;
+    }
+
+    function getTimeBlockEndMinutes(block) {
+      return getTimeBlockStartMinutes(block) + ((Number(block.duration) || 1) * 60);
+    }
+
+    function formatTimeBlockDuration(duration) {
+      const minutes = Math.round((Number(duration) || 1) * 60);
+      const hours = Math.floor(minutes / 60);
+      const remainder = minutes % 60;
+      if (!hours) return `${remainder}m`;
+      return remainder ? `${hours}h ${remainder}m` : `${hours}h`;
+    }
+
+    function getDefaultPerformanceDuration(type) {
+      return { strategic: 3, buffer: 1, breakout: 3 }[type] || 1;
+    }
+
+    function updateTimeBlockDurationDefault() {
+      const type = document.getElementById('hourly-block-type').value;
+      const duration = document.getElementById('hourly-block-duration');
+      const startHour = Number(activeTimeBlockStart?.split(':')[0]) || 6;
+      duration.value = Math.min(getDefaultPerformanceDuration(type), 24 - startHour);
+    }
+
     let hourlyPlannerOpen = false;
     let activeTimeBlockStart = null;
     let activeTimeBlockId = null;
@@ -1867,20 +1902,23 @@
       event.preventDefault();
       const title = document.getElementById('hourly-block-title').value.trim();
       const performanceType = document.getElementById('hourly-block-type').value;
-      if (!title || !performanceType) return;
+      if (!performanceType) return;
 
       if (!state.days[activeDateKey].timeBlocks) state.days[activeDateKey].timeBlocks = [];
-      const duration = Number(document.getElementById('hourly-block-duration').value) || 1;
+      const startHour = Number(activeTimeBlockStart.split(':')[0]);
+      const maxDuration = 24 - startHour;
+      const duration = Math.min(maxDuration, Math.max(0.5, Number(document.getElementById('hourly-block-duration').value) || getDefaultPerformanceDuration(performanceType)));
+      const activity = title;
       const existing = state.days[activeDateKey].timeBlocks.find(block => block.id === activeTimeBlockId);
       if (existing) {
-        existing.title = title;
+        existing.title = activity;
         existing.duration = duration;
         existing.performanceType = performanceType;
       } else {
         state.days[activeDateKey].timeBlocks.push({
           id: `block_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
           start: activeTimeBlockStart,
-          title,
+          title: activity,
           duration,
           performanceType
         });
@@ -1910,43 +1948,53 @@
       grid.innerHTML = Array.from({ length: 17 }, (_, index) => {
         const hour = index + 6;
         const start = `${String(hour).padStart(2, '0')}:00`;
-        const hourBlocks = blocks.filter(block => block.start === start);
+        const rowStartMinutes = hour * 60;
+        const startingBlocks = blocks.filter(block => block.start === start);
+        const continuingBlock = blocks.find(block => block.start !== start
+          && getTimeBlockStartMinutes(block) < rowStartMinutes
+          && getTimeBlockEndMinutes(block) > rowStartMinutes);
         const startLabel = formatHourLabel(hour);
         const formMarkup = activeTimeBlockStart === start ? (() => {
           const editing = blocks.find(block => block.id === activeTimeBlockId);
-          const duration = editing?.duration || 1;
+          const duration = editing?.duration || getDefaultPerformanceDuration(editing?.performanceType);
+          const maxDuration = 24 - hour;
           return `<form onsubmit="saveTimeBlock(event)" class="flex flex-wrap items-center gap-2 py-2">
             <span class="w-full text-[10px] font-semibold text-slate-300">Block starts at ${startLabel}</span>
             <label class="sr-only" for="hourly-block-title">Activity</label>
-            <input id="hourly-block-title" type="text" required maxlength="100" value="${escapeHtml(editing?.title || '')}" placeholder="Activity, e.g. Draft project proposal" class="min-w-0 flex-1 bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 outline-none focus:border-teal-500" />
+            <input id="hourly-block-title" type="text" maxlength="100" value="${escapeHtml(editing?.title || '')}" placeholder="Optional activity" class="min-w-0 flex-1 bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 outline-none focus:border-teal-500" />
             <label class="sr-only" for="hourly-block-type">Performance category</label>
-            <select id="hourly-block-type" required aria-label="Performance category" class="min-w-0 flex-1 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-200 outline-none focus:border-teal-500">
+            <select id="hourly-block-type" required onchange="updateTimeBlockDurationDefault()" aria-label="Performance category" class="min-w-0 flex-1 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-200 outline-none focus:border-teal-500">
               <option value="" ${editing?.performanceType ? '' : 'selected'} disabled>Choose category</option>
               <option value="strategic" ${editing?.performanceType === 'strategic' ? 'selected' : ''}>Strategic · high-value work</option>
               <option value="buffer" ${editing?.performanceType === 'buffer' ? 'selected' : ''}>Buffer · low-value tasks</option>
               <option value="breakout" ${editing?.performanceType === 'breakout' ? 'selected' : ''}>Breakout · time away from work</option>
             </select>
-            <select id="hourly-block-duration" aria-label="Block duration" class="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-200">
-              ${[1, 2, 3, 4].map(value => `<option value="${value}" ${duration === value ? 'selected' : ''}>${value}h</option>`).join('')}
-            </select>
+            <label class="flex items-center gap-1 text-[10px] text-slate-400">Duration
+              <input id="hourly-block-duration" type="number" min="0.5" max="${maxDuration}" step="0.5" value="${Math.min(duration, maxDuration)}" aria-label="Block duration in hours" class="w-16 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-200" />h
+            </label>
             <button type="submit" class="bg-teal-500 hover:bg-teal-400 text-slate-950 px-2.5 py-1.5 rounded-lg text-xs font-bold">Save</button>
             <button type="button" onclick="closeTimeBlockForm()" class="text-slate-400 hover:text-white px-1 text-xs">Cancel</button>
           </form>`;
         })() : '';
-        const blocksMarkup = hourBlocks.map(block => `
+        const blocksMarkup = startingBlocks.map(block => `
           <div class="flex items-center justify-between gap-2 my-1 ${block.performanceType ? getPerformanceColorClass(block.performanceType) : 'bg-slate-800 text-slate-200'} border border-slate-700 rounded-lg px-2.5 py-1.5">
-            <span class="min-w-0 truncate text-xs">${block.performanceType ? `<span class="font-semibold">${getPerformanceTypeName(block.performanceType)}:</span> ` : ''}${escapeHtml(block.title)} <span class="text-[10px] opacity-75">${block.duration || 1}h</span></span>
+            <span class="min-w-0 truncate text-xs"><span class="font-semibold">${getPerformanceTypeName(block.performanceType)}:</span>${block.title ? ` ${escapeHtml(block.title)}` : ''} <span class="text-[10px] opacity-75">${formatBlockClockTime(getTimeBlockStartMinutes(block))}–${formatBlockClockTime(getTimeBlockEndMinutes(block))} · ${formatTimeBlockDuration(block.duration)}</span></span>
             <span class="flex shrink-0 gap-2">
-              <button type="button" onclick="openTimeBlockForm('${start}', '${block.id}')" aria-label="Edit ${escapeHtml(block.title)}" class="text-slate-400 hover:text-white text-[10px]">Edit</button>
+              <button type="button" onclick="openTimeBlockForm('${start}', '${block.id}')" aria-label="Edit ${escapeHtml(block.title || getPerformanceTypeName(block.performanceType))}" class="text-slate-400 hover:text-white text-[10px]">Edit</button>
               <button type="button" onclick="deleteTimeBlock('${block.id}')" aria-label="Delete ${escapeHtml(block.title)}" class="text-slate-400 hover:text-rose-300 text-[10px]">Remove</button>
             </span>
           </div>
         `).join('');
-        const addButton = activeTimeBlockStart === start ? '' : `<button type="button" onclick="openTimeBlockForm('${start}')" class="text-[10px] text-slate-500 hover:text-teal-300">+ Block</button>`;
+        const continuingMarkup = continuingBlock
+          ? `<div class="my-1 rounded-lg border border-slate-800 bg-slate-900/70 px-2.5 py-1 text-[10px] text-slate-400">${getPerformanceTypeName(continuingBlock.performanceType)} block continues · ends ${formatBlockClockTime(getTimeBlockEndMinutes(continuingBlock))}</div>`
+          : '';
+        const addButton = activeTimeBlockStart === start || startingBlocks.length || continuingBlock
+          ? ''
+          : `<button type="button" onclick="openTimeBlockForm('${start}')" class="text-[10px] text-slate-500 hover:text-teal-300">+ Block</button>`;
 
         return `<div class="grid grid-cols-[3.5rem_1fr] gap-2 min-h-12 py-1.5">
           <span class="pt-1 text-[10px] font-mono text-slate-500">${formatHourLabel(hour)}</span>
-          <div class="min-w-0">${blocksMarkup}${formMarkup}${addButton}</div>
+          <div class="min-w-0">${blocksMarkup}${continuingMarkup}${formMarkup}${addButton}</div>
         </div>`;
       }).join('');
     }
