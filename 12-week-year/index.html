@@ -314,15 +314,15 @@
       </div>
 
       <!-- Date Controller Bar -->
-      <div class="bg-slate-900/80 border border-slate-800/80 rounded-xl px-3 py-2 grid grid-cols-[auto_minmax(0,1fr)_auto] sm:grid-cols-[auto_minmax(0,1fr)_auto_auto_auto] items-center gap-2 text-xs">
+      <div class="bg-slate-900/80 border border-slate-800/80 rounded-xl px-3 py-2 grid grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-2 text-xs">
         <button onclick="navigateDay(-1)" class="p-1 text-slate-400 hover:text-white transition-colors">← Prev</button>
-        <div class="row-start-1 col-start-2 min-w-0 text-center">
+        <button id="daily-date-display" type="button" onclick="openNativeDatePicker('daily-date-picker')" aria-label="Choose date" title="Choose date" class="min-w-0 text-center font-mono hover:text-amber-300 focus-visible:outline focus-visible:outline-1 focus-visible:outline-amber-400">
           <span id="daily-view-date" class="font-bold text-slate-100 font-mono text-xs sm:text-sm">Saturday, Sep 12</span>
           <span id="daily-view-indicator" class="text-[10px] text-amber-400 font-mono font-medium ml-1.5">• Today •</span>
-        </div>
-        <input id="daily-date-picker" type="date" aria-label="Go to specific date" title="Go to specific date" onchange="navigateToDate(this.value)" class="row-start-2 col-start-2 w-36 rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-300 focus:border-amber-400 focus:outline-none sm:row-start-1 sm:col-start-3" />
-        <button id="btn-go-today" onclick="goToToday()" aria-label="Go to today" title="Go to today" class="row-start-2 col-start-3 rounded-md border border-slate-700 px-2 py-1 text-slate-300 hover:border-amber-400 hover:text-amber-300 disabled:opacity-40 disabled:cursor-default sm:row-start-1 sm:col-start-4">Today</button>
-        <button onclick="navigateDay(1)" class="row-start-1 col-start-3 p-1 text-slate-400 hover:text-white transition-colors sm:col-start-5">Next →</button>
+        </button>
+        <input id="daily-date-picker" type="date" aria-label="Choose daily date" tabindex="-1" aria-hidden="true" onchange="navigateToDate(this.value)" class="pointer-events-none absolute h-px w-px opacity-0" />
+        <button id="btn-go-today" onclick="goToToday()" aria-label="Go to today" title="Go to today" class="rounded-md border border-slate-700 px-2 py-1 text-slate-300 hover:border-amber-400 hover:text-amber-300 disabled:opacity-40 disabled:cursor-default">Today</button>
+        <button onclick="navigateDay(1)" class="p-1 text-slate-400 hover:text-white transition-colors">Next →</button>
       </div>
 
       <!-- 1. % MAIN QUEST GAUGE -->
@@ -423,7 +423,11 @@
             <h2 id="wk-title" class="text-2xl font-bold tracking-tight text-white font-mono">THIS WEEK</h2>
             <span id="wk-badge-current-week" class="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs px-2 py-0.5 rounded font-mono font-bold">Week 1 / 12</span>
           </div>
-          <p id="wk-dates-label" class="text-xs text-slate-400 mt-1 font-mono"></p>
+          <div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+            <button id="wk-dates-label" type="button" onclick="openWeekDatePicker()" aria-label="Choose date to view its week" title="Choose date to view its week" class="text-left text-xs text-slate-400 font-mono hover:text-amber-300 focus-visible:outline focus-visible:outline-1 focus-visible:outline-amber-400"></button>
+            <button id="btn-this-week" type="button" onclick="goToCurrentCycleWeek()" class="text-[10px] font-mono text-amber-300 hover:text-amber-200 disabled:opacity-40 disabled:cursor-default">This week</button>
+            <input id="week-date-picker" type="date" aria-label="Choose date to view its week" tabindex="-1" aria-hidden="true" onchange="navigateCycleWeekToDate(this.value)" class="pointer-events-none absolute h-px w-px opacity-0" />
+          </div>
           <div class="flex items-center gap-1 mt-2">
             <button onclick="navigateCycleWeek(-1)" aria-label="Previous week" title="Previous week" class="bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 px-2.5 py-1 rounded-lg text-sm">←</button>
             <button onclick="navigateCycleWeek(1)" aria-label="Next week" title="Next week" class="bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 px-2.5 py-1 rounded-lg text-sm">→</button>
@@ -2423,10 +2427,51 @@
       renderDailyPage();
     }
 
+    function openNativeDatePicker(id) {
+      const picker = document.getElementById(id);
+      if (!picker) return;
+      try {
+        picker.showPicker();
+      } catch (error) {
+        picker.focus();
+        picker.click();
+      }
+    }
+
     function navigateToDate(dateKey) {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) return;
       activeDateKey = dateKey;
       renderDailyPage();
+    }
+
+    function openWeekDatePicker() {
+      const picker = document.getElementById('week-date-picker');
+      const cycleStart = parseDateKey(state?.startDate || formatDateKey(getLocalTodayDate()));
+      const currentWeek = Math.min(12, getCycleTimeline().currentWeek);
+      const currentWeekEnd = new Date(cycleStart);
+      currentWeekEnd.setDate(currentWeekEnd.getDate() + (currentWeek * 7) - 1);
+      const selectedWeekStart = new Date(cycleStart);
+      selectedWeekStart.setDate(selectedWeekStart.getDate() + ((selectedCycleWeek - 1) * 7));
+
+      picker.min = formatDateKey(cycleStart);
+      picker.max = formatDateKey(currentWeekEnd);
+      picker.value = formatDateKey(selectedWeekStart);
+      openNativeDatePicker('week-date-picker');
+    }
+
+    function navigateCycleWeekToDate(dateKey) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) return;
+      const cycleStart = parseDateKey(state?.startDate || formatDateKey(getLocalTodayDate()));
+      const selectedDate = parseDateKey(dateKey);
+      const elapsedDays = Math.floor((Date.UTC(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate()) - Date.UTC(cycleStart.getFullYear(), cycleStart.getMonth(), cycleStart.getDate())) / 86400000);
+      const currentWeek = Math.min(12, getCycleTimeline().currentWeek);
+      selectedCycleWeek = Math.max(1, Math.min(currentWeek, Math.floor(elapsedDays / 7) + 1));
+      renderWeekPage();
+    }
+
+    function goToCurrentCycleWeek() {
+      selectedCycleWeek = Math.min(12, getCycleTimeline().currentWeek);
+      renderWeekPage();
     }
 
     function updateDailyScore() {
@@ -2754,7 +2799,11 @@
       weekEnd.setDate(weekEnd.getDate() + 6);
 
       document.getElementById('wk-badge-current-week').textContent = `Week ${selectedCycleWeek} / 12${selectedCycleWeek === currentWeek ? ' • Current' : ''}`;
-      document.getElementById('wk-dates-label').textContent = `${weekStart.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} → ${weekEnd.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
+      const weekDateLabel = `${weekStart.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} → ${weekEnd.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
+      const weekDateButton = document.getElementById('wk-dates-label');
+      weekDateButton.textContent = weekDateLabel;
+      weekDateButton.setAttribute('aria-label', `Choose a date in ${weekDateLabel} to view its week`);
+      document.getElementById('btn-this-week').disabled = selectedCycleWeek === currentWeek;
       document.querySelector('[onclick="navigateCycleWeek(-1)"]').disabled = selectedCycleWeek <= 1;
       document.querySelector('[onclick="navigateCycleWeek(1)"]').disabled = selectedCycleWeek >= currentWeek;
 
