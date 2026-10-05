@@ -1,1 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#07060f" />
+<title>Bucket List</title>
+<style>
+  :root { --accent:#22d3ee; --bg:#07060f; --ink:#ecebf5; --mute:#8d8aa8; --glass:rgba(255,255,255,.045); --line:rgba(255,255,255,.09); }
+  * { box-sizing:border-box; }
+  html { color-scheme:dark; }
+  body { margin:0; min-height:100vh; background:var(--bg); color:var(--ink); font:15px/1.5 -apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,sans-serif; overflow-x:hidden; }
+  button { font:inherit; color:inherit; cursor:pointer; background:none; border:0; padding:0; }
+  input { font:inherit; color:inherit; }
 
+  /* aurora background */
+  .aurora { position:fixed; inset:0; z-index:-1; overflow:hidden; pointer-events:none; }
+  .aurora i { position:absolute; width:55vmax; height:55vmax; border-radius:50%; filter:blur(90px); opacity:.28; transition:background 1s; animation:drift 26s ease-in-out infinite alternate; }
+  .aurora i:nth-child(1) { background:var(--accent); top:-25vmax; left:-15vmax; }
+  .aurora i:nth-child(2) { background:#8b5cf6; bottom:-30vmax; right:-15vmax; animation-delay:-9s; opacity:.22; }
+  .aurora i:nth-child(3) { background:#ec4899; top:30%; left:45%; width:30vmax; height:30vmax; opacity:.10; animation-delay:-17s; }
+  @keyframes drift { to { transform:translate(8vmax,6vmax) scale(1.2); } }
+
+  .wrap { max-width:860px; margin:0 auto; padding:28px 18px 120px; }
+
+  header.top { display:flex; align-items:flex-end; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-bottom:22px; }
+  h1 { margin:0; font-size:clamp(30px,6vw,44px); letter-spacing:-.03em; font-weight:800; line-height:1.05;
+       background:linear-gradient(100deg,#fff 0%,var(--accent) 40%,#c084fc 70%,#fff 100%); background-size:220% 100%;
+       -webkit-background-clip:text; background-clip:text; color:transparent; animation:shine 9s linear infinite; }
+  @keyframes shine { to { background-position:-220% 0; } }
+  .sub { color:var(--mute); margin:6px 0 0; font-size:14px; }
+  .tools { display:flex; gap:8px; flex-wrap:wrap; }
+
+  .btn { display:inline-flex; align-items:center; gap:7px; padding:8px 13px; border-radius:11px; background:var(--glass); border:1px solid var(--line); font-size:13px; font-weight:600; color:var(--ink); transition:.2s; backdrop-filter:blur(8px); }
+  .btn:hover { border-color:color-mix(in srgb,var(--accent) 60%,transparent); box-shadow:0 0 20px color-mix(in srgb,var(--accent) 30%,transparent); transform:translateY(-1px); }
+  .btn.primary { background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 50%,#8b5cf6)); color:#07060f; border-color:transparent; box-shadow:0 4px 22px color-mix(in srgb,var(--accent) 45%,transparent); }
+  .btn.danger { background:linear-gradient(135deg,#f43f5e,#be123c); color:#fff; border-color:transparent; box-shadow:0 4px 22px rgba(244,63,94,.4); }
+  .btn.ghost.warn:hover { border-color:#f43f5e; box-shadow:0 0 20px rgba(244,63,94,.35); color:#fda4af; }
+  .btn svg, .ib svg { width:16px; height:16px; flex:none; }
+
+  /* tabs */
+  .tabs { display:flex; gap:8px; overflow-x:auto; padding:6px 4px 14px; margin:0 -4px; scrollbar-width:thin; }
+  .tab { flex:none; display:flex; align-items:center; gap:8px; padding:9px 15px; border-radius:999px; background:var(--glass); border:1px solid var(--line); font-weight:600; font-size:14px; white-space:nowrap; transition:.25s; cursor:grab; user-select:none; }
+  .tab:hover { transform:translateY(-2px); border-color:color-mix(in srgb,var(--c) 70%,transparent); }
+  .tab.active { background:color-mix(in srgb,var(--c) 22%,transparent); border-color:var(--c); box-shadow:0 0 24px color-mix(in srgb,var(--c) 45%,transparent), inset 0 0 14px color-mix(in srgb,var(--c) 15%,transparent); }
+  .tab small { color:var(--mute); font-weight:500; }
+  .tab.dragging { opacity:.4; }
+  .tab.over { box-shadow:-4px 0 0 var(--c); }
+  .tab.new { border-style:dashed; cursor:pointer; color:var(--mute); }
+
+  /* panel */
+  .panel { border:1px solid var(--line); border-radius:24px; padding:22px; background:linear-gradient(160deg,rgba(255,255,255,.06),rgba(255,255,255,.02)); backdrop-filter:blur(14px);
+           box-shadow:0 20px 60px rgba(0,0,0,.45), 0 0 80px -30px var(--accent); animation:rise .45s cubic-bezier(.2,.8,.3,1); }
+  @keyframes rise { from { opacity:0; transform:translateY(12px) scale(.985); } }
+  .ph { display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-bottom:18px; }
+  .ph .emo { font-size:38px; filter:drop-shadow(0 0 14px var(--accent)); }
+  .ph .meta { flex:1; min-width:180px; }
+  .ph h2 { margin:0; font-size:26px; letter-spacing:-.02em; }
+  .ph p { margin:2px 0 0; color:var(--mute); font-size:13px; }
+  .ring { width:54px; height:54px; position:relative; flex:none; }
+  .ring svg { width:100%; height:100%; transform:rotate(-90deg); }
+  .ring circle { fill:none; stroke-width:5; stroke-linecap:round; }
+  .ring .bg { stroke:rgba(255,255,255,.1); }
+  .ring .fg { stroke:var(--accent); filter:drop-shadow(0 0 5px var(--accent)); transition:stroke-dashoffset .8s cubic-bezier(.2,.8,.3,1); }
+  .ring b { position:absolute; inset:0; display:grid; place-items:center; font-size:12px; }
+  .pacts { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+
+  .ib { width:30px; height:30px; display:inline-grid; place-items:center; border-radius:8px; color:var(--mute); transition:.15s; flex:none; }
+  .ib:hover { background:rgba(255,255,255,.1); color:#fff; }
+  .ib.del:hover { background:rgba(244,63,94,.2); color:#fb7185; }
+  .ib:disabled { opacity:.25; pointer-events:none; }
+
+  /* nodes */
+  .row { display:flex; align-items:flex-start; gap:10px; padding:5px 6px; border-radius:10px; transition:background .15s; }
+  .row:hover { background:rgba(255,255,255,.045); }
+  .acts { display:flex; margin-left:auto; opacity:0; transition:opacity .15s; flex:none; }
+  .row:hover > .acts, .row:focus-within > .acts, .sh:hover > .acts, .sh:focus-within > .acts { opacity:1; }
+  @media (hover:none) { .acts { opacity:1; } }
+  .txt { flex:1; min-width:0; padding-top:3px; overflow-wrap:anywhere; }
+  .item > .row .txt { font-weight:500; }
+  .done > .row .txt { color:var(--mute); text-decoration:line-through; text-decoration-color:color-mix(in srgb,var(--accent) 70%,transparent); }
+  .chk { width:22px; height:22px; margin-top:3px; border-radius:50%; border:2px solid var(--accent); display:grid; place-items:center; flex:none; transition:.25s; color:transparent; }
+  .chk:hover { box-shadow:0 0 14px var(--accent); }
+  .chk svg { width:13px; height:13px; }
+  .done > .row .chk { background:linear-gradient(135deg,var(--accent),#c084fc); border-color:transparent; color:#07060f; box-shadow:0 0 16px var(--accent); }
+  .chk.pop { animation:pop .45s cubic-bezier(.3,1.8,.5,1); }
+  @keyframes pop { 0% { transform:scale(.6); } 100% { transform:scale(1); } }
+  .kids { margin-left:19px; padding-left:14px; border-left:1px dashed color-mix(in srgb,var(--accent) 30%,transparent); }
+  .bul > .row { padding-block:2px; font-size:14px; }
+  .dot { width:6px; height:6px; margin:11px 6px 0 7px; border-radius:50%; background:var(--accent); box-shadow:0 0 8px var(--accent); flex:none; }
+  .bul > .row .txt { color:#c9c7de; }
+
+  .sec { margin:10px 0; }
+  .sec.d1 { border:1px solid var(--line); border-radius:18px; padding:8px 10px 10px; background:rgba(255,255,255,.03); }
+  .sh { display:flex; align-items:center; gap:6px; padding:3px 2px; }
+  .sh h3 { margin:0; flex:0 1 auto; min-width:0; font-weight:700; letter-spacing:-.01em; overflow-wrap:anywhere; cursor:default; }
+  .d1 > .sh h3 { font-size:19px; }
+  .d2 > .sh h3 { font-size:16.5px; color:#fff; }
+  .d3 > .sh h3 { font-size:14px; text-transform:uppercase; letter-spacing:.08em; color:var(--accent); }
+  .badge { font-size:11.5px; padding:1px 8px; border-radius:99px; background:color-mix(in srgb,var(--accent) 16%,transparent); color:var(--accent); font-weight:700; white-space:nowrap; }
+  .sh .acts { margin-left:auto; }
+  .fold svg { transition:transform .25s; }
+  .sec.c > .sh .fold svg { transform:rotate(-90deg); }
+  .sbw { display:grid; grid-template-rows:1fr; transition:grid-template-rows .3s ease; }
+  .sec.c > .sbw { grid-template-rows:0fr; }
+  .sbw > div { overflow:hidden; min-height:0; }
+  .sec .body { margin-left:11px; padding:2px 0 2px 12px; border-left:1px solid color-mix(in srgb,var(--accent) 28%,transparent); }
+  .body.root { margin:0; padding:0; border:0; }
+
+  /* add row + inputs */
+  .add { display:flex; gap:6px; align-items:center; margin:4px 0 2px; }
+  .add input, .edit { flex:1; min-width:0; background:rgba(0,0,0,.25); border:1px dashed rgba(255,255,255,.14); border-radius:10px; padding:7px 11px; font-size:14px; outline:0; transition:.2s; }
+  .add input:focus, .edit:focus { border-style:solid; border-color:var(--accent); box-shadow:0 0 16px color-mix(in srgb,var(--accent) 35%,transparent); }
+  .edit { width:100%; padding:3px 9px; font-weight:inherit; font-size:inherit; border-style:solid; border-color:var(--accent); }
+  .mini { font-size:12px; padding:6px 10px; border-radius:9px; color:var(--mute); border:1px solid var(--line); white-space:nowrap; transition:.15s; }
+  .mini:hover { color:#fff; border-color:var(--accent); }
+
+  /* links */
+  a.lnk { display:inline-flex; align-items:center; gap:6px; max-width:100%; padding:1px 9px 1px 6px; margin:1px 2px; border-radius:99px; text-decoration:none; font-size:.9em; font-weight:500; color:#fff;
+          background:color-mix(in srgb,var(--accent) 14%,transparent); border:1px solid color-mix(in srgb,var(--accent) 45%,transparent); transition:.2s; vertical-align:middle; }
+  a.lnk:hover { background:color-mix(in srgb,var(--accent) 28%,transparent); box-shadow:0 0 16px color-mix(in srgb,var(--accent) 45%,transparent); transform:translateY(-1px); }
+  a.lnk img { width:15px; height:15px; border-radius:4px; flex:none; }
+  a.lnk span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  a.lnk span em { font-style:normal; opacity:.6; }
+  a.lnk svg { width:12px; height:12px; opacity:.6; flex:none; }
+
+  .emptystate { text-align:center; padding:60px 20px; color:var(--mute); }
+  .emptystate h2 { color:var(--ink); }
+
+  /* dialog */
+  dialog { border:1px solid var(--line); border-radius:22px; background:#12101f; color:var(--ink); padding:24px; width:min(440px,92vw); box-shadow:0 30px 90px rgba(0,0,0,.7), 0 0 60px -20px var(--accent); }
+  dialog::backdrop { background:rgba(4,3,10,.7); backdrop-filter:blur(5px); }
+  dialog[open] { animation:rise .3s cubic-bezier(.2,.8,.3,1); }
+  dialog h3 { margin:0 0 10px; font-size:20px; }
+  dialog label { display:block; font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--mute); margin:14px 0 6px; font-weight:700; }
+  dialog .fld { width:100%; background:rgba(0,0,0,.3); border:1px solid var(--line); border-radius:11px; padding:9px 12px; outline:0; }
+  dialog .fld:focus { border-color:var(--accent); box-shadow:0 0 16px color-mix(in srgb,var(--accent) 35%,transparent); }
+  .emojis { display:flex; flex-wrap:wrap; gap:4px; margin-top:8px; }
+  .emojis button { font-size:19px; width:34px; height:34px; border-radius:9px; transition:.15s; }
+  .emojis button:hover { background:rgba(255,255,255,.12); transform:scale(1.15); }
+  .swatches { display:flex; gap:9px; flex-wrap:wrap; }
+  dialog .swatches label { margin:0; width:28px; height:28px; border-radius:50%; background:var(--s); cursor:pointer; position:relative; box-shadow:0 0 12px color-mix(in srgb,var(--s) 60%,transparent); transition:.2s; }
+  .swatches input { position:absolute; opacity:0; }
+  .swatches label:has(input:checked) { outline:2px solid #fff; outline-offset:3px; transform:scale(1.1); }
+  .dact { display:flex; justify-content:flex-end; gap:8px; margin-top:22px; }
+  .warnbox { border:1px solid rgba(244,63,94,.4); background:rgba(244,63,94,.1); border-radius:12px; padding:10px 14px; color:#fecdd3; font-size:14px; }
+
+  .toast { position:fixed; left:50%; bottom:26px; transform:translateX(-50%); background:#1b1830; border:1px solid var(--line); border-radius:14px; padding:10px 14px; display:flex; gap:14px; align-items:center; z-index:50; box-shadow:0 10px 40px rgba(0,0,0,.6),0 0 30px -10px var(--accent); font-size:14px; max-width:92vw; }
+  .toast button { color:var(--accent); font-weight:700; }
+  .pc { position:fixed; width:7px; height:7px; border-radius:2px; pointer-events:none; z-index:60; }
+  @media (prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none !important; transition:none !important; } }
+  @media (max-width:560px) { .panel { padding:14px; border-radius:20px; } .kids { margin-left:11px; padding-left:8px; } }
+</style>
+</head>
+<body>
+<div class="aurora"><i></i><i></i><i></i></div>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Bucket List</h1>
+      <p class="sub">Dream big. Check it off. Saved automatically in your browser.</p>
+    </div>
+    <div class="tools" id="tools"></div>
+  </header>
+  <nav class="tabs" id="tabs" aria-label="Bucket lists"></nav>
+  <main id="panel"></main>
+</div>
+
+<dialog id="dlg"></dialog>
+<input type="file" id="file" accept="application/json,.json" hidden />
+
+<script>
+(() => {
+'use strict';
+const KEY = 'bucketlist.v1';
+const COLORS = ['#22d3ee','#a78bfa','#f472b6','#fbbf24','#34d399','#fb7185','#60a5fa','#fb923c'];
+const EMOJIS = ['🌟','✈️','🏔️','🌋','🎓','🎵','🏖️','🌌','🗽','📸','🍜','🚀','❤️','🏕️','🎯','🌎'];
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const $ = s => document.querySelector(s);
+const uid = () => Math.random().toString(36).slice(2, 10);
+
+const IC = {
+  plus:'<path d="M12 5v14M5 12h14"/>', edit:'<path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/>',
+  up:'<path d="M18 15l-6-6-6 6"/>', down:'<path d="M6 9l6 6 6-6"/>', left:'<path d="M15 18l-6-6 6-6"/>', right:'<path d="M9 18l6-6-6-6"/>',
+  trash:'<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"/>', check:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  dl:'<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>', ul:'<path d="M12 15V3M7 8l5-5 5 5M5 21h14"/>', ext:'<path d="M14 4h6v6M20 4l-9 9M18 14v6H4V6h6"/>',
+  spark:'<path d="M12 3l1.9 5.6L20 10l-6.1 1.4L12 17l-1.9-5.6L4 10l6.1-1.4z"/>'
+};
+const ico = n => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${IC[n]}</svg>`;
+
+/* ---------- model ---------- */
+// node: {id,type:'s'|'i'|'b',text,kids,done?,collapsed?}
+const mk = (type, text, kids = []) => ({ id: uid(), type, text, kids, ...(type === 'i' ? { done:false } : {}), ...(type === 's' ? { collapsed:false } : {}) });
+const S = (t, ...k) => mk('s', t, k);
+const I = (t, ...k) => mk('i', t, k);
+const B = (t, ...k) => mk('b', t, k);
+const items = arr => arr.map(t => I(t));
+
+const springBlooms = () => S('Spring Blooms',
+  ...items(['Anza-Borrego Desert State Park','Antelope Valley California Poppy Reserve','Carrizo Plain National Monument','Chino Hills State Park']),
+  I('Point Mugu State Park and Rancho Sierra Vista', B('Chumash Trail: starts at PCH and is a steep climb, where chocolate lily and globe gilia are known to grow along the ridgeline. Or start on the north side, at Rancho Sierra Vista near Thousand Oaks, and walk the rolling hills in search of wildflowers under the shadow of Boney Mountain.')),
+  I('Diamond Valley Lake'),
+  I('[California State Parks wildflower info](https://www.parks.ca.gov/?page_id=31189)'));
+
+function seed() {
+  const life = { id:uid(), name:'Life Bucket List', emoji:'🌟', color:COLORS[0], kids: items([
+    'See the Great Barrier Reef and scuba dive or snorkel there','See a volcano erupt (peacefully or at least safely)','See Hawaii',
+    'See Alaska when flowers are in bloom & see Denali','See the Himalayas and Mount Everest','See a really good Aurora','Go to Antarctica',
+    'See a crazy aurora event (where you can see the green)','NYE at Times Square','Go to New Zealand','Go skydiving','Live in another country for a period of time',
+    'See Angel Falls','Pando','Go on tour with a band (not in the band, just with them)','A real symphony plays your symphony',
+    'Real recording & live performance of my symphony','Someone covers my music (of their own volition)']) };
+
+  const travel = { id:uid(), name:'Travel', emoji:'✈️', color:COLORS[1], kids:[
+    S('Seasonal',
+      S('Winter',
+        I('Bolivian side of the Amazon rainforest', B('Location where you\u2019re around 17,000 feet up')),
+        S('January', ...items(['Death Valley, CA','Alabama Hills, CA','Monument Valley, AZ','Snow in Joshua Tree, CA','Bisti Badlands (astro and sunset)'])),
+        S('February', I('Alabama Hills, CA')),
+        S('March', ...items(['Goblin Valley State Park, UT','Needles District, Canyonlands, UT','Coyote Gulch, UT','Death Valley (during bloom), CA','Bisti Badlands (astro and sunset)']))),
+      S('Spring', springBlooms(), S('April'), S('May'), S('Early June')),
+      S('Summer', S('June'), S('July'), S('August')),
+      S('Fall', S('September'), S('October'), S('November'), S('December'))),
+    S('Domestic',
+      S('Alaska'),
+      S('Arizona', ...items(['Petrified Forest NP','Antelope Canyon','Pinal Airpark','Car thing that goes over the Grand Canyon'])),
+      S('California', ...items(['Fern Canyon','Griffith Park','Lava Beds National Monument','Natural Bridges','Painted Canyon','Channel Islands','Kings Canyon','Antelope Valley Poppy Reserve','Julia Pfeiffer Burns State Park','Ancient Bristlecone Forest','Burney Falls']), springBlooms()),
+      S('Colorado'),
+      S('Hawaii', I('Interstate H-3?')),
+      S('Michigan', I('Isle Royale NP')),
+      S('Minnesota', I('Voyageurs NP')),
+      S('Montana', I('East Portal Milwaukee Road')),
+      S('Nevada'),
+      S('New Mexico', ...items(['Carlsbad Caverns NP','Bisti Badlands (astro and sunset)','Ah-Shi-Sle-Pah','Taos','Salinas Pueblo Missions NM'])),
+      S('North Dakota', I('Theodore Roosevelt NP')),
+      S('South Dakota', ...items(['Badlands NP','Mount Rushmore'])),
+      S('Texas', ...items(['Big Bend','Guadalupe Mountains NP'])),
+      S('Utah', ...items(['Needles District, Canyonlands','Goblin Valley State Park','Coyote Gulch'])),
+      S('Washington', I('Tolmie Peak Trail at Mount Rainier National Park'))),
+    S('International', ...['North America','South America','Europe','Asia','Australia','Africa','Antarctica'].map(c => S(c))),
+    S('Dream Spots & Inspiration',
+      I('Most beautiful places in the world', B('https://www.cntraveler.com/galleries/2015-11-27/the-50-most-beautiful-places-in-the-world')),
+      I('Most beautiful places in America', B('https://www.countryliving.com/life/travel/g3468/most-beautiful-places-in-america/?slide=16')),
+      I('Most beautiful places in California', B('https://www.thrillist.com/entertainment/los-angeles/most-beautiful-places-in-california-road-trip-ideas-alamere-falls-pfeiffer-beach')),
+      I('El Paso Paint Mines, CO (near Denver, easy peasy!)', B('https://www.outtherecolorado.com/multimedia/these-colorful-rock-formations-in-colorado-looked-painted/collection_6db4d9a8-785a-11eb-b529-d3e1bb000100.html')),
+      I('Paria River Canyon, Utah', B('Scary to backpack through, esp. in winter. Maybe there\u2019s a nice viewpoint that\u2019s easily accessible?')),
+      I('Dead Horse Point State Park'),
+      S('Favs (blue hour, night, or sunset would be coolest)',
+        I('Blue Hill badlands region'),
+        I('Bentonite Hills',
+          B('Look up pics of [rainbow mountains Utah](https://www.google.com/search?q=rainbow+mountains+utah&tbm=isch) and find one of the real blue-colored badlands',
+            B('You can use Google Maps to get to the Mars research station area, then continue on the dirt road past the station to a large parking area surrounded by the Bentonite Hills. A great spot for sunset.')),
+          B('You\u2019ll need a high clearance vehicle. The road is 4WD only, but in dry weather you could probably do it in 2WD.'),
+          B('Part of Capitol Reef? Free camp in the Bentonite Hills'),
+          B('https://wanderfilledlife.com/capitol-reef-national-park-winter/'),
+          B('Fruita Campground, $25 first come first serve?'),
+          B('Really pretty ones are north of State Route 24 (I think). Road to get all up in there is dirt.')),
+        I('Rainbow Mountains, Colorado',
+          B('https://www.fs.usda.gov/Internet/FSE_DOCUMENTS/stelprdb5286902.pdf'),
+          B('https://hikearizona.com/decoder.php?ZTN=2161'),
+          B('Not worth it during winter I think')),
+        I('Crystal Mill, Colorado',
+          B('[Photos](https://www.google.com/search?q=crystal+mill+colorado&tbm=isch)'),
+          B('https://www.reddit.com/r/pics/comments/a6he80/falls_transition_to_winter_at_crystal_mill/'))))
+  ] };
+
+  const thirty = { id:uid(), name:'Before I Turn 30', emoji:'🚀', color:COLORS[3], kids: items(['Spend 3 months in another country','Live in NYC']) };
+  const college = { id:uid(), name:'Before I Graduate College', emoji:'🎓', color:COLORS[2], kids: items(['Epic Baldy sunset shot','Mt Wilson Observatory','Pet Hotel HQ (camera) photo at night!','The Gorge venue']) };
+  return [life, travel, thirty, college];
+}
+
+/* sanitise untrusted data (storage / import) and enforce depth limits */
+function clean(kids, parent, sd, bd) {
+  const out = [];
+  for (const k of Array.isArray(kids) ? kids : []) {
+    if (!k || typeof k !== 'object') continue;
+    const text = String(k.text ?? '').slice(0, 2000);
+    if (parent === 'root' || parent === 's') {
+      if (k.type === 's' && sd < 3) out.push({ id:uid(), type:'s', text, collapsed:!!k.collapsed, kids:clean(k.kids, 's', sd + 1, 0) });
+      else if (k.type === 'i') out.push({ id:uid(), type:'i', text, done:!!k.done, kids:clean(k.kids, 'i', sd, 0) });
+    } else if (k.type === 'b' && bd < 3) out.push({ id:uid(), type:'b', text, kids:clean(k.kids, 'b', sd, bd + 1) });
+  }
+  return out;
+}
+const cleanList = l => ({ id:uid(), name:String(l?.name || 'Untitled').slice(0, 80), emoji:String(l?.emoji || '✨').slice(0, 8),
+  color:/^#[0-9a-f]{6}$/i.test(l?.color) ? l.color : COLORS[0], kids:clean(l?.kids, 'root', 0, 0) });
+
+function load() {
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (raw) { const d = JSON.parse(raw); const lists = (d.lists || []).map(cleanList); const i = (d.lists || []).findIndex(l => l.id === d.active); return { lists, active:lists[i]?.id ?? null }; }
+  } catch {}
+  return { lists:seed(), active:null };
+}
+let state = load();
+if (!state.active) state.active = state.lists[0]?.id ?? null;
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {} };
+const cur = () => state.lists.find(l => l.id === state.active);
+
+function find(id) {
+  const walk = (arr, anc) => {
+    for (let i = 0; i < arr.length; i++) {
+      const n = arr[i];
+      if (n.id === id) return { n, arr, i };
+      const r = walk(n.kids, [...anc, n]); if (r) return r;
+    }
+  };
+  return walk(cur().kids, []);
+}
+function count(kids) {
+  let done = 0, total = 0;
+  for (const n of kids) {
+    if (n.type === 'i') { total++; if (n.done) done++; }
+    if (n.type === 's') { const c = count(n.kids); done += c.done; total += c.total; }
+  }
+  return { done, total };
+}
+
+/* ---------- text + links ---------- */
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+const LINK_RE = /\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)|((?:https?:\/\/|www\.)[^\s<>"]+)/gi;
+
+function chip(url, text) {
+  let u;
+  try { u = new URL(url); if (!/^https?:$/.test(u.protocol)) throw 0; } catch { return esc(text || url); }
+  const host = u.hostname.replace(/^www\./, '');
+  let label;
+  if (text) label = esc(text);
+  else {
+    let seg = '';
+    try { seg = decodeURIComponent(u.pathname.split('/').filter(Boolean).pop() || ''); } catch {}
+    seg = seg.replace(/\.(html?|php|pdf|aspx?)$/i, '').replace(/[-_+]+/g, ' ').trim();
+    if (/^\d+$/.test(seg)) seg = '';
+    if (seg.length > 42) seg = seg.slice(0, 40) + '…';
+    label = esc(host) + (seg ? ` <em>· ${esc(seg)}</em>` : '');
+  }
+  return `<a class="lnk" href="${esc(u.href)}" target="_blank" rel="noopener noreferrer" title="${esc(u.href)}"><img src="https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=32" alt="" loading="lazy" onerror="this.remove()"><span>${label}</span>${ico('ext')}</a>`;
+}
+function fmt(text) {
+  let out = '', last = 0, m;
+  LINK_RE.lastIndex = 0;
+  while ((m = LINK_RE.exec(text))) {
+    out += esc(text.slice(last, m.index));
+    if (m[2]) out += chip(m[2], m[1].trim());
+    else {
+      let url = m[3], tail = '';
+      const t = url.match(/[.,;:!?)\]]+$/); if (t) { tail = t[0]; url = url.slice(0, -tail.length); }
+      out += chip(/^www\./i.test(url) ? 'https://' + url : url) + esc(tail);
+    }
+    last = m.index + m[0].length;
+  }
+  return out + esc(text.slice(last));
+}
+
+/* ---------- ui state ---------- */
+const ui = { editing:null, adding:null, addSec:null, focus:null, pop:null };
+let rendering = false;
+
+/* ---------- rendering ---------- */
+const btn = (a, icon, title, extra = '') => `<button class="ib ${extra}" data-a="${a}" title="${title}" aria-label="${title}">${ico(icon)}</button>`;
+
+function addRow(id, canSec) {
+  if (ui.addSec === id) return `<div class="add"><input data-addsec="${id}" placeholder="Section name…" maxlength="120" autocomplete="off"><button class="mini" data-a="canceladd">Cancel</button></div>`;
+  return `<div class="add"><input data-add="${id}" placeholder="Add an item or paste a link…" autocomplete="off">${canSec ? `<button class="mini" data-a="addsec" title="Add a subsection">+ Section</button>` : ''}</div>`;
+}
+const editBox = n => `<input class="edit" data-edit="${n.id}" value="${esc(n.text)}" maxlength="2000" autocomplete="off">`;
+
+function rowActs(i, len, canAdd) {
+  return `<div class="acts">${canAdd ? btn('addbul', 'plus', 'Add sub-bullet') : ''}${btn('edit', 'edit', 'Edit')}
+    <button class="ib" data-a="up" title="Move up" ${i === 0 ? 'disabled' : ''}>${ico('up')}</button>
+    <button class="ib" data-a="down" title="Move down" ${i === len - 1 ? 'disabled' : ''}>${ico('down')}</button>${btn('del', 'trash', 'Delete', 'del')}</div>`;
+}
+
+function renderBullets(kids, bd, parentId) {
+  return kids.map((b, i) => `<div class="node bul" data-id="${b.id}"><div class="row"><span class="dot"></span>
+      <div class="txt" data-a="dbl">${ui.editing === b.id ? editBox(b) : fmt(b.text)}</div>${rowActs(i, kids.length, bd < 3)}</div>
+      ${(b.kids.length || ui.adding === b.id) ? `<div class="kids">${renderBullets(b.kids, bd + 1, b.id)}</div>` : ''}</div>`).join('')
+    + (ui.adding === parentId ? `<div class="add"><input data-add="${parentId}" placeholder="Add a bullet…" autocomplete="off"></div>` : '');
+}
+
+function renderKids(kids, sd) {
+  return kids.map((n, i) => {
+    if (n.type === 'i') {
+      return `<div class="node item ${n.done ? 'done' : ''}" data-id="${n.id}"><div class="row">
+        <button class="chk" data-a="toggle" aria-label="Toggle done" aria-pressed="${n.done}">${ico('check')}</button>
+        <div class="txt" data-a="dbl">${ui.editing === n.id ? editBox(n) : fmt(n.text)}</div>${rowActs(i, kids.length, true)}</div>
+        ${(n.kids.length || ui.adding === n.id) ? `<div class="kids">${renderBullets(n.kids, 1, n.id)}</div>` : ''}</div>`;
+    }
+    const c = count(n.kids), d = sd + 1;
+    return `<section class="node sec d${d} ${n.collapsed ? 'c' : ''}" data-id="${n.id}">
+      <div class="sh"><button class="ib fold" data-a="fold" title="Collapse / expand" aria-label="Collapse / expand">${ico('down')}</button>
+        <h3 data-a="dbl">${ui.editing === n.id ? editBox(n) : fmt(n.text)}</h3>${c.total ? `<span class="badge">${c.done}/${c.total}</span>` : ''}
+        <div class="acts">${btn('edit', 'edit', 'Rename')}
+        <button class="ib" data-a="up" title="Move up" ${i === 0 ? 'disabled' : ''}>${ico('up')}</button>
+        <button class="ib" data-a="down" title="Move down" ${i === kids.length - 1 ? 'disabled' : ''}>${ico('down')}</button>${btn('del', 'trash', 'Delete section', 'del')}</div></div>
+      <div class="sbw"><div><div class="body">${renderKids(n.kids, d)}${addRow(n.id, d < 3)}</div></div></div></section>`;
+  }).join('');
+}
+
+function renderTools() {
+  $('#tools').innerHTML = `<button class="btn" data-a="exportall">${ico('dl')}Export JSON</button>
+    <button class="btn" data-a="import">${ico('ul')}Import</button>
+    <button class="btn" data-a="examples">${ico('spark')}Add examples</button>`;
+}
+function renderTabs() {
+  $('#tabs').innerHTML = state.lists.map(l => {
+    const c = count(l.kids);
+    return `<button class="tab ${l.id === state.active ? 'active' : ''}" draggable="true" data-list="${l.id}" style="--c:${l.color}"><span>${esc(l.emoji)}</span>${esc(l.name)}<small>${c.done}/${c.total}</small></button>`;
+  }).join('') + `<button class="tab new" data-a="newlist" style="--c:var(--accent)">+ New list</button>`;
+}
+function renderPanel() {
+  const l = cur();
+  if (!l) {
+    $('#panel').innerHTML = `<div class="panel emptystate"><h2>No bucket lists yet</h2><p>Start fresh, or bring back the example lists.</p>
+      <div class="tools" style="justify-content:center"><button class="btn primary" data-a="newlist">+ New list</button><button class="btn" data-a="examples">${ico('spark')}Add examples</button></div></div>`;
+    return;
+  }
+  const c = count(l.kids), pct = c.total ? Math.round(c.done / c.total * 100) : 0, i = state.lists.indexOf(l);
+  $('#panel').innerHTML = `<div class="panel" data-lid="${l.id}">
+    <div class="ph"><span class="emo">${esc(l.emoji)}</span>
+      <div class="meta"><h2>${esc(l.name)}</h2><p>${c.done} of ${c.total} done</p></div>
+      <div class="ring"><svg viewBox="0 0 44 44"><circle class="bg" cx="22" cy="22" r="18"/><circle class="fg" cx="22" cy="22" r="18" stroke-dasharray="113.1" stroke-dashoffset="${113.1 * (1 - pct / 100)}"/></svg><b>${pct}%</b></div>
+      <div class="pacts">
+        <button class="ib" data-a="listleft" title="Move list left" ${i === 0 ? 'disabled' : ''}>${ico('left')}</button>
+        <button class="ib" data-a="listright" title="Move list right" ${i === state.lists.length - 1 ? 'disabled' : ''}>${ico('right')}</button>
+        <button class="btn" data-a="editlist">${ico('edit')}Edit</button>
+        <button class="btn" data-a="exportlist">${ico('dl')}JSON</button>
+        <button class="btn ghost warn" data-a="dellist">${ico('trash')}Delete</button>
+      </div></div>
+    <div class="body root">${renderKids(l.kids, 0)}${addRow(l.id, true)}</div></div>`;
+}
+function render() {
+  rendering = true;
+  document.body.style.setProperty('--accent', cur()?.color || COLORS[0]);
+  renderTools(); renderTabs(); renderPanel();
+  rendering = false;
+  const f = ui.focus; ui.focus = null;
+  const el = ui.editing ? $(`[data-edit="${ui.editing}"]`) : ui.addSec ? $(`[data-addsec="${ui.addSec}"]`) :
+    (f ? $(`[data-add="${f}"]`) : ui.adding ? $(`[data-add="${ui.adding}"]`) : null);
+  if (el) { el.focus(); if (el.dataset.edit) el.select(); }
+  if (ui.pop) { const c = $(`[data-id="${ui.pop}"] > .row .chk`); if (c) { c.classList.add('pop'); burst(c); } ui.pop = null; }
+}
+
+/* ---------- effects ---------- */
+function burst(el) {
+  if (reduced) return;
+  const r = el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  const cols = [cur().color, '#c084fc', '#f472b6', '#fbbf24', '#fff'];
+  for (let i = 0; i < 16; i++) {
+    const p = document.createElement('i'); p.className = 'pc';
+    p.style.cssText = `left:${cx}px;top:${cy}px;background:${cols[i % cols.length]};box-shadow:0 0 8px ${cols[i % cols.length]}`;
+    document.body.appendChild(p);
+    const a = Math.random() * Math.PI * 2, d = 30 + Math.random() * 50;
+    p.animate([{ transform:'translate(0,0) scale(1)', opacity:1 },
+      { transform:`translate(${Math.cos(a) * d}px,${Math.sin(a) * d + 18}px) rotate(${Math.random() * 360}deg) scale(.2)`, opacity:0 }],
+      { duration:600 + Math.random() * 300, easing:'cubic-bezier(.2,.8,.3,1)' }).onfinish = () => p.remove();
+  }
+}
+let toastTimer;
+function toast(msg, undo) {
+  $('.toast')?.remove(); clearTimeout(toastTimer);
+  const t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status');
+  t.innerHTML = `<span>${esc(msg)}</span>${undo ? '<button>Undo</button>' : ''}`;
+  if (undo) t.querySelector('button').onclick = () => { undo(); t.remove(); };
+  document.body.appendChild(t);
+  toastTimer = setTimeout(() => t.remove(), 6000);
+}
+
+/* ---------- dialogs ---------- */
+const dlg = $('#dlg');
+dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
+
+function listDialog(list) {
+  const editing = !!list;
+  const color = list?.color || COLORS[state.lists.length % COLORS.length];
+  dlg.innerHTML = `<form method="dialog" id="lform"><h3>${editing ? 'Edit list' : 'New bucket list'}</h3>
+    <label for="ln">Name</label><input class="fld" id="ln" required maxlength="80" value="${esc(list?.name || '')}" placeholder="e.g. Foodie adventures" autocomplete="off">
+    <label for="le">Emoji</label><input class="fld" id="le" maxlength="8" value="${esc(list?.emoji || '✨')}" autocomplete="off">
+    <div class="emojis">${EMOJIS.map(e => `<button type="button" data-e="${e}">${e}</button>`).join('')}</div>
+    <label>Color</label><div class="swatches">${COLORS.map(c => `<label style="--s:${c}"><input type="radio" name="col" value="${c}" ${c === color ? 'checked' : ''}></label>`).join('')}</div>
+    <div class="dact"><button type="button" class="btn" id="lcancel">Cancel</button><button class="btn primary" type="submit">${editing ? 'Save' : 'Create list'}</button></div></form>`;
+  dlg.querySelectorAll('[data-e]').forEach(b => b.onclick = () => { $('#le').value = b.dataset.e; });
+  $('#lcancel').onclick = () => dlg.close();
+  $('#lform').onsubmit = e => {
+    e.preventDefault();
+    const name = $('#ln').value.trim(); if (!name) return;
+    const emoji = $('#le').value.trim() || '✨', col = dlg.querySelector('[name=col]:checked')?.value || color;
+    if (editing) Object.assign(list, { name, emoji, color:col });
+    else { const l = { id:uid(), name, emoji, color:col, kids:[] }; state.lists.push(l); state.active = l.id; }
+    save(); dlg.close(); render();
+  };
+  dlg.showModal(); $('#ln').focus();
+}
+function confirmDelete(list) {
+  const c = count(list.kids);
+  dlg.innerHTML = `<h3>Delete \u201C${esc(list.name)}\u201D?</h3>
+    <div class="warnbox"><b>This can\u2019t be undone.</b> The list${c.total ? ` and its ${c.total} item${c.total > 1 ? 's' : ''}` : ''} will be permanently removed. Export a JSON backup first if you might want it back.</div>
+    <div class="dact"><button class="btn" id="dno">Keep it</button><button class="btn danger" id="dyes">Delete forever</button></div>`;
+  $('#dno').onclick = () => dlg.close();
+  $('#dyes').onclick = () => {
+    const i = state.lists.indexOf(list); state.lists.splice(i, 1);
+    state.active = (state.lists[i] || state.lists[i - 1])?.id ?? null;
+    save(); dlg.close(); render();
+  };
+  dlg.showModal(); $('#dno').focus();
+}
+
+/* ---------- import / export ---------- */
+function download(name, data) {
+  const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type:'application/json' }));
+  const a = Object.assign(document.createElement('a'), { href:url, download:name });
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+const stamp = () => new Date().toISOString().slice(0, 10);
+const payload = lists => ({ app:'bucketlist', version:1, exportedAt:new Date().toISOString(), lists });
+$('#file').addEventListener('change', async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  try {
+    const d = JSON.parse(await f.text());
+    const lists = (Array.isArray(d) ? d : d.lists || [d]).filter(x => x && typeof x === 'object' && 'kids' in x).map(cleanList);
+    if (!lists.length) throw 0;
+    state.lists.push(...lists); state.active = lists[0].id; save(); render();
+    toast(`Imported ${lists.length} list${lists.length > 1 ? 's' : ''}`);
+  } catch { toast('That file isn\u2019t a valid bucket list export'); }
+});
+
+/* ---------- actions ---------- */
+function addItems(parentId, text) {
+  const lines = text.split(/\r?\n/).map(s => s.trim().replace(/^[-*\u2022]\s+/, '')).filter(Boolean);
+  if (!lines.length) return;
+  const l = cur(), target = parentId === l.id ? { n:l } : find(parentId);
+  if (!target) return;
+  const type = target.n === l || target.n.type === 's' ? 'i' : 'b';
+  for (const t of lines) target.n.kids.push(mk(type, t));
+  save(); ui.focus = parentId; render();
+}
+function removeWithUndo(r, label) {
+  const snap = JSON.stringify(state);
+  r.arr.splice(r.i, 1); save(); render();
+  toast(`Deleted \u201C${label.slice(0, 40)}\u201D`, () => { state = JSON.parse(snap); save(); render(); });
+}
+function move(list, i, dir) {
+  const j = i + dir; if (j < 0 || j >= list.length) return;
+  [list[i], list[j]] = [list[j], list[i]]; save(); render();
+}
+
+const actions = {
+  newlist: () => listDialog(),
+  editlist: () => listDialog(cur()),
+  dellist: () => confirmDelete(cur()),
+  listleft: () => move(state.lists, state.lists.indexOf(cur()), -1),
+  listright: () => move(state.lists, state.lists.indexOf(cur()), 1),
+  exportall: () => download(`bucketlists-${stamp()}.json`, payload(state.lists)),
+  exportlist: () => download(`bucketlist-${cur().name.replace(/[^\w]+/g, '-').toLowerCase()}-${stamp()}.json`, payload([cur()])),
+  import: () => $('#file').click(),
+  examples: () => { const s = seed(); state.lists.push(...s); state.active = state.active || s[0].id; save(); render(); toast('Example lists added'); },
+  canceladd: () => { ui.addSec = null; ui.adding = null; render(); },
+  addsec: (id, el) => { ui.addSec = el.closest('.add').querySelector('[data-add]').dataset.add; render(); },
+  addbul: id => { ui.adding = id; render(); },
+  edit: id => { ui.editing = id; render(); },
+  toggle: id => { const r = find(id); r.n.done = !r.n.done; if (r.n.done) ui.pop = id; save(); render(); },
+  up: id => { const r = find(id); move(r.arr, r.i, -1); },
+  down: id => { const r = find(id); move(r.arr, r.i, 1); },
+  del: id => { const r = find(id); removeWithUndo(r, r.n.text.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')); },
+  fold: id => {
+    const r = find(id); r.n.collapsed = !r.n.collapsed; save();
+    document.querySelector(`[data-id="${id}"]`).classList.toggle('c', r.n.collapsed);
+  }
+};
+
+document.addEventListener('click', e => {
+  const tab = e.target.closest('[data-list]');
+  if (tab) { state.active = tab.dataset.list; save(); render(); return; }
+  const a = e.target.closest('[data-a]');
+  if (!a || a.dataset.a === 'dbl') return;
+  actions[a.dataset.a]?.(a.closest('[data-id]')?.dataset.id, a);
+});
+document.addEventListener('dblclick', e => {
+  const t = e.target.closest('[data-a="dbl"]');
+  if (t && !e.target.closest('a.lnk') && !e.target.closest('input')) { ui.editing = t.closest('[data-id]').dataset.id; render(); }
+});
+
+document.addEventListener('keydown', e => {
+  const t = e.target; if (!(t instanceof HTMLInputElement)) return;
+  if (e.key === 'Escape') {
+    if (t.dataset.edit) ui.editing = null; else if (t.dataset.add) ui.adding = null; else if (t.dataset.addsec) ui.addSec = null; else return;
+    render(); return;
+  }
+  if (e.key !== 'Enter' || e.isComposing) return;
+  const val = t.value.trim();
+  if (t.dataset.edit) commitEdit(t.dataset.edit, val);
+  else if (t.dataset.add) { if (val) { t.value = ''; addItems(t.dataset.add, val); } else if (ui.adding) { ui.adding = null; render(); } }
+  else if (t.dataset.addsec) {
+    const id = t.dataset.addsec; ui.addSec = null;
+    if (val) { const l = cur(), target = id === l.id ? { n:l } : find(id); target.n.kids.push(mk('s', val)); save(); }
+    ui.focus = id; render();
+  }
+});
+function commitEdit(id, val) {
+  if (ui.editing !== id) return;
+  ui.editing = null;
+  const r = find(id);
+  if (r && val) { r.n.text = val; save(); }
+  render();
+}
+document.addEventListener('focusout', e => {
+  if (rendering) return;
+  const t = e.target; if (!(t instanceof HTMLInputElement)) return;
+  if (t.dataset.edit) commitEdit(t.dataset.edit, t.value.trim());
+  else if (t.dataset.add && ui.adding === t.dataset.add && !t.value.trim()) { ui.adding = null; render(); }
+});
+// pasting several lines creates several items at once
+document.addEventListener('paste', e => {
+  const t = e.target; if (!(t instanceof HTMLInputElement) || !t.dataset.add) return;
+  const text = e.clipboardData.getData('text');
+  if (/\r?\n/.test(text.trim())) { e.preventDefault(); addItems(t.dataset.add, text); }
+});
+
+/* tab drag-and-drop reordering */
+let dragId = null;
+const tabs = $('#tabs');
+tabs.addEventListener('dragstart', e => { const t = e.target.closest('[data-list]'); if (!t) return; dragId = t.dataset.list; t.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', dragId); });
+tabs.addEventListener('dragover', e => {
+  const t = e.target.closest('[data-list]'); if (!t || !dragId) return;
+  e.preventDefault(); tabs.querySelectorAll('.over').forEach(x => x.classList.remove('over')); if (t.dataset.list !== dragId) t.classList.add('over');
+});
+tabs.addEventListener('drop', e => {
+  const t = e.target.closest('[data-list]'); if (!t || !dragId) return; e.preventDefault();
+  const from = state.lists.findIndex(l => l.id === dragId), to = state.lists.findIndex(l => l.id === t.dataset.list);
+  if (from > -1 && to > -1 && from !== to) { const [m] = state.lists.splice(from, 1); state.lists.splice(to, 0, m); save(); }
+  dragId = null; render();
+});
+tabs.addEventListener('dragend', () => { dragId = null; render(); });
+
+render();
+})();
+</script>
+</body>
+</html>
