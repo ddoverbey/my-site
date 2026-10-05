@@ -469,11 +469,18 @@
       'Text': 0.40
     };
 
+    const HEALTH_FLOORS = {
+      inner: 30,
+      close: 15,
+      wider: 0,
+      quarterly: 0
+    };
+
     function getPlantStage(health) {
       if (health >= 100) return { icon: '🌳', label: 'Full Tree', color: 'text-emerald-400' };
       if (health >= 75)  return { icon: '🪴', label: 'Lush Bush', color: 'text-teal-400' };
-      if (health >= 50)  return { icon: '🌿', label: 'Sprout', color: 'text-emerald-300' };
-      if (health >= 25)  return { icon: '🍁', label: 'Autumn Tree', color: 'text-[#ea580c]' };
+      if (health >= 30)  return { icon: '🌿', label: 'Sprout', color: 'text-emerald-300' };
+      if (health >= 15)  return { icon: '🍁', label: 'Autumn Tree', color: 'text-[#ea580c]' };
       if (health > 0)    return { icon: '🍂', label: 'Bare Tree', color: 'text-[#d97706]' };
       return { icon: '🥀', label: 'Withered', color: 'text-[#6b8276]' };
     }
@@ -734,8 +741,9 @@
 
     function calculateHealth(friend) {
       const targetCadence = getCadenceDays(friend.tier);
+      const healthFloor = HEALTH_FLOORS[friend.tier] || 0;
       if (!friend.touches || friend.touches.length === 0) {
-        return { health: 0, daysSince: 999 };
+        return { health: healthFloor, daysSince: 999 };
       }
 
       const now = Date.now();
@@ -747,7 +755,7 @@
       chronologicalTouches.forEach(touch => {
         if (previousTimestamp !== null) {
           const elapsedDays = Math.max(0, touch.timestamp - previousTimestamp) / dayMs;
-          vitality = Math.max(0, vitality - (elapsedDays / targetCadence) * 100);
+          vitality = Math.max(healthFloor, vitality - (elapsedDays / targetCadence) * 100);
         }
 
         const weight = TOUCH_WEIGHTS[touch.type] !== undefined ? TOUCH_WEIGHTS[touch.type] : 1.0;
@@ -757,14 +765,14 @@
 
       const lastTouch = chronologicalTouches[chronologicalTouches.length - 1];
       const daysSince = Math.max(0, now - lastTouch.timestamp) / dayMs;
-      const health = Math.max(0, Math.round(vitality - (daysSince / targetCadence) * 100));
+      const health = Math.max(healthFloor, Math.round(vitality - (daysSince / targetCadence) * 100));
       return { health, daysSince: Math.floor(daysSince) };
     }
 
     function getBatteryColor(health) {
       if (health >= 75) return 'bg-emerald-500';
-      if (health >= 50) return 'bg-teal-500';
-      if (health >= 25) return 'bg-[#ea580c]';
+      if (health >= 30) return 'bg-teal-500';
+      if (health >= 15) return 'bg-[#ea580c]';
       return 'bg-[#3b4c44]';
     }
 
