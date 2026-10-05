@@ -43,7 +43,7 @@
     <header class="flex items-center justify-between border-b border-[#23352e]/80 pb-4">
       <div>
         <h1 class="text-2xl font-bold tracking-tight text-[#f4ede4] flex items-center gap-2">
-          <img id="garden-weather-icon" src="assets/Good-icon.jpeg" alt="" aria-hidden="true" class="w-6 h-6 object-contain [image-rendering:pixelated]" /> Cultivate
+          <img id="garden-weather-icon" src="assets/Good.png" alt="" aria-hidden="true" class="w-6 h-6 object-contain [image-rendering:pixelated]" /> Cultivate
         </h1>
         <p class="text-xs text-[#9eb3a8] mt-0.5">
           <span class="line-through text-[#63756c]">Zero</span> (some) guilt. Gentle connections.
@@ -477,10 +477,10 @@
     };
 
     function getPlantStage(health) {
-      if (health >= 75) return { icon: 'assets/Thriving-icon.jpeg', label: 'Thriving', color: 'text-emerald-400' };
-      if (health >= 30) return { icon: 'assets/Good-icon.jpeg', label: 'Good', color: 'text-teal-400' };
-      if (health > 0) return { icon: 'assets/Decaying-icon.jpeg', label: 'Decaying', color: 'text-[#ea580c]' };
-      return { icon: 'assets/Dead-icon.jpeg', label: 'Dead', color: 'text-[#6b8276]' };
+      if (health >= 75) return { icon: 'assets/Thriving.png', label: 'Thriving', color: 'text-emerald-400' };
+      if (health >= 30) return { icon: 'assets/Good.png', label: 'Good', color: 'text-teal-400' };
+      if (health > 0) return { icon: 'assets/Decaying.png', label: 'Wilting', color: 'text-[#ea580c]' };
+      return { icon: 'assets/Dead.png', label: 'Dormant', color: 'text-[#6b8276]' };
     }
 
     function getDefaultExamples() {
@@ -518,7 +518,7 @@
           avatar: '🏡',
           photo: null,
           touches: [
-            // 80 days ago on 90d cadence = ~11% health -> Decaying
+            // 80 days ago on 90d cadence = ~11% health -> Wilting
             { type: 'Hangout', timestamp: now - (80 * DAY), note: 'Attended housewarming party' }
           ]
         },
