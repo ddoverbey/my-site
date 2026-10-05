@@ -177,7 +177,7 @@
               <option value="inner">Inner Circle</option>
               <option value="close" selected>Close Circle</option>
               <option value="wider">Wider Network</option>
-              <option value="quarterly">Quarterly</option>
+              <option value="quarterly">Long Range (6 months)</option>
             </select>
           </div>
         </div>
@@ -274,7 +274,7 @@
                 <input type="radio" name="touch-type" value="Text" class="hidden" />
                 <span>💬 Text / DM / Meme</span>
               </div>
-              <span class="text-[10px] text-[#8da498] font-mono">+25% charge</span>
+              <span class="text-[10px] text-[#8da498] font-mono">+40% charge</span>
             </label>
           </div>
         </div>
@@ -321,7 +321,7 @@
           <input id="cfg-cadence-wider" type="number" min="1" max="365" class="w-full bg-[#0b1210] border border-[#283e35] rounded-lg px-3 py-1.5 text-emerald-100 focus:border-teal-500 font-mono" />
         </div>
         <div>
-          <label class="block font-semibold text-[#c4d4cc] mb-1">Quarterly Check-ins Target (Days)</label>
+          <label class="block font-semibold text-[#c4d4cc] mb-1">Long-Range Target (Days)</label>
           <input id="cfg-cadence-quarterly" type="number" min="1" max="365" class="w-full bg-[#0b1210] border border-[#283e35] rounded-lg px-3 py-1.5 text-emerald-100 focus:border-teal-500 font-mono" />
         </div>
 
@@ -434,19 +434,39 @@
     const SETTINGS_KEY = 'cultivate_garden_settings_v1';
     const AUTH_SESSION_KEY = 'cultivate_cloud_session';
 
-    let cadenceSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || JSON.stringify({
+    const DEFAULT_CADENCE_SETTINGS = {
+      inner: 14,
+      close: 30,
+      wider: 90,
+      quarterly: 180
+    };
+    const PREVIOUS_DEFAULT_CADENCE_SETTINGS = {
       inner: 7,
       close: 14,
       wider: 45,
       quarterly: 90
-    }));
+    };
+
+    function isPreviousDefaultCadence(settings) {
+      return settings && Object.entries(PREVIOUS_DEFAULT_CADENCE_SETTINGS)
+        .every(([tier, days]) => settings[tier] === days);
+    }
+
+    const savedCadenceSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || 'null');
+    const shouldUpgradeSavedCadences = isPreviousDefaultCadence(savedCadenceSettings);
+    let cadenceSettings = !savedCadenceSettings || shouldUpgradeSavedCadences
+      ? { ...DEFAULT_CADENCE_SETTINGS }
+      : savedCadenceSettings;
+    if (shouldUpgradeSavedCadences) {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(cadenceSettings));
+    }
 
     const TOUCH_WEIGHTS = {
       'Hangout': 1.0,
       'Virtual Hangout': 0.50,
       'Long Call': 0.50,
       'Quick Call': 0.50,
-      'Text': 0.25
+      'Text': 0.40
     };
 
     function getPlantStage(health) {
@@ -477,11 +497,11 @@
           id: '2',
           name: 'Mom (Example)',
           category: 'Family',
-          tier: 'inner', // 7-day target
+          tier: 'inner', // 14-day default target
           avatar: '❤️',
           photo: null,
           touches: [
-            // 5 days ago on 7d cadence = ~28% health -> 🍁 Autumn Tree
+            // 5 days ago on 14d cadence = ~64% health -> 🌿 Sprout
             { type: 'Hangout', timestamp: now - (5 * DAY), note: 'Sunday family dinner' }
           ]
         },
@@ -493,7 +513,7 @@
           avatar: '🏡',
           photo: null,
           touches: [
-            // 50 days ago on 45d cadence = 0% health -> 🥀 Withered / Dead Bush
+            // 50 days ago on 90d cadence = ~44% health -> 🍁 Autumn Tree
             { type: 'Hangout', timestamp: now - (50 * DAY), note: 'Attended housewarming party' }
           ]
         },
@@ -505,7 +525,7 @@
           avatar: '🎓',
           photo: null,
           touches: [
-            // 85 days ago on 90d cadence = 0% health -> 🥀 Withered
+            // 85 days ago on 180d cadence with 40% text recharge = 0% health
             { type: 'Text', timestamp: now - (85 * DAY), note: 'Work and networking check-in email' }
           ]
         }
@@ -686,8 +706,14 @@
               localStorage.setItem(STORAGE_KEY, JSON.stringify(friends));
             }
             if (row.cadence_settings) {
-              cadenceSettings = row.cadence_settings;
+              const shouldUpgradeCloudCadences = isPreviousDefaultCadence(row.cadence_settings);
+              cadenceSettings = shouldUpgradeCloudCadences
+                ? { ...DEFAULT_CADENCE_SETTINGS }
+                : row.cadence_settings;
               localStorage.setItem(SETTINGS_KEY, JSON.stringify(cadenceSettings));
+              if (shouldUpgradeCloudCadences) {
+                await syncToCloud(false);
+              }
             }
             render();
           } else {
@@ -1160,10 +1186,10 @@
 
     document.getElementById('settings-form').addEventListener('submit', (e) => {
       e.preventDefault();
-      cadenceSettings.inner = parseInt(document.getElementById('cfg-cadence-inner').value, 10) || 7;
-      cadenceSettings.close = parseInt(document.getElementById('cfg-cadence-close').value, 10) || 14;
-      cadenceSettings.wider = parseInt(document.getElementById('cfg-cadence-wider').value, 10) || 45;
-      cadenceSettings.quarterly = parseInt(document.getElementById('cfg-cadence-quarterly').value, 10) || 90;
+      cadenceSettings.inner = parseInt(document.getElementById('cfg-cadence-inner').value, 10) || 14;
+      cadenceSettings.close = parseInt(document.getElementById('cfg-cadence-close').value, 10) || 30;
+      cadenceSettings.wider = parseInt(document.getElementById('cfg-cadence-wider').value, 10) || 90;
+      cadenceSettings.quarterly = parseInt(document.getElementById('cfg-cadence-quarterly').value, 10) || 180;
 
       saveSettings();
       toggleSettingsModal(false);
