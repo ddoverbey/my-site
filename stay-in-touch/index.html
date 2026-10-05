@@ -1262,7 +1262,6 @@
       });
 
       const contacts = [];
-      const seenContacts = new Set();
       let fields = null;
 
       const saveContact = () => {
@@ -1272,9 +1271,6 @@
         const normalizedPhone = phone.replace(/\D/g, '');
         const nameParts = fields.structuredName ? splitVCardValue(fields.structuredName, ';').map(unescapeVCardText) : [];
         const name = fields.formattedName || [nameParts[1], nameParts[0]].filter(Boolean).join(' ') || email || phone || 'Unnamed contact';
-        const fingerprint = `${name.toLowerCase()}|${normalizedEmail}|${normalizedPhone}`;
-        if (seenContacts.has(fingerprint)) return;
-        seenContacts.add(fingerprint);
         contacts.push({ id: contacts.length, name, email, phone });
       };
 
@@ -1309,7 +1305,16 @@
         else if (property === 'TEL') fields.phones.push(value);
       });
 
-      return contacts;
+      const fingerprintCounts = new Map();
+      contacts.forEach(contact => {
+        const fingerprint = `${contact.name.toLowerCase()}|${contact.email.toLowerCase()}|${contact.phone.replace(/\D/g, '')}`;
+        fingerprintCounts.set(fingerprint, (fingerprintCounts.get(fingerprint) || 0) + 1);
+      });
+
+      return contacts.map(contact => {
+        const fingerprint = `${contact.name.toLowerCase()}|${contact.email.toLowerCase()}|${contact.phone.replace(/\D/g, '')}`;
+        return { ...contact, duplicateInFile: fingerprintCounts.get(fingerprint) > 1 };
+      });
     }
 
     function readVCardFile(file) {
@@ -1371,9 +1376,10 @@
       const pageContacts = filteredContacts.slice(start, start + VCARD_PAGE_SIZE);
       const selectedCount = selectedVCardContactIds.size;
       const existingCount = vCardContacts.filter(contact => contact.alreadyInGarden).length;
+      const repeatedCount = vCardContacts.filter(contact => contact.duplicateInFile).length;
 
       document.getElementById('vcard-import-count').textContent = vCardContacts.length
-        ? `${vCardContacts.length} contacts · ${selectedCount} selected · ${existingCount} already in garden`
+        ? `${vCardContacts.length} contacts · ${selectedCount} selected · ${existingCount} already in garden · ${repeatedCount} repeated in file`
         : vCardStatusMessage;
       const message = document.getElementById('vcard-import-message');
       message.textContent = vCardStatusMessage;
@@ -1398,7 +1404,7 @@
             <span class="block text-xs font-medium text-[#f4ede4] truncate">${escapeHtml(contact.name)}</span>
             <span class="block text-[10px] text-[#8da498] truncate">${escapeHtml([contact.email, contact.phone].filter(Boolean).join(' · ') || 'No email or phone')}</span>
           </span>
-          ${contact.alreadyInGarden ? '<span class="text-[10px] text-amber-300 shrink-0">Already added</span>' : ''}
+          ${contact.alreadyInGarden ? '<span class="text-[10px] text-amber-300 shrink-0">Already added</span>' : contact.duplicateInFile ? '<span class="text-[10px] text-amber-300 shrink-0">Repeated in file</span>' : ''}
         </label>
       `).join('');
     }

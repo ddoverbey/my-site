@@ -7,7 +7,7 @@ Cultivate is a small connection-tracking game. Add people to your garden, log th
 Open [`index.html`](index.html) in a browser. No build step or package installation is required.
 
 - Select **Add** to plant a connection. Choose a relationship category, cadence tier, and optional emoji or photo.
-- Select **Import** to preview an iOS Contacts vCard (`.vcf`), search contacts, select or deselect people across pages, and import only the selected contacts. Choose a shared relationship category and cadence tier for the batch. Matching email addresses or phone numbers already in your garden are skipped.
+- Select **Import** to preview an iOS Contacts vCard (`.vcf`), search the list, and check each person you want to add. Selection is retained across pages. Repeated records in the file stay visible and are marked for review. Imported contacts default to Friends/Close; matching email addresses or matching name-and-phone pairs already in your garden are skipped.
 - Connections are listed from lowest vitality to highest. Open a connection to see its journal, edit it, or remove it.
 - Select **Water** to record an in-person hangout, virtual hangout, long call, quick call, or text. Add an optional reflection.
 - Use the category filters to narrow the garden, or **Roll Dice** to pick a connection with low vitality for a possible check-in.
