@@ -250,7 +250,7 @@
                 <input type="radio" name="touch-type" value="Virtual Hangout" class="hidden" />
                 <span>💻 Virtual Hangout / Game Night</span>
               </div>
-              <span class="text-[10px] text-emerald-400 font-mono">+100% (Full)</span>
+              <span class="text-[10px] text-teal-400 font-mono">+50% charge</span>
             </label>
 
             <label class="flex items-center justify-between bg-[#0b1210] border border-[#283e35] px-3 py-2 rounded-lg text-xs font-medium cursor-pointer has-[:checked]:border-teal-500 has-[:checked]:text-teal-300">
@@ -258,7 +258,7 @@
                 <input type="radio" name="touch-type" value="Long Call" class="hidden" />
                 <span>📹 Video Call / Long Call</span>
               </div>
-              <span class="text-[10px] text-teal-400 font-mono">+75% charge</span>
+              <span class="text-[10px] text-teal-400 font-mono">+50% charge</span>
             </label>
 
             <label class="flex items-center justify-between bg-[#0b1210] border border-[#283e35] px-3 py-2 rounded-lg text-xs font-medium cursor-pointer has-[:checked]:border-teal-500 has-[:checked]:text-teal-300">
@@ -443,8 +443,8 @@
 
     const TOUCH_WEIGHTS = {
       'Hangout': 1.0,
-      'Virtual Hangout': 1.0,
-      'Long Call': 0.75,
+      'Virtual Hangout': 0.50,
+      'Long Call': 0.50,
       'Quick Call': 0.50,
       'Text': 0.25
     };
@@ -713,15 +713,25 @@
       }
 
       const now = Date.now();
-      const lastTouch = friend.touches[0];
-      const diffMs = Math.max(0, now - lastTouch.timestamp);
-      const daysSince = diffMs / (1000 * 60 * 60 * 24);
+      const dayMs = 1000 * 60 * 60 * 24;
+      const chronologicalTouches = [...friend.touches].sort((a, b) => a.timestamp - b.timestamp);
+      let vitality = 0;
+      let previousTimestamp = null;
 
-      const baseDecayPercent = (daysSince / targetCadence) * 100;
-      const weight = TOUCH_WEIGHTS[lastTouch.type] !== undefined ? TOUCH_WEIGHTS[lastTouch.type] : 1.0;
-      const initialCharge = weight * 100;
+      chronologicalTouches.forEach(touch => {
+        if (previousTimestamp !== null) {
+          const elapsedDays = Math.max(0, touch.timestamp - previousTimestamp) / dayMs;
+          vitality = Math.max(0, vitality - (elapsedDays / targetCadence) * 100);
+        }
 
-      const health = Math.max(0, Math.min(100, Math.round(initialCharge - baseDecayPercent)));
+        const weight = TOUCH_WEIGHTS[touch.type] !== undefined ? TOUCH_WEIGHTS[touch.type] : 1.0;
+        vitality = Math.min(100, vitality + (weight * 100));
+        previousTimestamp = touch.timestamp;
+      });
+
+      const lastTouch = chronologicalTouches[chronologicalTouches.length - 1];
+      const daysSince = Math.max(0, now - lastTouch.timestamp) / dayMs;
+      const health = Math.max(0, Math.round(vitality - (daysSince / targetCadence) * 100));
       return { health, daysSince: Math.floor(daysSince) };
     }
 
