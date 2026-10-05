@@ -495,7 +495,7 @@
           avatar: '⛏️',
           photo: null,
           touches: [
-            { type: 'Virtual Hangout', timestamp: now, note: 'Played minecraft for a few hours' }
+            { type: 'Hangout', timestamp: now, note: 'Played minecraft for a few hours' }
           ]
         },
         {
@@ -518,8 +518,8 @@
           avatar: '🏡',
           photo: null,
           touches: [
-            // 50 days ago on 90d cadence = ~44% health -> 🍁 Autumn Tree
-            { type: 'Hangout', timestamp: now - (50 * DAY), note: 'Attended housewarming party' }
+            // 80 days ago on 90d cadence = ~11% health -> Decaying
+            { type: 'Hangout', timestamp: now - (80 * DAY), note: 'Attended housewarming party' }
           ]
         },
         {
@@ -537,8 +537,32 @@
       ];
     }
 
+    function hasUntouchedDefaultExamples(data) {
+      const expected = [
+        { id: '1', name: 'Jacob (Example)', category: 'Friends', tier: 'close', avatar: '⛏️', type: 'Virtual Hangout', note: 'Played minecraft for a few hours', daysAgo: 0 },
+        { id: '2', name: 'Mom (Example)', category: 'Family', tier: 'inner', avatar: '❤️', type: 'Hangout', note: 'Sunday family dinner', daysAgo: 5 },
+        { id: '3', name: 'Delilah (Example)', category: 'Friends', tier: 'wider', avatar: '🏡', type: 'Hangout', note: 'Attended housewarming party', daysAgo: 50 },
+        { id: '4', name: 'Prof. Milton (Example)', category: 'Professional', tier: 'quarterly', avatar: '🎓', type: 'Text', note: 'Work and networking check-in email', daysAgo: 85 }
+      ];
+      const dayMs = 1000 * 60 * 60 * 24;
+
+      return Array.isArray(data) && data.length === expected.length && expected.every(example => {
+        const friend = data.find(entry => entry.id === example.id);
+        if (!friend || friend.name !== example.name || friend.category !== example.category || friend.tier !== example.tier || friend.avatar !== example.avatar || friend.photo !== null || !friend.touches || friend.touches.length !== 1) {
+          return false;
+        }
+
+        const touch = friend.touches[0];
+        const daysSince = (Date.now() - touch.timestamp) / dayMs;
+        return touch.type === example.type && touch.note === example.note && Math.abs(daysSince - example.daysAgo) <= 1;
+      });
+    }
+
     let friends = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
     if (!friends || !Array.isArray(friends) || friends.length === 0) {
+      friends = getDefaultExamples();
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(friends));
+    } else if (hasUntouchedDefaultExamples(friends)) {
       friends = getDefaultExamples();
       localStorage.setItem(STORAGE_KEY, JSON.stringify(friends));
     }
@@ -706,8 +730,11 @@
           const records = await res.json();
           if (records && records.length > 0) {
             const row = records[0];
+            let shouldSyncCloud = false;
             if (row.friends && Array.isArray(row.friends)) {
-              friends = row.friends;
+              const shouldUpgradeCloudExamples = hasUntouchedDefaultExamples(row.friends);
+              friends = shouldUpgradeCloudExamples ? getDefaultExamples() : row.friends;
+              shouldSyncCloud = shouldSyncCloud || shouldUpgradeCloudExamples;
               localStorage.setItem(STORAGE_KEY, JSON.stringify(friends));
             }
             if (row.cadence_settings) {
@@ -716,9 +743,10 @@
                 ? { ...DEFAULT_CADENCE_SETTINGS }
                 : row.cadence_settings;
               localStorage.setItem(SETTINGS_KEY, JSON.stringify(cadenceSettings));
-              if (shouldUpgradeCloudCadences) {
-                await syncToCloud(false);
-              }
+              shouldSyncCloud = shouldSyncCloud || shouldUpgradeCloudCadences;
+            }
+            if (shouldSyncCloud) {
+              await syncToCloud(false);
             }
             render();
           } else {
@@ -879,17 +907,15 @@
           >
             <div class="flex items-center justify-between gap-3">
               <div class="flex items-center gap-3 cursor-pointer flex-1 min-w-0" onclick="toggleExpand('${friend.id}')">
-                <div class="relative shrink-0">
+                <div class="relative shrink-0 w-12 h-12">
+                  <img src="${plant.icon}" alt="${plant.label} plant" title="${plant.label}" class="w-12 h-12 rounded-lg object-cover border border-[#2e473d] [image-rendering:pixelated]" />
                   ${friend.photo ? `
-                    <img src="${friend.photo}" alt="${escapeHtml(friend.name)}" class="w-11 h-11 rounded-full object-cover border border-[#2e473d]" />
+                    <img src="${friend.photo}" alt="${escapeHtml(friend.name)}" class="absolute -bottom-1 -right-1 w-6 h-6 rounded-full object-cover border-2 border-[#14201b]" />
                   ` : `
-                    <div class="w-11 h-11 rounded-full bg-[#1c2d26] border border-[#2e473d] flex items-center justify-center text-base font-bold text-[#e4ece7] select-none">
+                    <span class="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-[#1c2d26] border-2 border-[#14201b] flex items-center justify-center text-[11px] select-none" title="${escapeHtml(friend.name)} avatar">
                       ${friend.avatar || friend.name.slice(0, 2).toUpperCase()}
-                    </div>
+                    </span>
                   `}
-                  <span class="absolute -bottom-1 -right-1 w-5 h-5 bg-[#0b1210] rounded-full border border-[#23352e] flex items-center justify-center" title="${plant.label}">
-                    <img src="${plant.icon}" alt="" class="w-4 h-4 object-contain [image-rendering:pixelated]" />
-                  </span>
                 </div>
 
                 <div class="min-w-0">
@@ -900,7 +926,7 @@
                   <div class="text-xs text-[#9eb3a8] flex items-center gap-1.5 mt-0.5">
                     <span>${daysSince === 0 ? 'Connected today' : `${daysSince}d ago`}</span>
                     <span class="text-[#4b6056]">•</span>
-                    <span class="font-mono text-[11px] ${plant.color}">${health}% charge</span>
+                    <span class="font-mono text-[11px] ${plant.color}">${health}% ${plant.label}</span>
                     <span class="text-[#4b6056]">•</span>
                     <span class="text-[11px] text-[#788f83]">${targetDays}d target</span>
                   </div>
