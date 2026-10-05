@@ -4,37 +4,110 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Devon Overbey | Tools & Projects</title>
-  <!-- Simple clean styling via Pico.css -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Custom glow effect for the cards */
+    .glow:hover {
+      box-shadow: 0 0 20px rgba(59, 130, 246, 0.15);
+    }
+  </style>
 </head>
-<body>
-  <main class="container" style="padding-top: 4rem;">
-    <h1>Devon Overbey</h1>
-    <p>Utility tools, Games, and Fun Stuff :P.</p>
-    
-    <hr />
+<body class="bg-slate-950 text-slate-300 font-sans antialiased min-h-screen flex flex-col items-center pt-16 pb-20 px-4 sm:px-6 lg:px-8">
 
-    <h2>Games</h2>
-    <ul>
-      <li><a href="/stay-in-touch">Cultivate: A gentle game of keeping in touch with those you love. (early dev)</a></li>
-    </ul>
-    <h2>Tools & Experiments</h2>
-    <ul>
-      <li><a href="/12-week-year"> 12-Week Year Planner/To-Do-List (Beta)</a></li>
-      <li><a href="/time-since">Time Since... Tracker (Beta)</a></li>
-      <li><a href="/coin-roll-hunting">CRH Calculator (Beta)</a></li>
-      <!--<li><a href="resistor/">Voltage Divider Calculator</a> <em>(Coming soon)</em></li>
-      <li><a href="bitmask/">Bitmask & Register Tool</a> <em>(Coming soon)</em></li>
-      -->
-    </ul>
-    <h2>Music</h2>
-    <ul>
-      <li><a href="/links">Music</a></li>
-    </ul>
-    <h2>Photography</h2>
-    <ul>
-      <li><a href="https://devonoverbeyphotography.com" target="_blank" rel="noopener noreferrer">Devon Overbey Photography</a></li>
-    </ul>
+  <main class="w-full max-w-4xl">
+    
+    <!-- Header Section -->
+    <div class="text-center mb-16">
+      <h1 class="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400 tracking-tight mb-4">
+        Devon Overbey
+      </h1>
+      <p class="text-lg text-slate-400 font-light">
+        Utility tools, Games, and Fun Stuff ✌️
+      </p>
+    </div>
+
+    <!-- Grid Layout for Categories -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+      <!-- Games Card -->
+      <div class="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 transition-all duration-300 hover:-translate-y-1 hover:border-blue-500/50 glow">
+        <h2 class="text-xl font-semibold text-slate-100 mb-4 flex items-center gap-2">
+          🎮 Games
+        </h2>
+        <ul class="space-y-3">
+          <li>
+            <a href="/stay-in-touch" class="group flex flex-col">
+              <span class="text-blue-400 group-hover:text-blue-300 font-medium transition-colors">Cultivate</span>
+              <span class="text-sm text-slate-500 mt-1">A gentle game of keeping in touch with those you love. <span class="text-xs px-2 py-0.5 ml-1 bg-slate-800 rounded-full text-slate-400">Early dev</span></span>
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Tools & Experiments Card -->
+      <div class="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 transition-all duration-300 hover:-translate-y-1 hover:border-emerald-500/50 glow">
+        <h2 class="text-xl font-semibold text-slate-100 mb-4 flex items-center gap-2">
+          🛠️ Tools & Experiments
+        </h2>
+        <ul class="space-y-4">
+          <li>
+            <a href="/12-week-year" class="block text-emerald-400 hover:text-emerald-300 transition-colors font-medium">12-Week Year Planner</a>
+          </li>
+          <li>
+            <a href="/bucketlist" class="block text-emerald-400 hover:text-emerald-300 transition-colors font-medium">Bucket List</a>
+          </li>
+          <li>
+            <a href="/time-since" class="block text-emerald-400 hover:text-emerald-300 transition-colors font-medium">Time Since... Tracker</a>
+          </li>
+          <li>
+            <a href="/coin-roll-hunting" class="block text-emerald-400 hover:text-emerald-300 transition-colors font-medium">CRH Calculator</a>
+          </li>
+                    <li>
+          
+          <!-- Coming Soon Items -->
+          <div class="pt-3 mt-3 border-t border-slate-800/50 space-y-2">
+            <li class="flex items-center justify-between">
+              <span class="text-slate-600 text-sm">Voltage Divider Calculator</span> 
+              <span class="text-[10px] uppercase tracking-wider text-slate-500 bg-slate-800/50 px-2 py-0.5 rounded">Coming soon</span>
+            </li>
+            <li class="flex items-center justify-between">
+              <span class="text-slate-600 text-sm">Bitmask & Register Tool</span> 
+              <span class="text-[10px] uppercase tracking-wider text-slate-500 bg-slate-800/50 px-2 py-0.5 rounded">Coming soon</span>
+            </li>
+          </div>
+        </ul>
+      </div>
+
+      <!-- Music Card -->
+      <div class="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 transition-all duration-300 hover:-translate-y-1 hover:border-purple-500/50 glow">
+        <h2 class="text-xl font-semibold text-slate-100 mb-4 flex items-center gap-2">
+          🎵 Music
+        </h2>
+        <ul class="space-y-3">
+          <li>
+            <a href="/links" class="text-purple-400 hover:text-purple-300 transition-colors font-medium">Listen to the latest tracks</a>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Photography Card -->
+      <div class="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 transition-all duration-300 hover:-translate-y-1 hover:border-orange-500/50 glow">
+        <h2 class="text-xl font-semibold text-slate-100 mb-4 flex items-center gap-2">
+          📸 Photography
+        </h2>
+        <ul class="space-y-3">
+          <li>
+            <a href="https://devonoverbeyphotography.com" target="_blank" rel="noopener noreferrer" class="group flex items-center gap-2 text-orange-400 hover:text-orange-300 transition-colors font-medium">
+              Portfolio & Prints
+              <!-- External Link Icon -->
+              <svg class="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+            </a>
+          </li>
+        </ul>
+      </div>
+
+    </div>
   </main>
 </body>
 </html>
