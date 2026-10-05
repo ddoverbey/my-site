@@ -12,7 +12,17 @@ Open [`index.html`](index.html) in a browser. No build step or package installat
 - Use the category filters to narrow the garden, or **Roll Dice** to pick a connection with low vitality for a possible check-in.
 - Open **Cadence Settings** to change the target interval for each tier.
 
-Vitality starts from the strength of the most recent interaction: hangouts restore 100%, long calls 75%, quick calls 50%, and texts 25%. It then declines according to the connection's cadence target. The garden's overall vitality and appearance change with the average vitality of all connections.
+## Vitality and watering
+
+Vitality ranges from 0% to 100% and decays between interactions at a rate set by that connection's cadence target. With no new interaction, a full connection reaches 0% over one target interval. For example, a 7-day target loses about 14% per day; a 45-day target loses about 2.2% per day.
+
+Watering adds vitality to the amount that remains, up to a maximum of 100%:
+
+- In-person hangout: +100%
+- Virtual hangout, video/long call, or quick call: +50%
+- Text, DM, or meme: +25%
+
+The game replays a connection's interactions in date order, applying decay between them and then adding each interaction's recharge. New connections start with a full in-person interaction on the date you enter. The garden's overall vitality and appearance reflect the average vitality of all connections.
 
 ## Data and sync
 
