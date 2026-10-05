@@ -197,11 +197,11 @@ const I = (t, ...k) => mk('i', t, k);
 const B = (t, ...k) => mk('b', t, k);
 const items = arr => arr.map(t => I(t));
 
-const springBlooms = () => S('Spring Blooms',
-  ...items(['Anza-Borrego Desert State Park','Antelope Valley California Poppy Reserve','Carrizo Plain National Monument','Chino Hills State Park']),
-  I('Point Mugu State Park and Rancho Sierra Vista', B('Chumash Trail: starts at PCH and is a steep climb, where chocolate lily and globe gilia are known to grow along the ridgeline. Or start on the north side, at Rancho Sierra Vista near Thousand Oaks, and walk the rolling hills in search of wildflowers under the shadow of Boney Mountain.')),
-  I('Diamond Valley Lake'),
-  I('[California State Parks wildflower info](https://www.parks.ca.gov/?page_id=31189)'));
+const springBlooms = () => I('California spring blooms',
+  ...['Anza-Borrego Desert State Park','Antelope Valley California Poppy Reserve','Carrizo Plain National Monument','Chino Hills State Park'].map(t => B(t)),
+  B('Point Mugu State Park and Rancho Sierra Vista', B('Chumash Trail: starts at PCH and is a steep climb, where chocolate lily and globe gilia are known to grow along the ridgeline. Or start on the north side, at Rancho Sierra Vista near Thousand Oaks, and walk the rolling hills in search of wildflowers under the shadow of Boney Mountain.')),
+  B('Diamond Valley Lake'),
+  B('[California State Parks wildflower info](https://www.parks.ca.gov/?page_id=31189)'));
 
 function seed() {
   const life = { id:uid(), name:'Life Bucket List', emoji:'🌟', color:COLORS[0], kids: items([
@@ -212,16 +212,13 @@ function seed() {
     'Real recording & live performance of my symphony','Someone covers my music (of their own volition)']) };
 
   const travel = { id:uid(), name:'Travel', emoji:'✈️', color:COLORS[1], kids:[
-    S('Seasonal',
-      S('Winter',
-        I('Bolivian side of the Amazon rainforest', B('Location where you\u2019re around 17,000 feet up')),
-        S('January', ...items(['Death Valley, CA','Alabama Hills, CA','Monument Valley, AZ','Snow in Joshua Tree, CA','Bisti Badlands (astro and sunset)'])),
-        S('February', I('Alabama Hills, CA')),
-        S('March', ...items(['Goblin Valley State Park, UT','Needles District, Canyonlands, UT','Coyote Gulch, UT','Death Valley (during bloom), CA','Bisti Badlands (astro and sunset)']))),
-      S('Spring', springBlooms(), S('April'), S('May'), S('Early June')),
-      S('Summer', S('June'), S('July'), S('August')),
-      S('Fall', S('September'), S('October'), S('November'), S('December'))),
     S('Domestic',
+     S('Seasonal',
+      S('Winter', ...items(['Death Valley, CA (Jan)','Alabama Hills, CA (Jan\u2013Feb)','Monument Valley, AZ (Jan)','Snow in Joshua Tree, CA (Jan)','Bisti Badlands, NM \u2013 astro and sunset (Jan, Mar)','Goblin Valley State Park, UT (Mar)','Needles District, Canyonlands, UT (Mar)','Coyote Gulch, UT (Mar)','Death Valley during the bloom, CA (Mar)'])),
+      S('Spring', springBlooms()),
+      S('Summer'),
+      S('Fall')),
+     S('States',
       S('Alaska'),
       S('Arizona', ...items(['Petrified Forest NP','Antelope Canyon','Pinal Airpark','Car thing that goes over the Grand Canyon'])),
       S('California', ...items(['Fern Canyon','Griffith Park','Lava Beds National Monument','Natural Bridges','Painted Canyon','Channel Islands','Kings Canyon','Antelope Valley Poppy Reserve','Julia Pfeiffer Burns State Park','Ancient Bristlecone Forest','Burney Falls']), springBlooms()),
@@ -236,8 +233,9 @@ function seed() {
       S('South Dakota', ...items(['Badlands NP','Mount Rushmore'])),
       S('Texas', ...items(['Big Bend','Guadalupe Mountains NP'])),
       S('Utah', ...items(['Needles District, Canyonlands','Goblin Valley State Park','Coyote Gulch'])),
-      S('Washington', I('Tolmie Peak Trail at Mount Rainier National Park'))),
-    S('International', ...['North America','South America','Europe','Asia','Australia','Africa','Antarctica'].map(c => S(c))),
+      S('Washington', I('Tolmie Peak Trail at Mount Rainier National Park')))),
+    S('International', ...['North America','Europe','Asia','Australia','Africa','Antarctica'].map(c => S(c)),
+      S('South America', I('Bolivian side of the Amazon rainforest', B('Location where you\u2019re around 17,000 feet up')))),
     S('Dream Spots & Inspiration',
       I('Most beautiful places in the world', B('https://www.cntraveler.com/galleries/2015-11-27/the-50-most-beautiful-places-in-the-world')),
       I('Most beautiful places in America', B('https://www.countryliving.com/life/travel/g3468/most-beautiful-places-in-america/?slide=16')),
