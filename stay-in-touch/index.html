@@ -40,45 +40,52 @@
   <main class="w-full max-w-xl space-y-6 pb-20">
     
     <!-- Header -->
-    <header class="flex items-center justify-between border-b border-[#23352e]/80 pb-4">
-      <div>
-        <h1 class="text-2xl font-bold tracking-tight text-[#f4ede4] flex items-center gap-2">
-          <img id="garden-weather-icon" src="assets/Good.png" alt="" aria-hidden="true" class="w-6 h-6 object-contain [image-rendering:pixelated]" /> Cultivate
-        </h1>
-        <p class="text-xs text-[#9eb3a8] mt-0.5">
-          <span class="line-through text-[#63756c]">Zero</span> (some) guilt. Gentle connections.
-        </p>
-        
-        <!-- Garden Vitality Indicator -->
-        <div class="flex items-center gap-2 mt-2">
-          <div class="w-20 bg-black/40 h-1.5 rounded-full overflow-hidden border border-[#23352e]">
-            <div id="average-vitality-bar" class="h-full bg-[#ea580c] transition-all duration-700" style="width: 34%"></div>
-          </div>
-          <span id="average-vitality-text" class="text-[11px] font-mono text-[#fdba74]">34% Garden Vitality</span>
-        </div>
-      </div>
+    <header class="border-b border-[#23352e]/80 pb-4 space-y-4">
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <h1 class="text-2xl font-bold tracking-tight text-[#f4ede4] flex items-center gap-2">
+            <img id="garden-weather-icon" src="assets/Good.png" alt="" aria-hidden="true" class="w-6 h-6 object-contain [image-rendering:pixelated]" /> Cultivate
+          </h1>
+          <p class="text-xs text-[#9eb3a8] mt-0.5">
+            <span class="line-through text-[#63756c]">Zero</span> (some) guilt. Gentle connections.
+          </p>
 
-      <div class="flex items-center gap-2">
+          <!-- Garden Vitality Indicator -->
+          <div class="flex items-center gap-2 mt-2">
+            <div class="w-20 bg-black/40 h-1.5 rounded-full overflow-hidden border border-[#23352e]">
+              <div id="average-vitality-bar" class="h-full bg-[#ea580c] transition-all duration-700" style="width: 34%"></div>
+            </div>
+            <span id="average-vitality-text" class="text-[10px] sm:text-[11px] font-mono text-[#fdba74]">34% Garden Vitality</span>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 shrink-0">
         <button 
           onclick="toggleSettingsModal(true)"
-          class="p-2 text-[#9eb3a8] hover:text-[#f4ede4] hover:bg-[#182721]/80 rounded-lg border border-[#23352e] transition-colors text-xs backdrop-blur-sm"
+          class="w-10 h-10 text-[#9eb3a8] hover:text-[#f4ede4] hover:bg-[#182721]/80 rounded-lg border border-[#23352e] transition-colors text-xs backdrop-blur-sm"
           title="Settings & Cadence Profiles"
+          aria-label="Settings and cadence profiles"
         >
           ⚙️
         </button>
         <button 
           id="btn-auth-header"
           onclick="toggleAuthModal(true)"
-          class="p-2 text-[#9eb3a8] hover:text-[#f4ede4] hover:bg-[#182721]/80 rounded-lg border border-[#23352e] transition-colors text-xs backdrop-blur-sm relative"
+          class="w-10 h-10 text-[#9eb3a8] hover:text-[#f4ede4] hover:bg-[#182721]/80 rounded-lg border border-[#23352e] transition-colors text-xs backdrop-blur-sm relative"
           title="Account & Cloud Sync"
+          aria-label="Account and cloud sync"
         >
           ☁️
           <span id="sync-status-dot" class="absolute top-1 right-1 w-2 h-2 rounded-full bg-slate-500"></span>
         </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2 sm:flex sm:justify-end">
         <button 
           id="btn-roll-dice"
           onclick="rollTheDice()"
-          class="bg-[#2d1b11]/90 hover:bg-[#3d2417] border border-[#ea580c]/40 text-[#fdba74] font-semibold px-3 py-1.5 rounded-lg text-xs transition-colors flex items-center gap-1.5 shadow-sm backdrop-blur-sm"
+          class="w-full sm:w-auto min-h-10 bg-[#2d1b11]/90 hover:bg-[#3d2417] border border-[#ea580c]/40 text-[#fdba74] font-semibold px-3 py-2 rounded-lg text-xs transition-colors flex items-center justify-center gap-1.5 shadow-sm backdrop-blur-sm"
           title="Randomly choose someone whose connection needs attention"
         >
           <span>🎲</span> Roll Dice
@@ -87,7 +94,7 @@
           href="https://docs.google.com/forms/d/e/1FAIpQLSc2SKVBdoYIIftgLo-7UZpc7kBD7qOIqhEN2YWEFaVwiIzo6Q/viewform?usp=header"
           target="_blank"
           rel="noopener noreferrer"
-          class="bg-[#241710]/90 hover:bg-[#342217] border border-[#ea580c]/40 text-[#fdba74] font-semibold px-2.5 py-1.5 rounded-lg text-xs transition-colors flex items-center gap-1.5 shadow-sm backdrop-blur-sm whitespace-nowrap"
+          class="w-full sm:w-10 min-h-10 bg-[#241710]/90 hover:bg-[#342217] border border-[#ea580c]/40 text-[#fdba74] font-semibold px-2.5 py-2 rounded-lg text-xs transition-colors flex items-center justify-center shadow-sm backdrop-blur-sm"
           title="Report a bug"
           aria-label="Report a bug"
         >
@@ -96,14 +103,14 @@
         <button
           type="button"
           onclick="openContactImportModal()"
-          class="bg-[#1c2d26] hover:bg-[#253d33] border border-[#2e473d] text-teal-300 font-semibold px-2.5 py-1.5 rounded-lg text-xs transition-colors flex items-center gap-1.5 shadow-sm whitespace-nowrap"
+          class="w-full sm:w-auto min-h-10 bg-[#1c2d26] hover:bg-[#253d33] border border-[#2e473d] text-teal-300 font-semibold px-3 py-2 rounded-lg text-xs transition-colors flex items-center justify-center gap-1.5 shadow-sm whitespace-nowrap"
           title="Import contacts from a vCard file"
         >
           <span>📇</span> Import
         </button>
         <button 
           onclick="openAddModal()"
-          class="bg-[#115e59] hover:bg-[#0f766e] text-white font-semibold px-3 py-1.5 rounded-lg text-xs transition-colors flex items-center gap-1 shadow-sm border border-teal-500/30"
+          class="w-full sm:w-auto min-h-10 bg-[#115e59] hover:bg-[#0f766e] text-white font-semibold px-3 py-2 rounded-lg text-xs transition-colors flex items-center justify-center gap-1 shadow-sm border border-teal-500/30"
         >
           <span>+</span> Add
         </button>
