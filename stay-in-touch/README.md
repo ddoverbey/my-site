@@ -8,6 +8,7 @@ Open [`index.html`](index.html) in a browser. No build step or package installat
 
 - Select **Add** to plant a connection. Choose a relationship category, cadence tier, and optional emoji or photo.
 - Select **Import** to preview an iOS Contacts vCard (`.vcf`), search the list, and check each person you want to add. Selection is retained across pages. Repeated records in the file stay visible and are marked for review. Imported contacts default to Friends/Close; matching email addresses or matching name-and-phone pairs already in your garden are skipped.
+- The garden at the top shows up to 10 plants, one per connection, prioritising Inner circle, then Close circle, Wider network and Long range, with the lowest vitality first within a tier. Each plant's art reflects its real status (Thriving, Good, Wilting, Dormant). Tap a plant to see its name and vitality and to water it. Use **Hide icons** to remove the small avatar circles. The background grass, flowers and fallen leaves grow or fade with the garden's average vitality.
 - Connections are listed from lowest vitality to highest. Open a connection to see its journal, edit it, or remove it.
 - Select **Water** to record an in-person hangout, virtual hangout, long call, quick call, or text. Add an optional reflection.
 - Use the category filters to narrow the garden, or **Roll Dice** to pick a connection with low vitality for a possible check-in.

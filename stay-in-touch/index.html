@@ -33,6 +33,27 @@
       -ms-overflow-style: none;
       scrollbar-width: none;
     }
+    @keyframes plant-sway {
+      0%, 100% { transform: rotate(-1.2deg); }
+      50% { transform: rotate(1.2deg); }
+    }
+    @keyframes plant-bounce {
+      0% { transform: scale(1); }
+      30% { transform: scale(1.14, 0.9); }
+      60% { transform: scale(0.96, 1.08); }
+      100% { transform: scale(1); }
+    }
+    .plant-sway {
+      transform-origin: 50% 90%;
+      animation: plant-sway 4.5s ease-in-out infinite;
+    }
+    .plant-bounce {
+      transform-origin: 50% 90%;
+      animation: plant-bounce 0.7s ease-out;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .plant-sway, .plant-bounce { animation: none; }
+    }
   </style>
 </head>
 <body id="garden-canvas" style="background-color: #29160d;" class="text-emerald-50 min-h-screen p-4 sm:p-6 flex flex-col items-center selection:bg-teal-600 selection:text-white transition-colors duration-1000">
@@ -116,6 +137,18 @@
         </button>
       </div>
     </header>
+
+    <!-- Visual Garden -->
+    <section id="visual-garden" class="relative w-full rounded-2xl border border-[#283e35] px-4 pt-3 pb-9">
+      <div class="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none">
+        <canvas id="garden-backdrop" class="w-full h-full [image-rendering:pixelated]"></canvas>
+      </div>
+      <div class="relative z-10 flex items-center justify-between mb-3 text-[11px]">
+        <span id="garden-plot-count" class="bg-black/40 text-[#e4ece7] font-mono px-2 py-1 rounded-full"></span>
+        <button id="garden-badge-toggle" type="button" onclick="toggleGardenBadges()" class="bg-black/40 hover:bg-black/60 text-[#e4ece7] px-2 py-1 rounded-full transition-colors"></button>
+      </div>
+      <div id="plots-container" class="relative z-10 flex flex-wrap justify-center gap-x-2 gap-y-9"></div>
+    </section>
 
     <!-- Notification / Reminder Bar -->
     <div id="notification-banner" class="bg-[#131f1a]/85 border border-[#23352e] rounded-xl p-3 flex items-center justify-between text-xs backdrop-blur-sm">
@@ -912,6 +945,192 @@
       canvas.style.setProperty('background-color', bgColor, 'important');
     }
 
+    /* =========================================================================
+       VISUAL GARDEN
+       ========================================================================= */
+    const GARDEN_MAX_PLANTS = 10;
+    const GARDEN_BADGES_KEY = 'cultivate_garden_badges_v1';
+    const TIER_PRIORITY = { inner: 4, close: 3, wider: 2, quarterly: 1 };
+    let gardenBadgesVisible = localStorage.getItem(GARDEN_BADGES_KEY) !== 'hidden';
+    let selectedGardenId = null;
+    let recentlyWateredId = null;
+    let gardenAverageHealth = 100;
+
+    // Closest relationships get plots first; ties go to whoever needs water most.
+    function getDisplayGarden(list) {
+      return list
+        .map(friend => ({ friend, health: calculateHealth(friend).health }))
+        .sort((a, b) =>
+          (TIER_PRIORITY[b.friend.tier] || 1) - (TIER_PRIORITY[a.friend.tier] || 1) || a.health - b.health)
+        .slice(0, GARDEN_MAX_PLANTS);
+    }
+
+    function renderVisualGarden(averageHealth) {
+      const container = document.getElementById('plots-container');
+      if (!container) return;
+      gardenAverageHealth = averageHealth;
+
+      const shown = getDisplayGarden(friends);
+      const overflow = friends.length - shown.length;
+      document.getElementById('garden-plot-count').textContent =
+        `${shown.length} plant${shown.length === 1 ? '' : 's'}${overflow > 0 ? ` · ${overflow} more in the list` : ''}`;
+      document.getElementById('garden-badge-toggle').textContent = gardenBadgesVisible ? 'Hide icons' : 'Show icons';
+
+      const plants = shown.map(({ friend, health }, index) => {
+        const stage = getPlantStage(health);
+        const bubble = selectedGardenId === friend.id ? `
+          <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 z-30 w-40 bg-[#0b1210] border border-[#2e473d] rounded-xl px-3 py-2 text-center shadow-xl">
+            <div class="text-xs font-semibold text-[#f4ede4] truncate">${escapeHtml(friend.name)}</div>
+            <div class="text-[11px] font-mono ${stage.color}">${health}% ${stage.label}</div>
+            <button type="button" onclick="waterGardenPlant('${friend.id}')" class="mt-1.5 w-full bg-[#1c2d26] hover:bg-[#253d33] border border-[#2e473d] text-teal-300 font-medium py-1 rounded-lg text-xs transition-colors">💧 Water</button>
+          </div>` : '';
+        const badge = !gardenBadgesVisible ? '' : friend.photo
+          ? `<img src="${friend.photo}" alt="" class="absolute bottom-1 right-1 w-6 h-6 rounded-full object-cover border-2 border-[#14201b]" />`
+          : `<span class="absolute bottom-1 right-1 w-6 h-6 rounded-full bg-[#1c2d26] border-2 border-[#14201b] flex items-center justify-center text-[11px] select-none">${escapeHtml(friend.avatar || '🌱')}</span>`;
+
+        return `
+          <div data-plot class="relative w-24 h-24">
+            ${bubble}
+            <div class="absolute bottom-2 left-1/2 -translate-x-1/2 w-14 h-3 rounded-full bg-black/30 pointer-events-none"></div>
+            <button type="button" onclick="selectGardenPlant('${friend.id}')" aria-label="${escapeHtml(friend.name)}, ${health}% ${stage.label}" class="relative w-24 h-24 ${recentlyWateredId === friend.id ? 'plant-bounce' : ''}">
+              <img src="${stage.icon}" alt="" draggable="false" class="w-full h-full object-contain plant-sway [image-rendering:pixelated]" style="animation-delay: -${(index * 0.7).toFixed(1)}s" />
+              ${badge}
+            </button>
+          </div>`;
+      }).join('');
+
+      const addPlot = shown.length < GARDEN_MAX_PLANTS ? `
+        <div data-plot class="relative w-24 h-24 flex items-center justify-center">
+          <button type="button" onclick="openAddModal()" aria-label="Add a connection" class="w-14 h-14 rounded-full border-2 border-dashed border-[#e4ece7]/40 bg-black/20 text-[#e4ece7]/70 hover:text-white hover:border-white/70 text-xl transition-colors">+</button>
+        </div>` : '';
+
+      container.innerHTML = plants + addPlot;
+      requestAnimationFrame(drawGardenBackdrop);
+    }
+
+    function selectGardenPlant(id) {
+      selectedGardenId = selectedGardenId === id ? null : id;
+      renderVisualGarden(gardenAverageHealth);
+    }
+
+    function waterGardenPlant(id) {
+      selectedGardenId = null;
+      renderVisualGarden(gardenAverageHealth);
+      openTouchModal(id);
+    }
+
+    function toggleGardenBadges() {
+      gardenBadgesVisible = !gardenBadgesVisible;
+      localStorage.setItem(GARDEN_BADGES_KEY, gardenBadgesVisible ? 'shown' : 'hidden');
+      renderVisualGarden(gardenAverageHealth);
+    }
+
+    function mulberry32(seed) {
+      return function () {
+        seed = (seed + 0x6D2B79F5) | 0;
+        let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    // Draws at 1/4 resolution and is scaled up crisp; flora thins out and browns as average health drops.
+    function drawGardenBackdrop() {
+      const garden = document.getElementById('visual-garden');
+      const canvas = document.getElementById('garden-backdrop');
+      if (!garden || !canvas || !garden.clientWidth) return;
+
+      const scale = 4;
+      const width = Math.ceil(garden.clientWidth / scale);
+      const height = Math.ceil(garden.clientHeight / scale);
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      const health = Math.max(0, Math.min(100, gardenAverageHealth)) / 100;
+      const rand = mulberry32(7);
+      const mix = (a, b, t) => a.map((value, i) => Math.round(value + (b[i] - value) * t));
+      const rgb = color => `rgb(${color[0]},${color[1]},${color[2]})`;
+      const dot = (x, y, color, w = 1, h = 1) => { ctx.fillStyle = rgb(color); ctx.fillRect(x, y, w, h); };
+
+      const grass = mix([108, 94, 56], [58, 122, 56], health);
+      const grassLight = mix(grass, [255, 255, 255], 0.08);
+      const grassDark = mix(grass, [0, 0, 0], 0.12);
+      dot(0, 0, grass, width, height);
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const r = rand();
+          if (r < 0.1) dot(x, y, grassDark);
+          else if (r < 0.17) dot(x, y, grassLight);
+        }
+      }
+
+      const gardenTop = garden.getBoundingClientRect().top;
+      const bottoms = [...garden.querySelectorAll('[data-plot]')]
+        .map(el => el.getBoundingClientRect().bottom - gardenTop)
+        .sort((a, b) => a - b);
+      const rowBottoms = bottoms.filter((bottom, i) => i === 0 || bottom - bottoms[i - 1] > 12);
+      const pathCenters = rowBottoms.map(bottom => (bottom + 20) / scale);
+      const pathY = (x, row) => pathCenters[row] + Math.sin(x / 8 + row * 2.1) * 1.6;
+      const pathOffset = (x, y) => Math.min(...pathCenters.map((_, row) => Math.abs(y - pathY(x, row))));
+      const onPath = (x, y, margin = 0) => pathCenters.length > 0 && pathOffset(x, y) <= 2.4 + margin;
+
+      const dirt = [150, 114, 74];
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          if (!onPath(x, y)) continue;
+          const edge = pathOffset(x, y) > 1.6;
+          const r = rand();
+          dot(x, y, mix(dirt, [0, 0, 0], edge ? 0.22 : r < 0.12 ? 0.1 : r < 0.2 ? -0.08 : 0));
+        }
+      }
+
+      const cells = (width * height) / 400;
+      const scatter = (count, draw) => {
+        for (let i = 0; i < count; i++) {
+          const x = 3 + Math.floor(rand() * (width - 6));
+          const y = 3 + Math.floor(rand() * (height - 6));
+          if (!onPath(x, y, 2)) draw(x, y);
+        }
+      };
+
+      const tuft = mix(grass, [0, 0, 0], 0.25);
+      scatter(Math.round(cells * 0.7), (x, y) => { dot(x, y, tuft); dot(x - 1, y - 1, tuft); dot(x + 1, y - 1, tuft); });
+
+      const petals = [[247, 224, 138], [244, 241, 232], [233, 143, 176], [143, 180, 238]];
+      const lushness = Math.max(0, health - 0.35) / 0.65;
+      scatter(Math.round(cells * 0.5 * lushness), (x, y) => {
+        const petal = mix(petals[Math.floor(rand() * petals.length)], grass, 0.2);
+        dot(x, y + 1, mix(grass, [20, 80, 20], 0.5));
+        dot(x - 1, y, petal); dot(x + 1, y, petal); dot(x, y - 1, petal);
+        dot(x, y, [240, 200, 70]);
+      });
+
+      const bush = [mix(grass, [10, 60, 20], 0.6), mix(grass, [90, 170, 70], 0.3)];
+      scatter(Math.round(cells * 0.09 * health), (x, y) => {
+        dot(x - 2, y, bush[0], 5, 2); dot(x - 1, y - 1, bush[0], 3, 1); dot(x - 1, y - 1, bush[1], 2, 1);
+      });
+
+      const decay = 1 - health;
+      const twig = [92, 64, 40];
+      scatter(Math.round(cells * 0.3 * Math.pow(decay, 1.2)), (x, y) => {
+        [[0, 0], [1, -1], [2, 0], [3, -1], [4, 0]].forEach(([dx, dy]) => dot(x + dx, y + dy, twig));
+        dot(x + 2, y - 2, twig);
+      });
+
+      const leaves = [[190, 90, 30], [160, 70, 30], [210, 150, 50]];
+      scatter(Math.round(cells * 0.6 * decay), (x, y) => dot(x, y, leaves[Math.floor(rand() * leaves.length)], 2, 1));
+
+      canvas.style.filter = `saturate(${(0.55 + 0.45 * health).toFixed(2)}) brightness(${(0.82 + 0.18 * health).toFixed(2)})`;
+    }
+
+    new ResizeObserver(drawGardenBackdrop).observe(document.getElementById('visual-garden'));
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && selectedGardenId) {
+        selectedGardenId = null;
+        renderVisualGarden(gardenAverageHealth);
+      }
+    });
+
     function setFilter(category) {
       activeFilter = category;
       ['all', 'Friends', 'Family', 'Romantic', 'Professional'].forEach(cat => {
@@ -936,6 +1155,7 @@
       });
       const avgHealth = friends.length > 0 ? Math.round(totalHealth / friends.length) : 100;
       updateGardenEcosystemTheme(avgHealth);
+      renderVisualGarden(avgHealth);
 
       let filtered = friends;
       if (activeFilter !== 'all') {
@@ -1552,6 +1772,8 @@
           note
         });
         saveData();
+        recentlyWateredId = id;
+        setTimeout(() => { recentlyWateredId = null; }, 900);
       }
 
       toggleTouchModal(false);
