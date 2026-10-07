@@ -4,6 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Cultivate • Connection Garden</title>
+  <link rel="icon" type="image/png" href="assets/sakura_summer.png" />
+  <link rel="apple-touch-icon" href="assets/sakura_summer.png" />
+  <link rel="stylesheet" href="https://unpkg.com/pixelarticons@1.8.1/fonts/pixelart-icons-font.css" />
   
   <link rel="manifest" href="data:application/manifest+json;base64,eyJuYW1lIjoiQ3VsdGl2YXRlIiwic2hvcnRfbmFtZSI6IkN1bHRpdmF0ZSIsInN0YXJ0X3VybCI6Ii4iLCJkaXNwbGF5Ijoic3RhbmRhbG9uZSItransInRoZW1lX2NvbG9yIjoiIzBiMTIxMCJ9" />
   <meta name="theme-color" content="#0b1210" />
@@ -51,6 +54,14 @@
       transform-origin: 50% 90%;
       animation: plant-bounce 0.7s ease-out;
     }
+    .pixel-icon {
+      display: inline-block;
+      font-size: 16px;
+      line-height: 1;
+      font-style: normal;
+      vertical-align: middle;
+      flex: none;
+    }
     @media (prefers-reduced-motion: reduce) {
       .plant-sway, .plant-bounce { animation: none; }
     }
@@ -65,7 +76,7 @@
       <div class="flex items-start justify-between gap-3">
         <div class="min-w-0">
           <h1 class="text-2xl font-bold tracking-tight text-[#f4ede4] flex items-center gap-2">
-            <img id="garden-weather-icon" src="assets/deadtree_summer.png" alt="" aria-hidden="true" class="w-6 h-6 object-contain [image-rendering:pixelated]" /> Cultivate
+            <img id="garden-weather-icon" src="assets/sakura_summer.png" alt="" aria-hidden="true" class="w-6 h-6 object-contain [image-rendering:pixelated]" /> Cultivate
           </h1>
           <p class="text-xs text-[#9eb3a8] mt-0.5">
             <span class="line-through text-[#63756c]">Zero</span> (some) guilt. Gentle connections.
@@ -79,7 +90,7 @@
           class="h-10 px-2.5 text-[#fdba74] hover:text-[#ffd9b0] bg-[#2d1b11]/90 hover:bg-[#3d2417] rounded-lg border border-[#ea580c]/40 transition-colors text-xs font-semibold"
           title="Cultivate Pro early access"
         >
-          ✨ Pro
+          <i class="pixelart-icons-font-zap pixel-icon" aria-hidden="true"></i> Pro
         </button>
         <button 
           onclick="toggleSettingsModal(true)"
@@ -87,7 +98,7 @@
           title="Settings & Cadence Profiles"
           aria-label="Settings and cadence profiles"
         >
-          ⚙️
+          <i class="pixelart-icons-font-sliders pixel-icon" aria-hidden="true"></i>
         </button>
         <button 
           id="btn-auth-header"
@@ -96,7 +107,7 @@
           title="Account & Cloud Sync"
           aria-label="Account and cloud sync"
         >
-          ☁️
+          <i class="pixelart-icons-font-cloud pixel-icon" aria-hidden="true"></i>
           <span id="sync-status-dot" class="absolute top-1 right-1 w-2 h-2 rounded-full bg-slate-500"></span>
         </button>
         </div>
@@ -108,7 +119,7 @@
         </div>
         <span id="average-vitality-text" class="text-[10px] sm:text-[11px] font-mono text-[#fdba74]">34% • Summer · Good</span>
         <button type="button" onclick="shareGarden()" class="shrink-0 w-6 h-6 flex items-center justify-center text-[#9eb3a8] hover:text-[#f4ede4] hover:bg-[#182721]/80 rounded-md border border-[#23352e] transition-colors" title="Share my garden" aria-label="Share my garden">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v14"/></svg>
+          <i class="pixelart-icons-font-upload pixel-icon" aria-hidden="true"></i>
         </button>
         <span id="share-feedback" class="text-[10px] text-teal-300" aria-live="polite"></span>
       </div>
@@ -120,7 +131,7 @@
           class="w-full sm:w-auto min-h-10 bg-[#2d1b11]/90 hover:bg-[#3d2417] border border-[#ea580c]/40 text-[#fdba74] font-semibold px-3 py-2 rounded-lg text-xs transition-colors flex items-center justify-center gap-1.5 shadow-sm backdrop-blur-sm"
           title="Randomly choose someone whose connection needs attention"
         >
-          <span>🎲</span> Roll Dice
+          <i class="pixelart-icons-font-dice pixel-icon" aria-hidden="true"></i> Roll Dice
         </button>
         <a
           href="https://docs.google.com/forms/d/e/1FAIpQLSc2SKVBdoYIIftgLo-7UZpc7kBD7qOIqhEN2YWEFaVwiIzo6Q/viewform?usp=header"
@@ -130,7 +141,7 @@
           title="Report a bug"
           aria-label="Report a bug"
         >
-          🪲
+          <i class="pixelart-icons-font-bug pixel-icon" aria-hidden="true"></i>
         </a>
         <button
           type="button"
@@ -138,13 +149,13 @@
           class="w-full sm:w-auto min-h-10 bg-[#1c2d26] hover:bg-[#253d33] border border-[#2e473d] text-teal-300 font-semibold px-3 py-2 rounded-lg text-xs transition-colors flex items-center justify-center gap-1.5 shadow-sm whitespace-nowrap"
           title="Import contacts from a vCard file"
         >
-          <span>📇</span> Import
+          <i class="pixelart-icons-font-users pixel-icon" aria-hidden="true"></i> Import
         </button>
         <button 
           onclick="openAddModal()"
           class="w-full sm:w-auto min-h-10 bg-[#115e59] hover:bg-[#0f766e] text-white font-semibold px-3 py-2 rounded-lg text-xs transition-colors flex items-center justify-center gap-1 shadow-sm border border-teal-500/30"
         >
-          <span>+</span> Add
+          <i class="pixelart-icons-font-plus pixel-icon" aria-hidden="true"></i> Add
         </button>
       </div>
     </header>
@@ -156,7 +167,7 @@
       </div>
       <div class="relative z-10 flex items-center justify-between mb-3 text-[11px]">
         <span id="garden-plot-count" class="bg-black/40 text-[#e4ece7] font-mono px-2 py-1 rounded-full"></span>
-        <button id="garden-badge-toggle" type="button" onclick="toggleGardenBadges()" class="bg-black/40 hover:bg-black/60 text-[#e4ece7] px-2 py-1 rounded-full transition-colors"></button>
+        <button id="garden-badge-toggle" type="button" onclick="toggleGardenBadges()" class="inline-flex items-center gap-1.5 bg-black/40 hover:bg-black/60 text-[#e4ece7] px-2 py-1 rounded-full transition-colors"></button>
       </div>
       <div id="plots-container" class="relative z-10 flex flex-wrap justify-center gap-x-2 gap-y-9"></div>
     </section>
@@ -164,7 +175,7 @@
     <!-- Notification / Reminder Bar -->
     <div id="notification-banner" class="bg-[#131f1a]/85 border border-[#23352e] rounded-xl p-3 flex items-center justify-between text-xs backdrop-blur-sm">
       <div class="flex items-center gap-2">
-        <span>🔔</span>
+        <i class="pixelart-icons-font-notification pixel-icon" aria-hidden="true"></i>
         <span id="notification-status-text" class="text-[#c4d4cc]">Enable check-in reminders for tired plants.</span>
       </div>
       <button 
@@ -179,10 +190,10 @@
     <!-- Dice Result Banner -->
     <div id="dice-banner" class="hidden bg-[#241710]/95 border border-[#ea580c]/50 rounded-xl p-3 flex items-center justify-between text-xs text-[#fed7aa] backdrop-blur-sm">
       <div class="flex items-center gap-2">
-        <span class="text-base">✨</span>
+        <i class="pixelart-icons-font-zap pixel-icon text-base" aria-hidden="true"></i>
         <span>The dice selected <strong id="dice-banner-name" class="text-white font-semibold"></strong>! Consider reaching out.</span>
       </div>
-      <button onclick="dismissDiceBanner()" class="text-[#ea580c] hover:text-[#fed7aa] text-sm px-1">✕</button>
+      <button onclick="dismissDiceBanner()" class="text-[#ea580c] hover:text-[#fed7aa] text-sm px-1" aria-label="Dismiss"><i class="pixelart-icons-font-close pixel-icon" aria-hidden="true"></i></button>
     </div>
 
     <!-- Category Filter Tabs -->
@@ -209,11 +220,11 @@
     <div class="bg-[#14201b] border border-[#283e35] rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-center border-b border-[#283e35] pb-3">
         <h3 id="friend-modal-title" class="font-bold text-sm text-[#f4ede4]">Add Connection</h3>
-        <button onclick="toggleFriendModal(false)" class="text-[#8da498] hover:text-[#f4ede4] text-sm">✕</button>
+        <button onclick="toggleFriendModal(false)" class="text-[#8da498] hover:text-[#f4ede4] text-sm" aria-label="Close"><i class="pixelart-icons-font-close pixel-icon" aria-hidden="true"></i></button>
       </div>
 
       <button id="btn-autosync" type="button" onclick="openWaitlistModal('autosync')" class="w-full bg-[#0b1210] hover:bg-[#182721] border border-dashed border-[#2e473d] text-teal-300 font-medium py-2 rounded-lg text-xs transition-colors">
-        🔄 Auto-Sync Contacts/Messages <span class="text-[#8da498]">(private beta)</span>
+        <i class="pixelart-icons-font-sync pixel-icon" aria-hidden="true"></i> Auto-Sync Contacts/Messages <span class="text-[#8da498]">(private beta)</span>
       </button>
 
       <form id="friend-form" class="space-y-3">
@@ -246,19 +257,22 @@
           </div>
         </div>
 
-        <!-- Avatar Selection -->
+        <!-- Generated Portrait -->
         <div class="space-y-2 border border-[#283e35] bg-[#0b1210]/60 p-3 rounded-xl">
-          <label class="block text-xs font-semibold text-[#a3b8ad] uppercase tracking-wider">Avatar Choice</label>
-          <div class="grid grid-cols-2 gap-2">
-            <div>
-              <span class="text-[11px] text-[#6b8276] block mb-1">Custom Emoji</span>
-              <input id="input-avatar" type="text" maxlength="2" placeholder="🌿" class="w-full bg-[#0b1210] border border-[#283e35] rounded-lg px-2.5 py-1.5 text-sm text-emerald-100 text-center focus:outline-none focus:border-teal-500" />
-            </div>
-            <div>
-              <span class="text-[11px] text-[#6b8276] block mb-1">Or Upload Photo</span>
-              <input id="input-photo" type="file" accept="image/*" class="w-full text-xs text-[#8da498] file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-[#1c2d26] file:text-emerald-200 hover:file:bg-[#253d33] cursor-pointer" />
+          <span class="block text-xs font-semibold text-[#a3b8ad] uppercase tracking-wider">8-bit Portrait</span>
+          <div class="flex items-center gap-3">
+            <img id="avatar-preview-img" src="" alt="Generated pixel-art portrait preview" referrerpolicy="no-referrer" class="w-14 h-14 rounded-full bg-[#1c2d26] border border-[#2e473d] [image-rendering:pixelated]" />
+            <div class="min-w-0 flex-1">
+              <span class="text-[11px] text-[#8da498] block mb-1">A unique character, created for this connection.</span>
+              <button type="button" onclick="regenerateAvatarPreview()" class="inline-flex items-center gap-1.5 text-xs text-teal-300 hover:text-teal-200">
+                <i class="pixelart-icons-font-dice pixel-icon" aria-hidden="true"></i> New portrait
+              </button>
             </div>
           </div>
+          <input id="input-avatar-seed" type="hidden" />
+          <label class="block text-[11px] text-[#6b8276]">Or use a photo
+            <input id="input-photo" type="file" accept="image/*" class="block w-full mt-1 text-xs text-[#8da498] file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-[#1c2d26] file:text-emerald-200 hover:file:bg-[#253d33] cursor-pointer" />
+          </label>
           
           <!-- Photo preview & removal (shows when photo exists) -->
           <div id="photo-preview-box" class="hidden items-center justify-between pt-1 border-t border-[#283e35]">
@@ -292,13 +306,13 @@
           <h3 class="font-bold text-sm text-[#f4ede4]">Import Contacts</h3>
           <p class="text-[11px] text-[#8da498] mt-1">Choose a vCard file, then select the people to add.</p>
         </div>
-        <button type="button" onclick="closeContactImportModal()" class="text-[#8da498] hover:text-[#f4ede4] text-sm" aria-label="Close contact import">✕</button>
+        <button type="button" onclick="closeContactImportModal()" class="text-[#8da498] hover:text-[#f4ede4] text-sm" aria-label="Close contact import"><i class="pixelart-icons-font-close pixel-icon" aria-hidden="true"></i></button>
       </div>
 
       <div class="space-y-3 shrink-0">
         <div class="flex flex-col sm:flex-row sm:items-end gap-3">
           <label class="inline-flex items-center justify-center gap-2 bg-[#1c2d26] hover:bg-[#253d33] text-teal-300 border border-[#2e473d] px-3 py-2 rounded-lg text-xs font-semibold cursor-pointer transition-colors">
-            <span>📂</span> Choose vCard file
+            <i class="pixelart-icons-font-folder pixel-icon" aria-hidden="true"></i> Choose vCard file
             <input id="vcard-file-input" type="file" accept=".vcf,text/vcard,text/x-vcard" class="hidden" onchange="handleVCardFile(event)" />
           </label>
           <a href="https://support.apple.com/guide/icloud/import-export-and-print-contacts-mmfba748b2/icloud" target="_blank" rel="noopener noreferrer" class="text-[11px] text-teal-300 hover:text-teal-200 underline underline-offset-2">How to export from iCloud</a>
@@ -336,7 +350,7 @@
           <h3 class="font-bold text-sm text-[#f4ede4]">Water <span id="touch-modal-name" class="text-teal-300"></span></h3>
           <p class="text-[11px] text-[#8da498]">Touches restore vitality based on depth</p>
         </div>
-        <button onclick="toggleTouchModal(false)" class="text-[#8da498] hover:text-[#f4ede4] text-sm">✕</button>
+        <button onclick="toggleTouchModal(false)" class="text-[#8da498] hover:text-[#f4ede4] text-sm" aria-label="Close"><i class="pixelart-icons-font-close pixel-icon" aria-hidden="true"></i></button>
       </div>
 
       <form id="touch-form" class="space-y-3">
@@ -348,7 +362,7 @@
             <label class="flex items-center justify-between bg-[#0b1210] border border-[#283e35] px-3 py-2 rounded-lg text-xs font-medium cursor-pointer has-[:checked]:border-teal-500 has-[:checked]:text-teal-300">
               <div class="flex items-center gap-2">
                 <input type="radio" name="touch-type" value="Hangout" checked class="hidden" />
-                <span>☕ In-Person Hangout</span>
+                <span class="flex items-center gap-2"><i class="pixelart-icons-font-coffee pixel-icon" aria-hidden="true"></i> In-Person Hangout</span>
               </div>
               <span class="text-[10px] text-emerald-400 font-mono">+100% (Full)</span>
             </label>
@@ -356,7 +370,7 @@
             <label class="flex items-center justify-between bg-[#0b1210] border border-[#283e35] px-3 py-2 rounded-lg text-xs font-medium cursor-pointer has-[:checked]:border-teal-500 has-[:checked]:text-teal-300">
               <div class="flex items-center gap-2">
                 <input type="radio" name="touch-type" value="Virtual Hangout" class="hidden" />
-                <span>💻 Virtual Hangout / Game Night</span>
+                <span class="flex items-center gap-2"><i class="pixelart-icons-font-device-laptop pixel-icon" aria-hidden="true"></i> Virtual Hangout / Game Night</span>
               </div>
               <span class="text-[10px] text-teal-400 font-mono">+50% charge</span>
             </label>
@@ -364,7 +378,7 @@
             <label class="flex items-center justify-between bg-[#0b1210] border border-[#283e35] px-3 py-2 rounded-lg text-xs font-medium cursor-pointer has-[:checked]:border-teal-500 has-[:checked]:text-teal-300">
               <div class="flex items-center gap-2">
                 <input type="radio" name="touch-type" value="Long Call" class="hidden" />
-                <span>📹 Video Call / Long Call</span>
+                <span class="flex items-center gap-2"><i class="pixelart-icons-font-video pixel-icon" aria-hidden="true"></i> Video Call / Long Call</span>
               </div>
               <span class="text-[10px] text-teal-400 font-mono">+50% charge</span>
             </label>
@@ -372,7 +386,7 @@
             <label class="flex items-center justify-between bg-[#0b1210] border border-[#283e35] px-3 py-2 rounded-lg text-xs font-medium cursor-pointer has-[:checked]:border-teal-500 has-[:checked]:text-teal-300">
               <div class="flex items-center gap-2">
                 <input type="radio" name="touch-type" value="Quick Call" class="hidden" />
-                <span>📞 Quick Call</span>
+                <span class="flex items-center gap-2"><i class="pixelart-icons-font-device-phone pixel-icon" aria-hidden="true"></i> Quick Call</span>
               </div>
               <span class="text-[10px] text-amber-400 font-mono">+50% charge</span>
             </label>
@@ -380,7 +394,7 @@
             <label class="flex items-center justify-between bg-[#0b1210] border border-[#283e35] px-3 py-2 rounded-lg text-xs font-medium cursor-pointer has-[:checked]:border-teal-500 has-[:checked]:text-teal-300">
               <div class="flex items-center gap-2">
                 <input type="radio" name="touch-type" value="Text" class="hidden" />
-                <span>💬 Text / DM / Meme</span>
+                <span class="flex items-center gap-2"><i class="pixelart-icons-font-message pixel-icon" aria-hidden="true"></i> Text / DM / Meme</span>
               </div>
               <span class="text-[10px] text-[#8da498] font-mono">+40% charge</span>
             </label>
@@ -393,7 +407,7 @@
         </div>
 
         <button type="submit" class="w-full bg-[#115e59] hover:bg-[#0f766e] font-semibold py-2 rounded-lg text-sm text-white transition-colors mt-2 border border-teal-500/30">
-          Water Plant 💧
+          Water Plant <i class="pixelart-icons-font-drop pixel-icon" aria-hidden="true"></i>
         </button>
       </form>
     </div>
@@ -407,7 +421,7 @@
           <h3 class="font-bold text-sm text-[#f4ede4]">Cadence Settings</h3>
           <p class="text-[11px] text-[#8da498]">What is a cadence profile?</p>
         </div>
-        <button onclick="toggleSettingsModal(false)" class="text-[#8da498] hover:text-[#f4ede4] text-sm">✕</button>
+        <button onclick="toggleSettingsModal(false)" class="text-[#8da498] hover:text-[#f4ede4] text-sm" aria-label="Close"><i class="pixelart-icons-font-close pixel-icon" aria-hidden="true"></i></button>
       </div>
 
       <div class="bg-[#0b1210] border border-[#283e35] rounded-xl p-3 text-xs text-[#a3b8ad] space-y-1.5 leading-relaxed">
@@ -445,7 +459,7 @@
     <div class="bg-[#14201b] border border-[#283e35] rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-center border-b border-[#283e35] pb-3">
         <h3 id="waitlist-title" class="font-bold text-sm text-[#f4ede4]"></h3>
-        <button type="button" onclick="closeWaitlistModal()" class="text-[#8da498] hover:text-[#f4ede4] text-sm" aria-label="Close">✕</button>
+        <button type="button" onclick="closeWaitlistModal()" class="text-[#8da498] hover:text-[#f4ede4] text-sm" aria-label="Close"><i class="pixelart-icons-font-close pixel-icon" aria-hidden="true"></i></button>
       </div>
       <div id="waitlist-intro" class="text-xs text-[#a3b8ad] leading-relaxed"></div>
       <ul id="waitlist-features" class="text-xs text-[#c4d4cc] space-y-1.5"></ul>
@@ -464,7 +478,7 @@
     <div class="bg-[#14201b] border border-[#283e35] rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
       <div class="flex justify-between items-center border-b border-[#283e35] pb-3">
         <h3 class="font-bold text-sm text-[#f4ede4]">Account & Cloud Sync</h3>
-        <button onclick="toggleAuthModal(false)" class="text-[#8da498] hover:text-[#f4ede4] text-sm">✕</button>
+        <button onclick="toggleAuthModal(false)" class="text-[#8da498] hover:text-[#f4ede4] text-sm" aria-label="Close"><i class="pixelart-icons-font-close pixel-icon" aria-hidden="true"></i></button>
       </div>
 
       <!-- Logged-In View -->
@@ -484,7 +498,7 @@
           onclick="syncToCloud(true)" 
           class="w-full bg-[#1c2d26] hover:bg-[#253d33] text-teal-300 py-2 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-2 border border-[#2e473d]"
         >
-          <span>🔄</span> Force Cloud Sync Now
+          <i class="pixelart-icons-font-sync pixel-icon" aria-hidden="true"></i> Force Cloud Sync Now
         </button>
 
         <button 
@@ -539,10 +553,10 @@
         <div class="text-[11px] text-[#6b8276] uppercase font-semibold">Offline Backup (No account required)</div>
         <div class="grid grid-cols-2 gap-2">
           <button onclick="exportBackup()" class="bg-[#131f1a] hover:bg-[#1c2d26] text-slate-300 py-1.5 rounded-lg text-[11px] transition-colors border border-[#23352e]">
-            📥 Export JSON
+            <i class="pixelart-icons-font-download pixel-icon" aria-hidden="true"></i> Export JSON
           </button>
           <label class="bg-[#131f1a] hover:bg-[#1c2d26] text-slate-300 py-1.5 rounded-lg text-[11px] transition-colors border border-[#23352e] text-center cursor-pointer">
-            📤 Import JSON
+            <i class="pixelart-icons-font-upload pixel-icon" aria-hidden="true"></i> Import JSON
             <input type="file" id="import-json-file" accept=".json" class="hidden" onchange="importBackup(event)" />
           </label>
         </div>
@@ -596,6 +610,40 @@
       'Text': 0.40
     };
 
+    function createAvatarSeed() {
+      return globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    }
+
+    function pixelAvatarUrl(seed) {
+      return `https://api.dicebear.com/9.x/pixel-art/svg?seed=${encodeURIComponent(seed)}`;
+    }
+
+    function migrateAvatarSeeds(list) {
+      let changed = false;
+      list.forEach(friend => {
+        if (!friend.avatar_seed) {
+          friend.avatar_seed = createAvatarSeed();
+          changed = true;
+        }
+        if (Object.prototype.hasOwnProperty.call(friend, 'avatar')) {
+          delete friend.avatar;
+          changed = true;
+        }
+      });
+      return changed;
+    }
+
+    function updateAvatarPreview() {
+      const seedInput = document.getElementById('input-avatar-seed');
+      if (!seedInput.value) seedInput.value = createAvatarSeed();
+      document.getElementById('avatar-preview-img').src = pixelAvatarUrl(seedInput.value);
+    }
+
+    function regenerateAvatarPreview() {
+      document.getElementById('input-avatar-seed').value = createAvatarSeed();
+      updateAvatarPreview();
+    }
+
     const HEALTH_FLOORS = {
       inner: 30,
       close: 15,
@@ -644,7 +692,7 @@
           name: 'Jacob (Example)',
           category: 'Friends',
           tier: 'close',
-          avatar: '⛏️',
+          avatar_seed: 'sample-jacob',
           photo: null,
           touches: [
             { type: 'Hangout', timestamp: now, note: 'Played minecraft for a few hours' }
@@ -655,10 +703,10 @@
           name: 'Mom (Example)',
           category: 'Family',
           tier: 'inner', // 14-day default target
-          avatar: '❤️',
+          avatar_seed: 'sample-mom',
           photo: null,
           touches: [
-            // 5 days ago on 14d cadence = ~64% health -> 🌿 Sprout
+            // 5 days ago on 14d cadence = ~64% health.
             { type: 'Hangout', timestamp: now - (5 * DAY), note: 'Sunday family dinner' }
           ]
         },
@@ -667,7 +715,7 @@
           name: 'Delilah (Example)',
           category: 'Friends',
           tier: 'wider',
-          avatar: '🏡',
+          avatar_seed: 'sample-delilah',
           photo: null,
           touches: [
             // 80 days ago on 90d cadence = ~11% health -> Wilting
@@ -679,7 +727,7 @@
           name: 'Prof. Milton (Example)',
           category: 'Professional',
           tier: 'quarterly',
-          avatar: '🎓',
+          avatar_seed: 'sample-milton',
           photo: null,
           touches: [
             // 85 days ago on 180d cadence with 40% text recharge = 0% health
@@ -691,18 +739,20 @@
 
     function hasUntouchedDefaultExamples(data) {
       const expected = [
-        { id: '1', name: 'Jacob (Example)', category: 'Friends', tier: 'close', avatar: '⛏️', type: 'Virtual Hangout', note: 'Played minecraft for a few hours', daysAgo: 0 },
-        { id: '2', name: 'Mom (Example)', category: 'Family', tier: 'inner', avatar: '❤️', type: 'Hangout', note: 'Sunday family dinner', daysAgo: 5 },
-        { id: '3', name: 'Delilah (Example)', category: 'Friends', tier: 'wider', avatar: '🏡', type: 'Hangout', note: 'Attended housewarming party', daysAgo: 50 },
-        { id: '4', name: 'Prof. Milton (Example)', category: 'Professional', tier: 'quarterly', avatar: '🎓', type: 'Text', note: 'Work and networking check-in email', daysAgo: 85 }
+        { id: '1', name: 'Jacob (Example)', category: 'Friends', tier: 'close', avatar_seed: 'sample-jacob', type: 'Virtual Hangout', note: 'Played minecraft for a few hours', daysAgo: 0 },
+        { id: '2', name: 'Mom (Example)', category: 'Family', tier: 'inner', avatar_seed: 'sample-mom', type: 'Hangout', note: 'Sunday family dinner', daysAgo: 5 },
+        { id: '3', name: 'Delilah (Example)', category: 'Friends', tier: 'wider', avatar_seed: 'sample-delilah', type: 'Hangout', note: 'Attended housewarming party', daysAgo: 50 },
+        { id: '4', name: 'Prof. Milton (Example)', category: 'Professional', tier: 'quarterly', avatar_seed: 'sample-milton', type: 'Text', note: 'Work and networking check-in email', daysAgo: 85 }
       ];
       const dayMs = 1000 * 60 * 60 * 24;
 
       return Array.isArray(data) && data.length === expected.length && expected.every(example => {
         const friend = data.find(entry => entry.id === example.id);
-        if (!friend || friend.name !== example.name || friend.category !== example.category || friend.tier !== example.tier || friend.avatar !== example.avatar || friend.photo !== null || !friend.touches || friend.touches.length !== 1) {
+        if (!friend || friend.name !== example.name || friend.category !== example.category || friend.tier !== example.tier || friend.photo !== null || !friend.touches || friend.touches.length !== 1) {
           return false;
         }
+        const seedMatches = friend.avatar_seed === example.avatar_seed || (!friend.avatar_seed && Boolean(friend.avatar));
+        if (!seedMatches) return false;
 
         const touch = friend.touches[0];
         const daysSince = (Date.now() - touch.timestamp) / dayMs;
@@ -716,6 +766,9 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify(friends));
     } else if (hasUntouchedDefaultExamples(friends)) {
       friends = getDefaultExamples();
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(friends));
+    }
+    if (migrateAvatarSeeds(friends)) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(friends));
     }
 
@@ -893,7 +946,8 @@
             if (row.friends && Array.isArray(row.friends)) {
               const shouldUpgradeCloudExamples = hasUntouchedDefaultExamples(row.friends);
               friends = shouldUpgradeCloudExamples ? getDefaultExamples() : row.friends;
-              shouldSyncCloud = shouldSyncCloud || shouldUpgradeCloudExamples;
+              const cloudAvatarsChanged = migrateAvatarSeeds(friends);
+              shouldSyncCloud = shouldSyncCloud || shouldUpgradeCloudExamples || cloudAvatarsChanged;
               localStorage.setItem(STORAGE_KEY, JSON.stringify(friends));
             }
             if (row.cadence_settings) {
@@ -968,7 +1022,7 @@
       const icon = document.getElementById('garden-weather-icon');
 
       if (!canvas || !bar || !text) return;
-      if (icon) icon.src = getPlantStage(averageHealth, 'inner').icon;
+      if (icon) icon.src = averageHealth >= 30 ? 'assets/sakura_summer.png' : 'assets/sakura_autumn.png';
       bar.style.width = `${averageHealth}%`;
 
       let bgColor;
@@ -1028,7 +1082,7 @@
       const overflow = friends.length - shown.length;
       document.getElementById('garden-plot-count').textContent =
         `${shown.length} plant${shown.length === 1 ? '' : 's'}${overflow > 0 ? ` · ${overflow} more in the list` : ''}`;
-      document.getElementById('garden-badge-toggle').textContent = gardenBadgesVisible ? 'Hide icons' : 'Show icons';
+      document.getElementById('garden-badge-toggle').innerHTML = `${pixelIcon(gardenBadgesVisible ? 'eye-closed' : 'eye')}<span>${gardenBadgesVisible ? 'Hide icons' : 'Show icons'}</span>`;
 
       const plants = shown.map(({ friend, health }, index) => {
         const stage = getPlantStage(health, friend.tier);
@@ -1036,11 +1090,9 @@
           <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 z-30 w-40 bg-[#0b1210] border border-[#2e473d] rounded-xl px-3 py-2 text-center shadow-xl">
             <div class="text-xs font-semibold text-[#f4ede4] truncate">${escapeHtml(friend.name)}</div>
             <div class="text-[11px] font-mono ${stage.color}">${health}% ${stage.label}</div>
-            <button type="button" onclick="waterGardenPlant('${friend.id}')" class="mt-1.5 w-full bg-[#1c2d26] hover:bg-[#253d33] border border-[#2e473d] text-teal-300 font-medium py-1 rounded-lg text-xs transition-colors">💧 Water</button>
+            <button type="button" onclick="waterGardenPlant('${friend.id}')" class="mt-1.5 w-full bg-[#1c2d26] hover:bg-[#253d33] border border-[#2e473d] text-teal-300 font-medium py-1 rounded-lg text-xs transition-colors"><i class="pixelart-icons-font-drop pixel-icon" aria-hidden="true"></i> Water</button>
           </div>` : '';
-        const badge = !gardenBadgesVisible ? '' : friend.photo
-          ? `<img src="${friend.photo}" alt="" class="absolute bottom-1 right-1 w-6 h-6 rounded-full object-cover border-2 border-[#14201b]" />`
-          : `<span class="absolute bottom-1 right-1 w-6 h-6 rounded-full bg-[#1c2d26] border-2 border-[#14201b] flex items-center justify-center text-[11px] select-none">${escapeHtml(friend.avatar || '🌱')}</span>`;
+        const badge = !gardenBadgesVisible ? '' : `<img src="${friend.photo || pixelAvatarUrl(friend.avatar_seed)}" alt="" referrerpolicy="no-referrer" class="absolute bottom-1 right-1 w-6 h-6 rounded-full object-cover border-2 border-[#14201b] [image-rendering:pixelated]" />`;
 
         return `
           <div data-plot class="relative w-24 h-24">
@@ -1055,7 +1107,7 @@
 
       const addPlot = shown.length < GARDEN_MAX_PLANTS ? `
         <div data-plot class="relative w-24 h-24 flex items-center justify-center">
-          <button type="button" onclick="openAddModal()" aria-label="Add a connection" class="w-14 h-14 rounded-full border-2 border-dashed border-[#e4ece7]/40 bg-black/20 text-[#e4ece7]/70 hover:text-white hover:border-white/70 text-xl transition-colors">+</button>
+          <button type="button" onclick="openAddModal()" aria-label="Add a connection" class="w-14 h-14 rounded-full border-2 border-dashed border-[#e4ece7]/40 bg-black/20 text-[#e4ece7]/70 hover:text-white hover:border-white/70 transition-colors"><i class="pixelart-icons-font-plus pixel-icon text-xl" aria-hidden="true"></i></button>
         </div>` : '';
 
       container.innerHTML = plants + addPlot;
@@ -1320,7 +1372,7 @@
       if (filtered.length === 0) {
         container.innerHTML = `
           <div class="text-center py-12 border border-dashed border-[#283e35] rounded-2xl p-6 text-[#7d968a] text-sm space-y-2">
-            <div>🌱 No connections found in this group.</div>
+            <div class="flex items-center justify-center gap-2"><i class="pixelart-icons-font-users pixel-icon" aria-hidden="true"></i> No connections found in this group.</div>
             <p class="text-xs text-[#5e7469]">Tap "+ Add" above to plant a new connection.</p>
           </div>
         `;
@@ -1345,13 +1397,7 @@
             <div class="flex items-center justify-between gap-3">
               <div class="flex items-center gap-3 cursor-pointer flex-1 min-w-0" onclick="toggleExpand('${friend.id}')">
                 <div class="relative shrink-0 w-12 h-12">
-                  ${friend.photo ? `
-                    <img src="${friend.photo}" alt="${escapeHtml(friend.name)}" class="w-12 h-12 rounded-full object-cover border border-[#2e473d]" />
-                  ` : `
-                    <span class="w-12 h-12 rounded-full bg-[#1c2d26] border border-[#2e473d] flex items-center justify-center text-base select-none" title="${escapeHtml(friend.name)} avatar">
-                      ${friend.avatar || friend.name.slice(0, 2).toUpperCase()}
-                    </span>
-                  `}
+                  <img src="${friend.photo || pixelAvatarUrl(friend.avatar_seed)}" alt="${escapeHtml(friend.name)}" referrerpolicy="no-referrer" class="w-12 h-12 rounded-full object-cover border border-[#2e473d] bg-[#1c2d26] [image-rendering:pixelated]" />
                   <img src="${plant.icon}" alt="${plant.label} plant" title="${plant.label}" class="absolute -bottom-1 -right-1 w-7 h-7 rounded-full object-contain bg-[#0b1210] border-2 border-[#14201b] [image-rendering:pixelated]" />
                 </div>
 
@@ -1375,7 +1421,7 @@
                 class="bg-[#1c2d26] hover:bg-[#253d33] border border-[#2e473d] text-teal-300 hover:text-teal-200 font-medium px-2.5 py-1.5 rounded-lg text-xs transition-colors shrink-0 flex items-center gap-1.5"
                 title="Log interaction"
               >
-                <span>💧</span> Water
+                <i class="pixelart-icons-font-drop pixel-icon" aria-hidden="true"></i> Water
               </button>
             </div>
 
@@ -1389,7 +1435,7 @@
                   <span>Connection Journal</span>
                   <div class="flex items-center gap-3">
                     <button onclick="openEditModal('${friend.id}')" class="text-teal-300 hover:text-teal-200 text-[10px] transition-colors flex items-center gap-0.5">
-                      <span>✏️</span> edit
+                      <i class="pixelart-icons-font-edit pixel-icon" aria-hidden="true"></i> edit
                     </button>
                     <button onclick="removeFriend('${friend.id}')" class="text-[#ea580c] hover:text-[#fed7aa] text-[10px] lowercase transition-colors">
                       remove
@@ -1403,7 +1449,7 @@
                       <div class="flex items-start justify-between bg-[#0b1210]/70 p-2 rounded-lg border border-[#23352e]">
                         <div>
                           <div class="flex items-center gap-1.5 font-medium text-[#c4d4cc]">
-                            <span>${getTouchEmoji(touch.type)}</span>
+                            <span class="text-teal-300">${getTouchIcon(touch.type)}</span>
                             <span>${touch.type}</span>
                             <span class="text-[#6b8276] font-mono text-[10px]">${new Date(touch.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                           </div>
@@ -1422,14 +1468,14 @@
       }).join('');
     }
 
-    function getTouchEmoji(type) {
+    function getTouchIcon(type) {
       switch(type) {
-        case 'Hangout': return '☕';
-        case 'Virtual Hangout': return '💻';
-        case 'Long Call': return '📹';
-        case 'Quick Call': return '📞';
-        case 'Text': return '💬';
-        default: return '🤝';
+        case 'Hangout': return pixelIcon('coffee');
+        case 'Virtual Hangout': return pixelIcon('device-laptop');
+        case 'Long Call': return pixelIcon('video');
+        case 'Quick Call': return pixelIcon('device-phone');
+        case 'Text': return pixelIcon('message');
+        default: return pixelIcon('users');
       }
     }
 
@@ -1533,14 +1579,22 @@
       trackEvent(event);
     }
 
+    function pixelIcon(name) {
+      return `<i class="pixelart-icons-font-${name} pixel-icon" aria-hidden="true"></i>`;
+    }
+
     const WAITLIST_COPY = {
       pro: {
-        title: '✨ Cultivate Pro',
+        title: 'Cultivate Pro',
         intro: 'Pro is in the works. Join the waitlist for early access and a say in what gets built first.',
-        features: ['🌿 Animated plants that sway, bloom and react', '📅 Calendar sync for birthdays and hangouts', '🪴 Unlimited plots in your garden']
+        features: [
+          { icon: 'animation', text: 'Animated plants that sway, bloom and react' },
+          { icon: 'calendar', text: 'Calendar sync for birthdays and hangouts' },
+          { icon: 'grid', text: 'Unlimited plots in your garden' }
+        ]
       },
       autosync: {
-        title: '🔄 Auto-Sync Contacts/Messages',
+        title: 'Auto-Sync Contacts/Messages',
         intro: 'Auto-sync is in private beta. It would log calls and texts for you so your plants stay healthy without manual entries. Join the waitlist to get an invite.',
         features: []
       }
@@ -1552,7 +1606,9 @@
       const copy = WAITLIST_COPY[source];
       document.getElementById('waitlist-title').textContent = copy.title;
       document.getElementById('waitlist-intro').textContent = copy.intro;
-      document.getElementById('waitlist-features').innerHTML = copy.features.map(f => `<li>${f}</li>`).join('');
+      document.getElementById('waitlist-features').innerHTML = copy.features
+        .map(feature => `<li class="flex items-center gap-2">${pixelIcon(feature.icon)}<span>${escapeHtml(feature.text)}</span></li>`)
+        .join('');
       document.getElementById('waitlist-message').textContent = '';
       document.getElementById('waitlist-submit').disabled = false;
       document.getElementById('waitlist-form').classList.remove('hidden');
@@ -1592,7 +1648,7 @@
     });
 
     async function shareGarden() {
-      const text = `My Cultivate garden is at ${gardenAverageHealth}% vitality! 🌱`;
+      const text = `My Cultivate garden is at ${gardenAverageHealth}% vitality!`;
       const feedback = document.getElementById('share-feedback');
       trackEvent('share_click');
       try {
@@ -1623,6 +1679,8 @@
       document.getElementById('input-date-label').textContent = 'Last Interaction Date';
       document.getElementById('edit-friend-id').value = '';
       document.getElementById('friend-form').reset();
+      document.getElementById('input-avatar-seed').value = createAvatarSeed();
+      updateAvatarPreview();
       document.getElementById('input-last-contact').value = new Date().toISOString().split('T')[0];
       document.getElementById('btn-autosync').classList.remove('hidden');
       removeActivePhoto();
@@ -1642,7 +1700,8 @@
       document.getElementById('input-name').value = friend.name;
       document.getElementById('input-category').value = friend.category || 'Friends';
       document.getElementById('input-cadence-tier').value = friend.tier || 'close';
-      document.getElementById('input-avatar').value = friend.avatar || '';
+      document.getElementById('input-avatar-seed').value = friend.avatar_seed;
+      updateAvatarPreview();
 
       if (friend.photo) {
         document.getElementById('input-photo-base64').value = friend.photo;
@@ -1950,10 +2009,6 @@
       renderVCardContactList();
     }
 
-    function getVCardInitials(name) {
-      return name.split(/\s+/).filter(Boolean).slice(0, 2).map(part => Array.from(part)[0]).join('').toUpperCase() || '🌱';
-    }
-
     function importSelectedVCardContacts() {
       const selected = vCardContacts.filter(contact => selectedVCardContactIds.has(contact.id) && !isVCardContactAlreadyInGarden(contact));
       if (selected.length === 0) return;
@@ -1966,7 +2021,7 @@
           name: contact.name,
           category: VCARD_IMPORT_DEFAULT_CATEGORY,
           tier: VCARD_IMPORT_DEFAULT_TIER,
-          avatar: getVCardInitials(contact.name),
+          avatar_seed: createAvatarSeed(),
           photo: null,
           email: contact.email,
           phone: contact.phone,
@@ -1990,7 +2045,7 @@
       const name = document.getElementById('input-name').value.trim();
       const category = document.getElementById('input-category').value;
       const tier = document.getElementById('input-cadence-tier').value;
-      const avatar = document.getElementById('input-avatar').value.trim();
+      const avatarSeed = document.getElementById('input-avatar-seed').value || createAvatarSeed();
       const photo = document.getElementById('input-photo-base64').value || null;
       const contactDate = document.getElementById('input-last-contact').value;
 
@@ -2004,7 +2059,8 @@
           friend.name = name;
           friend.category = category;
           friend.tier = tier;
-          friend.avatar = avatar || '🌱';
+          friend.avatar_seed = avatarSeed;
+          delete friend.avatar;
           friend.photo = photo;
 
           // If the date was modified, reflect it on the most recent touch
@@ -2021,7 +2077,7 @@
           name,
           category,
           tier,
-          avatar: avatar || '🌱',
+          avatar_seed: avatarSeed,
           photo,
           touches: [{ type: 'Hangout', timestamp, note: 'Initial connection planted' }]
         });
@@ -2115,12 +2171,12 @@
         const person = thirsty[0];
         new Notification('Cultivate • Gentle Reminder', {
           body: `${person.name} could use some love! Their plant has reached the ${getPlantStage(calculateHealth(person).health, person.tier).label} stage.`,
-          icon: '🌱'
+          icon: getPlantStage(calculateHealth(person).health, person.tier).icon
         });
       } else if (isTest) {
         new Notification('Cultivate • All Connections Blooming', {
           body: 'All your plants are currently well hydrated!',
-          icon: '🌿'
+          icon: 'assets/sakura_summer.png'
         });
       }
     }

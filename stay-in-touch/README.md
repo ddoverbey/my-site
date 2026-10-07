@@ -6,13 +6,15 @@ Cultivate is a small connection-tracking game. Add people to your garden, log th
 
 Open [`index.html`](index.html) in a browser. No build step or package installation is required.
 
-- Select **Add** to plant a connection. Choose a relationship category, cadence tier, and optional emoji or photo.
+- Select **Add** to plant a connection. Choose a relationship category and cadence tier; Cultivate creates a unique 8-bit portrait automatically, or you can upload a photo.
 - Select **Import** to preview an iOS Contacts vCard (`.vcf`), search the list, and check each person you want to add. Selection is retained across pages. Repeated records in the file stay visible and are marked for review. Imported contacts default to Friends/Close; matching email addresses or matching name-and-phone pairs already in your garden are skipped.
 - The garden at the top shows up to 10 plants, one per connection, prioritising Inner circle, then Close circle, Wider network and Long range, with the lowest vitality first within a tier. Inner Circle connections are dead trees, Close Circle connections are birches, Wider Network connections are bushes, and Long Range connections are sunflowers. Each plant's season reflects its vitality: spring (Thriving), summer (Good), autumn (Wilting), or winter (Dormant); these are vitality stages, not the calendar season. Tap a plant to see its name and vitality and to water it. Use **Hide icons** to remove the small avatar circles. The background becomes a flower-filled green meadow when thriving, dark green with sparse shrubs when good, autumnal with dying shrubs when wilting, and frosted gray with snow and ice when dormant. Connection cards show the contact photo or avatar prominently, with a smaller plant badge.
 - Connections are listed from lowest vitality to highest. Open a connection to see its journal, edit it, or remove it.
 - Select **Water** to record an in-person hangout, virtual hangout, long call, quick call, or text. Add an optional reflection.
 - Use the category filters to narrow the garden, or **Roll Dice** to pick a connection with low vitality for a possible check-in.
 - Open **Cadence Settings** to change the target interval for each tier.
+
+The header sakura changes from summer to autumn with average garden vitality. The browser tab and home-screen icon use the static summer sakura.
 
 ## Vitality and watering
 
@@ -29,6 +31,8 @@ The game replays a connection's interactions in date order, applying decay betwe
 ## Data and sync
 
 Connections and cadence settings are saved in this browser's local storage. vCard files are parsed in the browser; only contacts you select are added. Data is not automatically shared between browsers or devices. Use **Account & Cloud Sync** to sign in and sync through the Supabase service configured in the page, or use **Export JSON** and **Import JSON** for a portable backup.
+
+Generated pixel portraits use DiceBear's Pixel Art API. Each connection gets a random opaque seed that is saved with its garden data so the portrait stays consistent; the contact's name is not sent to DiceBear. Uploaded photos are used instead of generated portraits.
 
 The page can request browser notification permission for check-in reminders. Availability and behavior depend on browser support and permission settings.
 
