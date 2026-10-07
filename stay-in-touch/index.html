@@ -70,18 +70,6 @@
           <p class="text-xs text-[#9eb3a8] mt-0.5">
             <span class="line-through text-[#63756c]">Zero</span> (some) guilt. Gentle connections.
           </p>
-
-          <!-- Garden Vitality Indicator -->
-          <div class="flex items-center gap-2 mt-2">
-            <div class="w-20 shrink-0 bg-black/40 h-1.5 rounded-full overflow-hidden border border-[#23352e]">
-              <div id="average-vitality-bar" class="h-full bg-[#ea580c] transition-all duration-700" style="width: 34%"></div>
-            </div>
-            <span id="average-vitality-text" class="text-[10px] sm:text-[11px] font-mono text-[#fdba74]">34% Garden Vitality</span>
-            <button type="button" onclick="shareGarden()" class="shrink-0 w-6 h-6 flex items-center justify-center text-[#9eb3a8] hover:text-[#f4ede4] hover:bg-[#182721]/80 rounded-md border border-[#23352e] transition-colors" title="Share my garden" aria-label="Share my garden">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v14"/></svg>
-            </button>
-            <span id="share-feedback" class="text-[10px] text-teal-300" aria-live="polite"></span>
-          </div>
         </div>
 
         <div class="flex items-center gap-2 shrink-0">
@@ -112,6 +100,17 @@
           <span id="sync-status-dot" class="absolute top-1 right-1 w-2 h-2 rounded-full bg-slate-500"></span>
         </button>
         </div>
+      </div>
+
+      <div class="flex items-center gap-2 mt-2">
+        <div class="w-20 shrink-0 bg-black/40 h-1.5 rounded-full overflow-hidden border border-[#23352e]">
+          <div id="average-vitality-bar" class="h-full bg-[#ea580c] transition-all duration-700" style="width: 34%"></div>
+        </div>
+        <span id="average-vitality-text" class="text-[10px] sm:text-[11px] font-mono text-[#fdba74]">34% • Summer · Good</span>
+        <button type="button" onclick="shareGarden()" class="shrink-0 w-6 h-6 flex items-center justify-center text-[#9eb3a8] hover:text-[#f4ede4] hover:bg-[#182721]/80 rounded-md border border-[#23352e] transition-colors" title="Share my garden" aria-label="Share my garden">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v14"/></svg>
+        </button>
+        <span id="share-feedback" class="text-[10px] text-teal-300" aria-live="polite"></span>
       </div>
 
       <div class="grid grid-cols-2 gap-2 sm:flex sm:justify-end">
@@ -972,33 +971,28 @@
       if (icon) icon.src = getPlantStage(averageHealth, 'inner').icon;
       bar.style.width = `${averageHealth}%`;
 
-      let bgColor = '#29160d';
+      let bgColor;
 
-      if (averageHealth >= 80) {
-        bgColor = '#061a12';
+      if (averageHealth >= 75) {
+        bgColor = '#061d10';
         bar.className = 'h-full bg-emerald-400 transition-all duration-700';
         text.className = 'text-[11px] font-mono text-emerald-300';
-        text.textContent = `${averageHealth}% Garden Vitality • Blooming`;
-      } else if (averageHealth >= 60) {
-        bgColor = '#0a2118';
+        text.textContent = `${averageHealth}% • Spring · Thriving`;
+      } else if (averageHealth >= 30) {
+        bgColor = '#081b12';
         bar.className = 'h-full bg-teal-500 transition-all duration-700';
         text.className = 'text-[11px] font-mono text-teal-300';
-        text.textContent = `${averageHealth}% Garden Vitality • Thriving`;
-      } else if (averageHealth >= 40) {
-        bgColor = '#192015';
-        bar.className = 'h-full bg-emerald-500 transition-all duration-700';
-        text.className = 'text-[11px] font-mono text-amber-200/80';
-        text.textContent = `${averageHealth}% Garden Vitality • Stable`;
-      } else if (averageHealth >= 20) {
-        bgColor = '#29160d';
+        text.textContent = `${averageHealth}% • Summer · Good`;
+      } else if (averageHealth > 0) {
+        bgColor = '#25190f';
         bar.className = 'h-full bg-[#ea580c] transition-all duration-700';
         text.className = 'text-[11px] font-mono text-[#fdba74]';
-        text.textContent = `${averageHealth}% Garden Vitality • Autumn Frost`;
+        text.textContent = `${averageHealth}% • Autumn · Wilting`;
       } else {
-        bgColor = '#171413';
+        bgColor = '#15191c';
         bar.className = 'h-full bg-[#4b5563] transition-all duration-700';
         text.className = 'text-[11px] font-mono text-[#9ca3af]';
-        text.textContent = `${averageHealth}% Garden Vitality • Winter Drought`;
+        text.textContent = `${averageHealth}% • Winter · Dormant`;
       }
 
       document.documentElement.style.setProperty('background-color', bgColor, 'important');
@@ -1094,93 +1088,189 @@
       };
     }
 
-    // Draws at 1/4 resolution and is scaled up crisp; flora thins out and browns as average health drops.
+    // The same garden footprint shifts from a flower-filled meadow to a frozen field as vitality falls.
     function drawGardenBackdrop() {
       const garden = document.getElementById('visual-garden');
       const canvas = document.getElementById('garden-backdrop');
       if (!garden || !canvas || !garden.clientWidth) return;
 
-      const scale = 4;
+      const scale = 3;
       const width = Math.ceil(garden.clientWidth / scale);
       const height = Math.ceil(garden.clientHeight / scale);
       canvas.width = width;
       canvas.height = height;
       const ctx = canvas.getContext('2d');
-      const health = Math.max(0, Math.min(100, gardenAverageHealth)) / 100;
+      const health = Math.max(0, Math.min(100, gardenAverageHealth));
       const rand = mulberry32(7);
-      const mix = (a, b, t) => a.map((value, i) => Math.round(value + (b[i] - value) * t));
       const rgb = color => `rgb(${color[0]},${color[1]},${color[2]})`;
       const dot = (x, y, color, w = 1, h = 1) => { ctx.fillStyle = rgb(color); ctx.fillRect(x, y, w, h); };
-
-      const grass = mix([108, 94, 56], [58, 122, 56], health);
-      const grassLight = mix(grass, [255, 255, 255], 0.08);
-      const grassDark = mix(grass, [0, 0, 0], 0.12);
-      dot(0, 0, grass, width, height);
+      const scene = health >= 75 ? 'thriving' : health >= 30 ? 'good' : health > 0 ? 'wilting' : 'dormant';
+      const palettes = {
+        thriving: { grass: [29, 119, 48], light: [55, 151, 57], dark: [17, 77, 35], hill: [43, 135, 52], path: [165, 119, 67], edge: [111, 74, 43], shrub: [18, 76, 34], shrubLight: [47, 139, 49] },
+        good: { grass: [20, 76, 44], light: [34, 99, 55], dark: [11, 49, 32], hill: [25, 87, 48], path: [125, 91, 59], edge: [81, 61, 43], shrub: [14, 62, 36], shrubLight: [34, 104, 49] },
+        wilting: { grass: [111, 76, 41], light: [145, 96, 47], dark: [74, 57, 37], hill: [128, 79, 38], path: [153, 105, 66], edge: [90, 62, 43], shrub: [71, 66, 42], shrubLight: [111, 82, 43] },
+        dormant: { grass: [66, 73, 76], light: [99, 108, 111], dark: [45, 52, 57], hill: [79, 89, 93], path: [122, 133, 140], edge: [87, 99, 105], shrub: [63, 70, 72], shrubLight: [99, 108, 109] }
+      };
+      const colors = palettes[scene];
+      dot(0, 0, colors.grass, width, height);
       for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
           const r = rand();
-          if (r < 0.1) dot(x, y, grassDark);
-          else if (r < 0.17) dot(x, y, grassLight);
+          if (r < 0.12) dot(x, y, colors.dark);
+          else if (r < 0.2) dot(x, y, colors.light);
         }
       }
 
-      const gardenTop = garden.getBoundingClientRect().top;
-      const bottoms = [...garden.querySelectorAll('[data-plot]')]
-        .map(el => el.getBoundingClientRect().bottom - gardenTop)
+      const gardenRect = garden.getBoundingClientRect();
+      const plotRects = [...garden.querySelectorAll('[data-plot]')]
+        .map(el => el.getBoundingClientRect())
+        .map(rect => ({
+          left: (rect.left - gardenRect.left) / scale - 2,
+          right: (rect.right - gardenRect.left) / scale + 2,
+          top: (rect.top - gardenRect.top) / scale - 2,
+          bottom: (rect.bottom - gardenRect.top) / scale + 2
+        }));
+      const bottoms = plotRects
+        .map(rect => (rect.bottom - 2) * scale)
         .sort((a, b) => a - b);
-      const rowBottoms = bottoms.filter((bottom, i) => i === 0 || bottom - bottoms[i - 1] > 12);
+      const rowBottoms = [];
+      bottoms.forEach(bottom => {
+        if (!rowBottoms.length || bottom - rowBottoms[rowBottoms.length - 1] > 12) rowBottoms.push(bottom);
+      });
       const pathCenters = rowBottoms.map(bottom => (bottom + 20) / scale);
       const pathY = (x, row) => pathCenters[row] + Math.sin(x / 8 + row * 2.1) * 1.6;
       const pathOffset = (x, y) => Math.min(...pathCenters.map((_, row) => Math.abs(y - pathY(x, row))));
       const onPath = (x, y, margin = 0) => pathCenters.length > 0 && pathOffset(x, y) <= 2.4 + margin;
+      const inPlot = (x, y, margin = 0) => plotRects.some(rect =>
+        x >= rect.left - margin && x <= rect.right + margin && y >= rect.top - margin && y <= rect.bottom + margin);
+      const clearSpot = (x, y, margin = 2, avoidPlots = true) => !onPath(x, y, margin) && (!avoidPlots || !inPlot(x, y, margin));
 
-      const dirt = [150, 114, 74];
-      for (let y = 0; y < height; y++) {
-        for (let x = 0; x < width; x++) {
-          if (!onPath(x, y)) continue;
-          const edge = pathOffset(x, y) > 1.6;
-          const r = rand();
-          dot(x, y, mix(dirt, [0, 0, 0], edge ? 0.22 : r < 0.12 ? 0.1 : r < 0.2 ? -0.08 : 0));
-        }
+      for (let x = 0; x < width; x += 2) {
+        const ridge = Math.max(3, Math.floor(height * 0.13 + Math.sin(x / 13) * 2 + Math.sin(x / 5) * 1.2));
+        dot(x, ridge, colors.hill, 2, height - ridge);
       }
 
-      const cells = (width * height) / 400;
-      const scatter = (count, draw) => {
-        for (let i = 0; i < count; i++) {
-          const x = 3 + Math.floor(rand() * (width - 6));
-          const y = 3 + Math.floor(rand() * (height - 6));
-          if (!onPath(x, y, 2)) draw(x, y);
+      const flowerColors = [[255, 224, 74], [255, 239, 221], [246, 112, 157], [118, 181, 255], [211, 154, 255]];
+      const scatter = (count, draw, margin = 2, avoidPlots = false) => {
+        let placed = 0;
+        let attempts = 0;
+        while (placed < count && attempts < count * 10) {
+          attempts += 1;
+          const x = 4 + Math.floor(rand() * Math.max(1, width - 8));
+          const y = 4 + Math.floor(rand() * Math.max(1, height - 8));
+          if (!clearSpot(x, y, margin, avoidPlots)) continue;
+          draw(x, y);
+          placed += 1;
         }
       };
 
-      const tuft = mix(grass, [0, 0, 0], 0.25);
-      scatter(Math.round(cells * 0.7), (x, y) => { dot(x, y, tuft); dot(x - 1, y - 1, tuft); dot(x + 1, y - 1, tuft); });
+      const grassTuft = scene === 'thriving' ? colors.light : scene === 'good' ? colors.dark : scene === 'wilting' ? [174, 126, 59] : colors.light;
+      const tuftCount = Math.round(width * (scene === 'thriving' ? 0.9 : scene === 'good' ? 0.45 : scene === 'wilting' ? 0.7 : 0.55));
+      scatter(tuftCount, (x, y) => {
+        dot(x, y, grassTuft, 1, 2);
+        dot(x - 1, y + 1, grassTuft);
+        dot(x + 1, y + 1, grassTuft);
+      }, 1);
 
-      const petals = [[247, 224, 138], [244, 241, 232], [233, 143, 176], [143, 180, 238]];
-      const lushness = Math.max(0, health - 0.35) / 0.65;
-      scatter(Math.round(cells * 0.5 * lushness), (x, y) => {
-        const petal = mix(petals[Math.floor(rand() * petals.length)], grass, 0.2);
-        dot(x, y + 1, mix(grass, [20, 80, 20], 0.5));
-        dot(x - 1, y, petal); dot(x + 1, y, petal); dot(x, y - 1, petal);
-        dot(x, y, [240, 200, 70]);
-      });
+      const drawShrub = (x, y, dead = false) => {
+        dot(x - 3, y + 2, colors.dark, 7, 1);
+        if (dead) {
+          dot(x, y - 2, colors.edge, 1, 5);
+          dot(x - 3, y - 4, colors.edge, 4, 1);
+          dot(x - 2, y - 3, colors.edge);
+          dot(x + 1, y - 5, colors.edge, 3, 1);
+          dot(x + 2, y - 4, colors.edge);
+        } else {
+          dot(x - 3, y, colors.shrub, 7, 3);
+          dot(x - 2, y - 2, colors.shrub, 5, 3);
+          dot(x - 1, y - 3, colors.shrubLight, 3, 2);
+          if (scene === 'thriving') {
+            dot(x - 1, y - 2, [89, 174, 59], 2, 1);
+            dot(x + 1, y, [89, 174, 59], 2, 1);
+          }
+        }
+      };
 
-      const bush = [mix(grass, [10, 60, 20], 0.6), mix(grass, [90, 170, 70], 0.3)];
-      scatter(Math.round(cells * 0.09 * health), (x, y) => {
-        dot(x - 2, y, bush[0], 5, 2); dot(x - 1, y - 1, bush[0], 3, 1); dot(x - 1, y - 1, bush[1], 2, 1);
-      });
+      const shrubCount = Math.round(width / (scene === 'thriving' ? 24 : scene === 'good' ? 40 : scene === 'wilting' ? 30 : 42));
+      scatter(shrubCount, (x, y) => drawShrub(x, y, scene === 'wilting' || scene === 'dormant'), 5);
 
-      const decay = 1 - health;
-      const twig = [92, 64, 40];
-      scatter(Math.round(cells * 0.3 * Math.pow(decay, 1.2)), (x, y) => {
-        [[0, 0], [1, -1], [2, 0], [3, -1], [4, 0]].forEach(([dx, dy]) => dot(x + dx, y + dy, twig));
-        dot(x + 2, y - 2, twig);
-      });
+      if (scene === 'thriving') {
+        const flowerCount = Math.round(width * height / 180);
+        scatter(flowerCount, (x, y) => {
+          const petals = flowerColors[Math.floor(rand() * flowerColors.length)];
+          const center = [255, 207, 54];
+          dot(x, y + 2, [20, 81, 38], 1, 2);
+          dot(x - 1, y, petals, 1, 2);
+          dot(x + 1, y, petals, 1, 2);
+          dot(x, y - 1, petals, 1, 1);
+          dot(x, y + 1, petals, 1, 1);
+          dot(x, y, center);
+        }, 2);
 
-      const leaves = [[190, 90, 30], [160, 70, 30], [210, 150, 50]];
-      scatter(Math.round(cells * 0.6 * decay), (x, y) => dot(x, y, leaves[Math.floor(rand() * leaves.length)], 2, 1));
+        const rabbit = [
+          '....W..W....',
+          '....WP.PW...',
+          '.....W.W....',
+          '...WWWWWWW..',
+          '..WCCCCCCW..',
+          '..WCECCCCW..',
+          '..WCCCCCCW..',
+          '...WCCCCW...',
+          '....WEEW....',
+          '....W..W....'
+        ];
+        const candidates = [
+          { x: Math.floor(width / 2) - 6, y: 1 },
+          { x: 7, y: Math.floor(height * 0.48) },
+          { x: width - 19, y: Math.floor(height * 0.48) },
+          { x: Math.floor(width / 2) - 6, y: 5 },
+          { x: Math.floor(width / 2) - 6, y: height - 15 }
+        ];
+        const animalSpot = candidates.find(({ x, y }) =>
+          x >= 0 && x + 12 < width && y >= 0 && y + 10 < height &&
+          !plotRects.some(rect => x < rect.right && x + 12 > rect.left && y < rect.bottom && y + 10 > rect.top) &&
+          !Array.from({ length: 12 }, (_, offset) => onPath(x + offset, y + 5, 1)).some(Boolean));
+        if (animalSpot) {
+          const rabbitColors = { W: [238, 231, 204], C: [255, 248, 224], P: [235, 142, 158], E: [65, 48, 38] };
+          rabbit.forEach((row, y) => Array.from(row).forEach((pixel, x) => {
+            if (rabbitColors[pixel]) dot(animalSpot.x + x, animalSpot.y + y, rabbitColors[pixel]);
+          }));
+        }
+      }
 
-      canvas.style.filter = `saturate(${(0.55 + 0.45 * health).toFixed(2)}) brightness(${(0.82 + 0.18 * health).toFixed(2)})`;
+      if (scene === 'wilting') {
+        const leaves = [[198, 111, 42], [218, 157, 55], [144, 66, 37]];
+        scatter(Math.round(width * 0.75), (x, y) => {
+          const leaf = leaves[Math.floor(rand() * leaves.length)];
+          dot(x, y, leaf, 2, 1);
+          dot(x + 1, y - 1, leaf);
+        }, 1);
+      }
+
+      if (scene === 'dormant') {
+        scatter(Math.round(width * height / 22), (x, y) => {
+          dot(x, y, [205, 221, 224], 2, 1);
+          if (rand() > 0.55) dot(x + 1, y - 1, [167, 197, 204]);
+        }, 1);
+        scatter(Math.round(width / 2), (x, y) => {
+          dot(x - 2, y, [157, 190, 198], 5, 1);
+          dot(x, y - 2, [157, 190, 198], 1, 5);
+          dot(x - 1, y - 1, [157, 190, 198]);
+          dot(x + 1, y + 1, [157, 190, 198]);
+        }, 2);
+      }
+
+      const pathColor = colors.path;
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          if (!onPath(x, y)) continue;
+          const distance = pathOffset(x, y);
+          dot(x, y, distance > 1.6 ? colors.edge : pathColor);
+          if (scene === 'dormant' && distance < 1.6 && rand() > 0.7) dot(x, y, [188, 210, 216]);
+          else if (scene !== 'dormant' && distance < 1.6 && rand() > 0.82) dot(x, y, colors.light);
+        }
+      }
+      canvas.style.filter = 'none';
     }
 
     new ResizeObserver(drawGardenBackdrop).observe(document.getElementById('visual-garden'));
@@ -1255,14 +1345,14 @@
             <div class="flex items-center justify-between gap-3">
               <div class="flex items-center gap-3 cursor-pointer flex-1 min-w-0" onclick="toggleExpand('${friend.id}')">
                 <div class="relative shrink-0 w-12 h-12">
-                  <img src="${plant.icon}" alt="${plant.label} plant" title="${plant.label}" class="w-12 h-12 rounded-lg object-cover border border-[#2e473d] [image-rendering:pixelated]" />
                   ${friend.photo ? `
-                    <img src="${friend.photo}" alt="${escapeHtml(friend.name)}" class="absolute -bottom-1 -right-1 w-6 h-6 rounded-full object-cover border-2 border-[#14201b]" />
+                    <img src="${friend.photo}" alt="${escapeHtml(friend.name)}" class="w-12 h-12 rounded-full object-cover border border-[#2e473d]" />
                   ` : `
-                    <span class="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-[#1c2d26] border-2 border-[#14201b] flex items-center justify-center text-[11px] select-none" title="${escapeHtml(friend.name)} avatar">
+                    <span class="w-12 h-12 rounded-full bg-[#1c2d26] border border-[#2e473d] flex items-center justify-center text-base select-none" title="${escapeHtml(friend.name)} avatar">
                       ${friend.avatar || friend.name.slice(0, 2).toUpperCase()}
                     </span>
                   `}
+                  <img src="${plant.icon}" alt="${plant.label} plant" title="${plant.label}" class="absolute -bottom-1 -right-1 w-7 h-7 rounded-full object-contain bg-[#0b1210] border-2 border-[#14201b] [image-rendering:pixelated]" />
                 </div>
 
                 <div class="min-w-0">
