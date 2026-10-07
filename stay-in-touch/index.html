@@ -65,7 +65,7 @@
       <div class="flex items-start justify-between gap-3">
         <div class="min-w-0">
           <h1 class="text-2xl font-bold tracking-tight text-[#f4ede4] flex items-center gap-2">
-            <img id="garden-weather-icon" src="assets/Good.png" alt="" aria-hidden="true" class="w-6 h-6 object-contain [image-rendering:pixelated]" /> Cultivate
+            <img id="garden-weather-icon" src="assets/deadtree_summer.png" alt="" aria-hidden="true" class="w-6 h-6 object-contain [image-rendering:pixelated]" /> Cultivate
           </h1>
           <p class="text-xs text-[#9eb3a8] mt-0.5">
             <span class="line-through text-[#63756c]">Zero</span> (some) guilt. Gentle connections.
@@ -73,14 +73,26 @@
 
           <!-- Garden Vitality Indicator -->
           <div class="flex items-center gap-2 mt-2">
-            <div class="w-20 bg-black/40 h-1.5 rounded-full overflow-hidden border border-[#23352e]">
+            <div class="w-20 shrink-0 bg-black/40 h-1.5 rounded-full overflow-hidden border border-[#23352e]">
               <div id="average-vitality-bar" class="h-full bg-[#ea580c] transition-all duration-700" style="width: 34%"></div>
             </div>
             <span id="average-vitality-text" class="text-[10px] sm:text-[11px] font-mono text-[#fdba74]">34% Garden Vitality</span>
+            <button type="button" onclick="shareGarden()" class="shrink-0 w-6 h-6 flex items-center justify-center text-[#9eb3a8] hover:text-[#f4ede4] hover:bg-[#182721]/80 rounded-md border border-[#23352e] transition-colors" title="Share my garden" aria-label="Share my garden">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v14"/></svg>
+            </button>
+            <span id="share-feedback" class="text-[10px] text-teal-300" aria-live="polite"></span>
           </div>
         </div>
 
         <div class="flex items-center gap-2 shrink-0">
+        <button
+          type="button"
+          onclick="openWaitlistModal('pro')"
+          class="h-10 px-2.5 text-[#fdba74] hover:text-[#ffd9b0] bg-[#2d1b11]/90 hover:bg-[#3d2417] rounded-lg border border-[#ea580c]/40 transition-colors text-xs font-semibold"
+          title="Cultivate Pro early access"
+        >
+          ✨ Pro
+        </button>
         <button 
           onclick="toggleSettingsModal(true)"
           class="w-10 h-10 text-[#9eb3a8] hover:text-[#f4ede4] hover:bg-[#182721]/80 rounded-lg border border-[#23352e] transition-colors text-xs backdrop-blur-sm"
@@ -200,6 +212,10 @@
         <h3 id="friend-modal-title" class="font-bold text-sm text-[#f4ede4]">Add Connection</h3>
         <button onclick="toggleFriendModal(false)" class="text-[#8da498] hover:text-[#f4ede4] text-sm">✕</button>
       </div>
+
+      <button id="btn-autosync" type="button" onclick="openWaitlistModal('autosync')" class="w-full bg-[#0b1210] hover:bg-[#182721] border border-dashed border-[#2e473d] text-teal-300 font-medium py-2 rounded-lg text-xs transition-colors">
+        🔄 Auto-Sync Contacts/Messages <span class="text-[#8da498]">(private beta)</span>
+      </button>
 
       <form id="friend-form" class="space-y-3">
         <input type="hidden" id="edit-friend-id" />
@@ -425,6 +441,25 @@
     </div>
   </div>
 
+  <!-- WAITLIST MODAL (Pro + Auto-Sync) -->
+  <div id="waitlist-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4 hidden">
+    <div class="bg-[#14201b] border border-[#283e35] rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center border-b border-[#283e35] pb-3">
+        <h3 id="waitlist-title" class="font-bold text-sm text-[#f4ede4]"></h3>
+        <button type="button" onclick="closeWaitlistModal()" class="text-[#8da498] hover:text-[#f4ede4] text-sm" aria-label="Close">✕</button>
+      </div>
+      <div id="waitlist-intro" class="text-xs text-[#a3b8ad] leading-relaxed"></div>
+      <ul id="waitlist-features" class="text-xs text-[#c4d4cc] space-y-1.5"></ul>
+      <form id="waitlist-form" class="space-y-2">
+        <label for="waitlist-email" class="block text-xs font-semibold text-[#a3b8ad] uppercase tracking-wider">Email for early access</label>
+        <input id="waitlist-email" type="email" required autocomplete="email" placeholder="you@example.com" class="w-full bg-[#0b1210] border border-[#283e35] rounded-lg px-3 py-2 text-sm text-emerald-100 focus:outline-none focus:border-teal-500" />
+        <button id="waitlist-submit" type="submit" class="w-full bg-[#115e59] hover:bg-[#0f766e] font-semibold py-2 rounded-lg text-sm text-white transition-colors border border-teal-500/30 disabled:opacity-60">Join the waitlist</button>
+        <p id="waitlist-message" class="text-xs min-h-4" aria-live="polite"></p>
+        <p class="text-[10px] text-[#6f877b]">Only used to tell you when this launches. No spam.</p>
+      </form>
+    </div>
+  </div>
+
   <!-- ACCOUNT & CLOUD SYNC MODAL -->
   <div id="auth-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-[#14201b] border border-[#283e35] rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
@@ -569,11 +604,36 @@
       quarterly: 0
     };
 
-    function getPlantStage(health) {
-      if (health >= 75) return { icon: 'assets/Thriving.png', label: 'Thriving', color: 'text-emerald-400' };
-      if (health >= 30) return { icon: 'assets/Good.png', label: 'Good', color: 'text-teal-400' };
-      if (health > 0) return { icon: 'assets/Decaying.png', label: 'Wilting', color: 'text-[#ea580c]' };
-      return { icon: 'assets/Dead.png', label: 'Dormant', color: 'text-[#6b8276]' };
+    function getPlantStage(health, tier = 'inner') {
+      let season;
+      let label;
+      let color;
+      if (health >= 75) {
+        season = 'spring';
+        label = 'Thriving';
+        color = 'text-emerald-400';
+      } else if (health >= 30) {
+        season = 'summer';
+        label = 'Good';
+        color = 'text-teal-400';
+      } else if (health > 0) {
+        season = 'autumn';
+        label = 'Wilting';
+        color = 'text-[#ea580c]';
+      } else {
+        season = 'winter';
+        label = 'Dormant';
+        color = 'text-[#6b8276]';
+      }
+
+      const plantFiles = {
+        inner: { spring: 'deadtree_spring.png', summer: 'deadtree_summer.png', autumn: 'deadtree_autumn.png', winter: 'deadtree_winter.png' },
+        close: { spring: 'birch_spring.png', summer: 'birch_summer.png', autumn: 'birch_autumn_2.png', winter: 'birch_winter_1.png' },
+        wider: { spring: 'bush_spring.png', summer: 'bush_summer.png', autumn: 'bush_autumn.png', winter: 'bush_winter.png' },
+        quarterly: { spring: 'sunflower_spring.png', summer: 'sunflower_summer.png', autumn: 'sunflower_autum.png', winter: 'sunflower_winter.png' }
+      };
+      const files = plantFiles[tier] || plantFiles.close;
+      return { icon: `assets/${files[season]}`, label, color, season };
     }
 
     function getDefaultExamples() {
@@ -909,7 +969,7 @@
       const icon = document.getElementById('garden-weather-icon');
 
       if (!canvas || !bar || !text) return;
-      if (icon) icon.src = getPlantStage(averageHealth).icon;
+      if (icon) icon.src = getPlantStage(averageHealth, 'inner').icon;
       bar.style.width = `${averageHealth}%`;
 
       let bgColor = '#29160d';
@@ -977,7 +1037,7 @@
       document.getElementById('garden-badge-toggle').textContent = gardenBadgesVisible ? 'Hide icons' : 'Show icons';
 
       const plants = shown.map(({ friend, health }, index) => {
-        const stage = getPlantStage(health);
+        const stage = getPlantStage(health, friend.tier);
         const bubble = selectedGardenId === friend.id ? `
           <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 z-30 w-40 bg-[#0b1210] border border-[#2e473d] rounded-xl px-3 py-2 text-center shadow-xl">
             <div class="text-xs font-semibold text-[#f4ede4] truncate">${escapeHtml(friend.name)}</div>
@@ -1181,7 +1241,7 @@
 
       container.innerHTML = sorted.map(friend => {
         const { health, daysSince } = calculateHealth(friend);
-        const plant = getPlantStage(health);
+        const plant = getPlantStage(health, friend.tier);
         const barColor = getBatteryColor(health);
         const isExpanded = expandedCards.has(friend.id);
         const isHighlighted = highlightedId === friend.id;
@@ -1338,6 +1398,128 @@
       render();
     }
 
+    /* =========================================================================
+       ANALYTICS + WAITLIST (Supabase tables: cultivate_events, cultivate_waitlist)
+       ========================================================================= */
+    const SHARE_URL = 'https://devonoverbey.com/tools';
+    const ANON_ID_KEY = 'cultivate_anon_id_v1';
+    const MILESTONES_KEY = 'cultivate_milestones_v1';
+    const isLocalPreview = ['file:', 'localhost', '127.0.0.1'].some(v => location.protocol === v || location.hostname === v);
+
+    function getAnonId() {
+      let id = localStorage.getItem(ANON_ID_KEY);
+      if (!id) {
+        id = crypto.randomUUID();
+        localStorage.setItem(ANON_ID_KEY, id);
+      }
+      return id;
+    }
+
+    function supabaseInsert(table, row) {
+      return fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify(row),
+        keepalive: true
+      });
+    }
+
+    // Events carry only an anonymous random id and the event name; never contact data.
+    function trackEvent(event, props = {}) {
+      if (isLocalPreview) return;
+      supabaseInsert('cultivate_events', { anon_id: getAnonId(), event, props }).catch(() => {});
+    }
+
+    function trackMilestoneOnce(event) {
+      const done = JSON.parse(localStorage.getItem(MILESTONES_KEY) || '{}');
+      if (done[event]) return;
+      done[event] = true;
+      localStorage.setItem(MILESTONES_KEY, JSON.stringify(done));
+      trackEvent(event);
+    }
+
+    const WAITLIST_COPY = {
+      pro: {
+        title: '✨ Cultivate Pro',
+        intro: 'Pro is in the works. Join the waitlist for early access and a say in what gets built first.',
+        features: ['🌿 Animated plants that sway, bloom and react', '📅 Calendar sync for birthdays and hangouts', '🪴 Unlimited plots in your garden']
+      },
+      autosync: {
+        title: '🔄 Auto-Sync Contacts/Messages',
+        intro: 'Auto-sync is in private beta. It would log calls and texts for you so your plants stay healthy without manual entries. Join the waitlist to get an invite.',
+        features: []
+      }
+    };
+    let waitlistSource = 'pro';
+
+    function openWaitlistModal(source) {
+      waitlistSource = source;
+      const copy = WAITLIST_COPY[source];
+      document.getElementById('waitlist-title').textContent = copy.title;
+      document.getElementById('waitlist-intro').textContent = copy.intro;
+      document.getElementById('waitlist-features').innerHTML = copy.features.map(f => `<li>${f}</li>`).join('');
+      document.getElementById('waitlist-message').textContent = '';
+      document.getElementById('waitlist-submit').disabled = false;
+      document.getElementById('waitlist-form').classList.remove('hidden');
+      document.getElementById('waitlist-modal').classList.remove('hidden');
+      trackEvent(source === 'pro' ? 'pro_click' : 'autosync_click');
+    }
+
+    function closeWaitlistModal() {
+      document.getElementById('waitlist-modal').classList.add('hidden');
+    }
+
+    document.getElementById('waitlist-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const emailInput = document.getElementById('waitlist-email');
+      const message = document.getElementById('waitlist-message');
+      const submit = document.getElementById('waitlist-submit');
+      const email = emailInput.value.trim().toLowerCase();
+      if (!emailInput.checkValidity() || !email) return;
+
+      submit.disabled = true;
+      message.className = 'text-xs min-h-4 text-[#a3b8ad]';
+      message.textContent = 'Saving...';
+      try {
+        const res = await supabaseInsert('cultivate_waitlist', { email, source: waitlistSource, anon_id: getAnonId() });
+        // 409 means this email is already on the list for this source.
+        if (!res.ok && res.status !== 409) throw new Error(`HTTP ${res.status}`);
+        message.className = 'text-xs min-h-4 text-teal-300';
+        message.textContent = "You're on the list. Thank you!";
+        emailInput.value = '';
+        trackEvent('waitlist_submitted', { source: waitlistSource });
+        setTimeout(closeWaitlistModal, 1800);
+      } catch (err) {
+        message.className = 'text-xs min-h-4 text-rose-300';
+        message.textContent = 'Could not save right now. Please try again.';
+        submit.disabled = false;
+      }
+    });
+
+    async function shareGarden() {
+      const text = `My Cultivate garden is at ${gardenAverageHealth}% vitality! 🌱`;
+      const feedback = document.getElementById('share-feedback');
+      trackEvent('share_click');
+      try {
+        if (navigator.share) {
+          await navigator.share({ title: 'Cultivate', text, url: SHARE_URL });
+          return;
+        }
+        await navigator.clipboard.writeText(`${text} ${SHARE_URL}`);
+        feedback.textContent = 'Copied!';
+        setTimeout(() => { feedback.textContent = ''; }, 2000);
+      } catch (err) {
+        if (err && err.name === 'AbortError') return;
+        feedback.textContent = 'Could not share';
+        setTimeout(() => { feedback.textContent = ''; }, 2000);
+      }
+    }
+
     /* Modal Controls */
     function toggleFriendModal(show) {
       const modal = document.getElementById('friend-modal');
@@ -1352,6 +1534,7 @@
       document.getElementById('edit-friend-id').value = '';
       document.getElementById('friend-form').reset();
       document.getElementById('input-last-contact').value = new Date().toISOString().split('T')[0];
+      document.getElementById('btn-autosync').classList.remove('hidden');
       removeActivePhoto();
       toggleFriendModal(true);
     }
@@ -1364,6 +1547,7 @@
       document.getElementById('friend-submit-btn').textContent = 'Save Changes';
       document.getElementById('input-date-label').textContent = 'Latest Interaction Date';
       document.getElementById('edit-friend-id').value = friend.id;
+      document.getElementById('btn-autosync').classList.add('hidden');
       
       document.getElementById('input-name').value = friend.name;
       document.getElementById('input-category').value = friend.category || 'Friends';
@@ -1701,6 +1885,7 @@
       });
 
       saveData();
+      trackMilestoneOnce('first_seed_planted');
       render();
       selectedVCardContactIds.clear();
       vCardContacts = vCardContacts.map(contact => ({ ...contact, alreadyInGarden: isVCardContactAlreadyInGarden(contact) }));
@@ -1750,6 +1935,7 @@
           photo,
           touches: [{ type: 'Hangout', timestamp, note: 'Initial connection planted' }]
         });
+        trackMilestoneOnce('first_seed_planted');
       }
 
       saveData();
@@ -1774,6 +1960,7 @@
         saveData();
         recentlyWateredId = id;
         setTimeout(() => { recentlyWateredId = null; }, 900);
+        trackMilestoneOnce('first_plant_watered');
       }
 
       toggleTouchModal(false);
@@ -1837,7 +2024,7 @@
       if (thirsty.length > 0) {
         const person = thirsty[0];
         new Notification('Cultivate • Gentle Reminder', {
-          body: `${person.name} could use some love! Their plant has reached the ${getPlantStage(calculateHealth(person).health).label} stage.`,
+          body: `${person.name} could use some love! Their plant has reached the ${getPlantStage(calculateHealth(person).health, person.tier).label} stage.`,
           icon: '🌱'
         });
       } else if (isTest) {
@@ -1886,6 +2073,7 @@
     }
 
     // Launch sequence
+    trackEvent('page_visit');
     updateAuthUI();
     updateNotificationButton();
     render();
