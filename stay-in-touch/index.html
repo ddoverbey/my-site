@@ -169,7 +169,19 @@
         <span id="garden-plot-count" class="bg-black/40 text-[#e4ece7] font-mono px-2 py-1 rounded-full"></span>
         <button id="garden-badge-toggle" type="button" onclick="toggleGardenBadges()" class="inline-flex items-center gap-1.5 bg-black/40 hover:bg-black/60 text-[#e4ece7] px-2 py-1 rounded-full transition-colors"></button>
       </div>
+      <div id="garden-water-alert" class="hidden relative z-10 mb-2 flex items-center gap-2 rounded-lg border border-[#e6a34a]/50 bg-[#241c12]/90 px-3 py-2 text-xs text-[#f4d49c]" role="status" aria-live="polite">
+        <i class="pixelart-icons-font-warning-box pixel-icon shrink-0" aria-hidden="true"></i>
+        <span id="garden-water-alert-text" class="min-w-0 flex-1"></span>
+        <button type="button" onclick="waterGardenReminder()" class="inline-flex items-center gap-1 rounded-md border border-[#e6a34a]/40 px-2 py-1 font-semibold text-[#f4d49c] hover:bg-[#3a2b18]">
+          <i class="pixelart-icons-font-drop pixel-icon" aria-hidden="true"></i> Water
+        </button>
+      </div>
       <div id="plots-container" class="relative z-10 flex flex-wrap justify-center gap-x-2 gap-y-9"></div>
+      <div id="garden-page-controls" class="absolute bottom-0 left-1/2 z-20 flex h-8 -translate-x-1/2 items-center gap-3 rounded-full bg-[#20180f]/90 px-2 text-xs text-[#f4ede4]">
+        <button id="garden-page-previous" type="button" onclick="changeGardenPage(-1)" aria-label="Previous garden page" class="flex h-7 w-7 items-center justify-center rounded-full hover:bg-white/10 disabled:opacity-30" disabled><i class="pixelart-icons-font-chevron-left pixel-icon" aria-hidden="true"></i></button>
+        <span id="garden-page-indicator" class="min-w-10 text-center font-mono"></span>
+        <button id="garden-page-next" type="button" onclick="changeGardenPage(1)" aria-label="Next garden page" class="flex h-7 w-7 items-center justify-center rounded-full hover:bg-white/10 disabled:opacity-30" disabled><i class="pixelart-icons-font-chevron-right pixel-icon" aria-hidden="true"></i></button>
+      </div>
     </section>
 
     <!-- Notification / Reminder Bar -->
@@ -185,6 +197,7 @@
       >
         Enable
       </button>
+      <button type="button" onclick="dismissReminderBanner()" aria-label="Close reminder banner" class="ml-2 flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[#8da498] hover:bg-white/10 hover:text-white"><i class="pixelart-icons-font-close pixel-icon" aria-hidden="true"></i></button>
     </div>
 
     <!-- Dice Result Banner -->
@@ -446,6 +459,10 @@
           <label class="block font-semibold text-[#c4d4cc] mb-1">Long-Range Target (Days)</label>
           <input id="cfg-cadence-quarterly" type="number" min="1" max="365" class="w-full bg-[#0b1210] border border-[#283e35] rounded-lg px-3 py-1.5 text-emerald-100 focus:border-teal-500 font-mono" />
         </div>
+        <label class="flex items-center justify-between gap-3 border-t border-[#283e35] pt-3 text-[#c4d4cc]">
+          <span>Show check-in reminder banner</span>
+          <input id="cfg-show-reminder-banner" type="checkbox" class="h-4 w-4 accent-teal-500" />
+        </label>
 
         <button type="submit" class="w-full bg-[#115e59] hover:bg-[#0f766e] font-semibold py-2 rounded-lg text-sm text-white transition-colors mt-3 border border-teal-500/30">
           Save Cadences
@@ -573,6 +590,7 @@
 
     const STORAGE_KEY = 'cultivate_garden_data_v1';
     const SETTINGS_KEY = 'cultivate_garden_settings_v1';
+    const REMINDER_BANNER_KEY = 'cultivate_reminder_banner_v1';
     const AUTH_SESSION_KEY = 'cultivate_cloud_session';
 
     const DEFAULT_CADENCE_SETTINGS = {
@@ -644,13 +662,6 @@
       updateAvatarPreview();
     }
 
-    const HEALTH_FLOORS = {
-      inner: 30,
-      close: 15,
-      wider: 0,
-      quarterly: 0
-    };
-
     function getPlantStage(health, tier = 'inner') {
       let season;
       let label;
@@ -659,7 +670,7 @@
         season = 'spring';
         label = 'Thriving';
         color = 'text-emerald-400';
-      } else if (health >= 30) {
+      } else if (health > 30) {
         season = 'summer';
         label = 'Good';
         color = 'text-teal-400';
@@ -980,9 +991,8 @@
 
     function calculateHealth(friend) {
       const targetCadence = getCadenceDays(friend.tier);
-      const healthFloor = HEALTH_FLOORS[friend.tier] || 0;
       if (!friend.touches || friend.touches.length === 0) {
-        return { health: healthFloor, daysSince: 999 };
+        return { health: 0, daysSince: 999 };
       }
 
       const now = Date.now();
@@ -994,7 +1004,7 @@
       chronologicalTouches.forEach(touch => {
         if (previousTimestamp !== null) {
           const elapsedDays = Math.max(0, touch.timestamp - previousTimestamp) / dayMs;
-          vitality = Math.max(healthFloor, vitality - (elapsedDays / targetCadence) * 100);
+          vitality = Math.max(0, vitality - (elapsedDays / targetCadence) * 100);
         }
 
         const weight = TOUCH_WEIGHTS[touch.type] !== undefined ? TOUCH_WEIGHTS[touch.type] : 1.0;
@@ -1004,13 +1014,13 @@
 
       const lastTouch = chronologicalTouches[chronologicalTouches.length - 1];
       const daysSince = Math.max(0, now - lastTouch.timestamp) / dayMs;
-      const health = Math.max(healthFloor, Math.round(vitality - (daysSince / targetCadence) * 100));
+      const health = Math.max(0, Math.round(vitality - (daysSince / targetCadence) * 100));
       return { health, daysSince: Math.floor(daysSince) };
     }
 
     function getBatteryColor(health) {
       if (health >= 75) return 'bg-emerald-500';
-      if (health >= 30) return 'bg-teal-500';
+      if (health > 30) return 'bg-teal-500';
       if (health >= 15) return 'bg-[#ea580c]';
       return 'bg-[#3b4c44]';
     }
@@ -1022,7 +1032,7 @@
       const icon = document.getElementById('garden-weather-icon');
 
       if (!canvas || !bar || !text) return;
-      if (icon) icon.src = averageHealth >= 30 ? 'assets/sakura_summer.png' : 'assets/sakura_autumn.png';
+      if (icon) icon.src = averageHealth > 30 ? 'assets/sakura_summer.png' : 'assets/sakura_autumn.png';
       bar.style.width = `${averageHealth}%`;
 
       let bgColor;
@@ -1032,7 +1042,7 @@
         bar.className = 'h-full bg-emerald-400 transition-all duration-700';
         text.className = 'text-[11px] font-mono text-emerald-300';
         text.textContent = `${averageHealth}% • Spring · Thriving`;
-      } else if (averageHealth >= 30) {
+      } else if (averageHealth > 30) {
         bgColor = '#081b12';
         bar.className = 'h-full bg-teal-500 transition-all duration-700';
         text.className = 'text-[11px] font-mono text-teal-300';
@@ -1056,21 +1066,57 @@
     /* =========================================================================
        VISUAL GARDEN
        ========================================================================= */
-    const GARDEN_MAX_PLANTS = 10;
+    const GARDEN_PAGE_SIZE = 10;
     const GARDEN_BADGES_KEY = 'cultivate_garden_badges_v1';
     const TIER_PRIORITY = { inner: 4, close: 3, wider: 2, quarterly: 1 };
     let gardenBadgesVisible = localStorage.getItem(GARDEN_BADGES_KEY) !== 'hidden';
+    let reminderBannerHidden = localStorage.getItem(REMINDER_BANNER_KEY) === 'hidden';
     let selectedGardenId = null;
     let recentlyWateredId = null;
     let gardenAverageHealth = 100;
+    let gardenPage = 0;
 
-    // Closest relationships get plots first; ties go to whoever needs water most.
     function getDisplayGarden(list) {
       return list
         .map(friend => ({ friend, health: calculateHealth(friend).health }))
         .sort((a, b) =>
-          (TIER_PRIORITY[b.friend.tier] || 1) - (TIER_PRIORITY[a.friend.tier] || 1) || a.health - b.health)
-        .slice(0, GARDEN_MAX_PLANTS);
+          (TIER_PRIORITY[b.friend.tier] || 1) - (TIER_PRIORITY[a.friend.tier] || 1) ||
+          a.friend.name.localeCompare(b.friend.name, undefined, { sensitivity: 'base' }));
+    }
+
+    function getGardenWaterReminder() {
+      const thirsty = friends
+        .map(friend => ({ friend, health: calculateHealth(friend).health }))
+        .filter(entry => entry.health <= 30)
+        .sort((a, b) =>
+          (TIER_PRIORITY[b.friend.tier] || 1) - (TIER_PRIORITY[a.friend.tier] || 1) ||
+          a.health - b.health ||
+          a.friend.name.localeCompare(b.friend.name, undefined, { sensitivity: 'base' }));
+      return thirsty.length ? { ...thirsty[0], count: thirsty.length } : null;
+    }
+
+    function updateGardenWaterReminder() {
+      const alert = document.getElementById('garden-water-alert');
+      const text = document.getElementById('garden-water-alert-text');
+      if (!alert || !text) return;
+      const reminder = getGardenWaterReminder();
+      alert.classList.toggle('hidden', !reminder);
+      if (reminder) {
+        const prefix = reminder.count > 1 ? `${reminder.count} plants could use water. ` : 'Ready to water. ';
+        text.textContent = `${prefix}${reminder.friend.name} is at ${reminder.health}% ${getPlantStage(reminder.health, reminder.friend.tier).label}.`;
+      }
+    }
+
+    function waterGardenReminder() {
+      const reminder = getGardenWaterReminder();
+      if (reminder) openTouchModal(reminder.friend.id);
+    }
+
+    function changeGardenPage(direction) {
+      const pageCount = Math.max(1, Math.ceil(friends.length / GARDEN_PAGE_SIZE));
+      gardenPage = Math.max(0, Math.min(pageCount - 1, gardenPage + direction));
+      selectedGardenId = null;
+      renderVisualGarden(gardenAverageHealth);
     }
 
     function renderVisualGarden(averageHealth) {
@@ -1078,11 +1124,19 @@
       if (!container) return;
       gardenAverageHealth = averageHealth;
 
-      const shown = getDisplayGarden(friends);
-      const overflow = friends.length - shown.length;
+      const sorted = getDisplayGarden(friends);
+      const pageCount = Math.max(1, Math.ceil(sorted.length / GARDEN_PAGE_SIZE));
+      gardenPage = Math.max(0, Math.min(pageCount - 1, gardenPage));
+      const start = gardenPage * GARDEN_PAGE_SIZE;
+      const shown = sorted.slice(start, start + GARDEN_PAGE_SIZE);
       document.getElementById('garden-plot-count').textContent =
-        `${shown.length} plant${shown.length === 1 ? '' : 's'}${overflow > 0 ? ` · ${overflow} more in the list` : ''}`;
+        `${friends.length} connection${friends.length === 1 ? '' : 's'}`;
       document.getElementById('garden-badge-toggle').innerHTML = `${pixelIcon(gardenBadgesVisible ? 'eye-closed' : 'eye')}<span>${gardenBadgesVisible ? 'Hide icons' : 'Show icons'}</span>`;
+      document.getElementById('garden-page-indicator').textContent = `${gardenPage + 1} / ${pageCount}`;
+      document.getElementById('garden-page-previous').disabled = gardenPage === 0;
+      document.getElementById('garden-page-next').disabled = gardenPage >= pageCount - 1;
+      document.getElementById('garden-page-controls').classList.toggle('invisible', pageCount <= 1);
+      updateGardenWaterReminder();
 
       const plants = shown.map(({ friend, health }, index) => {
         const stage = getPlantStage(health, friend.tier);
@@ -1105,7 +1159,7 @@
           </div>`;
       }).join('');
 
-      const addPlot = shown.length < GARDEN_MAX_PLANTS ? `
+      const addPlot = gardenPage === pageCount - 1 && shown.length < GARDEN_PAGE_SIZE ? `
         <div data-plot class="relative w-24 h-24 flex items-center justify-center">
           <button type="button" onclick="openAddModal()" aria-label="Add a connection" class="w-14 h-14 rounded-full border-2 border-dashed border-[#e4ece7]/40 bg-black/20 text-[#e4ece7]/70 hover:text-white hover:border-white/70 transition-colors"><i class="pixelart-icons-font-plus pixel-icon text-xl" aria-hidden="true"></i></button>
         </div>` : '';
@@ -1156,7 +1210,7 @@
       const rand = mulberry32(7);
       const rgb = color => `rgb(${color[0]},${color[1]},${color[2]})`;
       const dot = (x, y, color, w = 1, h = 1) => { ctx.fillStyle = rgb(color); ctx.fillRect(x, y, w, h); };
-      const scene = health >= 75 ? 'thriving' : health >= 30 ? 'good' : health > 0 ? 'wilting' : 'dormant';
+      const scene = health >= 75 ? 'thriving' : health > 30 ? 'good' : health > 0 ? 'wilting' : 'dormant';
       const palettes = {
         thriving: { grass: [29, 119, 48], light: [55, 151, 57], dark: [17, 77, 35], hill: [43, 135, 52], path: [165, 119, 67], edge: [111, 74, 43], shrub: [18, 76, 34], shrubLight: [47, 139, 49] },
         good: { grass: [20, 76, 44], light: [34, 99, 55], dark: [11, 49, 32], hill: [25, 87, 48], path: [125, 91, 59], edge: [81, 61, 43], shrub: [14, 62, 36], shrubLight: [34, 104, 49] },
@@ -1730,6 +1784,7 @@
         document.getElementById('cfg-cadence-close').value = cadenceSettings.close;
         document.getElementById('cfg-cadence-wider').value = cadenceSettings.wider;
         document.getElementById('cfg-cadence-quarterly').value = cadenceSettings.quarterly;
+        document.getElementById('cfg-show-reminder-banner').checked = !reminderBannerHidden;
         modal.classList.remove('hidden');
       } else {
         modal.classList.add('hidden');
@@ -2120,16 +2175,26 @@
       cadenceSettings.close = parseInt(document.getElementById('cfg-cadence-close').value, 10) || 30;
       cadenceSettings.wider = parseInt(document.getElementById('cfg-cadence-wider').value, 10) || 90;
       cadenceSettings.quarterly = parseInt(document.getElementById('cfg-cadence-quarterly').value, 10) || 180;
+      reminderBannerHidden = !document.getElementById('cfg-show-reminder-banner').checked;
+      localStorage.setItem(REMINDER_BANNER_KEY, reminderBannerHidden ? 'hidden' : 'shown');
 
       saveSettings();
+      updateNotificationButton();
       toggleSettingsModal(false);
       render();
     });
+
+    function dismissReminderBanner() {
+      reminderBannerHidden = true;
+      localStorage.setItem(REMINDER_BANNER_KEY, 'hidden');
+      document.getElementById('notification-banner').classList.add('hidden');
+    }
 
     function updateNotificationButton() {
       const btn = document.getElementById('btn-request-notifications');
       const text = document.getElementById('notification-status-text');
       if (!btn || !text) return;
+      document.getElementById('notification-banner').classList.toggle('hidden', reminderBannerHidden);
       
       if (!('Notification' in window)) {
         text.textContent = 'Notifications not supported on this device.';

@@ -8,7 +8,8 @@ Open [`index.html`](index.html) in a browser. No build step or package installat
 
 - Select **Add** to plant a connection. Choose a relationship category and cadence tier; Cultivate creates a unique 8-bit portrait automatically, or you can upload a photo.
 - Select **Import** to preview an iOS Contacts vCard (`.vcf`), search the list, and check each person you want to add. Selection is retained across pages. Repeated records in the file stay visible and are marked for review. Imported contacts default to Friends/Close; matching email addresses or matching name-and-phone pairs already in your garden are skipped.
-- The garden at the top shows up to 10 plants, one per connection, prioritising Inner circle, then Close circle, Wider network and Long range, with the lowest vitality first within a tier. Inner Circle connections are dead trees, Close Circle connections are birches, Wider Network connections are bushes, and Long Range connections are sunflowers. Each plant's season reflects its vitality: spring (Thriving), summer (Good), autumn (Wilting), or winter (Dormant); these are vitality stages, not the calendar season. Tap a plant to see its name and vitality and to water it. Use **Hide icons** to remove the small avatar circles. The background becomes a flower-filled green meadow when thriving, dark green with sparse shrubs when good, autumnal with dying shrubs when wilting, and frosted gray with snow and ice when dormant. Connection cards show the contact photo or avatar prominently, with a smaller plant badge.
+- The garden at the top shows 10 plants per page. Turn pages with the arrows on the path; connections are ordered Inner, Close, Wider Network, then Long Range, and alphabetically within each tier. Inner Circle connections are dead trees, Close Circle connections are birches, Wider Network connections are bushes, and Long Range connections are sunflowers. Each plant's season reflects its vitality: spring (Thriving), summer (Good), autumn (Wilting), or winter (Dormant); these are vitality stages, not the calendar season. Tap a plant to see its name and vitality and to water it. The in-garden alert points to a plant at 30% vitality or lower, prioritizing closer tiers. Use **Hide icons** to remove the small avatar circles. The background reflects average garden vitality: a flower-filled green meadow when thriving, dark green with sparse shrubs when good, autumnal with bare shrubs when wilting, and frosted gray with snow and ice when dormant. Connection cards show the contact photo or avatar prominently, with a smaller plant badge.
+- Close the check-in reminder strip with its close button. Re-enable it at any time using **Show check-in reminder banner** in **Cadence Settings**; this only controls the in-page strip, not browser notification permission.
 - Connections are listed from lowest vitality to highest. Open a connection to see its journal, edit it, or remove it.
 - Select **Water** to record an in-person hangout, virtual hangout, long call, quick call, or text. Add an optional reflection.
 - Use the category filters to narrow the garden, or **Roll Dice** to pick a connection with low vitality for a possible check-in.
@@ -18,7 +19,7 @@ The header sakura changes from summer to autumn with average garden vitality. Th
 
 ## Vitality and watering
 
-Vitality ranges from 0% to 100% and decays between interactions at a rate set by that connection's cadence target. Default targets are 14 days for Inner Circle, 30 days for Close Circle, 90 days for Wider Network, and 180 days for Long Range. Inner Circle vitality has a 30% floor and Close Circle has a 15% floor; Wider Network and Long Range can decay to 0%.
+Vitality ranges from 0% to 100% and decays between interactions at a rate set by that connection's cadence target. Default targets are 14 days for Inner Circle, 30 days for Close Circle, 90 days for Wider Network, and 180 days for Long Range. Every tier can decay to 0%; there are no vitality protection floors.
 
 Watering adds vitality to the amount that remains, up to a maximum of 100%:
 
@@ -26,7 +27,7 @@ Watering adds vitality to the amount that remains, up to a maximum of 100%:
 - Virtual hangout, video/long call, or quick call: +50%
 - Text, DM, or meme: +40%
 
-The game replays a connection's interactions in date order, applying decay between them and then adding each interaction's recharge. New connections start with a full in-person interaction on the date you enter. Plant art shows Thriving (75%+), Good (30-74%), Wilting (1-29%), or Dormant (0%). Imported contacts start with no interaction history; the game does not invent a last-contact date. The garden's overall vitality and appearance reflect the average vitality of all connections.
+The game replays a connection's interactions in date order, applying decay between them and then adding each interaction's recharge. New connections start with a full in-person interaction on the date you enter. Plant art shows Thriving (75%+), Good (31-74%), Wilting (1-30%), or Dormant (0%). Imported contacts start with no interaction history; the game does not invent a last-contact date. The garden's overall vitality and appearance reflect the average vitality of all connections.
 
 ## Data and sync
 
