@@ -107,8 +107,8 @@
         <button 
           onclick="toggleSettingsModal(true)"
           class="w-10 h-10 text-[#9eb3a8] hover:text-[#f4ede4] hover:bg-[#182721]/80 rounded-lg border border-[#23352e] transition-colors text-xs backdrop-blur-sm"
-          title="Settings & Cadence Profiles"
-          aria-label="Settings and cadence profiles"
+          title="Settings"
+          aria-label="Settings"
         >
           <i class="pixelart-icons-font-sliders pixel-icon" aria-hidden="true"></i>
         </button>
@@ -229,6 +229,15 @@
       <button onclick="setFilter('Family')" id="filter-Family" class="px-3 py-1 rounded-full font-medium transition-colors bg-[#131f1a]/80 text-[#9eb3a8] border border-[#23352e] hover:text-[#f4ede4] backdrop-blur-sm">Family</button>
       <button onclick="setFilter('Romantic')" id="filter-Romantic" class="px-3 py-1 rounded-full font-medium transition-colors bg-[#131f1a]/80 text-[#9eb3a8] border border-[#23352e] hover:text-[#f4ede4] backdrop-blur-sm">Romantic</button>
       <button onclick="setFilter('Professional')" id="filter-Professional" class="px-3 py-1 rounded-full font-medium transition-colors bg-[#131f1a]/80 text-[#9eb3a8] border border-[#23352e] hover:text-[#f4ede4] backdrop-blur-sm">Professional</button>
+    </div>
+
+    <!-- Tier Filter Chips -->
+    <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar" role="group" aria-label="Filter by tier">
+      <button type="button" onclick="toggleTierFilter('inner')" id="tier-filter-inner" aria-pressed="false" class="shrink-0 px-3 py-1 rounded-full font-medium transition-colors bg-[#131f1a]/80 text-[#9eb3a8] border border-[#23352e] hover:text-[#f4ede4] backdrop-blur-sm">Inner Circle</button>
+      <button type="button" onclick="toggleTierFilter('close')" id="tier-filter-close" aria-pressed="false" class="shrink-0 px-3 py-1 rounded-full font-medium transition-colors bg-[#131f1a]/80 text-[#9eb3a8] border border-[#23352e] hover:text-[#f4ede4] backdrop-blur-sm">Close Circle</button>
+      <button type="button" onclick="toggleTierFilter('wider')" id="tier-filter-wider" aria-pressed="false" class="shrink-0 px-3 py-1 rounded-full font-medium transition-colors bg-[#131f1a]/80 text-[#9eb3a8] border border-[#23352e] hover:text-[#f4ede4] backdrop-blur-sm">Wider Network</button>
+      <button type="button" onclick="toggleTierFilter('quarterly')" id="tier-filter-quarterly" aria-pressed="false" class="shrink-0 px-3 py-1 rounded-full font-medium transition-colors bg-[#131f1a]/80 text-[#9eb3a8] border border-[#23352e] hover:text-[#f4ede4] backdrop-blur-sm">Long Range</button>
+      <button type="button" onclick="clearTierFilters()" id="tier-filter-clear" class="hidden shrink-0 px-2 py-1 text-[#8da498] hover:text-[#f4ede4] underline">Clear</button>
     </div>
 
     <!-- Queue Header -->
@@ -497,23 +506,36 @@
     </div>
   </div>
 
-  <!-- CADENCE SETTINGS MODAL -->
+  <!-- SETTINGS MODAL -->
   <div id="settings-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-[#14201b] border border-[#283e35] rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl">
+    <div class="bg-[#14201b] border border-[#283e35] rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-center border-b border-[#283e35] pb-3">
-        <div>
-          <h3 class="font-bold text-sm text-[#f4ede4]">Cadence Settings</h3>
-          <p class="text-[11px] text-[#8da498]">What is a cadence profile?</p>
-        </div>
+        <h3 class="font-bold text-sm text-[#f4ede4]">Settings</h3>
         <button onclick="toggleSettingsModal(false)" class="text-[#8da498] hover:text-[#f4ede4] text-sm" aria-label="Close"><i class="pixelart-icons-font-close pixel-icon" aria-hidden="true"></i></button>
       </div>
 
-      <div class="bg-[#0b1210] border border-[#283e35] rounded-xl p-3 text-xs text-[#a3b8ad] space-y-1.5 leading-relaxed">
-        <p><strong class="text-[#f4ede4]">A Cadence Profile</strong> is your personal target rhythm for reaching out before a connection's vitality reaches zero.</p>
-        <p>Instead of strict daily streaks, it gives each tier in your life a natural grace period to stay gently connected.</p>
-      </div>
+      <form id="settings-form" class="space-y-4 text-xs">
+        <section class="space-y-2">
+          <h4 class="font-bold text-[#f4ede4] text-xs uppercase tracking-wider">General</h4>
+          <label class="flex items-center justify-between gap-3 text-[#c4d4cc]">
+            <span>Show tier on connection cards</span>
+            <input id="cfg-show-tier-badge" type="checkbox" class="h-4 w-4 accent-teal-500" />
+          </label>
+          <label class="flex items-center justify-between gap-3 text-[#c4d4cc]">
+            <span>Show check-in reminder banner</span>
+            <input id="cfg-show-reminder-banner" type="checkbox" class="h-4 w-4 accent-teal-500" />
+          </label>
+        </section>
 
-      <form id="settings-form" class="space-y-3 text-xs">
+        <section class="space-y-3 border-t border-[#283e35] pt-4">
+          <div>
+            <h4 class="font-bold text-[#f4ede4] text-xs uppercase tracking-wider">Cadence Settings</h4>
+            <p class="text-[11px] text-[#8da498]">What is a cadence profile?</p>
+          </div>
+          <div class="bg-[#0b1210] border border-[#283e35] rounded-xl p-3 text-xs text-[#a3b8ad] space-y-1.5 leading-relaxed">
+            <p><strong class="text-[#f4ede4]">A Cadence Profile</strong> is your personal target rhythm for reaching out before a connection's vitality reaches zero.</p>
+            <p>Instead of strict daily streaks, it gives each tier in your life a natural grace period to stay gently connected.</p>
+          </div>
         <div>
           <label class="block font-semibold text-[#c4d4cc] mb-1">Inner Circle Target (Days)</label>
           <input id="cfg-cadence-inner" type="number" min="1" max="365" class="w-full bg-[#0b1210] border border-[#283e35] rounded-lg px-3 py-1.5 text-emerald-100 focus:border-teal-500 font-mono" />
@@ -530,13 +552,10 @@
           <label class="block font-semibold text-[#c4d4cc] mb-1">Long-Range Target (Days)</label>
           <input id="cfg-cadence-quarterly" type="number" min="1" max="365" class="w-full bg-[#0b1210] border border-[#283e35] rounded-lg px-3 py-1.5 text-emerald-100 focus:border-teal-500 font-mono" />
         </div>
-        <label class="flex items-center justify-between gap-3 border-t border-[#283e35] pt-3 text-[#c4d4cc]">
-          <span>Show check-in reminder banner</span>
-          <input id="cfg-show-reminder-banner" type="checkbox" class="h-4 w-4 accent-teal-500" />
-        </label>
+        </section>
 
-        <button type="submit" class="w-full bg-[#115e59] hover:bg-[#0f766e] font-semibold py-2 rounded-lg text-sm text-white transition-colors mt-3 border border-teal-500/30">
-          Save Cadences
+        <button type="submit" class="w-full bg-[#115e59] hover:bg-[#0f766e] font-semibold py-2 rounded-lg text-sm text-white transition-colors border border-teal-500/30">
+          Save Settings
         </button>
       </form>
     </div>
@@ -661,6 +680,7 @@
 
     const STORAGE_KEY = 'cultivate_garden_data_v1';
     const SETTINGS_KEY = 'cultivate_garden_settings_v1';
+    const DISPLAY_SETTINGS_KEY = 'cultivate_display_settings_v1';
     const REMINDER_BANNER_KEY = 'cultivate_reminder_banner_v1';
     const AUTH_SESSION_KEY = 'cultivate_cloud_session';
 
@@ -860,6 +880,15 @@
     }
 
     let activeFilter = 'all';
+    const activeTierFilters = new Set();
+    const TIER_LABELS = { inner: 'Inner Circle', close: 'Close Circle', wider: 'Wider Network', quarterly: 'Long Range' };
+    const DEFAULT_DISPLAY_SETTINGS = { showTierBadge: true };
+    function normalizeDisplaySettings(raw) {
+      return { ...DEFAULT_DISPLAY_SETTINGS, ...(raw && typeof raw === 'object' && typeof raw.showTierBadge === 'boolean' ? { showTierBadge: raw.showTierBadge } : {}) };
+    }
+    let displaySettings;
+    try { displaySettings = normalizeDisplaySettings(JSON.parse(localStorage.getItem(DISPLAY_SETTINGS_KEY) || 'null')); }
+    catch (e) { displaySettings = { ...DEFAULT_DISPLAY_SETTINGS }; }
     let searchQuery = '';
     let searchTimer = null;
     let bulkMode = false;
@@ -881,6 +910,7 @@
 
     function saveSettings() {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(cadenceSettings));
+      localStorage.setItem(DISPLAY_SETTINGS_KEY, JSON.stringify(displaySettings));
       if (cloudHydrated) syncToCloud(false);
     }
 
@@ -904,6 +934,7 @@
     function resetListFilters() {
       searchQuery = '';
       activeFilter = 'all';
+      activeTierFilters.clear();
       clearTimeout(searchTimer);
       const searchEl = document.getElementById('queue-search');
       if (searchEl) searchEl.value = '';
@@ -1060,7 +1091,7 @@
           body: JSON.stringify({
             user_id: cloudSession.user.id,
             friends: friends,
-            cadence_settings: cadenceSettings,
+            cadence_settings: { ...cadenceSettings, display: displaySettings },
             updated_at: new Date().toISOString()
           })
         });
@@ -1114,10 +1145,13 @@
             localStorage.setItem(STORAGE_KEY, JSON.stringify(friends));
           }
           if (row.cadence_settings) {
-            const shouldUpgradeCloudCadences = isPreviousDefaultCadence(row.cadence_settings);
+            const { display: cloudDisplay, ...cloudCadences } = row.cadence_settings;
+            displaySettings = normalizeDisplaySettings(cloudDisplay);
+            localStorage.setItem(DISPLAY_SETTINGS_KEY, JSON.stringify(displaySettings));
+            const shouldUpgradeCloudCadences = isPreviousDefaultCadence(cloudCadences);
             cadenceSettings = shouldUpgradeCloudCadences
               ? { ...DEFAULT_CADENCE_SETTINGS }
-              : row.cadence_settings;
+              : cloudCadences;
             localStorage.setItem(SETTINGS_KEY, JSON.stringify(cadenceSettings));
             shouldSyncCloud = shouldSyncCloud || shouldUpgradeCloudCadences;
           }
@@ -1569,7 +1603,32 @@
       render();
     }
 
+    function updateTierFilterChips() {
+      Object.keys(TIER_LABELS).forEach(tier => {
+        const el = document.getElementById(`tier-filter-${tier}`);
+        if (!el) return;
+        const on = activeTierFilters.has(tier);
+        el.setAttribute('aria-pressed', on ? 'true' : 'false');
+        el.className = 'shrink-0 px-3 py-1 rounded-full font-medium transition-colors backdrop-blur-sm ' + (on
+          ? 'bg-teal-900/40 text-teal-200 border border-teal-600/50'
+          : 'bg-[#131f1a]/80 text-[#9eb3a8] border border-[#23352e] hover:text-[#f4ede4]');
+      });
+      const clear = document.getElementById('tier-filter-clear');
+      if (clear) clear.classList.toggle('hidden', activeTierFilters.size === 0);
+    }
+
+    function toggleTierFilter(tier) {
+      if (activeTierFilters.has(tier)) activeTierFilters.delete(tier); else activeTierFilters.add(tier);
+      render();
+    }
+
+    function clearTierFilters() {
+      activeTierFilters.clear();
+      render();
+    }
+
     function render() {
+      updateTierFilterChips();
       const container = document.getElementById('friends-queue');
       if (!container) return;
       
@@ -1636,6 +1695,7 @@
                   <div class="flex items-center gap-2">
                     <span class="font-semibold text-[#f4ede4] text-sm truncate">${escapeHtml(friend.name)}</span>
                     <span class="text-[10px] px-1.5 py-0.5 rounded bg-[#1c2d26] text-teal-300 font-medium border border-[#283e35]">${friend.category || 'Friends'}</span>
+                    ${displaySettings.showTierBadge && TIER_LABELS[friend.tier] ? `<span class="text-[10px] px-1.5 py-0.5 rounded bg-[#131f1a] text-[#9eb3a8] font-medium border border-[#23352e]">${TIER_LABELS[friend.tier]}</span>` : ''}
                   </div>
                   <div class="text-xs text-[#9eb3a8] flex items-center gap-1.5 mt-0.5">
                     <span>${daysSince === 999 ? 'No interaction yet' : daysSince === 0 ? 'Connected today' : `${daysSince}d ago`}</span>
@@ -1763,6 +1823,7 @@
       const query = searchQuery.trim().toLowerCase();
       return friends.filter(f =>
         (activeFilter === 'all' || f.category === activeFilter) &&
+        (activeTierFilters.size === 0 || activeTierFilters.has(f.tier)) &&
         (!query || f.name.toLowerCase().includes(query)));
     }
 
@@ -2039,6 +2100,7 @@
         document.getElementById('cfg-cadence-wider').value = cadenceSettings.wider;
         document.getElementById('cfg-cadence-quarterly').value = cadenceSettings.quarterly;
         document.getElementById('cfg-show-reminder-banner').checked = !reminderBannerHidden;
+        document.getElementById('cfg-show-tier-badge').checked = displaySettings.showTierBadge;
         modal.classList.remove('hidden');
       } else {
         modal.classList.add('hidden');
@@ -2449,6 +2511,7 @@
       cadenceSettings.close = parseInt(document.getElementById('cfg-cadence-close').value, 10) || 30;
       cadenceSettings.wider = parseInt(document.getElementById('cfg-cadence-wider').value, 10) || 90;
       cadenceSettings.quarterly = parseInt(document.getElementById('cfg-cadence-quarterly').value, 10) || 180;
+      displaySettings.showTierBadge = document.getElementById('cfg-show-tier-badge').checked;
       reminderBannerHidden = !document.getElementById('cfg-show-reminder-banner').checked;
       localStorage.setItem(REMINDER_BANNER_KEY, reminderBannerHidden ? 'hidden' : 'shown');
 
@@ -2521,7 +2584,7 @@
     }
 
     function exportBackup() {
-      const blob = new Blob([JSON.stringify({ friends, cadenceSettings }, null, 2)], { type: 'application/json' });
+      const blob = new Blob([JSON.stringify({ friends, cadenceSettings, displaySettings }, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -2539,6 +2602,7 @@
           const data = JSON.parse(e.target.result);
           if (data.friends) friends = data.friends;
           if (data.cadenceSettings) cadenceSettings = data.cadenceSettings;
+          if (data.displaySettings) displaySettings = normalizeDisplaySettings(data.displaySettings);
           saveData();
           saveSettings();
           render();
