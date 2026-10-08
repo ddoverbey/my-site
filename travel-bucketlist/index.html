@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wanderlog • Travel Bucket List</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  :root { --bg:#0b1020; --panel:#141b30; --line:#232c47; --text:#e6e9f2; --mute:#8b94b0; --visit:#22c55e; --wish:#f59e0b; --none:#334155; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif; }
+  header { display:flex; flex-wrap:wrap; align-items:center; gap:12px; padding:10px 16px; background:var(--panel); border-bottom:1px solid var(--line); }
+  header h1 { font-size:18px; margin:0 12px 0 0; }
+  nav { display:flex; gap:6px; flex-wrap:wrap; }
+  button { font:inherit; color:var(--text); background:#1d2744; border:1px solid var(--line); border-radius:8px; padding:6px 12px; cursor:pointer; }
+  button:hover { background:#27345c; }
+  nav button.active { background:#3b5bdb; border-color:#3b5bdb; }
+  .spacer { flex:1; }
+  .page { display:none; height:calc(100vh - 56px); position:relative; }
+  .page.active { display:block; }
+  .scroll { overflow:auto; padding:20px; }
+  #globeEl, #leafletEl { width:100%; height:100%; }
+  .hud { position:absolute; top:12px; left:12px; z-index:500; background:rgba(20,27,48,.88); border:1px solid var(--line); border-radius:12px; padding:12px 14px; min-width:200px; backdrop-filter:blur(6px); }
+  .hud h3 { margin:0 0 6px; font-size:14px; }
+  .hud .row { display:flex; justify-content:space-between; gap:16px; color:var(--mute); }
+  .hud .row b { color:var(--text); }
+  .legend { position:absolute; bottom:12px; left:12px; z-index:500; background:rgba(20,27,48,.88); border:1px solid var(--line); border-radius:10px; padding:8px 12px; font-size:13px; color:var(--mute); }
+  .dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin:0 4px 0 10px; }
+  .dot:first-child { margin-left:0; }
+  .toolbar { display:flex; gap:8px; margin-bottom:12px; align-items:center; flex-wrap:wrap; }
+  .toolbar .hint { color:var(--mute); }
+  svg.map { width:100%; max-width:1100px; background:#0f1730; border:1px solid var(--line); border-radius:12px; display:block; }
+  svg.map path { stroke:#0b1020; stroke-width:.5; cursor:pointer; transition:fill .15s; }
+  svg.map path:hover { filter:brightness(1.4); }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:12px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px 14px; }
+  .card h4 { margin:0 0 2px; font-size:14px; }
+  .card p { margin:0 0 8px; color:var(--mute); font-size:13px; }
+  .bar { height:6px; background:#222c49; border-radius:4px; overflow:hidden; }
+  .bar i { display:block; height:100%; background:var(--wish); }
+  .done .bar i { background:var(--visit); }
+  .done { border-color:var(--visit); }
+  .locked { opacity:.5; }
+  .tag { font-size:11px; padding:1px 7px; border-radius:99px; border:1px solid currentColor; }
+  .common { color:#94a3b8; } .uncommon { color:#38bdf8; } .rare { color:#c084fc; }
+  h2 { margin:24px 0 10px; font-size:16px; }
+  h2:first-child { margin-top:0; }
+  .passport { display:grid; grid-template-columns:minmax(260px,340px) 1fr; gap:16px; margin-bottom:8px; }
+  @media (max-width:760px) { .passport { grid-template-columns:1fr; } }
+  .big { font-size:28px; font-weight:700; }
+  .leaflet-popup-content-wrapper, .leaflet-popup-tip { background:var(--panel); color:var(--text); }
+  .popbtns { display:flex; gap:6px; margin-top:6px; }
+  .popbtns button { padding:3px 8px; font-size:12px; }
+  .filters { display:flex; gap:6px; }
+  .filters button.on { background:#3b5bdb; border-color:#3b5bdb; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Wanderlog</h1>
+  <nav id="nav">
+    <button data-p="globe">Globe</button>
+    <button data-p="scratch">Scratch-Off Map</button>
+    <button data-p="parks">Parks &amp; Pins</button>
+    <button data-p="passport">Passport</button>
+  </nav>
+  <span class="spacer"></span>
+  <button id="share">Copy share link</button>
+  <button id="export">Export</button>
+  <button id="import">Import</button>
+  <input id="file" type="file" accept="application/json" hidden>
+</header>
+
+<section class="page" id="page-globe">
+  <div id="globeEl"></div>
+  <div class="hud" id="hudGlobe"></div>
+  <div class="legend"><span class="dot" style="background:var(--visit)"></span>Visited<span class="dot" style="background:var(--wish)"></span>Wishlist<span class="dot" style="background:var(--none)"></span>Unvisited &nbsp;·&nbsp; click a country or pin to cycle status</div>
+</section>
+
+<section class="page scroll" id="page-scratch">
+  <div class="toolbar">
+    <div class="filters"><button data-m="world" class="on">World</button><button data-m="usa">USA states</button></div>
+    <span class="hint">Click to cycle: unvisited → wishlist → visited</span>
+    <span id="scratchCount" class="hint"></span>
+  </div>
+  <svg class="map" id="svgMap"></svg>
+</section>
+
+<section class="page" id="page-parks">
+  <div id="leafletEl"></div>
+  <div class="hud" id="hudParks"></div>
+</section>
+
+<section class="page scroll" id="page-passport"></section>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/globe.gl"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
+<script>
+// ---------- Static data ----------
+const BIOMES = {
+  fo:['Temperate Forest','common'], gr:['Grassland','common'], co:['Coastline','common'], ur:['Urban','common'],
+  de:['Desert','uncommon'], al:['Alpine','uncommon'], we:['Wetland','uncommon'], tr:['Tropical','uncommon'], ch:['Chaparral','uncommon'], is:['Island','uncommon'],
+  rf:['Temperate Rainforest','rare'], gl:['Glacier','rare'], vo:['Volcanic / Geothermal','rare'], ca:['Cave System','rare'], tu:['Arctic Tundra','rare']
+};
+// [id, name, lat, lng, biomes, intl]
+const PARKS = [
+ ['acadia','Acadia',44.35,-68.21,'fo,co'],['samoa','American Samoa',-14.25,-170.68,'tr,is,co'],['arches','Arches',38.73,-109.59,'de'],
+ ['badlands','Badlands',43.75,-102.5,'gr'],['bigbend','Big Bend',29.25,-103.25,'de'],['biscayne','Biscayne',25.65,-80.08,'co,is'],
+ ['blackcanyon','Black Canyon of the Gunnison',38.57,-107.72,'al'],['bryce','Bryce Canyon',37.57,-112.18,'de,al'],['canyonlands','Canyonlands',38.2,-109.93,'de'],
+ ['capitolreef','Capitol Reef',38.2,-111.17,'de'],['carlsbad','Carlsbad Caverns',32.17,-104.44,'ca,de'],['channel','Channel Islands',34.01,-119.42,'is,ch,co'],
+ ['congaree','Congaree',33.78,-80.78,'we,fo'],['crater','Crater Lake',42.94,-122.1,'vo,al'],['cuyahoga','Cuyahoga Valley',41.24,-81.55,'fo'],
+ ['deathvalley','Death Valley',36.24,-116.82,'de'],['denali','Denali',63.33,-150.5,'tu,gl,al'],['drytortugas','Dry Tortugas',24.63,-82.87,'is,co'],
+ ['everglades','Everglades',25.32,-80.93,'we,tr'],['gatesarctic','Gates of the Arctic',67.78,-153.3,'tu'],['gatewayarch','Gateway Arch',38.62,-90.19,'ur'],
+ ['glacier','Glacier',48.76,-113.79,'al,gl,fo'],['glacierbay','Glacier Bay',58.5,-137,'gl,co,rf'],['grandcanyon','Grand Canyon',36.06,-112.14,'de,fo'],
+ ['grandteton','Grand Teton',43.79,-110.68,'al,fo'],['greatbasin','Great Basin',38.98,-114.3,'de,al'],['greatsand','Great Sand Dunes',37.73,-105.51,'de,gr'],
+ ['smokies','Great Smoky Mountains',35.61,-83.49,'fo'],['guadalupe','Guadalupe Mountains',31.92,-104.52,'de'],['haleakala','Haleakalā',20.72,-156.17,'vo,is,tr'],
+ ['hawaiivolc','Hawaiʻi Volcanoes',19.38,-155.2,'vo,is,tr'],['hotsprings','Hot Springs',34.51,-93.05,'fo,vo'],['indianadunes','Indiana Dunes',41.65,-87.05,'co,fo'],
+ ['isleroyale','Isle Royale',48.1,-88.55,'is,fo'],['joshuatree','Joshua Tree',33.79,-115.9,'de'],['katmai','Katmai',58.5,-155,'vo,tu,co'],
+ ['kenai','Kenai Fjords',59.92,-149.65,'gl,co,rf'],['kingscanyon','Kings Canyon',36.89,-118.55,'al,fo'],['kobuk','Kobuk Valley',67.55,-159.28,'tu,de'],
+ ['lakeclark','Lake Clark',60.97,-153.42,'vo,tu'],['lassen','Lassen Volcanic',40.49,-121.51,'vo,al'],['mammoth','Mammoth Cave',37.19,-86.1,'ca,fo'],
+ ['mesaverde','Mesa Verde',37.18,-108.49,'de,ch'],['rainier','Mount Rainier',46.85,-121.75,'gl,al,fo'],['newriver','New River Gorge',37.96,-81.08,'fo'],
+ ['northcascades','North Cascades',48.7,-121.2,'gl,al,rf'],['olympic','Olympic',47.97,-123.5,'rf,al,co'],['petrified','Petrified Forest',34.91,-109.81,'de'],
+ ['pinnacles','Pinnacles',36.48,-121.16,'ch'],['redwood','Redwood',41.21,-124,'rf,co'],['rockymtn','Rocky Mountain',40.34,-105.68,'al,fo'],
+ ['saguaro','Saguaro',32.25,-110.5,'de'],['sequoia','Sequoia',36.49,-118.57,'al,fo'],['shenandoah','Shenandoah',38.53,-78.35,'fo'],
+ ['roosevelt','Theodore Roosevelt',46.97,-103.45,'gr'],['virginislands','Virgin Islands',18.34,-64.74,'tr,is,co'],['voyageurs','Voyageurs',48.5,-92.88,'we,fo'],
+ ['whitesands','White Sands',32.78,-106.17,'de'],['windcave','Wind Cave',43.57,-103.48,'ca,gr'],['wrangell','Wrangell–St. Elias',61,-142,'gl,al,tu'],
+ ['yellowstone','Yellowstone',44.6,-110.5,'vo,al,fo'],['yosemite','Yosemite',37.85,-119.57,'al,fo'],['zion','Zion',37.3,-113.05,'de'],
+ // International
+ ['banff','Banff (Canada)',51.5,-116.15,'al,gl,fo',1],['torres','Torres del Paine (Chile)',-51,-73,'al,gl,gr',1],['serengeti','Serengeti (Tanzania)',-2.33,34.83,'gr',1],
+ ['galapagos','Galápagos (Ecuador)',-0.67,-90.55,'is,vo,co',1],['iguazu','Iguazú Falls (Argentina/Brazil)',-25.69,-54.44,'tr',1],['fiordland','Fiordland (New Zealand)',-45.4,167.7,'rf,gl,co',1],
+ ['plitvice','Plitvice Lakes (Croatia)',44.88,15.62,'fo,we',1],['thingvellir','Þingvellir / Iceland',64.26,-21.12,'vo,gl,tu',1],['halong','Hạ Long Bay (Vietnam)',20.91,107.18,'is,co,tr',1],
+ ['kruger','Kruger (South Africa)',-23.99,31.55,'gr',1],['uluru','Uluru-Kata Tjuṯa (Australia)',-25.34,131.04,'de',1],['jungfrau','Swiss Alps / Jungfrau',46.54,7.96,'al,gl',1]
+].map(a => ({id:a[0], name:a[1], lat:a[2], lng:a[3], biomes:a[4].split(','), intl:!!a[5]}));
+
+const QUESTS = [
+  ['The Mighty 5','Utah\'s five national parks',['zion','bryce','capitolreef','arches','canyonlands']],
+  ['Cascade Volcanoes','Fire and ice in the Pacific Northwest',['rainier','crater','lassen']],
+  ['Alaska Wild','The last frontier',['denali','glacierbay','kenai','katmai','wrangell']],
+  ['Island Volcanoes','Hawaii\'s two volcano parks',['haleakala','hawaiivolc']],
+  ['Underground','Cave systems of the US',['carlsbad','mammoth','windcave']],
+  ['Desert Southwest','Heat, rock and saguaros',['deathvalley','joshuatree','saguaro','grandcanyon','whitesands','bigbend']],
+  ['Giants','The big trees',['redwood','sequoia','kingscanyon','yosemite']]
+];
+const WORLD_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
+const US_URL = 'https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json';
+
+// ---------- State ----------
+let S = {};               // key -> 'v' | 'w'  (keys: c:Name, s:Name, p:id)
+let viewOnly = false;
+const NEXT = {undefined:'w', w:'v', v:undefined};
+const COL = {v:'#22c55e', w:'#f59e0b'};
+const NONE = '#334155';
+
+(function loadState() {
+  const d = new URLSearchParams(location.search).get('d');
+  if (d) { try { S = JSON.parse(decodeURIComponent(atob(d))); viewOnly = true; return; } catch (e) {} }
+  try { S = JSON.parse(localStorage.getItem('wanderlog') || '{}'); } catch (e) { S = {}; }
+})();
+function save() { if (!viewOnly) localStorage.setItem('wanderlog', JSON.stringify(S)); }
+function setStatus(key, st) { if (st) S[key] = st; else delete S[key]; save(); renderAll(); }
+function cycle(key) { setStatus(key, NEXT[S[key]]); }
+const count = (prefix, st='v') => Object.keys(S).filter(k => k.startsWith(prefix) && S[k] === st).length;
+const parkVisited = p => S['p:'+p.id] === 'v';
+
+// ---------- Derived stats ----------
+let worldFeatures = [], usFeatures = [];
+function stats() {
+  const vp = PARKS.filter(parkVisited);
+  const biomes = new Set(vp.flatMap(p => p.biomes));
+  const rareAll = Object.keys(BIOMES).filter(b => BIOMES[b][1] === 'rare');
+  const unlockedRare = rareAll.filter(b => biomes.has(b));
+  const countries = count('c:'), states = count('s:');
+  const usParks = vp.filter(p => !p.intl).length;
+  let xp = countries*10 + states*5 + vp.length*15;
+  biomes.forEach(b => xp += {common:10, uncommon:30, rare:60}[BIOMES[b][1]]);
+  const level = Math.floor(Math.sqrt(xp/20)) + 1;
+  return {vp, biomes, rareAll, unlockedRare, countries, states, usParks, anyParks:vp.length, xp, level};
+}
+
+function achievements(st) {
+  const tiers = (name, desc, val, goals) => goals.map(g => ({name:`${name} ${g}`, desc:desc.replace('#', g), val, goal:g}));
+  const nUS = PARKS.filter(p => !p.intl).length;
+  return [
+    ...tiers('Country Counter','Visit # countries', st.countries, [1,5,10,25,50,100]),
+    ...tiers('State Hopper','Visit # US states', st.states, [5,10,25,50]),
+    ...tiers('Park Ranger','Visit # US national parks', st.usParks, [1,5,10,25,nUS]),
+    ...tiers('Global Ranger','Visit # national parks worldwide', st.anyParks, [5,15,30,75]),
+    ...tiers('Biome Collector','Unlock # biomes', st.biomes.size, [3,6,10,Object.keys(BIOMES).length]),
+    ...tiers('Rare Finder','Unlock # rare biomes', st.unlockedRare.length, [1,3,st.rareAll.length])
+  ];
+}
+
+function travelerClass(st) {
+  const has = (p, bs) => p.biomes.some(b => bs.includes(b));
+  const v = st.vp;
+  const axes = {
+    Nature: Math.min(1, v.length/30),
+    Adventure: Math.min(1, v.filter(p => has(p,['al','gl','vo','ca'])).length/12),
+    Remoteness: Math.min(1, v.filter(p => has(p,['tu','is','gl'])).length/8),
+    Worldly: Math.min(1, st.countries/25),
+    Roadtrip: Math.min(1, st.states/40)
+  };
+  const best = Object.entries(axes).sort((a,b) => b[1]-a[1])[0];
+  const cls = best[1] === 0 ? 'Fresh Recruit' : {Nature:'Park Completionist', Adventure:'Alpine Ranger', Remoteness:'Biome Hunter', Worldly:'Globetrotter', Roadtrip:'Road Warrior'}[best[0]];
+  return {axes, cls};
+}
+
+// ---------- Routing ----------
+const pages = ['globe','scratch','parks','passport'];
+function show(p) {
+  if (!pages.includes(p)) p = 'globe';
+  pages.forEach(x => document.getElementById('page-'+x).classList.toggle('active', x === p));
+  document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('active', b.dataset.p === p));
+  if (p === 'globe') { sizeGlobe(); }
+  if (p === 'parks') { initLeaflet(); setTimeout(() => lmap.invalidateSize(), 50); }
+  if (p === 'scratch') drawScratch();
+  if (p === 'passport') renderPassport();
+  history.replaceState(null, '', location.search + '#' + p);
+}
+document.getElementById('nav').onclick = e => { if (e.target.dataset.p) show(e.target.dataset.p); };
+
+// ---------- Globe ----------
+let globe;
+function colorFor(key) { return COL[S[key]] || NONE; }
+function initGlobe() {
+  globe = Globe()(document.getElementById('globeEl'))
+    .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-night.jpg')
+    .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
+    .atmosphereColor('#6ea8ff')
+    .polygonsData(worldFeatures)
+    .polygonAltitude(d => S['c:'+d.properties.name] ? 0.02 : 0.006)
+    .polygonCapColor(d => { const c = S['c:'+d.properties.name]; return c ? COL[c] + 'cc' : 'rgba(100,116,139,0.25)'; })
+    .polygonSideColor(() => 'rgba(255,255,255,0.05)')
+    .polygonStrokeColor(() => '#0b1020')
+    .polygonLabel(d => `<b>${d.properties.name}</b><br>${{v:'Visited',w:'Wishlist'}[S['c:'+d.properties.name]] || 'Unvisited'}`)
+    .onPolygonClick(d => { if (!viewOnly) cycle('c:'+d.properties.name); })
+    .pointsData(PARKS)
+    .pointLat('lat').pointLng('lng')
+    .pointAltitude(d => S['p:'+d.id] ? 0.06 : 0.02)
+    .pointRadius(0.35)
+    .pointColor(d => S['p:'+d.id] === 'v' ? '#4ade80' : S['p:'+d.id] === 'w' ? '#fbbf24' : '#94a3b8')
+    .pointLabel(d => `<b>${d.name}</b><br>${d.biomes.map(b => BIOMES[b][0]).join(', ')}`)
+    .onPointClick(d => { if (!viewOnly) cycle('p:'+d.id); });
+  globe.controls().autoRotate = true;
+  globe.controls().autoRotateSpeed = 0.35;
+  sizeGlobe();
+}
+function sizeGlobe() {
+  if (!globe) return;
+  const el = document.getElementById('globeEl');
+  globe.width(el.clientWidth).height(el.clientHeight);
+}
+function refreshGlobe() {
+  if (!globe) return;
+  globe.polygonAltitude(globe.polygonAltitude()).polygonCapColor(globe.polygonCapColor())
+       .pointAltitude(globe.pointAltitude()).pointColor(globe.pointColor());
+}
+
+// ---------- Scratch-off SVG map ----------
+let scratchMode = 'world';
+function drawScratch() {
+  const svg = d3.select('#svgMap').html('');
+  const W = 960, H = scratchMode === 'world' ? 500 : 600;
+  svg.attr('viewBox', `0 0 ${W} ${H}`);
+  const feats = scratchMode === 'world' ? worldFeatures.filter(f => f.properties.name !== 'Antarctica') : usFeatures;
+  const proj = scratchMode === 'world' ? d3.geoNaturalEarth1() : d3.geoAlbersUsa();
+  proj.fitSize([W, H], {type:'FeatureCollection', features:feats});
+  const pre = scratchMode === 'world' ? 'c:' : 's:';
+  const path = d3.geoPath(proj);
+  svg.selectAll('path').data(feats).join('path')
+    .attr('d', path)
+    .attr('fill', d => colorFor(pre + d.properties.name))
+    .on('click', (e, d) => { if (!viewOnly) cycle(pre + d.properties.name); })
+    .append('title').text(d => d.properties.name);
+  updateScratchCount();
+}
+function updateScratchCount() {
+  const world = scratchMode === 'world';
+  document.getElementById('scratchCount').textContent =
+    world ? `${count('c:')} / ${worldFeatures.length} countries visited` : `${count('s:')} / ${usFeatures.length} states visited`;
+}
+function refreshScratch() {
+  if (!document.getElementById('page-scratch').classList.contains('active')) return;
+  const pre = scratchMode === 'world' ? 'c:' : 's:';
+  d3.select('#svgMap').selectAll('path').attr('fill', d => colorFor(pre + d.properties.name));
+  updateScratchCount();
+}
+document.querySelector('#page-scratch .filters').onclick = e => {
+  if (!e.target.dataset.m) return;
+  scratchMode = e.target.dataset.m;
+  document.querySelectorAll('#page-scratch .filters button').forEach(b => b.classList.toggle('on', b === e.target));
+  drawScratch();
+};
+
+// ---------- Leaflet parks map ----------
+let lmap, markers = {};
+function initLeaflet() {
+  if (lmap) return;
+  lmap = L.map('leafletEl', {worldCopyJump:true}).setView([39, -98], 4);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution:'&copy; OpenStreetMap contributors &copy; CARTO', maxZoom:18
+  }).addTo(lmap);
+  PARKS.forEach(p => {
+    const m = L.circleMarker([p.lat, p.lng], {radius:8, weight:2, color:'#0b1020', fillOpacity:.95}).addTo(lmap);
+    m.bindPopup(() => {
+      const btn = (s, t) => viewOnly ? '' : `<button onclick="setStatus('p:${p.id}', ${s ? `'${s}'` : 'null'})">${t}</button>`;
+      return `<b>${p.name}</b><br>${p.biomes.map(b => `<span class="tag ${BIOMES[b][1]}">${BIOMES[b][0]}</span>`).join(' ')}
+        <div class="popbtns">${btn('v','Visited')}${btn('w','Wishlist')}${btn(null,'Clear')}</div>`;
+    });
+    markers[p.id] = m;
+  });
+  refreshLeaflet();
+}
+function refreshLeaflet() {
+  if (!lmap) return;
+  PARKS.forEach(p => markers[p.id].setStyle({fillColor: colorFor('p:'+p.id)}));
+}
+
+// ---------- Passport ----------
+function bar(v, g) { return `<div class="bar"><i style="width:${Math.min(100, v/g*100)}%"></i></div>`; }
+function radar(axes) {
+  const names = Object.keys(axes), n = names.length, R = 90, C = 120;
+  const pt = (i, r) => [C + Math.sin(2*Math.PI*i/n) * r, C - Math.cos(2*Math.PI*i/n) * r];
+  const ring = k => names.map((_, i) => pt(i, R*k).join(',')).join(' ');
+  const shape = names.map((k, i) => pt(i, R * Math.max(0.05, axes[k])).join(',')).join(' ');
+  const labels = names.map((k, i) => { const [x, y] = pt(i, R + 18); return `<text x="${x}" y="${y}" fill="#8b94b0" font-size="11" text-anchor="middle" dominant-baseline="middle">${k}</text>`; }).join('');
+  return `<svg viewBox="0 0 240 240" width="100%">${[.33,.66,1].map(k => `<polygon points="${ring(k)}" fill="none" stroke="#232c47"/>`).join('')}
+    <polygon points="${shape}" fill="rgba(59,91,219,.45)" stroke="#6ea8ff" stroke-width="2"/>${labels}</svg>`;
+}
+function renderPassport() {
+  const st = stats(), tc = travelerClass(st), ach = achievements(st);
+  const biomeCards = Object.entries(BIOMES).sort((a, b) => ['common','uncommon','rare'].indexOf(a[1][1]) - ['common','uncommon','rare'].indexOf(b[1][1])).map(([id, [name, rar]]) => {
+    const on = st.biomes.has(id);
+    return `<div class="card ${on ? 'done' : 'locked'}"><h4>${name}</h4><span class="tag ${rar}">${rar}</span>
+      <p style="margin-top:8px">${on ? 'Unlocked' : 'Visit a park with this biome'}</p></div>`;
+  }).join('');
+  const questCards = QUESTS.map(([name, desc, ids]) => {
+    const v = ids.filter(id => S['p:'+id] === 'v').length;
+    return `<div class="card ${v === ids.length ? 'done' : ''}"><h4>${name}</h4><p>${desc}</p>${bar(v, ids.length)}
+      <p style="margin:6px 0 0">${v} / ${ids.length}: ${ids.map(id => PARKS.find(p => p.id === id).name).join(', ')}</p></div>`;
+  }).join('');
+  const achCards = ach.map(a => `<div class="card ${a.val >= a.goal ? 'done' : ''}"><h4>${a.name}</h4><p>${a.desc}</p>${bar(a.val, a.goal)}
+      <p style="margin:6px 0 0">${Math.min(a.val, a.goal)} / ${a.goal}</p></div>`).join('');
+  document.getElementById('page-passport').innerHTML = `
+    <div class="passport">
+      <div class="card"><div class="big">Lv ${st.level} · ${tc.cls}</div><p>${st.xp} XP${viewOnly ? ' · viewing a shared passport' : ''}</p>${radar(tc.axes)}</div>
+      <div class="card">
+        <div class="grid">
+          <div><div class="big">${st.countries}</div><p>Countries</p></div>
+          <div><div class="big">${st.states}<small style="font-size:14px;color:var(--mute)"> / 50</small></div><p>US states</p></div>
+          <div><div class="big">${st.usParks}<small style="font-size:14px;color:var(--mute)"> / ${PARKS.filter(p => !p.intl).length}</small></div><p>US national parks</p></div>
+          <div><div class="big">${st.anyParks}</div><p>Parks worldwide</p></div>
+          <div><div class="big">${st.biomes.size}<small style="font-size:14px;color:var(--mute)"> / ${Object.keys(BIOMES).length}</small></div><p>Biomes</p></div>
+          <div><div class="big">${st.unlockedRare.length}<small style="font-size:14px;color:var(--mute)"> / ${st.rareAll.length}</small></div><p>Rare biomes</p></div>
+        </div>
+      </div>
+    </div>
+    <h2>Biome Pokédex</h2><div class="grid">${biomeCards}</div>
+    <h2>Questlines</h2><div class="grid">${questCards}</div>
+    <h2>Achievements</h2><div class="grid">${achCards}</div>`;
+}
+
+// ---------- HUDs ----------
+function renderHud() {
+  const st = stats();
+  document.getElementById('hudGlobe').innerHTML = `<h3>Lv ${st.level} · ${travelerClass(st).cls}</h3>
+    <div class="row">Countries <b>${st.countries}</b></div><div class="row">US states <b>${st.states} / 50</b></div>
+    <div class="row">Parks <b>${st.anyParks}</b></div><div class="row">Biomes <b>${st.biomes.size} / ${Object.keys(BIOMES).length}</b></div>
+    <div class="row">Wishlist <b>${count('c:','w') + count('p:','w') + count('s:','w')}</b></div>
+    ${viewOnly ? '<div class="row" style="margin-top:6px;color:var(--wish)">Read-only shared view</div>' : ''}`;
+  document.getElementById('hudParks').innerHTML = `<h3>National Parks</h3>
+    <div class="row">US visited <b>${st.usParks} / ${PARKS.filter(p => !p.intl).length}</b></div>
+    <div class="row">Wishlist <b>${count('p:','w')}</b></div>
+    <div class="row" style="margin-top:6px">Click a pin to update</div>`;
+}
+
+function renderAll() { renderHud(); refreshGlobe(); refreshScratch(); refreshLeaflet(); if (document.getElementById('page-passport').classList.contains('active')) renderPassport(); }
+
+// ---------- Share / export / import ----------
+document.getElementById('share').onclick = async e => {
+  const url = location.origin + location.pathname + '?d=' + btoa(encodeURIComponent(JSON.stringify(S))) + '#passport';
+  try { await navigator.clipboard.writeText(url); e.target.textContent = 'Copied!'; } catch (_) { prompt('Copy this link:', url); }
+  setTimeout(() => e.target.textContent = 'Copy share link', 1500);
+};
+document.getElementById('export').onclick = () => {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(S, null, 2)], {type:'application/json'}));
+  a.download = 'wanderlog.json'; a.click();
+};
+document.getElementById('import').onclick = () => document.getElementById('file').click();
+document.getElementById('file').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try {
+    const data = JSON.parse(await f.text());
+    if (typeof data !== 'object' || Array.isArray(data)) throw 0;
+    S = Object.fromEntries(Object.entries(data).filter(([k, v]) => /^[cps]:/.test(k) && (v === 'v' || v === 'w')));
+    viewOnly = false; save(); renderAll();
+  } catch (_) { alert('Invalid file'); }
+  e.target.value = '';
+};
+
+// ---------- Boot ----------
+window.addEventListener('resize', sizeGlobe);
+Promise.all([fetch(WORLD_URL).then(r => r.json()), fetch(US_URL).then(r => r.json())]).then(([w, u]) => {
+  worldFeatures = topojson.feature(w, w.objects.countries).features;
+  usFeatures = topojson.feature(u, u.objects.states).features.filter(f => +f.id <= 56 && f.id !== '11');
+  initGlobe();
+  renderAll();
+  show(location.hash.slice(1) || 'globe');
+});
+</script>
+</body>
+</html>
