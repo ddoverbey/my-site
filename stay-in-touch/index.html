@@ -1875,15 +1875,25 @@
     }
 
     function parseVCardContacts(text) {
-      const physicalLines = text.replace(/=\r?\n[ \t]?/g, '').replace(/\r\n?/g, '\n').split('\n');
+      const physicalLines = text.replace(/\r\n?/g, '\n').split('\n');
       const lines = [];
+      let quotedPrintableOpen = false;
       physicalLines.forEach(line => {
+        // A trailing "=" is a soft break only inside QUOTED-PRINTABLE fields; base64 padding also ends in "=".
+        if (quotedPrintableOpen && lines.length > 0) {
+          const softBreak = line.endsWith('=');
+          lines[lines.length - 1] += softBreak ? line.slice(0, -1) : line;
+          quotedPrintableOpen = softBreak;
+          return;
+        }
         if (/^[ \t]/.test(line) && lines.length > 0) {
           if (!/^(?:item\d+\.)?(?:PHOTO|LOGO|SOUND)(?:[.;:]|$)/i.test(lines[lines.length - 1])) {
             lines[lines.length - 1] += line.slice(1);
           }
         } else {
-          lines.push(line);
+          const isQuotedPrintable = /^[^:]*;(?:ENCODING=)?QUOTED-PRINTABLE/i.test(line);
+          quotedPrintableOpen = isQuotedPrintable && line.endsWith('=');
+          lines.push(quotedPrintableOpen ? line.slice(0, -1) : line);
         }
       });
 
