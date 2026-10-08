@@ -232,9 +232,45 @@
     </div>
 
     <!-- Queue Header -->
-    <div class="flex items-center justify-between text-xs text-[#8da498] px-1">
+    <div class="flex items-center justify-between gap-2 text-xs text-[#8da498] px-1">
       <span class="font-medium">Connection Garden (Lowest charge first)</span>
-      <span id="queue-stat" class="text-[11px] text-[#6b8276]">4 connections</span>
+      <div class="flex items-center gap-2 shrink-0">
+        <span id="queue-stat" class="text-[11px] text-[#6b8276]">4 connections</span>
+        <button id="btn-bulk-toggle" type="button" onclick="toggleBulkMode()" class="inline-flex items-center gap-1 rounded-md border border-[#2e473d] bg-[#1c2d26] px-2 py-1 text-[11px] text-teal-300 hover:bg-[#253d33]"><i class="pixelart-icons-font-checklist pixel-icon" aria-hidden="true"></i><span>Select</span></button>
+      </div>
+    </div>
+
+    <input id="queue-search" type="search" placeholder="Search connections" oninput="setSearch(this.value)" class="w-full bg-[#0b1210]/80 border border-[#283e35] rounded-lg px-3 py-2 text-xs text-emerald-100 placeholder:text-[#60766b] focus:outline-none focus:border-teal-500" />
+
+    <!-- Bulk Edit Bar -->
+    <div id="bulk-bar" class="hidden sticky top-2 z-30 space-y-2 rounded-xl border border-teal-600/50 bg-[#0f1c17]/95 p-3 text-xs shadow-xl backdrop-blur-sm">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <span id="bulk-count" class="font-mono text-teal-200">0 selected</span>
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="selectAllVisibleForBulk()" class="rounded-md border border-[#2e473d] bg-[#1c2d26] px-2 py-1 text-teal-300 hover:bg-[#253d33]">Select all shown</button>
+          <button type="button" onclick="clearBulkSelection()" class="rounded-md border border-[#2e473d] px-2 py-1 text-[#9eb3a8] hover:bg-white/5">Clear</button>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <select id="bulk-category" onchange="updateBulkBar()" class="w-full bg-[#0b1210] border border-[#283e35] rounded-lg px-2 py-1.5 text-emerald-100 focus:outline-none focus:border-teal-500">
+          <option value="">Keep relationship</option>
+          <option value="Friends">Friends</option>
+          <option value="Family">Family</option>
+          <option value="Romantic">Romantic</option>
+          <option value="Professional">Professional</option>
+        </select>
+        <select id="bulk-tier" onchange="updateBulkBar()" class="w-full bg-[#0b1210] border border-[#283e35] rounded-lg px-2 py-1.5 text-emerald-100 focus:outline-none focus:border-teal-500">
+          <option value="">Keep tier</option>
+          <option value="inner">Inner Circle</option>
+          <option value="close">Close Circle</option>
+          <option value="wider">Wider Network</option>
+          <option value="quarterly">Long Range</option>
+        </select>
+      </div>
+      <div class="flex items-center justify-between gap-2">
+        <span id="bulk-status" class="min-w-0 text-[11px] text-teal-300" aria-live="polite"></span>
+        <button id="bulk-apply" type="button" onclick="applyBulkEdit()" disabled class="shrink-0 rounded-lg border border-teal-500/30 bg-[#115e59] px-3 py-1.5 font-semibold text-white hover:bg-[#0f766e] disabled:opacity-40">Apply</button>
+      </div>
     </div>
 
     <!-- Contact Cards Container -->
@@ -354,6 +390,28 @@
 
       <div id="vcard-contact-list" class="flex-1 min-h-0 overflow-y-auto border-y border-[#283e35] divide-y divide-[#23352e]">
         <div class="text-center text-xs text-[#6b8276] py-10">Your contact preview will appear here.</div>
+      </div>
+
+      <div class="shrink-0 space-y-2">
+        <div class="grid grid-cols-2 gap-2 text-[11px] text-[#8da498]">
+          <label class="block">Add as relationship
+            <select id="vcard-import-category" class="mt-1 w-full bg-[#0b1210] border border-[#283e35] rounded-lg px-2 py-1.5 text-xs text-emerald-100 focus:outline-none focus:border-teal-500">
+              <option value="Friends" selected>Friends</option>
+              <option value="Family">Family</option>
+              <option value="Romantic">Romantic</option>
+              <option value="Professional">Professional</option>
+            </select>
+          </label>
+          <label class="block">Cadence tier
+            <select id="vcard-import-tier" class="mt-1 w-full bg-[#0b1210] border border-[#283e35] rounded-lg px-2 py-1.5 text-xs text-emerald-100 focus:outline-none focus:border-teal-500">
+              <option value="inner">Inner Circle</option>
+              <option value="close" selected>Close Circle</option>
+              <option value="wider">Wider Network</option>
+              <option value="quarterly">Long Range</option>
+            </select>
+          </label>
+        </div>
+        <button type="button" onclick="selectAllVCardContacts()" class="text-[11px] text-teal-300 hover:text-teal-200 underline underline-offset-2">Select everyone in this list (skips ones already added)</button>
       </div>
 
       <div class="flex items-center justify-between gap-3 shrink-0">
@@ -802,6 +860,10 @@
     }
 
     let activeFilter = 'all';
+    let searchQuery = '';
+    let searchTimer = null;
+    let bulkMode = false;
+    const bulkSelectedIds = new Set();
     let expandedCards = new Set();
     let highlightedId = null;
     let vCardContacts = [];
@@ -1440,10 +1502,7 @@
       updateGardenEcosystemTheme(avgHealth);
       renderVisualGarden(avgHealth);
 
-      let filtered = friends;
-      if (activeFilter !== 'all') {
-        filtered = friends.filter(f => f.category === activeFilter);
-      }
+      const filtered = getVisibleFriends();
 
       const queueStat = document.getElementById('queue-stat');
       if (queueStat) {
@@ -1469,16 +1528,19 @@
         const isExpanded = expandedCards.has(friend.id);
         const isHighlighted = highlightedId === friend.id;
         const targetDays = getCadenceDays(friend.tier);
+        const cardClick = bulkMode ? `toggleBulkSelect('${friend.id}')` : `toggleExpand('${friend.id}')`;
+        const bulkChecked = bulkSelectedIds.has(friend.id);
 
         return `
           <div 
             id="card-${friend.id}"
-            class="bg-[#14201b]/90 border ${isHighlighted ? 'dice-highlight' : 'border-[#23352e]'} rounded-xl p-4 transition-all duration-200 shadow-sm backdrop-blur-sm"
+            class="bg-[#14201b]/90 border ${isHighlighted ? 'dice-highlight' : bulkChecked ? 'border-teal-400' : 'border-[#23352e]'} rounded-xl p-4 transition-all duration-200 shadow-sm backdrop-blur-sm"
           >
             <div class="flex items-center justify-between gap-3">
-              <div class="flex items-center gap-3 cursor-pointer flex-1 min-w-0" onclick="toggleExpand('${friend.id}')">
+              <div class="flex items-center gap-3 cursor-pointer flex-1 min-w-0" onclick="${cardClick}">
+                ${bulkMode ? `<input id="bulk-check-${friend.id}" type="checkbox" ${bulkChecked ? 'checked' : ''} tabindex="-1" aria-label="Select ${escapeHtml(friend.name)}" class="pointer-events-none h-4 w-4 shrink-0 accent-teal-500" />` : ''}
                 <div class="relative shrink-0 w-12 h-12">
-                  <img src="${friend.photo || pixelAvatarUrl(friend.avatar_seed)}" alt="${escapeHtml(friend.name)}" referrerpolicy="no-referrer" class="w-12 h-12 rounded-full object-cover border border-[#2e473d] bg-[#1c2d26] [image-rendering:pixelated]" />
+                  <img src="${friend.photo || pixelAvatarUrl(friend.avatar_seed)}" loading="lazy" decoding="async" alt="${escapeHtml(friend.name)}" referrerpolicy="no-referrer" class="w-12 h-12 rounded-full object-cover border border-[#2e473d] bg-[#1c2d26] [image-rendering:pixelated]" />
                   <img src="${plant.icon}" alt="${plant.label} plant" title="${plant.label}" class="absolute -bottom-1 -right-1 w-7 h-7 rounded-full object-contain bg-[#0b1210] border-2 border-[#14201b] [image-rendering:pixelated]" />
                 </div>
 
@@ -1499,14 +1561,14 @@
 
               <button 
                 onclick="openTouchModal('${friend.id}')"
-                class="bg-[#1c2d26] hover:bg-[#253d33] border border-[#2e473d] text-teal-300 hover:text-teal-200 font-medium px-2.5 py-1.5 rounded-lg text-xs transition-colors shrink-0 flex items-center gap-1.5"
+                class="bg-[#1c2d26] hover:bg-[#253d33] border border-[#2e473d] text-teal-300 hover:text-teal-200 font-medium px-2.5 py-1.5 rounded-lg text-xs transition-colors shrink-0 ${bulkMode ? 'hidden' : 'flex'} items-center gap-1.5"
                 title="Log interaction"
               >
                 <i class="pixelart-icons-font-drop pixel-icon" aria-hidden="true"></i> Water
               </button>
             </div>
 
-            <div class="w-full bg-[#0b1210] h-1.5 rounded-full overflow-hidden mt-3 cursor-pointer" onclick="toggleExpand('${friend.id}')">
+            <div class="w-full bg-[#0b1210] h-1.5 rounded-full overflow-hidden mt-3 cursor-pointer" onclick="${cardClick}">
               <div class="battery-fill h-full rounded-full ${barColor}" style="width: ${health}%"></div>
             </div>
 
@@ -1607,6 +1669,83 @@
       highlightedId = null;
       document.getElementById('dice-banner').classList.add('hidden');
       render();
+    }
+
+    function getVisibleFriends() {
+      const query = searchQuery.trim().toLowerCase();
+      return friends.filter(f =>
+        (activeFilter === 'all' || f.category === activeFilter) &&
+        (!query || f.name.toLowerCase().includes(query)));
+    }
+
+    function setSearch(value) {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => { searchQuery = value; render(); }, 150);
+    }
+
+    function updateBulkBar() {
+      const count = bulkSelectedIds.size;
+      document.getElementById('bulk-count').textContent = `${count} selected`;
+      const hasChange = document.getElementById('bulk-category').value || document.getElementById('bulk-tier').value;
+      document.getElementById('bulk-apply').disabled = count === 0 || !hasChange;
+    }
+
+    function toggleBulkMode() {
+      bulkMode = !bulkMode;
+      bulkSelectedIds.clear();
+      document.getElementById('bulk-bar').classList.toggle('hidden', !bulkMode);
+      document.querySelector('#btn-bulk-toggle span').textContent = bulkMode ? 'Done' : 'Select';
+      document.getElementById('bulk-status').textContent = '';
+      document.getElementById('bulk-category').value = '';
+      document.getElementById('bulk-tier').value = '';
+      updateBulkBar();
+      render();
+    }
+
+    // Updates only the touched card so selecting in a 900-person list stays instant.
+    function toggleBulkSelect(id) {
+      const selected = !bulkSelectedIds.has(id);
+      if (selected) bulkSelectedIds.add(id); else bulkSelectedIds.delete(id);
+      const checkbox = document.getElementById(`bulk-check-${id}`);
+      if (checkbox) checkbox.checked = selected;
+      const card = document.getElementById(`card-${id}`);
+      if (card) {
+        card.classList.toggle('border-teal-400', selected);
+        card.classList.toggle('border-[#23352e]', !selected);
+      }
+      updateBulkBar();
+    }
+
+    function selectAllVisibleForBulk() {
+      getVisibleFriends().forEach(f => bulkSelectedIds.add(f.id));
+      updateBulkBar();
+      render();
+    }
+
+    function clearBulkSelection() {
+      bulkSelectedIds.clear();
+      updateBulkBar();
+      render();
+    }
+
+    function applyBulkEdit() {
+      const category = document.getElementById('bulk-category').value;
+      const tier = document.getElementById('bulk-tier').value;
+      if (bulkSelectedIds.size === 0 || (!category && !tier)) return;
+      let updated = 0;
+      friends.forEach(friend => {
+        if (!bulkSelectedIds.has(friend.id)) return;
+        if (category) friend.category = category;
+        if (tier) friend.tier = tier;
+        updated += 1;
+      });
+      saveData();
+      bulkSelectedIds.clear();
+      document.getElementById('bulk-category').value = '';
+      document.getElementById('bulk-tier').value = '';
+      updateBulkBar();
+      render();
+      document.getElementById('bulk-status').textContent = `Updated ${updated} connection${updated === 1 ? '' : 's'}.`;
     }
 
     function toggleExpand(id) {
@@ -1991,6 +2130,7 @@
       const phone = normalizeVCardPhone(contact.phone);
       return friends.some(friend =>
         (email && normalizeVCardEmail(friend.email) === email) ||
+        (!email && !phone && friend.name.trim().toLowerCase() === contact.name.trim().toLowerCase()) ||
         (phone && normalizeVCardPhone(friend.phone) === phone && friend.name.trim().toLowerCase() === contact.name.trim().toLowerCase())
       );
     }
@@ -2101,9 +2241,18 @@
       renderVCardContactList();
     }
 
+    function selectAllVCardContacts() {
+      getFilteredVCardContacts().forEach(contact => {
+        if (!contact.alreadyInGarden) selectedVCardContactIds.add(contact.id);
+      });
+      renderVCardContactList();
+    }
+
     function importSelectedVCardContacts() {
       const selected = vCardContacts.filter(contact => selectedVCardContactIds.has(contact.id) && !isVCardContactAlreadyInGarden(contact));
       if (selected.length === 0) return;
+      const importCategory = document.getElementById('vcard-import-category').value || VCARD_IMPORT_DEFAULT_CATEGORY;
+      const importTier = document.getElementById('vcard-import-tier').value || VCARD_IMPORT_DEFAULT_TIER;
 
       let nextId = Date.now();
       selected.forEach(contact => {
@@ -2111,8 +2260,8 @@
         friends.push({
           id: String(nextId++),
           name: contact.name,
-          category: VCARD_IMPORT_DEFAULT_CATEGORY,
-          tier: VCARD_IMPORT_DEFAULT_TIER,
+          category: importCategory,
+          tier: importTier,
           avatar_seed: createAvatarSeed(),
           photo: null,
           email: contact.email,
