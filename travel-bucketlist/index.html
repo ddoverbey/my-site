@@ -30,7 +30,7 @@
   .toolbar { display:flex; gap:8px; margin-bottom:12px; align-items:center; flex-wrap:wrap; }
   .toolbar .hint { color:var(--mute); }
   svg.map { width:100%; max-width:1100px; background:#0f1730; border:1px solid var(--line); border-radius:12px; display:block; }
-  svg.map path { stroke:#0b1020; stroke-width:.5; cursor:pointer; transition:fill .15s; }
+  svg.map path { stroke:#1f2a48; stroke-width:.5; cursor:pointer; transition:fill .15s; }
   svg.map path:hover { filter:brightness(1.4); }
   .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:12px; }
   .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px 14px; }
@@ -48,6 +48,7 @@
   .passport { display:grid; grid-template-columns:minmax(260px,340px) 1fr; gap:16px; margin-bottom:8px; }
   @media (max-width:760px) { .passport { grid-template-columns:1fr; } }
   .big { font-size:28px; font-weight:700; }
+  .leaflet-container { background:#05070d; }
   .leaflet-popup-content-wrapper, .leaflet-popup-tip { background:var(--panel); color:var(--text); }
   .popbtns { display:flex; gap:6px; margin-top:6px; }
   .popbtns button { padding:3px 8px; font-size:12px; }
@@ -74,7 +75,7 @@
 <section class="page" id="page-globe">
   <div id="globeEl"></div>
   <div class="hud" id="hudGlobe"></div>
-  <div class="legend"><span class="dot" style="background:var(--visit)"></span>Visited<span class="dot" style="background:var(--wish)"></span>Wishlist<span class="dot" style="background:var(--none)"></span>Unvisited &nbsp;·&nbsp; click a country or pin to cycle status</div>
+  <div class="legend"><span class="dot" style="background:var(--visit)"></span>Visited<span class="dot" style="background:var(--wish)"></span>Wishlist<span class="dot" style="background:#05070d;border:1px solid #475569"></span>Fogged &nbsp;·&nbsp; click a country or pin to cycle status</div>
 </section>
 
 <section class="page scroll" id="page-scratch">
@@ -143,6 +144,8 @@ const QUESTS = [
   ['Desert Southwest','Heat, rock and saguaros',['deathvalley','joshuatree','saguaro','grandcanyon','whitesands','bigbend']],
   ['Giants','The big trees',['redwood','sequoia','kingscanyon','yosemite']]
 ];
+const US_ST = {acadia:['Maine'],arches:['Utah'],badlands:['South Dakota'],bigbend:['Texas'],biscayne:['Florida'],blackcanyon:['Colorado'],bryce:['Utah'],canyonlands:['Utah'],capitolreef:['Utah'],carlsbad:['New Mexico'],channel:['California'],congaree:['South Carolina'],crater:['Oregon'],cuyahoga:['Ohio'],deathvalley:['California','Nevada'],denali:['Alaska'],drytortugas:['Florida'],everglades:['Florida'],gatesarctic:['Alaska'],gatewayarch:['Missouri'],glacier:['Montana'],glacierbay:['Alaska'],grandcanyon:['Arizona'],grandteton:['Wyoming'],greatbasin:['Nevada'],greatsand:['Colorado'],smokies:['Tennessee','North Carolina'],guadalupe:['Texas'],haleakala:['Hawaii'],hawaiivolc:['Hawaii'],hotsprings:['Arkansas'],indianadunes:['Indiana'],isleroyale:['Michigan'],joshuatree:['California'],katmai:['Alaska'],kenai:['Alaska'],kingscanyon:['California'],kobuk:['Alaska'],lakeclark:['Alaska'],lassen:['California'],mammoth:['Kentucky'],mesaverde:['Colorado'],rainier:['Washington'],newriver:['West Virginia'],northcascades:['Washington'],olympic:['Washington'],petrified:['Arizona'],pinnacles:['California'],redwood:['California'],rockymtn:['Colorado'],saguaro:['Arizona'],sequoia:['California'],shenandoah:['Virginia'],roosevelt:['North Dakota'],voyageurs:['Minnesota'],whitesands:['New Mexico'],windcave:['South Dakota'],wrangell:['Alaska'],yellowstone:['Wyoming','Montana','Idaho'],yosemite:['California'],zion:['Utah']};
+const INTL_C = {banff:['Canada'],torres:['Chile'],serengeti:['Tanzania'],galapagos:['Ecuador'],iguazu:['Argentina','Brazil'],fiordland:['New Zealand'],plitvice:['Croatia'],thingvellir:['Iceland'],halong:['Vietnam'],kruger:['South Africa'],uluru:['Australia'],jungfrau:['Switzerland']};
 const WORLD_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
 const US_URL = 'https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json';
 
@@ -151,7 +154,19 @@ let S = {};               // key -> 'v' | 'w'  (keys: c:Name, s:Name, p:id)
 let viewOnly = false;
 const NEXT = {undefined:'w', w:'v', v:undefined};
 const COL = {v:'#22c55e', w:'#f59e0b'};
-const NONE = '#334155';
+const FOG = '#05070d';
+const FOG_STROKE = '#1a2238';
+
+// Visiting a park implies its state(s) and country
+let implied = new Set();
+function computeImplied() {
+  implied = new Set();
+  PARKS.filter(p => S['p:'+p.id] === 'v').forEach(p => {
+    if (p.intl) INTL_C[p.id].forEach(c => implied.add('c:'+c));
+    else { implied.add('c:United States of America'); (US_ST[p.id] || []).forEach(s => implied.add('s:'+s)); }
+  });
+}
+const eff = k => implied.has(k) ? 'v' : S[k];
 
 (function loadState() {
   const d = new URLSearchParams(location.search).get('d');
@@ -161,7 +176,7 @@ const NONE = '#334155';
 function save() { if (!viewOnly) localStorage.setItem('wanderlog', JSON.stringify(S)); }
 function setStatus(key, st) { if (st) S[key] = st; else delete S[key]; save(); renderAll(); }
 function cycle(key) { setStatus(key, NEXT[S[key]]); }
-const count = (prefix, st='v') => Object.keys(S).filter(k => k.startsWith(prefix) && S[k] === st).length;
+const count = (prefix, st='v') => [...new Set([...Object.keys(S), ...implied])].filter(k => k.startsWith(prefix) && eff(k) === st).length;
 const parkVisited = p => S['p:'+p.id] === 'v';
 
 // ---------- Derived stats ----------
@@ -213,7 +228,7 @@ function show(p) {
   if (!pages.includes(p)) p = 'globe';
   pages.forEach(x => document.getElementById('page-'+x).classList.toggle('active', x === p));
   document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('active', b.dataset.p === p));
-  if (p === 'globe') { sizeGlobe(); }
+  if (globe) { if (p === 'globe') { sizeGlobe(); globe.resumeAnimation(); } else globe.pauseAnimation(); }
   if (p === 'parks') { initLeaflet(); setTimeout(() => lmap.invalidateSize(), 50); }
   if (p === 'scratch') drawScratch();
   if (p === 'passport') renderPassport();
@@ -223,26 +238,31 @@ document.getElementById('nav').onclick = e => { if (e.target.dataset.p) show(e.t
 
 // ---------- Globe ----------
 let globe;
-function colorFor(key) { return COL[S[key]] || NONE; }
+function colorFor(key) { return COL[eff(key)] || FOG; }
+const capColor = d => { const c = eff('c:'+d.properties.name); return c ? COL[c] + '88' : '#05070dff'; };
+const pointColor = d => { const s = eff('p:'+d.id); return s === 'v' ? '#4ade80' : s === 'w' ? '#fbbf24' : '#64748b'; };
 function initGlobe() {
-  globe = Globe()(document.getElementById('globeEl'))
+  globe = Globe({rendererConfig:{antialias:false, powerPreference:'high-performance'}})(document.getElementById('globeEl'))
     .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-night.jpg')
     .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
     .atmosphereColor('#6ea8ff')
     .polygonsData(worldFeatures)
-    .polygonAltitude(d => S['c:'+d.properties.name] ? 0.02 : 0.006)
-    .polygonCapColor(d => { const c = S['c:'+d.properties.name]; return c ? COL[c] + 'cc' : 'rgba(100,116,139,0.25)'; })
-    .polygonSideColor(() => 'rgba(255,255,255,0.05)')
-    .polygonStrokeColor(() => '#0b1020')
-    .polygonLabel(d => `<b>${d.properties.name}</b><br>${{v:'Visited',w:'Wishlist'}[S['c:'+d.properties.name]] || 'Unvisited'}`)
+    .polygonsTransitionDuration(0)
+    .polygonAltitude(0.008)
+    .polygonCapColor(capColor)
+    .polygonSideColor(() => 'rgba(0,0,0,0)')
+    .polygonStrokeColor(() => '#1f2a48')
+    .polygonLabel(d => `<b>${d.properties.name}</b><br>${{v:'Visited',w:'Wishlist'}[eff('c:'+d.properties.name)] || 'Unexplored'}`)
     .onPolygonClick(d => { if (!viewOnly) cycle('c:'+d.properties.name); })
     .pointsData(PARKS)
     .pointLat('lat').pointLng('lng')
-    .pointAltitude(d => S['p:'+d.id] ? 0.06 : 0.02)
+    .pointAltitude(0.03)
     .pointRadius(0.35)
-    .pointColor(d => S['p:'+d.id] === 'v' ? '#4ade80' : S['p:'+d.id] === 'w' ? '#fbbf24' : '#94a3b8')
+    .pointResolution(6)
+    .pointColor(pointColor)
     .pointLabel(d => `<b>${d.name}</b><br>${d.biomes.map(b => BIOMES[b][0]).join(', ')}`)
     .onPointClick(d => { if (!viewOnly) cycle('p:'+d.id); });
+  globe.renderer().setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
   globe.controls().autoRotate = true;
   globe.controls().autoRotateSpeed = 0.35;
   sizeGlobe();
@@ -254,8 +274,7 @@ function sizeGlobe() {
 }
 function refreshGlobe() {
   if (!globe) return;
-  globe.polygonAltitude(globe.polygonAltitude()).polygonCapColor(globe.polygonCapColor())
-       .pointAltitude(globe.pointAltitude()).pointColor(globe.pointColor());
+  globe.polygonCapColor(capColor).pointColor(pointColor);
 }
 
 // ---------- Scratch-off SVG map ----------
@@ -295,15 +314,24 @@ document.querySelector('#page-scratch .filters').onclick = e => {
 };
 
 // ---------- Leaflet parks map ----------
-let lmap, markers = {};
+let lmap, markers = {}, regionLayers = [];
+function regionStyle(pre) {
+  return f => { const s = eff(pre + f.properties.name); return {fillColor: COL[s] || FOG, fillOpacity: s ? .8 : 1, color: '#1f2a48', weight: .6}; };
+}
 function initLeaflet() {
   if (lmap) return;
-  lmap = L.map('leafletEl', {worldCopyJump:true}).setView([39, -98], 4);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution:'&copy; OpenStreetMap contributors &copy; CARTO', maxZoom:18
-  }).addTo(lmap);
+  lmap = L.map('leafletEl', {worldCopyJump:true, preferCanvas:true, minZoom:2, zoomSnap:.5}).setView([39, -98], 4);
+  const add = (feats, pre) => {
+    const lyr = L.geoJSON({type:'FeatureCollection', features:feats}, {
+      style: regionStyle(pre),
+      onEachFeature: (f, l) => { l.bindTooltip(f.properties.name, {sticky:true}); l.on('click', () => { if (!viewOnly) cycle(pre + f.properties.name); }); }
+    }).addTo(lmap);
+    regionLayers.push([lyr, pre]);
+  };
+  add(worldFeatures.filter(f => f.properties.name !== 'United States of America'), 'c:');
+  add(usFeatures, 's:');
   PARKS.forEach(p => {
-    const m = L.circleMarker([p.lat, p.lng], {radius:8, weight:2, color:'#0b1020', fillOpacity:.95}).addTo(lmap);
+    const m = L.circleMarker([p.lat, p.lng], {radius:7, weight:2, color:'#e2e8f0', fillOpacity:1, bubblingMouseEvents:false}).addTo(lmap);
     m.bindPopup(() => {
       const btn = (s, t) => viewOnly ? '' : `<button onclick="setStatus('p:${p.id}', ${s ? `'${s}'` : 'null'})">${t}</button>`;
       return `<b>${p.name}</b><br>${p.biomes.map(b => `<span class="tag ${BIOMES[b][1]}">${BIOMES[b][0]}</span>`).join(' ')}
@@ -315,7 +343,8 @@ function initLeaflet() {
 }
 function refreshLeaflet() {
   if (!lmap) return;
-  PARKS.forEach(p => markers[p.id].setStyle({fillColor: colorFor('p:'+p.id)}));
+  regionLayers.forEach(([lyr, pre]) => lyr.setStyle(regionStyle(pre)));
+  PARKS.forEach(p => markers[p.id].setStyle({fillColor: eff('p:'+p.id) ? COL[eff('p:'+p.id)] : '#64748b'}).bringToFront());
 }
 
 // ---------- Passport ----------
@@ -376,7 +405,7 @@ function renderHud() {
     <div class="row" style="margin-top:6px">Click a pin to update</div>`;
 }
 
-function renderAll() { renderHud(); refreshGlobe(); refreshScratch(); refreshLeaflet(); if (document.getElementById('page-passport').classList.contains('active')) renderPassport(); }
+function renderAll() { computeImplied(); renderHud(); refreshGlobe(); refreshScratch(); refreshLeaflet(); if (document.getElementById('page-passport').classList.contains('active')) renderPassport(); }
 
 // ---------- Share / export / import ----------
 document.getElementById('share').onclick = async e => {
@@ -406,6 +435,7 @@ window.addEventListener('resize', sizeGlobe);
 Promise.all([fetch(WORLD_URL).then(r => r.json()), fetch(US_URL).then(r => r.json())]).then(([w, u]) => {
   worldFeatures = topojson.feature(w, w.objects.countries).features;
   usFeatures = topojson.feature(u, u.objects.states).features.filter(f => +f.id <= 56 && f.id !== '11');
+  computeImplied();
   initGlobe();
   renderAll();
   show(location.hash.slice(1) || 'globe');
