@@ -6,7 +6,7 @@
   <title>Cultivate • Connection Garden</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="icon" type="image/png" href="assets/sakura_summer.png" />
   <link rel="apple-touch-icon" href="assets/sakura_summer.png" />
   <link rel="stylesheet" href="https://unpkg.com/pixelarticons@1.8.1/fonts/pixelart-icons-font.css" />
@@ -22,11 +22,12 @@
       transition: background-color 1.2s ease, border-color 1.2s ease;
     }
     body h1, body h2, body h3, body button, body .font-mono, body #average-vitality-text {
-      font-family: 'Pixelify Sans', monospace;
+      font-family: 'Silkscreen', monospace;
     }
     .brand-wordmark {
-      font-family: 'Pixelify Sans', monospace;
-      font-weight: 500;
+      font-family: 'Silkscreen', monospace;
+      font-weight: 400;
+      letter-spacing: -0.02em;
     }
     .battery-fill {
       transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.4s ease;
@@ -86,7 +87,7 @@
     <header class="border-b border-[#23352e]/80 pb-4 space-y-4">
       <div class="flex items-start justify-between gap-3">
         <div class="min-w-0">
-          <h1 class="text-2xl font-bold tracking-tight text-[#f4ede4] flex items-center gap-2">
+          <h1 class="text-base min-[360px]:text-lg sm:text-2xl font-bold tracking-tight text-[#f4ede4] flex items-center gap-2">
             <img id="garden-weather-icon" src="assets/sakura_summer.png" alt="" aria-hidden="true" class="w-6 h-6 object-contain [image-rendering:pixelated]" /> <span class="brand-wordmark">Cultivate</span>
           </h1>
           <p class="text-xs text-[#9eb3a8] mt-0.5">
@@ -180,12 +181,13 @@
         <span id="garden-plot-count" class="bg-black/40 text-[#e4ece7] font-mono px-2 py-1 rounded-full"></span>
         <button id="garden-badge-toggle" type="button" onclick="toggleGardenBadges()" class="inline-flex items-center gap-1.5 bg-black/40 hover:bg-black/60 text-[#e4ece7] px-2 py-1 rounded-full transition-colors"></button>
       </div>
-      <div id="garden-water-alert" class="hidden relative z-10 mb-2 flex items-center gap-2 rounded-lg border border-[#e6a34a]/50 bg-[#241c12]/90 px-3 py-2 text-xs text-[#f4d49c]" role="status" aria-live="polite">
+      <div id="garden-water-alert" class="hidden relative z-10 mb-2 flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-lg border-2 border-[#ffd09a] bg-[#ff7a00] py-2 pl-3 pr-10 text-xs font-semibold text-[#1f0d00] shadow-lg shadow-black/40" role="status" aria-live="polite">
         <i class="pixelart-icons-font-warning-box pixel-icon shrink-0" aria-hidden="true"></i>
-        <span id="garden-water-alert-text" class="min-w-0 flex-1"></span>
-        <button type="button" onclick="waterGardenReminder()" class="inline-flex items-center gap-1 rounded-md border border-[#e6a34a]/40 px-2 py-1 font-semibold text-[#f4d49c] hover:bg-[#3a2b18]">
+        <span id="garden-water-alert-text" class="min-w-0 flex-1 basis-36 font-sans font-semibold"></span>
+        <button type="button" onclick="waterGardenReminder()" class="inline-flex items-center gap-1 rounded-md bg-[#1f0d00] px-2 py-1 text-[#ffb067] hover:bg-black">
           <i class="pixelart-icons-font-drop pixel-icon" aria-hidden="true"></i> Water
         </button>
+        <button type="button" onclick="dismissGardenWaterAlert()" aria-label="Close watering alert" class="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-md hover:bg-black/20"><i class="pixelart-icons-font-close pixel-icon" aria-hidden="true"></i></button>
       </div>
       <div id="plots-container" class="relative z-10 flex flex-wrap justify-center gap-x-2 gap-y-9"></div>
       <div id="garden-page-controls" class="absolute bottom-0 left-1/2 z-20 flex h-8 -translate-x-1/2 items-center gap-3 rounded-full bg-[#20180f]/90 px-2 text-xs text-[#f4ede4]">
@@ -673,6 +675,10 @@
       updateAvatarPreview();
     }
 
+    // Stage cut-offs: Thriving >= 75, Good > 50, Wilting > 15, Dormant <= 15. The watering alert starts at Wilting.
+    const GOOD_ABOVE = 50;
+    const DORMANT_AT_OR_BELOW = 15;
+
     function getPlantStage(health, tier = 'inner') {
       let season;
       let label;
@@ -681,11 +687,11 @@
         season = 'spring';
         label = 'Thriving';
         color = 'text-emerald-400';
-      } else if (health > 30) {
+      } else if (health > GOOD_ABOVE) {
         season = 'summer';
         label = 'Good';
         color = 'text-teal-400';
-      } else if (health > 0) {
+      } else if (health > DORMANT_AT_OR_BELOW) {
         season = 'autumn';
         label = 'Wilting';
         color = 'text-[#ea580c]';
@@ -740,8 +746,8 @@
           avatar_seed: 'sample-delilah',
           photo: null,
           touches: [
-            // 80 days ago on 90d cadence = ~11% health -> Wilting
-            { type: 'Hangout', timestamp: now - (80 * DAY), note: 'Attended housewarming party' }
+            // 60 days ago on 90d cadence = ~33% health -> Wilting
+            { type: 'Hangout', timestamp: now - (60 * DAY), note: 'Attended housewarming party' }
           ]
         },
         {
@@ -763,7 +769,7 @@
       const expected = [
         { id: '1', name: 'Jacob (Example)', category: 'Friends', tier: 'close', avatar_seed: 'sample-jacob', type: 'Virtual Hangout', note: 'Played minecraft for a few hours', daysAgo: 0 },
         { id: '2', name: 'Mom (Example)', category: 'Family', tier: 'inner', avatar_seed: 'sample-mom', type: 'Hangout', note: 'Sunday family dinner', daysAgo: 5 },
-        { id: '3', name: 'Delilah (Example)', category: 'Friends', tier: 'wider', avatar_seed: 'sample-delilah', type: 'Hangout', note: 'Attended housewarming party', daysAgo: 50 },
+        { id: '3', name: 'Delilah (Example)', category: 'Friends', tier: 'wider', avatar_seed: 'sample-delilah', type: 'Hangout', note: 'Attended housewarming party', daysAgo: 60, legacyDaysAgo: [50, 80] },
         { id: '4', name: 'Prof. Milton (Example)', category: 'Professional', tier: 'quarterly', avatar_seed: 'sample-milton', type: 'Text', note: 'Work and networking check-in email', daysAgo: 85 }
       ];
       const dayMs = 1000 * 60 * 60 * 24;
@@ -778,7 +784,8 @@
 
         const touch = friend.touches[0];
         const daysSince = (Date.now() - touch.timestamp) / dayMs;
-        return touch.type === example.type && touch.note === example.note && Math.abs(daysSince - example.daysAgo) <= 1;
+        return touch.type === example.type && touch.note === example.note &&
+          [example.daysAgo, ...(example.legacyDaysAgo || [])].some(days => Math.abs(daysSince - days) <= 1);
       });
     }
 
@@ -1031,8 +1038,8 @@
 
     function getBatteryColor(health) {
       if (health >= 75) return 'bg-emerald-500';
-      if (health > 30) return 'bg-teal-500';
-      if (health >= 15) return 'bg-[#ea580c]';
+      if (health > GOOD_ABOVE) return 'bg-teal-500';
+      if (health > DORMANT_AT_OR_BELOW) return 'bg-[#ea580c]';
       return 'bg-[#3b4c44]';
     }
 
@@ -1043,7 +1050,7 @@
       const icon = document.getElementById('garden-weather-icon');
 
       if (!canvas || !bar || !text) return;
-      if (icon) icon.src = averageHealth > 30 ? 'assets/sakura_summer.png' : 'assets/sakura_autumn.png';
+      if (icon) icon.src = averageHealth > GOOD_ABOVE ? 'assets/sakura_summer.png' : 'assets/sakura_autumn.png';
       bar.style.width = `${averageHealth}%`;
 
       let bgColor;
@@ -1053,12 +1060,12 @@
         bar.className = 'h-full bg-emerald-400 transition-all duration-700';
         text.className = 'text-[11px] font-mono text-emerald-300';
         text.textContent = `${averageHealth}% • Spring · Thriving`;
-      } else if (averageHealth > 30) {
+      } else if (averageHealth > GOOD_ABOVE) {
         bgColor = '#081b12';
         bar.className = 'h-full bg-teal-500 transition-all duration-700';
         text.className = 'text-[11px] font-mono text-teal-300';
         text.textContent = `${averageHealth}% • Summer · Good`;
-      } else if (averageHealth > 0) {
+      } else if (averageHealth > DORMANT_AT_OR_BELOW) {
         bgColor = '#25190f';
         bar.className = 'h-full bg-[#ea580c] transition-all duration-700';
         text.className = 'text-[11px] font-mono text-[#fdba74]';
@@ -1098,7 +1105,7 @@
     function getGardenWaterReminder() {
       const thirsty = friends
         .map(friend => ({ friend, health: calculateHealth(friend).health }))
-        .filter(entry => entry.health <= 30)
+        .filter(entry => entry.health <= GOOD_ABOVE)
         .sort((a, b) =>
           (TIER_PRIORITY[b.friend.tier] || 1) - (TIER_PRIORITY[a.friend.tier] || 1) ||
           a.health - b.health ||
@@ -1106,12 +1113,21 @@
       return thirsty.length ? { ...thirsty[0], count: thirsty.length } : null;
     }
 
+    let dismissedWaterAlertKey = null;
+    const waterAlertKey = reminder => `${reminder.friend.id}:${reminder.count}`;
+
+    function dismissGardenWaterAlert() {
+      const reminder = getGardenWaterReminder();
+      dismissedWaterAlertKey = reminder ? waterAlertKey(reminder) : null;
+      updateGardenWaterReminder();
+    }
+
     function updateGardenWaterReminder() {
       const alert = document.getElementById('garden-water-alert');
       const text = document.getElementById('garden-water-alert-text');
       if (!alert || !text) return;
       const reminder = getGardenWaterReminder();
-      alert.classList.toggle('hidden', !reminder);
+      alert.classList.toggle('hidden', !reminder || waterAlertKey(reminder) === dismissedWaterAlertKey);
       if (reminder) {
         const prefix = reminder.count > 1 ? `${reminder.count} plants could use water. ` : 'Ready to water. ';
         text.textContent = `${prefix}${reminder.friend.name} is at ${reminder.health}% ${getPlantStage(reminder.health, reminder.friend.tier).label}.`;
@@ -1221,7 +1237,7 @@
       const rand = mulberry32(7);
       const rgb = color => `rgb(${color[0]},${color[1]},${color[2]})`;
       const dot = (x, y, color, w = 1, h = 1) => { ctx.fillStyle = rgb(color); ctx.fillRect(x, y, w, h); };
-      const scene = health >= 75 ? 'thriving' : health > 30 ? 'good' : health > 0 ? 'wilting' : 'dormant';
+      const scene = health >= 75 ? 'thriving' : health > GOOD_ABOVE ? 'good' : health > DORMANT_AT_OR_BELOW ? 'wilting' : 'dormant';
       const palettes = {
         thriving: { grass: [29, 119, 48], light: [55, 151, 57], dark: [17, 77, 35], hill: [43, 135, 52], path: [165, 119, 67], edge: [111, 74, 43], shrub: [18, 76, 34], shrubLight: [47, 139, 49] },
         good: { grass: [20, 76, 44], light: [34, 99, 55], dark: [11, 49, 32], hill: [25, 87, 48], path: [125, 91, 59], edge: [81, 61, 43], shrub: [14, 62, 36], shrubLight: [34, 104, 49] },
@@ -2251,7 +2267,7 @@
 
     function checkRemindersAndNotify(isTest = false) {
       if (Notification.permission !== 'granted') return;
-      const thirsty = friends.filter(f => calculateHealth(f).health <= 25);
+      const thirsty = friends.filter(f => calculateHealth(f).health <= GOOD_ABOVE);
       
       if (thirsty.length > 0) {
         const person = thirsty[0];
