@@ -240,7 +240,7 @@
       </div>
     </div>
 
-    <input id="queue-search" type="search" placeholder="Search connections" oninput="setSearch(this.value)" class="w-full bg-[#0b1210]/80 border border-[#283e35] rounded-lg px-3 py-2 text-xs text-emerald-100 placeholder:text-[#60766b] focus:outline-none focus:border-teal-500" />
+    <input id="queue-search" type="search" name="queue-search" autocomplete="off" placeholder="Search connections" oninput="setSearch(this.value)" class="w-full bg-[#0b1210]/80 border border-[#283e35] rounded-lg px-3 py-2 text-xs text-emerald-100 placeholder:text-[#60766b] focus:outline-none focus:border-teal-500" />
 
     <!-- Bulk Edit Bar -->
     <div id="bulk-bar" class="hidden sticky top-2 z-30 space-y-2 rounded-xl border border-teal-600/50 bg-[#0f1c17]/95 p-3 text-xs shadow-xl backdrop-blur-sm">
@@ -876,18 +876,69 @@
 
     function saveData() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(friends));
-      syncToCloud(false);
+      if (cloudHydrated) syncToCloud(false);
     }
 
     function saveSettings() {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(cadenceSettings));
-      syncToCloud(false);
+      if (cloudHydrated) syncToCloud(false);
     }
 
     /* =========================================================================
        NATIVE REST AUTH & CLOUD SYNC
        ========================================================================= */
     let cloudSession = JSON.parse(localStorage.getItem(AUTH_SESSION_KEY) || 'null');
+    // Cloud pushes are blocked until the first successful cloud load so stale local data never overwrites the cloud copy.
+    let cloudHydrated = false;
+    let cloudSyncFailed = false;
+
+    function setSyncFailed(failed, message) {
+      cloudSyncFailed = failed;
+      const dot = document.getElementById('sync-status-dot');
+      if (dot && cloudSession && cloudSession.user) {
+        dot.className = 'absolute top-1 right-1 w-2 h-2 rounded-full ' + (failed ? 'bg-red-500' : 'bg-emerald-400');
+        dot.title = failed ? (message || 'Cloud sync failed') : '';
+      }
+    }
+
+    function resetListFilters() {
+      searchQuery = '';
+      activeFilter = 'all';
+      clearTimeout(searchTimer);
+      const searchEl = document.getElementById('queue-search');
+      if (searchEl) searchEl.value = '';
+      setFilter('all');
+    }
+
+    async function refreshCloudSession() {
+      if (!cloudSession || !cloudSession.refresh_token) return false;
+      try {
+        const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY },
+          body: JSON.stringify({ refresh_token: cloudSession.refresh_token })
+        });
+        if (!res.ok) return false;
+        const data = await res.json();
+        if (!data.access_token) return false;
+        cloudSession = { ...cloudSession, ...data, user: data.user || cloudSession.user };
+        localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(cloudSession));
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    async function cloudFetch(url, options, retried = false) {
+      const res = await fetch(url, {
+        ...options,
+        headers: { ...options.headers, 'Authorization': `Bearer ${cloudSession.access_token}` }
+      });
+      if ((res.status === 401 || res.status === 403) && !retried && await refreshCloudSession()) {
+        return cloudFetch(url, options, true);
+      }
+      return res;
+    }
 
     function updateAuthUI() {
       const dot = document.getElementById('sync-status-dot');
@@ -932,7 +983,9 @@
 
         cloudSession = data;
         localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(cloudSession));
+        cloudHydrated = false;
         updateAuthUI();
+        resetListFilters();
         await loadFromCloud();
         toggleAuthModal(false);
       } catch (err) {
@@ -968,6 +1021,7 @@
           cloudSession = data.session;
           localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(cloudSession));
           updateAuthUI();
+          cloudHydrated = true;
           await syncToCloud(true);
         } else {
           alert('Account created! If email confirmations are enabled in your Supabase dashboard, check your inbox to confirm.');
@@ -981,6 +1035,8 @@
 
     function handleLogout() {
       cloudSession = null;
+      cloudHydrated = false;
+      cloudSyncFailed = false;
       localStorage.removeItem(AUTH_SESSION_KEY);
       updateAuthUI();
       toggleAuthModal(false);
@@ -988,14 +1044,17 @@
 
     async function syncToCloud(notify = false) {
       if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !cloudSession || !cloudSession.access_token) return;
+      if (!cloudHydrated) {
+        if (notify) alert('Cloud data has not loaded yet, so sync was skipped to protect your garden. Try again once it loads.');
+        return;
+      }
 
       try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/cultivate_gardens`, {
+        const res = await cloudFetch(`${SUPABASE_URL}/rest/v1/cultivate_gardens`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${cloudSession.access_token}`,
             'Prefer': 'resolution=merge-duplicates'
           },
           body: JSON.stringify({
@@ -1007,14 +1066,18 @@
         });
 
         if (!res.ok) {
-          const errData = await res.json();
+          const errData = await res.json().catch(() => ({}));
           console.warn('Sync failed:', errData);
+          setSyncFailed(true, 'Sync failed: ' + (errData.message || res.status));
           if (notify) alert('Sync error: ' + (errData.message || 'Failed'));
-        } else if (notify) {
-          alert('Garden safely synced to cloud!');
+        } else {
+          setSyncFailed(false);
+          if (notify) alert('Garden safely synced to cloud!');
         }
       } catch (e) {
         console.warn('Sync network error:', e);
+        setSyncFailed(true, 'Sync network error');
+        if (notify) alert('Sync network error. Your data is still saved locally.');
       }
     }
 
@@ -1022,43 +1085,59 @@
       if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !cloudSession || !cloudSession.access_token) return;
 
       try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/cultivate_gardens?user_id=eq.${cloudSession.user.id}&select=*`, {
+        const res = await cloudFetch(`${SUPABASE_URL}/rest/v1/cultivate_gardens?user_id=eq.${cloudSession.user.id}&select=*`, {
           headers: {
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${cloudSession.access_token}`
+            'apikey': SUPABASE_ANON_KEY
           }
         });
 
-        if (res.ok) {
-          const records = await res.json();
-          if (records && records.length > 0) {
-            const row = records[0];
-            let shouldSyncCloud = false;
-            if (row.friends && Array.isArray(row.friends)) {
-              const shouldUpgradeCloudExamples = hasUntouchedDefaultExamples(row.friends);
-              friends = shouldUpgradeCloudExamples ? getDefaultExamples() : row.friends;
-              const cloudAvatarsChanged = migrateAvatarSeeds(friends);
-              shouldSyncCloud = shouldSyncCloud || shouldUpgradeCloudExamples || cloudAvatarsChanged;
-              localStorage.setItem(STORAGE_KEY, JSON.stringify(friends));
-            }
-            if (row.cadence_settings) {
-              const shouldUpgradeCloudCadences = isPreviousDefaultCadence(row.cadence_settings);
-              cadenceSettings = shouldUpgradeCloudCadences
-                ? { ...DEFAULT_CADENCE_SETTINGS }
-                : row.cadence_settings;
-              localStorage.setItem(SETTINGS_KEY, JSON.stringify(cadenceSettings));
-              shouldSyncCloud = shouldSyncCloud || shouldUpgradeCloudCadences;
-            }
-            if (shouldSyncCloud) {
-              await syncToCloud(false);
-            }
-            render();
-          } else {
+        if (!res.ok) {
+          console.warn('Load cloud failed:', res.status);
+          setSyncFailed(true, 'Could not load cloud data; local data kept');
+          return;
+        }
+
+        const records = await res.json();
+        if (!Array.isArray(records)) {
+          setSyncFailed(true, 'Unexpected cloud response; local data kept');
+          return;
+        }
+
+        if (records.length > 0) {
+          const row = records[0];
+          let shouldSyncCloud = false;
+          if (row.friends && Array.isArray(row.friends)) {
+            const shouldUpgradeCloudExamples = hasUntouchedDefaultExamples(row.friends);
+            friends = shouldUpgradeCloudExamples ? getDefaultExamples() : row.friends;
+            const cloudAvatarsChanged = migrateAvatarSeeds(friends);
+            shouldSyncCloud = shouldSyncCloud || shouldUpgradeCloudExamples || cloudAvatarsChanged;
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(friends));
+          }
+          if (row.cadence_settings) {
+            const shouldUpgradeCloudCadences = isPreviousDefaultCadence(row.cadence_settings);
+            cadenceSettings = shouldUpgradeCloudCadences
+              ? { ...DEFAULT_CADENCE_SETTINGS }
+              : row.cadence_settings;
+            localStorage.setItem(SETTINGS_KEY, JSON.stringify(cadenceSettings));
+            shouldSyncCloud = shouldSyncCloud || shouldUpgradeCloudCadences;
+          }
+          cloudHydrated = true;
+          setSyncFailed(false);
+          if (shouldSyncCloud) {
+            await syncToCloud(false);
+          }
+        } else {
+          // No cloud row yet. Only seed it with real local data, never the untouched examples.
+          cloudHydrated = true;
+          setSyncFailed(false);
+          if (friends.length > 0 && !hasUntouchedDefaultExamples(friends)) {
             await syncToCloud(false);
           }
         }
+        render();
       } catch (e) {
         console.warn('Load cloud error:', e);
+        setSyncFailed(true, 'Could not load cloud data; local data kept');
       }
     }
 
@@ -1510,6 +1589,15 @@
       }
 
       if (filtered.length === 0) {
+        if (friends.length > 0) {
+          container.innerHTML = `
+            <div class="text-center py-12 border border-dashed border-[#283e35] rounded-2xl p-6 text-[#7d968a] text-sm space-y-3">
+              <div class="flex items-center justify-center gap-2"><i class="pixelart-icons-font-users pixel-icon" aria-hidden="true"></i> ${friends.length} connection${friends.length === 1 ? ' is' : 's are'} hidden by the current search or filter.</div>
+              <button type="button" onclick="resetListFilters()" class="px-3 py-1 rounded-full text-xs font-medium bg-teal-900/40 text-teal-200 border border-teal-600/50">Clear filters</button>
+            </div>
+          `;
+          return;
+        }
         container.innerHTML = `
           <div class="text-center py-12 border border-dashed border-[#283e35] rounded-2xl p-6 text-[#7d968a] text-sm space-y-2">
             <div class="flex items-center justify-center gap-2"><i class="pixelart-icons-font-users pixel-icon" aria-hidden="true"></i> No connections found in this group.</div>
