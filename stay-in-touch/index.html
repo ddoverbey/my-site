@@ -4,6 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Cultivate • Connection Garden</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="icon" type="image/png" href="assets/sakura_summer.png" />
   <link rel="apple-touch-icon" href="assets/sakura_summer.png" />
   <link rel="stylesheet" href="https://unpkg.com/pixelarticons@1.8.1/fonts/pixelart-icons-font.css" />
@@ -15,7 +18,15 @@
   
   <style>
     body {
+      font-family: 'Space Grotesk', sans-serif;
       transition: background-color 1.2s ease, border-color 1.2s ease;
+    }
+    body h1, body h2, body h3, body button, body .font-mono, body #average-vitality-text {
+      font-family: 'Pixelify Sans', monospace;
+    }
+    .brand-wordmark {
+      font-family: 'Pixelify Sans', monospace;
+      font-weight: 500;
     }
     .battery-fill {
       transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.4s ease;
@@ -76,7 +87,7 @@
       <div class="flex items-start justify-between gap-3">
         <div class="min-w-0">
           <h1 class="text-2xl font-bold tracking-tight text-[#f4ede4] flex items-center gap-2">
-            <img id="garden-weather-icon" src="assets/sakura_summer.png" alt="" aria-hidden="true" class="w-6 h-6 object-contain [image-rendering:pixelated]" /> Cultivate
+            <img id="garden-weather-icon" src="assets/sakura_summer.png" alt="" aria-hidden="true" class="w-6 h-6 object-contain [image-rendering:pixelated]" /> <span class="brand-wordmark">Cultivate</span>
           </h1>
           <p class="text-xs text-[#9eb3a8] mt-0.5">
             <span class="line-through text-[#63756c]">Zero</span> (some) guilt. Gentle connections.
