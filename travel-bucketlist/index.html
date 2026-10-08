@@ -81,7 +81,7 @@
 <section class="page scroll" id="page-scratch">
   <div class="toolbar">
     <div class="filters"><button data-m="world" class="on">World</button><button data-m="usa">USA states</button></div>
-    <span class="hint">Click to cycle: unvisited → wishlist → visited</span>
+    <span class="hint">Click to cycle: visited → wishlist → clear</span>
     <span id="scratchCount" class="hint"></span>
   </div>
   <svg class="map" id="svgMap"></svg>
@@ -152,7 +152,7 @@ const US_URL = 'https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json';
 // ---------- State ----------
 let S = {};               // key -> 'v' | 'w'  (keys: c:Name, s:Name, p:id)
 let viewOnly = false;
-const NEXT = {undefined:'w', w:'v', v:undefined};
+const NEXT = {undefined:'v', v:'w', w:undefined};
 const COL = {v:'#22c55e', w:'#f59e0b'};
 const FOG = '#05070d';
 const FOG_STROKE = '#1a2238';
@@ -181,6 +181,19 @@ const parkVisited = p => S['p:'+p.id] === 'v';
 
 // ---------- Derived stats ----------
 let worldFeatures = [], usFeatures = [];
+function exploredPct() {
+  const land = worldFeatures.filter(f => f.properties.name !== 'Antarctica');
+  const total = d3.sum(land, f => f.area);
+  const usa = land.find(f => f.properties.name === 'United States of America');
+  const usTotal = d3.sum(usFeatures, f => f.area);
+  const usSeen = d3.sum(usFeatures.filter(f => eff('s:'+f.properties.name) === 'v'), f => f.area);
+  const usShare = S['c:United States of America'] === 'v' ? 1 : usSeen / usTotal;
+  let seen = 0;
+  land.forEach(f => { if (f !== usa && eff('c:'+f.properties.name) === 'v') seen += f.area; });
+  if (usa) seen += usa.area * usShare;
+  return seen / total * 100;
+}
+
 function stats() {
   const vp = PARKS.filter(parkVisited);
   const biomes = new Set(vp.flatMap(p => p.biomes));
@@ -191,7 +204,7 @@ function stats() {
   let xp = countries*10 + states*5 + vp.length*15;
   biomes.forEach(b => xp += {common:10, uncommon:30, rare:60}[BIOMES[b][1]]);
   const level = Math.floor(Math.sqrt(xp/20)) + 1;
-  return {vp, biomes, rareAll, unlockedRare, countries, states, usParks, anyParks:vp.length, xp, level};
+  return {vp, biomes, rareAll, unlockedRare, countries, states, usParks, anyParks:vp.length, xp, level, explored:exploredPct()};
 }
 
 function achievements(st) {
@@ -244,11 +257,11 @@ const pointColor = d => { const s = eff('p:'+d.id); return s === 'v' ? '#4ade80'
 function initGlobe() {
   globe = Globe({rendererConfig:{antialias:false, powerPreference:'high-performance'}})(document.getElementById('globeEl'))
     .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-night.jpg')
-    .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
+    .backgroundColor('#05070d')
     .atmosphereColor('#6ea8ff')
     .polygonsData(worldFeatures)
     .polygonsTransitionDuration(0)
-    .polygonAltitude(0.008)
+    .polygonAltitude(0.003)
     .polygonCapColor(capColor)
     .polygonSideColor(() => 'rgba(0,0,0,0)')
     .polygonStrokeColor(() => '#1f2a48')
@@ -262,7 +275,7 @@ function initGlobe() {
     .pointColor(pointColor)
     .pointLabel(d => `<b>${d.name}</b><br>${d.biomes.map(b => BIOMES[b][0]).join(', ')}`)
     .onPointClick(d => { if (!viewOnly) cycle('p:'+d.id); });
-  globe.renderer().setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+  globe.renderer().setPixelRatio(1);
   globe.controls().autoRotate = true;
   globe.controls().autoRotateSpeed = 0.35;
   sizeGlobe();
@@ -377,6 +390,7 @@ function renderPassport() {
       <div class="card"><div class="big">Lv ${st.level} · ${tc.cls}</div><p>${st.xp} XP${viewOnly ? ' · viewing a shared passport' : ''}</p>${radar(tc.axes)}</div>
       <div class="card">
         <div class="grid">
+          <div><div class="big">${st.explored.toFixed(1)}%</div><p>World explored (by land area)</p></div>
           <div><div class="big">${st.countries}</div><p>Countries</p></div>
           <div><div class="big">${st.states}<small style="font-size:14px;color:var(--mute)"> / 50</small></div><p>US states</p></div>
           <div><div class="big">${st.usParks}<small style="font-size:14px;color:var(--mute)"> / ${PARKS.filter(p => !p.intl).length}</small></div><p>US national parks</p></div>
@@ -395,6 +409,7 @@ function renderPassport() {
 function renderHud() {
   const st = stats();
   document.getElementById('hudGlobe').innerHTML = `<h3>Lv ${st.level} · ${travelerClass(st).cls}</h3>
+    <div class="row">World explored <b>${st.explored.toFixed(1)}%</b></div>
     <div class="row">Countries <b>${st.countries}</b></div><div class="row">US states <b>${st.states} / 50</b></div>
     <div class="row">Parks <b>${st.anyParks}</b></div><div class="row">Biomes <b>${st.biomes.size} / ${Object.keys(BIOMES).length}</b></div>
     <div class="row">Wishlist <b>${count('c:','w') + count('p:','w') + count('s:','w')}</b></div>
@@ -434,7 +449,9 @@ document.getElementById('file').onchange = async e => {
 window.addEventListener('resize', sizeGlobe);
 Promise.all([fetch(WORLD_URL).then(r => r.json()), fetch(US_URL).then(r => r.json())]).then(([w, u]) => {
   worldFeatures = topojson.feature(w, w.objects.countries).features;
+  worldFeatures.forEach(f => f.area = d3.geoArea(f));
   usFeatures = topojson.feature(u, u.objects.states).features.filter(f => +f.id <= 56 && f.id !== '11');
+  usFeatures.forEach(f => f.area = d3.geoArea(f));
   computeImplied();
   initGlobe();
   renderAll();
