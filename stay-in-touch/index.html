@@ -236,7 +236,8 @@
       <button type="button" onclick="toggleTierFilter('inner')" id="tier-filter-inner" aria-pressed="false" class="shrink-0 px-3 py-1 rounded-full font-medium transition-colors bg-[#131f1a]/80 text-[#9eb3a8] border border-[#23352e] hover:text-[#f4ede4] backdrop-blur-sm">Inner Circle</button>
       <button type="button" onclick="toggleTierFilter('close')" id="tier-filter-close" aria-pressed="false" class="shrink-0 px-3 py-1 rounded-full font-medium transition-colors bg-[#131f1a]/80 text-[#9eb3a8] border border-[#23352e] hover:text-[#f4ede4] backdrop-blur-sm">Close Circle</button>
       <button type="button" onclick="toggleTierFilter('wider')" id="tier-filter-wider" aria-pressed="false" class="shrink-0 px-3 py-1 rounded-full font-medium transition-colors bg-[#131f1a]/80 text-[#9eb3a8] border border-[#23352e] hover:text-[#f4ede4] backdrop-blur-sm">Wider Network</button>
-      <button type="button" onclick="toggleTierFilter('quarterly')" id="tier-filter-quarterly" aria-pressed="false" class="shrink-0 px-3 py-1 rounded-full font-medium transition-colors bg-[#131f1a]/80 text-[#9eb3a8] border border-[#23352e] hover:text-[#f4ede4] backdrop-blur-sm">Long Range</button>
+      <button type="button" onclick="toggleTierFilter('extended')" id="tier-filter-extended" aria-pressed="false" class="shrink-0 px-3 py-1 rounded-full font-medium transition-colors bg-[#131f1a]/80 text-[#9eb3a8] border border-[#23352e] hover:text-[#f4ede4] backdrop-blur-sm">Extended Network</button>
+      <button type="button" onclick="toggleTierFilter('annual')" id="tier-filter-annual" aria-pressed="false" class="shrink-0 px-3 py-1 rounded-full font-medium transition-colors bg-[#131f1a]/80 text-[#9eb3a8] border border-[#23352e] hover:text-[#f4ede4] backdrop-blur-sm">Annual+ Network</button>
       <button type="button" onclick="clearTierFilters()" id="tier-filter-clear" class="hidden shrink-0 px-2 py-1 text-[#8da498] hover:text-[#f4ede4] underline">Clear</button>
     </div>
 
@@ -273,7 +274,8 @@
           <option value="inner">Inner Circle</option>
           <option value="close">Close Circle</option>
           <option value="wider">Wider Network</option>
-          <option value="quarterly">Long Range</option>
+          <option value="extended">Extended Network</option>
+          <option value="annual">Annual+ Network</option>
         </select>
       </div>
       <div class="flex items-center justify-between gap-2">
@@ -323,7 +325,8 @@
               <option value="inner">Inner Circle</option>
               <option value="close" selected>Close Circle</option>
               <option value="wider">Wider Network</option>
-              <option value="quarterly">Long Range (6 months)</option>
+              <option value="extended">Extended Network (6 months)</option>
+              <option value="annual">Annual+ Network (1 year)</option>
             </select>
           </div>
         </div>
@@ -416,7 +419,8 @@
               <option value="inner">Inner Circle</option>
               <option value="close" selected>Close Circle</option>
               <option value="wider">Wider Network</option>
-              <option value="quarterly">Long Range</option>
+              <option value="extended">Extended Network</option>
+              <option value="annual">Annual+ Network</option>
             </select>
           </label>
         </div>
@@ -440,7 +444,7 @@
     <div class="bg-[#14201b] border border-[#283e35] rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
       <div class="flex justify-between items-center border-b border-[#283e35] pb-3">
         <div>
-          <h3 class="font-bold text-sm text-[#f4ede4]">Water <span id="touch-modal-name" class="text-teal-300"></span></h3>
+          <h3 class="font-bold text-sm text-[#f4ede4]"><span id="touch-modal-action">Water</span> <span id="touch-modal-name" class="text-teal-300"></span></h3>
           <p class="text-[11px] text-[#8da498]">Touches restore vitality based on depth</p>
         </div>
         <button onclick="toggleTouchModal(false)" class="text-[#8da498] hover:text-[#f4ede4] text-sm" aria-label="Close"><i class="pixelart-icons-font-close pixel-icon" aria-hidden="true"></i></button>
@@ -448,6 +452,7 @@
 
       <form id="touch-form" class="space-y-3">
         <input type="hidden" id="touch-friend-id" />
+        <input type="hidden" id="touch-edit-index" value="" />
         
         <div>
           <label class="block text-xs font-semibold text-[#a3b8ad] uppercase tracking-wider mb-1.5">Interaction Type</label>
@@ -465,7 +470,7 @@
                 <input type="radio" name="touch-type" value="Virtual Hangout" class="hidden" />
                 <span class="flex items-center gap-2"><i class="pixelart-icons-font-device-laptop pixel-icon" aria-hidden="true"></i> Virtual Hangout / Game Night</span>
               </div>
-              <span class="text-[10px] text-teal-400 font-mono">+50% charge</span>
+              <span class="text-[10px] text-teal-400 font-mono">+100% charge</span>
             </label>
 
             <label class="flex items-center justify-between bg-[#0b1210] border border-[#283e35] px-3 py-2 rounded-lg text-xs font-medium cursor-pointer has-[:checked]:border-teal-500 has-[:checked]:text-teal-300">
@@ -473,7 +478,7 @@
                 <input type="radio" name="touch-type" value="Long Call" class="hidden" />
                 <span class="flex items-center gap-2"><i class="pixelart-icons-font-video pixel-icon" aria-hidden="true"></i> Video Call / Long Call</span>
               </div>
-              <span class="text-[10px] text-teal-400 font-mono">+50% charge</span>
+              <span class="text-[10px] text-teal-400 font-mono">+75% charge</span>
             </label>
 
             <label class="flex items-center justify-between bg-[#0b1210] border border-[#283e35] px-3 py-2 rounded-lg text-xs font-medium cursor-pointer has-[:checked]:border-teal-500 has-[:checked]:text-teal-300">
@@ -495,11 +500,16 @@
         </div>
 
         <div>
+          <label for="touch-date" class="block text-xs font-semibold text-[#a3b8ad] uppercase tracking-wider mb-1">Interaction Date <span class="font-normal normal-case text-[#6b8276]">(optional, defaults to today)</span></label>
+          <input id="touch-date" type="date" class="w-full bg-[#0b1210] border border-[#283e35] rounded-lg px-3 py-2 text-sm text-emerald-100 focus:outline-none focus:border-teal-500" />
+        </div>
+
+        <div>
           <label class="block text-xs font-semibold text-[#a3b8ad] uppercase tracking-wider mb-1">Quick Reflection <span class="text-[#6b8276] font-normal">(Optional)</span></label>
           <input id="touch-note" type="text" placeholder="e.g., Talked about career moves" class="w-full bg-[#0b1210] border border-[#283e35] rounded-lg px-3 py-2 text-sm text-emerald-100 focus:outline-none focus:border-teal-500" />
         </div>
 
-        <button type="submit" class="w-full bg-[#115e59] hover:bg-[#0f766e] font-semibold py-2 rounded-lg text-sm text-white transition-colors mt-2 border border-teal-500/30">
+        <button id="touch-submit" type="submit" class="w-full bg-[#115e59] hover:bg-[#0f766e] font-semibold py-2 rounded-lg text-sm text-white transition-colors mt-2 border border-teal-500/30">
           Water Plant <i class="pixelart-icons-font-drop pixel-icon" aria-hidden="true"></i>
         </button>
       </form>
@@ -549,8 +559,12 @@
           <input id="cfg-cadence-wider" type="number" min="1" max="365" class="w-full bg-[#0b1210] border border-[#283e35] rounded-lg px-3 py-1.5 text-emerald-100 focus:border-teal-500 font-mono" />
         </div>
         <div>
-          <label class="block font-semibold text-[#c4d4cc] mb-1">Long-Range Target (Days)</label>
-          <input id="cfg-cadence-quarterly" type="number" min="1" max="365" class="w-full bg-[#0b1210] border border-[#283e35] rounded-lg px-3 py-1.5 text-emerald-100 focus:border-teal-500 font-mono" />
+          <label class="block font-semibold text-[#c4d4cc] mb-1">Extended Network Target (Days)</label>
+          <input id="cfg-cadence-extended" type="number" min="1" max="3650" class="w-full bg-[#0b1210] border border-[#283e35] rounded-lg px-3 py-1.5 text-emerald-100 focus:border-teal-500 font-mono" />
+        </div>
+        <div>
+          <label class="block font-semibold text-[#c4d4cc] mb-1">Annual+ Network Target (Days)</label>
+          <input id="cfg-cadence-annual" type="number" min="1" max="3650" class="w-full bg-[#0b1210] border border-[#283e35] rounded-lg px-3 py-1.5 text-emerald-100 focus:border-teal-500 font-mono" />
         </div>
         </section>
 
@@ -688,7 +702,8 @@
       inner: 14,
       close: 30,
       wider: 90,
-      quarterly: 180
+      extended: 180,
+      annual: 365
     };
     const PREVIOUS_DEFAULT_CADENCE_SETTINGS = {
       inner: 7,
@@ -702,19 +717,24 @@
         .every(([tier, days]) => settings[tier] === days);
     }
 
+    function normalizeCadenceSettings(settings) {
+      if (!settings || isPreviousDefaultCadence(settings)) return { ...DEFAULT_CADENCE_SETTINGS };
+      const normalized = { ...DEFAULT_CADENCE_SETTINGS, ...settings };
+      if (settings.extended === undefined && settings.quarterly !== undefined) normalized.extended = settings.quarterly;
+      delete normalized.quarterly;
+      return normalized;
+    }
+
     const savedCadenceSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || 'null');
-    const shouldUpgradeSavedCadences = isPreviousDefaultCadence(savedCadenceSettings);
-    let cadenceSettings = !savedCadenceSettings || shouldUpgradeSavedCadences
-      ? { ...DEFAULT_CADENCE_SETTINGS }
-      : savedCadenceSettings;
-    if (shouldUpgradeSavedCadences) {
+    let cadenceSettings = normalizeCadenceSettings(savedCadenceSettings);
+    if (JSON.stringify(savedCadenceSettings) !== JSON.stringify(cadenceSettings)) {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(cadenceSettings));
     }
 
     const TOUCH_WEIGHTS = {
       'Hangout': 1.0,
-      'Virtual Hangout': 0.50,
-      'Long Call': 0.50,
+      'Virtual Hangout': 1.0,
+      'Long Call': 0.75,
       'Quick Call': 0.50,
       'Text': 0.40
     };
@@ -736,6 +756,17 @@
         }
         if (Object.prototype.hasOwnProperty.call(friend, 'avatar')) {
           delete friend.avatar;
+          changed = true;
+        }
+      });
+      return changed;
+    }
+
+    function migrateLegacyFriendTiers(list) {
+      let changed = false;
+      list.forEach(friend => {
+        if (friend.tier === 'quarterly') {
+          friend.tier = 'extended';
           changed = true;
         }
       });
@@ -783,7 +814,8 @@
         inner: { spring: 'deadtree_spring.png', summer: 'deadtree_summer.png', autumn: 'deadtree_autumn.png', winter: 'deadtree_winter.png' },
         close: { spring: 'birch_spring.png', summer: 'birch_summer.png', autumn: 'birch_autumn_2.png', winter: 'birch_winter_1.png' },
         wider: { spring: 'bush_spring.png', summer: 'bush_summer.png', autumn: 'bush_autumn.png', winter: 'bush_winter.png' },
-        quarterly: { spring: 'sunflower_spring.png', summer: 'sunflower_summer.png', autumn: 'sunflower_autum.png', winter: 'sunflower_winter.png' }
+        extended: { spring: 'sunflower_spring.png', summer: 'sunflower_summer.png', autumn: 'sunflower_autum.png', winter: 'sunflower_winter.png' },
+        annual: { spring: 'willow_spring.png', summer: 'willow_summer.png', autumn: 'willow_autumn.png', winter: 'willow_winter.png' }
       };
       const files = plantFiles[tier] || plantFiles.close;
       return { icon: `assets/${files[season]}`, label, color, season };
@@ -832,12 +864,12 @@
           id: '4',
           name: 'Prof. Milton (Example)',
           category: 'Professional',
-          tier: 'quarterly',
+          tier: 'annual',
           avatar_seed: 'sample-milton',
           photo: null,
           touches: [
-            // 85 days ago on 180d cadence with 40% text recharge = 0% health
-            { type: 'Text', timestamp: now - (85 * DAY), note: 'Work and networking check-in email' }
+            // 300 days ago on the annual tier with a 40% text recharge = 0% health.
+            { type: 'Text', timestamp: now - (300 * DAY), note: 'Work and networking check-in email' }
           ]
         }
       ];
@@ -848,13 +880,14 @@
         { id: '1', name: 'Jacob (Example)', category: 'Friends', tier: 'close', avatar_seed: 'sample-jacob', type: 'Virtual Hangout', note: 'Played minecraft for a few hours', daysAgo: 0 },
         { id: '2', name: 'Mom (Example)', category: 'Family', tier: 'inner', avatar_seed: 'sample-mom', type: 'Hangout', note: 'Sunday family dinner', daysAgo: 5 },
         { id: '3', name: 'Delilah (Example)', category: 'Friends', tier: 'wider', avatar_seed: 'sample-delilah', type: 'Hangout', note: 'Attended housewarming party', daysAgo: 60, legacyDaysAgo: [50, 80] },
-        { id: '4', name: 'Prof. Milton (Example)', category: 'Professional', tier: 'quarterly', avatar_seed: 'sample-milton', type: 'Text', note: 'Work and networking check-in email', daysAgo: 85 }
+        { id: '4', name: 'Prof. Milton (Example)', category: 'Professional', tier: 'annual', legacyTiers: ['quarterly'], avatar_seed: 'sample-milton', type: 'Text', note: 'Work and networking check-in email', daysAgo: 300, legacyDaysAgo: [85] }
       ];
       const dayMs = 1000 * 60 * 60 * 24;
 
       return Array.isArray(data) && data.length === expected.length && expected.every(example => {
         const friend = data.find(entry => entry.id === example.id);
-        if (!friend || friend.name !== example.name || friend.category !== example.category || friend.tier !== example.tier || friend.photo !== null || !friend.touches || friend.touches.length !== 1) {
+        const tierMatches = friend && (friend.tier === example.tier || (example.legacyTiers || []).includes(friend.tier));
+        if (!friend || friend.name !== example.name || friend.category !== example.category || !tierMatches || friend.photo !== null || !friend.touches || friend.touches.length !== 1) {
           return false;
         }
         const seedMatches = friend.avatar_seed === example.avatar_seed || (!friend.avatar_seed && Boolean(friend.avatar));
@@ -875,13 +908,15 @@
       friends = getDefaultExamples();
       localStorage.setItem(STORAGE_KEY, JSON.stringify(friends));
     }
-    if (migrateAvatarSeeds(friends)) {
+    const avatarSeedsChanged = migrateAvatarSeeds(friends);
+    const friendTiersChanged = migrateLegacyFriendTiers(friends);
+    if (avatarSeedsChanged || friendTiersChanged) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(friends));
     }
 
     let activeFilter = 'all';
     const activeTierFilters = new Set();
-    const TIER_LABELS = { inner: 'Inner Circle', close: 'Close Circle', wider: 'Wider Network', quarterly: 'Long Range' };
+    const TIER_LABELS = { inner: 'Inner Circle', close: 'Close Circle', wider: 'Wider Network', extended: 'Extended Network', annual: 'Annual+ Network' };
     const DEFAULT_DISPLAY_SETTINGS = { showTierBadge: true };
     function normalizeDisplaySettings(raw) {
       return { ...DEFAULT_DISPLAY_SETTINGS, ...(raw && typeof raw === 'object' && typeof raw.showTierBadge === 'boolean' ? { showTierBadge: raw.showTierBadge } : {}) };
@@ -1141,17 +1176,16 @@
             const shouldUpgradeCloudExamples = hasUntouchedDefaultExamples(row.friends);
             friends = shouldUpgradeCloudExamples ? getDefaultExamples() : row.friends;
             const cloudAvatarsChanged = migrateAvatarSeeds(friends);
-            shouldSyncCloud = shouldSyncCloud || shouldUpgradeCloudExamples || cloudAvatarsChanged;
+            const cloudTiersChanged = migrateLegacyFriendTiers(friends);
+            shouldSyncCloud = shouldSyncCloud || shouldUpgradeCloudExamples || cloudAvatarsChanged || cloudTiersChanged;
             localStorage.setItem(STORAGE_KEY, JSON.stringify(friends));
           }
           if (row.cadence_settings) {
             const { display: cloudDisplay, ...cloudCadences } = row.cadence_settings;
             displaySettings = normalizeDisplaySettings(cloudDisplay);
             localStorage.setItem(DISPLAY_SETTINGS_KEY, JSON.stringify(displaySettings));
-            const shouldUpgradeCloudCadences = isPreviousDefaultCadence(cloudCadences);
-            cadenceSettings = shouldUpgradeCloudCadences
-              ? { ...DEFAULT_CADENCE_SETTINGS }
-              : cloudCadences;
+            cadenceSettings = normalizeCadenceSettings(cloudCadences);
+            const shouldUpgradeCloudCadences = JSON.stringify(cadenceSettings) !== JSON.stringify(cloudCadences);
             localStorage.setItem(SETTINGS_KEY, JSON.stringify(cadenceSettings));
             shouldSyncCloud = shouldSyncCloud || shouldUpgradeCloudCadences;
           }
@@ -1261,11 +1295,12 @@
        ========================================================================= */
     const GARDEN_PAGE_SIZE = 10;
     const GARDEN_BADGES_KEY = 'cultivate_garden_badges_v1';
-    const TIER_PRIORITY = { inner: 4, close: 3, wider: 2, quarterly: 1 };
+    const TIER_PRIORITY = { inner: 5, close: 4, wider: 3, extended: 2, annual: 1 };
     let gardenBadgesVisible = localStorage.getItem(GARDEN_BADGES_KEY) !== 'hidden';
     let reminderBannerHidden = localStorage.getItem(REMINDER_BANNER_KEY) === 'hidden';
     let selectedGardenId = null;
     let recentlyWateredId = null;
+    let currentlyEditingTouch = null;
     let gardenAverageHealth = 100;
     let gardenPage = 0;
 
@@ -1736,7 +1771,7 @@
 
                 ${friend.touches && friend.touches.length > 0 ? `
                   <div class="space-y-1.5 max-h-40 overflow-y-auto pr-1">
-                    ${friend.touches.map(touch => `
+                    ${friend.touches.map((touch, touchIndex) => `
                       <div class="flex items-start justify-between bg-[#0b1210]/70 p-2 rounded-lg border border-[#23352e]">
                         <div>
                           <div class="flex items-center gap-1.5 font-medium text-[#c4d4cc]">
@@ -1745,6 +1780,10 @@
                             <span class="text-[#6b8276] font-mono text-[10px]">${new Date(touch.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                           </div>
                           ${touch.note ? `<p class="text-[#8da498] text-[11px] mt-0.5">${escapeHtml(touch.note)}</p>` : ''}
+                        </div>
+                        <div class="flex shrink-0 items-center gap-1 pl-2">
+                          <button type="button" onclick="editTouch('${friend.id}', ${touchIndex})" aria-label="Edit interaction" class="flex h-7 w-7 items-center justify-center rounded-md text-teal-300 hover:bg-white/5"><i class="pixelart-icons-font-edit pixel-icon" aria-hidden="true"></i></button>
+                          <button type="button" onclick="deleteTouch('${friend.id}', ${touchIndex})" aria-label="Delete interaction" class="flex h-7 w-7 items-center justify-center rounded-md text-[#ea580c] hover:bg-white/5"><i class="pixelart-icons-font-trash pixel-icon" aria-hidden="true"></i></button>
                         </div>
                       </div>
                     `).join('')}
@@ -2098,7 +2137,8 @@
         document.getElementById('cfg-cadence-inner').value = cadenceSettings.inner;
         document.getElementById('cfg-cadence-close').value = cadenceSettings.close;
         document.getElementById('cfg-cadence-wider').value = cadenceSettings.wider;
-        document.getElementById('cfg-cadence-quarterly').value = cadenceSettings.quarterly;
+        document.getElementById('cfg-cadence-extended').value = cadenceSettings.extended;
+        document.getElementById('cfg-cadence-annual').value = cadenceSettings.annual;
         document.getElementById('cfg-show-reminder-banner').checked = !reminderBannerHidden;
         document.getElementById('cfg-show-tier-badge').checked = displaySettings.showTierBadge;
         modal.classList.remove('hidden');
@@ -2118,10 +2158,39 @@
     function openTouchModal(id) {
       const friend = friends.find(f => f.id === id);
       if (!friend) return;
+      currentlyEditingTouch = null;
+      document.getElementById('touch-form').reset();
       document.getElementById('touch-friend-id').value = id;
+      document.getElementById('touch-edit-index').value = '';
       document.getElementById('touch-modal-name').textContent = friend.name;
+      document.getElementById('touch-modal-action').textContent = 'Water';
+      document.getElementById('touch-date').value = new Date().toISOString().split('T')[0];
       document.getElementById('touch-note').value = '';
+      document.getElementById('touch-submit').textContent = 'Water Plant';
       toggleTouchModal(true);
+    }
+
+    function editTouch(friendId, touchIndex) {
+      const friend = friends.find(f => f.id === friendId);
+      const touch = friend?.touches?.[touchIndex];
+      if (!friend || !touch) return;
+      openTouchModal(friendId);
+      currentlyEditingTouch = { friendId, touchIndex };
+      document.getElementById('touch-edit-index').value = String(touchIndex);
+      document.querySelector(`input[name="touch-type"][value="${touch.type}"]`).checked = true;
+      document.getElementById('touch-date').value = new Date(touch.timestamp).toISOString().split('T')[0];
+      document.getElementById('touch-note').value = touch.note || '';
+      document.getElementById('touch-modal-action').textContent = 'Edit';
+      document.getElementById('touch-submit').textContent = 'Save Changes';
+    }
+
+    function deleteTouch(friendId, touchIndex) {
+      const friend = friends.find(f => f.id === friendId);
+      if (!friend?.touches?.[touchIndex]) return;
+      if (!confirm(`Delete this interaction with ${friend.name}?`)) return;
+      friend.touches.splice(touchIndex, 1);
+      saveData();
+      render();
     }
 
     function removeFriend(id) {
@@ -2485,21 +2554,26 @@
       const id = document.getElementById('touch-friend-id').value;
       const type = document.querySelector('input[name="touch-type"]:checked').value;
       const note = document.getElementById('touch-note').value.trim();
+      const dateValue = document.getElementById('touch-date').value;
+      const timestamp = dateValue ? new Date(`${dateValue}T12:00:00`).getTime() : Date.now();
 
       const friend = friends.find(f => f.id === id);
       if (friend) {
         if (!friend.touches) friend.touches = [];
-        friend.touches.unshift({
-          type,
-          timestamp: Date.now(),
-          note
-        });
+        const editingIndex = Number.parseInt(document.getElementById('touch-edit-index').value, 10);
+        const isEditing = currentlyEditingTouch?.friendId === id && Number.isInteger(editingIndex) && editingIndex >= 0 && editingIndex < friend.touches.length;
+        if (isEditing) {
+          friend.touches[editingIndex] = { ...friend.touches[editingIndex], type, timestamp, note };
+        } else {
+          friend.touches.unshift({ type, timestamp, note });
+        }
         saveData();
         recentlyWateredId = id;
         setTimeout(() => { recentlyWateredId = null; }, 900);
-        trackMilestoneOnce('first_plant_watered');
+        if (!isEditing) trackMilestoneOnce('first_plant_watered');
       }
 
+      currentlyEditingTouch = null;
       toggleTouchModal(false);
       dismissDiceBanner();
       render();
@@ -2510,7 +2584,8 @@
       cadenceSettings.inner = parseInt(document.getElementById('cfg-cadence-inner').value, 10) || 14;
       cadenceSettings.close = parseInt(document.getElementById('cfg-cadence-close').value, 10) || 30;
       cadenceSettings.wider = parseInt(document.getElementById('cfg-cadence-wider').value, 10) || 90;
-      cadenceSettings.quarterly = parseInt(document.getElementById('cfg-cadence-quarterly').value, 10) || 180;
+      cadenceSettings.extended = parseInt(document.getElementById('cfg-cadence-extended').value, 10) || 180;
+      cadenceSettings.annual = parseInt(document.getElementById('cfg-cadence-annual').value, 10) || 365;
       displaySettings.showTierBadge = document.getElementById('cfg-show-tier-badge').checked;
       reminderBannerHidden = !document.getElementById('cfg-show-reminder-banner').checked;
       localStorage.setItem(REMINDER_BANNER_KEY, reminderBannerHidden ? 'hidden' : 'shown');
@@ -2600,8 +2675,12 @@
       reader.onload = function(e) {
         try {
           const data = JSON.parse(e.target.result);
-          if (data.friends) friends = data.friends;
-          if (data.cadenceSettings) cadenceSettings = data.cadenceSettings;
+          if (data.friends) {
+            friends = data.friends;
+            migrateAvatarSeeds(friends);
+            migrateLegacyFriendTiers(friends);
+          }
+          if (data.cadenceSettings) cadenceSettings = normalizeCadenceSettings(data.cadenceSettings);
           if (data.displaySettings) displaySettings = normalizeDisplaySettings(data.displaySettings);
           saveData();
           saveSettings();
