@@ -6,32 +6,26 @@
 <title>Wanderlog • Travel Bucket List</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
-  :root { --bg:#0b1020; --panel:#141b30; --line:#232c47; --text:#e6e9f2; --mute:#8b94b0; --visit:#22c55e; --wish:#f59e0b; --none:#334155; }
+  :root { --bg:#0f172a; --panel:#1e293b; --line:#334155; --text:#f1e9d2; --mute:#94a3b8; --visit:#22c55e; --wish:#f59e0b; --none:#334155; --gold:#f59e0b; }
   * { box-sizing:border-box; }
   body { margin:0; background:var(--bg); color:var(--text); font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif; }
   header { display:flex; flex-wrap:wrap; align-items:center; gap:12px; padding:10px 16px; background:var(--panel); border-bottom:1px solid var(--line); }
-  header h1 { font-size:18px; margin:0 12px 0 0; }
+  header { border-bottom-color:var(--gold); }
+  header h1, h2, .big, .modal-box h2 { font-family:Georgia,'Times New Roman',serif; }
+  header h1 { font-size:18px; margin:0 12px 0 0; color:var(--gold); letter-spacing:.04em; }
   nav { display:flex; gap:6px; flex-wrap:wrap; }
   button { font:inherit; color:var(--text); background:#1d2744; border:1px solid var(--line); border-radius:8px; padding:6px 12px; cursor:pointer; }
   button:hover { background:#27345c; }
-  nav button.active { background:#3b5bdb; border-color:#3b5bdb; }
+  nav button.active { background:var(--gold); border-color:var(--gold); color:#0f172a; font-weight:600; }
   .spacer { flex:1; }
   .page { display:none; height:calc(100vh - 56px); position:relative; }
   .page.active { display:block; }
   .scroll { overflow:auto; padding:20px; }
-  #globeEl, #leafletEl { width:100%; height:100%; }
+  #leafletEl { width:100%; height:100%; }
   .hud { position:absolute; top:12px; left:12px; z-index:500; background:rgba(20,27,48,.88); border:1px solid var(--line); border-radius:12px; padding:12px 14px; min-width:200px; backdrop-filter:blur(6px); }
   .hud h3 { margin:0 0 6px; font-size:14px; }
   .hud .row { display:flex; justify-content:space-between; gap:16px; color:var(--mute); }
   .hud .row b { color:var(--text); }
-  .legend { position:absolute; bottom:12px; left:12px; z-index:500; background:rgba(20,27,48,.88); border:1px solid var(--line); border-radius:10px; padding:8px 12px; font-size:13px; color:var(--mute); }
-  .dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin:0 4px 0 10px; }
-  .dot:first-child { margin-left:0; }
-  .toolbar { display:flex; gap:8px; margin-bottom:12px; align-items:center; flex-wrap:wrap; }
-  .toolbar .hint { color:var(--mute); }
-  svg.map { width:100%; max-width:1100px; background:#0f1730; border:1px solid var(--line); border-radius:12px; display:block; }
-  svg.map path { stroke:#1f2a48; stroke-width:.5; cursor:pointer; transition:fill .15s; }
-  svg.map path:hover { filter:brightness(1.4); }
   .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:12px; }
   .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px 14px; }
   .card h4 { margin:0 0 2px; font-size:14px; }
@@ -52,18 +46,22 @@
   .leaflet-popup-content-wrapper, .leaflet-popup-tip { background:var(--panel); color:var(--text); }
   .popbtns { display:flex; gap:6px; margin-top:6px; }
   .popbtns button { padding:3px 8px; font-size:12px; }
-  .filters { display:flex; gap:6px; }
-  .filters button.on { background:#3b5bdb; border-color:#3b5bdb; }
+  .modal { display:none; position:fixed; inset:0; z-index:2000; align-items:center; justify-content:center; background:rgba(5,7,13,.8); }
+  .modal.open { display:flex; }
+  .modal-box { max-width:420px; margin:16px; padding:28px; text-align:center; background:var(--panel); border:2px solid var(--gold); border-radius:14px; }
+  .modal-box h2 { margin:0 0 18px; font-size:20px; color:var(--gold); }
+  .btn-gold { background:var(--gold); border-color:var(--gold); color:#0f172a; font-weight:600; }
+  .btn-gold:hover { background:#fbbf24; }
+  .banner { position:absolute; top:12px; left:50%; transform:translateX(-50%); z-index:1000; padding:8px 18px; background:var(--panel); border:2px solid var(--gold); border-radius:99px; color:var(--gold); font-family:Georgia,serif; box-shadow:0 4px 18px rgba(0,0,0,.5); }
+  .banner[hidden] { display:none; }
 </style>
 </head>
 <body>
 <header>
   <h1>Wanderlog</h1>
   <nav id="nav">
-    <button data-p="globe">Globe</button>
-    <button data-p="scratch">Scratch-Off Map</button>
-    <button data-p="parks">Parks &amp; Pins</button>
-    <button data-p="passport">Passport</button>
+    <button data-p="parks">RPG Explorer</button>
+    <button data-p="passport">Trip Ledger</button>
   </nav>
   <span class="spacer"></span>
   <button id="share">Copy share link</button>
@@ -72,30 +70,22 @@
   <input id="file" type="file" accept="application/json" hidden>
 </header>
 
-<section class="page" id="page-globe">
-  <div id="globeEl"></div>
-  <div class="hud" id="hudGlobe"></div>
-  <div class="legend"><span class="dot" style="background:var(--visit)"></span>Visited<span class="dot" style="background:var(--wish)"></span>Wishlist<span class="dot" style="background:#05070d;border:1px solid #475569"></span>Fogged &nbsp;·&nbsp; click a country or pin to cycle status</div>
-</section>
-
-<section class="page scroll" id="page-scratch">
-  <div class="toolbar">
-    <div class="filters"><button data-m="world" class="on">World</button><button data-m="usa">USA states</button></div>
-    <span class="hint">Click to cycle: visited → wishlist → clear</span>
-    <span id="scratchCount" class="hint"></span>
-  </div>
-  <svg class="map" id="svgMap"></svg>
-</section>
-
 <section class="page" id="page-parks">
   <div id="leafletEl"></div>
   <div class="hud" id="hudParks"></div>
+  <div class="banner" id="home-banner" hidden>Click your home county</div>
 </section>
 
 <section class="page scroll" id="page-passport"></section>
 
+<div class="modal" id="modal-onboard">
+  <div class="modal-box">
+    <h2>Every journey begins at home. Establish your Citadel.</h2>
+    <button class="btn-gold" id="btn-set-home">Set Home Base</button>
+  </div>
+</div>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/globe.gl"></script>
 <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 <script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
 <script>
@@ -311,95 +301,16 @@ function travelerClass(st) {
 }
 
 // ---------- Routing ----------
-const pages = ['globe','scratch','parks','passport'];
+const pages = ['parks','passport'];
 function show(p) {
-  if (!pages.includes(p)) p = 'globe';
+  if (!pages.includes(p)) p = 'parks';
   pages.forEach(x => document.getElementById('page-'+x).classList.toggle('active', x === p));
   document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('active', b.dataset.p === p));
-  if (globe) { if (p === 'globe') { sizeGlobe(); globe.resumeAnimation(); } else globe.pauseAnimation(); }
   if (p === 'parks') { initLeaflet(); setTimeout(() => lmap.invalidateSize(), 50); }
-  if (p === 'scratch') drawScratch();
   if (p === 'passport') renderPassport();
   history.replaceState(null, '', location.search + '#' + p);
 }
 document.getElementById('nav').onclick = e => { if (e.target.dataset.p) show(e.target.dataset.p); };
-
-// ---------- Globe ----------
-let globe;
-function colorFor(key) { return COL[eff(key)] || FOG; }
-const capColor = d => { const c = eff('c:'+d.properties.name); return c ? COL[c] + '88' : '#05070dff'; };
-const pointColor = d => { const s = eff('p:'+d.id); return s === 'v' ? '#4ade80' : s === 'w' ? '#fbbf24' : '#64748b'; };
-function initGlobe() {
-  globe = Globe({rendererConfig:{antialias:false, powerPreference:'high-performance'}})(document.getElementById('globeEl'))
-    .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-night.jpg')
-    .backgroundColor('#05070d')
-    .atmosphereColor('#6ea8ff')
-    .polygonsData(worldFeatures)
-    .polygonsTransitionDuration(0)
-    .polygonAltitude(0.003)
-    .polygonCapColor(capColor)
-    .polygonSideColor(() => 'rgba(0,0,0,0)')
-    .polygonStrokeColor(() => '#1f2a48')
-    .polygonLabel(d => `<b>${d.properties.name}</b><br>${{v:'Visited',w:'Wishlist'}[eff('c:'+d.properties.name)] || 'Unexplored'}`)
-    .onPolygonClick(d => { if (!viewOnly) cycle('c:'+d.properties.name); })
-    .pointsData(PARKS)
-    .pointLat('lat').pointLng('lng')
-    .pointAltitude(0.03)
-    .pointRadius(0.35)
-    .pointResolution(6)
-    .pointColor(pointColor)
-    .pointLabel(d => `<b>${d.name}</b><br>${d.biomes.map(b => BIOMES[b][0]).join(', ')}`)
-    .onPointClick(d => { if (!viewOnly) cycle('p:'+d.id); });
-  globe.renderer().setPixelRatio(1);
-  globe.controls().autoRotate = true;
-  globe.controls().autoRotateSpeed = 0.35;
-  sizeGlobe();
-}
-function sizeGlobe() {
-  if (!globe) return;
-  const el = document.getElementById('globeEl');
-  globe.width(el.clientWidth).height(el.clientHeight);
-}
-function refreshGlobe() {
-  if (!globe) return;
-  globe.polygonCapColor(capColor).pointColor(pointColor);
-}
-
-// ---------- Scratch-off SVG map ----------
-let scratchMode = 'world';
-function drawScratch() {
-  const svg = d3.select('#svgMap').html('');
-  const W = 960, H = scratchMode === 'world' ? 500 : 600;
-  svg.attr('viewBox', `0 0 ${W} ${H}`);
-  const feats = scratchMode === 'world' ? worldFeatures.filter(f => f.properties.name !== 'Antarctica') : usFeatures;
-  const proj = scratchMode === 'world' ? d3.geoNaturalEarth1() : d3.geoAlbersUsa();
-  proj.fitSize([W, H], {type:'FeatureCollection', features:feats});
-  const pre = scratchMode === 'world' ? 'c:' : 's:';
-  const path = d3.geoPath(proj);
-  svg.selectAll('path').data(feats).join('path')
-    .attr('d', path)
-    .attr('fill', d => colorFor(pre + d.properties.name))
-    .on('click', (e, d) => { if (!viewOnly) cycle(pre + d.properties.name); })
-    .append('title').text(d => d.properties.name);
-  updateScratchCount();
-}
-function updateScratchCount() {
-  const world = scratchMode === 'world';
-  document.getElementById('scratchCount').textContent =
-    world ? `${count('c:')} / ${worldFeatures.length} countries visited` : `${count('s:')} / ${usFeatures.length} states visited`;
-}
-function refreshScratch() {
-  if (!document.getElementById('page-scratch').classList.contains('active')) return;
-  const pre = scratchMode === 'world' ? 'c:' : 's:';
-  d3.select('#svgMap').selectAll('path').attr('fill', d => colorFor(pre + d.properties.name));
-  updateScratchCount();
-}
-document.querySelector('#page-scratch .filters').onclick = e => {
-  if (!e.target.dataset.m) return;
-  scratchMode = e.target.dataset.m;
-  document.querySelectorAll('#page-scratch .filters button').forEach(b => b.classList.toggle('on', b === e.target));
-  drawScratch();
-};
 
 // ---------- Leaflet parks map ----------
 let lmap, markers = {}, regionLayers = [];
@@ -434,12 +345,15 @@ function initLeaflet() {
   const fc = features => ({type:'FeatureCollection', features});
   const world = L.geoJSON(fc(worldFeatures.filter(f => f.properties.name !== 'United States of America')), {
     style: regionStyle('c:'),
-    onEachFeature: (f, l) => { l.bindTooltip(f.properties.name, {sticky:true}); l.on('click', () => { if (!viewOnly) cycle('c:' + f.properties.name); }); }
+    onEachFeature: (f, l) => { l.bindTooltip(f.properties.name, {sticky:true}); l.on('click', () => { if (!viewOnly && !isSettingHome) cycle('c:' + f.properties.name); }); }
   }).addTo(lmap);
   regionLayers.push([world, regionStyle('c:')]);
   const counties = L.geoJSON(fc(countyFeatures), {
     style: countyStyle,
-    onEachFeature: (f, l) => l.on('click', () => { if (!countyCleared(f)) console.log('Fogged county:', f.properties.name, f.id); })
+    onEachFeature: (f, l) => l.on('click', () => {
+      if (isSettingHome) return setHomeCounty(f);
+      if (!countyCleared(f)) console.log('Fogged county:', f.properties.name, f.id);
+    })
   }).addTo(lmap);
   regionLayers.push([counties, countyStyle]);
   PARKS.forEach(p => {
@@ -453,6 +367,25 @@ function initLeaflet() {
   });
   refreshLeaflet();
 }
+// ---------- Citadel onboarding ----------
+let isSettingHome = false;
+const modalOnboard = document.getElementById('modal-onboard');
+const homeBanner = document.getElementById('home-banner');
+document.getElementById('btn-set-home').onclick = () => {
+  modalOnboard.classList.remove('open');
+  isSettingHome = true;
+  homeBanner.hidden = false;
+  show('parks');
+};
+function setHomeCounty(f) {
+  const [lng, lat] = d3.geoCentroid(f);
+  const st = stateByFips.get(String(f.id).slice(0, 2));
+  state.locations['k:' + f.id] = 'lived';
+  isSettingHome = false;
+  homeBanner.hidden = true;
+  setHomeBase({lat, lng, name: st ? `${f.properties.name}, ${st}` : f.properties.name, countyId: String(f.id)});
+}
+
 function refreshLeaflet() {
   if (!lmap) return;
   regionLayers.forEach(([lyr, style]) => lyr.setStyle(style));
@@ -507,19 +440,17 @@ function renderPassport() {
 // ---------- HUDs ----------
 function renderHud() {
   const st = stats();
-  document.getElementById('hudGlobe').innerHTML = `<h3>Lv ${st.level} · ${travelerClass(st).cls}</h3>
+  document.getElementById('hudParks').innerHTML = `<h3>Lv ${st.level} · ${travelerClass(st).cls}</h3>
     <div class="row">World explored <b>${st.explored.toFixed(1)}%</b></div>
     <div class="row">Countries <b>${st.countries}</b></div><div class="row">US states <b>${st.states} / 50</b></div>
-    <div class="row">Parks <b>${st.anyParks}</b></div><div class="row">Biomes <b>${st.biomes.size} / ${Object.keys(BIOMES).length}</b></div>
-    <div class="row">Wishlist <b>${count('c:','w') + count('p:','w') + count('s:','w')}</b></div>
-    ${viewOnly ? '<div class="row" style="margin-top:6px;color:var(--wish)">Read-only shared view</div>' : ''}`;
-  document.getElementById('hudParks').innerHTML = `<h3>National Parks</h3>
+    <div class="row">Biomes <b>${st.biomes.size} / ${Object.keys(BIOMES).length}</b></div>
+    ${viewOnly ? '<div class="row" style="margin-top:6px;color:var(--wish)">Read-only shared view</div>' : ''}
     <div class="row">US visited <b>${st.usParks} / ${PARKS.filter(p => !p.intl).length}</b></div>
     <div class="row">Wishlist <b>${count('p:','w')}</b></div>
     <div class="row" style="margin-top:6px">Click a pin to update</div>`;
 }
 
-function renderAll() { computeImplied(); renderHud(); refreshGlobe(); refreshScratch(); refreshLeaflet(); if (document.getElementById('page-passport').classList.contains('active')) renderPassport(); }
+function renderAll() { computeImplied(); renderHud(); refreshLeaflet(); if (document.getElementById('page-passport').classList.contains('active')) renderPassport(); }
 
 // ---------- Share / export / import ----------
 document.getElementById('share').onclick = async e => {
@@ -545,7 +476,6 @@ document.getElementById('file').onchange = async e => {
 };
 
 // ---------- Boot ----------
-window.addEventListener('resize', sizeGlobe);
 Promise.all([WORLD_URL, US_URL, COUNTIES_URL].map(url => fetch(url).then(r => r.json()))).then(([w, u, c]) => {
   worldFeatures = topojson.feature(w, w.objects.countries).features;
   worldFeatures.forEach(f => f.area = d3.geoArea(f));
@@ -553,9 +483,9 @@ Promise.all([WORLD_URL, US_URL, COUNTIES_URL].map(url => fetch(url).then(r => r.
   usFeatures.forEach(f => f.area = d3.geoArea(f));
   countyFeatures = topojson.feature(c, c.objects.counties).features;
   computeImplied();
-  initGlobe();
   renderAll();
-  show(location.hash.slice(1) || 'globe');
+  show(location.hash.slice(1));
+  if (!state.homeBase && !viewOnly) modalOnboard.classList.add('open');
 });
 </script>
 </body>
