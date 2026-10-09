@@ -148,6 +148,7 @@ const US_ST = {acadia:['Maine'],arches:['Utah'],badlands:['South Dakota'],bigben
 const INTL_C = {banff:['Canada'],torres:['Chile'],serengeti:['Tanzania'],galapagos:['Ecuador'],iguazu:['Argentina','Brazil'],fiordland:['New Zealand'],plitvice:['Croatia'],thingvellir:['Iceland'],halong:['Vietnam'],kruger:['South Africa'],uluru:['Australia'],jungfrau:['Switzerland']};
 const WORLD_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
 const US_URL = 'https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json';
+const COUNTIES_URL = 'https://cdn.jsdelivr.net/npm/us-atlas@3/counties-10m.json';
 
 // ---------- State ----------
 // Canonical state (persisted). S below is a derived legacy view so the existing UI keeps working.
@@ -155,7 +156,7 @@ const TIERS = ['wishlist', 'transited', 'visited', 'lived'];
 const TO_LEGACY = {wishlist:'w', visited:'v', lived:'v'};   // 'transited' is not shown by the current UI
 const FROM_LEGACY = {w:'wishlist', v:'visited'};
 const STORE_KEY = 'wanderlog_v2';
-const LOC_RE = /^[cps]:/;
+const LOC_RE = /^[cpsk]:/;   // k: = county (FIPS)
 let state = {version:2, homeBase:null, expeditions:[], locations:{}};
 let S = {};               // legacy view: key -> 'v' | 'w'
 let viewOnly = false;
@@ -254,7 +255,7 @@ const count = (prefix, st='v') => [...new Set([...Object.keys(S), ...implied])].
 const parkVisited = p => S['p:'+p.id] === 'v';
 
 // ---------- Derived stats ----------
-let worldFeatures = [], usFeatures = [];
+let worldFeatures = [], usFeatures = [], countyFeatures = [];
 function exploredPct() {
   const land = worldFeatures.filter(f => f.properties.name !== 'Antarctica');
   const total = d3.sum(land, f => f.area);
@@ -402,21 +403,45 @@ document.querySelector('#page-scratch .filters').onclick = e => {
 
 // ---------- Leaflet parks map ----------
 let lmap, markers = {}, regionLayers = [];
+const CLEARED_TIERS = ['visited', 'lived', 'transited'];
+let stateByFips = new Map();
+
+// Non-US countries: visited clears the fog, wishlist tints amber.
 function regionStyle(pre) {
-  return f => { const s = eff(pre + f.properties.name); return {fillColor: COL[s] || FOG, fillOpacity: s ? .8 : 1, color: '#1f2a48', weight: .6}; };
+  return f => {
+    const s = eff(pre + f.properties.name);
+    const base = {fillColor: FOG, color: '#1f2a48', weight: .6};
+    return s === 'v' ? {...base, fillOpacity: 0} : s === 'w' ? {...base, fillColor: COL.w, fillOpacity: .35} : {...base, fillOpacity: .95};
+  };
 }
+
+// A county is cleared if logged itself, or its state is visited (bridges existing state data).
+function countyCleared(f) {
+  if (CLEARED_TIERS.includes(state.locations['k:' + f.id])) return true;
+  return eff('s:' + stateByFips.get(String(f.id).slice(0, 2))) === 'v';
+}
+function countyStyle(f) {
+  return countyCleared(f)
+    ? {fillColor: FOG, fillOpacity: 0, color: '#3b4a72', weight: .4}
+    : {fillColor: FOG, fillOpacity: .95, color: '#1f2a48', weight: .3};
+}
+
 function initLeaflet() {
   if (lmap) return;
+  stateByFips = new Map(usFeatures.map(f => [f.id, f.properties.name]));
   lmap = L.map('leafletEl', {worldCopyJump:true, preferCanvas:true, minZoom:2, zoomSnap:.5}).setView([39, -98], 4);
-  const add = (feats, pre) => {
-    const lyr = L.geoJSON({type:'FeatureCollection', features:feats}, {
-      style: regionStyle(pre),
-      onEachFeature: (f, l) => { l.bindTooltip(f.properties.name, {sticky:true}); l.on('click', () => { if (!viewOnly) cycle(pre + f.properties.name); }); }
-    }).addTo(lmap);
-    regionLayers.push([lyr, pre]);
-  };
-  add(worldFeatures.filter(f => f.properties.name !== 'United States of America'), 'c:');
-  add(usFeatures, 's:');
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; OpenStreetMap &copy; CARTO' }).addTo(lmap);
+  const fc = features => ({type:'FeatureCollection', features});
+  const world = L.geoJSON(fc(worldFeatures.filter(f => f.properties.name !== 'United States of America')), {
+    style: regionStyle('c:'),
+    onEachFeature: (f, l) => { l.bindTooltip(f.properties.name, {sticky:true}); l.on('click', () => { if (!viewOnly) cycle('c:' + f.properties.name); }); }
+  }).addTo(lmap);
+  regionLayers.push([world, regionStyle('c:')]);
+  const counties = L.geoJSON(fc(countyFeatures), {
+    style: countyStyle,
+    onEachFeature: (f, l) => l.on('click', () => { if (!countyCleared(f)) console.log('Fogged county:', f.properties.name, f.id); })
+  }).addTo(lmap);
+  regionLayers.push([counties, countyStyle]);
   PARKS.forEach(p => {
     const m = L.circleMarker([p.lat, p.lng], {radius:7, weight:2, color:'#e2e8f0', fillOpacity:1, bubblingMouseEvents:false}).addTo(lmap);
     m.bindPopup(() => {
@@ -430,7 +455,7 @@ function initLeaflet() {
 }
 function refreshLeaflet() {
   if (!lmap) return;
-  regionLayers.forEach(([lyr, pre]) => lyr.setStyle(regionStyle(pre)));
+  regionLayers.forEach(([lyr, style]) => lyr.setStyle(style));
   PARKS.forEach(p => markers[p.id].setStyle({fillColor: eff('p:'+p.id) ? COL[eff('p:'+p.id)] : '#64748b'}).bringToFront());
 }
 
@@ -521,11 +546,12 @@ document.getElementById('file').onchange = async e => {
 
 // ---------- Boot ----------
 window.addEventListener('resize', sizeGlobe);
-Promise.all([fetch(WORLD_URL).then(r => r.json()), fetch(US_URL).then(r => r.json())]).then(([w, u]) => {
+Promise.all([WORLD_URL, US_URL, COUNTIES_URL].map(url => fetch(url).then(r => r.json()))).then(([w, u, c]) => {
   worldFeatures = topojson.feature(w, w.objects.countries).features;
   worldFeatures.forEach(f => f.area = d3.geoArea(f));
   usFeatures = topojson.feature(u, u.objects.states).features.filter(f => +f.id <= 56 && f.id !== '11');
   usFeatures.forEach(f => f.area = d3.geoArea(f));
+  countyFeatures = topojson.feature(c, c.objects.counties).features;
   computeImplied();
   initGlobe();
   renderAll();
