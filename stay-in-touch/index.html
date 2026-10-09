@@ -782,6 +782,33 @@
       return changed;
     }
 
+    function ensureProximityExamples(list) {
+      const professor = list.find(friend => friend.name === 'Prof. Milton (Example)');
+      if (!professor) return false;
+
+      let changed = false;
+      if (professor.tier === 'quarterly' || professor.tier === 'extended') {
+        professor.tier = 'annual';
+        changed = true;
+      }
+      if (!list.some(friend => friend.avatar_seed === 'sample-avery')) {
+        const day = 1000 * 60 * 60 * 24;
+        let id = String(Date.now());
+        while (list.some(friend => friend.id === id)) id = String(Number(id) + 1);
+        list.push({
+          id,
+          name: 'Avery (Example)',
+          category: 'Friends',
+          tier: 'extended',
+          avatar_seed: 'sample-avery',
+          photo: null,
+          touches: [{ type: 'Hangout', timestamp: Date.now() - (81 * day), note: 'Caught up after moving away' }]
+        });
+        changed = true;
+      }
+      return changed;
+    }
+
     function updateAvatarPreview() {
       const seedInput = document.getElementById('input-avatar-seed');
       if (!seedInput.value) seedInput.value = createAvatarSeed();
@@ -880,20 +907,32 @@
             // 300 days ago on the annual tier with a 40% text recharge = 0% health.
             { type: 'Text', timestamp: now - (300 * DAY), note: 'Work and networking check-in email' }
           ]
+        },
+        {
+          id: '5',
+          name: 'Avery (Example)',
+          category: 'Friends',
+          tier: 'extended',
+          avatar_seed: 'sample-avery',
+          photo: null,
+          touches: [
+            { type: 'Hangout', timestamp: now - (81 * DAY), note: 'Caught up after moving away' }
+          ]
         }
       ];
     }
 
     function hasUntouchedDefaultExamples(data) {
       const expected = [
-        { id: '1', name: 'Jacob (Example)', category: 'Friends', tier: 'close', avatar_seed: 'sample-jacob', type: 'Virtual Hangout', note: 'Played minecraft for a few hours', daysAgo: 0 },
+        { id: '1', name: 'Jacob (Example)', category: 'Friends', tier: 'close', avatar_seed: 'sample-jacob', types: ['Hangout', 'Virtual Hangout'], note: 'Played minecraft for a few hours', daysAgo: 0 },
         { id: '2', name: 'Mom (Example)', category: 'Family', tier: 'inner', avatar_seed: 'sample-mom', type: 'Hangout', note: 'Sunday family dinner', daysAgo: 5 },
         { id: '3', name: 'Delilah (Example)', category: 'Friends', tier: 'wider', avatar_seed: 'sample-delilah', type: 'Hangout', note: 'Attended housewarming party', daysAgo: 60, legacyDaysAgo: [50, 80] },
-        { id: '4', name: 'Prof. Milton (Example)', category: 'Professional', tier: 'annual', legacyTiers: ['quarterly'], avatar_seed: 'sample-milton', type: 'Text', note: 'Work and networking check-in email', daysAgo: 300, legacyDaysAgo: [85] }
+        { id: '4', name: 'Prof. Milton (Example)', category: 'Professional', tier: 'annual', legacyTiers: ['quarterly', 'extended'], avatar_seed: 'sample-milton', type: 'Text', note: 'Work and networking check-in email', daysAgo: 300, legacyDaysAgo: [85] },
+        { id: '5', name: 'Avery (Example)', category: 'Friends', tier: 'extended', avatar_seed: 'sample-avery', type: 'Hangout', note: 'Caught up after moving away', daysAgo: 81 }
       ];
       const dayMs = 1000 * 60 * 60 * 24;
 
-      return Array.isArray(data) && data.length === expected.length && expected.every(example => {
+      return Array.isArray(data) && [expected.length - 1, expected.length].includes(data.length) && expected.slice(0, data.length).every(example => {
         const friend = data.find(entry => entry.id === example.id);
         const tierMatches = friend && (friend.tier === example.tier || (example.legacyTiers || []).includes(friend.tier));
         if (!friend || friend.name !== example.name || friend.category !== example.category || !tierMatches || friend.photo !== null || !friend.touches || friend.touches.length !== 1) {
@@ -904,7 +943,7 @@
 
         const touch = friend.touches[0];
         const daysSince = (Date.now() - touch.timestamp) / dayMs;
-        return touch.type === example.type && touch.note === example.note &&
+        return (example.types || [example.type]).includes(touch.type) && touch.note === example.note &&
           [example.daysAgo, ...(example.legacyDaysAgo || [])].some(days => Math.abs(daysSince - days) <= 1);
       });
     }
@@ -919,7 +958,8 @@
     }
     const avatarSeedsChanged = migrateAvatarSeeds(friends);
     const friendTiersChanged = migrateLegacyFriendTiers(friends);
-    if (avatarSeedsChanged || friendTiersChanged) {
+    const proximityExamplesChanged = ensureProximityExamples(friends);
+    if (avatarSeedsChanged || friendTiersChanged || proximityExamplesChanged) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(friends));
     }
 
@@ -1187,7 +1227,8 @@
             friends = shouldUpgradeCloudExamples ? getDefaultExamples() : row.friends;
             const cloudAvatarsChanged = migrateAvatarSeeds(friends);
             const cloudTiersChanged = migrateLegacyFriendTiers(friends);
-            shouldSyncCloud = shouldSyncCloud || shouldUpgradeCloudExamples || cloudAvatarsChanged || cloudTiersChanged;
+            const cloudExamplesChanged = ensureProximityExamples(friends);
+            shouldSyncCloud = shouldSyncCloud || shouldUpgradeCloudExamples || cloudAvatarsChanged || cloudTiersChanged || cloudExamplesChanged;
             localStorage.setItem(STORAGE_KEY, JSON.stringify(friends));
           }
           if (row.cadence_settings) {
@@ -2712,6 +2753,7 @@
             friends = data.friends;
             migrateAvatarSeeds(friends);
             migrateLegacyFriendTiers(friends);
+            ensureProximityExamples(friends);
           }
           if (data.cadenceSettings) cadenceSettings = normalizeCadenceSettings(data.cadenceSettings);
           if (data.displaySettings) displaySettings = normalizeDisplaySettings(data.displaySettings);
