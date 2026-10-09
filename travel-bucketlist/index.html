@@ -54,6 +54,23 @@
   .btn-gold:hover { background:#fbbf24; }
   .banner { position:absolute; top:12px; left:50%; transform:translateX(-50%); z-index:1000; padding:8px 18px; background:var(--panel); border:2px solid var(--gold); border-radius:99px; color:var(--gold); font-family:Georgia,serif; box-shadow:0 4px 18px rgba(0,0,0,.5); }
   .banner[hidden] { display:none; }
+  #modal-expedition .modal-box { width:460px; max-width:calc(100vw - 32px); text-align:left; max-height:90vh; overflow:auto; }
+  #modal-expedition h2 { margin:0 0 4px; }
+  .target { margin:0 0 14px; color:var(--mute); font-family:Georgia,serif; }
+  .field { display:block; margin-bottom:12px; font-size:13px; color:var(--mute); }
+  .field input { display:block; width:100%; margin-top:4px; padding:7px 10px; font:inherit; color:var(--text); background:var(--bg); border:1px solid var(--line); border-radius:8px; color-scheme:dark; }
+  .field input:focus { outline:none; border-color:var(--gold); }
+  .row2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .tagrow { display:flex; flex-wrap:wrap; gap:6px; margin:4px 0 12px; }
+  .tag-btn { border-radius:99px; padding:4px 12px; font-size:13px; background:var(--bg); }
+  .tag-btn.on { background:var(--gold); border-color:var(--gold); color:#0f172a; font-weight:600; }
+  .modal-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:8px; }
+  .trip { padding:12px 14px; margin-bottom:10px; background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--gold); border-radius:10px; }
+  .trip h4 { margin:0; font-family:Georgia,serif; font-size:15px; }
+  .trip .meta { color:var(--mute); font-size:13px; margin:2px 0 6px; }
+  .badge { display:inline-block; margin:0 4px 4px 0; padding:1px 8px; font-size:11px; border-radius:99px; border:1px solid var(--line); color:var(--mute); }
+  .badge.transit { border-color:#38bdf8; color:#38bdf8; }
+  .badge.purpose { border-color:var(--gold); color:var(--gold); }
 </style>
 </head>
 <body>
@@ -82,6 +99,35 @@
   <div class="modal-box">
     <h2>Every journey begins at home. Establish your Citadel.</h2>
     <button class="btn-gold" id="btn-set-home">Set Home Base</button>
+  </div>
+</div>
+
+<div class="modal" id="modal-expedition">
+  <div class="modal-box">
+    <h2>Log Expedition</h2>
+    <p class="target" id="exp-target"></p>
+    <label class="field">Trip name<input id="exp-name" type="text" maxlength="120" placeholder="Aspen Anniversary"></label>
+    <div class="row2">
+      <label class="field">Start date<input id="exp-start" type="date"></label>
+      <label class="field">End date<input id="exp-end" type="date"></label>
+    </div>
+    <div class="field">How you traveled</div>
+    <div class="tagrow">
+      <button type="button" class="tag-btn" data-group="transit">AWD/Off-Road</button>
+      <button type="button" class="tag-btn" data-group="transit">Ferry</button>
+      <button type="button" class="tag-btn" data-group="transit">Flight</button>
+      <button type="button" class="tag-btn" data-group="transit">Foot</button>
+    </div>
+    <div class="field">Why you went</div>
+    <div class="tagrow">
+      <button type="button" class="tag-btn" data-group="purpose">Photography</button>
+      <button type="button" class="tag-btn" data-group="purpose">Solo</button>
+      <button type="button" class="tag-btn" data-group="purpose">Friends/Family</button>
+    </div>
+    <div class="modal-actions">
+      <button type="button" id="exp-cancel">Cancel</button>
+      <button type="button" class="btn-gold" id="exp-save">Save Expedition</button>
+    </div>
   </div>
 </div>
 
@@ -315,7 +361,7 @@ document.getElementById('nav').onclick = e => { if (e.target.dataset.p) show(e.t
 // ---------- Leaflet parks map ----------
 let lmap, markers = {}, regionLayers = [];
 const CLEARED_TIERS = ['visited', 'lived', 'transited'];
-let stateByFips = new Map();
+let stateByFips = new Map(), countyIndex = new Map();
 
 // Non-US countries: visited clears the fog, wishlist tints amber.
 function regionStyle(pre) {
@@ -352,7 +398,7 @@ function initLeaflet() {
     style: countyStyle,
     onEachFeature: (f, l) => l.on('click', () => {
       if (isSettingHome) return setHomeCounty(f);
-      if (!countyCleared(f)) console.log('Fogged county:', f.properties.name, f.id);
+      if (!viewOnly) openExpedition(f);
     })
   }).addTo(lmap);
   regionLayers.push([counties, countyStyle]);
@@ -386,6 +432,40 @@ function setHomeCounty(f) {
   setHomeBase({lat, lng, name: st ? `${f.properties.name}, ${st}` : f.properties.name, countyId: String(f.id)});
 }
 
+// ---------- Expedition logger ----------
+let expTarget = null;
+const modalExp = document.getElementById('modal-expedition');
+function openExpedition(f) {
+  const st = stateByFips.get(String(f.id).slice(0, 2));
+  expTarget = {id: String(f.id), name: st ? `${f.properties.name}, ${st}` : f.properties.name};
+  document.getElementById('exp-target').textContent = 'Target: ' + expTarget.name;
+  modalExp.classList.add('open');
+  document.getElementById('exp-name').focus();
+}
+function closeExpedition() {
+  modalExp.classList.remove('open');
+  modalExp.querySelectorAll('input').forEach(i => i.value = '');
+  modalExp.querySelectorAll('.tag-btn.on').forEach(b => b.classList.remove('on'));
+  expTarget = null;
+}
+function saveExpedition() {
+  if (!expTarget) return;
+  const val = id => document.getElementById(id).value;
+  let start = val('exp-start'), end = val('exp-end');
+  if (start && end && end < start) [start, end] = [end, start];
+  const tags = g => [...modalExp.querySelectorAll(`.tag-btn[data-group="${g}"].on`)].map(b => b.textContent.trim());
+  addExpedition({
+    name: val('exp-name').trim() || expTarget.name,
+    startDate: start, endDate: end,
+    transitTags: tags('transit'), purposeTags: tags('purpose'),
+    locations: ['k:' + expTarget.id]
+  });
+  closeExpedition();
+}
+modalExp.querySelectorAll('.tag-btn').forEach(b => b.onclick = () => b.classList.toggle('on'));
+document.getElementById('exp-save').onclick = saveExpedition;
+document.getElementById('exp-cancel').onclick = closeExpedition;
+
 function refreshLeaflet() {
   if (!lmap) return;
   regionLayers.forEach(([lyr, style]) => lyr.setStyle(style));
@@ -405,6 +485,15 @@ function radar(axes) {
 }
 function renderPassport() {
   const st = stats(), tc = travelerClass(st), ach = achievements(st);
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const trips = state.expeditions.map((t, i) => ({t, i}))
+    .sort((a, b) => (b.t.endDate || b.t.startDate).localeCompare(a.t.endDate || a.t.startDate) || b.i - a.i).map(x => x.t);
+  const tripCards = trips.map(t => {
+    const dates = t.startDate && t.endDate && t.startDate !== t.endDate ? `${t.startDate} → ${t.endDate}` : (t.startDate || t.endDate || 'Date unknown');
+    const places = t.locations.map(id => id.startsWith('k:') ? countyIndex.get(id.slice(2)) : id.slice(2)).filter(Boolean).join(', ');
+    const badges = t.transitTags.map(x => `<span class="badge transit">${esc(x)}</span>`).join('') + t.purposeTags.map(x => `<span class="badge purpose">${esc(x)}</span>`).join('');
+    return `<div class="trip"><h4>${esc(t.name)}</h4><div class="meta">${esc(dates)}${places ? ' · ' + esc(places) : ''}</div>${badges}</div>`;
+  }).join('') || '<p style="color:var(--mute)">No expeditions logged yet. Click a county on the map to log one.</p>';
   const biomeCards = Object.entries(BIOMES).sort((a, b) => ['common','uncommon','rare'].indexOf(a[1][1]) - ['common','uncommon','rare'].indexOf(b[1][1])).map(([id, [name, rar]]) => {
     const on = st.biomes.has(id);
     return `<div class="card ${on ? 'done' : 'locked'}"><h4>${name}</h4><span class="tag ${rar}">${rar}</span>
@@ -434,6 +523,7 @@ function renderPassport() {
     </div>
     <h2>Biome Pokédex</h2><div class="grid">${biomeCards}</div>
     <h2>Questlines</h2><div class="grid">${questCards}</div>
+    <h2>Expedition History</h2>${tripCards}
     <h2>Achievements</h2><div class="grid">${achCards}</div>`;
 }
 
@@ -482,6 +572,7 @@ Promise.all([WORLD_URL, US_URL, COUNTIES_URL].map(url => fetch(url).then(r => r.
   usFeatures = topojson.feature(u, u.objects.states).features.filter(f => +f.id <= 56 && f.id !== '11');
   usFeatures.forEach(f => f.area = d3.geoArea(f));
   countyFeatures = topojson.feature(c, c.objects.counties).features;
+  countyIndex = new Map(countyFeatures.map(f => [String(f.id), f.properties.name]));
   computeImplied();
   renderAll();
   show(location.hash.slice(1));
