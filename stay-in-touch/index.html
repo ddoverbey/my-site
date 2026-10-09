@@ -811,11 +811,11 @@
       }
 
       const plantFiles = {
-        inner: { spring: 'deadtree_spring.png', summer: 'deadtree_summer.png', autumn: 'deadtree_autumn.png', winter: 'deadtree_winter.png' },
-        close: { spring: 'birch_spring.png', summer: 'birch_summer.png', autumn: 'birch_autumn_2.png', winter: 'birch_winter_1.png' },
+        inner: { spring: 'willow_spring.png', summer: 'willow_summer.png', autumn: 'willow_autumn.png', winter: 'willow_winter.png' },
+        close: { spring: 'deadtree_spring.png', summer: 'deadtree_summer.png', autumn: 'deadtree_autumn.png', winter: 'deadtree_winter.png' },
         wider: { spring: 'bush_spring.png', summer: 'bush_summer.png', autumn: 'bush_autumn.png', winter: 'bush_winter.png' },
         extended: { spring: 'sunflower_spring.png', summer: 'sunflower_summer.png', autumn: 'sunflower_autum.png', winter: 'sunflower_winter.png' },
-        annual: { spring: 'willow_spring.png', summer: 'willow_summer.png', autumn: 'willow_autumn.png', winter: 'willow_winter.png' }
+        annual: { spring: 'Succulent_spring.png', summer: 'Succulent_summer.png', autumn: 'Succulent_autumn.png', winter: 'Succulent_winter.png' }
       };
       const files = plantFiles[tier] || plantFiles.close;
       return { icon: `assets/${files[season]}`, label, color, season };
@@ -1377,6 +1377,7 @@
 
       const plants = shown.map(({ friend, health }, index) => {
         const stage = getPlantStage(health, friend.tier);
+        const plantSize = friend.tier === 'annual' ? 'w-10 h-10' : 'w-full h-full';
         const bubble = selectedGardenId === friend.id ? `
           <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 z-30 w-40 bg-[#0b1210] border border-[#2e473d] rounded-xl px-3 py-2 text-center shadow-xl">
             <div class="text-xs font-semibold text-[#f4ede4] truncate">${escapeHtml(friend.name)}</div>
@@ -1388,9 +1389,8 @@
         return `
           <div data-plot class="relative w-24 h-24">
             ${bubble}
-            <div class="absolute bottom-2 left-1/2 -translate-x-1/2 w-14 h-3 rounded-full bg-black/30 pointer-events-none"></div>
-            <button type="button" onclick="selectGardenPlant('${friend.id}')" aria-label="${escapeHtml(friend.name)}, ${health}% ${stage.label}" class="relative w-24 h-24 ${recentlyWateredId === friend.id ? 'plant-bounce' : ''}">
-              <img src="${stage.icon}" alt="" draggable="false" class="w-full h-full object-contain plant-sway [image-rendering:pixelated]" style="animation-delay: -${(index * 0.7).toFixed(1)}s" />
+            <button type="button" onclick="selectGardenPlant('${friend.id}')" aria-label="${escapeHtml(friend.name)}, ${health}% ${stage.label}" class="relative flex w-24 h-24 items-end justify-center ${recentlyWateredId === friend.id ? 'plant-bounce' : ''}">
+              <img src="${stage.icon}" alt="" draggable="false" class="${plantSize} object-contain plant-sway [image-rendering:pixelated]" style="animation-delay: -${(index * 0.7).toFixed(1)}s" />
               ${badge}
             </button>
           </div>`;
@@ -1480,7 +1480,7 @@
       bottoms.forEach(bottom => {
         if (!rowBottoms.length || bottom - rowBottoms[rowBottoms.length - 1] > 12) rowBottoms.push(bottom);
       });
-      const pathCenters = rowBottoms.map(bottom => (bottom + 20) / scale);
+      const pathCenters = rowBottoms.map(bottom => (bottom + 7) / scale);
       const pathY = (x, row) => pathCenters[row] + Math.sin(x / 8 + row * 2.1) * 1.6;
       const pathOffset = (x, y) => Math.min(...pathCenters.map((_, row) => Math.abs(y - pathY(x, row))));
       const onPath = (x, y, margin = 0) => pathCenters.length > 0 && pathOffset(x, y) <= 2.4 + margin;
@@ -1723,7 +1723,7 @@
                 ${bulkMode ? `<input id="bulk-check-${friend.id}" type="checkbox" ${bulkChecked ? 'checked' : ''} tabindex="-1" aria-label="Select ${escapeHtml(friend.name)}" class="pointer-events-none h-4 w-4 shrink-0 accent-teal-500" />` : ''}
                 <div class="relative shrink-0 w-12 h-12">
                   <img src="${friend.photo || pixelAvatarUrl(friend.avatar_seed)}" loading="lazy" decoding="async" alt="${escapeHtml(friend.name)}" referrerpolicy="no-referrer" class="w-12 h-12 rounded-full object-cover border border-[#2e473d] bg-[#1c2d26] [image-rendering:pixelated]" />
-                  <img src="${plant.icon}" alt="${plant.label} plant" title="${plant.label}" class="absolute -bottom-1 -right-1 w-7 h-7 rounded-full object-contain bg-[#0b1210] border-2 border-[#14201b] [image-rendering:pixelated]" />
+                  <img src="${plant.icon}" alt="${plant.label} plant" title="${plant.label}" class="absolute -bottom-1 -right-1 ${friend.tier === 'annual' ? 'w-4 h-4' : 'w-7 h-7'} rounded-full object-contain bg-[#0b1210] border-2 border-[#14201b] [image-rendering:pixelated]" />
                 </div>
 
                 <div class="min-w-0">
