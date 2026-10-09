@@ -21,7 +21,7 @@
   .page { display:none; height:calc(100vh - 56px); position:relative; }
   .page.active { display:block; }
   .scroll { overflow:auto; padding:20px; }
-  #leafletEl { width:100%; height:100%; }
+  #leafletEl { width:100%; height:100%; background:#05070d; }
   .hud { position:absolute; top:12px; left:12px; z-index:500; background:rgba(20,27,48,.88); border:1px solid var(--line); border-radius:12px; padding:12px 14px; min-width:200px; backdrop-filter:blur(6px); }
   .hud h3 { margin:0 0 6px; font-size:14px; }
   .hud .row { display:flex; justify-content:space-between; gap:16px; color:var(--mute); }
@@ -54,6 +54,10 @@
   .btn-gold:hover { background:#fbbf24; }
   .banner { position:absolute; top:12px; left:50%; transform:translateX(-50%); z-index:1000; padding:8px 18px; background:var(--panel); border:2px solid var(--gold); border-radius:99px; color:var(--gold); font-family:Georgia,serif; box-shadow:0 4px 18px rgba(0,0,0,.5); }
   .banner[hidden] { display:none; }
+  .searchrow { display:flex; gap:8px; margin-bottom:10px; }
+  .searchrow input { flex:1; min-width:0; padding:8px 10px; font:inherit; color:var(--text); background:var(--bg); border:1px solid var(--line); border-radius:8px; }
+  .searchrow input:focus { outline:none; border-color:var(--gold); }
+  #citadel-msg { min-height:1.4em; margin:10px 0 0; font-size:13px; color:#f87171; }
   #modal-expedition .modal-box { width:460px; max-width:calc(100vw - 32px); text-align:left; max-height:90vh; overflow:auto; }
   #modal-expedition h2 { margin:0 0 4px; }
   .target { margin:0 0 14px; color:var(--mute); font-family:Georgia,serif; }
@@ -98,7 +102,12 @@
 <div class="modal" id="modal-onboard">
   <div class="modal-box">
     <h2>Every journey begins at home. Establish your Citadel.</h2>
-    <button class="btn-gold" id="btn-set-home">Set Home Base</button>
+    <div class="searchrow">
+      <input type="text" id="input-citadel-search" placeholder="Enter your city (e.g. San Diego, CA)">
+      <button class="btn-gold" id="btn-citadel-search">Search</button>
+    </div>
+    <button id="btn-citadel-locate">📍 Use My Current Location</button>
+    <p id="citadel-msg"></p>
   </div>
 </div>
 
@@ -388,7 +397,7 @@ function initLeaflet() {
   if (lmap) return;
   stateByFips = new Map(usFeatures.map(f => [f.id, f.properties.name]));
   lmap = L.map('leafletEl', {worldCopyJump:true, preferCanvas:true, minZoom:2, zoomSnap:.5}).setView([39, -98], 4);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; OpenStreetMap &copy; CARTO' }).addTo(lmap);
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '&copy; Esri' }).addTo(lmap);
   const fc = features => ({type:'FeatureCollection', features});
   const world = L.geoJSON(fc(worldFeatures.filter(f => f.properties.name !== 'United States of America')), {
     style: regionStyle('c:'),
@@ -418,12 +427,51 @@ function initLeaflet() {
 let isSettingHome = false;
 const modalOnboard = document.getElementById('modal-onboard');
 const homeBanner = document.getElementById('home-banner');
-document.getElementById('btn-set-home').onclick = () => {
-  modalOnboard.classList.remove('open');
-  isSettingHome = true;
-  homeBanner.hidden = false;
+const citadelMsg = document.getElementById('citadel-msg');
+const citadelInput = document.getElementById('input-citadel-search');
+const searchBtn = document.getElementById('btn-citadel-search');
+const locateBtn = document.getElementById('btn-citadel-locate');
+
+function beginCitadelPick(lat, lng, flyOpts) {
   show('parks');
-};
+  lmap.flyTo([lat, lng], 10, flyOpts);
+  modalOnboard.classList.remove('open');
+  citadelMsg.textContent = '';
+  isSettingHome = true;
+  homeBanner.textContent = 'Click your county to establish your Citadel.';
+  homeBanner.hidden = false;
+}
+
+async function searchCitadel() {
+  const query = citadelInput.value.trim();
+  if (!query) { citadelMsg.textContent = 'Enter a city to search.'; return; }
+  searchBtn.disabled = true;
+  citadelMsg.textContent = '';
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+    if (!res.ok) throw new Error(res.status);
+    const result = await res.json();
+    const lat = parseFloat(result[0]?.lat), lon = parseFloat(result[0]?.lon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) { citadelMsg.textContent = 'No results found. Try a different search.'; return; }
+    beginCitadelPick(lat, lon, {duration: 1.5});
+  } catch (err) {
+    citadelMsg.textContent = 'Search failed. Check your connection and try again.';
+  } finally {
+    searchBtn.disabled = false;
+  }
+}
+
+function locateCitadel() {
+  if (!navigator.geolocation) { citadelMsg.textContent = 'Geolocation is not supported by this browser.'; return; }
+  navigator.geolocation.getCurrentPosition(
+    pos => beginCitadelPick(pos.coords.latitude, pos.coords.longitude),
+    () => { citadelMsg.textContent = 'Could not get your location. Try searching instead.'; }
+  );
+}
+
+searchBtn.onclick = searchCitadel;
+locateBtn.onclick = locateCitadel;
+citadelInput.onkeydown = e => { if (e.key === 'Enter') searchCitadel(); };
 function setHomeCounty(f) {
   const [lng, lat] = d3.geoCentroid(f);
   const st = stateByFips.get(String(f.id).slice(0, 2));
