@@ -222,23 +222,32 @@
       <button onclick="dismissDiceBanner()" class="text-[#ea580c] hover:text-[#fed7aa] text-sm px-1" aria-label="Dismiss"><i class="pixelart-icons-font-close pixel-icon" aria-hidden="true"></i></button>
     </div>
 
-    <!-- Category Filter Tabs -->
-    <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar">
-      <button onclick="setFilter('all')" id="filter-all" class="px-3 py-1 rounded-full font-medium transition-colors bg-teal-900/40 text-teal-200 border border-teal-600/50 backdrop-blur-sm">All</button>
-      <button onclick="setFilter('Friends')" id="filter-Friends" class="px-3 py-1 rounded-full font-medium transition-colors bg-[#131f1a]/80 text-[#9eb3a8] border border-[#23352e] hover:text-[#f4ede4] backdrop-blur-sm">Friends</button>
-      <button onclick="setFilter('Family')" id="filter-Family" class="px-3 py-1 rounded-full font-medium transition-colors bg-[#131f1a]/80 text-[#9eb3a8] border border-[#23352e] hover:text-[#f4ede4] backdrop-blur-sm">Family</button>
-      <button onclick="setFilter('Romantic')" id="filter-Romantic" class="px-3 py-1 rounded-full font-medium transition-colors bg-[#131f1a]/80 text-[#9eb3a8] border border-[#23352e] hover:text-[#f4ede4] backdrop-blur-sm">Romantic</button>
-      <button onclick="setFilter('Professional')" id="filter-Professional" class="px-3 py-1 rounded-full font-medium transition-colors bg-[#131f1a]/80 text-[#9eb3a8] border border-[#23352e] hover:text-[#f4ede4] backdrop-blur-sm">Professional</button>
+    <div class="flex items-center justify-between gap-3">
+      <button id="btn-filter-toggle" type="button" onclick="toggleFiltersPanel()" aria-expanded="false" aria-controls="filters-panel" class="inline-flex items-center gap-1.5 rounded-lg border border-[#2e473d] bg-[#1c2d26] px-3 py-2 text-xs text-teal-300 hover:bg-[#253d33]"><i class="pixelart-icons-font-sliders pixel-icon" aria-hidden="true"></i><span id="filter-toggle-label">Filters</span></button>
+      <button id="btn-clear-filters" type="button" onclick="clearAllFilters()" class="hidden text-xs text-[#8da498] hover:text-[#f4ede4] underline underline-offset-2">Clear filters</button>
     </div>
 
-    <!-- Tier Filter Chips -->
-    <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar" role="group" aria-label="Filter by tier">
-      <button type="button" onclick="toggleTierFilter('inner')" id="tier-filter-inner" aria-pressed="false" class="shrink-0 px-3 py-1 rounded-full font-medium transition-colors bg-[#131f1a]/80 text-[#9eb3a8] border border-[#23352e] hover:text-[#f4ede4] backdrop-blur-sm">Inner Circle</button>
-      <button type="button" onclick="toggleTierFilter('close')" id="tier-filter-close" aria-pressed="false" class="shrink-0 px-3 py-1 rounded-full font-medium transition-colors bg-[#131f1a]/80 text-[#9eb3a8] border border-[#23352e] hover:text-[#f4ede4] backdrop-blur-sm">Close Circle</button>
-      <button type="button" onclick="toggleTierFilter('wider')" id="tier-filter-wider" aria-pressed="false" class="shrink-0 px-3 py-1 rounded-full font-medium transition-colors bg-[#131f1a]/80 text-[#9eb3a8] border border-[#23352e] hover:text-[#f4ede4] backdrop-blur-sm">Wider Network</button>
-      <button type="button" onclick="toggleTierFilter('extended')" id="tier-filter-extended" aria-pressed="false" class="shrink-0 px-3 py-1 rounded-full font-medium transition-colors bg-[#131f1a]/80 text-[#9eb3a8] border border-[#23352e] hover:text-[#f4ede4] backdrop-blur-sm">Extended Network</button>
-      <button type="button" onclick="toggleTierFilter('annual')" id="tier-filter-annual" aria-pressed="false" class="shrink-0 px-3 py-1 rounded-full font-medium transition-colors bg-[#131f1a]/80 text-[#9eb3a8] border border-[#23352e] hover:text-[#f4ede4] backdrop-blur-sm">Annual+ Network</button>
-      <button type="button" onclick="clearTierFilters()" id="tier-filter-clear" class="hidden shrink-0 px-2 py-1 text-[#8da498] hover:text-[#f4ede4] underline">Clear</button>
+    <div id="filters-panel" class="hidden space-y-3 rounded-xl border border-[#283e35] bg-[#101a15]/95 p-3">
+      <fieldset class="space-y-1.5">
+        <legend class="text-[10px] font-semibold uppercase text-[#8da498]">Relationship type</legend>
+        <div class="flex flex-wrap gap-1.5 text-xs">
+          <button type="button" onclick="setFilter('all')" id="filter-all" class="px-3 py-1 rounded-full font-medium transition-colors">All</button>
+          <button type="button" onclick="setFilter('Friends')" id="filter-Friends" class="px-3 py-1 rounded-full font-medium transition-colors">Friends</button>
+          <button type="button" onclick="setFilter('Family')" id="filter-Family" class="px-3 py-1 rounded-full font-medium transition-colors">Family</button>
+          <button type="button" onclick="setFilter('Romantic')" id="filter-Romantic" class="px-3 py-1 rounded-full font-medium transition-colors">Romantic</button>
+          <button type="button" onclick="setFilter('Professional')" id="filter-Professional" class="px-3 py-1 rounded-full font-medium transition-colors">Professional</button>
+        </div>
+      </fieldset>
+      <fieldset class="space-y-1.5">
+        <legend class="text-[10px] font-semibold uppercase text-[#8da498]">Proximity</legend>
+        <div class="flex flex-wrap gap-1.5 text-xs" role="group" aria-label="Filter by proximity">
+          <button type="button" onclick="toggleTierFilter('inner')" id="tier-filter-inner" aria-pressed="false" class="px-3 py-1 rounded-full font-medium transition-colors">Inner Circle</button>
+          <button type="button" onclick="toggleTierFilter('close')" id="tier-filter-close" aria-pressed="false" class="px-3 py-1 rounded-full font-medium transition-colors">Close Circle</button>
+          <button type="button" onclick="toggleTierFilter('wider')" id="tier-filter-wider" aria-pressed="false" class="px-3 py-1 rounded-full font-medium transition-colors">Wider Network</button>
+          <button type="button" onclick="toggleTierFilter('extended')" id="tier-filter-extended" aria-pressed="false" class="px-3 py-1 rounded-full font-medium transition-colors">Extended Network</button>
+          <button type="button" onclick="toggleTierFilter('annual')" id="tier-filter-annual" aria-pressed="false" class="px-3 py-1 rounded-full font-medium transition-colors">Annual+ Network</button>
+        </div>
+      </fieldset>
     </div>
 
     <!-- Queue Header -->
@@ -916,6 +925,7 @@
 
     let activeFilter = 'all';
     const activeTierFilters = new Set();
+    let filtersPanelOpen = false;
     const TIER_LABELS = { inner: 'Inner Circle', close: 'Close Circle', wider: 'Wider Network', extended: 'Extended Network', annual: 'Annual+ Network' };
     const DEFAULT_DISPLAY_SETTINGS = { showTierBadge: true };
     function normalizeDisplaySettings(raw) {
@@ -1630,9 +1640,9 @@
         const el = document.getElementById(`filter-${cat}`);
         if (!el) return;
         if (cat === category) {
-          el.className = 'px-3 py-1 rounded-full font-medium transition-colors bg-teal-900/40 text-teal-200 border border-teal-600/50 backdrop-blur-sm';
+          el.className = 'px-3 py-1 rounded-full font-medium transition-colors bg-teal-900/40 text-teal-200 border border-teal-600/50';
         } else {
-          el.className = 'px-3 py-1 rounded-full font-medium transition-colors bg-[#131f1a]/80 text-[#9eb3a8] border border-[#23352e] hover:text-[#f4ede4] backdrop-blur-sm';
+          el.className = 'px-3 py-1 rounded-full font-medium transition-colors bg-[#131f1a]/80 text-[#9eb3a8] border border-[#23352e] hover:text-[#f4ede4]';
         }
       });
       render();
@@ -1644,12 +1654,34 @@
         if (!el) return;
         const on = activeTierFilters.has(tier);
         el.setAttribute('aria-pressed', on ? 'true' : 'false');
-        el.className = 'shrink-0 px-3 py-1 rounded-full font-medium transition-colors backdrop-blur-sm ' + (on
+        el.className = 'px-3 py-1 rounded-full font-medium transition-colors ' + (on
           ? 'bg-teal-900/40 text-teal-200 border border-teal-600/50'
           : 'bg-[#131f1a]/80 text-[#9eb3a8] border border-[#23352e] hover:text-[#f4ede4]');
       });
-      const clear = document.getElementById('tier-filter-clear');
-      if (clear) clear.classList.toggle('hidden', activeTierFilters.size === 0);
+      updateFilterPanelButton();
+    }
+
+    function updateFilterPanelButton() {
+      const activeCount = (activeFilter === 'all' ? 0 : 1) + activeTierFilters.size;
+      const label = document.getElementById('filter-toggle-label');
+      const clearButton = document.getElementById('btn-clear-filters');
+      if (label) label.textContent = activeCount ? `Filters · ${activeCount}` : 'Filters';
+      if (clearButton) clearButton.classList.toggle('hidden', activeCount === 0 && !searchQuery);
+    }
+
+    function toggleFiltersPanel() {
+      filtersPanelOpen = !filtersPanelOpen;
+      document.getElementById('filters-panel').classList.toggle('hidden', !filtersPanelOpen);
+      document.getElementById('btn-filter-toggle').setAttribute('aria-expanded', String(filtersPanelOpen));
+    }
+
+    function clearAllFilters() {
+      activeFilter = 'all';
+      activeTierFilters.clear();
+      searchQuery = '';
+      clearTimeout(searchTimer);
+      document.getElementById('queue-search').value = '';
+      render();
     }
 
     function toggleTierFilter(tier) {
@@ -1664,6 +1696,7 @@
 
     function render() {
       updateTierFilterChips();
+      updateFilterPanelButton();
       const container = document.getElementById('friends-queue');
       if (!container) return;
       
