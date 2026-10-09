@@ -150,7 +150,14 @@ const WORLD_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.jso
 const US_URL = 'https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json';
 
 // ---------- State ----------
-let S = {};               // key -> 'v' | 'w'  (keys: c:Name, s:Name, p:id)
+// Canonical state (persisted). S below is a derived legacy view so the existing UI keeps working.
+const TIERS = ['wishlist', 'transited', 'visited', 'lived'];
+const TO_LEGACY = {wishlist:'w', visited:'v', lived:'v'};   // 'transited' is not shown by the current UI
+const FROM_LEGACY = {w:'wishlist', v:'visited'};
+const STORE_KEY = 'wanderlog_v2';
+const LOC_RE = /^[cps]:/;
+let state = {version:2, homeBase:null, expeditions:[], locations:{}};
+let S = {};               // legacy view: key -> 'v' | 'w'
 let viewOnly = false;
 const NEXT = {undefined:'v', v:'w', w:undefined};
 const COL = {v:'#22c55e', w:'#f59e0b'};
@@ -168,13 +175,80 @@ function computeImplied() {
 }
 const eff = k => implied.has(k) ? 'v' : S[k];
 
+const str = (v, max = 200) => typeof v === 'string' ? v.slice(0, max) : '';
+const strList = v => Array.isArray(v) ? v.filter(x => typeof x === 'string').map(x => x.slice(0, 80)) : [];
+const locList = v => strList(v).filter(id => LOC_RE.test(id));
+
+function normalizeExpedition(t, i = 0) {
+  if (!t || typeof t !== 'object') return null;
+  return {
+    id: str(t.id, 60) || 'trip-' + Date.now().toString(36) + i,
+    name: str(t.name), startDate: str(t.startDate, 10), endDate: str(t.endDate, 10),
+    transitTags: strList(t.transitTags), purposeTags: strList(t.purposeTags), locations: locList(t.locations)
+  };
+}
+
+function normalizeHomeBase(h) {
+  if (!h || typeof h !== 'object' || !isFinite(h.lat) || !isFinite(h.lng)) return null;
+  return {lat:+h.lat, lng:+h.lng, name:str(h.name, 100), countyId:str(h.countyId, 10)};
+}
+
+// Accepts v2 state or the legacy flat {key:'v'|'w'} map; returns a clean v2 state.
+function normalizeState(raw) {
+  const out = {version:2, homeBase:null, expeditions:[], locations:{}};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  const isV2 = raw.locations && typeof raw.locations === 'object';
+  const locs = isV2 ? raw.locations : raw;
+  for (const [k, v] of Object.entries(locs)) {
+    if (!LOC_RE.test(k)) continue;
+    const tier = isV2 ? v : FROM_LEGACY[v];
+    if (TIERS.includes(tier)) out.locations[k] = tier;
+  }
+  if (isV2) {
+    out.homeBase = normalizeHomeBase(raw.homeBase);
+    out.expeditions = (Array.isArray(raw.expeditions) ? raw.expeditions : []).map(normalizeExpedition).filter(Boolean);
+  }
+  return out;
+}
+
+function syncLegacy() {
+  S = {};
+  for (const [k, t] of Object.entries(state.locations)) if (TO_LEGACY[t]) S[k] = TO_LEGACY[t];
+}
+
 (function loadState() {
   const d = new URLSearchParams(location.search).get('d');
-  if (d) { try { S = JSON.parse(decodeURIComponent(atob(d))); viewOnly = true; return; } catch (e) {} }
-  try { S = JSON.parse(localStorage.getItem('wanderlog') || '{}'); } catch (e) { S = {}; }
+  if (d) {
+    try { state = normalizeState(JSON.parse(decodeURIComponent(atob(d)))); viewOnly = true; syncLegacy(); return; } catch (e) {}
+  }
+  try {
+    const v2 = localStorage.getItem(STORE_KEY);
+    // First run after upgrade: migrate the old flat map once.
+    state = normalizeState(JSON.parse(v2 || localStorage.getItem('wanderlog') || '{}'));
+    if (!v2) save();
+  } catch (e) { state = normalizeState(null); }
+  syncLegacy();
 })();
-function save() { if (!viewOnly) localStorage.setItem('wanderlog', JSON.stringify(S)); }
-function setStatus(key, st) { if (st) S[key] = st; else delete S[key]; save(); renderAll(); }
+function save() { if (!viewOnly) localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+
+function setHomeBase(h) { state.homeBase = normalizeHomeBase(h); save(); renderAll(); }
+
+function setStatus(key, st) {
+  if (!LOC_RE.test(key)) return;
+  if (FROM_LEGACY[st]) state.locations[key] = FROM_LEGACY[st]; else delete state.locations[key];
+  syncLegacy(); save(); renderAll();
+}
+
+// Logs a trip and promotes its locations to at least 'visited' (never downgrades 'lived').
+function addExpedition(trip) {
+  const t = normalizeExpedition(trip, state.expeditions.length);
+  if (!t) return null;
+  while (state.expeditions.some(e => e.id === t.id)) t.id += '-' + Math.random().toString(36).slice(2, 5);
+  state.expeditions.push(t);
+  t.locations.forEach(id => { if (TIERS.indexOf(state.locations[id]) < TIERS.indexOf('visited')) state.locations[id] = 'visited'; });
+  syncLegacy(); save(); renderAll();
+  return t;
+}
 function cycle(key) { setStatus(key, NEXT[S[key]]); }
 const count = (prefix, st='v') => [...new Set([...Object.keys(S), ...implied])].filter(k => k.startsWith(prefix) && eff(k) === st).length;
 const parkVisited = p => S['p:'+p.id] === 'v';
@@ -424,23 +498,23 @@ function renderAll() { computeImplied(); renderHud(); refreshGlobe(); refreshScr
 
 // ---------- Share / export / import ----------
 document.getElementById('share').onclick = async e => {
-  const url = location.origin + location.pathname + '?d=' + btoa(encodeURIComponent(JSON.stringify(S))) + '#passport';
+  const url = location.origin + location.pathname + '?d=' + btoa(encodeURIComponent(JSON.stringify(state))) + '#passport';
   try { await navigator.clipboard.writeText(url); e.target.textContent = 'Copied!'; } catch (_) { prompt('Copy this link:', url); }
   setTimeout(() => e.target.textContent = 'Copy share link', 1500);
 };
 document.getElementById('export').onclick = () => {
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([JSON.stringify(S, null, 2)], {type:'application/json'}));
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(state, null, 2)], {type:'application/json'}));
   a.download = 'wanderlog.json'; a.click();
 };
 document.getElementById('import').onclick = () => document.getElementById('file').click();
 document.getElementById('file').onchange = async e => {
   const f = e.target.files[0]; if (!f) return;
   try {
-    const data = JSON.parse(await f.text());
-    if (typeof data !== 'object' || Array.isArray(data)) throw 0;
-    S = Object.fromEntries(Object.entries(data).filter(([k, v]) => /^[cps]:/.test(k) && (v === 'v' || v === 'w')));
-    viewOnly = false; save(); renderAll();
+    const raw = JSON.parse(await f.text());
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw 0;
+    state = normalizeState(raw);
+    syncLegacy(); viewOnly = false; save(); renderAll();
   } catch (_) { alert('Invalid file'); }
   e.target.value = '';
 };
