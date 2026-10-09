@@ -221,7 +221,8 @@ function normalizeExpedition(t, i = 0) {
   return {
     id: str(t.id, 60) || 'trip-' + Date.now().toString(36) + i,
     name: str(t.name), startDate: str(t.startDate, 10), endDate: str(t.endDate, 10),
-    transitTags: strList(t.transitTags), purposeTags: strList(t.purposeTags), locations: locList(t.locations)
+    transitTags: strList(t.transitTags), purposeTags: strList(t.purposeTags), locations: locList(t.locations),
+    elevation: Number.isFinite(t.elevation) ? Math.round(t.elevation) : null   // feet
   };
 }
 
@@ -396,9 +397,9 @@ function initLeaflet() {
   regionLayers.push([world, regionStyle('c:')]);
   const counties = L.geoJSON(fc(countyFeatures), {
     style: countyStyle,
-    onEachFeature: (f, l) => l.on('click', () => {
+    onEachFeature: (f, l) => l.on('click', e => {
       if (isSettingHome) return setHomeCounty(f);
-      if (!viewOnly) openExpedition(f);
+      if (!viewOnly) openExpedition(f, e.latlng);
     })
   }).addTo(lmap);
   regionLayers.push([counties, countyStyle]);
@@ -433,11 +434,13 @@ function setHomeCounty(f) {
 }
 
 // ---------- Expedition logger ----------
-let expTarget = null;
+let expTarget = null, expTargetLat = null, expTargetLng = null;
 const modalExp = document.getElementById('modal-expedition');
-function openExpedition(f) {
+function openExpedition(f, latlng) {
   const st = stateByFips.get(String(f.id).slice(0, 2));
   expTarget = {id: String(f.id), name: st ? `${f.properties.name}, ${st}` : f.properties.name};
+  expTargetLat = latlng.lat;
+  expTargetLng = latlng.lng;
   document.getElementById('exp-target').textContent = 'Target: ' + expTarget.name;
   modalExp.classList.add('open');
   document.getElementById('exp-name').focus();
@@ -447,19 +450,36 @@ function closeExpedition() {
   modalExp.querySelectorAll('input').forEach(i => i.value = '');
   modalExp.querySelectorAll('.tag-btn.on').forEach(b => b.classList.remove('on'));
   expTarget = null;
+  expTargetLat = expTargetLng = null;
 }
-function saveExpedition() {
+async function saveExpedition() {
   if (!expTarget) return;
+  const btn = document.getElementById('exp-save');
+  const target = expTarget, lat = expTargetLat, lng = expTargetLng;
   const val = id => document.getElementById(id).value;
   let start = val('exp-start'), end = val('exp-end');
   if (start && end && end < start) [start, end] = [end, start];
   const tags = g => [...modalExp.querySelectorAll(`.tag-btn[data-group="${g}"].on`)].map(b => b.textContent.trim());
-  addExpedition({
-    name: val('exp-name').trim() || expTarget.name,
+  const trip = {
+    name: val('exp-name').trim() || target.name,
     startDate: start, endDate: end,
     transitTags: tags('transit'), purposeTags: tags('purpose'),
-    locations: ['k:' + expTarget.id]
-  });
+    locations: ['k:' + target.id]
+  };
+  btn.disabled = true;
+  btn.textContent = 'Charting...';
+  try {
+    const res = await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lat}&longitude=${lng}`);
+    if (!res.ok) throw new Error(res.status);
+    const meters = (await res.json()).elevation?.[0];
+    if (Number.isFinite(meters)) trip.elevation = Math.round(meters * 3.28084);
+  } catch (err) {
+    console.warn('Elevation lookup failed; saving without it.', err);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Save Expedition';
+  }
+  addExpedition(trip);
   closeExpedition();
 }
 modalExp.querySelectorAll('.tag-btn').forEach(b => b.onclick = () => b.classList.toggle('on'));
@@ -486,6 +506,10 @@ function radar(axes) {
 function renderPassport() {
   const st = stats(), tc = travelerClass(st), ach = achievements(st);
   const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const elevs = state.expeditions.map(t => t.elevation).filter(Number.isFinite);
+  const fmtFt = n => n.toLocaleString('en-US') + ' ft';
+  const hiElev = elevs.length ? fmtFt(Math.max(...elevs)) : '---';
+  const loElev = elevs.length ? fmtFt(Math.min(...elevs)) : '---';
   const trips = state.expeditions.map((t, i) => ({t, i}))
     .sort((a, b) => (b.t.endDate || b.t.startDate).localeCompare(a.t.endDate || a.t.startDate) || b.i - a.i).map(x => x.t);
   const tripCards = trips.map(t => {
@@ -512,6 +536,8 @@ function renderPassport() {
       <div class="card">
         <div class="grid">
           <div><div class="big">${st.explored.toFixed(1)}%</div><p>World explored (by land area)</p></div>
+          <div><div class="big">${hiElev}</div><p>Highest Elevation</p></div>
+          <div><div class="big">${loElev}</div><p>Lowest Elevation</p></div>
           <div><div class="big">${st.countries}</div><p>Countries</p></div>
           <div><div class="big">${st.states}<small style="font-size:14px;color:var(--mute)"> / 50</small></div><p>US states</p></div>
           <div><div class="big">${st.usParks}<small style="font-size:14px;color:var(--mute)"> / ${PARKS.filter(p => !p.intl).length}</small></div><p>US national parks</p></div>
