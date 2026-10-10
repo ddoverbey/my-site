@@ -931,11 +931,12 @@
         : [39.50, -98.35];
       map.setView(defaultCenter, AppState.homeBase ? 6 : 4);
 
-      // CartoDB Dark Matter tiles (free, dark aesthetic)
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      // Esri World Imagery (High-res satellite, truly free)
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
         maxZoom: 19,
-        subdomains: 'abcd'
+        attribution: 'Tiles &copy; Esri'
       }).addTo(map);
+
 
       // Custom Zoom control in bottom right
       L.control.zoom({ position: 'bottomright' }).addTo(map);
