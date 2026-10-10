@@ -1,0 +1,1732 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Terra Incognita • RPG Travel Fog of War</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Leaflet CSS & JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- D3 & Topojson for scratch map -->
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
+  <!-- Google Fonts: Cinzel & MedievalSharp for RPG vibe + Inter for readability -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Cinzel+Decorative:wght@700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            cinzel: ['"Cinzel"', 'serif'],
+            cinzelDeco: ['"Cinzel Decorative"', 'serif'],
+            sans: ['"Inter"', 'system-ui', 'sans-serif'],
+          },
+          colors: {
+            parchment: '#dfd2b5',
+            parchmentDark: '#121624',
+            parchmentBorder: '#2e3b5e',
+            arcane: '#38bdf8',
+            gold: '#fbbf24',
+            goldGlow: '#f59e0b',
+            fogDark: '#05070d',
+            emeraldExp: '#10b981'
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    :root {
+      --bg-dark: #060913;
+      --card-bg: rgba(18, 24, 42, 0.92);
+      --border-parchment: #293859;
+      --gold: #f59e0b;
+      --gold-light: #fde68a;
+      --text-muted: #94a3b8;
+    }
+    body {
+      background-color: var(--bg-dark);
+      color: #e2e8f0;
+      overflow-x: hidden;
+      font-family: 'Inter', system-ui, sans-serif;
+    }
+    .cinzel { font-family: 'Cinzel', serif; }
+    .cinzel-deco { font-family: 'Cinzel Decorative', serif; }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0b1120; }
+    ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #334155; }
+
+    /* Custom Leaflet Dark Styler */
+    .leaflet-container {
+      background: #040711 !important;
+      font-family: inherit;
+    }
+    .leaflet-popup-content-wrapper {
+      background: rgba(15, 23, 42, 0.95) !important;
+      color: #f1f5f9 !important;
+      border: 1px solid #3b82f6;
+      border-radius: 10px !important;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.7), 0 0 15px rgba(56, 189, 248, 0.2) !important;
+      backdrop-filter: blur(8px);
+    }
+    .leaflet-popup-tip {
+      background: rgba(15, 23, 42, 0.95) !important;
+    }
+    
+    /* Parchment texture effect on HUD panels */
+    .rpg-panel {
+      background: linear-gradient(135deg, rgba(17, 24, 43, 0.92) 0%, rgba(10, 15, 29, 0.96) 100%);
+      border: 1px solid #2a3756;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(245, 158, 11, 0.08);
+      backdrop-filter: blur(8px);
+    }
+    .rpg-panel-gold {
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      box-shadow: 0 0 20px rgba(245, 158, 11, 0.15), inset 0 0 12px rgba(245, 158, 11, 0.05);
+    }
+
+    /* Fog Canvas Layer styles */
+    #fogCanvasOverlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 450;
+      transition: opacity 0.5s ease;
+    }
+    .mode-classic #fogCanvasOverlay {
+      opacity: 0;
+    }
+
+    /* Pulse effect for home base & player cursor */
+    @keyframes pulseAura {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.15); opacity: 0.4; }
+      100% { transform: scale(0.95); opacity: 0.8; }
+    }
+    .aura-ring {
+      animation: pulseAura 3s infinite ease-in-out;
+    }
+
+    /* Shimmer effect for XP bar */
+    @keyframes xpShimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+    .xp-glow {
+      background: linear-gradient(90deg, #10b981 0%, #34d399 50%, #10b981 100%);
+      background-size: 200% 100%;
+    }
+  </style>
+</head>
+<body class="h-screen w-screen flex flex-col bg-[#060913] text-slate-100 select-none">
+
+  <header class="h-16 border-b border-slate-800 bg-[#0c1222]/95 px-4 flex items-center justify-between z-50 shrink-0 backdrop-blur-md">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center text-xl shadow-lg shadow-amber-500/20 border border-amber-400/40">
+        🧭
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="cinzel text-lg font-bold tracking-wider text-amber-200">TERRA INCOGNITA</h1>
+          <span class="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30">RPG Atlas</span>
+        </div>
+        <p class="text-xs text-slate-400 font-sans hidden sm:block">A Gamified Fog-of-War Travel Odyssey</p>
+      </div>
+    </div>
+
+    <!-- Mode Selector & Nav Tabs -->
+    <div class="flex items-center gap-2 sm:gap-4">
+      <!-- RPG vs Classic Bucket List Toggle -->
+      <div class="bg-slate-900/90 p-1 rounded-xl border border-slate-700 flex text-xs font-semibold">
+        <button id="toggleRpgMode" class="px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 bg-amber-500 text-slate-950 font-bold shadow-md">
+          <span>⚔️</span> <span class="hidden md:inline">RPG Explorer</span>
+        </button>
+        <button id="toggleClassicMode" class="px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 text-slate-400 hover:text-slate-200">
+          <span>📋</span> <span class="hidden md:inline">Bucket List</span>
+        </button>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav id="navTabs" class="flex gap-1 bg-slate-900/60 p-1 rounded-xl border border-slate-800">
+        <button data-tab="map" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-600 text-white transition-all">World Map</button>
+        <button data-tab="scratch" class="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white transition-all">Scratch Map</button>
+        <button data-tab="passport" class="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white transition-all">Character / Stats</button>
+      </nav>
+    </div>
+
+    <!-- Quick Utilities -->
+    <div class="flex items-center gap-2">
+      <button id="btnHomeConfig" title="Change Home Base" class="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-xs text-amber-300 transition-all flex items-center gap-1">
+        <span>🏰</span>
+        <span id="headerHometownText" class="max-w-[90px] truncate hidden lg:inline">Home Base</span>
+      </button>
+
+      <button id="btnShare" title="Copy Shareable Link" class="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-xs text-slate-200 transition-all">
+        🔗
+      </button>
+
+      <div class="relative group">
+        <button class="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-xs text-slate-200 transition-all">
+          ⚙️
+        </button>
+        <div class="absolute right-0 mt-2 w-48 py-2 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all z-50">
+          <button id="btnExport" class="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-800 flex items-center gap-2">
+            <span>💾</span> Export Passport (.json)
+          </button>
+          <button id="btnImportTrigger" class="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-800 flex items-center gap-2">
+            <span>📂</span> Import Passport
+          </button>
+          <input type="file" id="fileInput" accept=".json" class="hidden" />
+          <hr class="border-slate-800 my-1">
+          <button id="btnResetData" class="w-full text-left px-4 py-2 text-xs text-rose-400 hover:bg-rose-950/40 flex items-center gap-2">
+            <span>⚠️</span> Reset All Progress
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-1 relative overflow-hidden">
+
+    <!-- VIEW 1: INTERACTIVE FOG-OF-WAR & PARKS MAP -->
+    <div id="tabContent-map" class="w-full h-full relative">
+      <div id="leafletMap" class="w-full h-full z-0"></div>
+      <canvas id="fogCanvasOverlay"></canvas>
+
+      <!-- RPG Explorer Floating HUD (Top Left) -->
+      <div id="rpgMapHud" class="absolute top-4 left-4 z-[460] rpg-panel rounded-2xl p-4 w-72 transition-all duration-300">
+        <div class="flex items-center justify-between border-b border-slate-700/80 pb-2 mb-3">
+          <div class="flex items-center gap-2">
+            <span class="text-xl" id="hudClassIcon">⚔️</span>
+            <div>
+              <div class="cinzel text-xs font-bold text-amber-300 uppercase tracking-wider" id="hudClassName">Fresh Recruit</div>
+              <div class="text-[11px] text-slate-400">Level <span id="hudLevel" class="text-amber-400 font-bold">1</span> Explorer</div>
+            </div>
+          </div>
+          <div class="text-right">
+            <div class="text-xs font-bold font-mono text-emerald-400"><span id="hudXp">0</span> XP</div>
+            <div class="text-[10px] text-slate-400">Next: <span id="hudNextXp">100</span></div>
+          </div>
+        </div>
+
+        <!-- Level XP Progress Bar -->
+        <div class="w-full bg-slate-900 rounded-full h-2 mb-3 overflow-hidden border border-slate-700/60">
+          <div id="hudXpBar" class="h-full xp-glow transition-all duration-500" style="width: 0%"></div>
+        </div>
+
+        <!-- Fog of war coverage and statistics -->
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <div class="bg-slate-900/70 p-2 rounded-xl border border-slate-800">
+            <span class="text-[10px] text-slate-400 block uppercase">Shroud Cleared</span>
+            <span class="font-bold text-amber-300 font-mono text-sm" id="hudClearedPct">0.8%</span>
+          </div>
+          <div class="bg-slate-900/70 p-2 rounded-xl border border-slate-800">
+            <span class="text-[10px] text-slate-400 block uppercase">Parks Visited</span>
+            <span class="font-bold text-emerald-400 font-mono text-sm" id="hudParksCount">0 / 63</span>
+          </div>
+          <div class="bg-slate-900/70 p-2 rounded-xl border border-slate-800">
+            <span class="text-[10px] text-slate-400 block uppercase">Biomes Found</span>
+            <span class="font-bold text-sky-400 font-mono text-sm" id="hudBiomesCount">0 / 15</span>
+          </div>
+          <div class="bg-slate-900/70 p-2 rounded-xl border border-slate-800">
+            <span class="text-[10px] text-slate-400 block uppercase">Quests Complete</span>
+            <span class="font-bold text-purple-400 font-mono text-sm" id="hudQuestsCount">0 / 7</span>
+          </div>
+        </div>
+
+        <!-- Quick filter for Leaflet pins -->
+        <div class="mt-3 pt-3 border-t border-slate-700/60 flex items-center justify-between text-[11px]">
+          <span class="text-slate-400">Show pins:</span>
+          <div class="flex gap-1" id="pinFilterBtns">
+            <button data-filt="all" class="px-2 py-0.5 rounded bg-blue-600/80 text-white font-medium">All</button>
+            <button data-filt="v" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white">Visited</button>
+            <button data-filt="w" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white">Wishlist</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fog of War Toggle Control & Legend (Bottom Left) -->
+      <div class="absolute bottom-6 left-4 z-[460] rpg-panel rounded-xl px-3 py-2 text-xs flex items-center gap-4 text-slate-300">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="fogToggleCheckbox" checked class="rounded border-slate-700 text-amber-500 focus:ring-0">
+          <span class="font-medium text-amber-200">Dense Fog Shroud</span>
+        </label>
+        <span class="h-3 w-px bg-slate-700"></span>
+        <div class="flex items-center gap-3 text-[11px] text-slate-400">
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Visited (Aura)</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span> Wishlist</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-slate-600"></span> Unexplored</span>
+        </div>
+      </div>
+
+      <!-- Quick Compass / Recenter on Home (Bottom Right) -->
+      <button id="btnRecenterHome" class="absolute bottom-6 right-4 z-[460] rpg-panel rounded-xl px-3 py-2.5 text-xs font-semibold text-amber-300 hover:text-amber-200 flex items-center gap-2 hover:border-amber-400/50 transition-all">
+        <span>🏰</span> Jump to Home Citadel
+      </button>
+    </div>
+
+    <!-- VIEW 2: SCRATCH-OFF ATLAS (SVG CHOROPLETH) -->
+    <div id="tabContent-scratch" class="w-full h-full p-4 md:p-6 overflow-y-auto hidden">
+      <div class="max-w-6xl mx-auto space-y-4">
+        <!-- Scratch Header Controls -->
+        <div class="flex flex-wrap items-center justify-between gap-4 rpg-panel p-4 rounded-2xl">
+          <div>
+            <h2 class="cinzel text-lg font-bold text-amber-200">The Royal Cartography Records</h2>
+            <p class="text-xs text-slate-400">Click countries or US states to claim territory: Unexplored → Visited → Wishlist</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="flex bg-slate-900 p-1 rounded-xl border border-slate-700 text-xs">
+              <button id="btnScratchWorld" class="px-3 py-1.5 rounded-lg bg-blue-600 text-white font-medium">World Nations</button>
+              <button id="btnScratchUsa" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white">United States</button>
+            </div>
+            <div class="text-xs font-mono text-amber-300 bg-amber-950/40 border border-amber-500/30 px-3 py-1.5 rounded-xl" id="scratchStatsLabel">
+              0 Claimed
+            </div>
+          </div>
+        </div>
+
+        <!-- SVG Map Render Card -->
+        <div class="rpg-panel p-4 rounded-2xl flex items-center justify-center min-h-[500px]">
+          <svg id="svgScratchMap" class="w-full max-h-[640px] drop-shadow-2xl"></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW 3: PASSPORT / RPG CHARACTER SHEET -->
+    <div id="tabContent-passport" class="w-full h-full p-4 md:p-8 overflow-y-auto hidden">
+      <div class="max-w-6xl mx-auto space-y-8 pb-16">
+        
+        <!-- Hero Character Banner -->
+        <div class="rpg-panel rpg-panel-gold rounded-3xl p-6 md:p-8 relative overflow-hidden">
+          <div class="relative z-10 flex flex-col md:flex-row items-center md:items-start justify-between gap-6">
+            <div class="flex flex-col md:flex-row items-center gap-5 text-center md:text-left">
+              <div class="w-24 h-24 rounded-2xl bg-gradient-to-tr from-amber-600 via-amber-400 to-amber-200 p-1 shadow-2xl">
+                <div class="w-full h-full bg-slate-950 rounded-xl flex items-center justify-center text-4xl" id="passportAvatar">
+                  🧭
+                </div>
+              </div>
+              <div>
+                <div class="flex items-center justify-center md:justify-start gap-3">
+                  <h2 class="cinzel text-2xl md:text-3xl font-extrabold text-amber-200" id="passportClassName">Alpine Ranger</h2>
+                  <span class="px-2.5 py-0.5 rounded-full text-xs font-mono bg-amber-400 text-slate-950 font-bold" id="passportLevelBadge">Level 1</span>
+                </div>
+                <p class="text-sm text-slate-300 mt-1" id="passportTitleDesc">Bound to the high peaks and wilderness.</p>
+                <div class="flex flex-wrap items-center justify-center md:justify-start gap-4 mt-3 text-xs text-slate-400">
+                  <span>🏰 Home: <b class="text-slate-200" id="passportHomeText">Not Assigned</b></span>
+                  <span>⚡ Total XP: <b class="text-emerald-400 font-mono" id="passportTotalXp">0</b></span>
+                  <span>🗺️ Global Land Explored: <b class="text-amber-300 font-mono" id="passportExploredPct">0.0%</b></span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Radar Archetype Chart Container -->
+            <div class="w-56 h-56 flex flex-col items-center justify-center shrink-0">
+              <span class="text-[10px] uppercase font-mono tracking-wider text-slate-400 mb-1">Traveler Archetype</span>
+              <svg id="radarSvg" viewBox="0 0 240 240" class="w-full h-full drop-shadow-lg"></svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Master Statistics Bento Box -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div class="rpg-panel p-4 rounded-2xl text-center">
+            <span class="text-[10px] uppercase text-slate-400 font-mono">Countries</span>
+            <div class="text-2xl font-bold font-mono text-emerald-400 mt-1" id="statCountries">0</div>
+            <span class="text-[10px] text-slate-500">of 195</span>
+          </div>
+          <div class="rpg-panel p-4 rounded-2xl text-center">
+            <span class="text-[10px] uppercase text-slate-400 font-mono">US States</span>
+            <div class="text-2xl font-bold font-mono text-sky-400 mt-1" id="statStates">0</div>
+            <span class="text-[10px] text-slate-500">of 50</span>
+          </div>
+          <div class="rpg-panel p-4 rounded-2xl text-center">
+            <span class="text-[10px] uppercase text-slate-400 font-mono">US Nat. Parks</span>
+            <div class="text-2xl font-bold font-mono text-amber-300 mt-1" id="statUsParks">0</div>
+            <span class="text-[10px] text-slate-500">of 63</span>
+          </div>
+          <div class="rpg-panel p-4 rounded-2xl text-center">
+            <span class="text-[10px] uppercase text-slate-400 font-mono">Global Parks</span>
+            <div class="text-2xl font-bold font-mono text-purple-400 mt-1" id="statGlobalParks">0</div>
+            <span class="text-[10px] text-slate-500">total logged</span>
+          </div>
+          <div class="rpg-panel p-4 rounded-2xl text-center">
+            <span class="text-[10px] uppercase text-slate-400 font-mono">Biomes Unlocked</span>
+            <div class="text-2xl font-bold font-mono text-teal-400 mt-1" id="statBiomes">0</div>
+            <span class="text-[10px] text-slate-500">of 15</span>
+          </div>
+          <div class="rpg-panel p-4 rounded-2xl text-center">
+            <span class="text-[10px] uppercase text-slate-400 font-mono">Rare Biomes</span>
+            <div class="text-2xl font-bold font-mono text-rose-400 mt-1" id="statRareBiomes">0</div>
+            <span class="text-[10px] text-slate-500">of 5</span>
+          </div>
+        </div>
+
+        <!-- Biome Pokédex Section -->
+        <div>
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="cinzel text-xl font-bold text-amber-200">Biome Pokédex</h3>
+              <p class="text-xs text-slate-400">Discover Earth's distinct ecological environments through your travels</p>
+            </div>
+            <span class="text-xs font-mono text-amber-400 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30" id="biomeCompletionRatio">0/15 Found</span>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3" id="biomePokedexContainer">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+        <!-- Questlines Section -->
+        <div>
+          <div class="mb-4">
+            <h3 class="cinzel text-xl font-bold text-amber-200">Active Questlines & Expeditions</h3>
+            <p class="text-xs text-slate-400">Complete geographic milestones and famous park circuits</p>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="questsContainer">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+        <!-- Achievements Section -->
+        <div>
+          <div class="mb-4">
+            <h3 class="cinzel text-xl font-bold text-amber-200">Milestone Achievements</h3>
+            <p class="text-xs text-slate-400">Earn renown as you venture farther into the unknown</p>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3" id="achievementsContainer">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- VIEW 4: BUCKET LIST MODE (OVERLAY DRAWER / FULL VIEW) -->
+    <div id="tabContent-bucketlist" class="w-full h-full p-4 md:p-8 overflow-y-auto hidden">
+      <div class="max-w-5xl mx-auto space-y-6 pb-20">
+        <div class="rpg-panel p-6 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h2 class="cinzel text-xl font-bold text-amber-200">Traditional Travel Wishlist & Ledger</h2>
+            <p class="text-xs text-slate-400">Manage all National Parks, locations, and status marks seamlessly</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-3">
+            <input type="text" id="bucketSearch" placeholder="Search park, state, biome..." class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-400 w-56">
+            <select id="bucketFilterStatus" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none">
+              <option value="all">All Items</option>
+              <option value="v">Visited Only</option>
+              <option value="w">Wishlist Only</option>
+              <option value="un">Unexplored Only</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Bucket List Table Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3" id="bucketListGrid">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <div id="homeBaseModal" class="fixed inset-0 z-[1000] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 transition-all duration-300">
+    <div class="rpg-panel rpg-panel-gold max-w-lg w-full rounded-3xl p-6 sm:p-8 text-center space-y-6">
+      <div class="w-20 h-20 mx-auto rounded-3xl bg-gradient-to-tr from-amber-600 to-amber-300 flex items-center justify-center text-4xl shadow-xl shadow-amber-500/20">
+        🏰
+      </div>
+      <div>
+        <h2 class="cinzel text-2xl sm:text-3xl font-extrabold text-amber-200">Establish Your Home Citadel</h2>
+        <p class="text-sm text-slate-300 mt-2">
+          Every explorer begins somewhere. Set your starting home coordinates to clear the initial shroud of fog (75-mile radius) around your home sanctuary!
+        </p>
+      </div>
+
+      <div class="space-y-3">
+        <button id="btnGeoDetect" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-sky-600 hover:from-blue-500 hover:to-sky-500 font-semibold text-white text-sm shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2 transition-all">
+          <span>📡</span> Detect My Location Automatically
+        </button>
+
+        <div class="flex items-center gap-3 text-xs text-slate-500">
+          <div class="flex-1 h-px bg-slate-800"></div>
+          <span>OR CHOOSE CITADEL</span>
+          <div class="flex-1 h-px bg-slate-800"></div>
+        </div>
+
+        <div class="flex gap-2">
+          <input type="text" id="cityInput" placeholder="e.g. Seattle, WA or London, UK" class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-400">
+          <button id="btnSubmitCity" class="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 font-bold text-slate-950 text-sm transition-all">
+            Confirm
+          </button>
+        </div>
+
+        <div class="flex flex-wrap gap-1.5 justify-center pt-2">
+          <span class="text-[11px] text-slate-400 self-center mr-1">Quick Picks:</span>
+          <button class="quick-city-chip text-[11px] px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700" data-name="Seattle, WA" data-lat="47.6062" data-lng="-122.3321">Seattle</button>
+          <button class="quick-city-chip text-[11px] px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700" data-name="Denver, CO" data-lat="39.7392" data-lng="-104.9903">Denver</button>
+          <button class="quick-city-chip text-[11px] px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700" data-name="New York, NY" data-lat="40.7128" data-lng="-74.0060">New York</button>
+          <button class="quick-city-chip text-[11px] px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700" data-name="San Francisco, CA" data-lat="37.7749" data-lng="-122.4194">San Francisco</button>
+          <button class="quick-city-chip text-[11px] px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700" data-name="London, UK" data-lat="51.5074" data-lng="-0.1278">London</button>
+        </div>
+      </div>
+
+      <div class="text-[11px] text-slate-500">
+        You can always change your home base or customize fog clearing later.
+      </div>
+    </div>
+  </div>
+
+  <div id="toastNotification" class="fixed top-20 right-6 z-[1100] transform translate-y-4 opacity-0 pointer-events-none transition-all duration-300 rpg-panel rounded-2xl p-4 shadow-2xl flex items-center gap-3 border-amber-500/50 max-w-sm">
+    <div class="text-2xl" id="toastIcon">🏆</div>
+    <div>
+      <h4 class="text-xs font-bold text-amber-300 uppercase tracking-wider" id="toastTitle">Achievement Unlocked</h4>
+      <p class="text-xs text-slate-200 mt-0.5" id="toastMsg">You cleared the fog of your home!</p>
+    </div>
+  </div>
+
+  <script>
+    /* Biomes Definition with rarity tiers and colors */
+    const BIOMES = {
+      fo: { name: 'Temperate Forest', rarity: 'common', color: '#10b981', icon: '🌲', xp: 15 },
+      gr: { name: 'Grassland / Plains', rarity: 'common', color: '#84cc16', icon: '🌾', xp: 15 },
+      co: { name: 'Oceanic Coastline', rarity: 'common', color: '#38bdf8', icon: '🌊', xp: 15 },
+      ur: { name: 'Urban Metropolis', rarity: 'common', color: '#94a3b8', icon: '🏙️', xp: 10 },
+      de: { name: 'Desert / Arid', rarity: 'uncommon', color: '#f59e0b', icon: '🏜️', xp: 30 },
+      al: { name: 'Alpine Peaks', rarity: 'uncommon', color: '#06b6d4', icon: '⛰️', xp: 35 },
+      we: { name: 'Wetlands / Everglades', rarity: 'uncommon', color: '#14b8a6', icon: '🐊', xp: 30 },
+      tr: { name: 'Tropical Jungle', rarity: 'uncommon', color: '#22c55e', icon: '🌴', xp: 35 },
+      ch: { name: 'Mediterranean Chaparral', rarity: 'uncommon', color: '#eab308', icon: '🌿', xp: 30 },
+      is: { name: 'Remote Island', rarity: 'uncommon', color: '#0ea5e9', icon: '🏝️', xp: 40 },
+      rf: { name: 'Temperate Rainforest', rarity: 'rare', color: '#059669', icon: '🌧️', xp: 60 },
+      gl: { name: 'Glacial Icefield', rarity: 'rare', color: '#67e8f9', icon: '🧊', xp: 75 },
+      vo: { name: 'Volcanic / Geothermal', rarity: 'rare', color: '#f43f5e', icon: '🌋', xp: 70 },
+      ca: { name: 'Subterranean Cavern', rarity: 'rare', color: '#a855f7', icon: '🦇', xp: 65 },
+      tu: { name: 'Arctic Tundra', rarity: 'rare', color: '#c084fc', icon: '❄️', xp: 80 }
+    };
+
+    /* Comprehensive 63 US National Parks + 12 International Icons */
+    const PARKS = [
+      { id: 'acadia', name: 'Acadia', lat: 44.35, lng: -68.21, state: 'Maine', biomes: ['fo','co'], desc: 'Rugged granite coast and Atlantic surf' },
+      { id: 'samoa', name: 'National Park of American Samoa', lat: -14.25, lng: -170.68, state: 'American Samoa', biomes: ['tr','is','co'], desc: 'Coral reefs and paleotropical rainforests' },
+      { id: 'arches', name: 'Arches', lat: 38.73, lng: -109.59, state: 'Utah', biomes: ['de'], desc: 'Over 2,000 natural sandstone arches' },
+      { id: 'badlands', name: 'Badlands', lat: 43.75, lng: -102.5, state: 'South Dakota', biomes: ['gr'], desc: 'Dramatic layered rock formations and fossil beds' },
+      { id: 'bigbend', name: 'Big Bend', lat: 29.25, lng: -103.25, state: 'Texas', biomes: ['de'], desc: 'Rio Grande canyons and Chihuahuan desert expanses' },
+      { id: 'biscayne', name: 'Biscayne', lat: 25.65, lng: -80.08, state: 'Florida', biomes: ['co','is'], desc: 'Subaquatic coral wonderland and mangrove waters' },
+      { id: 'blackcanyon', name: 'Black Canyon of the Gunnison', lat: 38.57, lng: -107.72, state: 'Colorado', biomes: ['al'], desc: 'Precambrian gorges plunged into deep shadows' },
+      { id: 'bryce', name: 'Bryce Canyon', lat: 37.57, lng: -112.18, state: 'Utah', biomes: ['de','al'], desc: 'Crimson amphitheaters packed with hoodoos' },
+      { id: 'canyonlands', name: 'Canyonlands', lat: 38.2, lng: -109.93, state: 'Utah', biomes: ['de'], desc: 'Vast wilderness gouged by the Green and Colorado rivers' },
+      { id: 'capitolreef', name: 'Capitol Reef', lat: 38.2, lng: -111.17, state: 'Utah', biomes: ['de'], desc: 'The massive geologic Waterpocket Fold wrinkle' },
+      { id: 'carlsbad', name: 'Carlsbad Caverns', lat: 32.17, lng: -104.44, state: 'New Mexico', biomes: ['ca','de'], desc: 'Underground limestone palaces carved over eons' },
+      { id: 'channel', name: 'Channel Islands', lat: 34.01, lng: -119.42, state: 'California', biomes: ['is','ch','co'], desc: 'Isolated Galapagos of North America' },
+      { id: 'congaree', name: 'Congaree', lat: 33.78, lng: -80.78, state: 'South Carolina', biomes: ['we','fo'], desc: 'Largest continuous tract of old growth bottomland hardwood' },
+      { id: 'crater', name: 'Crater Lake', lat: 42.94, lng: -122.1, state: 'Oregon', biomes: ['vo','al'], desc: 'Pure azure caldera of collapsed Mount Mazama' },
+      { id: 'cuyahoga', name: 'Cuyahoga Valley', lat: 41.24, lng: -81.55, state: 'Ohio', biomes: ['fo'], desc: 'Rolling forest sanctuaries and heritage waterways' },
+      { id: 'deathvalley', name: 'Death Valley', lat: 36.24, lng: -116.82, state: 'California', biomes: ['de'], desc: 'Hottest and lowest basin in North America' },
+      { id: 'denali', name: 'Denali', lat: 63.33, lng: -150.5, state: 'Alaska', biomes: ['tu','gl','al'], desc: 'Highest peak on the continent amid arctic tundra' },
+      { id: 'drytortugas', name: 'Dry Tortugas', lat: 24.63, lng: -82.87, state: 'Florida', biomes: ['is','co'], desc: 'Historic Fort Jefferson surrounded by open blue sea' },
+      { id: 'everglades', name: 'Everglades', lat: 25.32, lng: -80.93, state: 'Florida', biomes: ['we','tr'], desc: 'Slow moving river of grass protecting unique ecosystems' },
+      { id: 'gatesarctic', name: 'Gates of the Arctic', lat: 67.78, lng: -153.3, state: 'Alaska', biomes: ['tu','al'], desc: 'Vast trail-less arctic wilderness north of the circle' },
+      { id: 'gatewayarch', name: 'Gateway Arch', lat: 38.62, lng: -90.19, state: 'Missouri', biomes: ['ur'], desc: 'Monument to westward exploration' },
+      { id: 'glacier', name: 'Glacier', lat: 48.76, lng: -113.79, state: 'Montana', biomes: ['al','gl','fo'], desc: 'Crown of the continent with pristine carved valleys' },
+      { id: 'glacierbay', name: 'Glacier Bay', lat: 58.5, lng: -137.0, state: 'Alaska', biomes: ['gl','co','rf'], desc: 'Tidewater glaciers, deep fjords, and marine sanctuaries' },
+      { id: 'grandcanyon', name: 'Grand Canyon', lat: 36.06, lng: -112.14, state: 'Arizona', biomes: ['de','fo'], desc: 'Immense layered chasm carved by the Colorado River' },
+      { id: 'grandteton', name: 'Grand Teton', lat: 43.79, lng: -110.68, state: 'Wyoming', biomes: ['al','fo'], desc: 'Towering granite spires reflected in Jackson Lake' },
+      { id: 'greatbasin', name: 'Great Basin', lat: 38.98, lng: -114.3, state: 'Nevada', biomes: ['de','al'], desc: 'Ancient bristlecone pines under dark sky skies' },
+      { id: 'greatsand', name: 'Great Sand Dunes', lat: 37.73, lng: -105.51, state: 'Colorado', biomes: ['de','gr'], desc: 'Tallest sand dunes in North America beside alpine peaks' },
+      { id: 'smokies', name: 'Great Smoky Mountains', lat: 35.61, lng: -83.49, state: 'Tennessee', biomes: ['fo'], desc: 'Misty ridges rich in Appalachian biodiversity' },
+      { id: 'guadalupe', name: 'Guadalupe Mountains', lat: 31.92, lng: -104.52, state: 'Texas', biomes: ['de'], desc: 'Permian fossil reef rising out of desert scrub' },
+      { id: 'haleakala', name: 'Haleakalā', lat: 20.72, lng: -156.17, state: 'Hawaii', biomes: ['vo','is','tr'], desc: 'High altitude volcanic shield crater on Maui' },
+      { id: 'hawaiivolc', name: 'Hawaiʻi Volcanoes', lat: 19.38, lng: -155.2, state: 'Hawaii', biomes: ['vo','is','tr'], desc: 'Active basaltic flows of Kīlauea and Mauna Loa' },
+      { id: 'hotsprings', name: 'Hot Springs', lat: 34.51, lng: -93.05, state: 'Arkansas', biomes: ['fo','vo'], desc: 'Thermal springs nestled in the Ouachita hills' },
+      { id: 'indianadunes', name: 'Indiana Dunes', lat: 41.65, lng: -87.05, state: 'Indiana', biomes: ['co','fo'], desc: 'Lake Michigan shoreline dunes and wetland ecology' },
+      { id: 'isleroyale', name: 'Isle Royale', lat: 48.1, lng: -88.55, state: 'Michigan', biomes: ['is','fo'], desc: 'Rugged island sanctuary isolated in Lake Superior' },
+      { id: 'joshuatree', name: 'Joshua Tree', lat: 33.79, lng: -115.9, state: 'California', biomes: ['de'], desc: 'Mojave and Colorado desert convergence with twisted trees' },
+      { id: 'katmai', name: 'Katmai', lat: 58.5, lng: -155.0, state: 'Alaska', biomes: ['vo','tu','co'], desc: 'Valley of Ten Thousand Smokes and coastal brown bears' },
+      { id: 'kenai', name: 'Kenai Fjords', lat: 59.92, lng: -149.65, state: 'Alaska', biomes: ['gl','co','rf'], desc: 'Harding Icefield sending glaciers into the sea' },
+      { id: 'kingscanyon', name: 'Kings Canyon', lat: 36.89, lng: -118.55, state: 'California', biomes: ['al','fo'], desc: 'Deep canyon gorges and giant sequoia groves' },
+      { id: 'kobuk', name: 'Kobuk Valley', lat: 67.55, lng: -159.28, state: 'Alaska', biomes: ['tu','de'], desc: 'Great arctic sand dunes north of the Arctic circle' },
+      { id: 'lakeclark', name: 'Lake Clark', lat: 60.97, lng: -153.42, state: 'Alaska', biomes: ['vo','tu'], desc: 'Turquoise lakes, steaming volcanoes, and salmon runs' },
+      { id: 'lassen', name: 'Lassen Volcanic', lat: 40.49, lng: -121.51, state: 'California', biomes: ['vo','al'], desc: 'Active hydrothermal vents and plug dome volcanoes' },
+      { id: 'mammoth', name: 'Mammoth Cave', lat: 37.19, lng: -86.1, state: 'Kentucky', biomes: ['ca','fo'], desc: 'Longest cave system known in the world' },
+      { id: 'mesaverde', name: 'Mesa Verde', lat: 37.18, lng: -108.49, state: 'Colorado', biomes: ['de','ch'], desc: 'Pueblo cliff dwellings preserved in sandstone niches' },
+      { id: 'rainier', name: 'Mount Rainier', lat: 46.85, lng: -121.75, state: 'Washington', biomes: ['gl','al','fo'], desc: 'Glaciated stratovolcano rising into the clouds' },
+      { id: 'newriver', name: 'New River Gorge', lat: 37.96, lng: -81.08, state: 'West Virginia', biomes: ['fo'], desc: 'Ancient Appalachian river cutting through sandstone' },
+      { id: 'northcascades', name: 'North Cascades', lat: 48.7, lng: -121.2, state: 'Washington', biomes: ['gl','al','rf'], desc: 'The American Alps with hundreds of active glaciers' },
+      { id: 'olympic', name: 'Olympic', lat: 47.97, lng: -123.5, state: 'Washington', biomes: ['rf','al','co'], desc: 'Mossy rainforests, glacial peaks, and wild sea stacks' },
+      { id: 'petrified', name: 'Petrified Forest', lat: 34.91, lng: -109.81, state: 'Arizona', biomes: ['de'], desc: 'Prehistoric rainbow wood crystals and painted desert badlands' },
+      { id: 'pinnacles', name: 'Pinnacles', lat: 36.48, lng: -121.16, state: 'California', biomes: ['ch'], desc: 'Remnants of an extinct volcano hosting California condors' },
+      { id: 'redwood', name: 'Redwood', lat: 41.21, lng: -124.0, state: 'California', biomes: ['rf','co'], desc: 'Tallest living beings on Earth shrouded in coastal fog' },
+      { id: 'rockymtn', name: 'Rocky Mountain', lat: 40.34, lng: -105.68, state: 'Colorado', biomes: ['al','fo'], desc: 'Continental Divide trails and high alpine tundra lakes' },
+      { id: 'saguaro', name: 'Saguaro', lat: 32.25, lng: -110.5, state: 'Arizona', biomes: ['de'], desc: 'Iconic towering giant cacti across the Sonoran desert' },
+      { id: 'sequoia', name: 'Sequoia', lat: 36.49, lng: -118.57, state: 'California', biomes: ['al','fo'], desc: 'Home to General Sherman and granite domes' },
+      { id: 'shenandoah', name: 'Shenandoah', lat: 38.53, lng: -78.35, state: 'Virginia', biomes: ['fo'], desc: 'Skyline Drive vistas overlooking the Virginia piedmont' },
+      { id: 'roosevelt', name: 'Theodore Roosevelt', lat: 46.97, lng: -103.45, state: 'North Dakota', biomes: ['gr'], desc: 'Rugged badlands where bison graze freely' },
+      { id: 'virginislands', name: 'Virgin Islands', lat: 18.34, lng: -64.74, state: 'Virgin Islands', biomes: ['tr','is','co'], desc: 'White coral sands and submerged snorkel trails' },
+      { id: 'voyageurs', name: 'Voyageurs', lat: 48.5, lng: -92.88, state: 'Minnesota', biomes: ['we','fo'], desc: 'Water maze of north woods waterways' },
+      { id: 'whitesands', name: 'White Sands', lat: 32.78, lng: -106.17, state: 'New Mexico', biomes: ['de'], desc: 'Greatest gypsum dune field on the planet' },
+      { id: 'windcave', name: 'Wind Cave', lat: 43.57, lng: -103.48, state: 'South Dakota', biomes: ['ca','gr'], desc: 'Intricate subterranean boxwork formations' },
+      { id: 'wrangell', name: 'Wrangell–St. Elias', lat: 61.0, lng: -142.0, state: 'Alaska', biomes: ['gl','al','tu'], desc: 'Massive wilderness where major mountain ranges meet' },
+      { id: 'yellowstone', name: 'Yellowstone', lat: 44.6, lng: -110.5, state: 'Wyoming', biomes: ['vo','al','fo'], desc: 'World’s first park: geysers, hot pots, and megafauna' },
+      { id: 'yosemite', name: 'Yosemite', lat: 37.85, lng: -119.57, state: 'California', biomes: ['al','fo'], desc: 'Glacial valley flanked by El Capitan and Half Dome' },
+      { id: 'zion', name: 'Zion', lat: 37.3, lng: -113.05, state: 'Utah', biomes: ['de'], desc: 'Navajo sandstone canyon cut by the Virgin River' },
+
+      /* Selected Global Icons */
+      { id: 'banff', name: 'Banff', lat: 51.5, lng: -116.15, country: 'Canada', intl: true, biomes: ['al','gl','fo'], desc: 'Glacial lakes of the Canadian Rockies' },
+      { id: 'torres', name: 'Torres del Paine', lat: -51.0, lng: -73.0, country: 'Chile', intl: true, biomes: ['al','gl','gr'], desc: 'Patagonian granite horns and ice sheets' },
+      { id: 'serengeti', name: 'Serengeti', lat: -2.33, lng: 34.83, country: 'Tanzania', intl: true, biomes: ['gr'], desc: 'The great wildebeest migration plains' },
+      { id: 'galapagos', name: 'Galápagos', lat: -0.67, lng: -90.55, country: 'Ecuador', intl: true, biomes: ['is','vo','co'], desc: 'Volcanic sanctuary of evolutionary wonder' },
+      { id: 'iguazu', name: 'Iguazú Falls', lat: -25.69, lng: -54.44, country: 'Argentina', intl: true, biomes: ['tr'], desc: 'Curtain of 275 waterfalls in subtropical jungle' },
+      { id: 'fiordland', name: 'Fiordland', lat: -45.4, lng: 167.7, country: 'New Zealand', intl: true, biomes: ['rf','gl','co'], desc: 'Mitre peak towering over Milford Sound' },
+      { id: 'plitvice', name: 'Plitvice Lakes', lat: 44.88, lng: 15.62, country: 'Croatia', intl: true, biomes: ['fo','we'], desc: 'Cascading terraced turquoise lakes' },
+      { id: 'thingvellir', name: 'Þingvellir / Iceland', lat: 64.26, lng: -21.12, country: 'Iceland', intl: true, biomes: ['vo','gl','tu'], desc: 'Tectonic rift valley where continental plates split' },
+      { id: 'halong', name: 'Hạ Long Bay', lat: 20.91, lng: 107.18, country: 'Vietnam', intl: true, biomes: ['is','co','tr'], desc: 'Emerald waters and thousands of limestone pillars' },
+      { id: 'kruger', name: 'Kruger', lat: -23.99, lng: 31.55, country: 'South Africa', intl: true, biomes: ['gr'], desc: 'Expansive African bushveld wildlife reserve' },
+      { id: 'uluru', name: 'Uluṟu-Kata Tjuṯa', lat: -25.34, lng: 131.04, country: 'Australia', intl: true, biomes: ['de'], desc: 'Red heart monolith of the Australian Outback' },
+      { id: 'jungfrau', name: 'Swiss Alps / Jungfrau-Aletsch', lat: 46.54, lng: 7.96, country: 'Switzerland', intl: true, biomes: ['al','gl'], desc: 'Glaciated backbone of the high European Alps' }
+    ];
+
+    /* Curated Questlines */
+    const QUESTLINES = [
+      { id: 'mighty5', title: 'The Mighty 5', desc: 'Conquer Utah’s five iconic red-rock parks', parkIds: ['zion','bryce','capitolreef','arches','canyonlands'], bonusXp: 150 },
+      { id: 'cascades', title: 'Cascade Volcanoes', desc: 'Summit the Pacific Northwest ring of fire', parkIds: ['rainier','crater','lassen'], bonusXp: 120 },
+      { id: 'alaska', title: 'The Last Frontier', desc: 'Brave the great subarctic and arctic expanses', parkIds: ['denali','glacierbay','kenai','katmai','wrangell'], bonusXp: 250 },
+      { id: 'caverns', title: 'Subterranean Odyssey', desc: 'Venture deep beneath the Earth’s mantle', parkIds: ['carlsbad','mammoth','windcave'], bonusXp: 140 },
+      { id: 'deserts', title: 'The Desert Furnace', desc: 'Endure the harshest arid ecosystems of North America', parkIds: ['deathvalley','joshuatree','saguaro','whitesands','bigbend'], bonusXp: 180 },
+      { id: 'giants', title: 'Realm of the Ancients', desc: 'Walk among the ancient giant trees of California', parkIds: ['redwood','sequoia','kingscanyon','yosemite'], bonusXp: 150 },
+      { id: 'islands', title: 'Archipelago Wanderer', desc: 'Visit isolated ocean national parks', parkIds: ['channel','drytortugas','biscayne','virginislands','haleakala'], bonusXp: 200 }
+    ];
+
+    /* Dynamic Achievements */
+    const ACHIEVEMENTS = [
+      { id: 'first_park', title: 'First Steps', desc: 'Visit your 1st National Park', req: (s) => s.visitedParks.length >= 1 },
+      { id: 'park_5', title: 'Trailblazer', desc: 'Visit 5 National Parks', req: (s) => s.visitedParks.length >= 5 },
+      { id: 'park_15', title: 'Master Ranger', desc: 'Visit 15 National Parks', req: (s) => s.visitedParks.length >= 15 },
+      { id: 'park_30', title: 'Grand Voyager', desc: 'Visit 30 National Parks', req: (s) => s.visitedParks.length >= 30 },
+      { id: 'park_63', title: 'Completionist Legend', desc: 'Visit all 63 US National Parks', req: (s) => s.usParksCount >= 63 },
+      { id: 'biome_5', title: 'Biome Explorer', desc: 'Collect 5 unique biomes', req: (s) => s.biomesSet.size >= 5 },
+      { id: 'biome_10', title: 'Ecologist', desc: 'Collect 10 unique biomes', req: (s) => s.biomesSet.size >= 10 },
+      { id: 'biome_all', title: 'Gaia Wanderer', desc: 'Discover all 15 terrestrial biomes', req: (s) => s.biomesSet.size >= 15 },
+      { id: 'rare_3', title: 'Anomaly Seeker', desc: 'Unlock 3 Rare Biomes', req: (s) => s.rareBiomesCount >= 3 },
+      { id: 'states_10', title: 'Continental Traveler', desc: 'Claim 10 US States', req: (s) => s.statesCount >= 10 },
+      { id: 'states_50', title: 'Union Pioneer', desc: 'Visit all 50 US States', req: (s) => s.statesCount >= 50 },
+      { id: 'countries_5', title: 'Globetrotter', desc: 'Log 5 different nations', req: (s) => s.countriesCount >= 5 }
+    ];
+
+    /* Known City Lookup Coordinates for text input */
+    const CITY_LOOKUP = {
+      'seattle': { name: 'Seattle, WA', lat: 47.6062, lng: -122.3321 },
+      'seattle, wa': { name: 'Seattle, WA', lat: 47.6062, lng: -122.3321 },
+      'portland': { name: 'Portland, OR', lat: 45.5152, lng: -122.6784 },
+      'san francisco': { name: 'San Francisco, CA', lat: 37.7749, lng: -122.4194 },
+      'los angeles': { name: 'Los Angeles, CA', lat: 34.0522, lng: -118.2437 },
+      'san diego': { name: 'San Diego, CA', lat: 32.7157, lng: -117.1611 },
+      'murrieta': { name: 'Murrieta, CA', lat: 33.5539, lng: -117.2139 },
+      'murrieta, ca': { name: 'Murrieta, CA', lat: 33.5539, lng: -117.2139 },
+      'temecula': { name: 'Temecula, CA', lat: 33.4936, lng: -117.1484 },
+      'temecula, ca': { name: 'Temecula, CA', lat: 33.4936, lng: -117.1484 },
+      'denver': { name: 'Denver, CO', lat: 39.7392, lng: -104.9903 },
+      'salt lake city': { name: 'Salt Lake City, UT', lat: 40.7608, lng: -111.8910 },
+      'phoenix': { name: 'Phoenix, AZ', lat: 33.4484, lng: -112.0740 },
+      'austin': { name: 'Austin, TX', lat: 30.2672, lng: -97.7431 },
+      'chicago': { name: 'Chicago, IL', lat: 41.8781, lng: -87.6298 },
+      'new york': { name: 'New York, NY', lat: 40.7128, lng: -74.0060 },
+      'boston': { name: 'Boston, MA', lat: 42.3601, lng: -71.0589 },
+      'miami': { name: 'Miami, FL', lat: 25.7617, lng: -80.1918 },
+      'london': { name: 'London, UK', lat: 51.5074, lng: -0.1278 },
+      'paris': { name: 'Paris, France', lat: 48.8566, lng: 2.3522 },
+      'tokyo': { name: 'Tokyo, Japan', lat: 35.6762, lng: 139.6503 }
+    };
+  </script>
+
+  <script>
+    // Audio synthesizer for retro fantasy RPG SFX (no external assets)
+    const AudioEngine = {
+      ctx: null,
+      init() {
+        if (!this.ctx) {
+          try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){}
+        }
+      },
+      playChime(type = 'discover') {
+        try {
+          this.init();
+          if (!this.ctx) return;
+          if (this.ctx.state === 'suspended') this.ctx.resume();
+          const t = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          if (type === 'discover') {
+            // High harp chord
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(523.25, t); // C5
+            osc.frequency.exponentialRampToValueAtTime(783.99, t + 0.15); // G5
+            osc.frequency.exponentialRampToValueAtTime(1046.50, t + 0.3); // C6
+            gain.gain.setValueAtTime(0.15, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
+            osc.start(t);
+            osc.stop(t + 0.6);
+          } else if (type === 'levelup') {
+            // Fanfare
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(440, t);
+            osc.frequency.setValueAtTime(554.37, t + 0.1);
+            osc.frequency.setValueAtTime(659.25, t + 0.2);
+            osc.frequency.setValueAtTime(880, t + 0.3);
+            gain.gain.setValueAtTime(0.2, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.8);
+            osc.start(t);
+            osc.stop(t + 0.8);
+          }
+        } catch(e) {}
+      }
+    };
+
+    // Central application state
+    const AppState = {
+      homeBase: null, // { name, lat, lng, radiusKm }
+      pins: {},       // id -> 'v' (visited) | 'w' (wishlist)
+      regions: {},    // 'c:Country' | 's:State' -> 'v' | 'w'
+      currentTab: 'map',
+      mode: 'rpg',    // 'rpg' or 'classic'
+      pinFilter: 'all',
+      scratchDataset: 'world',
+      viewOnly: false
+    };
+
+    // Load state from localStorage or URL hash
+    function loadPersistedState() {
+      // Check query param for share link
+      const params = new URLSearchParams(window.location.search);
+      const sharedData = params.get('d');
+      if (sharedData) {
+        try {
+          const parsed = JSON.parse(decodeURIComponent(atob(sharedData)));
+          AppState.homeBase = parsed.homeBase || null;
+          AppState.pins = parsed.pins || {};
+          AppState.regions = parsed.regions || {};
+          AppState.viewOnly = true;
+          showNotification('📜 Passport Loaded', 'Viewing a shared explorer log (read-only).', '🧭');
+          return;
+        } catch (e) {
+          console.error("Failed to parse shared link", e);
+        }
+      }
+
+      const stored = localStorage.getItem('terra_incognita_state');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          AppState.homeBase = parsed.homeBase || null;
+          AppState.pins = parsed.pins || {};
+          AppState.regions = parsed.regions || {};
+          AppState.mode = parsed.mode || 'rpg';
+        } catch (e) {
+          console.error("Failed to load local storage state", e);
+        }
+      }
+    }
+
+    function saveState() {
+      if (AppState.viewOnly) return;
+      localStorage.setItem('terra_incognita_state', JSON.stringify({
+        homeBase: AppState.homeBase,
+        pins: AppState.pins,
+        regions: AppState.regions,
+        mode: AppState.mode
+      }));
+    }
+
+    function showNotification(title, message, icon = '🏆') {
+      const toast = document.getElementById('toastNotification');
+      document.getElementById('toastTitle').textContent = title;
+      document.getElementById('toastMsg').textContent = message;
+      document.getElementById('toastIcon').textContent = icon;
+
+      toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+      toast.classList.add('opacity-100', 'translate-y-0');
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+        toast.classList.remove('opacity-100', 'translate-y-0');
+      }, 4000);
+    }
+  </script>
+
+  <script>
+    function calculateStats() {
+      const visitedParks = PARKS.filter(p => AppState.pins[p.id] === 'v');
+      const wishlistParks = PARKS.filter(p => AppState.pins[p.id] === 'w');
+      
+      const biomesSet = new Set();
+      visitedParks.forEach(p => p.biomes.forEach(b => biomesSet.add(b)));
+
+      const rareBiomesList = Object.keys(BIOMES).filter(b => BIOMES[b].rarity === 'rare');
+      const unlockedRare = rareBiomesList.filter(b => biomesSet.has(b));
+
+      // Determine visited states and countries
+      const visitedStates = new Set();
+      const visitedCountries = new Set();
+
+      // Add direct regions
+      Object.keys(AppState.regions).forEach(k => {
+        if (AppState.regions[k] === 'v') {
+          if (k.startsWith('s:')) visitedStates.add(k.substring(2));
+          if (k.startsWith('c:')) visitedCountries.add(k.substring(2));
+        }
+      });
+
+      // Implied states & countries from visited parks
+      visitedParks.forEach(p => {
+        if (p.state) {
+          visitedStates.add(p.state);
+          visitedCountries.add('United States of America');
+        }
+        if (p.country) {
+          visitedCountries.add(p.country);
+        }
+      });
+
+      // Experience Points Calculation
+      let xp = 0;
+      xp += visitedParks.length * 25;
+      xp += visitedStates.size * 10;
+      xp += visitedCountries.size * 20;
+
+      // Biome XP bonuses
+      biomesSet.forEach(b => {
+        if (BIOMES[b]) xp += BIOMES[b].xp;
+      });
+
+      // Home base clearing bonus
+      if (AppState.homeBase) xp += 50;
+
+      // Completed quests bonus
+      let completedQuestsCount = 0;
+      QUESTLINES.forEach(q => {
+        const isDone = q.parkIds.every(pid => AppState.pins[pid] === 'v');
+        if (isDone) {
+          completedQuestsCount++;
+          xp += q.bonusXp;
+        }
+      });
+
+      // Level algorithm: Level 1 starts at 0 XP, quadratic scaling
+      // Level = floor(sqrt(xp / 35)) + 1
+      const level = Math.floor(Math.sqrt(xp / 35)) + 1;
+      const nextLevelXp = Math.pow(level, 2) * 35;
+      const currentLevelBaseXp = Math.pow(level - 1, 2) * 35;
+      const levelProgressPct = Math.min(100, Math.max(0, ((xp - currentLevelBaseXp) / (nextLevelXp - currentLevelBaseXp)) * 100));
+
+      // Shroud exploration percentage calculation (heuristic based on radius clearing)
+      let exploredPct = 0.5; // Base minimum
+      if (AppState.homeBase) exploredPct += 2.0;
+      exploredPct += visitedParks.length * 0.85;
+      exploredPct += visitedStates.size * 0.5;
+      exploredPct += visitedCountries.size * 1.2;
+      exploredPct = Math.min(100, Math.max(0.5, exploredPct));
+
+      // Archetype classification
+      const archetypes = {
+        Nature: Math.min(1, visitedParks.length / 25),
+        Adventure: Math.min(1, visitedParks.filter(p => p.biomes.some(b => ['al','gl','vo','ca'].includes(b))).length / 10),
+        Remoteness: Math.min(1, visitedParks.filter(p => p.biomes.some(b => ['tu','is','gl'].includes(b))).length / 6),
+        Worldly: Math.min(1, visitedCountries.size / 15),
+        Roadtrip: Math.min(1, visitedStates.size / 30)
+      };
+
+      const sortedAxes = Object.entries(archetypes).sort((a,b) => b[1] - a[1]);
+      let cls = 'Fresh Recruit';
+      let titleDesc = 'The journey of ten thousand leagues begins with a single step.';
+      let avatar = '🧭';
+
+      if (sortedAxes[0][1] > 0.05) {
+        switch(sortedAxes[0][0]) {
+          case 'Adventure':
+            cls = 'Alpine Ranger';
+            titleDesc = 'Conqueror of high passes, frozen shelves, and volcanic rifts.';
+            avatar = '🧗';
+            break;
+          case 'Nature':
+            cls = 'Park Completionist';
+            titleDesc = 'Devoted explorer of national preserves and wild sanctuaries.';
+            avatar = '🏕️';
+            break;
+          case 'Remoteness':
+            cls = 'Biome Hunter';
+            titleDesc = 'Seeker of rare microclimates and isolated world fringes.';
+            avatar = '❄️';
+            break;
+          case 'Worldly':
+            cls = 'Globetrotter';
+            titleDesc = 'Crosser of oceans and student of international cultures.';
+            avatar = '✈️';
+            break;
+          case 'Roadtrip':
+            cls = 'Pioneer Wayfarer';
+            titleDesc = 'Master of highways, state borders, and open skylines.';
+            avatar = '🚙';
+            break;
+        }
+      }
+
+      return {
+        visitedParks,
+        wishlistParks,
+        usParksCount: visitedParks.filter(p => !p.intl).length,
+        biomesSet,
+        unlockedRare,
+        rareBiomesCount: unlockedRare.length,
+        statesCount: visitedStates.size,
+        countriesCount: visitedCountries.size,
+        completedQuestsCount,
+        xp,
+        level,
+        nextLevelXp,
+        levelProgressPct,
+        exploredPct,
+        archetypes,
+        cls,
+        titleDesc,
+        avatar
+      };
+    }
+  </script>
+
+  <script>
+    let map = null;
+    let fogCanvas = null;
+    let fogCtx = null;
+    let leafletMarkers = {};
+    let homeMarker = null;
+
+    function initMap() {
+      if (map) return;
+
+      // Dark parchment map tile styling via CartoDB Dark Matter
+      map = L.map('leafletMap', {
+        zoomControl: false,
+        attributionControl: false,
+        minZoom: 2,
+        maxZoom: 14,
+        preferCanvas: true
+      });
+
+      // Default view centered on the continental US
+      const defaultCenter = AppState.homeBase 
+        ? [AppState.homeBase.lat, AppState.homeBase.lng] 
+        : [39.50, -98.35];
+      map.setView(defaultCenter, AppState.homeBase ? 6 : 4);
+
+      // CartoDB Dark Matter tiles (free, dark aesthetic)
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+        subdomains: 'abcd'
+      }).addTo(map);
+
+      // Custom Zoom control in bottom right
+      L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+      // Initialize Fog Canvas Overlay
+      fogCanvas = document.getElementById('fogCanvasOverlay');
+      fogCtx = fogCanvas.getContext('2d');
+      resizeFogCanvas();
+
+      // Render park markers
+      renderParkMarkers();
+
+      // Setup map event listeners to re-render the fog canvas on pan/zoom
+      map.on('move', drawFogOfWar);
+      map.on('resize', () => {
+        resizeFogCanvas();
+        drawFogOfWar();
+      });
+      window.addEventListener('resize', () => {
+        resizeFogCanvas();
+        drawFogOfWar();
+      });
+
+      // Update home base marker if existing
+      updateHomeBaseMarker();
+
+      // Initial Fog draw
+      drawFogOfWar();
+    }
+
+    function resizeFogCanvas() {
+      if (!fogCanvas || !map) return;
+      const size = map.getSize();
+      fogCanvas.width = size.x;
+      fogCanvas.height = size.y;
+    }
+
+    /* Fog of War Rendering Routine */
+    function drawFogOfWar() {
+      if (!fogCtx || !map) return;
+
+      const width = fogCanvas.width;
+      const height = fogCanvas.height;
+
+      // Clear previous canvas frame
+      fogCtx.clearRect(0, 0, width, height);
+
+      // If user turned fog off, exit
+      const isFogActive = document.getElementById('fogToggleCheckbox').checked;
+      if (!isFogActive || AppState.mode === 'classic') {
+        return;
+      }
+
+      // Step 1: Draw Dense Shroud of War (Midnight Indigo with slight texture)
+      fogCtx.fillStyle = 'rgba(5, 8, 16, 0.94)';
+      fogCtx.fillRect(0, 0, width, height);
+
+      // Step 2: Use Destination-Out blend mode to carve out glowing exploration circles
+      fogCtx.globalCompositeOperation = 'destination-out';
+
+      // Punch out hole for Home Base
+      if (AppState.homeBase) {
+        const homePoint = map.latLngToContainerPoint([AppState.homeBase.lat, AppState.homeBase.lng]);
+        const radius = calculatePixelRadius(AppState.homeBase.lat, 110); // ~110km radius
+        punchFogAura(homePoint.x, homePoint.y, radius, 1.0);
+      }
+
+      // Punch out holes for all visited parks & pins
+      PARKS.forEach(p => {
+        if (AppState.pins[p.id] === 'v') {
+          const pt = map.latLngToContainerPoint([p.lat, p.lng]);
+          // Check if point is roughly within viewport
+          if (pt.x >= -200 && pt.x <= width + 200 && pt.y >= -200 && pt.y <= height + 200) {
+            const radius = calculatePixelRadius(p.lat, 85); // 85km clear radius
+            punchFogAura(pt.x, pt.y, radius, 0.95);
+          }
+        }
+      });
+
+      // Reset composite operation to normal
+      fogCtx.globalCompositeOperation = 'source-over';
+    }
+
+    // Punch a radial gradient with soft glowing feather edges
+    function punchFogAura(x, y, radius, opacityMultiplier = 1.0) {
+      if (radius <= 0) return;
+      const grad = fogCtx.createRadialGradient(x, y, radius * 0.25, x, y, radius);
+      grad.addColorStop(0, `rgba(0, 0, 0, ${1.0 * opacityMultiplier})`);
+      grad.addColorStop(0.7, `rgba(0, 0, 0, ${0.85 * opacityMultiplier})`);
+      grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+      fogCtx.fillStyle = grad;
+      fogCtx.beginPath();
+      fogCtx.arc(x, y, radius, 0, Math.PI * 2);
+      fogCtx.fill();
+    }
+
+    // Convert real-world kilometers to Leaflet screen pixels at current zoom
+    function calculatePixelRadius(lat, km) {
+      const meters = km * 1000;
+      const point1 = map.latLngToContainerPoint([lat, 0]);
+      // Approximate 1 deg latitude ~ 111km
+      const dLat = (meters / 111320);
+      const point2 = map.latLngToContainerPoint([lat + dLat, 0]);
+      return Math.max(25, Math.abs(point1.y - point2.y));
+    }
+
+    function renderParkMarkers() {
+      // Clear existing
+      Object.values(leafletMarkers).forEach(m => map.removeLayer(m));
+      leafletMarkers = {};
+
+      PARKS.forEach(p => {
+        const status = AppState.pins[p.id] || 'un'; // 'v', 'w', 'un'
+        
+        // Filter by pin visibility state
+        if (AppState.pinFilter === 'v' && status !== 'v') return;
+        if (AppState.pinFilter === 'w' && status !== 'w') return;
+
+        // Custom pin color based on status
+        const color = status === 'v' ? '#10b981' : (status === 'w' ? '#f59e0b' : '#475569');
+        const borderColor = status === 'v' ? '#6ee7b7' : (status === 'w' ? '#fde68a' : '#94a3b8');
+
+        const marker = L.circleMarker([p.lat, p.lng], {
+          radius: status === 'v' ? 8 : 6,
+          fillColor: color,
+          fillOpacity: 0.9,
+          color: borderColor,
+          weight: 2
+        }).addTo(map);
+
+        // Tooltip
+        marker.bindTooltip(`<b>${p.name}</b>`, {
+          direction: 'top',
+          offset: [0, -8],
+          className: 'rpg-tooltip'
+        });
+
+        // Popup with interactive status toggling
+        marker.bindPopup(() => createPopupContent(p), {
+          maxWidth: 280
+        });
+
+        leafletMarkers[p.id] = marker;
+      });
+    }
+
+    function createPopupContent(p) {
+      const cur = AppState.pins[p.id] || 'un';
+      const biomeTags = p.biomes.map(b => {
+        const info = BIOMES[b] || { name: b, icon: '🌿' };
+        return `<span class="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-200">
+          <span>${info.icon}</span> ${info.name}
+        </span>`;
+      }).join(' ');
+
+      return `
+        <div class="p-1 space-y-2">
+          <div class="flex items-start justify-between gap-2 border-b border-slate-700 pb-1.5">
+            <div>
+              <h4 class="font-bold text-sm text-amber-200">${p.name}</h4>
+              <span class="text-[11px] text-slate-400">${p.state || p.country}</span>
+            </div>
+            <span class="text-xs px-2 py-0.5 rounded font-bold uppercase ${
+              cur === 'v' ? 'bg-emerald-950 text-emerald-300 border border-emerald-500/40' :
+              cur === 'w' ? 'bg-amber-950 text-amber-300 border border-amber-500/40' :
+              'bg-slate-800 text-slate-400'
+            }">
+              ${cur === 'v' ? 'Visited' : cur === 'w' ? 'Wishlist' : 'Unvisited'}
+            </span>
+          </div>
+          <p class="text-xs text-slate-300">${p.desc || ''}</p>
+          <div class="flex flex-wrap gap-1 pt-1">${biomeTags}</div>
+          <div class="grid grid-cols-3 gap-1.5 pt-2 border-t border-slate-800 text-xs font-semibold">
+            <button onclick="setPinStatus('${p.id}', 'v')" class="py-1 px-2 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-center transition-all ${cur==='v'?'ring-2 ring-emerald-300':''}">Visited</button>
+            <button onclick="setPinStatus('${p.id}', 'w')" class="py-1 px-2 rounded bg-amber-600 hover:bg-amber-500 text-white text-center transition-all ${cur==='w'?'ring-2 ring-amber-300':''}">Wishlist</button>
+            <button onclick="setPinStatus('${p.id}', 'un')" class="py-1 px-2 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 text-center transition-all">Clear</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function setPinStatus(parkId, status) {
+      if (AppState.viewOnly) return;
+      const prev = AppState.pins[parkId];
+      if (status === 'un') {
+        delete AppState.pins[parkId];
+      } else {
+        AppState.pins[parkId] = status;
+        if (status === 'v' && prev !== 'v') {
+          AudioEngine.playChime('discover');
+          const p = PARKS.find(item => item.id === parkId);
+          showNotification('🗺️ Fog Pierced!', `You cleared the fog around ${p ? p.name : 'new territory'}!`, '✨');
+        }
+      }
+      saveState();
+      renderParkMarkers();
+      drawFogOfWar();
+      updateAllUI();
+    }
+
+    function updateHomeBaseMarker() {
+      if (!map) return;
+      if (homeMarker) map.removeLayer(homeMarker);
+      if (!AppState.homeBase) return;
+
+      const customIcon = L.divIcon({
+        className: 'custom-home-pin',
+        html: `
+          <div class="relative flex items-center justify-center">
+            <div class="absolute w-12 h-12 rounded-full bg-amber-400/20 aura-ring"></div>
+            <div class="w-8 h-8 rounded-full bg-amber-500 border-2 border-white shadow-xl flex items-center justify-center text-sm shadow-amber-500/50">
+              🏰
+            </div>
+          </div>
+        `,
+        iconSize: [32, 32],
+        iconAnchor: [16, 16]
+      });
+
+      homeMarker = L.marker([AppState.homeBase.lat, AppState.homeBase.lng], { icon: customIcon }).addTo(map);
+      homeMarker.bindTooltip(`<b>Home Base:</b> ${AppState.homeBase.name}`, { direction: 'top', offset: [0, -10] });
+    }
+  </script>
+
+  <script>
+    let worldGeoJson = null;
+    let usaGeoJson = null;
+
+    async function loadGeoDatasets() {
+      try {
+        const [worldRes, usaRes] = await Promise.all([
+          fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json').then(r => r.json()),
+          fetch('https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json').then(r => r.json())
+        ]);
+        worldGeoJson = topojson.feature(worldRes, worldRes.objects.countries).features;
+        usaGeoJson = topojson.feature(usaRes, usaRes.objects.states).features.filter(f => +f.id <= 56 && f.id !== '11');
+      } catch (e) {
+        console.error("Failed to load geographic atlas boundaries", e);
+      }
+    }
+
+    function renderScratchMap() {
+      const svg = d3.select('#svgScratchMap').html('');
+      const isWorld = AppState.scratchDataset === 'world';
+      const features = isWorld ? (worldGeoJson || []) : (usaGeoJson || []);
+
+      if (!features.length) {
+        svg.append('text')
+          .attr('x', '50%').attr('y', '50%')
+          .attr('text-anchor', 'middle')
+          .attr('fill', '#94a3b8')
+          .text('Loading imperial cartographic charts...');
+        return;
+      }
+
+      const W = 960;
+      const H = isWorld ? 500 : 580;
+      svg.attr('viewBox', `0 0 ${W} ${H}`);
+
+      const projection = isWorld ? d3.geoNaturalEarth1() : d3.geoAlbersUsa();
+      projection.fitSize([W, H], { type: 'FeatureCollection', features });
+      const pathGenerator = d3.geoPath(projection);
+
+      const prefix = isWorld ? 'c:' : 's:';
+
+      svg.selectAll('path')
+        .data(features)
+        .join('path')
+        .attr('d', pathGenerator)
+        .attr('stroke', '#1e293b')
+        .attr('stroke-width', 0.6)
+        .attr('fill', d => {
+          const name = d.properties.name;
+          const status = AppState.regions[prefix + name];
+          if (status === 'v') return '#10b981'; // Visited Emerald
+          if (status === 'w') return '#f59e0b'; // Wishlist Amber
+          return '#090d1a'; // Shrouded Parchment Dark
+        })
+        .attr('cursor', 'pointer')
+        .on('click', (e, d) => {
+          if (AppState.viewOnly) return;
+          const name = d.properties.name;
+          const key = prefix + name;
+          const cur = AppState.regions[key];
+          // Cycle: unvisited -> visited -> wishlist -> unvisited
+          if (!cur) {
+            AppState.regions[key] = 'v';
+            AudioEngine.playChime('discover');
+            showNotification('Territory Claimed!', `${name} marked as Visited.`, '🗺️');
+          } else if (cur === 'v') {
+            AppState.regions[key] = 'w';
+          } else {
+            delete AppState.regions[key];
+          }
+          saveState();
+          renderScratchMap();
+          updateAllUI();
+        })
+        .append('title')
+        .text(d => `${d.properties.name} • Click to cycle status`);
+
+      // Update scratch counter
+      const claimedCount = Object.keys(AppState.regions).filter(k => k.startsWith(prefix) && AppState.regions[k] === 'v').length;
+      document.getElementById('scratchStatsLabel').textContent = `${claimedCount} of ${features.length} Explored`;
+    }
+  </script>
+
+  <script>
+    function renderRadarChart(axes) {
+      const names = Object.keys(axes);
+      const n = names.length;
+      const R = 85;
+      const C = 120;
+      const pt = (i, r) => [C + Math.sin(2 * Math.PI * i / n) * r, C - Math.cos(2 * Math.PI * i / n) * r];
+      const ring = k => names.map((_, i) => pt(i, R * k).join(',')).join(' ');
+      const shape = names.map((k, i) => pt(i, R * Math.max(0.08, axes[k])).join(',')).join(' ');
+
+      const labels = names.map((k, i) => {
+        const [x, y] = pt(i, R + 18);
+        return `<text x="${x}" y="${y}" fill="#94a3b8" font-size="10" font-family="Inter" text-anchor="middle" dominant-baseline="middle">${k}</text>`;
+      }).join('');
+
+      const svgEl = document.getElementById('radarSvg');
+      svgEl.innerHTML = `
+        ${[0.33, 0.66, 1.0].map(k => `<polygon points="${ring(k)}" fill="none" stroke="#1e293b" stroke-width="1"/>`).join('')}
+        <polygon points="${shape}" fill="rgba(56, 189, 248, 0.35)" stroke="#38bdf8" stroke-width="2"/>
+        ${names.map((k, i) => {
+          const [px, py] = pt(i, R * Math.max(0.08, axes[k]));
+          return `<circle cx="${px}" cy="${py}" r="3" fill="#fbbf24"/>`;
+        }).join('')}
+        ${labels}
+      `;
+    }
+
+    function renderPassportView() {
+      const stats = calculateStats();
+
+      // Hero banner
+      document.getElementById('passportClassName').textContent = stats.cls;
+      document.getElementById('passportTitleDesc').textContent = stats.titleDesc;
+      document.getElementById('passportAvatar').textContent = stats.avatar;
+      document.getElementById('passportLevelBadge').textContent = `Level ${stats.level}`;
+      document.getElementById('passportHomeText').textContent = AppState.homeBase ? AppState.homeBase.name : 'Unknown Hearth';
+      document.getElementById('passportTotalXp').textContent = `${stats.xp} XP`;
+      document.getElementById('passportExploredPct').textContent = `${stats.exploredPct.toFixed(1)}%`;
+
+      // Radar
+      renderRadarChart(stats.archetypes);
+
+      // Stat Bento Box
+      document.getElementById('statCountries').textContent = stats.countriesCount;
+      document.getElementById('statStates').textContent = stats.statesCount;
+      document.getElementById('statUsParks').textContent = stats.usParksCount;
+      document.getElementById('statGlobalParks').textContent = stats.visitedParks.length;
+      document.getElementById('statBiomes').textContent = stats.biomesSet.size;
+      document.getElementById('statRareBiomes').textContent = stats.rareBiomesCount;
+
+      // Biome Pokédex cards
+      const biomeContainer = document.getElementById('biomePokedexContainer');
+      document.getElementById('biomeCompletionRatio').textContent = `${stats.biomesSet.size} / ${Object.keys(BIOMES).length} Found`;
+      biomeContainer.innerHTML = '';
+
+      Object.entries(BIOMES).forEach(([key, info]) => {
+        const isUnlocked = stats.biomesSet.has(key);
+        const card = document.createElement('div');
+        card.className = `p-3 rounded-2xl border transition-all duration-300 ${
+          isUnlocked 
+            ? 'bg-slate-900/90 border-amber-500/40 shadow-lg shadow-amber-500/10' 
+            : 'bg-slate-950/60 border-slate-800 opacity-40 grayscale'
+        }`;
+        card.innerHTML = `
+          <div class="flex items-center justify-between">
+            <span class="text-2xl">${info.icon}</span>
+            <span class="text-[9px] uppercase px-1.5 py-0.5 rounded font-mono font-bold ${
+              info.rarity === 'rare' ? 'bg-purple-950 text-purple-300 border border-purple-500/40' :
+              info.rarity === 'uncommon' ? 'bg-sky-950 text-sky-300 border border-sky-500/40' :
+              'bg-slate-800 text-slate-400'
+            }">${info.rarity}</span>
+          </div>
+          <h4 class="font-bold text-xs text-slate-200 mt-2 truncate">${info.name}</h4>
+          <div class="text-[10px] text-slate-400 mt-0.5">
+            ${isUnlocked ? '<span class="text-emerald-400">✓ Documented</span>' : 'Uncharted'}
+          </div>
+        `;
+        biomeContainer.appendChild(card);
+      });
+
+      // Questlines
+      const questsContainer = document.getElementById('questsContainer');
+      questsContainer.innerHTML = '';
+
+      QUESTLINES.forEach(q => {
+        const visitedInQuest = q.parkIds.filter(pid => AppState.pins[pid] === 'v').length;
+        const isComplete = visitedInQuest === q.parkIds.length;
+        const pct = Math.round((visitedInQuest / q.parkIds.length) * 100);
+
+        const card = document.createElement('div');
+        card.className = `p-4 rounded-2xl border ${
+          isComplete ? 'bg-emerald-950/20 border-emerald-500/40' : 'rpg-panel border-slate-800'
+        }`;
+        card.innerHTML = `
+          <div class="flex items-start justify-between">
+            <div>
+              <h4 class="font-bold text-sm text-amber-200">${q.title}</h4>
+              <p class="text-xs text-slate-400 mt-0.5">${q.desc}</p>
+            </div>
+            <span class="text-xs font-mono font-bold ${isComplete ? 'text-emerald-400' : 'text-amber-400'}">+${q.bonusXp} XP</span>
+          </div>
+          <div class="mt-3">
+            <div class="flex justify-between text-[11px] text-slate-400 mb-1">
+              <span>Progress</span>
+              <span>${visitedInQuest} / ${q.parkIds.length}</span>
+            </div>
+            <div class="w-full bg-slate-900 rounded-full h-2 overflow-hidden border border-slate-800">
+              <div class="h-full bg-gradient-to-r ${isComplete ? 'from-emerald-500 to-teal-400' : 'from-amber-500 to-amber-300'}" style="width: ${pct}%"></div>
+            </div>
+          </div>
+        `;
+        questsContainer.appendChild(card);
+      });
+
+      // Achievements
+      const achContainer = document.getElementById('achievementsContainer');
+      achContainer.innerHTML = '';
+
+      ACHIEVEMENTS.forEach(ach => {
+        const unlocked = ach.req(stats);
+        const card = document.createElement('div');
+        card.className = `p-3.5 rounded-2xl border ${
+          unlocked 
+            ? 'bg-amber-950/20 border-amber-500/40 shadow-md shadow-amber-500/5' 
+            : 'bg-slate-950/50 border-slate-800 opacity-50'
+        }`;
+        card.innerHTML = `
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center text-lg ${
+              unlocked ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-slate-500'
+            }">
+              ${unlocked ? '🏆' : '🔒'}
+            </div>
+            <div>
+              <h5 class="text-xs font-bold text-slate-200">${ach.title}</h5>
+              <p class="text-[10px] text-slate-400 leading-tight mt-0.5">${ach.desc}</p>
+            </div>
+          </div>
+        `;
+        achContainer.appendChild(card);
+      });
+    }
+
+    function renderBucketListView() {
+      const search = (document.getElementById('bucketSearch').value || '').toLowerCase();
+      const filter = document.getElementById('bucketFilterStatus').value;
+      const grid = document.getElementById('bucketListGrid');
+      grid.innerHTML = '';
+
+      const filtered = PARKS.filter(p => {
+        const status = AppState.pins[p.id] || 'un';
+        if (filter !== 'all' && status !== filter) return false;
+        if (!search) return true;
+        return p.name.toLowerCase().includes(search) || 
+               (p.state && p.state.toLowerCase().includes(search)) ||
+               (p.country && p.country.toLowerCase().includes(search)) ||
+               p.biomes.some(b => (BIOMES[b] && BIOMES[b].name.toLowerCase().includes(search)));
+      });
+
+      if (!filtered.length) {
+        grid.innerHTML = '<div class="col-span-2 text-center text-slate-500 py-12 text-sm">No destination matches your filter criteria.</div>';
+        return;
+      }
+
+      filtered.forEach(p => {
+        const cur = AppState.pins[p.id] || 'un';
+        const card = document.createElement('div');
+        card.className = `p-3.5 rounded-2xl border rpg-panel flex items-center justify-between gap-3 ${
+          cur === 'v' ? 'border-emerald-500/40 bg-emerald-950/10' :
+          cur === 'w' ? 'border-amber-500/40 bg-amber-950/10' : 'border-slate-800'
+        }`;
+
+        card.innerHTML = `
+          <div class="min-w-0">
+            <h4 class="font-bold text-sm text-slate-200 truncate">${p.name}</h4>
+            <div class="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
+              <span>${p.state || p.country}</span>
+              <span>•</span>
+              <span class="text-[11px] text-amber-300">${p.biomes.map(b => BIOMES[b] ? BIOMES[b].icon : '').join('')}</span>
+            </div>
+          </div>
+          <div class="flex items-center gap-1 shrink-0">
+            <button onclick="setPinStatus('${p.id}', 'v')" class="px-2.5 py-1 rounded-lg text-xs font-semibold ${cur==='v'?'bg-emerald-500 text-slate-950':'bg-slate-800 text-slate-400 hover:text-white'}">Visited</button>
+            <button onclick="setPinStatus('${p.id}', 'w')" class="px-2.5 py-1 rounded-lg text-xs font-semibold ${cur==='w'?'bg-amber-500 text-slate-950':'bg-slate-800 text-slate-400 hover:text-white'}">Wishlist</button>
+            <button onclick="setPinStatus('${p.id}', 'un')" class="px-2 py-1 rounded-lg text-xs bg-slate-800 text-slate-400 hover:text-white" title="Clear">✕</button>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function updateHud() {
+      const stats = calculateStats();
+      document.getElementById('hudClassName').textContent = stats.cls;
+      document.getElementById('hudLevel').textContent = stats.level;
+      document.getElementById('hudXp').textContent = stats.xp;
+      document.getElementById('hudNextXp').textContent = stats.nextLevelXp;
+      document.getElementById('hudXpBar').style.width = `${stats.levelProgressPct}%`;
+      document.getElementById('hudClearedPct').textContent = `${stats.exploredPct.toFixed(1)}%`;
+      document.getElementById('hudParksCount').textContent = `${stats.usParksCount} / 63`;
+      document.getElementById('hudBiomesCount').textContent = `${stats.biomesSet.size} / 15`;
+      document.getElementById('hudQuestsCount').textContent = `${stats.completedQuestsCount} / ${QUESTLINES.length}`;
+      document.getElementById('hudClassIcon').textContent = stats.avatar;
+
+      if (AppState.homeBase) {
+        document.getElementById('headerHometownText').textContent = AppState.homeBase.name;
+      }
+    }
+
+    function updateAllUI() {
+      updateHud();
+      if (AppState.currentTab === 'passport') renderPassportView();
+      if (AppState.currentTab === 'scratch') renderScratchMap();
+      if (AppState.currentTab === 'bucketlist') renderBucketListView();
+    }
+  </script>
+
+  <script>
+    // Tab Switching
+    function switchTab(tabId) {
+      AppState.currentTab = tabId;
+
+      document.querySelectorAll('#navTabs button').forEach(b => {
+        const isActive = b.dataset.tab === tabId;
+        b.className = isActive 
+          ? 'px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-600 text-white transition-all'
+          : 'px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white transition-all';
+      });
+
+      // Hide all tabs
+      document.getElementById('tabContent-map').classList.add('hidden');
+      document.getElementById('tabContent-scratch').classList.add('hidden');
+      document.getElementById('tabContent-passport').classList.add('hidden');
+      document.getElementById('tabContent-bucketlist').classList.add('hidden');
+
+      if (tabId === 'map') {
+        document.getElementById('tabContent-map').classList.remove('hidden');
+        if (map) {
+          setTimeout(() => {
+            map.invalidateSize();
+            resizeFogCanvas();
+            drawFogOfWar();
+          }, 100);
+        }
+      } else if (tabId === 'scratch') {
+        document.getElementById('tabContent-scratch').classList.remove('hidden');
+        renderScratchMap();
+      } else if (tabId === 'passport') {
+        document.getElementById('tabContent-passport').classList.remove('hidden');
+        renderPassportView();
+      } else if (tabId === 'bucketlist') {
+        document.getElementById('tabContent-bucketlist').classList.remove('hidden');
+        renderBucketListView();
+      }
+    }
+
+    document.querySelectorAll('#navTabs button').forEach(btn => {
+      btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+    });
+
+    // Toggle Mode: RPG vs Classic
+    document.getElementById('toggleRpgMode').addEventListener('click', () => {
+      AppState.mode = 'rpg';
+      document.body.classList.remove('mode-classic');
+      document.getElementById('toggleRpgMode').className = 'px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 bg-amber-500 text-slate-950 font-bold shadow-md';
+      document.getElementById('toggleClassicMode').className = 'px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 text-slate-400 hover:text-slate-200';
+      document.getElementById('rpgMapHud').classList.remove('hidden');
+      document.getElementById('fogToggleCheckbox').checked = true;
+      saveState();
+      switchTab('map');
+      drawFogOfWar();
+    });
+
+    document.getElementById('toggleClassicMode').addEventListener('click', () => {
+      AppState.mode = 'classic';
+      document.body.classList.add('mode-classic');
+      document.getElementById('toggleClassicMode').className = 'px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 bg-blue-600 text-white font-bold shadow-md';
+      document.getElementById('toggleRpgMode').className = 'px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 text-slate-400 hover:text-slate-200';
+      document.getElementById('rpgMapHud').classList.add('hidden');
+      document.getElementById('fogToggleCheckbox').checked = false;
+      saveState();
+      switchTab('bucketlist');
+      drawFogOfWar();
+    });
+
+    // Scratch Map Dataset Switch
+    document.getElementById('btnScratchWorld').addEventListener('click', () => {
+      AppState.scratchDataset = 'world';
+      document.getElementById('btnScratchWorld').className = 'px-3 py-1.5 rounded-lg bg-blue-600 text-white font-medium';
+      document.getElementById('btnScratchUsa').className = 'px-3 py-1.5 rounded-lg text-slate-400 hover:text-white';
+      renderScratchMap();
+    });
+
+    document.getElementById('btnScratchUsa').addEventListener('click', () => {
+      AppState.scratchDataset = 'usa';
+      document.getElementById('btnScratchUsa').className = 'px-3 py-1.5 rounded-lg bg-blue-600 text-white font-medium';
+      document.getElementById('btnScratchWorld').className = 'px-3 py-1.5 rounded-lg text-slate-400 hover:text-white';
+      renderScratchMap();
+    });
+
+    // Pin filtering on Leaflet Map
+    document.querySelectorAll('#pinFilterBtns button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        AppState.pinFilter = btn.dataset.filt;
+        document.querySelectorAll('#pinFilterBtns button').forEach(b => {
+          b.className = b === btn 
+            ? 'px-2 py-0.5 rounded bg-blue-600/80 text-white font-medium'
+            : 'px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white';
+        });
+        renderParkMarkers();
+      });
+    });
+
+    // Fog Checkbox toggle
+    document.getElementById('fogToggleCheckbox').addEventListener('change', drawFogOfWar);
+
+    // Recenter Home Button
+    document.getElementById('btnRecenterHome').addEventListener('click', () => {
+      if (AppState.homeBase && map) {
+        map.flyTo([AppState.homeBase.lat, AppState.homeBase.lng], 7, { duration: 1.5 });
+      } else {
+        openHomeModal();
+      }
+    });
+
+    // Bucket List Search & Filter listeners
+    document.getElementById('bucketSearch').addEventListener('input', renderBucketListView);
+    document.getElementById('bucketFilterStatus').addEventListener('change', renderBucketListView);
+
+    // Share link generator (base64 URL param)
+    document.getElementById('btnShare').addEventListener('click', () => {
+      const sharePayload = {
+        homeBase: AppState.homeBase,
+        pins: AppState.pins,
+        regions: AppState.regions
+      };
+      const encoded = btoa(encodeURIComponent(JSON.stringify(sharePayload)));
+      const shareUrl = `${window.location.origin}${window.location.pathname}?d=${encoded}`;
+      
+      const copyInput = document.createElement('textarea');
+      copyInput.value = shareUrl;
+      document.body.appendChild(copyInput);
+      copyInput.select();
+      document.execCommand('copy');
+      document.body.removeChild(copyInput);
+
+      showNotification('🔗 Link Copied!', 'Shareable passport link copied to clipboard.', '📜');
+    });
+
+    // Export JSON
+    document.getElementById('btnExport').addEventListener('click', () => {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(AppState, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `terra_incognita_passport_${new Date().toISOString().slice(0,10)}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    });
+
+    // Import JSON
+    document.getElementById('btnImportTrigger').addEventListener('click', () => {
+      document.getElementById('fileInput').click();
+    });
+
+    document.getElementById('fileInput').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const parsed = JSON.parse(event.target.result);
+          AppState.homeBase = parsed.homeBase || null;
+          AppState.pins = parsed.pins || {};
+          AppState.regions = parsed.regions || {};
+          AppState.mode = parsed.mode || 'rpg';
+          saveState();
+          initMap();
+          updateHomeBaseMarker();
+          renderParkMarkers();
+          drawFogOfWar();
+          updateAllUI();
+          showNotification('📂 Passport Loaded', 'Successfully imported your travel records!', '✨');
+        } catch(err) {
+          showNotification('Error', 'Invalid passport file.', '⚠️');
+        }
+      };
+      reader.readAsText(file);
+    });
+
+    // Reset progress
+    document.getElementById('btnResetData').addEventListener('click', () => {
+      AppState.homeBase = null;
+      AppState.pins = {};
+      AppState.regions = {};
+      saveState();
+      location.reload();
+    });
+  </script>
+
+  <script>
+    function openHomeModal() {
+      document.getElementById('homeBaseModal').classList.remove('hidden');
+    }
+
+    function closeHomeModal() {
+      document.getElementById('homeBaseModal').classList.add('hidden');
+    }
+
+    document.getElementById('btnHomeConfig').addEventListener('click', openHomeModal);
+
+    function setHometownCoordinates(name, lat, lng) {
+      AppState.homeBase = {
+        name,
+        lat: parseFloat(lat),
+        lng: parseFloat(lng),
+        radiusKm: 110
+      };
+      saveState();
+      closeHomeModal();
+      updateHomeBaseMarker();
+      if (map) {
+        map.flyTo([lat, lng], 7, { duration: 1.5 });
+      }
+      drawFogOfWar();
+      updateAllUI();
+      AudioEngine.playChime('discover');
+      showNotification('🏰 Citadel Established!', `${name} is now your home base! The surrounding fog has cleared!`, '✨');
+    }
+
+    // Geolocation trigger
+    document.getElementById('btnGeoDetect').addEventListener('click', () => {
+      if (!navigator.geolocation) {
+        showNotification('Location Error', 'Geolocation is not supported by your browser.', '⚠️');
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          setHometownCoordinates('Home Sanctuary', lat, lng);
+        },
+        (err) => {
+          showNotification('Location Access', 'Could not detect location. Please type your city name.', '⚠️');
+        }
+      );
+    });
+
+    // City text input submission
+    document.getElementById('btnSubmitCity').addEventListener('click', () => {
+      const query = (document.getElementById('cityInput').value || '').trim().toLowerCase();
+      if (!query) return;
+
+      if (CITY_LOOKUP[query]) {
+        const item = CITY_LOOKUP[query];
+        setHometownCoordinates(item.name, item.lat, item.lng);
+      } else {
+        // Fallback default coordinates or approximate US center
+        setHometownCoordinates(document.getElementById('cityInput').value, 37.7749, -122.4194);
+      }
+    });
+
+    // Quick city chips
+    document.querySelectorAll('.quick-city-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        setHometownCoordinates(chip.dataset.name, chip.dataset.lat, chip.dataset.lng);
+      });
+    });
+
+    // App Startup Entry Point
+    window.addEventListener('DOMContentLoaded', async () => {
+      loadPersistedState();
+      await loadGeoDatasets();
+      initMap();
+      updateAllUI();
+
+      // If user has never set a home base and is not viewing a shared link, open onboarding modal
+      if (!AppState.homeBase && !AppState.viewOnly) {
+        setTimeout(openHomeModal, 600);
+      } else {
+        closeHomeModal();
+      }
+    });
+  </script>
+</body>
+</html>
