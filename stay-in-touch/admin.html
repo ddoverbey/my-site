@@ -228,7 +228,7 @@
 
   <script>
     const SUPABASE_URL = 'https://mrgdthihogxrqsfnknxd.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1yZ2R0aGlob2d4cnFzZm5rbnhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg5ODc3ODQsImV4cCI6MjA2NDU2Mzc4NH0.05v-tH4wY2rY9GqT8Z3xXv0kKqM-J7B0kQ9R8wV1xY8';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1yZ2R0aGlob2d4cnFzZm5rbnhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyNDk4NTYsImV4cCI6MjEwNDgyNTg1Nn0.1fwcaGPGrzUut3zng2NNkYZt7hUguhKPhfqYyu8MA3s';
     const AUTH_SESSION_KEY = 'cultivate_cloud_session';
 
     let cloudSession = JSON.parse(localStorage.getItem(AUTH_SESSION_KEY) || 'null');
@@ -306,7 +306,26 @@
       }
     }
 
-    async function fetchFromSupabase(table) {
+    async function refreshCloudSession() {
+      if (!cloudSession || !cloudSession.refresh_token) return false;
+      try {
+        const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY },
+          body: JSON.stringify({ refresh_token: cloudSession.refresh_token })
+        });
+        if (!res.ok) return false;
+        const data = await res.json();
+        if (!data.access_token) return false;
+        cloudSession = { ...cloudSession, ...data, user: data.user || cloudSession.user };
+        localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(cloudSession));
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    async function fetchFromSupabase(table, retried = false) {
       const token = getAuthToken();
       const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=*&order=created_at.desc&limit=1000`, {
         headers: {
@@ -314,6 +333,9 @@
           'Authorization': `Bearer ${token}`
         }
       });
+      if ((res.status === 401 || res.status === 403) && !retried && await refreshCloudSession()) {
+        return fetchFromSupabase(table, true);
+      }
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.message || `HTTP ${res.status}`);
