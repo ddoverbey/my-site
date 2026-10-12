@@ -2049,7 +2049,7 @@
 
     // Events carry only an anonymous random id and the event name; never contact data.
     function trackEvent(event, props = {}) {
-      if (isLocalPreview) return;
+      // if (isLocalPreview) return;
       supabaseInsert('cultivate_events', { anon_id: getAnonId(), event, props }).catch(() => {});
     }
 
