@@ -68,4 +68,10 @@ create policy "anon can join waitlist" on public.cultivate_waitlist for insert t
 create policy "anon can log events" on public.cultivate_events for insert to anon with check (true);
 ```
 
-View results in the Supabase table editor, for example the number of distinct `anon_id` values per event.
+View results in the Supabase table editor or visit [`admin.html`](admin.html) to view conversion funnels, event volume charts, and waitlist submissions.
+
+To allow authenticated access to read analytics on `admin.html`, add this read policy in Supabase:
+```sql
+create policy "authenticated can view events" on public.cultivate_events for select to authenticated using (true);
+create policy "authenticated can view waitlist" on public.cultivate_waitlist for select to authenticated using (true);
+```
