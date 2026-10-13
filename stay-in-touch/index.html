@@ -179,7 +179,13 @@
       </div>
       <div class="relative z-10 flex items-center justify-between mb-3 text-[11px]">
         <span id="garden-plot-count" class="bg-black/40 text-[#e4ece7] font-mono px-2 py-1 rounded-full"></span>
-        <button id="garden-badge-toggle" type="button" onclick="toggleGardenBadges()" class="inline-flex items-center gap-1.5 bg-black/40 hover:bg-black/60 text-[#e4ece7] px-2 py-1 rounded-full transition-colors"></button>
+        <div class="flex items-center gap-2">
+          <button id="btn-clear-examples" type="button" onclick="clearAllExamples()" class="hidden inline-flex items-center gap-1 bg-[#241710]/90 hover:bg-[#342217] border border-[#ea580c]/50 text-[#fed7aa] px-2.5 py-1 rounded-full transition-colors" title="Remove all demo examples">
+            <i class="pixelart-icons-font-trash pixel-icon" aria-hidden="true"></i>
+            <span>Clear examples</span>
+          </button>
+          <button id="garden-badge-toggle" type="button" onclick="toggleGardenBadges()" class="inline-flex items-center gap-1.5 bg-black/40 hover:bg-black/60 text-[#e4ece7] px-2 py-1 rounded-full transition-colors"></button>
+        </div>
       </div>
       <div id="garden-water-alert" class="hidden relative z-10 mb-2 flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-lg border-2 border-[#ffd09a] bg-[#ff7a00] py-2 pl-3 pr-10 text-xs font-semibold text-[#1f0d00] shadow-lg shadow-black/40" role="status" aria-live="polite">
         <i class="pixelart-icons-font-warning-box pixel-icon shrink-0" aria-hidden="true"></i>
@@ -790,30 +796,37 @@
     }
 
     function ensureProximityExamples(list) {
-      const professor = list.find(friend => friend.name === 'Prof. Milton (Example)');
-      if (!professor) return false;
+      if (!Array.isArray(list) || !list.some(friend => friend.name && friend.name.includes('(Example)'))) return false;
 
       let changed = false;
-      if (professor.tier === 'quarterly' || professor.tier === 'extended') {
-        professor.tier = 'annual';
-        changed = true;
-      }
-      if (!list.some(friend => friend.avatar_seed === 'sample-avery')) {
-        const day = 1000 * 60 * 60 * 24;
-        let id = String(Date.now());
-        while (list.some(friend => friend.id === id)) id = String(Number(id) + 1);
-        list.push({
-          id,
-          name: 'Avery (Example)',
-          category: 'Friends',
-          tier: 'extended',
-          avatar_seed: 'sample-avery',
-          photo: null,
-          touches: [{ type: 'Hangout', timestamp: Date.now() - (81 * day), note: 'Caught up after moving away' }]
-        });
-        changed = true;
-      }
+      const defaults = getDefaultExamples();
+      defaults.forEach(defFriend => {
+        const existing = list.find(f => f.name === defFriend.name || (f.avatar_seed && f.avatar_seed === defFriend.avatar_seed));
+        if (!existing) {
+          list.push({ ...defFriend });
+          changed = true;
+        } else if (existing.tier !== defFriend.tier) {
+          existing.tier = defFriend.tier;
+          changed = true;
+        }
+      });
       return changed;
+    }
+
+    function hasAnyExamples() {
+      return Array.isArray(friends) && friends.some(f => f.name && f.name.includes('(Example)'));
+    }
+
+    function updateClearExamplesButton() {
+      const btn = document.getElementById('btn-clear-examples');
+      if (btn) btn.classList.toggle('hidden', !hasAnyExamples());
+    }
+
+    function clearAllExamples() {
+      if (!confirm('Clear all example connections from your garden?')) return;
+      friends = friends.filter(f => !f.name || !f.name.includes('(Example)'));
+      saveData();
+      render();
     }
 
     function updateAvatarPreview() {
@@ -831,7 +844,53 @@
     const GOOD_ABOVE = 50;
     const DORMANT_AT_OR_BELOW = 15;
 
-    function getPlantStage(health, tier = 'inner') {
+    const PLANT_TIER_VARIANTS = {
+      inner: [
+        { name: 'deadtree', files: { spring: 'deadtree_spring.png', summer: 'deadtree_summer.png', autumn: 'deadtree_autumn.png', winter: 'deadtree_winter.png' } }
+      ],
+      close: [
+        { name: 'birch', files: { spring: 'birch_spring.png', summer: 'birch_summer.png', autumn: 'birch_autumn_2.png', winter: 'birch_winter_1.png' } },
+        { name: 'willow', files: { spring: 'willow_spring.png', summer: 'willow_summer.png', autumn: 'willow_autumn.png', winter: 'willow_winter.png' } }
+      ],
+      wider: [
+        { name: 'bush', files: { spring: 'bush_spring.png', summer: 'bush_summer.png', autumn: 'bush_autumn.png', winter: 'bush_winter.png' } }
+      ],
+      extended: [
+        { name: 'sunflower', files: { spring: 'sunflower_spring.png', summer: 'sunflower_summer.png', autumn: 'sunflower_autum.png', winter: 'sunflower_winter.png' } },
+        { name: 'tulips', files: { spring: 'tulips_spring.png', summer: 'tulips_summer.png', autumn: 'tulips_autumn.png', winter: 'tulips_winter.png' } }
+      ],
+      annual: [
+        { name: 'succulent', files: { spring: 'Succulent_spring.png', summer: 'Succulent_summer.png', autumn: 'Succulent_autumn.png', winter: 'Succulent_winter.png' } },
+        { name: 'cactus', files: { spring: 'cactus_spring.png', summer: 'Cactus_Summer.png', autumn: 'Cactus_Autumn.png', winter: 'cactus_winter.png' } }
+      ]
+    };
+
+    function hashString(str) {
+      let hash = 0;
+      const s = String(str || '');
+      for (let i = 0; i < s.length; i++) {
+        hash = ((hash << 5) - hash) + s.charCodeAt(i);
+        hash |= 0;
+      }
+      return Math.abs(hash);
+    }
+
+    function getPlantVariant(friendOrSeed, tier) {
+      const variants = PLANT_TIER_VARIANTS[tier] || PLANT_TIER_VARIANTS.close;
+      if (!variants || variants.length <= 1) return variants[0];
+      if (!friendOrSeed) return variants[0];
+      if (typeof friendOrSeed === 'object' && friendOrSeed.plant_variant) {
+        const found = variants.find(v => v.name === friendOrSeed.plant_variant);
+        if (found) return found;
+      }
+      const seed = typeof friendOrSeed === 'string'
+        ? friendOrSeed
+        : (friendOrSeed.avatar_seed || friendOrSeed.id || friendOrSeed.name || '');
+      const index = hashString(seed) % variants.length;
+      return variants[index];
+    }
+
+    function getPlantStage(health, tier = 'inner', friendOrSeed = null) {
       let season;
       let label;
       let color;
@@ -853,15 +912,8 @@
         color = 'text-[#6b8276]';
       }
 
-      const plantFiles = {
-        inner: { spring: 'willow_spring.png', summer: 'willow_summer.png', autumn: 'willow_autumn.png', winter: 'willow_winter.png' },
-        close: { spring: 'deadtree_spring.png', summer: 'deadtree_summer.png', autumn: 'deadtree_autumn.png', winter: 'deadtree_winter.png' },
-        wider: { spring: 'bush_spring.png', summer: 'bush_summer.png', autumn: 'bush_autumn.png', winter: 'bush_winter.png' },
-        extended: { spring: 'sunflower_spring.png', summer: 'sunflower_summer.png', autumn: 'sunflower_autum.png', winter: 'sunflower_winter.png' },
-        annual: { spring: 'Succulent_spring.png', summer: 'Succulent_summer.png', autumn: 'Succulent_autumn.png', winter: 'Succulent_winter.png' }
-      };
-      const files = plantFiles[tier] || plantFiles.close;
-      return { icon: `assets/${files[season]}`, label, color, season };
+      const variant = getPlantVariant(friendOrSeed, tier);
+      return { icon: `assets/${variant.files[season]}`, label, color, season, plantType: variant.name };
     }
 
     function getDefaultExamples() {
@@ -925,38 +977,75 @@
           touches: [
             { type: 'Hangout', timestamp: now - (81 * DAY), note: 'Caught up after moving away' }
           ]
+        },
+        {
+          id: '6',
+          name: 'Pookie (Example)',
+          category: 'Romantic',
+          tier: 'inner',
+          avatar_seed: 'sample-pookie',
+          photo: null,
+          touches: [
+            { type: 'Hangout', timestamp: now - (1 * DAY), note: 'Date night at the new Italian place' }
+          ]
+        },
+        {
+          id: '7',
+          name: 'Cousin Chris (Example)',
+          category: 'Family',
+          tier: 'close',
+          avatar_seed: 'sample-chris',
+          photo: null,
+          touches: [
+            { type: 'Quick Call', timestamp: now - (10 * DAY), note: "Checking in about mom's birthday gift" }
+          ]
+        },
+        {
+          id: '8',
+          name: 'Sarah from Design (Example)',
+          category: 'Professional',
+          tier: 'wider',
+          avatar_seed: 'sample-sarah',
+          photo: null,
+          touches: [
+            { type: 'Virtual Hangout', timestamp: now - (25 * DAY), note: 'Weekly cross-department sync' }
+          ]
+        },
+        {
+          id: '9',
+          name: 'Aunt Carol (Example)',
+          category: 'Family',
+          tier: 'extended',
+          avatar_seed: 'sample-carol',
+          photo: null,
+          touches: [
+            { type: 'Long Call', timestamp: now - (110 * DAY), note: 'Caught up on family news and holiday plans' }
+          ]
+        },
+        {
+          id: '10',
+          name: 'Old Roommate Mark (Example)',
+          category: 'Friends',
+          tier: 'annual',
+          avatar_seed: 'sample-mark',
+          photo: null,
+          touches: [
+            { type: 'Text', timestamp: now - (250 * DAY), note: 'Sent a meme about our old apartment' }
+          ]
         }
       ];
     }
 
     function hasUntouchedDefaultExamples(data) {
-      const expected = [
-        { id: '1', name: 'Jacob (Example)', category: 'Friends', tier: 'close', avatar_seed: 'sample-jacob', types: ['Hangout', 'Virtual Hangout'], note: 'Played minecraft for a few hours', daysAgo: 0 },
-        { id: '2', name: 'Mom (Example)', category: 'Family', tier: 'inner', avatar_seed: 'sample-mom', type: 'Hangout', note: 'Sunday family dinner', daysAgo: 5 },
-        { id: '3', name: 'Delilah (Example)', category: 'Friends', tier: 'wider', avatar_seed: 'sample-delilah', type: 'Hangout', note: 'Attended housewarming party', daysAgo: 60, legacyDaysAgo: [50, 80] },
-        { id: '4', name: 'Prof. Milton (Example)', category: 'Professional', tier: 'annual', legacyTiers: ['quarterly', 'extended'], avatar_seed: 'sample-milton', type: 'Text', note: 'Work and networking check-in email', daysAgo: 300, legacyDaysAgo: [85] },
-        { id: '5', name: 'Avery (Example)', category: 'Friends', tier: 'extended', avatar_seed: 'sample-avery', type: 'Hangout', note: 'Caught up after moving away', daysAgo: 81 }
-      ];
-      const dayMs = 1000 * 60 * 60 * 24;
-
-      return Array.isArray(data) && [expected.length - 1, expected.length].includes(data.length) && expected.slice(0, data.length).every(example => {
-        const friend = data.find(entry => entry.id === example.id);
-        const tierMatches = friend && (friend.tier === example.tier || (example.legacyTiers || []).includes(friend.tier));
-        if (!friend || friend.name !== example.name || friend.category !== example.category || !tierMatches || friend.photo !== null || !friend.touches || friend.touches.length !== 1) {
-          return false;
-        }
-        const seedMatches = friend.avatar_seed === example.avatar_seed || (!friend.avatar_seed && Boolean(friend.avatar));
-        if (!seedMatches) return false;
-
-        const touch = friend.touches[0];
-        const daysSince = (Date.now() - touch.timestamp) / dayMs;
-        return (example.types || [example.type]).includes(touch.type) && touch.note === example.note &&
-          [example.daysAgo, ...(example.legacyDaysAgo || [])].some(days => Math.abs(daysSince - days) <= 1);
-      });
+      if (!Array.isArray(data)) return false;
+      const expected = getDefaultExamples();
+      if (![4, 5, 10].includes(data.length)) return false;
+      return data.every(friend => expected.some(ex => ex.name === friend.name));
     }
 
-    let friends = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-    if (!friends || !Array.isArray(friends) || friends.length === 0) {
+    const storedFriendsRaw = localStorage.getItem(STORAGE_KEY);
+    let friends = storedFriendsRaw !== null ? JSON.parse(storedFriendsRaw) : null;
+    if (!Array.isArray(friends)) {
       friends = getDefaultExamples();
       localStorage.setItem(STORAGE_KEY, JSON.stringify(friends));
     } else if (hasUntouchedDefaultExamples(friends)) {
@@ -1398,7 +1487,7 @@
       alert.classList.toggle('hidden', !reminder || waterAlertKey(reminder) === dismissedWaterAlertKey);
       if (reminder) {
         const prefix = reminder.count > 1 ? `${reminder.count} plants could use water. ` : 'Ready to water. ';
-        text.textContent = `${prefix}${reminder.friend.name} is at ${reminder.health}% ${getPlantStage(reminder.health, reminder.friend.tier).label}.`;
+        text.textContent = `${prefix}${reminder.friend.name} is at ${reminder.health}% ${getPlantStage(reminder.health, reminder.friend.tier, reminder.friend).label}.`;
       }
     }
 
@@ -1414,6 +1503,19 @@
       renderVisualGarden(gardenAverageHealth);
     }
 
+    function getShuffledPagePlants(items, pageIndex) {
+      if (!Array.isArray(items) || items.length <= 1) return items;
+      const idSum = items.reduce((acc, item) => acc + hashString(item.friend.id || item.friend.name), 0);
+      const seed = (((pageIndex + 1) * 7919) + idSum) >>> 0;
+      const rand = mulberry32(seed);
+      const shuffled = [...items];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(rand() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      return shuffled;
+    }
+
     function renderVisualGarden(averageHealth) {
       const container = document.getElementById('plots-container');
       if (!container) return;
@@ -1423,7 +1525,8 @@
       const pageCount = Math.max(1, Math.ceil(sorted.length / GARDEN_PAGE_SIZE));
       gardenPage = Math.max(0, Math.min(pageCount - 1, gardenPage));
       const start = gardenPage * GARDEN_PAGE_SIZE;
-      const shown = sorted.slice(start, start + GARDEN_PAGE_SIZE);
+      const pageSlice = sorted.slice(start, start + GARDEN_PAGE_SIZE);
+      const shown = getShuffledPagePlants(pageSlice, gardenPage);
       document.getElementById('garden-plot-count').textContent =
         `${friends.length} connection${friends.length === 1 ? '' : 's'}`;
       document.getElementById('garden-badge-toggle').innerHTML = `${pixelIcon(gardenBadgesVisible ? 'eye-closed' : 'eye')}<span>${gardenBadgesVisible ? 'Hide icons' : 'Show icons'}</span>`;
@@ -1434,8 +1537,24 @@
       updateGardenWaterReminder();
 
       const plants = shown.map(({ friend, health }, index) => {
-        const stage = getPlantStage(health, friend.tier);
-        const plantSize = friend.tier === 'annual' ? 'w-10 h-10' : 'w-full h-full';
+        const stage = getPlantStage(health, friend.tier, friend);
+        let plantSize = 'w-full h-full';
+        if (friend.tier === 'inner') {
+          plantSize = 'w-[116px] h-[116px] max-w-none';
+        } else if (friend.tier === 'close') {
+          plantSize = 'w-20 h-20';
+        } else if (friend.tier === 'wider') {
+          plantSize = 'w-16 h-16';
+        } else if (friend.tier === 'extended') {
+          plantSize = 'w-20 h-20';
+        } else if (friend.tier === 'annual') {
+          plantSize = stage.plantType === 'cactus' ? 'w-20 h-20' : 'w-10 h-10';
+        }
+        const h = hashString(friend.id || friend.name);
+        const dx = (h % 11) - 5;
+        const dy = ((h >> 3) % 7) - 3;
+        const swayDelay = ((h % 40) / 10).toFixed(1);
+
         const bubble = selectedGardenId === friend.id ? `
           <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 z-30 w-40 bg-[#0b1210] border border-[#2e473d] rounded-xl px-3 py-2 text-center shadow-xl">
             <div class="text-xs font-semibold text-[#f4ede4] truncate">${escapeHtml(friend.name)}</div>
@@ -1447,14 +1566,14 @@
         return `
           <div data-plot class="relative w-24 h-24">
             ${bubble}
-            <button type="button" onclick="selectGardenPlant('${friend.id}')" aria-label="${escapeHtml(friend.name)}, ${health}% ${stage.label}" class="relative flex w-24 h-24 items-end justify-center ${recentlyWateredId === friend.id ? 'plant-bounce' : ''}">
-              <img src="${stage.icon}" alt="" draggable="false" class="${plantSize} object-contain plant-sway [image-rendering:pixelated]" style="animation-delay: -${(index * 0.7).toFixed(1)}s" />
+            <button type="button" onclick="selectGardenPlant('${friend.id}')" aria-label="${escapeHtml(friend.name)}, ${health}% ${stage.label}" class="relative flex w-24 h-24 items-end justify-center ${recentlyWateredId === friend.id ? 'plant-bounce' : ''}" style="transform: translate(${dx}px, ${dy}px)">
+              <img src="${stage.icon}" alt="" draggable="false" class="${plantSize} object-contain plant-sway [image-rendering:pixelated]" style="animation-delay: -${swayDelay}s" />
               ${badge}
             </button>
           </div>`;
       }).join('');
 
-      const addPlot = gardenPage === pageCount - 1 && shown.length < GARDEN_PAGE_SIZE ? `
+      const addPlot = gardenPage === pageCount - 1 && pageSlice.length < GARDEN_PAGE_SIZE ? `
         <div data-plot class="relative w-24 h-24 flex items-center justify-center">
           <button type="button" onclick="openAddModal()" aria-label="Add a connection" class="w-14 h-14 rounded-full border-2 border-dashed border-[#e4ece7]/40 bg-black/20 text-[#e4ece7]/70 hover:text-white hover:border-white/70 transition-colors"><i class="pixelart-icons-font-plus pixel-icon text-xl" aria-hidden="true"></i></button>
         </div>` : '';
@@ -1745,6 +1864,7 @@
     function render() {
       updateTierFilterChips();
       updateFilterPanelButton();
+      updateClearExamplesButton();
       const container = document.getElementById('friends-queue');
       if (!container) return;
       
@@ -1786,7 +1906,7 @@
 
       container.innerHTML = sorted.map(friend => {
         const { health, daysSince } = calculateHealth(friend);
-        const plant = getPlantStage(health, friend.tier);
+        const plant = getPlantStage(health, friend.tier, friend);
         const barColor = getBatteryColor(health);
         const isExpanded = expandedCards.has(friend.id);
         const isHighlighted = highlightedId === friend.id;
@@ -1804,7 +1924,7 @@
                 ${bulkMode ? `<input id="bulk-check-${friend.id}" type="checkbox" ${bulkChecked ? 'checked' : ''} tabindex="-1" aria-label="Select ${escapeHtml(friend.name)}" class="pointer-events-none h-4 w-4 shrink-0 accent-teal-500" />` : ''}
                 <div class="relative shrink-0 w-12 h-12">
                   <img src="${friend.photo || pixelAvatarUrl(friend.avatar_seed)}" loading="lazy" decoding="async" alt="${escapeHtml(friend.name)}" referrerpolicy="no-referrer" class="w-12 h-12 rounded-full object-cover border border-[#2e473d] bg-[#1c2d26] [image-rendering:pixelated]" />
-                  <img src="${plant.icon}" alt="${plant.label} plant" title="${plant.label}" class="absolute -bottom-1 -right-1 ${friend.tier === 'annual' ? 'w-4 h-4' : 'w-7 h-7'} rounded-full object-contain bg-[#0b1210] border-2 border-[#14201b] [image-rendering:pixelated]" />
+                  <img src="${plant.icon}" alt="${plant.label} plant" title="${plant.label}" class="absolute -bottom-1 -right-1 ${plant.plantType === 'succulent' ? 'w-4 h-4' : 'w-7 h-7'} rounded-full object-contain bg-[#0b1210] border-2 border-[#14201b] [image-rendering:pixelated]" />
                 </div>
 
                 <div class="min-w-0">
@@ -2735,8 +2855,8 @@
       if (thirsty.length > 0) {
         const person = thirsty[0];
         new Notification('Cultivate • Gentle Reminder', {
-          body: `${person.name} could use some love! Their plant has reached the ${getPlantStage(calculateHealth(person).health, person.tier).label} stage.`,
-          icon: getPlantStage(calculateHealth(person).health, person.tier).icon
+          body: `${person.name} could use some love! Their plant has reached the ${getPlantStage(calculateHealth(person).health, person.tier, person).label} stage.`,
+          icon: getPlantStage(calculateHealth(person).health, person.tier, person).icon
         });
       } else if (isTest) {
         new Notification('Cultivate • All Connections Blooming', {
