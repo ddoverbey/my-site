@@ -84,11 +84,20 @@
           href="https://buymeacoffee.com/ddoverbey"
           target="_blank"
           rel="noopener noreferrer"
+          onclick="trackEvent('coffee_click')"
           class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm"
           title="Buy me a coffee"
         >
           <span aria-hidden="true">☕</span> <span class="hidden sm:inline">Coffee</span>
         </a>
+
+        <button
+          type="button"
+          onclick="openProModal()"
+          class="bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-300 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-colors"
+        >
+          <span aria-hidden="true">⚡</span> Pro
+        </button>
 
         <!-- 1-Click JSON Backup -->
         <button 
@@ -268,7 +277,7 @@
                 <label class="font-semibold text-slate-300">Leading Indicators (Action Metric + Target + Cadence)</label>
               </div>
               <div id="wiz-lead-container" class="space-y-2"></div>
-              <button type="button" onclick="addIndicatorRow('wiz-lead-container', 'lead')" class="text-xs text-amber-400 hover:text-amber-300 font-semibold font-mono">+ Add Leading Indicator</button>
+              <button type="button" onclick="addIndicatorRow('wiz-lead-container', 'lead', undefined, true)" class="text-xs text-amber-400 hover:text-amber-300 font-semibold font-mono">+ Add Leading Indicator</button>
             </div>
 
             <!-- Lagging Indicators -->
@@ -277,7 +286,7 @@
                 <label class="font-semibold text-slate-300">Lagging Indicators (Result Metric + Target Amount)</label>
               </div>
               <div id="wiz-lag-container" class="space-y-2"></div>
-              <button type="button" onclick="addIndicatorRow('wiz-lag-container', 'lag')" class="text-xs text-teal-400 hover:text-teal-300 font-semibold font-mono">+ Add Lagging Indicator</button>
+              <button type="button" onclick="addIndicatorRow('wiz-lag-container', 'lag', undefined, true)" class="text-xs text-teal-400 hover:text-teal-300 font-semibold font-mono">+ Add Lagging Indicator</button>
             </div>
           </div>
         </div>
@@ -933,6 +942,30 @@
   </div>
 
   <!-- AUTH MODAL -->
+  <div id="pro-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden" role="dialog" aria-modal="true" aria-labelledby="pro-modal-title">
+    <div class="bg-slate-900/90 border border-slate-800 rounded-2xl w-full max-w-lg p-6 space-y-5 shadow-2xl">
+      <div class="flex items-start justify-between gap-4 border-b border-slate-800 pb-3">
+        <div>
+          <span class="text-[10px] uppercase tracking-wider text-blue-400 font-semibold">Coming into focus</span>
+          <h2 id="pro-modal-title" class="text-xl font-semibold text-slate-100 mt-1">12-Week Year Pro</h2>
+        </div>
+        <button type="button" onclick="closeProModal()" aria-label="Close Pro features" class="text-slate-400 hover:text-white"><svg class="w-5 h-5" aria-hidden="true"><use href="#heroicon-x-mark" /></svg></button>
+      </div>
+      <p class="text-sm text-slate-400 font-light">Pro is a painted-door preview of ways to make your execution system more automatic and connected.</p>
+      <ul class="space-y-3 text-sm text-slate-300">
+        <li class="flex items-start gap-2"><svg class="w-4 h-4 mt-0.5 text-blue-400 shrink-0" aria-hidden="true"><use href="#heroicon-chart-bar" /></svg><span><strong class="text-slate-100">Two-way calendar sync</strong> — Send Strategic, Buffer, and Breakout blocks to Apple or Google Calendar.</span></li>
+        <li class="flex items-start gap-2"><svg class="w-4 h-4 mt-0.5 text-emerald-400 shrink-0" aria-hidden="true"><use href="#heroicon-arrow-path" /></svg><span><strong class="text-slate-100">Automated indicator tickers</strong> — Connect services like Apple Health or GitHub to update metrics without manual entry.</span></li>
+        <li class="flex items-start gap-2"><svg class="w-4 h-4 mt-0.5 text-purple-400 shrink-0" aria-hidden="true"><use href="#heroicon-star" /></svg><span><strong class="text-slate-100">Historical cycle vault</strong> — Archive past 12-week years and compare long-term progress.</span></li>
+        <li class="flex items-start gap-2"><svg class="w-4 h-4 mt-0.5 text-amber-400 shrink-0" aria-hidden="true"><use href="#heroicon-bell" /></svg><span><strong class="text-slate-100">Reliable SMS and push alerts</strong> — Get check-ins even when this browser tab is closed.</span></li>
+      </ul>
+      <div class="border-t border-slate-800/50 pt-3 mt-3 flex items-center justify-between gap-3">
+        <p class="text-xs text-slate-500">This preview measures anonymous interest only; no contact information is collected.</p>
+        <button type="button" onclick="closeProModal()" class="shrink-0 bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-3 py-2 rounded-lg text-xs font-semibold transition-colors">Got it</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- AUTH MODAL -->
   <div id="auth-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-slate-900/90 border border-slate-800 rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
       <div class="flex justify-between items-center border-b border-slate-800 pb-3">
@@ -952,6 +985,7 @@
         </div>
 
         <button type="button" onclick="syncToCloud(true)" class="w-full bg-slate-800 hover:bg-slate-700 text-emerald-300 py-2 rounded-lg text-xs font-semibold transition-colors border border-slate-700 flex items-center justify-center gap-2"><svg class="w-4 h-4" aria-hidden="true"><use href="#heroicon-arrow-path" /></svg>Force Sync Now</button>
+        <a href="admin.html" target="_blank" rel="noopener noreferrer" class="block text-center text-xs text-blue-400 hover:text-blue-300 transition-colors">Open Analytics Dashboard →</a>
         <button type="button" onclick="handleLogout()" class="w-full bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 py-2 rounded-lg text-xs font-semibold transition-colors border border-rose-500/30">Sign Out</button>
       </div>
 
@@ -1059,6 +1093,7 @@
 
     /* JSON BACKUP */
     function downloadBackupJSON() {
+      trackEvent('json_export_click');
       if (!state) return alert('No active plan data found to export.');
       const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
       const downloadAnchor = document.createElement('a');
@@ -1092,6 +1127,68 @@
 
     /* CLOUD SYNC */
     let cloudSession = JSON.parse(localStorage.getItem(AUTH_SESSION_KEY) || 'null');
+    const ANALYTICS_ANON_ID_KEY = 'twelve_week_year_anon_id_v1';
+    const ANALYTICS_MILESTONES_KEY = 'twelve_week_year_milestones_v1';
+    const ANALYTICS_CONFIG_KEY = 'twelve_week_year_supabase_config_v1';
+    localStorage.setItem(ANALYTICS_CONFIG_KEY, JSON.stringify({ url: SUPABASE_URL, anonKey: SUPABASE_ANON_KEY }));
+    const isLocalPreview = ['file:', 'localhost', '127.0.0.1'].some(value => location.protocol === value || location.hostname === value);
+    const EXCLUDED_ANALYTICS_EMAILS = ['devonoverbey@gmail.com'];
+
+    function getAnalyticsAnonId() {
+      let id = localStorage.getItem(ANALYTICS_ANON_ID_KEY);
+      if (!id) {
+        id = crypto.randomUUID();
+        localStorage.setItem(ANALYTICS_ANON_ID_KEY, id);
+      }
+      return id;
+    }
+
+    function isExcludedAnalyticsUser() {
+      const email = cloudSession?.user?.email?.trim().toLowerCase();
+      return Boolean(email && EXCLUDED_ANALYTICS_EMAILS.includes(email));
+    }
+
+    function trackEvent(event, props = {}) {
+      if (isLocalPreview || isExcludedAnalyticsUser()) return;
+
+      const row = { anon_id: getAnalyticsAnonId(), event, props };
+      fetch(`${SUPABASE_URL}/rest/v1/twelve_week_year_events`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify(row),
+        keepalive: true
+      }).then(response => {
+        if (!response.ok) console.warn(`12WY analytics event "${event}" failed: HTTP ${response.status}`);
+      }).catch(error => {
+        console.warn(`12WY analytics event "${event}" could not be sent:`, error);
+      });
+    }
+
+    function trackMilestoneOnce(event, props = {}, milestoneKey = event) {
+      const milestones = JSON.parse(localStorage.getItem(ANALYTICS_MILESTONES_KEY) || '{}');
+      if (milestones[milestoneKey]) return;
+      milestones[milestoneKey] = true;
+      localStorage.setItem(ANALYTICS_MILESTONES_KEY, JSON.stringify(milestones));
+      trackEvent(event, props);
+    }
+
+    function trackFirstTacticCompletion() {
+      trackMilestoneOnce('first_tactic_completed');
+    }
+
+    function openProModal() {
+      trackEvent('pro_click');
+      document.getElementById('pro-modal').classList.remove('hidden');
+    }
+
+    function closeProModal() {
+      document.getElementById('pro-modal').classList.add('hidden');
+    }
     let cloudHydrationComplete = false;
 
     function toggleAuthModal(show) {
@@ -1466,10 +1563,11 @@
       checkTacticsCount('wiz-w1-tactics-container', 'wiz-tactics-counter-badge');
     }
 
-    function addIndicatorRow(containerId, type, item = { name: '', target: '', frequency: 'daily' }) {
+    function addIndicatorRow(containerId, type, item = { name: '', target: '', frequency: 'daily' }, isNew = false) {
       const container = document.getElementById(containerId);
       const div = document.createElement('div');
       div.className = 'flex flex-wrap sm:flex-nowrap gap-2 items-center bg-slate-950/60 p-2 rounded-xl border border-slate-800';
+      div.dataset.analyticsNew = String(isNew);
       
       const freqSelect = type === 'lead' ? `
         <select class="w-28 bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-slate-300 focus:border-amber-500 outline-none font-mono ind-freq">
@@ -1820,6 +1918,7 @@
 
     function finishWizard() {
       if (!state) state = {};
+      const isFirstOnboarding = !state.hasCompletedOnboarding;
       state.hasCompletedOnboarding = true;
       state.startDate = document.getElementById('wiz-start-date').value || formatDateKey(getLocalTodayDate());
       state.weekStartDay = parseInt(document.getElementById('wiz-start-day').value, 10);
@@ -1828,6 +1927,12 @@
       state.inaction = document.getElementById('wiz-inaction').value.trim();
       state.leadingIndicators = collectIndicators('wiz-lead-container', 'lead');
       state.laggingIndicators = collectIndicators('wiz-lag-container', 'lag');
+      ['wiz-lead-container', 'wiz-lag-container'].forEach(containerId => {
+        const type = containerId === 'wiz-lead-container' ? 'leading' : 'lagging';
+        Array.from(document.getElementById(containerId).children)
+          .filter(row => row.dataset.analyticsNew === 'true' && row.querySelector('.ind-name')?.value.trim())
+          .forEach(() => trackEvent('indicator_added', { type }));
+      });
       state.week1Goal = document.getElementById('wiz-w1-nonneg').value.trim();
 
       const tacticsInputs = document.querySelectorAll('#wiz-w1-tactics-container .wiz-tactic-inp');
@@ -1839,6 +1944,12 @@
       }));
 
       saveState();
+      if (isFirstOnboarding) {
+        trackMilestoneOnce('onboarding_completed');
+        if (Object.values(state.days || {}).some(day => (day.nonneg || []).some(task => task.done))) {
+          trackFirstTacticCompletion();
+        }
+      }
       activeDateKey = formatDateKey(getLocalTodayDate());
       switchView('daily');
     }
@@ -2079,6 +2190,7 @@
 
     function toggleHourlyPlanner() {
       hourlyPlannerOpen = !hourlyPlannerOpen;
+      if (hourlyPlannerOpen) trackEvent('hourly_planner_opened');
       const planner = document.getElementById('daily-hourly-planner');
       const button = document.getElementById('btn-hourly-planner-tab');
       planner.classList.toggle('hidden', !hourlyPlannerOpen);
@@ -2592,6 +2704,7 @@
 
     function toggleNonNegDone(idx) {
       state.days[activeDateKey].nonneg[idx].done = !state.days[activeDateKey].nonneg[idx].done;
+      if (state.days[activeDateKey].nonneg[idx].done) trackFirstTacticCompletion();
       saveState();
       renderDailyPage();
     }
@@ -3396,6 +3509,7 @@
         if (!state.laggingIndicators) state.laggingIndicators = [];
         state.laggingIndicators.push(newInd);
       }
+      trackEvent('indicator_added', { type: type === 'leading' || type === 'lead' ? 'leading' : 'lagging' });
       saveState();
       renderOverviewPage();
     }
@@ -3423,6 +3537,7 @@
       const targetTactic = currentTactics[idx];
       if (targetTactic) {
         targetTactic.done = !targetTactic.done;
+        if (targetTactic.done) trackFirstTacticCompletion();
         saveState();
         renderWeekPage();
       }
@@ -3889,6 +4004,13 @@
     function finishWeeklyReview() {
       if (selectedReviewWeek !== null && selectedReviewWeek <= getLatestReviewableWeek()) {
         const values = getReviewFormValues();
+        if (['proud', 'challenges', 'learn', 'friend'].every(field => values[field].trim())) {
+          trackMilestoneOnce(
+            'weekly_review_submitted',
+            { week: selectedReviewWeek },
+            `weekly_review_submitted_${state.startDate}_${selectedReviewWeek}`
+          );
+        }
         clearTimeout(reviewDraftSaveTimeout);
         persistReviewValues(selectedReviewWeek, values);
         renderReviewHistory(getLatestReviewableWeek());
@@ -3957,6 +4079,7 @@
       if (!state || !state.hasCompletedOnboarding) {
         if (!state) state = { hasCompletedOnboarding: false };
         wizStep = 1;
+        trackMilestoneOnce('onboarding_started');
         switchView('guide');
       } else {
         switchView('daily');
