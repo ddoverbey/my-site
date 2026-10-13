@@ -1475,11 +1475,11 @@
         } else if (friend.tier === 'close') {
           plantSize = 'w-20 h-20';
         } else if (friend.tier === 'wider') {
-          plantSize = 'w-22 h-22';
+          plantSize = 'w-16 h-16';
         } else if (friend.tier === 'extended') {
           plantSize = 'w-20 h-20';
         } else if (friend.tier === 'annual') {
-          plantSize = 'w-10 h-10';
+          plantSize = stage.plantType === 'cactus' ? 'w-20 h-20' : 'w-10 h-10';
         }
         const bubble = selectedGardenId === friend.id ? `
           <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 z-30 w-40 bg-[#0b1210] border border-[#2e473d] rounded-xl px-3 py-2 text-center shadow-xl">
@@ -1849,7 +1849,7 @@
                 ${bulkMode ? `<input id="bulk-check-${friend.id}" type="checkbox" ${bulkChecked ? 'checked' : ''} tabindex="-1" aria-label="Select ${escapeHtml(friend.name)}" class="pointer-events-none h-4 w-4 shrink-0 accent-teal-500" />` : ''}
                 <div class="relative shrink-0 w-12 h-12">
                   <img src="${friend.photo || pixelAvatarUrl(friend.avatar_seed)}" loading="lazy" decoding="async" alt="${escapeHtml(friend.name)}" referrerpolicy="no-referrer" class="w-12 h-12 rounded-full object-cover border border-[#2e473d] bg-[#1c2d26] [image-rendering:pixelated]" />
-                  <img src="${plant.icon}" alt="${plant.label} plant" title="${plant.label}" class="absolute -bottom-1 -right-1 ${friend.tier === 'annual' ? 'w-4 h-4' : 'w-7 h-7'} rounded-full object-contain bg-[#0b1210] border-2 border-[#14201b] [image-rendering:pixelated]" />
+                  <img src="${plant.icon}" alt="${plant.label} plant" title="${plant.label}" class="absolute -bottom-1 -right-1 ${plant.plantType === 'succulent' ? 'w-4 h-4' : 'w-7 h-7'} rounded-full object-contain bg-[#0b1210] border-2 border-[#14201b] [image-rendering:pixelated]" />
                 </div>
 
                 <div class="min-w-0">
