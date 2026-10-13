@@ -11,23 +11,59 @@
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     .grab-handle { cursor: grab; }
     .grab-handle:active { cursor: grabbing; }
+    svg use { fill: none; stroke: currentColor; stroke-width: 1.5; }
+    .glow { transition: all 300ms ease; }
+    .glow:hover {
+      transform: translateY(-0.25rem);
+      box-shadow: 0 0 20px rgba(59, 130, 246, 0.15);
+    }
+    .app-container > * { width: 100%; }
+    .app-container .bg-slate-900 { background-color: rgb(15 23 42 / 0.5); }
+    .app-container section[id^="view-"] > div[class*="bg-slate-900"] {
+      transition: all 300ms ease;
+    }
+    .app-container section[id^="view-"] > div[class*="bg-slate-900"]:hover {
+      transform: translateY(-0.25rem);
+      box-shadow: 0 0 20px rgba(59, 130, 246, 0.15);
+    }
   </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen p-3 sm:p-6 flex flex-col items-center selection:bg-amber-500 selection:text-black">
+<body class="bg-slate-950 text-slate-300 font-sans antialiased min-h-screen p-3 sm:p-6 flex flex-col items-center selection:bg-blue-500 selection:text-white">
 
-  <div class="w-full max-w-4xl space-y-4 pb-24">
+  <svg xmlns="http://www.w3.org/2000/svg" class="hidden" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5">
+    <symbol id="heroicon-bolt" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m3.75 13.5 6.75-10.5-.75 7.5h10.5l-6.75 10.5.75-7.5H3.75Z" /></symbol>
+    <symbol id="heroicon-bug-ant" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8.25v-3m0 3a3 3 0 0 0-3 3v1.5m3-4.5a3 3 0 0 1 3 3v1.5m-6 0h6m-6 0v3m6-3v3m-6 0a3 3 0 0 0 6 0m-6 0H6m9 0h3m-12-3H4.5m15 0H18m-12 6-1.5 1.5m13.5-1.5 1.5 1.5M9 5.25l-1.5-1.5M15 5.25l1.5-1.5" /></symbol>
+    <symbol id="heroicon-arrow-down-tray" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" /></symbol>
+    <symbol id="heroicon-arrow-up-tray" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M7.5 7.5 12 3m0 0 4.5 4.5M12 3v13.5" /></symbol>
+    <symbol id="heroicon-arrow-path" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992V4.356M20.7 9.3a8.25 8.25 0 0 0-14.5-3.5L4.5 7.5m0 0V3m0 4.5H9m-5.7 7.2a8.25 8.25 0 0 0 14.5 3.5l1.7-1.7m0 0V21m0-4.5H15" /></symbol>
+    <symbol id="heroicon-bell" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9a6 6 0 0 0-12 0v.75a8.967 8.967 0 0 1-2.311 6.022 23.848 23.848 0 0 0 5.454 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" /></symbol>
+    <symbol id="heroicon-cloud" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15a4.5 4.5 0 0 0 4.5 4.5h10.5a4.5 4.5 0 0 0 .75-8.937 6 6 0 0 0-11.619-1.14A4.5 4.5 0 0 0 2.25 15Z" /></symbol>
+    <symbol id="heroicon-target" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m0 13.5V21m9-9h-2.25M5.25 12H3m15.364-6.364-1.591 1.591M7.227 16.773l-1.591 1.591m12.728 0-1.591-1.591M7.227 7.227 5.636 5.636M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></symbol>
+    <symbol id="heroicon-chart-bar" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.5h4.5v7.5H3v-7.5Zm6.75-6h4.5V21h-4.5V7.5Zm6.75-4.5H21V21h-4.5V3Z" /></symbol>
+    <symbol id="heroicon-star" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m11.48 3.499 2.127 6.548h6.884l-5.57 4.047 2.128 6.548-5.57-4.047-5.57 4.047 2.127-6.548-5.57-4.047h6.884L11.48 3.5Z" /></symbol>
+    <symbol id="heroicon-trophy" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 0 1-3 3h-3a3 3 0 0 1-3-3m9 0v-3.375a3.375 3.375 0 0 0-3.375-3.375h-1.5a3.375 3.375 0 0 0-3.375 3.375v3.375m12-12V7.5a3 3 0 0 1-3 3h-1.5m-9 0H6a3 3 0 0 1-3-3V6.75m3 3.75V5.25A2.25 2.25 0 0 1 8.25 3h7.5A2.25 2.25 0 0 1 18 5.25v5.25" /></symbol>
+    <symbol id="heroicon-cog-6-tooth" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.592c.55 0 1.02.398 1.11.94l.213 1.281a7.5 7.5 0 0 1 1.15.665l1.2-.48a1.125 1.125 0 0 1 1.372.49l1.296 2.244c.275.476.17 1.08-.25 1.436l-.987.837a7.5 7.5 0 0 1 0 1.33l.987.837c.42.356.525.96.25 1.436l-1.296 2.244a1.125 1.125 0 0 1-1.372.49l-1.2-.48a7.5 7.5 0 0 1-1.15.665l-.213 1.281c-.09.542-.56.94-1.11.94h-2.592c-.55 0-1.02-.398-1.11-.94l-.213-1.281a7.5 7.5 0 0 1-1.15-.665l-1.2.48a1.125 1.125 0 0 1-1.372-.49l-1.296-2.244a1.125 1.125 0 0 1 .25-1.436l.987-.837a7.5 7.5 0 0 1 0-1.33l-.987-.837a1.125 1.125 0 0 1-.25-1.436l1.296-2.244a1.125 1.125 0 0 1 1.372-.49l1.2.48a7.5 7.5 0 0 1 1.15-.665l.213-1.281Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></symbol>
+    <symbol id="heroicon-x-mark" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></symbol>
+    <symbol id="heroicon-exclamation-triangle" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9.303 3.376L13.303 3.618a1.5 1.5 0 0 0-2.606 0L2.697 16.126A1.5 1.5 0 0 0 3.999 18.5h16.002a1.5 1.5 0 0 0 1.302-2.374ZM12 15.75h.008v.008H12v-.008Z" /></symbol>
+  </svg>
+
+  <div class="app-container w-full max-w-4xl flex flex-col items-center space-y-4 pb-24">
+
+    <header class="text-center py-2">
+      <h1 class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400 font-extrabold tracking-tight text-4xl md:text-5xl">12-Week Year</h1>
+      <p class="text-lg text-slate-400 font-light mt-2">Execution Command Center</p>
+    </header>
     
     <!-- Persistent Top Bar -->
     <nav id="app-nav" class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
       <div class="flex items-center gap-2">
-        <span class="text-lg">⚡</span>
-        <span class="font-mono font-bold text-sm tracking-wider text-white">12-WEEK YEAR</span>
-        <span id="nav-week-badge" class="text-[11px] font-mono font-bold bg-amber-500/10 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded">Wk 1 / 12</span>
+        <svg class="w-5 h-5 text-blue-400" aria-hidden="true"><use href="#heroicon-bolt" /></svg>
+        <span id="nav-week-badge" class="text-[10px] uppercase tracking-wider text-slate-500 bg-slate-800/50 px-2 py-0.5 rounded">Wk 1 / 12</span>
       </div>
 
       <div class="flex flex-wrap items-center justify-end gap-2 min-w-0">
         <div class="flex items-center gap-1 bg-slate-900 border border-slate-800 p-1 rounded-xl text-xs">
-          <button onclick="switchView('daily')" id="tab-daily" class="px-3 py-1 rounded-lg font-semibold transition-colors bg-amber-500 text-black">Today</button>
+          <button onclick="switchView('daily')" id="tab-daily" class="px-3 py-1 rounded-lg font-semibold transition-colors bg-emerald-500 text-slate-950">Today</button>
           <button onclick="switchView('week')" id="tab-week" class="px-3 py-1 rounded-lg font-semibold text-slate-400 hover:text-white transition-colors">This Week</button>
           <button onclick="switchView('overview')" id="tab-overview" class="px-3 py-1 rounded-lg font-semibold text-slate-400 hover:text-white transition-colors">Overview</button>
           <button onclick="switchView('review')" id="tab-review" class="px-3 py-1 rounded-lg font-semibold text-slate-400 hover:text-white transition-colors">Review</button>
@@ -38,21 +74,30 @@
           href="https://docs.google.com/forms/d/e/1FAIpQLSc2SKVBdoYIIftgLo-7UZpc7kBD7qOIqhEN2YWEFaVwiIzo6Q/viewform?usp=header"
           target="_blank"
           rel="noopener noreferrer"
-          class="bg-teal-500/10 hover:bg-teal-500/20 border border-teal-500/30 text-teal-300 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5"
+          class="bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-300 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5"
           title="Report a bug"
         >
-          <span aria-hidden="true">🐞</span> Report a bug
+          <svg class="w-4 h-4" aria-hidden="true"><use href="#heroicon-bug-ant" /></svg> Report a bug
         </a>
 
         <a
           href="https://buymeacoffee.com/ddoverbey"
           target="_blank"
           rel="noopener noreferrer"
-          class="bg-amber-500 hover:bg-amber-400 text-black px-2.5 py-1.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm"
+          onclick="trackEvent('coffee_click')"
+          class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm"
           title="Buy me a coffee"
         >
-          <span>☕</span> <span class="hidden sm:inline">Coffee</span>
+          <span aria-hidden="true">☕</span> <span class="hidden sm:inline">Coffee</span>
         </a>
+
+        <button
+          type="button"
+          onclick="openProModal()"
+          class="bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-300 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-colors"
+        >
+          <span aria-hidden="true">⚡</span> Pro
+        </button>
 
         <!-- 1-Click JSON Backup -->
         <button 
@@ -60,7 +105,7 @@
           class="bg-slate-900 hover:bg-slate-800 border border-slate-800 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1 text-slate-300 hover:text-amber-400"
           title="Download Backup JSON"
         >
-          <span>📥</span> <span class="hidden sm:inline">JSON</span>
+          <svg class="w-4 h-4" aria-hidden="true"><use href="#heroicon-arrow-down-tray" /></svg> <span class="hidden sm:inline">JSON</span>
         </button>
 
         <button
@@ -69,7 +114,7 @@
           class="bg-slate-900 hover:bg-slate-800 border border-slate-800 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1 text-slate-300 hover:text-amber-400"
           title="Refresh data from cloud"
         >
-          <span>↻</span> <span class="hidden sm:inline">Refresh</span>
+          <svg class="w-4 h-4" aria-hidden="true"><use href="#heroicon-arrow-path" /></svg> <span class="hidden sm:inline">Refresh</span>
         </button>
 
         <button 
@@ -78,7 +123,7 @@
           class="bg-slate-900 hover:bg-slate-800 border border-slate-800 p-2 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center text-slate-300"
           title="Alert Settings"
         >
-          <span>🔔</span>
+          <svg class="w-4 h-4" aria-hidden="true"><use href="#heroicon-bell" /></svg>
         </button>
 
         <button 
@@ -87,7 +132,7 @@
           class="bg-slate-900 hover:bg-slate-800 border border-slate-800 p-2 rounded-xl text-xs font-semibold transition-colors relative flex items-center justify-center text-slate-300"
           title="Account & Cloud Sync"
         >
-          <span>☁️</span>
+          <svg class="w-4 h-4" aria-hidden="true"><use href="#heroicon-cloud" /></svg>
           <span id="sync-status-dot" class="absolute top-1 right-1 w-2 h-2 rounded-full bg-slate-500"></span>
         </button>
       </div>
@@ -96,12 +141,12 @@
     <!-- Planning Suggestion Banner (Appears on Sunday if Monday start, or Saturday if Sunday start) -->
     <div id="weekly-plan-prompt-banner" class="hidden bg-amber-950/40 border border-amber-500/40 rounded-xl p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
       <div class="flex items-center gap-2">
-        <span class="text-base">🎯</span>
+        <svg class="w-4 h-4 text-amber-300" aria-hidden="true"><use href="#heroicon-target" /></svg>
         <span class="text-amber-200">Planning Day: Set up your non-negotiables & tactics for <strong id="prompt-banner-week-name" class="text-white">Week 2</strong>?</span>
       </div>
       <button 
         onclick="openNextWeekPlanningModal()" 
-        class="bg-amber-500 hover:bg-amber-400 text-black px-3 py-1 rounded-lg font-bold font-mono text-xs transition-colors"
+        class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-3 py-1 rounded-lg font-bold font-mono text-xs transition-colors"
       >
         Set Week Plan →
       </button>
@@ -109,7 +154,7 @@
 
     <div id="weekly-review-prompt-banner" class="hidden bg-emerald-950/40 border border-emerald-500/40 rounded-xl p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
       <div class="flex items-center gap-2">
-        <span class="text-base">📊</span>
+        <svg class="w-4 h-4 text-emerald-300" aria-hidden="true"><use href="#heroicon-chart-bar" /></svg>
         <span class="text-emerald-200">Weekly Review: Reflect on <strong id="review-prompt-week-name" class="text-white">Week 1</strong>.</span>
       </div>
       <button
@@ -123,15 +168,15 @@
     </div>
 
     <!-- Notification Banner -->
-    <div id="notification-banner" class="bg-slate-900/90 border border-slate-800 rounded-xl p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+    <div id="notification-banner" class="bg-slate-900/50 border border-slate-800 rounded-2xl p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
       <div class="flex items-center gap-2">
-        <span class="text-base">🔔</span>
+        <svg class="w-4 h-4 text-blue-300" aria-hidden="true"><use href="#heroicon-bell" /></svg>
         <span id="notification-status-text" class="text-slate-300">Enable local reminders for 8:30 AM tactical plan & 8:30 PM 85% goal pacing.</span>
       </div>
       <div class="flex items-center gap-2">
         <button id="btn-test-notif" onclick="testNotification()" class="hidden text-[11px] text-slate-400 hover:text-white underline font-mono">Test Alert</button>
-        <button id="btn-enable-notif" onclick="requestNotificationPermission()" class="bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 px-3 py-1 rounded-lg text-xs font-semibold font-mono transition-colors">Enable Alerts</button>
-        <button onclick="dismissNotificationBanner()" class="text-slate-500 hover:text-white text-xs px-1" title="Dismiss">✕</button>
+        <button id="btn-enable-notif" onclick="requestNotificationPermission()" class="text-emerald-400 hover:text-emerald-300 transition-colors font-medium border border-emerald-500/30 px-3 py-1 rounded-lg text-xs">Enable Alerts</button>
+        <button onclick="dismissNotificationBanner()" class="text-slate-500 hover:text-white text-xs px-1" title="Dismiss"><svg class="w-4 h-4" aria-hidden="true"><use href="#heroicon-x-mark" /></svg></button>
       </div>
     </div>
 
@@ -154,7 +199,7 @@
         <!-- Step 1 -->
         <div id="step-1" class="wiz-step space-y-4">
           <div>
-            <h2 class="text-xl font-bold text-white">When did your 12-Week Year start?</h2>
+            <h2 class="text-xl font-semibold text-slate-100">When did your 12-Week Year start?</h2>
             <p class="text-xs text-slate-400 mt-1">If your cycle started earlier this week, we'll walk you day-by-day to backfill execution.</p>
           </div>
           <div class="space-y-3 pt-2">
@@ -175,7 +220,7 @@
         <!-- Step 2 -->
         <div id="step-2" class="wiz-step space-y-4 hidden">
           <div>
-            <h2 class="text-xl font-bold text-white">List 5 goals on your mind</h2>
+            <h2 class="text-xl font-semibold text-slate-100">List 5 goals on your mind</h2>
             <p class="text-xs text-slate-400 mt-1">Brainstorm 5 goals for this year without editing yourself.</p>
           </div>
           <div class="space-y-2 text-xs">
@@ -190,7 +235,7 @@
         <!-- Step 3 -->
         <div id="step-3" class="wiz-step space-y-4 hidden">
           <div>
-            <h2 class="text-xl font-bold text-white">Select The ONE Big Goal</h2>
+            <h2 class="text-xl font-semibold text-slate-100">Select The ONE Big Goal</h2>
             <p class="text-xs text-slate-400 mt-1">Which single goal will create the highest leverage in your life?</p>
           </div>
           <div id="wiz-goal-radio-group" class="space-y-2 text-xs"></div>
@@ -199,7 +244,7 @@
         <!-- Step 4 -->
         <div id="step-4" class="wiz-step space-y-4 hidden">
           <div>
-            <h2 class="text-xl font-bold text-white">The Emotional Connection</h2>
+            <h2 class="text-xl font-semibold text-slate-100">The Emotional Connection</h2>
             <p class="text-xs text-slate-400 mt-1">Anchor your discipline in reality.</p>
           </div>
           <div class="space-y-3 text-xs">
@@ -217,7 +262,7 @@
         <!-- Step 5 -->
         <div id="step-5" class="wiz-step space-y-4 hidden">
           <div>
-            <h2 class="text-xl font-bold text-white">Measurable Indicators</h2>
+            <h2 class="text-xl font-semibold text-slate-100">Measurable Indicators</h2>
             <p class="text-xs text-slate-400 mt-1">Leading metrics can have a frequency or N/A. Lagging metrics are purely total amounts.</p>
           </div>
           <div class="space-y-4 text-xs">
@@ -232,7 +277,7 @@
                 <label class="font-semibold text-slate-300">Leading Indicators (Action Metric + Target + Cadence)</label>
               </div>
               <div id="wiz-lead-container" class="space-y-2"></div>
-              <button type="button" onclick="addIndicatorRow('wiz-lead-container', 'lead')" class="text-xs text-amber-400 hover:text-amber-300 font-semibold font-mono">+ Add Leading Indicator</button>
+              <button type="button" onclick="addIndicatorRow('wiz-lead-container', 'lead', undefined, true)" class="text-xs text-amber-400 hover:text-amber-300 font-semibold font-mono">+ Add Leading Indicator</button>
             </div>
 
             <!-- Lagging Indicators -->
@@ -241,7 +286,7 @@
                 <label class="font-semibold text-slate-300">Lagging Indicators (Result Metric + Target Amount)</label>
               </div>
               <div id="wiz-lag-container" class="space-y-2"></div>
-              <button type="button" onclick="addIndicatorRow('wiz-lag-container', 'lag')" class="text-xs text-teal-400 hover:text-teal-300 font-semibold font-mono">+ Add Lagging Indicator</button>
+              <button type="button" onclick="addIndicatorRow('wiz-lag-container', 'lag', undefined, true)" class="text-xs text-teal-400 hover:text-teal-300 font-semibold font-mono">+ Add Lagging Indicator</button>
             </div>
           </div>
         </div>
@@ -250,7 +295,7 @@
         <div id="step-6" class="wiz-step space-y-4 hidden">
           <div>
             <div class="flex items-center justify-between">
-              <h2 class="text-xl font-bold text-white">Week 1 Tactics (Main Quest)</h2>
+              <h2 class="text-xl font-semibold text-slate-100">Week 1 Tactics (Main Quest)</h2>
               <span class="text-[10px] font-mono text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded">Recommended: 2–5 max</span>
             </div>
             <p class="text-xs text-slate-400 mt-1">Actions starting with verbs. Focus on your highest-leverage priorities.</p>
@@ -279,7 +324,7 @@
               <span id="catchup-date-badge" class="text-xs font-mono font-bold text-amber-400">Monday, Sep 7</span>
               <span id="catchup-day-step" class="text-[11px] font-mono text-slate-500">Day 1 of 6</span>
             </div>
-            <h2 id="catchup-title" class="text-xl font-bold text-white mt-1">What did you execute?</h2>
+            <h2 id="catchup-title" class="text-xl font-semibold text-slate-100 mt-1">What did you execute?</h2>
             <p class="text-xs text-slate-400 mt-0.5">Enter non-negotiables & side quests for this specific day.</p>
           </div>
 
@@ -301,7 +346,7 @@
 
         <div class="flex items-center justify-between pt-4 border-t border-slate-800">
           <button id="btn-wiz-prev" onclick="prevWizStep()" class="px-4 py-2 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition-colors invisible">← Back</button>
-          <button id="btn-wiz-next" onclick="nextWizStep()" class="bg-amber-500 hover:bg-amber-400 font-bold text-black px-6 py-2 rounded-lg text-xs transition-colors">Next Step →</button>
+          <button id="btn-wiz-next" onclick="nextWizStep()" class="bg-emerald-500 hover:bg-emerald-400 font-bold text-slate-950 px-6 py-2 rounded-lg text-xs transition-colors">Next Step →</button>
         </div>
 
       </div>
@@ -316,7 +361,7 @@
       <div class="bg-gradient-to-r from-slate-900 via-slate-900 to-amber-950/20 border border-slate-800 rounded-xl p-3.5 flex items-center justify-between shadow-sm">
         <div class="space-y-0.5 min-w-0">
           <div class="text-[10px] font-bold uppercase tracking-wider text-amber-400 font-mono flex items-center gap-1.5">
-            <span>🎯</span> <span id="daily-banner-week-title">Week 1 Objective</span>
+            <svg class="w-4 h-4" aria-hidden="true"><use href="#heroicon-target" /></svg> <span id="daily-banner-week-title">Week 1 Objective</span>
           </div>
           <div id="daily-banner-week-goal" class="text-sm sm:text-base font-bold text-slate-100 truncate">Ship MVP</div>
         </div>
@@ -336,7 +381,7 @@
       </div>
 
       <!-- 1. % MAIN QUEST GAUGE -->
-      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center justify-between shadow-sm">
+      <div class="glow bg-slate-900/50 border border-slate-800 rounded-2xl p-4 flex items-center justify-between shadow-sm">
         <div>
           <div class="text-xs font-mono uppercase tracking-wider text-amber-400 font-bold">Main Quest Score</div>
           <div class="flex items-baseline gap-2 mt-0.5">
@@ -356,29 +401,29 @@
       </div>
 
       <!-- 2. MAIN QUEST TASKS -->
-      <div class="bg-slate-900 border-2 border-slate-800/90 rounded-2xl p-5 sm:p-6 space-y-4 shadow-xl">
+      <div class="glow bg-slate-900/50 border border-slate-800/90 rounded-2xl p-5 sm:p-6 space-y-4 shadow-xl">
         <div class="flex flex-wrap items-center justify-between border-b border-slate-800 pb-3 gap-2">
           <div class="flex items-center gap-2">
             <span class="text-sm font-bold text-amber-400 uppercase tracking-wider font-mono flex items-center gap-1.5">
-              <span>🔥</span> Today's Non-Negotiables
+              <span aria-hidden="true">🔥</span> Today's Non-Negotiables
             </span>
             <span class="text-[10px] font-mono text-slate-400 bg-slate-800 px-2 py-0.5 rounded">Target: 2–5 actions</span>
           </div>
-          <span id="daily-nonneg-warning" class="hidden text-[10px] font-mono text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded font-bold">⚠️ 6+ items — Focus dilution risk</span>
+          <span id="daily-nonneg-warning" class="hidden text-[10px] font-mono text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded font-bold"><svg class="inline w-3 h-3 mr-0.5" aria-hidden="true"><use href="#heroicon-exclamation-triangle" /></svg>6+ items — Focus dilution risk</span>
         </div>
 
         <div id="daily-nonneg-container" class="space-y-3 text-sm"></div>
       </div>
 
       <!-- 3. SIDE-QUESTS STAR RATING -->
-      <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5 flex items-center justify-between shadow-sm">
+      <div class="glow bg-slate-900/50 border border-slate-800 rounded-2xl p-3.5 flex items-center justify-between shadow-sm">
         <div>
           <div class="text-[10px] font-mono uppercase tracking-wider text-purple-400 font-bold">Side Quest Stars</div>
           <div class="flex items-center gap-2 mt-0.5">
-            <span id="daily-stars-display" class="text-xl tracking-wider text-slate-600">☆☆☆</span>
+            <span id="daily-stars-display" class="flex items-center gap-0.5 text-slate-600" role="img" aria-label="No stars"><svg class="w-4 h-4" aria-hidden="true"><use href="#heroicon-star" /></svg><svg class="w-4 h-4" aria-hidden="true"><use href="#heroicon-star" /></svg><svg class="w-4 h-4" aria-hidden="true"><use href="#heroicon-star" /></svg></span>
             <span id="daily-stars-badge" class="text-xs font-mono font-bold text-slate-400">None</span>
           </div>
-          <p class="text-[9px] text-slate-500 mt-0.5">★ 30% • ★★ 60% • ★★★ 80%</p>
+          <p class="text-[9px] text-slate-500 mt-0.5">1 star 30% · 2 stars 60% · 3 stars 80%</p>
         </div>
 
         <div class="text-right">
@@ -388,7 +433,7 @@
       </div>
 
       <!-- 4. SIDE-QUESTS LIST -->
-      <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-4 space-y-3">
+      <div class="glow bg-slate-900/50 border border-slate-800 rounded-2xl p-4 space-y-3">
         <div class="flex items-center justify-between border-b border-slate-800 pb-2">
           <div class="flex items-center gap-2">
             <span class="text-xs font-bold text-purple-300 uppercase tracking-wider font-mono">Side Quests (Optional Extras)</span>
@@ -444,7 +489,7 @@
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
         <div>
           <div class="flex items-center gap-2">
-            <h2 id="wk-title" class="text-2xl font-bold tracking-tight text-white font-mono">THIS WEEK</h2>
+            <h2 id="wk-title" class="text-xl font-semibold tracking-tight text-slate-100 font-mono">THIS WEEK</h2>
             <span id="wk-badge-current-week" class="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs px-2 py-0.5 rounded font-mono font-bold">Week 1 / 12</span>
           </div>
           <div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -458,7 +503,7 @@
           </div>
         </div>
         <div class="flex items-center gap-2">
-          <button onclick="switchView('daily')" class="bg-amber-500 hover:bg-amber-400 text-black px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">← Back to Daily</button>
+          <button onclick="switchView('daily')" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">← Back to Daily</button>
           <button onclick="switchView('overview')" class="bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors">12WY Overview →</button>
         </div>
       </div>
@@ -474,7 +519,7 @@
             <p id="wk-week-nonneg-text" class="text-[11px] text-amber-400 font-medium truncate mt-0.5"></p>
           </div>
           <div class="flex items-center gap-2">
-            <span id="wk-tactics-warning" class="hidden text-[10px] font-mono text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded">⚠️ 6+ items - Focus dilution risk</span>
+            <span id="wk-tactics-warning" class="hidden text-[10px] font-mono text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded"><svg class="inline w-3 h-3 mr-0.5" aria-hidden="true"><use href="#heroicon-exclamation-triangle" /></svg>6+ items - Focus dilution risk</span>
             <button id="btn-plan-ahead" onclick="openNextWeekPlanningModal(Math.min(12, getCycleTimeline().currentWeek + 1), false)" class="text-xs bg-teal-500/10 hover:bg-teal-500/20 border border-teal-500/30 text-teal-300 px-2.5 py-1 rounded">Plan Ahead</button>
             <button onclick="openNextWeekPlanningModal(selectedCycleWeek, false)" class="text-xs bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 px-2.5 py-1 rounded">Edit Week Plan</button>
             <button onclick="promptNewTactic()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded">+ Add Tactic</button>
@@ -540,7 +585,7 @@
         <div>
           <span class="text-[10px] font-mono uppercase tracking-wider text-purple-400 font-bold">This Week's Side Quests</span>
           <div class="flex items-center gap-2 mt-1">
-            <span id="wk-week-stars-display" class="text-2xl text-slate-600">☆☆☆</span>
+            <span id="wk-week-stars-display" class="flex items-center gap-0.5 text-slate-600" role="img" aria-label="No stars"><svg class="w-5 h-5" aria-hidden="true"><use href="#heroicon-star" /></svg><svg class="w-5 h-5" aria-hidden="true"><use href="#heroicon-star" /></svg><svg class="w-5 h-5" aria-hidden="true"><use href="#heroicon-star" /></svg></span>
             <span id="wk-week-stars-badge" class="font-bold text-slate-400 text-xs">None</span>
           </div>
           <span id="wk-week-stars-ratio" class="text-[11px] text-slate-400 mt-0.5 block font-mono">0 / 0 cleared this week</span>
@@ -573,13 +618,13 @@
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
         <div>
           <div class="flex items-center gap-2">
-            <h2 class="text-2xl font-bold tracking-tight text-white font-mono">12-WEEK CYCLE</h2>
+            <h2 class="text-xl font-semibold tracking-tight text-slate-100 font-mono">12-WEEK CYCLE</h2>
             <span id="ov-badge-current-week" class="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs px-2 py-0.5 rounded font-mono font-bold">Week 1 / 12</span>
           </div>
           <p id="ov-cycle-dates-label" class="text-xs text-slate-400 mt-1 font-mono"></p>
         </div>
         <div class="flex items-center gap-2">
-          <button onclick="switchView('daily')" class="bg-amber-500 hover:bg-amber-400 text-black px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">← Back to Daily</button>
+          <button onclick="switchView('daily')" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">← Back to Daily</button>
           <button onclick="switchView('guide')" class="bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors">Edit Strategy</button>
         </div>
       </div>
@@ -604,7 +649,7 @@
             <p id="ov-total-nonneg-count" class="text-[10px] text-slate-500 mt-0.5">0 / 0 non-negotiables done</p>
             <span class="mt-1 block text-[9px] text-slate-500">View completed tasks ↓</span>
           </div>
-          <span class="text-3xl">🔥</span>
+          <span class="text-3xl" aria-hidden="true">🔥</span>
         </button>
 
         <button type="button" onclick="toggleCycleTaskDetails('sidequests')" aria-expanded="false" aria-controls="ov-sidequest-detail" class="w-full text-left bg-slate-900 hover:bg-slate-800/80 p-4 rounded-xl border border-slate-800 flex items-center justify-between transition-colors">
@@ -614,7 +659,7 @@
             <p id="ov-total-sidequests-sub" class="text-[10px] text-slate-500 mt-0.5">0 / 0 bonus items completed</p>
             <span class="mt-1 block text-[9px] text-slate-500">View completed tasks ↓</span>
           </div>
-          <span class="text-3xl">🏆</span>
+          <svg class="w-8 h-8 text-purple-400" aria-hidden="true"><use href="#heroicon-trophy" /></svg>
         </button>
       </div>
 
@@ -686,7 +731,7 @@
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-5">
         <div class="border-b border-slate-800 pb-3">
           <h3 class="text-xs font-bold text-slate-300 uppercase font-mono flex items-center gap-1.5">
-            <span>📊</span> Analytics & Goal Totals
+            <svg class="w-4 h-4 text-blue-400" aria-hidden="true"><use href="#heroicon-chart-bar" /></svg> Analytics & Goal Totals
           </h3>
           <p class="text-[11px] text-slate-500">Visual breakdown of your 12-week execution</p>
         </div>
@@ -739,7 +784,7 @@
         <div class="border-b border-slate-800 pb-3 flex items-center justify-between">
           <div>
             <span class="text-xs font-mono font-bold text-amber-400 uppercase">Weekly Cadence</span>
-            <h2 class="text-xl font-bold text-white mt-0.5">Week <span id="rev-week-num">1</span> Review</h2>
+            <h2 class="text-xl font-semibold text-slate-100 mt-0.5">Week <span id="rev-week-num">1</span> Review</h2>
           </div>
           <div class="flex items-center gap-2">
             <button id="btn-review-prev" onclick="selectReviewWeek(-1)" aria-label="Previous review week" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-lg">←</button>
@@ -770,7 +815,7 @@
             <label class="block font-semibold text-amber-300 mb-1">What would you tell a friend who had a week like yours?</label>
             <textarea id="rev-friend" oninput="saveReviewDraft()" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-amber-500 outline-none"></textarea>
           </div>
-          <button type="button" onclick="finishWeeklyReview()" class="w-full bg-amber-500 hover:bg-amber-400 text-black font-bold py-2.5 rounded-lg transition-colors">Done</button>
+          <button type="button" onclick="finishWeeklyReview()" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2.5 rounded-lg transition-colors">Done</button>
         </div>
       </div>
       <section id="review-history" class="hidden border-t border-slate-800 pt-4 space-y-3" aria-labelledby="review-history-heading">
@@ -791,14 +836,14 @@
   </div>
 
   <!-- SPECIALIZED PHASE 6 MODAL (Suggested on Transition Day / Gate on Week Start) -->
-  <div id="next-week-modal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+  <div id="next-week-modal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden" onclick="if(event.target === this && !mandatoryPlanningGate) closeNextWeekPlanningModal(false)">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
       <div class="border-b border-slate-800 pb-3 flex items-center justify-between">
         <div>
           <span class="text-[10px] font-mono uppercase tracking-wider text-amber-400 font-bold">Weekly Transition</span>
-          <h2 class="text-lg font-bold text-white mt-0.5"><span id="modal-week-action">Plan</span> <span id="modal-next-week-title">Week 2</span> Goals & Tactics</h2>
+          <h2 class="text-xl font-semibold text-slate-100 mt-0.5"><span id="modal-week-action">Plan</span> <span id="modal-next-week-title">Week 2</span> Goals & Tactics</h2>
         </div>
-        <button id="btn-close-next-week-modal" onclick="closeNextWeekPlanningModal(false)" class="text-slate-400 hover:text-white text-sm">✕</button>
+        <button id="btn-close-next-week-modal" onclick="closeNextWeekPlanningModal(false)" aria-label="Close weekly planning" class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"><svg class="w-4 h-4" aria-hidden="true"><use href="#heroicon-x-mark" /></svg></button>
       </div>
 
       <p id="modal-week-plan-description" class="text-xs text-slate-400 leading-relaxed">
@@ -826,7 +871,7 @@
         </div>
 
         <div class="pt-2 border-t border-slate-800 flex items-center justify-end gap-2">
-          <button type="submit" class="w-full bg-amber-500 hover:bg-amber-400 text-black py-2.5 rounded-lg font-bold font-mono transition-colors">
+          <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 py-2.5 rounded-lg font-bold font-mono transition-colors">
             <span id="modal-week-save-label">Lock in Week Plan</span>
           </button>
         </div>
@@ -834,14 +879,14 @@
     </div>
   </div>
 
-  <div id="weekly-review-modal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden" role="dialog" aria-modal="true" aria-labelledby="weekly-review-modal-title">
-    <div class="bg-slate-900 border border-emerald-800/70 rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl">
+  <div id="weekly-review-modal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden" role="dialog" aria-modal="true" aria-labelledby="weekly-review-modal-title" onclick="if(event.target === this) dismissWeeklyReviewPrompt()">
+    <div class="bg-slate-900 border border-emerald-800/70 rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl" onclick="event.stopPropagation()">
       <div class="flex items-start justify-between gap-3 border-b border-slate-800 pb-3">
         <div>
           <span class="text-[10px] font-mono uppercase tracking-wider text-emerald-400 font-bold">Weekly Review</span>
-          <h2 id="weekly-review-modal-title" class="text-lg font-bold text-white mt-0.5">Review Week <span id="weekly-review-modal-week">1</span></h2>
+          <h2 id="weekly-review-modal-title" class="text-xl font-semibold text-slate-100 mt-0.5">Review Week <span id="weekly-review-modal-week">1</span></h2>
         </div>
-        <button type="button" onclick="dismissWeeklyReviewPrompt()" aria-label="Close weekly review reminder" class="text-slate-400 hover:text-white text-sm">✕</button>
+        <button type="button" onclick="dismissWeeklyReviewPrompt()" aria-label="Close weekly review reminder" class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"><svg class="w-4 h-4" aria-hidden="true"><use href="#heroicon-x-mark" /></svg></button>
       </div>
       <p class="text-sm text-slate-300">Your week is complete. Take a few minutes to capture what went well, what was difficult, and what you learned.</p>
       <div class="flex items-center justify-end gap-2">
@@ -852,24 +897,24 @@
   </div>
 
   <!-- SETTINGS MODAL -->
-  <div id="settings-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
+  <div id="settings-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden" onclick="if(event.target === this) toggleSettingsModal(false)">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl" onclick="event.stopPropagation()">
       <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-        <h3 class="font-bold text-sm text-white">⚙️ Alert Settings</h3>
-        <button onclick="toggleSettingsModal(false)" class="text-slate-400 hover:text-white text-sm">✕</button>
+        <h3 class="font-bold text-sm text-white flex items-center gap-2"><svg class="w-4 h-4 text-blue-400" aria-hidden="true"><use href="#heroicon-cog-6-tooth" /></svg>Alert Settings</h3>
+        <button onclick="toggleSettingsModal(false)" aria-label="Close alert settings" class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"><svg class="w-4 h-4" aria-hidden="true"><use href="#heroicon-x-mark" /></svg></button>
       </div>
 
       <p class="text-[11px] text-slate-500 leading-relaxed">Choose which local reminders fire and at what time. Alerts only work while this browser tab has notification permission granted.</p>
 
       <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
         <span id="settings-notification-permission" class="text-[11px] text-slate-400" role="status"></span>
-        <button id="btn-settings-enable-alerts" type="button" onclick="requestNotificationPermission()" class="bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 px-3 py-1.5 rounded-lg text-xs font-semibold font-mono">Enable Alerts</button>
+        <button id="btn-settings-enable-alerts" type="button" onclick="requestNotificationPermission()" class="text-emerald-400 hover:text-emerald-300 transition-colors font-medium border border-emerald-500/30 px-3 py-1.5 rounded-lg text-xs">Enable Alerts</button>
       </div>
 
       <form onsubmit="saveSettings(event)" class="space-y-3 text-xs">
         <div class="space-y-1.5">
           <label class="flex items-center justify-between bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
-            <span class="font-semibold text-slate-300">🎯 Morning Tactical Brief</span>
+            <span class="font-semibold text-slate-300 flex items-center gap-2"><svg class="w-4 h-4 text-blue-400" aria-hidden="true"><use href="#heroicon-target" /></svg>Morning Tactical Brief</span>
             <input type="checkbox" id="settings-morning-enabled" class="w-4 h-4 text-amber-500 rounded bg-slate-900 border-slate-700 cursor-pointer" />
           </label>
           <input type="time" id="settings-morning-time" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none font-mono" />
@@ -877,7 +922,7 @@
 
         <div class="space-y-1.5">
           <label class="flex items-center justify-between bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
-            <span class="font-semibold text-slate-300">⚡ Evening 85% Pacing</span>
+            <span class="font-semibold text-slate-300 flex items-center gap-2"><svg class="w-4 h-4 text-emerald-400" aria-hidden="true"><use href="#heroicon-bolt" /></svg>Evening 85% Pacing</span>
             <input type="checkbox" id="settings-evening-enabled" class="w-4 h-4 text-amber-500 rounded bg-slate-900 border-slate-700 cursor-pointer" />
           </label>
           <input type="time" id="settings-evening-time" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none font-mono" />
@@ -885,38 +930,63 @@
 
         <div class="space-y-1.5">
           <label class="flex items-center justify-between bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
-            <span class="font-semibold text-slate-300">📊 Weekly Review</span>
+            <span class="font-semibold text-slate-300 flex items-center gap-2"><svg class="w-4 h-4 text-purple-400" aria-hidden="true"><use href="#heroicon-chart-bar" /></svg>Weekly Review</span>
             <input type="checkbox" id="settings-review-enabled" class="w-4 h-4 text-amber-500 rounded bg-slate-900 border-slate-700 cursor-pointer" />
           </label>
           <input type="time" id="settings-review-time" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 outline-none font-mono" />
         </div>
 
-        <button type="submit" class="w-full bg-amber-500 hover:bg-amber-400 text-black font-bold py-2.5 rounded-lg transition-colors">Save Settings</button>
+        <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2.5 rounded-lg transition-colors">Save Settings</button>
       </form>
     </div>
   </div>
 
+  <!-- PRO MODAL -->
+  <div id="pro-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden" role="dialog" aria-modal="true" aria-labelledby="pro-modal-title" onclick="if(event.target === this) closeProModal()">
+    <div class="bg-slate-900/90 border border-slate-800 rounded-2xl w-full max-w-lg p-6 space-y-5 shadow-2xl" onclick="event.stopPropagation()">
+      <div class="flex items-start justify-between gap-4 border-b border-slate-800 pb-3">
+        <div>
+          <span class="text-[10px] uppercase tracking-wider text-blue-400 font-semibold">Coming into focus</span>
+          <h2 id="pro-modal-title" class="text-xl font-semibold text-slate-100 mt-1">12-Week Year Pro</h2>
+        </div>
+        <button type="button" onclick="closeProModal()" aria-label="Close Pro features" class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"><svg class="w-4 h-4" aria-hidden="true"><use href="#heroicon-x-mark" /></svg></button>
+      </div>
+      <p class="text-sm text-slate-400 font-light">Pro is a painted-door preview of ways to make your execution system more automatic and connected.</p>
+      <ul class="space-y-3 text-sm text-slate-300">
+        <li class="flex items-start gap-2"><svg class="w-4 h-4 mt-0.5 text-blue-400 shrink-0" aria-hidden="true"><use href="#heroicon-chart-bar" /></svg><span><strong class="text-slate-100">Two-way calendar sync</strong> — Send Strategic, Buffer, and Breakout blocks to Apple or Google Calendar.</span></li>
+        <li class="flex items-start gap-2"><svg class="w-4 h-4 mt-0.5 text-emerald-400 shrink-0" aria-hidden="true"><use href="#heroicon-arrow-path" /></svg><span><strong class="text-slate-100">Automated indicator tickers</strong> — Connect services like Apple Health or GitHub to update metrics without manual entry.</span></li>
+        <li class="flex items-start gap-2"><svg class="w-4 h-4 mt-0.5 text-purple-400 shrink-0" aria-hidden="true"><use href="#heroicon-star" /></svg><span><strong class="text-slate-100">Historical cycle vault</strong> — Archive past 12-week years and compare long-term progress.</span></li>
+        <li class="flex items-start gap-2"><svg class="w-4 h-4 mt-0.5 text-amber-400 shrink-0" aria-hidden="true"><use href="#heroicon-bell" /></svg><span><strong class="text-slate-100">Reliable SMS and push alerts</strong> — Get check-ins even when this browser tab is closed.</span></li>
+      </ul>
+      <div class="border-t border-slate-800/50 pt-3 mt-3 flex items-center justify-between gap-3">
+        <p class="text-xs text-slate-500">This preview measures anonymous interest only; no contact information is collected.</p>
+        <button type="button" onclick="closeProModal()" class="shrink-0 bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-3 py-2 rounded-lg text-xs font-semibold transition-colors">Got it</button>
+      </div>
+    </div>
+  </div>
+
   <!-- AUTH MODAL -->
-  <div id="auth-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-[#14201b] border border-[#283e35] rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
-      <div class="flex justify-between items-center border-b border-[#283e35] pb-3">
-        <h3 class="font-bold text-sm text-[#f4ede4]">Account & Cloud Sync</h3>
-        <button onclick="toggleAuthModal(false)" class="text-[#8da498] hover:text-[#f4ede4] text-sm">✕</button>
+  <div id="auth-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title" onclick="if(event.target === this) toggleAuthModal(false)">
+    <div class="bg-slate-900/90 border border-slate-800 rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl" onclick="event.stopPropagation()">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h3 id="auth-modal-title" class="font-bold text-sm text-slate-100">Account & Cloud Sync</h3>
+        <button onclick="toggleAuthModal(false)" aria-label="Close account settings" class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"><svg class="w-4 h-4" aria-hidden="true"><use href="#heroicon-x-mark" /></svg></button>
       </div>
 
       <div id="auth-view-logged-in" class="hidden space-y-4">
-        <div class="bg-[#0b1210] border border-[#283e35] rounded-xl p-3 text-xs text-[#a3b8ad] space-y-1">
+        <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-3 text-xs text-slate-300 space-y-1">
           <div class="flex items-center justify-between">
             <span class="text-emerald-400 font-medium flex items-center gap-1.5">
               <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse"></span> Cloud Active
             </span>
-            <span id="auth-current-email" class="text-[#f4ede4] font-mono text-[11px] truncate max-w-[150px]"></span>
+            <span id="auth-current-email" class="text-slate-100 font-mono text-[11px] truncate max-w-[150px]"></span>
           </div>
-          <p class="text-[11px] text-[#6b8276] pt-1">Your 12WY plan, daily tasks, and indicators are synced to Supabase.</p>
+          <p class="text-[11px] text-slate-500 pt-1">Your 12WY plan, daily tasks, and indicators are synced to Supabase.</p>
         </div>
 
-        <button type="button" onclick="syncToCloud(true)" class="w-full bg-[#1c2d26] hover:bg-[#253d33] text-teal-300 py-2 rounded-lg text-xs font-semibold transition-colors border border-[#2e473d]">🔄 Force Sync Now</button>
-        <button type="button" onclick="handleLogout()" class="w-full bg-[#241710] hover:bg-[#342217] text-[#ea580c] py-2 rounded-lg text-xs font-semibold transition-colors border border-[#ea580c]/30">Sign Out</button>
+        <button type="button" onclick="syncToCloud(true)" class="w-full bg-slate-800 hover:bg-slate-700 text-emerald-300 py-2 rounded-lg text-xs font-semibold transition-colors border border-slate-700 flex items-center justify-center gap-2"><svg class="w-4 h-4" aria-hidden="true"><use href="#heroicon-arrow-path" /></svg>Force Sync Now</button>
+        <a href="admin.html" target="_blank" rel="noopener noreferrer" class="block text-center text-xs text-blue-400 hover:text-blue-300 transition-colors">Open Analytics Dashboard →</a>
+        <button type="button" onclick="handleLogout()" class="w-full bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 py-2 rounded-lg text-xs font-semibold transition-colors border border-rose-500/30">Sign Out</button>
       </div>
 
       <div id="auth-view-logged-out" class="space-y-4">
@@ -925,28 +995,28 @@
           <input type="password" style="display:none" />
 
           <div>
-            <label class="block text-xs font-semibold text-[#a3b8ad] uppercase tracking-wider mb-1">Email</label>
-            <input id="auth-email" type="email" placeholder="you@domain.com" class="w-full bg-[#0b1210] border border-[#283e35] rounded-lg px-3 py-2 text-sm text-emerald-100 focus:outline-none focus:border-teal-500" />
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Email</label>
+            <input id="auth-email" type="email" placeholder="you@domain.com" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500" />
           </div>
           <div>
-            <label class="block text-xs font-semibold text-[#a3b8ad] uppercase tracking-wider mb-1">Password</label>
-            <input id="auth-password" type="password" placeholder="••••••••" class="w-full bg-[#0b1210] border border-[#283e35] rounded-lg px-3 py-2 text-sm text-emerald-100 focus:outline-none focus:border-teal-500" />
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Password</label>
+            <input id="auth-password" type="password" placeholder="••••••••" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500" />
           </div>
-          <div id="auth-error-msg" class="text-xs text-[#ea580c] hidden"></div>
+          <div id="auth-error-msg" class="text-xs text-rose-400 hidden"></div>
           <div class="grid grid-cols-2 gap-2 pt-1">
-            <button type="button" onclick="handleLogin()" class="w-full bg-[#115e59] hover:bg-[#0f766e] text-white py-2 rounded-lg text-xs font-semibold transition-colors border border-teal-500/30">Sign In</button>
-            <button type="button" onclick="handleSignUp()" class="w-full bg-[#1c2d26] hover:bg-[#253d33] text-teal-300 py-2 rounded-lg text-xs font-semibold transition-colors border border-[#2e473d]">Create Account</button>
+            <button type="button" onclick="handleLogin()" class="w-full bg-blue-500 hover:bg-blue-400 text-slate-950 py-2 rounded-lg text-xs font-semibold transition-colors">Sign In</button>
+            <button type="button" onclick="handleSignUp()" class="w-full bg-slate-800 hover:bg-slate-700 text-emerald-300 py-2 rounded-lg text-xs font-semibold transition-colors border border-slate-700">Create Account</button>
           </div>
         </form>
       </div>
 
       <!-- JSON File Backup in Modal -->
-      <div class="border-t border-[#283e35] pt-3 space-y-2">
-        <div class="text-[11px] text-[#6b8276] uppercase font-semibold">Offline File Backup</div>
+      <div class="border-t border-slate-800 pt-3 space-y-2">
+        <div class="text-[11px] text-slate-500 uppercase font-semibold">Offline File Backup</div>
         <div class="grid grid-cols-2 gap-2">
-          <button onclick="downloadBackupJSON()" class="bg-[#131f1a] hover:bg-[#1c2d26] text-slate-300 py-1.5 rounded-lg text-[11px] transition-colors border border-[#23352e]">📥 Export JSON</button>
-          <label class="bg-[#131f1a] hover:bg-[#1c2d26] text-slate-300 py-1.5 rounded-lg text-[11px] transition-colors border border-[#23352e] text-center cursor-pointer">
-            📤 Import JSON
+          <button onclick="downloadBackupJSON()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 py-1.5 rounded-lg text-[11px] transition-colors border border-slate-700 flex items-center justify-center gap-1"><svg class="w-3.5 h-3.5" aria-hidden="true"><use href="#heroicon-arrow-down-tray" /></svg>Export JSON</button>
+          <label class="bg-slate-800 hover:bg-slate-700 text-slate-300 py-1.5 rounded-lg text-[11px] transition-colors border border-slate-700 text-center cursor-pointer flex items-center justify-center gap-1">
+            <svg class="w-3.5 h-3.5" aria-hidden="true"><use href="#heroicon-arrow-up-tray" /></svg>Import JSON
             <input type="file" id="import-json-file" accept=".json" class="hidden" onchange="importBackupJSON(event)" />
           </label>
         </div>
@@ -1023,6 +1093,7 @@
 
     /* JSON BACKUP */
     function downloadBackupJSON() {
+      trackEvent('json_export_click');
       if (!state) return alert('No active plan data found to export.');
       const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
       const downloadAnchor = document.createElement('a');
@@ -1056,6 +1127,68 @@
 
     /* CLOUD SYNC */
     let cloudSession = JSON.parse(localStorage.getItem(AUTH_SESSION_KEY) || 'null');
+    const ANALYTICS_ANON_ID_KEY = 'twelve_week_year_anon_id_v1';
+    const ANALYTICS_MILESTONES_KEY = 'twelve_week_year_milestones_v1';
+    const ANALYTICS_CONFIG_KEY = 'twelve_week_year_supabase_config_v1';
+    localStorage.setItem(ANALYTICS_CONFIG_KEY, JSON.stringify({ url: SUPABASE_URL, anonKey: SUPABASE_ANON_KEY }));
+    const isLocalPreview = ['file:', 'localhost', '127.0.0.1'].some(value => location.protocol === value || location.hostname === value);
+    const EXCLUDED_ANALYTICS_EMAILS = ['devonoverbey@gmail.com'];
+
+    function getAnalyticsAnonId() {
+      let id = localStorage.getItem(ANALYTICS_ANON_ID_KEY);
+      if (!id) {
+        id = crypto.randomUUID();
+        localStorage.setItem(ANALYTICS_ANON_ID_KEY, id);
+      }
+      return id;
+    }
+
+    function isExcludedAnalyticsUser() {
+      const email = cloudSession?.user?.email?.trim().toLowerCase();
+      return Boolean(email && EXCLUDED_ANALYTICS_EMAILS.includes(email));
+    }
+
+    function trackEvent(event, props = {}) {
+      if (isLocalPreview || isExcludedAnalyticsUser()) return;
+
+      const row = { anon_id: getAnalyticsAnonId(), event, props };
+      fetch(`${SUPABASE_URL}/rest/v1/twelve_week_year_events`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify(row),
+        keepalive: true
+      }).then(response => {
+        if (!response.ok) console.warn(`12WY analytics event "${event}" failed: HTTP ${response.status}`);
+      }).catch(error => {
+        console.warn(`12WY analytics event "${event}" could not be sent:`, error);
+      });
+    }
+
+    function trackMilestoneOnce(event, props = {}, milestoneKey = event) {
+      const milestones = JSON.parse(localStorage.getItem(ANALYTICS_MILESTONES_KEY) || '{}');
+      if (milestones[milestoneKey]) return;
+      milestones[milestoneKey] = true;
+      localStorage.setItem(ANALYTICS_MILESTONES_KEY, JSON.stringify(milestones));
+      trackEvent(event, props);
+    }
+
+    function trackFirstTacticCompletion() {
+      trackMilestoneOnce('first_tactic_completed');
+    }
+
+    function openProModal() {
+      trackEvent('pro_click');
+      document.getElementById('pro-modal').classList.remove('hidden');
+    }
+
+    function closeProModal() {
+      document.getElementById('pro-modal').classList.add('hidden');
+    }
     let cloudHydrationComplete = false;
 
     function toggleAuthModal(show) {
@@ -1409,7 +1542,7 @@
       const filled = Array.from(container.querySelectorAll('input')).filter(i => i.value.trim() !== '').length;
       if (badge) {
         if (filled > 5) {
-          badge.textContent = `⚠️ ${filled} items (Focus dilution risk)`;
+          badge.innerHTML = `<svg class="inline w-3 h-3 mr-0.5" aria-hidden="true"><use href="#heroicon-exclamation-triangle" /></svg>${filled} items (Focus dilution risk)`;
           badge.className = 'text-[10px] text-amber-400 font-mono font-bold';
         } else {
           badge.textContent = `${filled} item${filled === 1 ? '' : 's'} (Rec: 2–5)`;
@@ -1424,16 +1557,17 @@
       div.className = 'flex items-center gap-2';
       div.innerHTML = `
         <input type="text" autocomplete="new-password" data-lpignore="true" value="${escapeHtml(val)}" placeholder="Tactic starting with verb..." class="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none wiz-tactic-inp" oninput="checkTacticsCount('wiz-w1-tactics-container', 'wiz-tactics-counter-badge')" />
-        <button type="button" onclick="this.parentElement.remove(); checkTacticsCount('wiz-w1-tactics-container', 'wiz-tactics-counter-badge');" class="text-slate-600 hover:text-rose-400 px-2 py-1 text-xs">✕</button>
+        <button type="button" onclick="this.parentElement.remove(); checkTacticsCount('wiz-w1-tactics-container', 'wiz-tactics-counter-badge');" aria-label="Remove tactic" class="text-slate-600 hover:text-rose-400 px-2 py-1 text-xs"><svg class="w-4 h-4" aria-hidden="true"><use href="#heroicon-x-mark" /></svg></button>
       `;
       container.appendChild(div);
       checkTacticsCount('wiz-w1-tactics-container', 'wiz-tactics-counter-badge');
     }
 
-    function addIndicatorRow(containerId, type, item = { name: '', target: '', frequency: 'daily' }) {
+    function addIndicatorRow(containerId, type, item = { name: '', target: '', frequency: 'daily' }, isNew = false) {
       const container = document.getElementById(containerId);
       const div = document.createElement('div');
       div.className = 'flex flex-wrap sm:flex-nowrap gap-2 items-center bg-slate-950/60 p-2 rounded-xl border border-slate-800';
+      div.dataset.analyticsNew = String(isNew);
       
       const freqSelect = type === 'lead' ? `
         <select class="w-28 bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-slate-300 focus:border-amber-500 outline-none font-mono ind-freq">
@@ -1448,7 +1582,7 @@
         <input type="text" autocomplete="new-password" data-lpignore="true" value="${escapeHtml(item.name)}" placeholder="Indicator name" class="flex-1 min-w-[140px] bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-slate-200 focus:border-amber-500 outline-none ind-name" />
         <input type="number" placeholder="Target" value="${item.target !== undefined ? item.target : ''}" class="w-20 bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-slate-200 focus:border-amber-500 outline-none font-mono ind-target" />
         ${freqSelect}
-        <button type="button" onclick="this.parentElement.remove()" class="text-slate-600 hover:text-rose-400 px-1 text-xs">✕</button>
+        <button type="button" onclick="this.parentElement.remove()" aria-label="Remove indicator" class="text-slate-600 hover:text-rose-400 px-1 text-xs"><svg class="w-4 h-4" aria-hidden="true"><use href="#heroicon-x-mark" /></svg></button>
       `;
       container.appendChild(div);
     }
@@ -1501,12 +1635,22 @@
     }
 
     function getStarRating(done, total) {
-      if (total === 0) return { stars: '☆☆☆', badge: 'None', color: 'text-slate-500', pct: 0 };
+      if (total === 0) return { starCount: 0, badge: 'None', color: 'text-slate-500', pct: 0 };
       const pct = Math.round((done / total) * 100);
-      if (pct >= 80) return { stars: '★★★', badge: 'Gold (80%+)', color: 'text-amber-400', pct };
-      if (pct >= 60) return { stars: '★★☆', badge: 'Silver (60%)', color: 'text-slate-300', pct };
-      if (pct >= 30) return { stars: '★☆☆', badge: 'Bronze (30%)', color: 'text-amber-600', pct };
-      return { stars: '☆☆☆', badge: 'Started', color: 'text-slate-500', pct };
+      if (pct >= 80) return { starCount: 3, badge: 'Gold (80%+)', color: 'text-amber-400', pct };
+      if (pct >= 60) return { starCount: 2, badge: 'Silver (60%)', color: 'text-slate-300', pct };
+      if (pct >= 30) return { starCount: 1, badge: 'Bronze (30%)', color: 'text-amber-600', pct };
+      return { starCount: 0, badge: 'Started', color: 'text-slate-500', pct };
+    }
+
+    function renderStarIcons(container, rating, sizeClass) {
+      container.innerHTML = Array.from({ length: 3 }, (_, index) => `
+        <svg class="${sizeClass} ${index < rating.starCount ? rating.color : 'text-slate-700'}" aria-hidden="true">
+          <use href="#heroicon-star" />
+        </svg>
+      `).join('');
+      container.className = 'flex items-center gap-0.5';
+      container.setAttribute('aria-label', `${rating.starCount} of 3 stars`);
     }
 
     function getCycleTimeline() {
@@ -1677,7 +1821,7 @@
       document.getElementById('catchup-day-step').textContent = `Day ${catchupIndex + 1} of ${catchupDates.length}`;
       document.getElementById('catchup-title').textContent = isToday ? "What must you execute TODAY?" : `What did you execute on ${d.toLocaleDateString(undefined, { weekday: 'long' })}?`;
 
-      document.getElementById('btn-wiz-next').textContent = (catchupIndex === catchupDates.length - 1) ? "Launch Daily Workspace 🚀" : "Next Day →";
+      document.getElementById('btn-wiz-next').textContent = (catchupIndex === catchupDates.length - 1) ? "Launch Daily Workspace" : "Next Day →";
 
       const existing = state?.days?.[dKey] || { nonneg: [], other: [] };
 
@@ -1729,7 +1873,8 @@
         const deleteBtn = document.createElement('button');
         deleteBtn.type = 'button';
         deleteBtn.className = 'text-slate-600 hover:text-rose-400 px-1 text-xs';
-        deleteBtn.textContent = '✕';
+        deleteBtn.setAttribute('aria-label', 'Remove side quest');
+        deleteBtn.innerHTML = '<svg class="w-4 h-4" aria-hidden="true"><use href="#heroicon-x-mark" /></svg>';
         deleteBtn.onclick = () => div.remove();
         div.appendChild(deleteBtn);
       }
@@ -1773,6 +1918,7 @@
 
     function finishWizard() {
       if (!state) state = {};
+      const isFirstOnboarding = !state.hasCompletedOnboarding;
       state.hasCompletedOnboarding = true;
       state.startDate = document.getElementById('wiz-start-date').value || formatDateKey(getLocalTodayDate());
       state.weekStartDay = parseInt(document.getElementById('wiz-start-day').value, 10);
@@ -1781,6 +1927,12 @@
       state.inaction = document.getElementById('wiz-inaction').value.trim();
       state.leadingIndicators = collectIndicators('wiz-lead-container', 'lead');
       state.laggingIndicators = collectIndicators('wiz-lag-container', 'lag');
+      ['wiz-lead-container', 'wiz-lag-container'].forEach(containerId => {
+        const type = containerId === 'wiz-lead-container' ? 'leading' : 'lagging';
+        Array.from(document.getElementById(containerId).children)
+          .filter(row => row.dataset.analyticsNew === 'true' && row.querySelector('.ind-name')?.value.trim())
+          .forEach(() => trackEvent('indicator_added', { type }));
+      });
       state.week1Goal = document.getElementById('wiz-w1-nonneg').value.trim();
 
       const tacticsInputs = document.querySelectorAll('#wiz-w1-tactics-container .wiz-tactic-inp');
@@ -1792,6 +1944,12 @@
       }));
 
       saveState();
+      if (isFirstOnboarding) {
+        trackMilestoneOnce('onboarding_completed');
+        if (Object.values(state.days || {}).some(day => (day.nonneg || []).some(task => task.done))) {
+          trackFirstTacticCompletion();
+        }
+      }
       activeDateKey = formatDateKey(getLocalTodayDate());
       switchView('daily');
     }
@@ -2032,6 +2190,7 @@
 
     function toggleHourlyPlanner() {
       hourlyPlannerOpen = !hourlyPlannerOpen;
+      if (hourlyPlannerOpen) trackEvent('hourly_planner_opened');
       const planner = document.getElementById('daily-hourly-planner');
       const button = document.getElementById('btn-hourly-planner-tab');
       planner.classList.toggle('hidden', !hourlyPlannerOpen);
@@ -2213,7 +2372,7 @@
               <span class="font-mono text-xs ${colorClass} px-1 cursor-pointer" onclick="editIndicatorValues('${item.id}')">${item.current || 0}</span>
               <button onclick="adjustIndicator('${item.id}', -1)" class="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-white font-bold bg-slate-900 border border-slate-800 rounded text-xs">-</button>
               <button onclick="adjustIndicator('${item.id}', 1)" class="w-6 h-6 flex items-center justify-center text-amber-400 hover:text-amber-300 font-bold bg-slate-900 border border-slate-800 rounded text-xs">+</button>
-              <button onclick="deleteIndicator('${type}', ${idx})" class="text-slate-600 hover:text-rose-400 text-xs ml-1">✕</button>
+              <button onclick="deleteIndicator('${type}', ${idx})" aria-label="Delete indicator" class="text-slate-600 hover:text-rose-400 text-xs ml-1"><svg class="w-4 h-4" aria-hidden="true"><use href="#heroicon-x-mark" /></svg></button>
             </div>
           </div>
         `;
@@ -2364,7 +2523,7 @@
       div.className = 'flex items-center gap-2';
       div.innerHTML = `
         <input type="text" autocomplete="new-password" data-lpignore="true" value="${escapeHtml(val)}" placeholder="Tactic starting with verb..." class="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 focus:border-amber-500 outline-none modal-tactic-inp" oninput="checkTacticsCount('modal-next-week-tactics-container', 'modal-tactics-counter-badge')" />
-        <button type="button" onclick="this.parentElement.remove(); checkTacticsCount('modal-next-week-tactics-container', 'modal-tactics-counter-badge');" class="text-slate-600 hover:text-rose-400 px-2 py-1 text-xs">✕</button>
+        <button type="button" onclick="this.parentElement.remove(); checkTacticsCount('modal-next-week-tactics-container', 'modal-tactics-counter-badge');" aria-label="Remove tactic" class="text-slate-600 hover:text-rose-400 px-2 py-1 text-xs"><svg class="w-4 h-4" aria-hidden="true"><use href="#heroicon-x-mark" /></svg></button>
       `;
       container.appendChild(div);
       checkTacticsCount('modal-next-week-tactics-container', 'modal-tactics-counter-badge');
@@ -2504,7 +2663,8 @@
         removeBtn.type = 'button';
         removeBtn.onclick = () => removeNonNeg(idx);
         removeBtn.className = 'text-slate-600 hover:text-rose-400 px-1 text-xs';
-        removeBtn.textContent = '✕';
+        removeBtn.setAttribute('aria-label', 'Remove task');
+        removeBtn.innerHTML = '<svg class="w-4 h-4" aria-hidden="true"><use href="#heroicon-x-mark" /></svg>';
         div.appendChild(removeBtn);
 
         container.appendChild(div);
@@ -2544,6 +2704,7 @@
 
     function toggleNonNegDone(idx) {
       state.days[activeDateKey].nonneg[idx].done = !state.days[activeDateKey].nonneg[idx].done;
+      if (state.days[activeDateKey].nonneg[idx].done) trackFirstTacticCompletion();
       saveState();
       renderDailyPage();
     }
@@ -2603,7 +2764,8 @@
         removeBtn.type = 'button';
         removeBtn.onclick = () => removeOtherTask(idx);
         removeBtn.className = 'text-slate-600 hover:text-rose-400 px-1 text-xs';
-        removeBtn.textContent = '✕';
+        removeBtn.setAttribute('aria-label', 'Remove side quest');
+        removeBtn.innerHTML = '<svg class="w-4 h-4" aria-hidden="true"><use href="#heroicon-x-mark" /></svg>';
         row.appendChild(removeBtn);
 
         container.appendChild(row);
@@ -2757,8 +2919,7 @@
 
       const starData = getStarRating(otherDone, otherTotal);
       const starDisplay = document.getElementById('daily-stars-display');
-      starDisplay.textContent = starData.stars;
-      starDisplay.className = `text-xl tracking-wider ${starData.color}`;
+      renderStarIcons(starDisplay, starData, 'w-4 h-4');
 
       const starBadge = document.getElementById('daily-stars-badge');
       starBadge.textContent = starData.badge;
@@ -3085,7 +3246,7 @@
       tacticsEl.innerHTML = tactics.map((t, idx) => editingWeeklyTacticId === t.id
         ? `<form onsubmit="saveWeeklyTacticEdit(event, '${t.id}')" class="flex items-center gap-2 p-2 bg-slate-950 border border-amber-500/50 rounded-xl">
             <input id="weekly-tactic-edit-input" type="text" required maxlength="160" value="${escapeHtml(t.title)}" aria-label="Edit weekly tactic" class="min-w-0 flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 outline-none focus:border-amber-500" />
-            <button type="submit" class="bg-amber-500 hover:bg-amber-400 text-black px-2.5 py-1.5 rounded-lg text-xs font-bold">Save</button>
+            <button type="submit" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-2.5 py-1.5 rounded-lg text-xs font-bold">Save</button>
             <button type="button" onclick="cancelWeeklyTacticEdit()" class="text-slate-400 hover:text-white px-1 text-xs">Cancel</button>
           </form>`
         : `<div
@@ -3104,7 +3265,7 @@
               </label>
             </div>
             <button type="button" onclick="editWeeklyTactic('${t.id}')" aria-label="Edit tactic ${escapeHtml(t.title)}" class="text-slate-400 hover:text-amber-300 text-xs px-1">Edit</button>
-            <button type="button" onclick="removeOverviewTactic(${idx})" aria-label="Delete tactic ${escapeHtml(t.title)}" class="text-slate-600 hover:text-rose-400 text-xs px-1">✕</button>
+            <button type="button" onclick="removeOverviewTactic(${idx})" aria-label="Delete tactic ${escapeHtml(t.title)}" class="text-slate-600 hover:text-rose-400 text-xs px-1"><svg class="w-4 h-4" aria-hidden="true"><use href="#heroicon-x-mark" /></svg></button>
           </div>`
       ).join('') || '<div class="text-slate-600 text-xs py-2">No tactics configured.</div>';
     }
@@ -3123,8 +3284,7 @@
 
       const rating = getStarRating(done, total);
       const display = document.getElementById('wk-week-stars-display');
-      display.textContent = rating.stars;
-      display.className = `text-2xl ${rating.color}`;
+      renderStarIcons(display, rating, 'w-5 h-5');
       const badge = document.getElementById('wk-week-stars-badge');
       badge.textContent = rating.badge;
       badge.className = `font-bold text-xs ${rating.color}`;
@@ -3154,7 +3314,7 @@
           <input type="checkbox" ${item.done ? 'checked' : ''} onchange="toggleWeeklySideQuest('${dateKey}', ${index})" class="w-4 h-4 rounded text-purple-500 bg-slate-900 border-slate-700 cursor-pointer" />
           <input type="text" value="${escapeHtml(item.text)}" oninput="editWeeklySideQuest('${dateKey}', ${index}, this.value)" class="bg-transparent flex-1 text-slate-200 outline-none text-xs ${item.done ? 'line-through text-slate-500' : ''}" />
           <span class="text-[9px] text-purple-400 font-mono">${dateLabel}</span>
-          <button onclick="removeWeeklySideQuest('${dateKey}', ${index})" class="text-slate-600 hover:text-rose-400 px-1 text-xs">✕</button>
+          <button onclick="removeWeeklySideQuest('${dateKey}', ${index})" aria-label="Remove side quest" class="text-slate-600 hover:text-rose-400 px-1 text-xs"><svg class="w-4 h-4" aria-hidden="true"><use href="#heroicon-x-mark" /></svg></button>
         </div>`;
       }).join('');
     }
@@ -3269,7 +3429,7 @@
               <span class="font-mono text-xs ${colorClass} px-1 cursor-pointer" onclick="editIndicatorValues('${item.id}')">${item.current || 0}</span>
               <button onclick="adjustIndicator('${item.id}', -1)" class="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-white font-bold bg-slate-900 border border-slate-800 rounded text-xs">-</button>
               <button onclick="adjustIndicator('${item.id}', 1)" class="w-6 h-6 flex items-center justify-center text-amber-400 hover:text-amber-300 font-bold bg-slate-900 border border-slate-800 rounded text-xs">+</button>
-              <button onclick="deleteIndicator('${type}', ${idx})" class="text-slate-600 hover:text-rose-400 text-xs ml-1">✕</button>
+              <button onclick="deleteIndicator('${type}', ${idx})" aria-label="Delete indicator" class="text-slate-600 hover:text-rose-400 text-xs ml-1"><svg class="w-4 h-4" aria-hidden="true"><use href="#heroicon-x-mark" /></svg></button>
             </div>
           </div>
         `;
@@ -3349,6 +3509,7 @@
         if (!state.laggingIndicators) state.laggingIndicators = [];
         state.laggingIndicators.push(newInd);
       }
+      trackEvent('indicator_added', { type: type === 'leading' || type === 'lead' ? 'leading' : 'lagging' });
       saveState();
       renderOverviewPage();
     }
@@ -3376,6 +3537,7 @@
       const targetTactic = currentTactics[idx];
       if (targetTactic) {
         targetTactic.done = !targetTactic.done;
+        if (targetTactic.done) trackFirstTacticCompletion();
         saveState();
         renderWeekPage();
       }
@@ -3525,7 +3687,7 @@
 
       if (isMorningBrief) {
         if (totalNN === 0 || doneNN === 0) {
-          sendNotification("🎯 Morning Tactical Brief", "Lock in your 2–5 daily non-negotiables before the day pulls you into reactive mode.");
+          sendNotification("Morning Tactical Brief", "Lock in your 2–5 daily non-negotiables before the day pulls you into reactive mode.");
           lastNotifiedHour = currentTriggerKey;
         }
       }
@@ -3533,7 +3695,7 @@
       if (isEveningPacing) {
         if (mainPct < 85 && totalNN > 0) {
           const remaining = totalNN - doneNN;
-          sendNotification(`⚡ Action Required: Main Quest at ${mainPct}%`, `Complete ${remaining} more non-negotiable${remaining === 1 ? '' : 's'} to hit your 85% standard tonight.`);
+          sendNotification(`Action Required: Main Quest at ${mainPct}%`, `Complete ${remaining} more non-negotiable${remaining === 1 ? '' : 's'} to hit your 85% standard tonight.`);
           lastNotifiedHour = currentTriggerKey;
         } else if (mainPct >= 85) {
           const other = todayData.other || [];
@@ -3542,10 +3704,10 @@
           if (totalOther > 0) {
             const sqPct = Math.round((doneOther / totalOther) * 100);
             if (sqPct >= 30 && sqPct < 60) {
-              sendNotification("⭐ Side Quest Progress", "You're close to a ★★ Silver Star tonight! Complete your secondary tasks to level up.");
+              sendNotification("Side Quest Progress", "You're close to Silver status tonight! Complete your secondary tasks to level up.");
               lastNotifiedHour = currentTriggerKey;
             } else if (sqPct >= 60 && sqPct < 80) {
-              sendNotification("🌟 Gold Star Within Reach!", "Knock out your remaining side quests tonight to claim ★★★ Gold!");
+              sendNotification("Gold Star Within Reach!", "Knock out your remaining side quests tonight to claim Gold status!");
               lastNotifiedHour = currentTriggerKey;
             }
           }
@@ -3553,7 +3715,7 @@
       }
 
       if (isWeeklyReview) {
-        sendNotification("📊 Weekly Tactical Review", "Review your execution, capture what you learned, and set up for the week ahead.");
+        sendNotification("Weekly Tactical Review", "Review your execution, capture what you learned, and set up for the week ahead.");
         lastNotifiedHour = currentTriggerKey;
       }
     }
@@ -3842,6 +4004,13 @@
     function finishWeeklyReview() {
       if (selectedReviewWeek !== null && selectedReviewWeek <= getLatestReviewableWeek()) {
         const values = getReviewFormValues();
+        if (['proud', 'challenges', 'learn', 'friend'].every(field => values[field].trim())) {
+          trackMilestoneOnce(
+            'weekly_review_submitted',
+            { week: selectedReviewWeek },
+            `weekly_review_submitted_${state.startDate}_${selectedReviewWeek}`
+          );
+        }
         clearTimeout(reviewDraftSaveTimeout);
         persistReviewValues(selectedReviewWeek, values);
         renderReviewHistory(getLatestReviewableWeek());
@@ -3864,7 +4033,7 @@
         const tab = document.getElementById(`tab-${v}`);
         if (tab) {
           if (v === viewName) {
-            tab.className = 'px-3 py-1 rounded-lg font-semibold transition-colors bg-amber-500 text-black';
+            tab.className = 'px-3 py-1 rounded-lg font-semibold transition-colors bg-emerald-500 text-slate-950';
           } else {
             tab.className = 'px-3 py-1 rounded-lg font-semibold text-slate-400 hover:text-white transition-colors';
           }
@@ -3910,11 +4079,35 @@
       if (!state || !state.hasCompletedOnboarding) {
         if (!state) state = { hasCompletedOnboarding: false };
         wizStep = 1;
+        trackMilestoneOnce('onboarding_started');
         switchView('guide');
       } else {
         switchView('daily');
       }
     }
+
+    function closeAllModals() {
+      const authModal = document.getElementById('auth-modal');
+      if (authModal && !authModal.classList.contains('hidden')) toggleAuthModal(false);
+
+      const proModal = document.getElementById('pro-modal');
+      if (proModal && !proModal.classList.contains('hidden')) closeProModal();
+
+      const settingsModal = document.getElementById('settings-modal');
+      if (settingsModal && !settingsModal.classList.contains('hidden')) toggleSettingsModal(false);
+
+      const reviewModal = document.getElementById('weekly-review-modal');
+      if (reviewModal && !reviewModal.classList.contains('hidden')) dismissWeeklyReviewPrompt();
+
+      const nextWeekModal = document.getElementById('next-week-modal');
+      if (nextWeekModal && !nextWeekModal.classList.contains('hidden') && !mandatoryPlanningGate) closeNextWeekPlanningModal(false);
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeAllModals();
+      }
+    });
 
     initializeApp();
   </script>

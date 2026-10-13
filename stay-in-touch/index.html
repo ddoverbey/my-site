@@ -638,6 +638,13 @@
         >
           Sign Out
         </button>
+
+        <a 
+          href="admin.html" 
+          class="block text-center text-xs text-[#8da498] hover:text-emerald-400 py-1 transition-colors"
+        >
+          View Analytics Dashboard →
+        </a>
       </div>
 
       <!-- Logged-Out View -->
@@ -2023,6 +2030,12 @@
     const ANON_ID_KEY = 'cultivate_anon_id_v1';
     const MILESTONES_KEY = 'cultivate_milestones_v1';
     const isLocalPreview = ['file:', 'localhost', '127.0.0.1'].some(v => location.protocol === v || location.hostname === v);
+    const EXCLUDED_EMAILS = ['devonoverbey@gmail.com'];
+
+    function isExcludedUser() {
+      const email = cloudSession?.user?.email?.trim().toLowerCase();
+      return Boolean(email && EXCLUDED_EMAILS.includes(email));
+    }
 
     function getAnonId() {
       let id = localStorage.getItem(ANON_ID_KEY);
@@ -2050,6 +2063,7 @@
     // Events carry only an anonymous random id and the event name; never contact data.
     function trackEvent(event, props = {}) {
       if (isLocalPreview) return;
+      if (isExcludedUser()) return;
       supabaseInsert('cultivate_events', { anon_id: getAnonId(), event, props }).catch(() => {});
     }
 
