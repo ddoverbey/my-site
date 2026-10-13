@@ -50,3 +50,12 @@ create policy "admin can view cultivate waitlist"
   for select
   to authenticated
   using ((auth.jwt() ->> 'email') = 'devonoverbey@gmail.com');
+
+-- 12-Week Year events: same admin-only read access.
+drop policy if exists "authenticated can view 12wy events" on public.twelve_week_year_events;
+drop policy if exists "admin can view 12wy events" on public.twelve_week_year_events;
+create policy "admin can view 12wy events"
+  on public.twelve_week_year_events
+  for select
+  to authenticated
+  using ((auth.jwt() ->> 'email') = 'devonoverbey@gmail.com');

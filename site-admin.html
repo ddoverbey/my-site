@@ -12,8 +12,8 @@
   <main class="mx-auto max-w-6xl space-y-6">
     <header class="flex flex-col gap-4 border-b border-slate-800 pb-5 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <h1 class="bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-2xl font-extrabold tracking-tight text-transparent">Homepage Analytics</h1>
-        <p class="mt-1 text-sm font-light text-slate-400">Anonymous visits and link clicks on devonoverbey.com</p>
+        <h1 class="bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-2xl font-extrabold tracking-tight text-transparent">Site Analytics</h1>
+        <p class="mt-1 text-sm font-light text-slate-400">Homepage visits and link clicks, plus Cultivate and 12-Week Year events</p>
       </div>
       <div class="flex flex-wrap items-center gap-3">
         <span class="flex items-center gap-2 text-xs text-slate-400"><span id="auth-indicator" class="h-2 w-2 rounded-full bg-slate-600"></span><span id="auth-email">Checking session…</span></span>
@@ -77,6 +77,24 @@
           </table>
         </div>
       </div>
+
+      <div class="space-y-4 border-t border-slate-800 pt-6">
+        <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-500">App analytics</h2>
+        <details id="app-cultivate" data-app="cultivate" class="group rounded-xl border border-slate-800 bg-slate-900/50">
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-3 p-5 [&::-webkit-details-marker]:hidden">
+            <span class="flex items-center gap-2 text-sm font-semibold text-slate-200"><span class="text-slate-500 transition-transform group-open:rotate-90">▶</span>Cultivate</span>
+            <span id="cultivate-summary" class="text-[11px] text-slate-500">Loading…</span>
+          </summary>
+          <div id="cultivate-body" class="space-y-6 border-t border-slate-800 p-5"></div>
+        </details>
+        <details id="app-twelveWeek" data-app="twelveWeek" class="group rounded-xl border border-slate-800 bg-slate-900/50">
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-3 p-5 [&::-webkit-details-marker]:hidden">
+            <span class="flex items-center gap-2 text-sm font-semibold text-slate-200"><span class="text-slate-500 transition-transform group-open:rotate-90">▶</span>12-Week Year</span>
+            <span id="twelveWeek-summary" class="text-[11px] text-slate-500">Loading…</span>
+          </summary>
+          <div id="twelveWeek-body" class="space-y-6 border-t border-slate-800 p-5"></div>
+        </details>
+      </div>
     </section>
   </main>
 
@@ -104,6 +122,8 @@
 
     let cloudSession = loadSession();
     let allEvents = [];
+    const appData = {};
+    const appCharts = {};
     let dailyChart = null;
     let linksChart = null;
 
@@ -212,8 +232,8 @@
       return true;
     }
 
-    async function fetchPage(offset, retried = false) {
-      const response = await fetch(`${SUPABASE_URL}/rest/v1/site_events?select=anon_id,event,props,created_at&order=created_at.desc`, {
+    async function fetchPage(table, select, offset, retried = false) {
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=${select}&order=created_at.desc`, {
         headers: {
           apikey: SUPABASE_ANON_KEY,
           Authorization: `Bearer ${cloudSession.access_token}`,
@@ -221,7 +241,7 @@
         }
       });
       if ((response.status === 401 || response.status === 403) && !retried && await refreshCloudSession()) {
-        return fetchPage(offset, true);
+        return fetchPage(table, select, offset, true);
       }
       if (!response.ok) {
         const detail = await response.json().catch(() => ({}));
@@ -229,6 +249,16 @@
         throw new Error(detail.message || `HTTP ${response.status}`);
       }
       return response.json();
+    }
+
+    async function fetchTable(table, select = 'anon_id,event,props,created_at') {
+      const rows = [];
+      for (let offset = 0; offset < MAX_ROWS; offset += PAGE_SIZE) {
+        const page = await fetchPage(table, select, offset);
+        rows.push(...page);
+        if (page.length < PAGE_SIZE) break;
+      }
+      return rows;
     }
 
     async function fetchDashboardData() {
@@ -239,20 +269,32 @@
         return toggleLoginModal(true);
       }
       setStatus('Loading…', 'warning');
-      try {
-        const rows = [];
-        for (let offset = 0; offset < MAX_ROWS; offset += PAGE_SIZE) {
-          const page = await fetchPage(offset);
-          rows.push(...page);
-          if (page.length < PAGE_SIZE) break;
-        }
-        allEvents = rows;
-        setStatus(rows.length ? '' : 'No events yet. Run site-analytics.sql in Supabase, then visit the homepage from a browser where you are not signed in.', 'warning');
-        document.getElementById('dashboard').classList.remove('hidden');
-        renderDashboard();
-      } catch (err) {
-        setStatus(`Could not load analytics: ${err.message}`);
+      Object.keys(APPS).forEach(key => { document.getElementById(`${key}-summary`).textContent = 'Loading…'; });
+      const [site, ...apps] = await Promise.allSettled([
+        fetchTable('site_events'),
+        ...Object.entries(APPS).map(async ([key, app]) => ({
+          key,
+          events: await fetchTable(app.table),
+          extra: app.extraTable ? await fetchTable(app.extraTable.name, app.extraTable.select) : []
+        }))
+      ]);
+
+      Object.keys(APPS).forEach((key, i) => {
+        const result = apps[i];
+        appData[key] = result.status === 'fulfilled'
+          ? { events: result.value.events, extra: result.value.extra, error: null }
+          : { events: [], extra: [], error: result.reason?.message || 'Unknown error' };
+      });
+
+      if (site.status === 'rejected') {
+        allEvents = [];
+        setStatus(`Could not load homepage analytics: ${site.reason?.message}`);
+      } else {
+        allEvents = site.value;
+        setStatus(allEvents.length ? '' : 'No homepage events yet. Run site-analytics.sql in Supabase, then visit the homepage from a browser where you are not signed in.', 'warning');
       }
+      document.getElementById('dashboard').classList.remove('hidden');
+      renderDashboard();
     }
 
     function percent(numerator, denominator) {
@@ -284,6 +326,7 @@
       renderLinksChart(links);
       renderReferrers(visits);
       renderRecent(events);
+      Object.keys(APPS).forEach(renderApp);
     }
 
     function renderDailyChart(visits, clicks, days) {
@@ -364,6 +407,156 @@
         </tr>`;
       }).join('') || '<tr><td colspan="4" class="py-3 text-slate-500">No events in this range.</td></tr>';
     }
+
+    const APPS = {
+      cultivate: {
+        table: 'cultivate_events',
+        extraTable: { name: 'cultivate_waitlist', select: 'email,source,created_at' },
+        kpis: [
+          { label: 'Unique visitors', color: 'text-teal-300' },
+          { label: 'Pro clicks', event: 'pro_click', of: null, color: 'text-amber-300' },
+          { label: 'Waitlist signups', event: 'waitlist_submitted', of: 'pro_click', color: 'text-emerald-300', useExtraCount: true },
+          { label: 'First seed planted', event: 'first_seed_planted', of: null, color: 'text-lime-300' },
+          { label: 'First plant watered', event: 'first_plant_watered', of: 'first_seed_planted', color: 'text-sky-300' }
+        ],
+        funnelTitle: 'Pro waitlist funnel',
+        funnel: [['Visitors', null, 'bg-teal-400'], ['Pro click', 'pro_click', 'bg-amber-400'], ['Waitlist submitted', 'waitlist_submitted', 'bg-emerald-400']]
+      },
+      twelveWeek: {
+        table: 'twelve_week_year_events',
+        kpis: [
+          { label: 'Unique visitors', color: 'text-blue-300' },
+          { label: 'Onboarding started', event: 'onboarding_started', of: null, color: 'text-slate-100' },
+          { label: 'Onboarding completed', event: 'onboarding_completed', of: 'onboarding_started', color: 'text-emerald-300' },
+          { label: 'First tactic completed', event: 'first_tactic_completed', of: 'onboarding_completed', color: 'text-purple-300' },
+          { label: 'Pro interest', event: 'pro_click', of: null, color: 'text-amber-300' }
+        ],
+        funnelTitle: 'Onboarding & activation funnel',
+        funnel: [['Visitors', null, 'bg-blue-400'], ['Onboarding started', 'onboarding_started', 'bg-slate-400'], ['Onboarding completed', 'onboarding_completed', 'bg-emerald-400'], ['First tactic completed', 'first_tactic_completed', 'bg-purple-400']]
+      }
+    };
+
+    function getCutoff() {
+      const days = Number(document.getElementById('range-select').value);
+      return days ? Date.now() - days * 864e5 : 0;
+    }
+
+    function formatTime(value) {
+      return new Date(value).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+
+    function renderApp(key) {
+      const app = APPS[key];
+      const data = appData[key];
+      if (!data) return;
+      const summary = document.getElementById(`${key}-summary`);
+      const body = document.getElementById(`${key}-body`);
+
+      if (data.error) {
+        summary.innerHTML = '<span class="text-rose-300">Failed to load</span>';
+        body.innerHTML = `<p class="rounded-lg border border-rose-800 bg-rose-950/50 p-3 text-xs text-rose-200">Could not load <code>${escapeHtml(app.table)}</code>: ${escapeHtml(data.error)}. Make sure the admin read policy from site-analytics.sql has been applied.</p>`;
+        return;
+      }
+
+      const cutoff = getCutoff();
+      const events = data.events.filter(e => new Date(e.created_at).getTime() >= cutoff);
+      const extra = data.extra.filter(e => new Date(e.created_at).getTime() >= cutoff);
+      const visitors = new Set(events.map(e => e.anon_id));
+      const usersBy = {};
+      const counts = {};
+      events.forEach(e => {
+        counts[e.event] = (counts[e.event] || 0) + 1;
+        (usersBy[e.event] ||= new Set()).add(e.anon_id);
+      });
+      const uniq = event => event ? (usersBy[event]?.size || 0) : visitors.size;
+
+      summary.textContent = `${visitors.size} visitors · ${events.length} events`;
+      if (!document.getElementById(`app-${key}`).open) return;
+
+      const kpiHtml = app.kpis.map(k => {
+        const value = k.useExtraCount ? Math.max(extra.length, uniq(k.event)) : uniq(k.event);
+        const sub = k.event
+          ? `${percent(uniq(k.event), uniq(k.of))} of ${k.of ? k.of.replace(/_/g, ' ') : 'visitors'}`
+          : 'Anonymous browser IDs';
+        return `<div class="rounded-xl border border-slate-800 bg-slate-950/40 p-4">
+          <p class="text-[11px] uppercase tracking-wider text-slate-500">${escapeHtml(k.label)}</p>
+          <p class="mt-1 text-2xl font-bold ${k.color}">${value}</p>
+          <p class="mt-1 text-[10px] text-slate-500">${escapeHtml(sub)}</p>
+        </div>`;
+      }).join('');
+
+      const funnelHtml = app.funnel.map(([label, event, color]) => {
+        const n = uniq(event);
+        const pct = visitors.size ? Math.min(100, n / visitors.size * 100) : 0;
+        return `<div>
+          <div class="mb-1 flex justify-between text-xs"><span>${escapeHtml(label)}</span><span class="font-mono text-slate-300">${n} (${pct.toFixed(1)}%)</span></div>
+          <div class="h-2 overflow-hidden rounded-full bg-slate-950"><div class="h-full ${color} transition-all" style="width:${pct}%"></div></div>
+        </div>`;
+      }).join('');
+
+      const waitlistHtml = app.extraTable ? `
+        <div class="rounded-xl border border-slate-800 bg-slate-950/40 p-5">
+          <div class="mb-3 flex items-center justify-between"><h3 class="text-sm font-semibold text-slate-200">Waitlist submissions</h3><span class="rounded bg-slate-800 px-2 py-0.5 text-[10px] text-slate-400">${extra.length} entries</span></div>
+          <div class="max-h-72 overflow-y-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="sticky top-0 bg-slate-900 text-slate-500"><tr><th class="py-2 pr-3">Email</th><th class="py-2 pr-3">Source</th><th class="py-2">When</th></tr></thead>
+              <tbody class="divide-y divide-slate-800">${extra.map(r => `<tr>
+                <td class="py-2 pr-3 text-slate-200">${escapeHtml(r.email)}</td>
+                <td class="py-2 pr-3 text-teal-300">${escapeHtml(r.source || 'pro')}</td>
+                <td class="whitespace-nowrap py-2 text-slate-400">${escapeHtml(formatTime(r.created_at))}</td>
+              </tr>`).join('') || '<tr><td colspan="3" class="py-3 text-slate-500">No submissions in this range.</td></tr>'}</tbody>
+            </table>
+          </div>
+        </div>` : '';
+
+      const recentHtml = events.slice(0, 200).map(e => {
+        const details = Object.entries(e.props || {}).map(([k, v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`).join(', ');
+        return `<tr>
+          <td class="whitespace-nowrap py-2 pr-3 text-slate-400">${escapeHtml(formatTime(e.created_at))}</td>
+          <td class="py-2 pr-3 text-emerald-300">${escapeHtml(e.event)}</td>
+          <td class="py-2 pr-3 text-slate-300">${escapeHtml(details)}</td>
+          <td class="py-2 font-mono text-[10px] text-slate-500">${escapeHtml((e.anon_id || '').slice(0, 8))}</td>
+        </tr>`;
+      }).join('') || '<tr><td colspan="4" class="py-3 text-slate-500">No events in this range.</td></tr>';
+
+      body.innerHTML = `
+        <div class="grid grid-cols-2 gap-4 md:grid-cols-5">${kpiHtml}</div>
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <div class="rounded-xl border border-slate-800 bg-slate-950/40 p-5">
+            <h3 class="mb-4 text-sm font-semibold text-slate-200">${escapeHtml(app.funnelTitle)}</h3>
+            <div class="space-y-4">${funnelHtml}</div>
+          </div>
+          <div class="rounded-xl border border-slate-800 bg-slate-950/40 p-5">
+            <h3 class="mb-3 text-sm font-semibold text-slate-200">Event volume</h3>
+            <div class="h-64"><canvas id="${key}-chart"></canvas></div>
+          </div>
+        </div>
+        ${waitlistHtml}
+        <div class="rounded-xl border border-slate-800 bg-slate-950/40 p-5">
+          <h3 class="mb-3 text-sm font-semibold text-slate-200">Recent events</h3>
+          <div class="max-h-96 overflow-y-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="sticky top-0 bg-slate-900 text-slate-500"><tr><th class="py-2 pr-3">When</th><th class="py-2 pr-3">Event</th><th class="py-2 pr-3">Details</th><th class="py-2">Visitor</th></tr></thead>
+              <tbody class="divide-y divide-slate-800">${recentHtml}</tbody>
+            </table>
+          </div>
+        </div>`;
+
+      const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+      appCharts[key]?.destroy();
+      appCharts[key] = new Chart(document.getElementById(`${key}-chart`), {
+        type: 'bar',
+        data: {
+          labels: sorted.map(([event]) => event),
+          datasets: [{ label: 'Events', data: sorted.map(([, n]) => n), backgroundColor: 'rgba(52, 211, 153, 0.65)', borderRadius: 4 }]
+        },
+        options: { ...chartOptions(), indexAxis: 'y', plugins: { legend: { display: false } } }
+      });
+    }
+
+    document.querySelectorAll('details[data-app]').forEach(el => {
+      el.addEventListener('toggle', () => { if (el.open) renderApp(el.dataset.app); });
+    });
 
     function chartOptions() {
       return {

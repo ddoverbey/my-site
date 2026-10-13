@@ -20,8 +20,9 @@ create policy "anon can log 12wy events"
   with check (true);
 
 drop policy if exists "authenticated can view 12wy events" on public.twelve_week_year_events;
-create policy "authenticated can view 12wy events"
+drop policy if exists "admin can view 12wy events" on public.twelve_week_year_events;
+create policy "admin can view 12wy events"
   on public.twelve_week_year_events
   for select
   to authenticated
-  using (true);
+  using ((auth.jwt() ->> 'email') = 'devonoverbey@gmail.com');
