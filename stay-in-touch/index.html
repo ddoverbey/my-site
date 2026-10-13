@@ -831,7 +831,48 @@
     const GOOD_ABOVE = 50;
     const DORMANT_AT_OR_BELOW = 15;
 
-    function getPlantStage(health, tier = 'inner') {
+    const PLANT_TIER_VARIANTS = {
+      inner: [
+        { name: 'deadtree', files: { spring: 'deadtree_spring.png', summer: 'deadtree_summer.png', autumn: 'deadtree_autumn.png', winter: 'deadtree_winter.png' } }
+      ],
+      close: [
+        { name: 'birch', files: { spring: 'birch_spring.png', summer: 'birch_summer.png', autumn: 'birch_autumn_2.png', winter: 'birch_winter_1.png' } },
+        { name: 'willow', files: { spring: 'willow_spring.png', summer: 'willow_summer.png', autumn: 'willow_autumn.png', winter: 'willow_winter.png' } }
+      ],
+      wider: [
+        { name: 'bush', files: { spring: 'bush_spring.png', summer: 'bush_summer.png', autumn: 'bush_autumn.png', winter: 'bush_winter.png' } }
+      ],
+      extended: [
+        { name: 'sunflower', files: { spring: 'sunflower_spring.png', summer: 'sunflower_summer.png', autumn: 'sunflower_autum.png', winter: 'sunflower_winter.png' } },
+        { name: 'tulips', files: { spring: 'tulips_spring.png', summer: 'tulips_summer.png', autumn: 'tulips_autumn.png', winter: 'tulips_winter.png' } }
+      ],
+      annual: [
+        { name: 'succulent', files: { spring: 'Succulent_spring.png', summer: 'Succulent_summer.png', autumn: 'Succulent_autumn.png', winter: 'Succulent_winter.png' } },
+        { name: 'cactus', files: { spring: 'cactus_spring.png', summer: 'Cactus_Summer.png', autumn: 'Cactus_Autumn.png', winter: 'cactus_winter.png' } }
+      ]
+    };
+
+    function getPlantVariant(friendOrSeed, tier) {
+      const variants = PLANT_TIER_VARIANTS[tier] || PLANT_TIER_VARIANTS.close;
+      if (!variants || variants.length <= 1) return variants[0];
+      if (!friendOrSeed) return variants[0];
+      if (typeof friendOrSeed === 'object' && friendOrSeed.plant_variant) {
+        const found = variants.find(v => v.name === friendOrSeed.plant_variant);
+        if (found) return found;
+      }
+      const seed = typeof friendOrSeed === 'string'
+        ? friendOrSeed
+        : (friendOrSeed.avatar_seed || friendOrSeed.id || friendOrSeed.name || '');
+      let hash = 0;
+      for (let i = 0; i < seed.length; i++) {
+        hash = ((hash << 5) - hash) + seed.charCodeAt(i);
+        hash |= 0;
+      }
+      const index = Math.abs(hash) % variants.length;
+      return variants[index];
+    }
+
+    function getPlantStage(health, tier = 'inner', friendOrSeed = null) {
       let season;
       let label;
       let color;
@@ -853,15 +894,8 @@
         color = 'text-[#6b8276]';
       }
 
-      const plantFiles = {
-        inner: { spring: 'willow_spring.png', summer: 'willow_summer.png', autumn: 'willow_autumn.png', winter: 'willow_winter.png' },
-        close: { spring: 'deadtree_spring.png', summer: 'deadtree_summer.png', autumn: 'deadtree_autumn.png', winter: 'deadtree_winter.png' },
-        wider: { spring: 'bush_spring.png', summer: 'bush_summer.png', autumn: 'bush_autumn.png', winter: 'bush_winter.png' },
-        extended: { spring: 'sunflower_spring.png', summer: 'sunflower_summer.png', autumn: 'sunflower_autum.png', winter: 'sunflower_winter.png' },
-        annual: { spring: 'Succulent_spring.png', summer: 'Succulent_summer.png', autumn: 'Succulent_autumn.png', winter: 'Succulent_winter.png' }
-      };
-      const files = plantFiles[tier] || plantFiles.close;
-      return { icon: `assets/${files[season]}`, label, color, season };
+      const variant = getPlantVariant(friendOrSeed, tier);
+      return { icon: `assets/${variant.files[season]}`, label, color, season, plantType: variant.name };
     }
 
     function getDefaultExamples() {
@@ -1398,7 +1432,7 @@
       alert.classList.toggle('hidden', !reminder || waterAlertKey(reminder) === dismissedWaterAlertKey);
       if (reminder) {
         const prefix = reminder.count > 1 ? `${reminder.count} plants could use water. ` : 'Ready to water. ';
-        text.textContent = `${prefix}${reminder.friend.name} is at ${reminder.health}% ${getPlantStage(reminder.health, reminder.friend.tier).label}.`;
+        text.textContent = `${prefix}${reminder.friend.name} is at ${reminder.health}% ${getPlantStage(reminder.health, reminder.friend.tier, reminder.friend).label}.`;
       }
     }
 
@@ -1434,8 +1468,19 @@
       updateGardenWaterReminder();
 
       const plants = shown.map(({ friend, health }, index) => {
-        const stage = getPlantStage(health, friend.tier);
-        const plantSize = friend.tier === 'annual' ? 'w-10 h-10' : 'w-full h-full';
+        const stage = getPlantStage(health, friend.tier, friend);
+        let plantSize = 'w-full h-full';
+        if (friend.tier === 'inner') {
+          plantSize = 'w-[116px] h-[116px] max-w-none';
+        } else if (friend.tier === 'close') {
+          plantSize = 'w-20 h-20';
+        } else if (friend.tier === 'wider') {
+          plantSize = 'w-22 h-22';
+        } else if (friend.tier === 'extended') {
+          plantSize = 'w-20 h-20';
+        } else if (friend.tier === 'annual') {
+          plantSize = 'w-10 h-10';
+        }
         const bubble = selectedGardenId === friend.id ? `
           <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 z-30 w-40 bg-[#0b1210] border border-[#2e473d] rounded-xl px-3 py-2 text-center shadow-xl">
             <div class="text-xs font-semibold text-[#f4ede4] truncate">${escapeHtml(friend.name)}</div>
@@ -1786,7 +1831,7 @@
 
       container.innerHTML = sorted.map(friend => {
         const { health, daysSince } = calculateHealth(friend);
-        const plant = getPlantStage(health, friend.tier);
+        const plant = getPlantStage(health, friend.tier, friend);
         const barColor = getBatteryColor(health);
         const isExpanded = expandedCards.has(friend.id);
         const isHighlighted = highlightedId === friend.id;
@@ -2735,8 +2780,8 @@
       if (thirsty.length > 0) {
         const person = thirsty[0];
         new Notification('Cultivate • Gentle Reminder', {
-          body: `${person.name} could use some love! Their plant has reached the ${getPlantStage(calculateHealth(person).health, person.tier).label} stage.`,
-          icon: getPlantStage(calculateHealth(person).health, person.tier).icon
+          body: `${person.name} could use some love! Their plant has reached the ${getPlantStage(calculateHealth(person).health, person.tier, person).label} stage.`,
+          icon: getPlantStage(calculateHealth(person).health, person.tier, person).icon
         });
       } else if (isTest) {
         new Notification('Cultivate • All Connections Blooming', {
