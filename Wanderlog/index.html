@@ -234,8 +234,8 @@
             <span class="font-bold text-amber-300 font-mono text-sm" id="hudClearedPct">0.8%</span>
           </div>
           <div class="bg-slate-900/70 p-2 rounded-xl border border-slate-800">
-            <span class="text-[10px] text-slate-400 block uppercase">Parks Visited</span>
-            <span class="font-bold text-emerald-400 font-mono text-sm" id="hudParksCount">0 / 63</span>
+            <span class="text-[10px] text-slate-400 block uppercase">NPS Units Visited</span>
+            <span class="font-bold text-emerald-400 font-mono text-sm" id="hudParksCount">0 / --</span>
           </div>
           <div class="bg-slate-900/70 p-2 rounded-xl border border-slate-800">
             <span class="text-[10px] text-slate-400 block uppercase">Biomes Found</span>
@@ -353,9 +353,9 @@
             <span class="text-[10px] text-slate-500">of 50</span>
           </div>
           <div class="rpg-panel p-4 rounded-2xl text-center">
-            <span class="text-[10px] uppercase text-slate-400 font-mono">US Nat. Parks</span>
+            <span class="text-[10px] uppercase text-slate-400 font-mono">NPS Units</span>
             <div class="text-2xl font-bold font-mono text-amber-300 mt-1" id="statUsParks">0</div>
-            <span class="text-[10px] text-slate-500">of 63</span>
+            <span class="text-[10px] text-slate-500" id="statNpsTotal">Catalog loading</span>
           </div>
           <div class="rpg-panel p-4 rounded-2xl text-center">
             <span class="text-[10px] uppercase text-slate-400 font-mono">Global Parks</span>
@@ -419,10 +419,10 @@
         <div class="rpg-panel p-6 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h2 class="cinzel text-xl font-bold text-amber-200">Traditional Travel Wishlist & Ledger</h2>
-            <p class="text-xs text-slate-400">Manage all National Parks, locations, and status marks seamlessly</p>
+            <p class="text-xs text-slate-400">Explore NPS parks, monuments, seashores, historic sites, and international destinations</p>
           </div>
           <div class="flex flex-wrap items-center gap-3">
-            <input type="text" id="bucketSearch" placeholder="Search park, state, biome..." class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-400 w-56">
+            <input type="text" id="bucketSearch" placeholder="Search name, state, designation..." class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-400 w-56">
             <select id="bucketFilterStatus" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none">
               <option value="all">All Items</option>
               <option value="v">Visited Only</option>
@@ -495,6 +495,11 @@
     </div>
   </div>
 
+  <div class="fixed bottom-3 left-3 z-[900] rpg-panel rounded-xl px-3 py-2 text-xs text-slate-300 max-w-sm" role="status" aria-live="polite">
+    <span id="npsCatalogStatus">Loading official NPS catalog...</span>
+    <button id="btnRetryNps" class="hidden ml-2 text-amber-300 underline" type="button">Retry</button>
+  </div>
+  <script src="./nps-catalog.js"></script>
   <script>
     /* Biomes Definition with rarity tiers and colors */
     const BIOMES = {
@@ -515,73 +520,8 @@
       tu: { name: 'Arctic Tundra', rarity: 'rare', color: '#c084fc', icon: '❄️', xp: 80 }
     };
 
-    /* Comprehensive 63 US National Parks + 12 International Icons */
-    const PARKS = [
-      { id: 'acadia', name: 'Acadia', lat: 44.35, lng: -68.21, state: 'Maine', biomes: ['fo','co'], desc: 'Rugged granite coast and Atlantic surf' },
-      { id: 'samoa', name: 'National Park of American Samoa', lat: -14.25, lng: -170.68, state: 'American Samoa', biomes: ['tr','is','co'], desc: 'Coral reefs and paleotropical rainforests' },
-      { id: 'arches', name: 'Arches', lat: 38.73, lng: -109.59, state: 'Utah', biomes: ['de'], desc: 'Over 2,000 natural sandstone arches' },
-      { id: 'badlands', name: 'Badlands', lat: 43.75, lng: -102.5, state: 'South Dakota', biomes: ['gr'], desc: 'Dramatic layered rock formations and fossil beds' },
-      { id: 'bigbend', name: 'Big Bend', lat: 29.25, lng: -103.25, state: 'Texas', biomes: ['de'], desc: 'Rio Grande canyons and Chihuahuan desert expanses' },
-      { id: 'biscayne', name: 'Biscayne', lat: 25.65, lng: -80.08, state: 'Florida', biomes: ['co','is'], desc: 'Subaquatic coral wonderland and mangrove waters' },
-      { id: 'blackcanyon', name: 'Black Canyon of the Gunnison', lat: 38.57, lng: -107.72, state: 'Colorado', biomes: ['al'], desc: 'Precambrian gorges plunged into deep shadows' },
-      { id: 'bryce', name: 'Bryce Canyon', lat: 37.57, lng: -112.18, state: 'Utah', biomes: ['de','al'], desc: 'Crimson amphitheaters packed with hoodoos' },
-      { id: 'canyonlands', name: 'Canyonlands', lat: 38.2, lng: -109.93, state: 'Utah', biomes: ['de'], desc: 'Vast wilderness gouged by the Green and Colorado rivers' },
-      { id: 'capitolreef', name: 'Capitol Reef', lat: 38.2, lng: -111.17, state: 'Utah', biomes: ['de'], desc: 'The massive geologic Waterpocket Fold wrinkle' },
-      { id: 'carlsbad', name: 'Carlsbad Caverns', lat: 32.17, lng: -104.44, state: 'New Mexico', biomes: ['ca','de'], desc: 'Underground limestone palaces carved over eons' },
-      { id: 'channel', name: 'Channel Islands', lat: 34.01, lng: -119.42, state: 'California', biomes: ['is','ch','co'], desc: 'Isolated Galapagos of North America' },
-      { id: 'congaree', name: 'Congaree', lat: 33.78, lng: -80.78, state: 'South Carolina', biomes: ['we','fo'], desc: 'Largest continuous tract of old growth bottomland hardwood' },
-      { id: 'crater', name: 'Crater Lake', lat: 42.94, lng: -122.1, state: 'Oregon', biomes: ['vo','al'], desc: 'Pure azure caldera of collapsed Mount Mazama' },
-      { id: 'cuyahoga', name: 'Cuyahoga Valley', lat: 41.24, lng: -81.55, state: 'Ohio', biomes: ['fo'], desc: 'Rolling forest sanctuaries and heritage waterways' },
-      { id: 'deathvalley', name: 'Death Valley', lat: 36.24, lng: -116.82, state: 'California', biomes: ['de'], desc: 'Hottest and lowest basin in North America' },
-      { id: 'denali', name: 'Denali', lat: 63.33, lng: -150.5, state: 'Alaska', biomes: ['tu','gl','al'], desc: 'Highest peak on the continent amid arctic tundra' },
-      { id: 'drytortugas', name: 'Dry Tortugas', lat: 24.63, lng: -82.87, state: 'Florida', biomes: ['is','co'], desc: 'Historic Fort Jefferson surrounded by open blue sea' },
-      { id: 'everglades', name: 'Everglades', lat: 25.32, lng: -80.93, state: 'Florida', biomes: ['we','tr'], desc: 'Slow moving river of grass protecting unique ecosystems' },
-      { id: 'gatesarctic', name: 'Gates of the Arctic', lat: 67.78, lng: -153.3, state: 'Alaska', biomes: ['tu','al'], desc: 'Vast trail-less arctic wilderness north of the circle' },
-      { id: 'gatewayarch', name: 'Gateway Arch', lat: 38.62, lng: -90.19, state: 'Missouri', biomes: ['ur'], desc: 'Monument to westward exploration' },
-      { id: 'glacier', name: 'Glacier', lat: 48.76, lng: -113.79, state: 'Montana', biomes: ['al','gl','fo'], desc: 'Crown of the continent with pristine carved valleys' },
-      { id: 'glacierbay', name: 'Glacier Bay', lat: 58.5, lng: -137.0, state: 'Alaska', biomes: ['gl','co','rf'], desc: 'Tidewater glaciers, deep fjords, and marine sanctuaries' },
-      { id: 'grandcanyon', name: 'Grand Canyon', lat: 36.06, lng: -112.14, state: 'Arizona', biomes: ['de','fo'], desc: 'Immense layered chasm carved by the Colorado River' },
-      { id: 'grandteton', name: 'Grand Teton', lat: 43.79, lng: -110.68, state: 'Wyoming', biomes: ['al','fo'], desc: 'Towering granite spires reflected in Jackson Lake' },
-      { id: 'greatbasin', name: 'Great Basin', lat: 38.98, lng: -114.3, state: 'Nevada', biomes: ['de','al'], desc: 'Ancient bristlecone pines under dark sky skies' },
-      { id: 'greatsand', name: 'Great Sand Dunes', lat: 37.73, lng: -105.51, state: 'Colorado', biomes: ['de','gr'], desc: 'Tallest sand dunes in North America beside alpine peaks' },
-      { id: 'smokies', name: 'Great Smoky Mountains', lat: 35.61, lng: -83.49, state: 'Tennessee', biomes: ['fo'], desc: 'Misty ridges rich in Appalachian biodiversity' },
-      { id: 'guadalupe', name: 'Guadalupe Mountains', lat: 31.92, lng: -104.52, state: 'Texas', biomes: ['de'], desc: 'Permian fossil reef rising out of desert scrub' },
-      { id: 'haleakala', name: 'Haleakalā', lat: 20.72, lng: -156.17, state: 'Hawaii', biomes: ['vo','is','tr'], desc: 'High altitude volcanic shield crater on Maui' },
-      { id: 'hawaiivolc', name: 'Hawaiʻi Volcanoes', lat: 19.38, lng: -155.2, state: 'Hawaii', biomes: ['vo','is','tr'], desc: 'Active basaltic flows of Kīlauea and Mauna Loa' },
-      { id: 'hotsprings', name: 'Hot Springs', lat: 34.51, lng: -93.05, state: 'Arkansas', biomes: ['fo','vo'], desc: 'Thermal springs nestled in the Ouachita hills' },
-      { id: 'indianadunes', name: 'Indiana Dunes', lat: 41.65, lng: -87.05, state: 'Indiana', biomes: ['co','fo'], desc: 'Lake Michigan shoreline dunes and wetland ecology' },
-      { id: 'isleroyale', name: 'Isle Royale', lat: 48.1, lng: -88.55, state: 'Michigan', biomes: ['is','fo'], desc: 'Rugged island sanctuary isolated in Lake Superior' },
-      { id: 'joshuatree', name: 'Joshua Tree', lat: 33.79, lng: -115.9, state: 'California', biomes: ['de'], desc: 'Mojave and Colorado desert convergence with twisted trees' },
-      { id: 'katmai', name: 'Katmai', lat: 58.5, lng: -155.0, state: 'Alaska', biomes: ['vo','tu','co'], desc: 'Valley of Ten Thousand Smokes and coastal brown bears' },
-      { id: 'kenai', name: 'Kenai Fjords', lat: 59.92, lng: -149.65, state: 'Alaska', biomes: ['gl','co','rf'], desc: 'Harding Icefield sending glaciers into the sea' },
-      { id: 'kingscanyon', name: 'Kings Canyon', lat: 36.89, lng: -118.55, state: 'California', biomes: ['al','fo'], desc: 'Deep canyon gorges and giant sequoia groves' },
-      { id: 'kobuk', name: 'Kobuk Valley', lat: 67.55, lng: -159.28, state: 'Alaska', biomes: ['tu','de'], desc: 'Great arctic sand dunes north of the Arctic circle' },
-      { id: 'lakeclark', name: 'Lake Clark', lat: 60.97, lng: -153.42, state: 'Alaska', biomes: ['vo','tu'], desc: 'Turquoise lakes, steaming volcanoes, and salmon runs' },
-      { id: 'lassen', name: 'Lassen Volcanic', lat: 40.49, lng: -121.51, state: 'California', biomes: ['vo','al'], desc: 'Active hydrothermal vents and plug dome volcanoes' },
-      { id: 'mammoth', name: 'Mammoth Cave', lat: 37.19, lng: -86.1, state: 'Kentucky', biomes: ['ca','fo'], desc: 'Longest cave system known in the world' },
-      { id: 'mesaverde', name: 'Mesa Verde', lat: 37.18, lng: -108.49, state: 'Colorado', biomes: ['de','ch'], desc: 'Pueblo cliff dwellings preserved in sandstone niches' },
-      { id: 'rainier', name: 'Mount Rainier', lat: 46.85, lng: -121.75, state: 'Washington', biomes: ['gl','al','fo'], desc: 'Glaciated stratovolcano rising into the clouds' },
-      { id: 'newriver', name: 'New River Gorge', lat: 37.96, lng: -81.08, state: 'West Virginia', biomes: ['fo'], desc: 'Ancient Appalachian river cutting through sandstone' },
-      { id: 'northcascades', name: 'North Cascades', lat: 48.7, lng: -121.2, state: 'Washington', biomes: ['gl','al','rf'], desc: 'The American Alps with hundreds of active glaciers' },
-      { id: 'olympic', name: 'Olympic', lat: 47.97, lng: -123.5, state: 'Washington', biomes: ['rf','al','co'], desc: 'Mossy rainforests, glacial peaks, and wild sea stacks' },
-      { id: 'petrified', name: 'Petrified Forest', lat: 34.91, lng: -109.81, state: 'Arizona', biomes: ['de'], desc: 'Prehistoric rainbow wood crystals and painted desert badlands' },
-      { id: 'pinnacles', name: 'Pinnacles', lat: 36.48, lng: -121.16, state: 'California', biomes: ['ch'], desc: 'Remnants of an extinct volcano hosting California condors' },
-      { id: 'redwood', name: 'Redwood', lat: 41.21, lng: -124.0, state: 'California', biomes: ['rf','co'], desc: 'Tallest living beings on Earth shrouded in coastal fog' },
-      { id: 'rockymtn', name: 'Rocky Mountain', lat: 40.34, lng: -105.68, state: 'Colorado', biomes: ['al','fo'], desc: 'Continental Divide trails and high alpine tundra lakes' },
-      { id: 'saguaro', name: 'Saguaro', lat: 32.25, lng: -110.5, state: 'Arizona', biomes: ['de'], desc: 'Iconic towering giant cacti across the Sonoran desert' },
-      { id: 'sequoia', name: 'Sequoia', lat: 36.49, lng: -118.57, state: 'California', biomes: ['al','fo'], desc: 'Home to General Sherman and granite domes' },
-      { id: 'shenandoah', name: 'Shenandoah', lat: 38.53, lng: -78.35, state: 'Virginia', biomes: ['fo'], desc: 'Skyline Drive vistas overlooking the Virginia piedmont' },
-      { id: 'roosevelt', name: 'Theodore Roosevelt', lat: 46.97, lng: -103.45, state: 'North Dakota', biomes: ['gr'], desc: 'Rugged badlands where bison graze freely' },
-      { id: 'virginislands', name: 'Virgin Islands', lat: 18.34, lng: -64.74, state: 'Virgin Islands', biomes: ['tr','is','co'], desc: 'White coral sands and submerged snorkel trails' },
-      { id: 'voyageurs', name: 'Voyageurs', lat: 48.5, lng: -92.88, state: 'Minnesota', biomes: ['we','fo'], desc: 'Water maze of north woods waterways' },
-      { id: 'whitesands', name: 'White Sands', lat: 32.78, lng: -106.17, state: 'New Mexico', biomes: ['de'], desc: 'Greatest gypsum dune field on the planet' },
-      { id: 'windcave', name: 'Wind Cave', lat: 43.57, lng: -103.48, state: 'South Dakota', biomes: ['ca','gr'], desc: 'Intricate subterranean boxwork formations' },
-      { id: 'wrangell', name: 'Wrangell–St. Elias', lat: 61.0, lng: -142.0, state: 'Alaska', biomes: ['gl','al','tu'], desc: 'Massive wilderness where major mountain ranges meet' },
-      { id: 'yellowstone', name: 'Yellowstone', lat: 44.6, lng: -110.5, state: 'Wyoming', biomes: ['vo','al','fo'], desc: 'World’s first park: geysers, hot pots, and megafauna' },
-      { id: 'yosemite', name: 'Yosemite', lat: 37.85, lng: -119.57, state: 'California', biomes: ['al','fo'], desc: 'Glacial valley flanked by El Capitan and Half Dome' },
-      { id: 'zion', name: 'Zion', lat: 37.3, lng: -113.05, state: 'Utah', biomes: ['de'], desc: 'Navajo sandstone canyon cut by the Virgin River' },
-
-      /* Selected Global Icons */
+    /* International destinations are outside the NPS catalog. */
+    const INTERNATIONAL_PARKS = [
       { id: 'banff', name: 'Banff', lat: 51.5, lng: -116.15, country: 'Canada', intl: true, biomes: ['al','gl','fo'], desc: 'Glacial lakes of the Canadian Rockies' },
       { id: 'torres', name: 'Torres del Paine', lat: -51.0, lng: -73.0, country: 'Chile', intl: true, biomes: ['al','gl','gr'], desc: 'Patagonian granite horns and ice sheets' },
       { id: 'serengeti', name: 'Serengeti', lat: -2.33, lng: 34.83, country: 'Tanzania', intl: true, biomes: ['gr'], desc: 'The great wildebeest migration plains' },
@@ -595,6 +535,37 @@
       { id: 'uluru', name: 'Uluṟu-Kata Tjuṯa', lat: -25.34, lng: 131.04, country: 'Australia', intl: true, biomes: ['de'], desc: 'Red heart monolith of the Australian Outback' },
       { id: 'jungfrau', name: 'Swiss Alps / Jungfrau-Aletsch', lat: 46.54, lng: 7.96, country: 'Switzerland', intl: true, biomes: ['al','gl'], desc: 'Glaciated backbone of the high European Alps' }
     ];
+    let PARKS = [...INTERNATIONAL_PARKS];
+    let npsCatalogLoaded = false;
+    const escapeHtml = NpsCatalog.escapeHtml;
+
+    async function loadNpsCatalog() {
+      const status = document.getElementById('npsCatalogStatus');
+      const retry = document.getElementById('btnRetryNps');
+      status.textContent = 'Loading official NPS catalog...';
+      retry.classList.add('hidden');
+      try {
+        const response = await fetch('./nps-parks.json', { cache: 'no-cache' });
+        if (!response.ok) throw new Error(`Catalog request failed (HTTP ${response.status}).`);
+        const dataset = await response.json();
+        if (dataset.source !== 'https://developer.nps.gov/api/v1/parks' ||
+            dataset.total !== dataset.data?.length || !Number.isFinite(Date.parse(dataset.fetchedAt))) {
+          throw new Error('Invalid NPS catalog metadata.');
+        }
+        const units = NpsCatalog.normalizeParks(dataset.data);
+        PARKS = [...units, ...INTERNATIONAL_PARKS];
+        npsCatalogLoaded = true;
+        const unmapped = units.filter(p => p.lat === null || p.lng === null).length;
+        status.textContent = `${units.length} official NPS listings loaded (snapshot ${dataset.fetchedAt.slice(0, 10)})${unmapped ? `; ${unmapped} without map coordinates` : ''}.`;
+      } catch (error) {
+        PARKS = [...INTERNATIONAL_PARKS];
+        npsCatalogLoaded = false;
+        console.error('Failed to load NPS catalog', error);
+        status.textContent = 'NPS catalog unavailable. International destinations only; NPS progress is temporarily unavailable.';
+        retry.classList.remove('hidden');
+        showNotification('NPS catalog unavailable', 'Please retry. The site owner must generate and publish the NPS dataset if it is missing.', '⚠️');
+      }
+    }
 
     /* Curated Questlines */
     const QUESTLINES = [
@@ -606,14 +577,17 @@
       { id: 'giants', title: 'Realm of the Ancients', desc: 'Walk among the ancient giant trees of California', parkIds: ['redwood','sequoia','kingscanyon','yosemite'], bonusXp: 150 },
       { id: 'islands', title: 'Archipelago Wanderer', desc: 'Visit isolated ocean national parks', parkIds: ['channel','drytortugas','biscayne','virginislands','haleakala'], bonusXp: 200 }
     ];
+    QUESTLINES.forEach(q => {
+      q.parkIds = [...new Set(q.parkIds.map(id => NpsCatalog.aliases[id] || id))];
+    });
 
     /* Dynamic Achievements */
     const ACHIEVEMENTS = [
-      { id: 'first_park', title: 'First Steps', desc: 'Visit your 1st National Park', req: (s) => s.visitedParks.length >= 1 },
-      { id: 'park_5', title: 'Trailblazer', desc: 'Visit 5 National Parks', req: (s) => s.visitedParks.length >= 5 },
-      { id: 'park_15', title: 'Master Ranger', desc: 'Visit 15 National Parks', req: (s) => s.visitedParks.length >= 15 },
-      { id: 'park_30', title: 'Grand Voyager', desc: 'Visit 30 National Parks', req: (s) => s.visitedParks.length >= 30 },
-      { id: 'park_63', title: 'Completionist Legend', desc: 'Visit all 63 US National Parks', req: (s) => s.usParksCount >= 63 },
+      { id: 'first_park', title: 'First Steps', desc: 'Visit your 1st park or heritage destination', req: (s) => s.visitedParks.length >= 1 },
+      { id: 'park_5', title: 'Trailblazer', desc: 'Visit 5 park or heritage destinations', req: (s) => s.visitedParks.length >= 5 },
+      { id: 'park_15', title: 'Master Ranger', desc: 'Visit 15 park or heritage destinations', req: (s) => s.visitedParks.length >= 15 },
+      { id: 'park_30', title: 'Grand Voyager', desc: 'Visit 30 park or heritage destinations', req: (s) => s.visitedParks.length >= 30 },
+      { id: 'park_63', title: 'Completionist Legend', desc: 'Visit every NPS listing in the current catalog', req: (s) => npsCatalogLoaded && s.npsTotal > 0 && s.usParksCount === s.npsTotal },
       { id: 'biome_5', title: 'Biome Explorer', desc: 'Collect 5 unique biomes', req: (s) => s.biomesSet.size >= 5 },
       { id: 'biome_10', title: 'Ecologist', desc: 'Collect 10 unique biomes', req: (s) => s.biomesSet.size >= 10 },
       { id: 'biome_all', title: 'Gaia Wanderer', desc: 'Discover all 15 terrestrial biomes', req: (s) => s.biomesSet.size >= 15 },
@@ -716,7 +690,7 @@
         try {
           const parsed = JSON.parse(decodeURIComponent(atob(sharedData)));
           AppState.homeBase = parsed.homeBase || null;
-          AppState.pins = parsed.pins || {};
+          AppState.pins = NpsCatalog.migratePins(parsed.pins || {});
           AppState.regions = parsed.regions || {};
           AppState.viewOnly = true;
           showNotification('📜 Passport Loaded', 'Viewing a shared explorer log (read-only).', '🧭');
@@ -731,7 +705,7 @@
         try {
           const parsed = JSON.parse(stored);
           AppState.homeBase = parsed.homeBase || null;
-          AppState.pins = parsed.pins || {};
+          AppState.pins = NpsCatalog.migratePins(parsed.pins || {});
           AppState.regions = parsed.regions || {};
           AppState.mode = parsed.mode || 'rpg';
         } catch (e) {
@@ -784,7 +758,7 @@
       // Add direct regions
       Object.keys(AppState.regions).forEach(k => {
         if (AppState.regions[k] === 'v') {
-          if (k.startsWith('s:')) visitedStates.add(k.substring(2));
+          if (k.startsWith('s:') && NpsCatalog.isUsState(k.substring(2))) visitedStates.add(k.substring(2));
           if (k.startsWith('c:')) visitedCountries.add(k.substring(2));
         }
       });
@@ -792,7 +766,9 @@
       // Implied states & countries from visited parks
       visitedParks.forEach(p => {
         if (p.state) {
-          visitedStates.add(p.state);
+          (p.states || [p.state]).forEach(state => {
+            if (NpsCatalog.isUsState(state)) visitedStates.add(state);
+          });
           visitedCountries.add('United States of America');
         }
         if (p.country) {
@@ -887,6 +863,7 @@
         visitedParks,
         wishlistParks,
         usParksCount: visitedParks.filter(p => !p.intl).length,
+        npsTotal: PARKS.filter(p => !p.intl).length,
         biomesSet,
         unlockedRare,
         rareBiomesCount: unlockedRare.length,
@@ -1006,7 +983,7 @@
 
       // Punch out holes for all visited parks & pins
       PARKS.forEach(p => {
-        if (AppState.pins[p.id] === 'v') {
+        if (AppState.pins[p.id] === 'v' && p.lat !== null && p.lng !== null) {
           const pt = map.latLngToContainerPoint([p.lat, p.lng]);
           // Check if point is roughly within viewport
           if (pt.x >= -200 && pt.x <= width + 200 && pt.y >= -200 && pt.y <= height + 200) {
@@ -1050,6 +1027,7 @@
       leafletMarkers = {};
 
       PARKS.forEach(p => {
+        if (p.lat === null || p.lng === null) return;
         const status = AppState.pins[p.id] || 'un'; // 'v', 'w', 'un'
         
         // Filter by pin visibility state
@@ -1069,7 +1047,7 @@
         }).addTo(map);
 
         // Tooltip
-        marker.bindTooltip(`<b>${p.name}</b>`, {
+        marker.bindTooltip(`<b>${escapeHtml(p.name)}</b>`, {
           direction: 'top',
           offset: [0, -8],
           className: 'rpg-tooltip'
@@ -1097,8 +1075,8 @@
         <div class="p-1 space-y-2">
           <div class="flex items-start justify-between gap-2 border-b border-slate-700 pb-1.5">
             <div>
-              <h4 class="font-bold text-sm text-amber-200">${p.name}</h4>
-              <span class="text-[11px] text-slate-400">${p.state || p.country}</span>
+              <h4 class="font-bold text-sm text-amber-200">${escapeHtml(p.name)}</h4>
+              <span class="text-[11px] text-slate-400">${escapeHtml(p.state || p.country || '')}</span>
             </div>
             <span class="text-xs px-2 py-0.5 rounded font-bold uppercase ${
               cur === 'v' ? 'bg-emerald-950 text-emerald-300 border border-emerald-500/40' :
@@ -1108,7 +1086,10 @@
               ${cur === 'v' ? 'Visited' : cur === 'w' ? 'Wishlist' : 'Unvisited'}
             </span>
           </div>
-          <p class="text-xs text-slate-300">${p.desc || ''}</p>
+          ${p.designation ? `<p class="text-xs text-amber-300">${escapeHtml(p.designation)}</p>` : ''}
+          <p class="text-xs text-slate-300">${escapeHtml(p.desc || '')}</p>
+          ${p.url ? `<a href="${escapeHtml(p.url)}" target="_blank" rel="noopener noreferrer" class="text-xs text-sky-300 underline">Official NPS site</a>` : ''}
+          ${p.activities?.length ? `<p class="text-[11px] text-slate-400">Activities: ${p.activities.map(escapeHtml).join(', ')}</p>` : ''}
           <div class="flex flex-wrap gap-1 pt-1">${biomeTags}</div>
           <div class="grid grid-cols-3 gap-1.5 pt-2 border-t border-slate-800 text-xs font-semibold">
             <button onclick="setPinStatus('${p.id}', 'v')" class="py-1 px-2 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-center transition-all ${cur==='v'?'ring-2 ring-emerald-300':''}">Visited</button>
@@ -1290,7 +1271,7 @@
       // Stat Bento Box
       document.getElementById('statCountries').textContent = stats.countriesCount;
       document.getElementById('statStates').textContent = stats.statesCount;
-      document.getElementById('statUsParks').textContent = stats.usParksCount;
+      document.getElementById('statUsParks').textContent = npsCatalogLoaded ? stats.usParksCount : '--';
       document.getElementById('statGlobalParks').textContent = stats.visitedParks.length;
       document.getElementById('statBiomes').textContent = stats.biomesSet.size;
       document.getElementById('statRareBiomes').textContent = stats.rareBiomesCount;
@@ -1401,6 +1382,8 @@
         return p.name.toLowerCase().includes(search) || 
                (p.state && p.state.toLowerCase().includes(search)) ||
                (p.country && p.country.toLowerCase().includes(search)) ||
+               (p.designation && p.designation.toLowerCase().includes(search)) ||
+               (p.topics && p.topics.some(topic => topic.toLowerCase().includes(search))) ||
                p.biomes.some(b => (BIOMES[b] && BIOMES[b].name.toLowerCase().includes(search)));
       });
 
@@ -1419,9 +1402,12 @@
 
         card.innerHTML = `
           <div class="min-w-0">
-            <h4 class="font-bold text-sm text-slate-200 truncate">${p.name}</h4>
+            <h4 class="font-bold text-sm text-slate-200">${escapeHtml(p.name)}</h4>
+            ${p.designation ? `<p class="text-[11px] text-amber-300">${escapeHtml(p.designation)}</p>` : ''}
+            ${p.url ? `<a href="${escapeHtml(p.url)}" target="_blank" rel="noopener noreferrer" class="text-[11px] text-sky-300 underline">Official NPS site</a>` : ''}
+            ${p.lat === null || p.lng === null ? '<p class="text-[11px] text-slate-400">NPS coordinates unavailable; list only</p>' : ''}
             <div class="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
-              <span>${p.state || p.country}</span>
+              <span>${escapeHtml(p.state || p.country || '')}</span>
               <span>•</span>
               <span class="text-[11px] text-amber-300">${p.biomes.map(b => BIOMES[b] ? BIOMES[b].icon : '').join('')}</span>
             </div>
@@ -1444,7 +1430,8 @@
       document.getElementById('hudNextXp').textContent = stats.nextLevelXp;
       document.getElementById('hudXpBar').style.width = `${stats.levelProgressPct}%`;
       document.getElementById('hudClearedPct').textContent = `${stats.exploredPct.toFixed(1)}%`;
-      document.getElementById('hudParksCount').textContent = `${stats.usParksCount} / 63`;
+      document.getElementById('hudParksCount').textContent = `${npsCatalogLoaded ? stats.usParksCount : '--'} / ${npsCatalogLoaded ? stats.npsTotal : '--'}`;
+      document.getElementById('statNpsTotal').textContent = npsCatalogLoaded ? `of ${stats.npsTotal} NPS listings` : 'Catalog unavailable';
       document.getElementById('hudBiomesCount').textContent = `${stats.biomesSet.size} / 15`;
       document.getElementById('hudQuestsCount').textContent = `${stats.completedQuestsCount} / ${QUESTLINES.length}`;
       document.getElementById('hudClassIcon').textContent = stats.avatar;
@@ -1618,7 +1605,7 @@
         try {
           const parsed = JSON.parse(event.target.result);
           AppState.homeBase = parsed.homeBase || null;
-          AppState.pins = parsed.pins || {};
+          AppState.pins = NpsCatalog.migratePins(parsed.pins || {});
           AppState.regions = parsed.regions || {};
           AppState.mode = parsed.mode || 'rpg';
           saveState();
@@ -1715,9 +1702,18 @@
     });
 
     // App Startup Entry Point
+    document.getElementById('btnRetryNps').addEventListener('click', async () => {
+      await loadNpsCatalog();
+      if (map) {
+        renderParkMarkers();
+        drawFogOfWar();
+      }
+      updateAllUI();
+    });
+
     window.addEventListener('DOMContentLoaded', async () => {
       loadPersistedState();
-      await loadGeoDatasets();
+      await Promise.all([loadGeoDatasets(), loadNpsCatalog()]);
       initMap();
       updateAllUI();
 
