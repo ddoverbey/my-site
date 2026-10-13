@@ -1,0 +1,13 @@
+{
+  "name": "wanderlog-data",
+  "private": true,
+  "scripts": {
+    "test": "node nps-catalog.test.mjs && node ecoregions.test.mjs",
+    "import:ecoregions": "node import-ecoregions.mjs"
+  },
+  "devDependencies": {
+    "@turf/area": "^7.3.0",
+    "@turf/boolean-point-in-polygon": "^7.3.0",
+    "shapefile": "^0.6.6"
+  }
+}

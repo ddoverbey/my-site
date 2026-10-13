@@ -14,14 +14,26 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: '22'
-      - name: Test importer
-        run: node wanderlog/nps-catalog.test.mjs
+      - name: Install data importer dependencies
+        working-directory: wanderlog
+        run: npm ci
       - name: Fetch complete official catalog
         run: node wanderlog/import-nps.mjs
         env:
           NPS_API_KEY: ${{ secrets.NPS_API_KEY }}
-      - uses: actions/upload-artifact@v4
+      - name: Download licensed RESOLVE source
+        run: |
+          curl --fail --location --retry 3 --output "$RUNNER_TEMP/Ecoregions2017.zip" https://storage.googleapis.com/teow2016/Ecoregions2017.zip
+          unzip -q "$RUNNER_TEMP/Ecoregions2017.zip" -d "$RUNNER_TEMP/ecoregions"
+      - name: Refresh terrestrial biome mappings
+        run: node wanderlog/import-ecoregions.mjs "$RUNNER_TEMP/ecoregions/Ecoregions2017.shp"
+      - name: Test generated catalogs and game integration
+        working-directory: wanderlog
+        run: npm test
+      - uses: actions/upload-artifact@v6
         with:
           name: nps-catalog
-          path: wanderlog/nps-parks.json
+          path: |
+            wanderlog/nps-parks.json
+            wanderlog/ecoregion-mapping.json
           if-no-files-found: error

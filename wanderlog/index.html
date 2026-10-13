@@ -239,7 +239,7 @@
           </div>
           <div class="bg-slate-900/70 p-2 rounded-xl border border-slate-800">
             <span class="text-[10px] text-slate-400 block uppercase">Biomes Found</span>
-            <span class="font-bold text-sky-400 font-mono text-sm" id="hudBiomesCount">0 / 15</span>
+            <span class="font-bold text-sky-400 font-mono text-sm" id="hudBiomesCount">-- / 14</span>
           </div>
           <div class="bg-slate-900/70 p-2 rounded-xl border border-slate-800">
             <span class="text-[10px] text-slate-400 block uppercase">Quests Complete</span>
@@ -365,12 +365,12 @@
           <div class="rpg-panel p-4 rounded-2xl text-center">
             <span class="text-[10px] uppercase text-slate-400 font-mono">Biomes Unlocked</span>
             <div class="text-2xl font-bold font-mono text-teal-400 mt-1" id="statBiomes">0</div>
-            <span class="text-[10px] text-slate-500">of 15</span>
+            <span class="text-[10px] text-slate-500">of 14 terrestrial biomes</span>
           </div>
           <div class="rpg-panel p-4 rounded-2xl text-center">
             <span class="text-[10px] uppercase text-slate-400 font-mono">Rare Biomes</span>
             <div class="text-2xl font-bold font-mono text-rose-400 mt-1" id="statRareBiomes">0</div>
-            <span class="text-[10px] text-slate-500">of 5</span>
+            <span class="text-[10px] text-slate-500" id="statRareTotal">Area-based rarity loading</span>
           </div>
         </div>
 
@@ -379,10 +379,17 @@
           <div class="flex items-center justify-between mb-4">
             <div>
               <h3 class="cinzel text-xl font-bold text-amber-200">Biome Pokédex</h3>
-              <p class="text-xs text-slate-400">Discover Earth's distinct ecological environments through your travels</p>
+              <p class="text-xs text-slate-400">Collect 14 real terrestrial biomes at destination coordinates</p>
             </div>
-            <span class="text-xs font-mono text-amber-400 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30" id="biomeCompletionRatio">0/15 Found</span>
+            <span class="text-xs font-mono text-amber-400 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30" id="biomeCompletionRatio">--/14 Found</span>
           </div>
+          <p class="text-xs text-slate-400 mb-3">
+            <a href="https://ecoregions.appspot.com/" target="_blank" rel="noopener noreferrer" class="text-sky-300 underline">RESOLVE Ecoregions 2017</a>
+            (updated WWF framework), <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer" class="underline">CC BY 4.0</a>.
+            Game rarity: rare &lt;2%, uncommon 2–10%, common ≥10% of classified biome land area.
+            Point samples do not describe an entire park; oceans, rock/ice, and unclassified points earn no terrestrial biome.
+          </p>
+          <p id="biomeCatalogStatus" class="text-xs text-slate-400 mb-3" role="status" aria-live="polite">Loading ecoregion mappings...</p>
           <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3" id="biomePokedexContainer">
             <!-- Dynamically populated -->
           </div>
@@ -500,44 +507,50 @@
     <button id="btnRetryNps" class="hidden ml-2 text-amber-300 underline" type="button">Retry</button>
   </div>
   <script src="./nps-catalog.js"></script>
+  <script src="./international-parks.js"></script>
+  <script src="./ecoregions.js"></script>
   <script>
-    /* Biomes Definition with rarity tiers and colors */
-    const BIOMES = {
-      fo: { name: 'Temperate Forest', rarity: 'common', color: '#10b981', icon: '🌲', xp: 15 },
-      gr: { name: 'Grassland / Plains', rarity: 'common', color: '#84cc16', icon: '🌾', xp: 15 },
-      co: { name: 'Oceanic Coastline', rarity: 'common', color: '#38bdf8', icon: '🌊', xp: 15 },
-      ur: { name: 'Urban Metropolis', rarity: 'common', color: '#94a3b8', icon: '🏙️', xp: 10 },
-      de: { name: 'Desert / Arid', rarity: 'uncommon', color: '#f59e0b', icon: '🏜️', xp: 30 },
-      al: { name: 'Alpine Peaks', rarity: 'uncommon', color: '#06b6d4', icon: '⛰️', xp: 35 },
-      we: { name: 'Wetlands / Everglades', rarity: 'uncommon', color: '#14b8a6', icon: '🐊', xp: 30 },
-      tr: { name: 'Tropical Jungle', rarity: 'uncommon', color: '#22c55e', icon: '🌴', xp: 35 },
-      ch: { name: 'Mediterranean Chaparral', rarity: 'uncommon', color: '#eab308', icon: '🌿', xp: 30 },
-      is: { name: 'Remote Island', rarity: 'uncommon', color: '#0ea5e9', icon: '🏝️', xp: 40 },
-      rf: { name: 'Temperate Rainforest', rarity: 'rare', color: '#059669', icon: '🌧️', xp: 60 },
-      gl: { name: 'Glacial Icefield', rarity: 'rare', color: '#67e8f9', icon: '🧊', xp: 75 },
-      vo: { name: 'Volcanic / Geothermal', rarity: 'rare', color: '#f43f5e', icon: '🌋', xp: 70 },
-      ca: { name: 'Subterranean Cavern', rarity: 'rare', color: '#a855f7', icon: '🦇', xp: 65 },
-      tu: { name: 'Arctic Tundra', rarity: 'rare', color: '#c084fc', icon: '❄️', xp: 80 }
-    };
-
-    /* International destinations are outside the NPS catalog. */
-    const INTERNATIONAL_PARKS = [
-      { id: 'banff', name: 'Banff', lat: 51.5, lng: -116.15, country: 'Canada', intl: true, biomes: ['al','gl','fo'], desc: 'Glacial lakes of the Canadian Rockies' },
-      { id: 'torres', name: 'Torres del Paine', lat: -51.0, lng: -73.0, country: 'Chile', intl: true, biomes: ['al','gl','gr'], desc: 'Patagonian granite horns and ice sheets' },
-      { id: 'serengeti', name: 'Serengeti', lat: -2.33, lng: 34.83, country: 'Tanzania', intl: true, biomes: ['gr'], desc: 'The great wildebeest migration plains' },
-      { id: 'galapagos', name: 'Galápagos', lat: -0.67, lng: -90.55, country: 'Ecuador', intl: true, biomes: ['is','vo','co'], desc: 'Volcanic sanctuary of evolutionary wonder' },
-      { id: 'iguazu', name: 'Iguazú Falls', lat: -25.69, lng: -54.44, country: 'Argentina', intl: true, biomes: ['tr'], desc: 'Curtain of 275 waterfalls in subtropical jungle' },
-      { id: 'fiordland', name: 'Fiordland', lat: -45.4, lng: 167.7, country: 'New Zealand', intl: true, biomes: ['rf','gl','co'], desc: 'Mitre peak towering over Milford Sound' },
-      { id: 'plitvice', name: 'Plitvice Lakes', lat: 44.88, lng: 15.62, country: 'Croatia', intl: true, biomes: ['fo','we'], desc: 'Cascading terraced turquoise lakes' },
-      { id: 'thingvellir', name: 'Þingvellir / Iceland', lat: 64.26, lng: -21.12, country: 'Iceland', intl: true, biomes: ['vo','gl','tu'], desc: 'Tectonic rift valley where continental plates split' },
-      { id: 'halong', name: 'Hạ Long Bay', lat: 20.91, lng: 107.18, country: 'Vietnam', intl: true, biomes: ['is','co','tr'], desc: 'Emerald waters and thousands of limestone pillars' },
-      { id: 'kruger', name: 'Kruger', lat: -23.99, lng: 31.55, country: 'South Africa', intl: true, biomes: ['gr'], desc: 'Expansive African bushveld wildlife reserve' },
-      { id: 'uluru', name: 'Uluṟu-Kata Tjuṯa', lat: -25.34, lng: 131.04, country: 'Australia', intl: true, biomes: ['de'], desc: 'Red heart monolith of the Australian Outback' },
-      { id: 'jungfrau', name: 'Swiss Alps / Jungfrau-Aletsch', lat: 46.54, lng: 7.96, country: 'Switzerland', intl: true, biomes: ['al','gl'], desc: 'Glaciated backbone of the high European Alps' }
-    ];
+    let BIOMES = Ecoregions.biomeDefinitions();
+    const INTERNATIONAL_PARKS = InternationalParks.map(p => ({
+      ...p, biomes: [], ecoregions: [], biomeStatus: 'unavailable'
+    }));
     let PARKS = [...INTERNATIONAL_PARKS];
     let npsCatalogLoaded = false;
+    let biomeCatalogLoaded = false;
     const escapeHtml = NpsCatalog.escapeHtml;
+
+    async function loadBiomeCatalog() {
+      const status = document.getElementById('biomeCatalogStatus');
+      biomeCatalogLoaded = false;
+      BIOMES = Ecoregions.biomeDefinitions();
+      PARKS = PARKS.map(p => ({ ...p, biomes: [], ecoregions: [], biomeStatus: 'unavailable' }));
+      try {
+        const response = await fetch('./ecoregion-mapping.json', { cache: 'no-cache' });
+        if (!response.ok) throw new Error(`Ecoregion request failed (HTTP ${response.status}).`);
+        const result = Ecoregions.applySnapshot(PARKS, await response.json());
+        PARKS = result.parks;
+        BIOMES = result.biomes;
+        biomeCatalogLoaded = true;
+        const mapped = PARKS.filter(p => p.biomeStatus === 'matched').length;
+        const outdated = PARKS.filter(p => p.biomeStatus === 'mapping-outdated').length;
+        status.textContent = `${mapped}/${PARKS.length} destination points mapped. ${PARKS.length - mapped - outdated} have no terrestrial match.${outdated ? ` ${outdated} mappings need regeneration after a coordinate/catalog change.` : ''}`;
+        document.getElementById('btnRetryNps').classList.toggle('hidden', npsCatalogLoaded && !outdated);
+        if (outdated) showNotification('Ecoregion mappings outdated', 'The site owner must regenerate mappings for new or changed destination coordinates.', '⚠️');
+      } catch (error) {
+        console.error('Failed to load ecoregion mappings', error);
+        status.textContent = 'Ecoregion mappings unavailable. Biome collection and biome XP are disabled until the data loads.';
+        document.getElementById('btnRetryNps').classList.remove('hidden');
+        showNotification('Biome data unavailable', 'Retry loading the datasets. Park visits remain available.', '⚠️');
+      }
+    }
+
+    function biomeLocationLabel(p) {
+      if (p.ecoregions?.length) return p.ecoregions.map(region => `${region.name} (${region.realm})`).join('; ');
+      if (p.biomeStatus === 'no-terrestrial-match') return 'No terrestrial ecoregion at this coordinate';
+      if (p.biomeStatus === 'missing-coordinates') return 'No coordinates for ecoregion mapping';
+      if (p.biomeStatus === 'mapping-outdated') return 'Ecoregion mapping needs refresh';
+      return 'Ecoregion data unavailable';
+    }
 
     async function loadNpsCatalog() {
       const status = document.getElementById('npsCatalogStatus');
@@ -590,7 +603,7 @@
       { id: 'park_63', title: 'Completionist Legend', desc: 'Visit every NPS listing in the current catalog', req: (s) => npsCatalogLoaded && s.npsTotal > 0 && s.usParksCount === s.npsTotal },
       { id: 'biome_5', title: 'Biome Explorer', desc: 'Collect 5 unique biomes', req: (s) => s.biomesSet.size >= 5 },
       { id: 'biome_10', title: 'Ecologist', desc: 'Collect 10 unique biomes', req: (s) => s.biomesSet.size >= 10 },
-      { id: 'biome_all', title: 'Gaia Wanderer', desc: 'Discover all 15 terrestrial biomes', req: (s) => s.biomesSet.size >= 15 },
+      { id: 'biome_all', title: 'Gaia Wanderer', desc: 'Discover all 14 terrestrial biomes', req: (s) => biomeCatalogLoaded && s.biomesSet.size === Object.keys(BIOMES).length },
       { id: 'rare_3', title: 'Anomaly Seeker', desc: 'Unlock 3 Rare Biomes', req: (s) => s.rareBiomesCount >= 3 },
       { id: 'states_10', title: 'Continental Traveler', desc: 'Claim 10 US States', req: (s) => s.statesCount >= 10 },
       { id: 'states_50', title: 'Union Pioneer', desc: 'Visit all 50 US States', req: (s) => s.statesCount >= 50 },
@@ -818,8 +831,8 @@
       // Archetype classification
       const archetypes = {
         Nature: Math.min(1, visitedParks.length / 25),
-        Adventure: Math.min(1, visitedParks.filter(p => p.biomes.some(b => ['al','gl','vo','ca'].includes(b))).length / 10),
-        Remoteness: Math.min(1, visitedParks.filter(p => p.biomes.some(b => ['tu','is','gl'].includes(b))).length / 6),
+        Adventure: Math.min(1, visitedParks.filter(p => p.biomes.some(b => ['5','10','13'].includes(b))).length / 10),
+        Remoteness: Math.min(1, visitedParks.filter(p => p.biomes.some(b => ['6','11'].includes(b))).length / 6),
         Worldly: Math.min(1, visitedCountries.size / 15),
         Roadtrip: Math.min(1, visitedStates.size / 30)
       };
@@ -833,7 +846,7 @@
         switch(sortedAxes[0][0]) {
           case 'Adventure':
             cls = 'Alpine Ranger';
-            titleDesc = 'Conqueror of high passes, frozen shelves, and volcanic rifts.';
+            titleDesc = 'Explorer of conifer forests, montane grasslands, and arid shrublands.';
             avatar = '🧗';
             break;
           case 'Nature':
@@ -843,7 +856,7 @@
             break;
           case 'Remoteness':
             cls = 'Biome Hunter';
-            titleDesc = 'Seeker of rare microclimates and isolated world fringes.';
+            titleDesc = 'Explorer of boreal forests and tundra ecoregions.';
             avatar = '❄️';
             break;
           case 'Worldly':
@@ -1067,7 +1080,7 @@
       const biomeTags = p.biomes.map(b => {
         const info = BIOMES[b] || { name: b, icon: '🌿' };
         return `<span class="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-200">
-          <span>${info.icon}</span> ${info.name}
+          <span>${info.icon}</span> ${info.name} (${info.rarity})
         </span>`;
       }).join(' ');
 
@@ -1090,6 +1103,7 @@
           <p class="text-xs text-slate-300">${escapeHtml(p.desc || '')}</p>
           ${p.url ? `<a href="${escapeHtml(p.url)}" target="_blank" rel="noopener noreferrer" class="text-xs text-sky-300 underline">Official NPS site</a>` : ''}
           ${p.activities?.length ? `<p class="text-[11px] text-slate-400">Activities: ${p.activities.map(escapeHtml).join(', ')}</p>` : ''}
+          <p class="text-[11px] text-slate-400">${escapeHtml(biomeLocationLabel(p))}</p>
           <div class="flex flex-wrap gap-1 pt-1">${biomeTags}</div>
           <div class="grid grid-cols-3 gap-1.5 pt-2 border-t border-slate-800 text-xs font-semibold">
             <button onclick="setPinStatus('${p.id}', 'v')" class="py-1 px-2 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-center transition-all ${cur==='v'?'ring-2 ring-emerald-300':''}">Visited</button>
@@ -1273,12 +1287,13 @@
       document.getElementById('statStates').textContent = stats.statesCount;
       document.getElementById('statUsParks').textContent = npsCatalogLoaded ? stats.usParksCount : '--';
       document.getElementById('statGlobalParks').textContent = stats.visitedParks.length;
-      document.getElementById('statBiomes').textContent = stats.biomesSet.size;
-      document.getElementById('statRareBiomes').textContent = stats.rareBiomesCount;
+      document.getElementById('statBiomes').textContent = biomeCatalogLoaded ? stats.biomesSet.size : '--';
+      document.getElementById('statRareBiomes').textContent = biomeCatalogLoaded ? stats.rareBiomesCount : '--';
+      document.getElementById('statRareTotal').textContent = biomeCatalogLoaded ? `of ${Object.values(BIOMES).filter(b => b.rarity === 'rare').length} rare biomes` : 'Rarity unavailable';
 
       // Biome Pokédex cards
       const biomeContainer = document.getElementById('biomePokedexContainer');
-      document.getElementById('biomeCompletionRatio').textContent = `${stats.biomesSet.size} / ${Object.keys(BIOMES).length} Found`;
+      document.getElementById('biomeCompletionRatio').textContent = `${biomeCatalogLoaded ? stats.biomesSet.size : '--'} / ${Object.keys(BIOMES).length} Found`;
       biomeContainer.innerHTML = '';
 
       Object.entries(BIOMES).forEach(([key, info]) => {
@@ -1298,7 +1313,10 @@
               'bg-slate-800 text-slate-400'
             }">${info.rarity}</span>
           </div>
-          <h4 class="font-bold text-xs text-slate-200 mt-2 truncate">${info.name}</h4>
+          <h4 class="font-bold text-xs text-slate-200 mt-2">${info.name}</h4>
+          <p class="text-[10px] text-slate-400 mt-1">${info.areaShare === null ? 'Area data unavailable' : `${info.areaShare.toFixed(2)}% of classified biome land`}</p>
+          <p class="text-[10px] text-slate-400">+${info.xp} XP on first collection</p>
+          <p class="text-[10px] text-slate-400">${PARKS.filter(p => p.biomes.includes(key)).length} mapped destinations in this catalog</p>
           <div class="text-[10px] text-slate-400 mt-0.5">
             ${isUnlocked ? '<span class="text-emerald-400">✓ Documented</span>' : 'Uncharted'}
           </div>
@@ -1384,6 +1402,7 @@
                (p.country && p.country.toLowerCase().includes(search)) ||
                (p.designation && p.designation.toLowerCase().includes(search)) ||
                (p.topics && p.topics.some(topic => topic.toLowerCase().includes(search))) ||
+               (p.ecoregions && p.ecoregions.some(region => region.name.toLowerCase().includes(search) || region.realm.toLowerCase().includes(search))) ||
                p.biomes.some(b => (BIOMES[b] && BIOMES[b].name.toLowerCase().includes(search)));
       });
 
@@ -1406,6 +1425,8 @@
             ${p.designation ? `<p class="text-[11px] text-amber-300">${escapeHtml(p.designation)}</p>` : ''}
             ${p.url ? `<a href="${escapeHtml(p.url)}" target="_blank" rel="noopener noreferrer" class="text-[11px] text-sky-300 underline">Official NPS site</a>` : ''}
             ${p.lat === null || p.lng === null ? '<p class="text-[11px] text-slate-400">NPS coordinates unavailable; list only</p>' : ''}
+            <p class="text-[11px] text-slate-400">${escapeHtml(biomeLocationLabel(p))}</p>
+            <p class="text-[11px] text-teal-300">${p.biomes.map(b => escapeHtml(BIOMES[b].name)).join('; ')}</p>
             <div class="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
               <span>${escapeHtml(p.state || p.country || '')}</span>
               <span>•</span>
@@ -1432,7 +1453,7 @@
       document.getElementById('hudClearedPct').textContent = `${stats.exploredPct.toFixed(1)}%`;
       document.getElementById('hudParksCount').textContent = `${npsCatalogLoaded ? stats.usParksCount : '--'} / ${npsCatalogLoaded ? stats.npsTotal : '--'}`;
       document.getElementById('statNpsTotal').textContent = npsCatalogLoaded ? `of ${stats.npsTotal} NPS listings` : 'Catalog unavailable';
-      document.getElementById('hudBiomesCount').textContent = `${stats.biomesSet.size} / 15`;
+      document.getElementById('hudBiomesCount').textContent = `${biomeCatalogLoaded ? stats.biomesSet.size : '--'} / ${Object.keys(BIOMES).length}`;
       document.getElementById('hudQuestsCount').textContent = `${stats.completedQuestsCount} / ${QUESTLINES.length}`;
       document.getElementById('hudClassIcon').textContent = stats.avatar;
 
@@ -1704,6 +1725,7 @@
     // App Startup Entry Point
     document.getElementById('btnRetryNps').addEventListener('click', async () => {
       await loadNpsCatalog();
+      await loadBiomeCatalog();
       if (map) {
         renderParkMarkers();
         drawFogOfWar();
@@ -1714,6 +1736,7 @@
     window.addEventListener('DOMContentLoaded', async () => {
       loadPersistedState();
       await Promise.all([loadGeoDatasets(), loadNpsCatalog()]);
+      await loadBiomeCatalog();
       initMap();
       updateAllUI();
 

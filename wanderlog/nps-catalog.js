@@ -1,43 +1,21 @@
 (function (root) {
   'use strict';
 
-  // Legacy IDs and game biome tags are not official NPS metadata.
-  const legacyParks = [
-    ['acadia', 'acad', ['fo', 'co']], ['samoa', 'npsa', ['tr', 'is', 'co']],
-    ['arches', 'arch', ['de']], ['badlands', 'badl', ['gr']],
-    ['bigbend', 'bibe', ['de']], ['biscayne', 'bisc', ['co', 'is']],
-    ['blackcanyon', 'blca', ['al']], ['bryce', 'brca', ['de', 'al']],
-    ['canyonlands', 'cany', ['de']], ['capitolreef', 'care', ['de']],
-    ['carlsbad', 'cave', ['ca', 'de']], ['channel', 'chis', ['is', 'ch', 'co']],
-    ['congaree', 'cong', ['we', 'fo']], ['crater', 'crla', ['vo', 'al']],
-    ['cuyahoga', 'cuva', ['fo']], ['deathvalley', 'deva', ['de']],
-    ['denali', 'dena', ['tu', 'gl', 'al']], ['drytortugas', 'drto', ['is', 'co']],
-    ['everglades', 'ever', ['we', 'tr']], ['gatesarctic', 'gaar', ['tu', 'al']],
-    ['gatewayarch', 'jeff', ['ur']], ['glacier', 'glac', ['al', 'gl', 'fo']],
-    ['glacierbay', 'glba', ['gl', 'co', 'rf']], ['grandcanyon', 'grca', ['de', 'fo']],
-    ['grandteton', 'grte', ['al', 'fo']], ['greatbasin', 'grba', ['de', 'al']],
-    ['greatsand', 'grsa', ['de', 'gr']], ['smokies', 'grsm', ['fo']],
-    ['guadalupe', 'gumo', ['de']], ['haleakala', 'hale', ['vo', 'is', 'tr']],
-    ['hawaiivolc', 'havo', ['vo', 'is', 'tr']], ['hotsprings', 'hosp', ['fo', 'vo']],
-    ['indianadunes', 'indu', ['co', 'fo']], ['isleroyale', 'isro', ['is', 'fo']],
-    ['joshuatree', 'jotr', ['de']], ['katmai', 'katm', ['vo', 'tu', 'co']],
-    ['kenai', 'kefj', ['gl', 'co', 'rf']], ['kingscanyon', 'seki', ['al', 'fo']],
-    ['kobuk', 'kova', ['tu', 'de']], ['lakeclark', 'lacl', ['vo', 'tu']],
-    ['lassen', 'lavo', ['vo', 'al']], ['mammoth', 'maca', ['ca', 'fo']],
-    ['mesaverde', 'meve', ['de', 'ch']], ['rainier', 'mora', ['gl', 'al', 'fo']],
-    ['newriver', 'neri', ['fo']], ['northcascades', 'noca', ['gl', 'al', 'rf']],
-    ['olympic', 'olym', ['rf', 'al', 'co']], ['petrified', 'pefo', ['de']],
-    ['pinnacles', 'pinn', ['ch']], ['redwood', 'redw', ['rf', 'co']],
-    ['rockymtn', 'romo', ['al', 'fo']], ['saguaro', 'sagu', ['de']],
-    ['sequoia', 'seki', ['al', 'fo']], ['shenandoah', 'shen', ['fo']],
-    ['roosevelt', 'thro', ['gr']], ['virginislands', 'viis', ['tr', 'is', 'co']],
-    ['voyageurs', 'voya', ['we', 'fo']], ['whitesands', 'whsa', ['de']],
-    ['windcave', 'wica', ['ca', 'gr']], ['wrangell', 'wrst', ['gl', 'al', 'tu']],
-    ['yellowstone', 'yell', ['vo', 'al', 'fo']], ['yosemite', 'yose', ['al', 'fo']],
-    ['zion', 'zion', ['de']]
-  ];
-  const aliases = Object.fromEntries(legacyParks.map(([id, code]) => [id, code]));
-  const curatedBiomes = Object.fromEntries(legacyParks.map(([, code, biomes]) => [code, biomes]));
+  const aliases = {
+    acadia: 'acad', samoa: 'npsa', arches: 'arch', badlands: 'badl', bigbend: 'bibe',
+    biscayne: 'bisc', blackcanyon: 'blca', bryce: 'brca', canyonlands: 'cany', capitolreef: 'care',
+    carlsbad: 'cave', channel: 'chis', congaree: 'cong', crater: 'crla', cuyahoga: 'cuva',
+    deathvalley: 'deva', denali: 'dena', drytortugas: 'drto', everglades: 'ever', gatesarctic: 'gaar',
+    gatewayarch: 'jeff', glacier: 'glac', glacierbay: 'glba', grandcanyon: 'grca', grandteton: 'grte',
+    greatbasin: 'grba', greatsand: 'grsa', smokies: 'grsm', guadalupe: 'gumo', haleakala: 'hale',
+    hawaiivolc: 'havo', hotsprings: 'hosp', indianadunes: 'indu', isleroyale: 'isro', joshuatree: 'jotr',
+    katmai: 'katm', kenai: 'kefj', kingscanyon: 'seki', kobuk: 'kova', lakeclark: 'lacl',
+    lassen: 'lavo', mammoth: 'maca', mesaverde: 'meve', rainier: 'mora', newriver: 'neri',
+    northcascades: 'noca', olympic: 'olym', petrified: 'pefo', pinnacles: 'pinn', redwood: 'redw',
+    rockymtn: 'romo', saguaro: 'sagu', sequoia: 'seki', shenandoah: 'shen', roosevelt: 'thro',
+    virginislands: 'viis', voyageurs: 'voya', whitesands: 'whsa', windcave: 'wica', wrangell: 'wrst',
+    yellowstone: 'yell', yosemite: 'yose', zion: 'zion'
+  };
   const stateNames = {
     AL: 'Alabama', AK: 'Alaska', AZ: 'Arizona', AR: 'Arkansas', CA: 'California',
     CO: 'Colorado', CT: 'Connecticut', DE: 'Delaware', FL: 'Florida', GA: 'Georgia',
@@ -52,11 +30,6 @@
     WV: 'West Virginia', WI: 'Wisconsin', WY: 'Wyoming', DC: 'District of Columbia',
     AS: 'American Samoa', GU: 'Guam', MP: 'Northern Mariana Islands',
     PR: 'Puerto Rico', VI: 'Virgin Islands'
-  };
-  const topicBiomes = {
-    'Forests and Woodlands': 'fo', 'Grasslands': 'gr', 'Oceans': 'co',
-    'Deserts': 'de', 'Mountains': 'al', 'Wetlands': 'we',
-    'Islands': 'is', 'Glaciers': 'gl', 'Volcanoes': 'vo', 'Caves': 'ca', 'Tundra': 'tu'
   };
   const usStates = new Set(Object.entries(stateNames)
     .filter(([code]) => !['DC', 'AS', 'GU', 'MP', 'PR', 'VI'].includes(code))
@@ -109,8 +82,7 @@
         states: stateCodes.map(code => stateNames[code]),
         state: stateCodes.map(code => stateNames[code]).join(', '),
         topics, activities: p.activities.map(a => a.name),
-        biomes: curatedBiomes[p.parkCode] ||
-          [...new Set(topics.map(topic => topicBiomes[topic]).filter(Boolean))]
+        biomes: [], ecoregions: [], biomeStatus: 'unavailable'
       };
     }).sort((a, b) => a.name.localeCompare(b.name));
   }

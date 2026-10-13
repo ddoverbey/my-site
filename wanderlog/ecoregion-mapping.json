@@ -1,0 +1,6242 @@
+{
+  "version": 1,
+  "source": "https://storage.googleapis.com/teow2016/Ecoregions2017.zip",
+  "license": "CC-BY-4.0",
+  "attribution": "RESOLVE Ecoregions 2017, Dinerstein et al. (2017), updating WWF Terrestrial Ecoregions.",
+  "citation": "https://doi.org/10.1093/biosci/bix014",
+  "generatedAt": "2026-10-13T23:45:12.687Z",
+  "ecoregionCount": 847,
+  "method": "WGS84 destination point intersects unsimplified terrestrial ecoregion polygons. Rarity uses spherical geodesic area: rare <2%, uncommon <10%, common >=10% of classified biome land. Rock/ice and water excluded.",
+  "biomes": [
+    {
+      "id": 1,
+      "name": "Tropical & Subtropical Moist Broadleaf Forests",
+      "areaKm2": 19580625.084554445,
+      "areaShare": 13.376203432236464,
+      "rarity": "common"
+    },
+    {
+      "id": 2,
+      "name": "Tropical & Subtropical Dry Broadleaf Forests",
+      "areaKm2": 3878388.2242881986,
+      "areaShare": 2.6494613758879275,
+      "rarity": "uncommon"
+    },
+    {
+      "id": 3,
+      "name": "Tropical & Subtropical Coniferous Forests",
+      "areaKm2": 683072.1346779821,
+      "areaShare": 0.4666302425427713,
+      "rarity": "rare"
+    },
+    {
+      "id": 4,
+      "name": "Temperate Broadleaf & Mixed Forests",
+      "areaKm2": 12559795.380282814,
+      "areaShare": 8.580031400859108,
+      "rarity": "uncommon"
+    },
+    {
+      "id": 5,
+      "name": "Temperate Conifer Forests",
+      "areaKm2": 3761949.8654067325,
+      "areaShare": 2.569918298535262,
+      "rarity": "uncommon"
+    },
+    {
+      "id": 6,
+      "name": "Boreal Forests/Taiga",
+      "areaKm2": 15316595.107982822,
+      "areaShare": 10.463296813500989,
+      "rarity": "common"
+    },
+    {
+      "id": 7,
+      "name": "Tropical & Subtropical Grasslands, Savannas & Shrublands",
+      "areaKm2": 21415741.640224066,
+      "areaShare": 14.62983513523378,
+      "rarity": "common"
+    },
+    {
+      "id": 8,
+      "name": "Temperate Grasslands, Savannas & Shrublands",
+      "areaKm2": 10571597.671339734,
+      "areaShare": 7.221824658046419,
+      "rarity": "uncommon"
+    },
+    {
+      "id": 9,
+      "name": "Flooded Grasslands & Savannas",
+      "areaKm2": 1156664.5381686918,
+      "areaShare": 0.7901576225777738,
+      "rarity": "rare"
+    },
+    {
+      "id": 10,
+      "name": "Montane Grasslands & Shrublands",
+      "areaKm2": 4898894.283942402,
+      "areaShare": 3.346604424121481,
+      "rarity": "uncommon"
+    },
+    {
+      "id": 11,
+      "name": "Tundra",
+      "areaKm2": 22608038.885644443,
+      "areaShare": 15.44433469475083,
+      "rarity": "common"
+    },
+    {
+      "id": 12,
+      "name": "Mediterranean Forests, Woodlands & Scrub",
+      "areaKm2": 3296020.23178586,
+      "areaShare": 2.251625622100923,
+      "rarity": "uncommon"
+    },
+    {
+      "id": 13,
+      "name": "Deserts & Xeric Shrublands",
+      "areaKm2": 26324321.98666983,
+      "areaShare": 17.9830564442577,
+      "rarity": "common"
+    },
+    {
+      "id": 14,
+      "name": "Mangroves",
+      "areaKm2": 332320.77436895564,
+      "areaShare": 0.2270198353485636,
+      "rarity": "rare"
+    }
+  ],
+  "locations": {
+    "abli": {
+      "lat": 37.5858662,
+      "lng": -85.67330523,
+      "ecoregions": [
+        {
+          "id": 336,
+          "name": "Interior Plateau US Hardwood Forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "acad": {
+      "lat": 44.409286,
+      "lng": -68.247501,
+      "ecoregions": [
+        {
+          "id": 338,
+          "name": "New England-Acadian forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "adam": {
+      "lat": 42.2553961,
+      "lng": -71.01160356,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "afam": {
+      "lat": 38.9166,
+      "lng": -77.026,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "afbg": {
+      "lat": 40.71452681,
+      "lng": -74.00447358,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "agfo": {
+      "lat": 42.42170419,
+      "lng": -103.753886,
+      "ecoregions": [
+        {
+          "id": 402,
+          "name": "Western shortgrass prairie",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "alka": {
+      "lat": 19.144668109,
+      "lng": -155.890734294,
+      "ecoregions": [
+        {
+          "id": 636,
+          "name": "Hawai'i tropical dry forests",
+          "biomeId": 2,
+          "realm": "Oceania"
+        }
+      ],
+      "status": "matched"
+    },
+    "alag": {
+      "lat": 59.05180188,
+      "lng": -156.112002,
+      "ecoregions": [
+        {
+          "id": 409,
+          "name": "Beringia lowland tundra",
+          "biomeId": 11,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "anch": {
+      "lat": 61.2188,
+      "lng": -149.894536,
+      "ecoregions": [
+        {
+          "id": 371,
+          "name": "Cook Inlet taiga",
+          "biomeId": 6,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "alca": {
+      "lat": 37.82676234,
+      "lng": -122.4230206,
+      "ecoregions": [
+        {
+          "id": 423,
+          "name": "California interior chaparral and woodlands",
+          "biomeId": 12,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "aleu": {
+      "lat": 53.9143,
+      "lng": -166.5197,
+      "ecoregions": [
+        {
+          "id": 406,
+          "name": "Aleutian Islands tundra",
+          "biomeId": 11,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "alfl": {
+      "lat": 35.5819662,
+      "lng": -101.6717008,
+      "ecoregions": [
+        {
+          "id": 402,
+          "name": "Western shortgrass prairie",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "alpo": {
+      "lat": 40.42977467,
+      "lng": -78.57431622,
+      "ecoregions": [
+        {
+          "id": 329,
+          "name": "Appalachian mixed mesophytic forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "amch": {
+      "lat": 38.04962,
+      "lng": -102.32903,
+      "ecoregions": [
+        {
+          "id": 402,
+          "name": "Western shortgrass prairie",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "amme": {
+      "lat": 15.21680033,
+      "lng": 145.7231096,
+      "ecoregions": [
+        {
+          "id": 637,
+          "name": "Marianas tropical dry forests",
+          "biomeId": 2,
+          "realm": "Oceania"
+        }
+      ],
+      "status": "matched"
+    },
+    "amis": {
+      "lat": 29.53539777,
+      "lng": -101.075821,
+      "ecoregions": [
+        {
+          "id": 428,
+          "name": "Chihuahuan desert",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "anac": {
+      "lat": 38.8782,
+      "lng": -76.9703,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "ande": {
+      "lat": 32.19831758,
+      "lng": -84.12988898,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "anjo": {
+      "lat": 36.15624509,
+      "lng": -82.83709021,
+      "ecoregions": [
+        {
+          "id": 331,
+          "name": "Appalachian-Blue Ridge forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "ania": {
+      "lat": 56.85317675,
+      "lng": -157.5544362,
+      "ecoregions": [
+        {
+          "id": 369,
+          "name": "Alaska Peninsula montane taiga",
+          "biomeId": 6,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "anti": {
+      "lat": 39.46763452,
+      "lng": -77.73828017,
+      "ecoregions": [
+        {
+          "id": 331,
+          "name": "Appalachian-Blue Ridge forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "apis": {
+      "lat": 46.96240467,
+      "lng": -90.66045665,
+      "ecoregions": [
+        {
+          "id": 344,
+          "name": "Western Great Lakes forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "appa": {
+      "lat": 40.41029575,
+      "lng": -76.4337548,
+      "ecoregions": [
+        {
+          "id": 331,
+          "name": "Appalachian-Blue Ridge forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "apco": {
+      "lat": 37.38022164,
+      "lng": -78.79856982,
+      "ecoregions": [
+        {
+          "id": 330,
+          "name": "Appalachian Piedmont forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "arch": {
+      "lat": 38.72261844,
+      "lng": -109.5863666,
+      "ecoregions": [
+        {
+          "id": 429,
+          "name": "Colorado Plateau shrublands",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "arpo": {
+      "lat": 34.00389998,
+      "lng": -91.30837178,
+      "ecoregions": [
+        {
+          "id": 337,
+          "name": "Mississippi lowland forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "arho": {
+      "lat": 38.8822021484,
+      "lng": -77.0734786987,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "asis": {
+      "lat": 38.05593172,
+      "lng": -75.24524611,
+      "ecoregions": [
+        {
+          "id": 393,
+          "name": "Mid-Atlantic US coastal savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "azru": {
+      "lat": 36.83682216,
+      "lng": -107.9999245,
+      "ecoregions": [
+        {
+          "id": 429,
+          "name": "Colorado Plateau shrublands",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "badl": {
+      "lat": 43.68584846,
+      "lng": -102.482942,
+      "ecoregions": [
+        {
+          "id": 396,
+          "name": "Northern Shortgrass prairie",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "bawa": {
+      "lat": 39.02604289,
+      "lng": -76.85410921,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "band": {
+      "lat": 35.77898596,
+      "lng": -106.3317124,
+      "ecoregions": [
+        {
+          "id": 353,
+          "name": "Colorado Rockies forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "bepa": {
+      "lat": 38.89231541,
+      "lng": -77.00381882,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "beol": {
+      "lat": 38.03977546,
+      "lng": -103.4266499,
+      "ecoregions": [
+        {
+          "id": 402,
+          "name": "Western shortgrass prairie",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "bela": {
+      "lat": 65.96087902,
+      "lng": -164.4086432,
+      "ecoregions": [
+        {
+          "id": 410,
+          "name": "Beringia upland tundra",
+          "biomeId": 11,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "bibe": {
+      "lat": 29.29817767,
+      "lng": -103.2297897,
+      "ecoregions": [
+        {
+          "id": 428,
+          "name": "Chihuahuan desert",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "bicy": {
+      "lat": 25.97079602,
+      "lng": -81.08120629,
+      "ecoregions": [
+        {
+          "id": 581,
+          "name": "Everglades flooded grasslands",
+          "biomeId": 9,
+          "realm": "Neotropic"
+        }
+      ],
+      "status": "matched"
+    },
+    "biho": {
+      "lat": 45.64647324,
+      "lng": -113.6458443,
+      "ecoregions": [
+        {
+          "id": 394,
+          "name": "Montana Valley and Foothill grasslands",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "biso": {
+      "lat": 36.5348388,
+      "lng": -84.66506688,
+      "ecoregions": [
+        {
+          "id": 329,
+          "name": "Appalachian mixed mesophytic forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "bith": {
+      "lat": 30.457983431,
+      "lng": -94.386742115,
+      "ecoregions": [
+        {
+          "id": 363,
+          "name": "Piney Woods",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "bica": {
+      "lat": 45.13154227,
+      "lng": -108.1443943,
+      "ecoregions": [
+        {
+          "id": 394,
+          "name": "Montana Valley and Foothill grasslands",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "bicr": {
+      "lat": 33.5154266357,
+      "lng": -86.814666748,
+      "ecoregions": [
+        {
+          "id": 331,
+          "name": "Appalachian-Blue Ridge forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "bisc": {
+      "lat": 25.490587,
+      "lng": -80.21023851,
+      "ecoregions": [],
+      "status": "no-terrestrial-match"
+    },
+    "blca": {
+      "lat": 38.57779869,
+      "lng": -107.7242756,
+      "ecoregions": [
+        {
+          "id": 429,
+          "name": "Colorado Plateau shrublands",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "blrv": {
+      "lat": 41.8775792792,
+      "lng": -71.382433945,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "blsc": {
+      "lat": 30.3057966497568,
+      "lng": -104.022553112857,
+      "ecoregions": [
+        {
+          "id": 428,
+          "name": "Chihuahuan desert",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "blri": {
+      "lat": 35.5657195274,
+      "lng": -82.486484587,
+      "ecoregions": [
+        {
+          "id": 331,
+          "name": "Appalachian-Blue Ridge forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "blue": {
+      "lat": 37.56577087,
+      "lng": -80.98366657,
+      "ecoregions": [
+        {
+          "id": 329,
+          "name": "Appalachian mixed mesophytic forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "bowa": {
+      "lat": 37.11520539,
+      "lng": -79.73185833,
+      "ecoregions": [
+        {
+          "id": 330,
+          "name": "Appalachian Piedmont forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "boaf": {
+      "lat": 42.35908295,
+      "lng": -71.06764181,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "boha": {
+      "lat": 42.30905526,
+      "lng": -70.93941138,
+      "ecoregions": [],
+      "status": "no-terrestrial-match"
+    },
+    "bost": {
+      "lat": 42.36957407,
+      "lng": -71.05536763,
+      "ecoregions": [],
+      "status": "no-terrestrial-match"
+    },
+    "brcr": {
+      "lat": 34.50611958,
+      "lng": -88.72889343,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "brvb": {
+      "lat": 39.03787665,
+      "lng": -95.67614437,
+      "ecoregions": [
+        {
+          "id": 388,
+          "name": "Central Tallgrass prairie",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "brca": {
+      "lat": 37.58399144,
+      "lng": -112.1826689,
+      "ecoregions": [
+        {
+          "id": 429,
+          "name": "Colorado Plateau shrublands",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "buis": {
+      "lat": 17.81026717,
+      "lng": -64.6222179,
+      "ecoregions": [],
+      "status": "no-terrestrial-match"
+    },
+    "buff": {
+      "lat": 36.04116481,
+      "lng": -92.90761584,
+      "ecoregions": [
+        {
+          "id": 340,
+          "name": "Ozark Highlands mixed forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "buov": {
+      "lat": 32.2768237589,
+      "lng": -106.796583304,
+      "ecoregions": [
+        {
+          "id": 428,
+          "name": "Chihuahuan desert",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "cabr": {
+      "lat": 32.6722503,
+      "lng": -117.2415985,
+      "ecoregions": [
+        {
+          "id": 422,
+          "name": "California coastal sage and chaparral",
+          "biomeId": 12,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "cali": {
+      "lat": 42.3999643979,
+      "lng": -108.702415369,
+      "ecoregions": [
+        {
+          "id": 438,
+          "name": "Wyoming Basin shrub steppe",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "cane": {
+      "lat": 37.7970179913,
+      "lng": -84.598168306,
+      "ecoregions": [
+        {
+          "id": 336,
+          "name": "Interior Plateau US Hardwood Forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "cana": {
+      "lat": 28.78637529,
+      "lng": -80.75419576,
+      "ecoregions": [],
+      "status": "no-terrestrial-match"
+    },
+    "cari": {
+      "lat": 31.65408447,
+      "lng": -93.00131977,
+      "ecoregions": [
+        {
+          "id": 363,
+          "name": "Piney Woods",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "cach": {
+      "lat": 36.14319567,
+      "lng": -109.3388303,
+      "ecoregions": [
+        {
+          "id": 346,
+          "name": "Arizona Mountains forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "cany": {
+      "lat": 38.24555783,
+      "lng": -109.8801624,
+      "ecoregions": [
+        {
+          "id": 429,
+          "name": "Colorado Plateau shrublands",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "caco": {
+      "lat": 41.92381465,
+      "lng": -70.04319832,
+      "ecoregions": [],
+      "status": "no-terrestrial-match"
+    },
+    "caha": {
+      "lat": 35.41370839,
+      "lng": -75.65061112,
+      "ecoregions": [],
+      "status": "no-terrestrial-match"
+    },
+    "came": {
+      "lat": 36.9278094,
+      "lng": -76.0088219,
+      "ecoregions": [
+        {
+          "id": 393,
+          "name": "Mid-Atlantic US coastal savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "cakr": {
+      "lat": 67.41499986,
+      "lng": -163.5037786,
+      "ecoregions": [
+        {
+          "id": 408,
+          "name": "Arctic foothills tundra",
+          "biomeId": 11,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "calo": {
+      "lat": 34.8267961,
+      "lng": -76.34319082,
+      "ecoregions": [
+        {
+          "id": 393,
+          "name": "Mid-Atlantic US coastal savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "cahi": {
+      "lat": 38.889993,
+      "lng": -76.990332,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "care": {
+      "lat": 38.2821653131,
+      "lng": -111.247048378,
+      "ecoregions": [
+        {
+          "id": 429,
+          "name": "Colorado Plateau shrublands",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "cajo": {
+      "lat": 38.971601,
+      "lng": -76.483355,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "cavo": {
+      "lat": 36.78171096,
+      "lng": -103.9710427,
+      "ecoregions": [
+        {
+          "id": 402,
+          "name": "Western shortgrass prairie",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "carl": {
+      "lat": 35.26815509,
+      "lng": -82.45106258,
+      "ecoregions": [
+        {
+          "id": 331,
+          "name": "Appalachian-Blue Ridge forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "cibs": {
+      "lat": 40.2094,
+      "lng": -77.17971,
+      "ecoregions": [
+        {
+          "id": 331,
+          "name": "Appalachian-Blue Ridge forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "cave": {
+      "lat": 32.14089463,
+      "lng": -104.5529688,
+      "ecoregions": [
+        {
+          "id": 346,
+          "name": "Arizona Mountains forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "cawo": {
+      "lat": 38.91089286,
+      "lng": -77.02431104,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "cagr": {
+      "lat": 32.99702582,
+      "lng": -111.5325383,
+      "ecoregions": [
+        {
+          "id": 435,
+          "name": "Sonoran desert",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "casa": {
+      "lat": 29.89785701,
+      "lng": -81.31217173,
+      "ecoregions": [
+        {
+          "id": 612,
+          "name": "Bahamian-Antillean mangroves",
+          "biomeId": 14,
+          "realm": "Neotropic"
+        }
+      ],
+      "status": "matched"
+    },
+    "cacl": {
+      "lat": 40.70347795,
+      "lng": -74.01680558,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "camo": {
+      "lat": 35.29156348,
+      "lng": -115.0935606,
+      "ecoregions": [
+        {
+          "id": 433,
+          "name": "Mojave desert",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "cato": {
+      "lat": 39.65068457,
+      "lng": -77.46417665,
+      "ecoregions": [
+        {
+          "id": 331,
+          "name": "Appalachian-Blue Ridge forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "cebr": {
+      "lat": 37.63545562,
+      "lng": -112.845268,
+      "ecoregions": [
+        {
+          "id": 368,
+          "name": "Wasatch and Uinta montane forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "cebe": {
+      "lat": 39.0093576,
+      "lng": -78.30618934,
+      "ecoregions": [
+        {
+          "id": 331,
+          "name": "Appalachian-Blue Ridge forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "cech": {
+      "lat": 35.22729389,
+      "lng": -118.5615781,
+      "ecoregions": [
+        {
+          "id": 366,
+          "name": "Sierra Nevada forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "chcu": {
+      "lat": 36.03963414,
+      "lng": -107.9560076,
+      "ecoregions": [
+        {
+          "id": 429,
+          "name": "Colorado Plateau shrublands",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "cham": {
+      "lat": 31.76729634,
+      "lng": -106.4544011,
+      "ecoregions": [
+        {
+          "id": 428,
+          "name": "Chihuahuan desert",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "chis": {
+      "lat": 33.98680093,
+      "lng": -119.9112735,
+      "ecoregions": [],
+      "status": "no-terrestrial-match"
+    },
+    "chpi": {
+      "lat": 32.84577392,
+      "lng": -79.82487582,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "chyo": {
+      "lat": 39.70817829,
+      "lng": -83.89328575,
+      "ecoregions": [
+        {
+          "id": 342,
+          "name": "Southern Great Lakes forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "chat": {
+      "lat": 33.99698333,
+      "lng": -84.28953177,
+      "ecoregions": [
+        {
+          "id": 330,
+          "name": "Appalachian Piedmont forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "choh": {
+      "lat": 39.000283692,
+      "lng": -77.2481399539,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "cbpo": {
+      "lat": 38.971601,
+      "lng": -76.483355,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "chch": {
+      "lat": 34.94317623,
+      "lng": -85.28749537,
+      "ecoregions": [
+        {
+          "id": 331,
+          "name": "Appalachian-Blue Ridge forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "chic": {
+      "lat": 34.46050507,
+      "lng": -97.00715669,
+      "ecoregions": [
+        {
+          "id": 390,
+          "name": "Cross-Timbers savanna-woodland",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "chir": {
+      "lat": 32.01214618,
+      "lng": -109.341607,
+      "ecoregions": [
+        {
+          "id": 428,
+          "name": "Chihuahuan desert",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "chri": {
+      "lat": 17.7468,
+      "lng": -64.7022,
+      "ecoregions": [
+        {
+          "id": 599,
+          "name": "Caribbean shrublands",
+          "biomeId": 13,
+          "realm": "Neotropic"
+        }
+      ],
+      "status": "matched"
+    },
+    "ciro": {
+      "lat": 42.0699024,
+      "lng": -113.7124097,
+      "ecoregions": [
+        {
+          "id": 434,
+          "name": "Snake-Columbia shrub steppe",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "cwdw": {
+      "lat": 38.9644,
+      "lng": -77.0292,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "clba": {
+      "lat": 38.96762882,
+      "lng": -77.14009689,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "colo": {
+      "lat": 37.22824435,
+      "lng": -76.61998123,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "colm": {
+      "lat": 39.05045016,
+      "lng": -108.6920709,
+      "ecoregions": [
+        {
+          "id": 429,
+          "name": "Colorado Plateau shrublands",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "colt": {
+      "lat": 41.756169,
+      "lng": -72.663338,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "cong": {
+      "lat": 33.79187523,
+      "lng": -80.74867805,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "coga": {
+      "lat": 38.8909354,
+      "lng": -77.04409306,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "coro": {
+      "lat": 31.34900397,
+      "lng": -110.2561574,
+      "ecoregions": [
+        {
+          "id": 428,
+          "name": "Chihuahuan desert",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "cowp": {
+      "lat": 35.13160654,
+      "lng": -81.80935433,
+      "ecoregions": [
+        {
+          "id": 330,
+          "name": "Appalachian Piedmont forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "crla": {
+      "lat": 42.94065854,
+      "lng": -122.1338414,
+      "ecoregions": [
+        {
+          "id": 352,
+          "name": "Central-Southern Cascades Forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "crmo": {
+      "lat": 43.20345611,
+      "lng": -113.4791609,
+      "ecoregions": [
+        {
+          "id": 434,
+          "name": "Snake-Columbia shrub steppe",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "cuga": {
+      "lat": 36.62503076,
+      "lng": -83.6114083,
+      "ecoregions": [
+        {
+          "id": 331,
+          "name": "Appalachian-Blue Ridge forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "cuis": {
+      "lat": 30.85857484,
+      "lng": -81.45253575,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "cure": {
+      "lat": 38.46584558,
+      "lng": -107.3303371,
+      "ecoregions": [
+        {
+          "id": 353,
+          "name": "Colorado Rockies forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "cuva": {
+      "lat": 41.26093905,
+      "lng": -81.57116722,
+      "ecoregions": [
+        {
+          "id": 342,
+          "name": "Southern Great Lakes forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "daav": {
+      "lat": 39.78944467,
+      "lng": -84.10442045,
+      "ecoregions": [
+        {
+          "id": 342,
+          "name": "Southern Great Lakes forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "deso": {
+      "lat": 27.52272613,
+      "lng": -82.64335416,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "deva": {
+      "lat": 36.48753731,
+      "lng": -117.134395,
+      "ecoregions": [
+        {
+          "id": 433,
+          "name": "Mojave desert",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "dewa": {
+      "lat": 41.12793491,
+      "lng": -74.94751173,
+      "ecoregions": [
+        {
+          "id": 331,
+          "name": "Appalachian-Blue Ridge forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "dena": {
+      "lat": 63.29777484,
+      "lng": -151.0526568,
+      "ecoregions": [
+        {
+          "id": 405,
+          "name": "Alaska-St. Elias Range tundra",
+          "biomeId": 11,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "depo": {
+      "lat": 37.6152564,
+      "lng": -119.0873903,
+      "ecoregions": [
+        {
+          "id": 366,
+          "name": "Sierra Nevada forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "deto": {
+      "lat": 44.59064655,
+      "lng": -104.7156341,
+      "ecoregions": [
+        {
+          "id": 367,
+          "name": "South Central Rockies forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "dino": {
+      "lat": 40.50739742,
+      "lng": -108.9333714,
+      "ecoregions": [
+        {
+          "id": 429,
+          "name": "Colorado Plateau shrublands",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "drto": {
+      "lat": 24.628741,
+      "lng": -82.87319,
+      "ecoregions": [],
+      "status": "no-terrestrial-match"
+    },
+    "ddem": {
+      "lat": 38.8869476647,
+      "lng": -77.018737554,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "ebla": {
+      "lat": 48.21403036,
+      "lng": -122.6877213,
+      "ecoregions": [
+        {
+          "id": 364,
+          "name": "Puget lowland forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "edal": {
+      "lat": 39.96195482,
+      "lng": -75.1500062,
+      "ecoregions": [
+        {
+          "id": 393,
+          "name": "Mid-Atlantic US coastal savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "efmo": {
+      "lat": 43.08095081,
+      "lng": -91.19687517,
+      "ecoregions": [
+        {
+          "id": 343,
+          "name": "Upper Midwest US forest-savanna transition",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "eise": {
+      "lat": 39.79577592,
+      "lng": -77.26508101,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "elte": {
+      "lat": 30.0922964581,
+      "lng": -97.3397666725,
+      "ecoregions": [
+        {
+          "id": 332,
+          "name": "East Central Texas forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "elca": {
+      "lat": 33.7990672546,
+      "lng": -106.866386195,
+      "ecoregions": [
+        {
+          "id": 428,
+          "name": "Chihuahuan desert",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "elma": {
+      "lat": 34.88422799,
+      "lng": -107.9950948,
+      "ecoregions": [
+        {
+          "id": 429,
+          "name": "Colorado Plateau shrublands",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "elmo": {
+      "lat": 35.03895916,
+      "lng": -108.3463984,
+      "ecoregions": [
+        {
+          "id": 429,
+          "name": "Colorado Plateau shrublands",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "elro": {
+      "lat": 41.76208482,
+      "lng": -73.89894026,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "elis": {
+      "lat": 40.69946,
+      "lng": -74.0401,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "till": {
+      "lat": 33.9711,
+      "lng": -90.3698,
+      "ecoregions": [
+        {
+          "id": 337,
+          "name": "Mississippi lowland forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "euon": {
+      "lat": 37.82604456,
+      "lng": -122.0271566,
+      "ecoregions": [
+        {
+          "id": 423,
+          "name": "California interior chaparral and woodlands",
+          "biomeId": 12,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "ever": {
+      "lat": 25.37294225,
+      "lng": -80.88200301,
+      "ecoregions": [
+        {
+          "id": 612,
+          "name": "Bahamian-Antillean mangroves",
+          "biomeId": 14,
+          "realm": "Neotropic"
+        }
+      ],
+      "status": "matched"
+    },
+    "feha": {
+      "lat": 40.70731192,
+      "lng": -74.01025636,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "fiis": {
+      "lat": 40.69668638,
+      "lng": -73.00013462,
+      "ecoregions": [],
+      "status": "no-terrestrial-match"
+    },
+    "fila": {
+      "lat": 40.79689857,
+      "lng": -81.37579869,
+      "ecoregions": [
+        {
+          "id": 342,
+          "name": "Southern Great Lakes forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "frst": {
+      "lat": 39.83076929,
+      "lng": -75.56353942,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "flni": {
+      "lat": 40.06061476,
+      "lng": -78.89456905,
+      "ecoregions": [
+        {
+          "id": 329,
+          "name": "Appalachian mixed mesophytic forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "flfo": {
+      "lat": 38.91260586,
+      "lng": -105.2803396,
+      "ecoregions": [
+        {
+          "id": 353,
+          "name": "Colorado Rockies forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "foth": {
+      "lat": 38.89668819,
+      "lng": -77.02577944,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "fobo": {
+      "lat": 32.14925942,
+      "lng": -109.451132,
+      "ecoregions": [
+        {
+          "id": 428,
+          "name": "Chihuahuan desert",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "foda": {
+      "lat": 30.59930381,
+      "lng": -103.8961904,
+      "ecoregions": [
+        {
+          "id": 428,
+          "name": "Chihuahuan desert",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "fodo": {
+      "lat": 36.49019078,
+      "lng": -87.92445695,
+      "ecoregions": [
+        {
+          "id": 336,
+          "name": "Interior Plateau US Hardwood Forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "fodu": {
+      "lat": 38.87731289,
+      "lng": -76.94955824,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "fofo": {
+      "lat": 38.76901785,
+      "lng": -77.02812387,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "fofr": {
+      "lat": 31.2214699,
+      "lng": -81.39452014,
+      "ecoregions": [],
+      "status": "no-terrestrial-match"
+    },
+    "fola": {
+      "lat": 42.20301694,
+      "lng": -104.5459112,
+      "ecoregions": [
+        {
+          "id": 402,
+          "name": "Western shortgrass prairie",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "fols": {
+      "lat": 38.18047491,
+      "lng": -99.21836664,
+      "ecoregions": [
+        {
+          "id": 389,
+          "name": "Central-Southern US mixed grasslands",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "foma": {
+      "lat": 29.7121489,
+      "lng": -81.23567535,
+      "ecoregions": [],
+      "status": "no-terrestrial-match"
+    },
+    "fomc": {
+      "lat": 39.26395314,
+      "lng": -76.58044165,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "fomr": {
+      "lat": 37.01733343,
+      "lng": -76.30103195,
+      "ecoregions": [
+        {
+          "id": 393,
+          "name": "Mid-Atlantic US coastal savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "fone": {
+      "lat": 39.81306048,
+      "lng": -79.59033344,
+      "ecoregions": [
+        {
+          "id": 329,
+          "name": "Appalachian mixed mesophytic forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "fopo": {
+      "lat": 37.80837439,
+      "lng": -122.473747,
+      "ecoregions": [
+        {
+          "id": 423,
+          "name": "California interior chaparral and woodlands",
+          "biomeId": 12,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "fopu": {
+      "lat": 32.0308274,
+      "lng": -80.93361681,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "fora": {
+      "lat": 35.93278602,
+      "lng": -75.71496865,
+      "ecoregions": [
+        {
+          "id": 393,
+          "name": "Mid-Atlantic US coastal savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "fosc": {
+      "lat": 37.84358849,
+      "lng": -94.70429174,
+      "ecoregions": [
+        {
+          "id": 388,
+          "name": "Central Tallgrass prairie",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "fosm": {
+      "lat": 35.38834746,
+      "lng": -94.43129079,
+      "ecoregions": [
+        {
+          "id": 341,
+          "name": "Ozark Mountain forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "fost": {
+      "lat": 43.21053441,
+      "lng": -75.45557626,
+      "ecoregions": [
+        {
+          "id": 334,
+          "name": "Eastern Great Lakes lowland forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "fosu": {
+      "lat": 32.75654469,
+      "lng": -79.87068744,
+      "ecoregions": [],
+      "status": "no-terrestrial-match"
+    },
+    "foun": {
+      "lat": 35.90700629,
+      "lng": -105.0145185,
+      "ecoregions": [
+        {
+          "id": 402,
+          "name": "Western shortgrass prairie",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "fous": {
+      "lat": 48.00075828,
+      "lng": -104.0375238,
+      "ecoregions": [
+        {
+          "id": 396,
+          "name": "Northern Shortgrass prairie",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "fova": {
+      "lat": 45.62234841,
+      "lng": -122.6617043,
+      "ecoregions": [
+        {
+          "id": 403,
+          "name": "Willamette Valley oak savanna",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "fowa": {
+      "lat": 38.7117,
+      "lng": -77.0302,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "fobu": {
+      "lat": 41.85635223,
+      "lng": -110.7624754,
+      "ecoregions": [
+        {
+          "id": 438,
+          "name": "Wyoming Basin shrub steppe",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "frpe": {
+      "lat": 44.0052,
+      "lng": -69.5568,
+      "ecoregions": [
+        {
+          "id": 338,
+          "name": "New England-Acadian forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "frde": {
+      "lat": 38.88341274,
+      "lng": -77.04311542,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "frdo": {
+      "lat": 38.86298458,
+      "lng": -76.98508147,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "frla": {
+      "lat": 42.32424266,
+      "lng": -71.13202567,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "frsp": {
+      "lat": 38.29378,
+      "lng": -77.46734,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "frri": {
+      "lat": 33.635269165,
+      "lng": -85.9064331055,
+      "ecoregions": [
+        {
+          "id": 331,
+          "name": "Appalachian-Blue Ridge forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "frhi": {
+      "lat": 39.77543423,
+      "lng": -79.92504169,
+      "ecoregions": [
+        {
+          "id": 329,
+          "name": "Appalachian mixed mesophytic forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "gaar": {
+      "lat": 67.75961636,
+      "lng": -153.2917758,
+      "ecoregions": [
+        {
+          "id": 411,
+          "name": "Brooks-British Range tundra",
+          "biomeId": 11,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "jeff": {
+      "lat": 38.6258069,
+      "lng": -90.1892508,
+      "ecoregions": [
+        {
+          "id": 387,
+          "name": "Central US forest-grasslands transition",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "gate": {
+      "lat": 40.56536246,
+      "lng": -73.9171087,
+      "ecoregions": [],
+      "status": "no-terrestrial-match"
+    },
+    "gari": {
+      "lat": 38.20614947,
+      "lng": -81.00420836,
+      "ecoregions": [
+        {
+          "id": 329,
+          "name": "Appalachian mixed mesophytic forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "gegr": {
+      "lat": 40.81332817,
+      "lng": -73.96331542,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "gero": {
+      "lat": 38.67912659,
+      "lng": -87.53545212,
+      "ecoregions": [
+        {
+          "id": 387,
+          "name": "Central US forest-grasslands transition",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "gewa": {
+      "lat": 38.19362603,
+      "lng": -76.92079458,
+      "ecoregions": [
+        {
+          "id": 393,
+          "name": "Mid-Atlantic US coastal savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "gwca": {
+      "lat": 36.9871322,
+      "lng": -94.35522737,
+      "ecoregions": [
+        {
+          "id": 340,
+          "name": "Ozark Highlands mixed forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "gwmp": {
+      "lat": 38.9628,
+      "lng": -77.1495,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "gett": {
+      "lat": 39.81557366,
+      "lng": -77.23246758,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "gicl": {
+      "lat": 33.22715258,
+      "lng": -108.2706711,
+      "ecoregions": [
+        {
+          "id": 346,
+          "name": "Arizona Mountains forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "glba": {
+      "lat": 58.80086718,
+      "lng": -136.8407579,
+      "ecoregions": [
+        {
+          "id": 420,
+          "name": "Pacific Coastal Mountain icefields and tundra",
+          "biomeId": 11,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "glac": {
+      "lat": 48.68414678,
+      "lng": -113.8009306,
+      "ecoregions": [
+        {
+          "id": 361,
+          "name": "Northern Rockies conifer forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "glca": {
+      "lat": 36.9357464677,
+      "lng": -111.485594268,
+      "ecoregions": [
+        {
+          "id": 429,
+          "name": "Colorado Plateau shrublands",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "glec": {
+      "lat": 38.96912315,
+      "lng": -77.14012206,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "glde": {
+      "lat": 39.93435005,
+      "lng": -75.14398924,
+      "ecoregions": [
+        {
+          "id": 393,
+          "name": "Mid-Atlantic US coastal savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "goga": {
+      "lat": 37.85982543,
+      "lng": -122.6007386,
+      "ecoregions": [],
+      "status": "no-terrestrial-match"
+    },
+    "gosp": {
+      "lat": 41.61947508,
+      "lng": -112.5242653,
+      "ecoregions": [
+        {
+          "id": 430,
+          "name": "Great Basin shrub steppe",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "gois": {
+      "lat": 40.69164233,
+      "lng": -74.01670765,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "grca": {
+      "lat": 36.0001165336,
+      "lng": -112.121516363,
+      "ecoregions": [
+        {
+          "id": 346,
+          "name": "Arizona Mountains forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "para": {
+      "lat": 36.41535465,
+      "lng": -113.6682797,
+      "ecoregions": [
+        {
+          "id": 429,
+          "name": "Colorado Plateau shrublands",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "grpo": {
+      "lat": 47.99294217,
+      "lng": -89.75573031,
+      "ecoregions": [
+        {
+          "id": 344,
+          "name": "Western Great Lakes forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "grte": {
+      "lat": 43.81853565,
+      "lng": -110.7054666,
+      "ecoregions": [
+        {
+          "id": 367,
+          "name": "South Central Rockies forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "grko": {
+      "lat": 46.41358923,
+      "lng": -112.7467024,
+      "ecoregions": [
+        {
+          "id": 394,
+          "name": "Montana Valley and Foothill grasslands",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "grba": {
+      "lat": 38.94617378,
+      "lng": -114.2579782,
+      "ecoregions": [
+        {
+          "id": 356,
+          "name": "Great Basin montane forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "greg": {
+      "lat": 39.3042,
+      "lng": -74.6497,
+      "ecoregions": [],
+      "status": "no-terrestrial-match"
+    },
+    "grfa": {
+      "lat": 38.98776107,
+      "lng": -77.25128326,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "grsa": {
+      "lat": 37.79256812,
+      "lng": -105.5919572,
+      "ecoregions": [
+        {
+          "id": 429,
+          "name": "Colorado Plateau shrublands",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "grsm": {
+      "lat": 35.60116374,
+      "lng": -83.50818326,
+      "ecoregions": [
+        {
+          "id": 331,
+          "name": "Appalachian-Blue Ridge forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "grsp": {
+      "lat": 38.037099,
+      "lng": -78.189823,
+      "ecoregions": [
+        {
+          "id": 330,
+          "name": "Appalachian Piedmont forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "gree": {
+      "lat": 38.98328267,
+      "lng": -76.89722133,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "gumo": {
+      "lat": 31.92304462,
+      "lng": -104.885527,
+      "ecoregions": [
+        {
+          "id": 346,
+          "name": "Arizona Mountains forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "guco": {
+      "lat": 36.13225478,
+      "lng": -79.8424561,
+      "ecoregions": [
+        {
+          "id": 330,
+          "name": "Appalachian Piedmont forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "guis": {
+      "lat": 30.3211,
+      "lng": -87.2304,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "hafo": {
+      "lat": 42.79074114,
+      "lng": -114.9443074,
+      "ecoregions": [
+        {
+          "id": 434,
+          "name": "Snake-Columbia shrub steppe",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "hale": {
+      "lat": 20.70693015,
+      "lng": -156.1591775,
+      "ecoregions": [
+        {
+          "id": 639,
+          "name": "Hawai'i tropical high shrublands",
+          "biomeId": 7,
+          "realm": "Oceania"
+        }
+      ],
+      "status": "matched"
+    },
+    "hagr": {
+      "lat": 40.81871605,
+      "lng": -73.94878487,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "hamp": {
+      "lat": 39.4175296,
+      "lng": -76.58781182,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "haha": {
+      "lat": 38.74646351,
+      "lng": -77.00377069,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "hafe": {
+      "lat": 39.31865949,
+      "lng": -77.74088546,
+      "ecoregions": [
+        {
+          "id": 331,
+          "name": "Appalachian-Blue Ridge forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "hart": {
+      "lat": 42.9128920287,
+      "lng": -76.5646715462,
+      "ecoregions": [
+        {
+          "id": 334,
+          "name": "Eastern Great Lakes lowland forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "hatu": {
+      "lat": 38.4548643511,
+      "lng": -76.1373451376,
+      "ecoregions": [
+        {
+          "id": 393,
+          "name": "Mid-Atlantic US coastal savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "hstr": {
+      "lat": 38.92711967,
+      "lng": -94.5162488,
+      "ecoregions": [
+        {
+          "id": 388,
+          "name": "Central Tallgrass prairie",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "havo": {
+      "lat": 19.3355036,
+      "lng": -155.4700257,
+      "ecoregions": [
+        {
+          "id": 623,
+          "name": "Hawai'i tropical moist forests",
+          "biomeId": 1,
+          "realm": "Oceania"
+        }
+      ],
+      "status": "matched"
+    },
+    "heho": {
+      "lat": 41.66793558,
+      "lng": -91.35232139,
+      "ecoregions": [
+        {
+          "id": 388,
+          "name": "Central Tallgrass prairie",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "jame": {
+      "lat": 37.2065,
+      "lng": -76.7538,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "hofr": {
+      "lat": 41.76639758,
+      "lng": -73.92516857,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "home": {
+      "lat": 40.28802381,
+      "lng": -96.83387781,
+      "ecoregions": [
+        {
+          "id": 389,
+          "name": "Central-Southern US mixed grasslands",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "hono": {
+      "lat": 21.38817536,
+      "lng": -158.0574991,
+      "ecoregions": [
+        {
+          "id": 636,
+          "name": "Hawai'i tropical dry forests",
+          "biomeId": 2,
+          "realm": "Oceania"
+        }
+      ],
+      "status": "matched"
+    },
+    "hocu": {
+      "lat": 39.31594374,
+      "lng": -83.08049456,
+      "ecoregions": [
+        {
+          "id": 329,
+          "name": "Appalachian mixed mesophytic forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "hofu": {
+      "lat": 40.20610637,
+      "lng": -75.76766355,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "hobe": {
+      "lat": 32.97668879,
+      "lng": -85.73413589,
+      "ecoregions": [
+        {
+          "id": 330,
+          "name": "Appalachian Piedmont forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "hosp": {
+      "lat": 34.52414366,
+      "lng": -93.06332936,
+      "ecoregions": [
+        {
+          "id": 341,
+          "name": "Ozark Mountain forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "hove": {
+      "lat": 37.39134092,
+      "lng": -109.0047977,
+      "ecoregions": [
+        {
+          "id": 429,
+          "name": "Colorado Plateau shrublands",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "hutr": {
+      "lat": 35.70727324,
+      "lng": -109.5599515,
+      "ecoregions": [
+        {
+          "id": 429,
+          "name": "Colorado Plateau shrublands",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "iafl": {
+      "lat": 46.5669309008,
+      "lng": -118.992564971,
+      "ecoregions": [
+        {
+          "id": 398,
+          "name": "Palouse prairie",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "iatr": {
+      "lat": 43.9895697794,
+      "lng": -89.5612021706,
+      "ecoregions": [
+        {
+          "id": 343,
+          "name": "Upper Midwest US forest-savanna transition",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "inde": {
+      "lat": 39.94746112,
+      "lng": -75.14794157,
+      "ecoregions": [
+        {
+          "id": 393,
+          "name": "Mid-Atlantic US coastal savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "indu": {
+      "lat": 41.63765525,
+      "lng": -87.09647445,
+      "ecoregions": [
+        {
+          "id": 342,
+          "name": "Southern Great Lakes forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "inup": {
+      "lat": 71.29832445,
+      "lng": -156.7535863,
+      "ecoregions": [
+        {
+          "id": 407,
+          "name": "Arctic coastal tundra",
+          "biomeId": 11,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "isro": {
+      "lat": 48.01145819,
+      "lng": -88.82780657,
+      "ecoregions": [
+        {
+          "id": 344,
+          "name": "Western Great Lakes forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "jaga": {
+      "lat": 41.66486549,
+      "lng": -81.35086557,
+      "ecoregions": [
+        {
+          "id": 334,
+          "name": "Eastern Great Lakes lowland forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "jela": {
+      "lat": 29.81739855,
+      "lng": -90.1402241,
+      "ecoregions": [
+        {
+          "id": 337,
+          "name": "Mississippi lowland forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "jeca": {
+      "lat": 43.73102945,
+      "lng": -103.829994,
+      "ecoregions": [
+        {
+          "id": 367,
+          "name": "South Central Rockies forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "jica": {
+      "lat": 32.03611,
+      "lng": -84.3924,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "joda": {
+      "lat": 44.62566508,
+      "lng": -119.8811491,
+      "ecoregions": [
+        {
+          "id": 348,
+          "name": "Blue Mountains forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "jofi": {
+      "lat": 42.34693694,
+      "lng": -71.12323846,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "jomu": {
+      "lat": 37.9828422,
+      "lng": -122.1326097,
+      "ecoregions": [
+        {
+          "id": 423,
+          "name": "California interior chaparral and woodlands",
+          "biomeId": 12,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "jofl": {
+      "lat": 40.34584534,
+      "lng": -78.77448601,
+      "ecoregions": [
+        {
+          "id": 329,
+          "name": "Appalachian mixed mesophytic forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "jotr": {
+      "lat": 33.91418525,
+      "lng": -115.8398125,
+      "ecoregions": [
+        {
+          "id": 433,
+          "name": "Mojave desert",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "juba": {
+      "lat": 33.8743390994,
+      "lng": -117.224179857,
+      "ecoregions": [
+        {
+          "id": 422,
+          "name": "California coastal sage and chaparral",
+          "biomeId": 12,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "kala": {
+      "lat": 21.1731108,
+      "lng": -156.9511609,
+      "ecoregions": [
+        {
+          "id": 636,
+          "name": "Hawai'i tropical dry forests",
+          "biomeId": 2,
+          "realm": "Oceania"
+        }
+      ],
+      "status": "matched"
+    },
+    "kaho": {
+      "lat": 19.68083237,
+      "lng": -156.0306932,
+      "ecoregions": [
+        {
+          "id": 640,
+          "name": "Hawai'i tropical low shrublands",
+          "biomeId": 7,
+          "realm": "Oceania"
+        }
+      ],
+      "status": "matched"
+    },
+    "kaww": {
+      "lat": 45.9567565918,
+      "lng": -68.7122879028,
+      "ecoregions": [
+        {
+          "id": 338,
+          "name": "New England-Acadian forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "katm": {
+      "lat": 58.62235668,
+      "lng": -155.0126574,
+      "ecoregions": [
+        {
+          "id": 409,
+          "name": "Beringia lowland tundra",
+          "biomeId": 11,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "kefj": {
+      "lat": 59.81804414,
+      "lng": -150.106502,
+      "ecoregions": [
+        {
+          "id": 0,
+          "name": "Rock and Ice",
+          "biomeId": 11,
+          "realm": "N/A"
+        }
+      ],
+      "status": "matched"
+    },
+    "keaq": {
+      "lat": 38.9128,
+      "lng": -76.9434,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "kemo": {
+      "lat": 33.95370717,
+      "lng": -84.59214186,
+      "ecoregions": [
+        {
+          "id": 330,
+          "name": "Appalachian Piedmont forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "kewe": {
+      "lat": 47.1792308,
+      "lng": -88.52275344,
+      "ecoregions": [
+        {
+          "id": 344,
+          "name": "Western Great Lakes forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "kimo": {
+      "lat": 35.13900723,
+      "lng": -81.38978712,
+      "ecoregions": [
+        {
+          "id": 330,
+          "name": "Appalachian Piedmont forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "klse": {
+      "lat": 47.5993663,
+      "lng": -122.3319664,
+      "ecoregions": [
+        {
+          "id": 364,
+          "name": "Puget lowland forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "klgo": {
+      "lat": 59.61042373,
+      "lng": -135.2618535,
+      "ecoregions": [
+        {
+          "id": 420,
+          "name": "Pacific Coastal Mountain icefields and tundra",
+          "biomeId": 11,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "knri": {
+      "lat": 47.3540219,
+      "lng": -101.3860533,
+      "ecoregions": [
+        {
+          "id": 396,
+          "name": "Northern Shortgrass prairie",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "kova": {
+      "lat": 67.35631336,
+      "lng": -159.2002293,
+      "ecoregions": [
+        {
+          "id": 375,
+          "name": "Interior Alaska-Yukon lowland taiga",
+          "biomeId": 6,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "kowa": {
+      "lat": 38.88784226,
+      "lng": -77.04773857,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "lacl": {
+      "lat": 60.57405857,
+      "lng": -153.55535,
+      "ecoregions": [
+        {
+          "id": 405,
+          "name": "Alaska-St. Elias Range tundra",
+          "biomeId": 11,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "lake": {
+      "lat": 35.96622528,
+      "lng": -114.3469067,
+      "ecoregions": [
+        {
+          "id": 433,
+          "name": "Mojave desert",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "lamr": {
+      "lat": 35.61926203,
+      "lng": -101.6820066,
+      "ecoregions": [
+        {
+          "id": 402,
+          "name": "Western shortgrass prairie",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "laro": {
+      "lat": 48.17148735,
+      "lng": -118.3513713,
+      "ecoregions": [
+        {
+          "id": 361,
+          "name": "Northern Rockies conifer forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "lavo": {
+      "lat": 40.49354575,
+      "lng": -121.4075993,
+      "ecoregions": [
+        {
+          "id": 352,
+          "name": "Central-Southern Cascades Forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "labe": {
+      "lat": 41.75915823,
+      "lng": -121.5172189,
+      "ecoregions": [
+        {
+          "id": 354,
+          "name": "Eastern Cascades forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "lyba": {
+      "lat": 38.87858036,
+      "lng": -77.05145832,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "lecl": {
+      "lat": 41.2646141052,
+      "lng": -95.9245147705,
+      "ecoregions": [
+        {
+          "id": 388,
+          "name": "Central Tallgrass prairie",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "lewi": {
+      "lat": 46.21178735,
+      "lng": -123.9638583,
+      "ecoregions": [],
+      "status": "no-terrestrial-match"
+    },
+    "libo": {
+      "lat": 38.11817004,
+      "lng": -86.99656861,
+      "ecoregions": [
+        {
+          "id": 387,
+          "name": "Central US forest-grasslands transition",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "liho": {
+      "lat": 39.79715642,
+      "lng": -89.64513397,
+      "ecoregions": [
+        {
+          "id": 387,
+          "name": "Central US forest-grasslands transition",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "linc": {
+      "lat": 38.88927229,
+      "lng": -77.05017778,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "libi": {
+      "lat": 45.55633048,
+      "lng": -107.4183614,
+      "ecoregions": [
+        {
+          "id": 396,
+          "name": "Northern Shortgrass prairie",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "liri": {
+      "lat": 34.41461863,
+      "lng": -85.61734327,
+      "ecoregions": [
+        {
+          "id": 329,
+          "name": "Appalachian mixed mesophytic forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "chsc": {
+      "lat": 34.7369465,
+      "lng": -92.29987899,
+      "ecoregions": [
+        {
+          "id": 363,
+          "name": "Piney Woods",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "long": {
+      "lat": 42.37698854,
+      "lng": -71.12636956,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "lowe": {
+      "lat": 42.6455371,
+      "lng": -71.31588673,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "lode": {
+      "lat": 40.4000389,
+      "lng": -74.983737,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "loea": {
+      "lat": 40.7187683,
+      "lng": -73.99001245,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "lyjo": {
+      "lat": 30.2519655,
+      "lng": -98.60692433,
+      "ecoregions": [
+        {
+          "id": 391,
+          "name": "Edwards Plateau savanna",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "mawa": {
+      "lat": 37.54781499,
+      "lng": -77.43746979,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "maac": {
+      "lat": 47.25102114,
+      "lng": -68.59447532,
+      "ecoregions": [
+        {
+          "id": 338,
+          "name": "New England-Acadian forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "maca": {
+      "lat": 37.19760458,
+      "lng": -86.13090198,
+      "ecoregions": [
+        {
+          "id": 336,
+          "name": "Interior Plateau US Hardwood Forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "mana": {
+      "lat": 38.81710063,
+      "lng": -77.5353468,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "mapr": {
+      "lat": 35.88096,
+      "lng": -106.30214,
+      "ecoregions": [
+        {
+          "id": 353,
+          "name": "Colorado Rockies forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "manz": {
+      "lat": 36.72559195,
+      "lng": -118.1547177,
+      "ecoregions": [
+        {
+          "id": 430,
+          "name": "Great Basin shrub steppe",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "mabi": {
+      "lat": 43.63348732,
+      "lng": -72.53424638,
+      "ecoregions": [
+        {
+          "id": 338,
+          "name": "New England-Acadian forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "mlkm": {
+      "lat": 38.8862276865,
+      "lng": -77.0442195534,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "malu": {
+      "lat": 33.75618241,
+      "lng": -84.37256768,
+      "ecoregions": [
+        {
+          "id": 330,
+          "name": "Appalachian Piedmont forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "mava": {
+      "lat": 42.36819596,
+      "lng": -73.70834257,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "mamc": {
+      "lat": 38.90819107,
+      "lng": -77.03096742,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "memy": {
+      "lat": 32.34096274,
+      "lng": -90.21264553,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "meve": {
+      "lat": 37.23908345,
+      "lng": -108.4624032,
+      "ecoregions": [
+        {
+          "id": 429,
+          "name": "Colorado Plateau shrublands",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "misp": {
+      "lat": 37.0688158602,
+      "lng": -84.7375361304,
+      "ecoregions": [
+        {
+          "id": 336,
+          "name": "Interior Plateau US Hardwood Forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "miin": {
+      "lat": 42.678,
+      "lng": -114.2465,
+      "ecoregions": [
+        {
+          "id": 434,
+          "name": "Snake-Columbia shrub steppe",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "mima": {
+      "lat": 42.4562778,
+      "lng": -71.30738884,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "mimi": {
+      "lat": 43.89558013,
+      "lng": -102.0272131,
+      "ecoregions": [
+        {
+          "id": 396,
+          "name": "Northern Shortgrass prairie",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "miss": {
+      "lat": 44.942487,
+      "lng": -93.098712,
+      "ecoregions": [
+        {
+          "id": 343,
+          "name": "Upper Midwest US forest-savanna transition",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "mnrr": {
+      "lat": 42.7882189,
+      "lng": -97.59077822,
+      "ecoregions": [
+        {
+          "id": 388,
+          "name": "Central Tallgrass prairie",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "moja": {
+      "lat": 35.12485941,
+      "lng": -115.5168258,
+      "ecoregions": [
+        {
+          "id": 433,
+          "name": "Mojave desert",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "mono": {
+      "lat": 39.36084236,
+      "lng": -77.39637677,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "moca": {
+      "lat": 34.62237771,
+      "lng": -111.8147857,
+      "ecoregions": [
+        {
+          "id": 346,
+          "name": "Arizona Mountains forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "mocr": {
+      "lat": 34.45820776,
+      "lng": -78.11031134,
+      "ecoregions": [
+        {
+          "id": 393,
+          "name": "Mid-Atlantic US coastal savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "mopi": {
+      "lat": 41.2650321741,
+      "lng": -101.84083756,
+      "ecoregions": [
+        {
+          "id": 402,
+          "name": "Western shortgrass prairie",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "morr": {
+      "lat": 40.7650755,
+      "lng": -74.53455122,
+      "ecoregions": [
+        {
+          "id": 338,
+          "name": "New England-Acadian forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "mora": {
+      "lat": 46.86075416,
+      "lng": -121.7043885,
+      "ecoregions": [
+        {
+          "id": 352,
+          "name": "Central-Southern Cascades Forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "moru": {
+      "lat": 43.88037021,
+      "lng": -103.4525186,
+      "ecoregions": [
+        {
+          "id": 367,
+          "name": "South Central Rockies forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "muwo": {
+      "lat": 37.89658027,
+      "lng": -122.5808047,
+      "ecoregions": [
+        {
+          "id": 359,
+          "name": "Northern California coastal forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "natc": {
+      "lat": 31.54697621,
+      "lng": -91.39040665,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "natt": {
+      "lat": 34.330290333,
+      "lng": -88.7100104094,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "natr": {
+      "lat": 33.78002293,
+      "lng": -89.03092439,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "nace": {
+      "lat": 38.8659,
+      "lng": -76.994,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "nama": {
+      "lat": 38.8899,
+      "lng": -77.026,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "npsa": {
+      "lat": -14.22865935,
+      "lng": -169.8503777,
+      "ecoregions": [],
+      "status": "no-terrestrial-match"
+    },
+    "npnh": {
+      "lat": 40.6632,
+      "lng": -74.0451,
+      "ecoregions": [],
+      "status": "no-terrestrial-match"
+    },
+    "nabr": {
+      "lat": 37.6045329,
+      "lng": -110.0022436,
+      "ecoregions": [
+        {
+          "id": 429,
+          "name": "Colorado Plateau shrublands",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "nava": {
+      "lat": 36.71755643,
+      "lng": -110.5504015,
+      "ecoregions": [
+        {
+          "id": 429,
+          "name": "Colorado Plateau shrublands",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "nebe": {
+      "lat": 41.63540552,
+      "lng": -70.92322321,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "neen": {
+      "lat": 42.2915819137,
+      "lng": -72.5242767334,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "pine": {
+      "lat": 39.9384,
+      "lng": -74.625,
+      "ecoregions": [
+        {
+          "id": 347,
+          "name": "Atlantic coastal pine barrens",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "jazz": {
+      "lat": 29.96303129,
+      "lng": -90.06749669,
+      "ecoregions": [
+        {
+          "id": 337,
+          "name": "Mississippi lowland forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "neph": {
+      "lat": 39.69803,
+      "lng": -90.96131,
+      "ecoregions": [
+        {
+          "id": 387,
+          "name": "Central US forest-grasslands transition",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "neri": {
+      "lat": 37.86878554,
+      "lng": -80.99956002,
+      "ecoregions": [
+        {
+          "id": 329,
+          "name": "Appalachian mixed mesophytic forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "nepe": {
+      "lat": 46.07019093,
+      "lng": -115.8761258,
+      "ecoregions": [
+        {
+          "id": 361,
+          "name": "Northern Rockies conifer forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "nico": {
+      "lat": 39.39167606,
+      "lng": -99.61680329,
+      "ecoregions": [
+        {
+          "id": 389,
+          "name": "Central-Southern US mixed grasslands",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "nisi": {
+      "lat": 34.14273587,
+      "lng": -82.01636079,
+      "ecoregions": [
+        {
+          "id": 330,
+          "name": "Appalachian Piedmont forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "niob": {
+      "lat": 42.79413083,
+      "lng": -99.91870646,
+      "ecoregions": [
+        {
+          "id": 396,
+          "name": "Northern Shortgrass prairie",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "noat": {
+      "lat": 68.01027053,
+      "lng": -159.831694,
+      "ecoregions": [
+        {
+          "id": 408,
+          "name": "Arctic foothills tundra",
+          "biomeId": 11,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "noca": {
+      "lat": 48.71171756,
+      "lng": -121.2069423,
+      "ecoregions": [
+        {
+          "id": 358,
+          "name": "North Cascades conifer forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "noco": {
+      "lat": 46.334400743,
+      "lng": -90.8165630499,
+      "ecoregions": [
+        {
+          "id": 344,
+          "name": "Western Great Lakes forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "obed": {
+      "lat": 36.1056026037,
+      "lng": -84.5979170501,
+      "ecoregions": [
+        {
+          "id": 329,
+          "name": "Appalachian mixed mesophytic forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "ocmu": {
+      "lat": 32.83816576,
+      "lng": -83.60224853,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "okci": {
+      "lat": 35.473,
+      "lng": -97.5171,
+      "ecoregions": [
+        {
+          "id": 389,
+          "name": "Central-Southern US mixed grasslands",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "olsp": {
+      "lat": 37.0791782514,
+      "lng": -112.114693431,
+      "ecoregions": [
+        {
+          "id": 429,
+          "name": "Colorado Plateau shrublands",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "olym": {
+      "lat": 47.80392754,
+      "lng": -123.6663848,
+      "ecoregions": [
+        {
+          "id": 349,
+          "name": "British Columbia coastal conifer forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "orca": {
+      "lat": 42.10319143,
+      "lng": -123.4018586,
+      "ecoregions": [
+        {
+          "id": 357,
+          "name": "Klamath-Siskiyou forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "oreg": {
+      "lat": 41.9876977831,
+      "lng": -109.634200841,
+      "ecoregions": [
+        {
+          "id": 438,
+          "name": "Wyoming Basin shrub steppe",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "orpi": {
+      "lat": 32.03585543,
+      "lng": -112.8573314,
+      "ecoregions": [
+        {
+          "id": 435,
+          "name": "Sonoran desert",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "ovvi": {
+      "lat": 35.14044,
+      "lng": -81.377,
+      "ecoregions": [
+        {
+          "id": 330,
+          "name": "Appalachian Piedmont forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "oxhi": {
+      "lat": 38.80578214,
+      "lng": -77.01131457,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "ozar": {
+      "lat": 37.13968894,
+      "lng": -91.25709817,
+      "ecoregions": [
+        {
+          "id": 340,
+          "name": "Ozark Highlands mixed forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "pais": {
+      "lat": 27.05381186,
+      "lng": -97.35901135,
+      "ecoregions": [],
+      "status": "no-terrestrial-match"
+    },
+    "paal": {
+      "lat": 26.02387351,
+      "lng": -97.46296072,
+      "ecoregions": [
+        {
+          "id": 384,
+          "name": "Western Gulf coastal grasslands",
+          "biomeId": 7,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "pagr": {
+      "lat": 40.91584645,
+      "lng": -74.18021494,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "peri": {
+      "lat": 36.45438033,
+      "lng": -94.03468357,
+      "ecoregions": [
+        {
+          "id": 340,
+          "name": "Ozark Highlands mixed forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "valr": {
+      "lat": 21.3670699388,
+      "lng": -157.938578898,
+      "ecoregions": [
+        {
+          "id": 636,
+          "name": "Hawai'i tropical dry forests",
+          "biomeId": 2,
+          "realm": "Oceania"
+        }
+      ],
+      "status": "matched"
+    },
+    "peco": {
+      "lat": 35.54192238,
+      "lng": -105.6814684,
+      "ecoregions": [
+        {
+          "id": 353,
+          "name": "Colorado Rockies forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "paav": {
+      "lat": 38.89426856,
+      "lng": -77.02506554,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "pevi": {
+      "lat": 41.65449782,
+      "lng": -82.8115794,
+      "ecoregions": [
+        {
+          "id": 342,
+          "name": "Southern Great Lakes forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "pete": {
+      "lat": 37.19109957,
+      "lng": -77.47594865,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "pefo": {
+      "lat": 34.98387664,
+      "lng": -109.7877678,
+      "ecoregions": [
+        {
+          "id": 429,
+          "name": "Colorado Plateau shrublands",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "petr": {
+      "lat": 35.13915998,
+      "lng": -106.7491456,
+      "ecoregions": [
+        {
+          "id": 429,
+          "name": "Colorado Plateau shrublands",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "piro": {
+      "lat": 46.56435642,
+      "lng": -86.31628733,
+      "ecoregions": [
+        {
+          "id": 344,
+          "name": "Western Great Lakes forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "pinn": {
+      "lat": 36.49029208,
+      "lng": -121.1813607,
+      "ecoregions": [
+        {
+          "id": 423,
+          "name": "California interior chaparral and woodlands",
+          "biomeId": 12,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "pisp": {
+      "lat": 36.86282666,
+      "lng": -112.7398567,
+      "ecoregions": [
+        {
+          "id": 429,
+          "name": "Colorado Plateau shrublands",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "pipe": {
+      "lat": 44.01351958,
+      "lng": -96.32475523,
+      "ecoregions": [
+        {
+          "id": 386,
+          "name": "Canadian Aspen forests and parklands",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "pisc": {
+      "lat": 38.6929,
+      "lng": -77.067,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "pore": {
+      "lat": 38.05511241,
+      "lng": -122.8797804,
+      "ecoregions": [
+        {
+          "id": 359,
+          "name": "Northern California coastal forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "poex": {
+      "lat": 42.2365761128,
+      "lng": -109.266148417,
+      "ecoregions": [
+        {
+          "id": 438,
+          "name": "Wyoming Basin shrub steppe",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "poch": {
+      "lat": 38.05685472,
+      "lng": -122.0301603,
+      "ecoregions": [
+        {
+          "id": 385,
+          "name": "California Central Valley grasslands",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "pohe": {
+      "lat": 39.15060133,
+      "lng": -77.52301085,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "popo": {
+      "lat": 32.6424361,
+      "lng": -91.40829834,
+      "ecoregions": [
+        {
+          "id": 337,
+          "name": "Mississippi lowland forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "wicl": {
+      "lat": 33.66758356,
+      "lng": -93.59641868,
+      "ecoregions": [
+        {
+          "id": 363,
+          "name": "Piney Woods",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "prsf": {
+      "lat": 37.797,
+      "lng": -122.4671,
+      "ecoregions": [
+        {
+          "id": 423,
+          "name": "California interior chaparral and woodlands",
+          "biomeId": 12,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "prwi": {
+      "lat": 38.58589108,
+      "lng": -77.38910997,
+      "ecoregions": [
+        {
+          "id": 330,
+          "name": "Appalachian Piedmont forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "puho": {
+      "lat": 19.41268627,
+      "lng": -155.9008789,
+      "ecoregions": [
+        {
+          "id": 636,
+          "name": "Hawai'i tropical dry forests",
+          "biomeId": 2,
+          "realm": "Oceania"
+        }
+      ],
+      "status": "matched"
+    },
+    "puhe": {
+      "lat": 20.02772186,
+      "lng": -155.8211629,
+      "ecoregions": [
+        {
+          "id": 640,
+          "name": "Hawai'i tropical low shrublands",
+          "biomeId": 7,
+          "realm": "Oceania"
+        }
+      ],
+      "status": "matched"
+    },
+    "pull": {
+      "lat": 41.69429163,
+      "lng": -87.60873824,
+      "ecoregions": [
+        {
+          "id": 387,
+          "name": "Central US forest-grasslands transition",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "rabr": {
+      "lat": 37.0779,
+      "lng": -110.9655,
+      "ecoregions": [
+        {
+          "id": 429,
+          "name": "Colorado Plateau shrublands",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "reer": {
+      "lat": 32.3868598938,
+      "lng": -80.6511077881,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "redw": {
+      "lat": 41.37237268,
+      "lng": -124.0318129,
+      "ecoregions": [
+        {
+          "id": 359,
+          "name": "Northern California coastal forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "rich": {
+      "lat": 37.48774472,
+      "lng": -77.29107785,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "rigr": {
+      "lat": 29.881,
+      "lng": -102.3188,
+      "ecoregions": [
+        {
+          "id": 428,
+          "name": "Chihuahuan desert",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "rira": {
+      "lat": 41.91291085,
+      "lng": -83.37620464,
+      "ecoregions": [
+        {
+          "id": 342,
+          "name": "Southern Great Lakes forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "rocr": {
+      "lat": 38.95125063,
+      "lng": -77.05002838,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "romo": {
+      "lat": 40.3556924,
+      "lng": -105.6972879,
+      "ecoregions": [
+        {
+          "id": 353,
+          "name": "Colorado Rockies forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "rowi": {
+      "lat": 41.8298955,
+      "lng": -71.41056665,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "roca": {
+      "lat": 44.8736,
+      "lng": -66.9621,
+      "ecoregions": [
+        {
+          "id": 338,
+          "name": "New England-Acadian forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "rori": {
+      "lat": 37.90999027,
+      "lng": -122.360156,
+      "ecoregions": [
+        {
+          "id": 423,
+          "name": "California interior chaparral and woodlands",
+          "biomeId": 12,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "ruca": {
+      "lat": 34.97402063,
+      "lng": -85.81560314,
+      "ecoregions": [
+        {
+          "id": 329,
+          "name": "Appalachian mixed mesophytic forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "sahi": {
+      "lat": 40.88579128,
+      "lng": -73.49686438,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "sagu": {
+      "lat": 32.20909636,
+      "lng": -110.7574974,
+      "ecoregions": [
+        {
+          "id": 435,
+          "name": "Sonoran desert",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "sacr": {
+      "lat": 45.12858838,
+      "lng": -67.13363651,
+      "ecoregions": [],
+      "status": "no-terrestrial-match"
+    },
+    "sacn": {
+      "lat": 45.70019235,
+      "lng": -92.36126685,
+      "ecoregions": [
+        {
+          "id": 343,
+          "name": "Upper Midwest US forest-savanna transition",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "sapa": {
+      "lat": 40.89283511,
+      "lng": -73.82577276,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "saga": {
+      "lat": 43.4997238,
+      "lng": -72.37333969,
+      "ecoregions": [
+        {
+          "id": 338,
+          "name": "New England-Acadian forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "sama": {
+      "lat": 42.52024529,
+      "lng": -70.88640867,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "sapu": {
+      "lat": 34.35423203,
+      "lng": -106.2050309,
+      "ecoregions": [
+        {
+          "id": 402,
+          "name": "Western shortgrass prairie",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "sari": {
+      "lat": 17.77908602,
+      "lng": -64.75519348,
+      "ecoregions": [],
+      "status": "no-terrestrial-match"
+    },
+    "saan": {
+      "lat": 29.31262089,
+      "lng": -98.4289522,
+      "ecoregions": [
+        {
+          "id": 401,
+          "name": "Texas blackland prairies",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "safr": {
+      "lat": 37.81005871,
+      "lng": -122.4244415,
+      "ecoregions": [],
+      "status": "no-terrestrial-match"
+    },
+    "sajh": {
+      "lat": 48.51241933,
+      "lng": -123.0610277,
+      "ecoregions": [
+        {
+          "id": 364,
+          "name": "Puget lowland forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "saju": {
+      "lat": 18.46873857,
+      "lng": -66.11848623,
+      "ecoregions": [
+        {
+          "id": 495,
+          "name": "Puerto Rican moist forests",
+          "biomeId": 1,
+          "realm": "Neotropic"
+        }
+      ],
+      "status": "matched"
+    },
+    "sand": {
+      "lat": 38.56414189,
+      "lng": -102.5169542,
+      "ecoregions": [
+        {
+          "id": 402,
+          "name": "Western shortgrass prairie",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "safe": {
+      "lat": 37.7276522226,
+      "lng": -99.921969227,
+      "ecoregions": [
+        {
+          "id": 389,
+          "name": "Central-Southern US mixed grasslands",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "samo": {
+      "lat": 34.09777606,
+      "lng": -118.7708619,
+      "ecoregions": [
+        {
+          "id": 422,
+          "name": "California coastal sage and chaparral",
+          "biomeId": 12,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "sara": {
+      "lat": 42.99522612,
+      "lng": -73.63386108,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "sair": {
+      "lat": 42.46830664,
+      "lng": -71.0076953,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "scbl": {
+      "lat": 41.83464193,
+      "lng": -103.7071351,
+      "ecoregions": [
+        {
+          "id": 402,
+          "name": "Western shortgrass prairie",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "semo": {
+      "lat": 32.27082092,
+      "lng": -86.72823702,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "seki": {
+      "lat": 36.71277299,
+      "lng": -118.587429,
+      "ecoregions": [
+        {
+          "id": 366,
+          "name": "Sierra Nevada forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "shen": {
+      "lat": 38.49236644,
+      "lng": -78.46907715,
+      "ecoregions": [
+        {
+          "id": 331,
+          "name": "Appalachian-Blue Ridge forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "shil": {
+      "lat": 35.13850907,
+      "lng": -88.3421072,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "sitk": {
+      "lat": 57.04718173,
+      "lng": -135.3156876,
+      "ecoregions": [
+        {
+          "id": 360,
+          "name": "Northern Pacific Alaskan coastal forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "slbe": {
+      "lat": 44.92844962,
+      "lng": -86.02706591,
+      "ecoregions": [],
+      "status": "no-terrestrial-match"
+    },
+    "spra": {
+      "lat": 39.8027,
+      "lng": -89.6422,
+      "ecoregions": [
+        {
+          "id": 387,
+          "name": "Central US forest-grasslands transition",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "spar": {
+      "lat": 42.1086368,
+      "lng": -72.57967415,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "stsp": {
+      "lat": 39.2872505188,
+      "lng": -76.6034317017,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "stli": {
+      "lat": 40.6898,
+      "lng": -74.0451,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "stge": {
+      "lat": 37.9792171421,
+      "lng": -90.0432157516,
+      "ecoregions": [
+        {
+          "id": 387,
+          "name": "Central US forest-grasslands transition",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "stea": {
+      "lat": 41.40757521,
+      "lng": -75.67037255,
+      "ecoregions": [
+        {
+          "id": 331,
+          "name": "Appalachian-Blue Ridge forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "stri": {
+      "lat": 35.87608652,
+      "lng": -86.43078399,
+      "ecoregions": [
+        {
+          "id": 336,
+          "name": "Interior Plateau US Hardwood Forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "ston": {
+      "lat": 40.7337799072,
+      "lng": -74.0006866455,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "sucr": {
+      "lat": 35.37114323,
+      "lng": -111.510376,
+      "ecoregions": [
+        {
+          "id": 346,
+          "name": "Arizona Mountains forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "tapr": {
+      "lat": 38.44023613,
+      "lng": -96.5670822,
+      "ecoregions": [
+        {
+          "id": 392,
+          "name": "Flint Hills tallgrass prairie",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "thko": {
+      "lat": 39.94345312,
+      "lng": -75.14732045,
+      "ecoregions": [
+        {
+          "id": 393,
+          "name": "Mid-Atlantic US coastal savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "whho": {
+      "lat": 38.89541886,
+      "lng": -77.03654147,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "thrb": {
+      "lat": 40.7386469,
+      "lng": -73.98903703,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "thri": {
+      "lat": 42.90146781,
+      "lng": -78.87248411,
+      "ecoregions": [
+        {
+          "id": 334,
+          "name": "Eastern Great Lakes lowland forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "this": {
+      "lat": 38.89584162,
+      "lng": -77.06241918,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "thro": {
+      "lat": 47.17777274,
+      "lng": -103.4300083,
+      "ecoregions": [
+        {
+          "id": 396,
+          "name": "Northern Shortgrass prairie",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "thco": {
+      "lat": 42.22570607,
+      "lng": -73.86154864,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "edis": {
+      "lat": 40.78549896,
+      "lng": -74.23821139,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "thje": {
+      "lat": 38.88101431,
+      "lng": -77.03632572,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "thst": {
+      "lat": 38.52934443,
+      "lng": -77.037813,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "tica": {
+      "lat": 40.44039719,
+      "lng": -111.7093944,
+      "ecoregions": [
+        {
+          "id": 368,
+          "name": "Wasatch and Uinta montane forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "timu": {
+      "lat": 30.47251894,
+      "lng": -81.49950104,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "tont": {
+      "lat": 33.64842945,
+      "lng": -111.1135627,
+      "ecoregions": [
+        {
+          "id": 435,
+          "name": "Sonoran desert",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "tosy": {
+      "lat": 41.4893,
+      "lng": -71.3121,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "trte": {
+      "lat": 36.0530021046,
+      "lng": -89.6761041963,
+      "ecoregions": [
+        {
+          "id": 337,
+          "name": "Mississippi lowland forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "tule": {
+      "lat": 41.88727902,
+      "lng": -121.3744818,
+      "ecoregions": [
+        {
+          "id": 354,
+          "name": "Eastern Cascades forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "tusk": {
+      "lat": 36.3893217,
+      "lng": -115.3202223,
+      "ecoregions": [
+        {
+          "id": 433,
+          "name": "Mojave desert",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "tuma": {
+      "lat": 31.567824,
+      "lng": -111.051223,
+      "ecoregions": [
+        {
+          "id": 428,
+          "name": "Chihuahuan desert",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "tupe": {
+      "lat": 34.25557705,
+      "lng": -88.73708623,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "tuai": {
+      "lat": 32.45538671,
+      "lng": -85.67983321,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "tuin": {
+      "lat": 32.42962115,
+      "lng": -85.70488498,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "tuzi": {
+      "lat": 34.77296377,
+      "lng": -112.0279069,
+      "ecoregions": [
+        {
+          "id": 346,
+          "name": "Arizona Mountains forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "ulsg": {
+      "lat": 38.55182374,
+      "lng": -90.35169255,
+      "ecoregions": [
+        {
+          "id": 387,
+          "name": "Central US forest-grasslands transition",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "upde": {
+      "lat": 41.66172578,
+      "lng": -75.03861562,
+      "ecoregions": [
+        {
+          "id": 328,
+          "name": "Allegheny Highlands forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "vall": {
+      "lat": 35.91682872,
+      "lng": -106.5195724,
+      "ecoregions": [
+        {
+          "id": 353,
+          "name": "Colorado Rockies forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "vafo": {
+      "lat": 40.10054985,
+      "lng": -75.44581889,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "vama": {
+      "lat": 41.79697937,
+      "lng": -73.94205557,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "vick": {
+      "lat": 32.3621286,
+      "lng": -90.85030186,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "vive": {
+      "lat": 38.89096297,
+      "lng": -77.04765735,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "vicr": {
+      "lat": 18.28996918,
+      "lng": -64.70683395,
+      "ecoregions": [],
+      "status": "no-terrestrial-match"
+    },
+    "viis": {
+      "lat": 18.34279656,
+      "lng": -64.74194451,
+      "ecoregions": [
+        {
+          "id": 475,
+          "name": "Leeward Islands moist forests",
+          "biomeId": 1,
+          "realm": "Neotropic"
+        }
+      ],
+      "status": "matched"
+    },
+    "voya": {
+      "lat": 48.48370609,
+      "lng": -92.8382913,
+      "ecoregions": [
+        {
+          "id": 344,
+          "name": "Western Great Lakes forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "waco": {
+      "lat": 31.60465887,
+      "lng": -97.17606143,
+      "ecoregions": [
+        {
+          "id": 390,
+          "name": "Cross-Timbers savanna-woodland",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "waca": {
+      "lat": 35.16822994,
+      "lng": -111.5024239,
+      "ecoregions": [
+        {
+          "id": 346,
+          "name": "Arizona Mountains forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "wapa": {
+      "lat": 13.43795691,
+      "lng": 144.6922461,
+      "ecoregions": [
+        {
+          "id": 637,
+          "name": "Marianas tropical dry forests",
+          "biomeId": 2,
+          "realm": "Oceania"
+        }
+      ],
+      "status": "matched"
+    },
+    "wamo": {
+      "lat": 38.88948,
+      "lng": -77.035207,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "waro": {
+      "lat": 40.0958204557,
+      "lng": -74.8563515109,
+      "ecoregions": [
+        {
+          "id": 393,
+          "name": "Mid-Atlantic US coastal savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "waba": {
+      "lat": 35.62083963,
+      "lng": -99.70445143,
+      "ecoregions": [
+        {
+          "id": 389,
+          "name": "Central-Southern US mixed grasslands",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "wefa": {
+      "lat": 41.25886268,
+      "lng": -73.45452542,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "whis": {
+      "lat": 40.61359941,
+      "lng": -122.6022657,
+      "ecoregions": [
+        {
+          "id": 357,
+          "name": "Klamath-Siskiyou forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "whsa": {
+      "lat": 32.77907858,
+      "lng": -106.3333461,
+      "ecoregions": [
+        {
+          "id": 428,
+          "name": "Chihuahuan desert",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "whmi": {
+      "lat": 46.04119286,
+      "lng": -118.4629388,
+      "ecoregions": [
+        {
+          "id": 398,
+          "name": "Palouse prairie",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "wiho": {
+      "lat": 39.11970352,
+      "lng": -84.50758951,
+      "ecoregions": [
+        {
+          "id": 336,
+          "name": "Interior Plateau US Hardwood Forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "wicr": {
+      "lat": 37.1000127,
+      "lng": -93.40986704,
+      "ecoregions": [
+        {
+          "id": 340,
+          "name": "Ozark Highlands mixed forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "wica": {
+      "lat": 43.58012365,
+      "lng": -103.4394709,
+      "ecoregions": [
+        {
+          "id": 367,
+          "name": "South Central Rockies forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "wing": {
+      "lat": 47.59820859,
+      "lng": -122.3228912,
+      "ecoregions": [
+        {
+          "id": 364,
+          "name": "Puget lowland forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "wotr": {
+      "lat": 38.93854526,
+      "lng": -77.265089,
+      "ecoregions": [
+        {
+          "id": 339,
+          "name": "Northeast US Coastal forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "wori": {
+      "lat": 42.90817073,
+      "lng": -76.81655558,
+      "ecoregions": [
+        {
+          "id": 334,
+          "name": "Eastern Great Lakes lowland forests",
+          "biomeId": 4,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "wwim": {
+      "lat": 38.8959,
+      "lng": -77.0329,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "wwii": {
+      "lat": 38.88923917,
+      "lng": -77.0403759,
+      "ecoregions": [
+        {
+          "id": 399,
+          "name": "Southeast US conifer savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "wrst": {
+      "lat": 61.4182147,
+      "lng": -142.6028439,
+      "ecoregions": [
+        {
+          "id": 405,
+          "name": "Alaska-St. Elias Range tundra",
+          "biomeId": 11,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "wrbr": {
+      "lat": 36.01637713,
+      "lng": -75.66997163,
+      "ecoregions": [
+        {
+          "id": 393,
+          "name": "Mid-Atlantic US coastal savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "wupa": {
+      "lat": 35.55741077,
+      "lng": -111.3957216,
+      "ecoregions": [
+        {
+          "id": 429,
+          "name": "Colorado Plateau shrublands",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "yell": {
+      "lat": 44.59824417,
+      "lng": -110.5471695,
+      "ecoregions": [
+        {
+          "id": 367,
+          "name": "South Central Rockies forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "york": {
+      "lat": 37.2195,
+      "lng": -76.4983,
+      "ecoregions": [
+        {
+          "id": 393,
+          "name": "Mid-Atlantic US coastal savannas",
+          "biomeId": 8,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "yose": {
+      "lat": 37.84883288,
+      "lng": -119.5571873,
+      "ecoregions": [
+        {
+          "id": 366,
+          "name": "Sierra Nevada forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "yuho": {
+      "lat": 37.24778944,
+      "lng": -108.6861274,
+      "ecoregions": [
+        {
+          "id": 429,
+          "name": "Colorado Plateau shrublands",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "yuch": {
+      "lat": 65.0935608,
+      "lng": -142.7960021,
+      "ecoregions": [
+        {
+          "id": 416,
+          "name": "Interior Yukon-Alaska alpine tundra",
+          "biomeId": 11,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "zion": {
+      "lat": 37.29839254,
+      "lng": -113.0265138,
+      "ecoregions": [
+        {
+          "id": 429,
+          "name": "Colorado Plateau shrublands",
+          "biomeId": 13,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "banff": {
+      "lat": 51.5,
+      "lng": -116.15,
+      "ecoregions": [
+        {
+          "id": 361,
+          "name": "Northern Rockies conifer forests",
+          "biomeId": 5,
+          "realm": "Nearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "torres": {
+      "lat": -51,
+      "lng": -73,
+      "ecoregions": [
+        {
+          "id": 561,
+          "name": "Magellanic subpolar forests",
+          "biomeId": 4,
+          "realm": "Neotropic"
+        }
+      ],
+      "status": "matched"
+    },
+    "serengeti": {
+      "lat": -2.33,
+      "lng": 34.83,
+      "ecoregions": [
+        {
+          "id": 57,
+          "name": "Southern Acacia-Commiphora bushlands and thickets",
+          "biomeId": 7,
+          "realm": "Afrotropic"
+        }
+      ],
+      "status": "matched"
+    },
+    "galapagos": {
+      "lat": -0.67,
+      "lng": -90.55,
+      "ecoregions": [],
+      "status": "no-terrestrial-match"
+    },
+    "iguazu": {
+      "lat": -25.69,
+      "lng": -54.44,
+      "ecoregions": [
+        {
+          "id": 439,
+          "name": "Alto Paraná Atlantic forests",
+          "biomeId": 1,
+          "realm": "Neotropic"
+        }
+      ],
+      "status": "matched"
+    },
+    "fiordland": {
+      "lat": -45.4,
+      "lng": 167.7,
+      "ecoregions": [
+        {
+          "id": 169,
+          "name": "Fiordland temperate forests",
+          "biomeId": 4,
+          "realm": "Australasia"
+        }
+      ],
+      "status": "matched"
+    },
+    "plitvice": {
+      "lat": 44.88,
+      "lng": 15.62,
+      "ecoregions": [
+        {
+          "id": 660,
+          "name": "Dinaric Mountains mixed forests",
+          "biomeId": 4,
+          "realm": "Palearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "thingvellir": {
+      "lat": 64.26,
+      "lng": -21.12,
+      "ecoregions": [
+        {
+          "id": 711,
+          "name": "Iceland boreal birch forests and alpine tundra",
+          "biomeId": 6,
+          "realm": "Palearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "halong": {
+      "lat": 20.91,
+      "lng": 107.18,
+      "ecoregions": [],
+      "status": "no-terrestrial-match"
+    },
+    "kruger": {
+      "lat": -23.99,
+      "lng": 31.55,
+      "ecoregions": [
+        {
+          "id": 65,
+          "name": "Zambezian mopane woodlands",
+          "biomeId": 7,
+          "realm": "Afrotropic"
+        }
+      ],
+      "status": "matched"
+    },
+    "uluru": {
+      "lat": -25.34,
+      "lng": 131.04,
+      "ecoregions": [
+        {
+          "id": 210,
+          "name": "Great Sandy-Tanami desert",
+          "biomeId": 13,
+          "realm": "Australasia"
+        }
+      ],
+      "status": "matched"
+    },
+    "jungfrau": {
+      "lat": 46.54,
+      "lng": 7.96,
+      "ecoregions": [
+        {
+          "id": 689,
+          "name": "Alps conifer and mixed forests",
+          "biomeId": 5,
+          "realm": "Palearctic"
+        }
+      ],
+      "status": "matched"
+    }
+  },
+  "sourceSha256": "d564235263d7a2f118cbb4fcb6e7593ef5f8c2f3600604d46047aa2712a83574"
+}

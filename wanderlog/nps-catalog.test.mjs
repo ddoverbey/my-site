@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 import catalog from './nps-catalog.js';
+import ecoregions from './ecoregions.js';
+import internationalParks from './international-parks.js';
 import { collectParks } from './import-nps.mjs';
 
 const records = Array.from({ length: 405 }, (_, index) => ({
@@ -40,7 +42,7 @@ check('missing coordinates are null, not zero', () => {
   const unit = normalized.find(p => p.id === records[1].parkCode);
   assert.equal(unit.lat, null);
   assert.equal(unit.lng, null);
-  assert.deepEqual(unit.biomes, ['we']);
+  assert.deepEqual(unit.biomes, []);
 });
 check('state milestones exclude DC and territories without losing official locations', () => {
   assert.equal(catalog.isUsState('Wyoming'), true);
@@ -99,14 +101,15 @@ function element(id) {
     elements.set(id, {
       value: id === 'bucketFilterStatus' ? 'all' : '',
       textContent: '', innerHTML: '', style: {}, dataset: {},
-      classList: { add() {}, remove() {} }, addEventListener() {},
+      classList: { add() {}, remove() {}, toggle() {} }, addEventListener() {},
       appendChild(child) { this.innerHTML += child.innerHTML; }
     });
   }
   return elements.get(id);
 }
 const context = vm.createContext({
-  NpsCatalog: catalog, tailwind: {}, console, URLSearchParams, setTimeout() {},
+  NpsCatalog: catalog, Ecoregions: ecoregions, InternationalParks: internationalParks,
+  tailwind: {}, console, URLSearchParams, setTimeout() {},
   document: { getElementById: element, querySelectorAll: () => [], createElement: () => ({ innerHTML: '' }) },
   window: { addEventListener() {} },
   fetch: async () => ({ ok: true, json: async () => snapshot })
@@ -135,6 +138,54 @@ check('popup escapes API text and shows metadata', () => {
   assert.ok(popup.includes('&lt;img'));
   assert.ok(!popup.includes('<script>bad'));
   assert.ok(popup.includes('Official NPS site'));
+});
+const actualSnapshot = JSON.parse(await readFile(new URL('./nps-parks.json', import.meta.url), 'utf8'));
+const actualBiomes = JSON.parse(await readFile(new URL('./ecoregion-mapping.json', import.meta.url), 'utf8'));
+context.fetch = async url => ({
+  ok: true, json: async () => url.includes('ecoregion-mapping') ? actualBiomes : actualSnapshot
+});
+await vm.runInContext('loadNpsCatalog();', context);
+await vm.runInContext('loadBiomeCatalog();', context);
+check('published dataset, all legacy targets and real ecoregion mappings load', () => {
+  assert.ok(actualSnapshot.total >= 400);
+  assert.equal(vm.runInContext('PARKS.length', context), actualSnapshot.total + internationalParks.length);
+  assert.equal(vm.runInContext('PARKS.filter(p => p.biomeStatus === "matched").length', context),
+    Object.values(actualBiomes.locations).filter(p => p.status === 'matched').length);
+  assert.equal(vm.runInContext('PARKS.filter(p => p.biomeStatus === "mapping-outdated").length', context), 0);
+  const actualParks = catalog.normalizeParks(actualSnapshot.data);
+  for (const code of Object.values(catalog.aliases)) assert.ok(actualParks.some(p => p.id === code), code);
+});
+vm.runInContext("AppState.pins = NpsCatalog.migratePins({ yellowstone: 'v', everglades: 'v', arches: 'w', drytortugas: 'v' }); updateHud();", context);
+check('real visits collect only intersected biomes; wishlist and offshore points do not', () => {
+  assert.equal(element('hudParksCount').textContent, `3 / ${actualSnapshot.total}`);
+  assert.equal(element('hudBiomesCount').textContent, '2 / 14');
+  assert.deepEqual(Array.from(vm.runInContext('calculateStats().biomesSet', context)).sort(), ['14', '5']);
+  assert.equal(vm.runInContext('calculateStats().rareBiomesCount', context), 1);
+  assert.ok(vm.runInContext("createPopupContent(PARKS.find(p => p.id === 'ever'))", context).includes('Bahamian-Antillean mangroves'));
+});
+element('bucketSearch').value = 'south central rockies';
+vm.runInContext('renderBucketListView()', context);
+check('search finds real ecoregions and displays terrestrial biome labels', () => {
+  assert.ok(element('bucketListGrid').innerHTML.includes('Yellowstone'));
+  assert.ok(element('bucketListGrid').innerHTML.includes('Temperate Conifer Forests'));
+});
+vm.runInContext('renderPassportView()', context);
+check('pokedex and rare totals use the 14 real biome types', () => {
+  assert.equal(element('biomeCompletionRatio').textContent, '2 / 14 Found');
+  assert.equal(element('statRareTotal').textContent, 'of 3 rare biomes');
+  assert.ok(element('biomePokedexContainer').innerHTML.includes('0.23% of classified biome land'));
+  assert.ok(!element('biomePokedexContainer').innerHTML.includes('Subterranean Cavern'));
+});
+context.fetch = async () => ({ ok: false, status: 404 });
+context.console = { error() {} };
+await vm.runInContext('loadBiomeCatalog()', context);
+vm.runInContext('updateHud()', context);
+check('biome fetch failures disable collection and bonuses, not park progress', () => {
+  assert.equal(element('hudBiomesCount').textContent, '-- / 14');
+  assert.equal(element('hudParksCount').textContent, `3 / ${actualSnapshot.total}`);
+  assert.equal(vm.runInContext('calculateStats().biomesSet.size', context), 0);
+  assert.ok(element('biomeCatalogStatus').textContent.includes('disabled'));
+  assert.equal(element('toastTitle').textContent, 'Biome data unavailable');
 });
 context.fetch = async () => ({ ok: false, status: 404 });
 context.console = { error() {} };
