@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Site Analytics</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="min-h-screen bg-slate-950 p-4 font-sans text-slate-300 antialiased sm:p-8">
+  <main class="mx-auto max-w-6xl space-y-6">
+    <header class="flex flex-col gap-4 border-b border-slate-800 pb-5 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h1 class="bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-2xl font-extrabold tracking-tight text-transparent">Homepage Analytics</h1>
+        <p class="mt-1 text-sm font-light text-slate-400">Anonymous visits and link clicks on devonoverbey.com</p>
+      </div>
+      <div class="flex flex-wrap items-center gap-3">
+        <span class="flex items-center gap-2 text-xs text-slate-400"><span id="auth-indicator" class="h-2 w-2 rounded-full bg-slate-600"></span><span id="auth-email">Checking session…</span></span>
+        <select id="range-select" onchange="renderDashboard()" class="rounded-lg border border-slate-700 bg-slate-800 px-2 py-1.5 text-xs text-slate-200">
+          <option value="7">Last 7 days</option>
+          <option value="30" selected>Last 30 days</option>
+          <option value="90">Last 90 days</option>
+          <option value="0">All time</option>
+        </select>
+        <button type="button" onclick="fetchDashboardData()" class="rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-semibold text-emerald-300 transition-colors hover:bg-slate-700">Refresh</button>
+        <button id="btn-auth-action" type="button" onclick="handleAuthClick()" class="rounded-lg border border-blue-500/30 bg-blue-500/10 px-3 py-1.5 text-xs font-semibold text-blue-300 transition-colors hover:bg-blue-500/20">Sign In</button>
+      </div>
+    </header>
+
+    <div id="status-banner" class="hidden"></div>
+
+    <section id="dashboard" class="hidden space-y-6">
+      <div class="grid grid-cols-2 gap-4 md:grid-cols-5">
+        <div class="rounded-xl border border-slate-800 bg-slate-900/50 p-4"><p class="text-[11px] uppercase tracking-wider text-slate-500">Page visits</p><p id="kpi-visits" class="mt-1 text-2xl font-bold text-slate-100">0</p></div>
+        <div class="rounded-xl border border-slate-800 bg-slate-900/50 p-4"><p class="text-[11px] uppercase tracking-wider text-slate-500">Unique visitors</p><p id="kpi-visitors" class="mt-1 text-2xl font-bold text-slate-100">0</p></div>
+        <div class="rounded-xl border border-slate-800 bg-slate-900/50 p-4"><p class="text-[11px] uppercase tracking-wider text-slate-500">Link clicks</p><p id="kpi-clicks" class="mt-1 text-2xl font-bold text-slate-100">0</p></div>
+        <div class="rounded-xl border border-slate-800 bg-slate-900/50 p-4"><p class="text-[11px] uppercase tracking-wider text-slate-500">Visitor click-through</p><p id="kpi-ctr" class="mt-1 text-2xl font-bold text-emerald-300">0%</p></div>
+        <div class="rounded-xl border border-slate-800 bg-slate-900/50 p-4"><p class="text-[11px] uppercase tracking-wider text-slate-500">Visits today</p><p id="kpi-today" class="mt-1 text-2xl font-bold text-slate-100">0</p></div>
+      </div>
+
+      <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div class="rounded-xl border border-slate-800 bg-slate-900/50 p-5">
+          <h2 class="mb-3 text-sm font-semibold text-slate-200">Daily visits &amp; clicks</h2>
+          <div class="h-64"><canvas id="daily-chart"></canvas></div>
+        </div>
+        <div class="rounded-xl border border-slate-800 bg-slate-900/50 p-5">
+          <h2 class="mb-3 text-sm font-semibold text-slate-200">Clicks by link</h2>
+          <div class="h-64"><canvas id="links-chart"></canvas></div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div class="rounded-xl border border-slate-800 bg-slate-900/50 p-5 lg:col-span-2">
+          <h2 class="mb-3 text-sm font-semibold text-slate-200">Link performance</h2>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="text-slate-500"><tr><th class="py-2 pr-3">Link</th><th class="py-2 pr-3">Section</th><th class="py-2 pr-3 text-right">Clicks</th><th class="py-2 pr-3 text-right">Unique</th><th class="py-2 text-right">% of visitors</th></tr></thead>
+              <tbody id="links-table" class="divide-y divide-slate-800"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="rounded-xl border border-slate-800 bg-slate-900/50 p-5">
+          <h2 class="mb-3 text-sm font-semibold text-slate-200">Top referrers</h2>
+          <table class="w-full text-left text-xs">
+            <tbody id="referrers-table" class="divide-y divide-slate-800"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="rounded-xl border border-slate-800 bg-slate-900/50 p-5">
+        <h2 class="mb-3 text-sm font-semibold text-slate-200">Recent events</h2>
+        <div class="max-h-96 overflow-y-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="sticky top-0 bg-slate-900 text-slate-500"><tr><th class="py-2 pr-3">When</th><th class="py-2 pr-3">Event</th><th class="py-2 pr-3">Details</th><th class="py-2">Visitor</th></tr></thead>
+            <tbody id="recent-table" class="divide-y divide-slate-800"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="login-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
+    <form onsubmit="handleAdminLogin(event)" class="w-full max-w-sm space-y-3 rounded-2xl border border-slate-800 bg-slate-900 p-6">
+      <div class="flex items-center justify-between">
+        <h2 class="text-sm font-semibold text-slate-100">Admin sign in</h2>
+        <button type="button" onclick="toggleLoginModal(false)" class="text-slate-500 hover:text-slate-300">✕</button>
+      </div>
+      <label class="block text-[11px] text-slate-400">Email<input id="login-email" type="email" required autocomplete="email" class="mt-1 w-full rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-slate-200" /></label>
+      <label class="block text-[11px] text-slate-400">Password<input id="login-password" type="password" required autocomplete="current-password" class="mt-1 w-full rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-slate-200" /></label>
+      <p id="login-error" class="hidden text-xs text-rose-400"></p>
+      <button id="btn-login-submit" type="submit" class="w-full rounded-lg bg-emerald-500 py-2 text-xs font-semibold text-slate-950 transition-colors hover:bg-emerald-400">Sign in</button>
+    </form>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://mrgdthihogxrqsfnknxd.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1yZ2R0aGlob2d4cnFzZm5rbnhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyNDk4NTYsImV4cCI6MjEwNDgyNTg1Nn0.1fwcaGPGrzUut3zng2NNkYZt7hUguhKPhfqYyu8MA3s';
+    const ADMIN_EMAILS = ['devonoverbey@gmail.com'];
+    const AUTH_SESSION_KEY = 'site_admin_session';
+    const FALLBACK_SESSION_KEYS = ['cultivate_cloud_session', 'twelve_week_cloud_session'];
+    const PAGE_SIZE = 1000;
+    const MAX_ROWS = 20000;
+
+    let cloudSession = loadSession();
+    let allEvents = [];
+    let dailyChart = null;
+    let linksChart = null;
+
+    function loadSession() {
+      for (const key of [AUTH_SESSION_KEY, ...FALLBACK_SESSION_KEYS]) {
+        try {
+          const session = JSON.parse(localStorage.getItem(key) || 'null');
+          if (session?.access_token && isAdmin(session)) return session;
+        } catch {}
+      }
+      return null;
+    }
+
+    function isAdmin(session) {
+      return ADMIN_EMAILS.includes((session?.user?.email || '').toLowerCase());
+    }
+
+    function escapeHtml(value) {
+      const element = document.createElement('div');
+      element.textContent = value == null ? '' : String(value);
+      return element.innerHTML;
+    }
+
+    function setStatus(message, type = 'error') {
+      const banner = document.getElementById('status-banner');
+      if (!message) return banner.classList.add('hidden');
+      banner.className = `rounded-xl border p-4 text-xs ${
+        type === 'warning' ? 'border-amber-800 bg-amber-950/50 text-amber-200' : 'border-rose-800 bg-rose-950/50 text-rose-200'
+      }`;
+      banner.textContent = message;
+    }
+
+    function updateAuthHeader() {
+      const signedIn = Boolean(cloudSession?.access_token);
+      document.getElementById('auth-email').textContent = signedIn ? cloudSession.user.email : 'Not signed in';
+      document.getElementById('auth-indicator').className = `h-2 w-2 rounded-full ${signedIn ? 'bg-emerald-400' : 'bg-amber-400'}`;
+      document.getElementById('btn-auth-action').textContent = signedIn ? 'Sign Out' : 'Sign In';
+    }
+
+    function handleAuthClick() {
+      if (cloudSession?.access_token) {
+        localStorage.removeItem(AUTH_SESSION_KEY);
+        cloudSession = null;
+        allEvents = [];
+        document.getElementById('dashboard').classList.add('hidden');
+        updateAuthHeader();
+        setStatus('Signed out. Sign in with the admin account to view analytics.', 'warning');
+      } else {
+        toggleLoginModal(true);
+      }
+    }
+
+    function toggleLoginModal(show) {
+      const modal = document.getElementById('login-modal');
+      modal.classList.toggle('hidden', !show);
+      modal.classList.toggle('flex', show);
+      if (show) document.getElementById('login-email').focus();
+    }
+
+    async function handleAdminLogin(event) {
+      event.preventDefault();
+      const submit = document.getElementById('btn-login-submit');
+      const error = document.getElementById('login-error');
+      error.classList.add('hidden');
+      submit.disabled = true;
+      submit.textContent = 'Signing in…';
+      try {
+        const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY },
+          body: JSON.stringify({
+            email: document.getElementById('login-email').value.trim(),
+            password: document.getElementById('login-password').value
+          })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error_description || data.msg || data.message || `HTTP ${response.status}`);
+        if (!isAdmin(data)) throw new Error('This account is not authorized to view analytics.');
+        cloudSession = data;
+        localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(cloudSession));
+        document.getElementById('login-password').value = '';
+        updateAuthHeader();
+        toggleLoginModal(false);
+        await fetchDashboardData();
+      } catch (err) {
+        error.textContent = err.message;
+        error.classList.remove('hidden');
+      } finally {
+        submit.disabled = false;
+        submit.textContent = 'Sign in';
+      }
+    }
+
+    async function refreshCloudSession() {
+      if (!cloudSession?.refresh_token) return false;
+      const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY },
+        body: JSON.stringify({ refresh_token: cloudSession.refresh_token })
+      });
+      if (!response.ok) return false;
+      const data = await response.json();
+      if (!data.access_token) return false;
+      cloudSession = { ...cloudSession, ...data, user: data.user || cloudSession.user };
+      localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(cloudSession));
+      return true;
+    }
+
+    async function fetchPage(offset, retried = false) {
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/site_events?select=anon_id,event,props,created_at&order=created_at.desc`, {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${cloudSession.access_token}`,
+          Range: `${offset}-${offset + PAGE_SIZE - 1}`
+        }
+      });
+      if ((response.status === 401 || response.status === 403) && !retried && await refreshCloudSession()) {
+        return fetchPage(offset, true);
+      }
+      if (!response.ok) {
+        const detail = await response.json().catch(() => ({}));
+        if (response.status === 401) throw new Error('Session expired. Please sign in again.');
+        throw new Error(detail.message || `HTTP ${response.status}`);
+      }
+      return response.json();
+    }
+
+    async function fetchDashboardData() {
+      updateAuthHeader();
+      if (!cloudSession?.access_token) {
+        document.getElementById('dashboard').classList.add('hidden');
+        setStatus('Sign in with the admin account to view analytics.', 'warning');
+        return toggleLoginModal(true);
+      }
+      setStatus('Loading…', 'warning');
+      try {
+        const rows = [];
+        for (let offset = 0; offset < MAX_ROWS; offset += PAGE_SIZE) {
+          const page = await fetchPage(offset);
+          rows.push(...page);
+          if (page.length < PAGE_SIZE) break;
+        }
+        allEvents = rows;
+        setStatus(rows.length ? '' : 'No events yet. Run site-analytics.sql in Supabase, then visit the homepage from a browser where you are not signed in.', 'warning');
+        document.getElementById('dashboard').classList.remove('hidden');
+        renderDashboard();
+      } catch (err) {
+        setStatus(`Could not load analytics: ${err.message}`);
+      }
+    }
+
+    function percent(numerator, denominator) {
+      return denominator ? `${(numerator / denominator * 100).toFixed(1)}%` : '0%';
+    }
+
+    function dayKey(date) {
+      return date.toLocaleDateString('en-CA');
+    }
+
+    function renderDashboard() {
+      const days = Number(document.getElementById('range-select').value);
+      const cutoff = days ? Date.now() - days * 864e5 : 0;
+      const events = allEvents.filter(e => new Date(e.created_at).getTime() >= cutoff);
+      const visits = events.filter(e => e.event === 'page_visit');
+      const clicks = events.filter(e => e.event === 'link_click');
+      const visitors = new Set(visits.map(e => e.anon_id));
+      const clickers = new Set(clicks.map(e => e.anon_id));
+      const today = dayKey(new Date());
+
+      document.getElementById('kpi-visits').textContent = visits.length;
+      document.getElementById('kpi-visitors').textContent = visitors.size;
+      document.getElementById('kpi-clicks').textContent = clicks.length;
+      document.getElementById('kpi-ctr').textContent = percent([...clickers].filter(id => visitors.has(id)).length, visitors.size);
+      document.getElementById('kpi-today').textContent = visits.filter(e => dayKey(new Date(e.created_at)) === today).length;
+
+      renderDailyChart(visits, clicks, days);
+      const links = renderLinks(clicks, visitors.size);
+      renderLinksChart(links);
+      renderReferrers(visits);
+      renderRecent(events);
+    }
+
+    function renderDailyChart(visits, clicks, days) {
+      const span = days || Math.max(1, Math.ceil((Date.now() - Math.min(...[...visits, ...clicks].map(e => new Date(e.created_at).getTime()), Date.now())) / 864e5) + 1);
+      const labels = [];
+      for (let i = span - 1; i >= 0; i--) labels.push(dayKey(new Date(Date.now() - i * 864e5)));
+      const count = list => {
+        const map = Object.fromEntries(labels.map(l => [l, 0]));
+        list.forEach(e => { const k = dayKey(new Date(e.created_at)); if (k in map) map[k]++; });
+        return labels.map(l => map[l]);
+      };
+      dailyChart?.destroy();
+      dailyChart = new Chart(document.getElementById('daily-chart'), {
+        type: 'line',
+        data: {
+          labels: labels.map(l => l.slice(5)),
+          datasets: [
+            { label: 'Visits', data: count(visits), borderColor: '#60a5fa', backgroundColor: 'rgba(96,165,250,0.15)', fill: true, tension: 0.3 },
+            { label: 'Link clicks', data: count(clicks), borderColor: '#34d399', backgroundColor: 'rgba(52,211,153,0.1)', fill: true, tension: 0.3 }
+          ]
+        },
+        options: chartOptions()
+      });
+    }
+
+    function renderLinks(clicks, visitorCount) {
+      const byHref = {};
+      clicks.forEach(e => {
+        const href = e.props?.href || '(unknown)';
+        const entry = byHref[href] ||= { href, label: e.props?.label || href, section: e.props?.section || '', clicks: 0, users: new Set() };
+        entry.clicks++;
+        entry.users.add(e.anon_id);
+      });
+      const links = Object.values(byHref).sort((a, b) => b.clicks - a.clicks);
+      document.getElementById('links-table').innerHTML = links.length
+        ? links.map(l => `<tr>
+            <td class="py-2 pr-3"><span class="text-slate-200">${escapeHtml(l.label)}</span><span class="block text-[10px] text-slate-500">${escapeHtml(l.href)}</span></td>
+            <td class="py-2 pr-3 text-slate-400">${escapeHtml(l.section)}</td>
+            <td class="py-2 pr-3 text-right text-slate-200">${l.clicks}</td>
+            <td class="py-2 pr-3 text-right text-slate-400">${l.users.size}</td>
+            <td class="py-2 text-right text-emerald-300">${percent(l.users.size, visitorCount)}</td>
+          </tr>`).join('')
+        : '<tr><td colspan="5" class="py-3 text-slate-500">No link clicks in this range.</td></tr>';
+      return links;
+    }
+
+    function renderLinksChart(links) {
+      linksChart?.destroy();
+      linksChart = new Chart(document.getElementById('links-chart'), {
+        type: 'bar',
+        data: {
+          labels: links.map(l => l.label),
+          datasets: [{ label: 'Clicks', data: links.map(l => l.clicks), backgroundColor: '#34d399', borderRadius: 4 }]
+        },
+        options: { ...chartOptions(), indexAxis: 'y', plugins: { legend: { display: false } } }
+      });
+    }
+
+    function renderReferrers(visits) {
+      const counts = {};
+      visits.forEach(e => { const r = e.props?.referrer || '(direct)'; counts[r] = (counts[r] || 0) + 1; });
+      const rows = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 15);
+      document.getElementById('referrers-table').innerHTML = rows.length
+        ? rows.map(([r, n]) => `<tr><td class="py-2 pr-3 text-slate-300">${escapeHtml(r)}</td><td class="py-2 text-right text-slate-200">${n}</td></tr>`).join('')
+        : '<tr><td class="py-3 text-slate-500">No visits in this range.</td></tr>';
+    }
+
+    function renderRecent(events) {
+      document.getElementById('recent-table').innerHTML = events.slice(0, 200).map(e => {
+        const detail = e.event === 'link_click'
+          ? `${e.props?.label || ''} → ${e.props?.href || ''}`
+          : e.props?.referrer ? `from ${e.props.referrer}` : '';
+        return `<tr>
+          <td class="whitespace-nowrap py-2 pr-3 text-slate-400">${escapeHtml(new Date(e.created_at).toLocaleString())}</td>
+          <td class="py-2 pr-3 ${e.event === 'link_click' ? 'text-emerald-300' : 'text-blue-300'}">${escapeHtml(e.event)}</td>
+          <td class="py-2 pr-3 text-slate-300">${escapeHtml(detail)}</td>
+          <td class="py-2 font-mono text-[10px] text-slate-500">${escapeHtml((e.anon_id || '').slice(0, 8))}</td>
+        </tr>`;
+      }).join('') || '<tr><td colspan="4" class="py-3 text-slate-500">No events in this range.</td></tr>';
+    }
+
+    function chartOptions() {
+      return {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: '#94a3b8', font: { size: 11 } } } },
+        scales: {
+          x: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: 'rgba(51,65,85,0.3)' } },
+          y: { beginAtZero: true, ticks: { color: '#64748b', font: { size: 10 }, precision: 0 }, grid: { color: 'rgba(51,65,85,0.3)' } }
+        }
+      };
+    }
+
+    fetchDashboardData();
+  </script>
+</body>
+</html>

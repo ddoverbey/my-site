@@ -70,8 +70,8 @@ create policy "anon can log events" on public.cultivate_events for insert to ano
 
 View results in the Supabase table editor or visit [`admin.html`](admin.html) to view conversion funnels, event volume charts, and waitlist submissions.
 
-To allow authenticated access to read analytics on `admin.html`, add this read policy in Supabase:
+Only the admin account can read analytics on `admin.html`. Anyone can create a Cultivate account, so the read policies check the signed-in email (also included in [`../site-analytics.sql`](../site-analytics.sql)):
 ```sql
-create policy "authenticated can view events" on public.cultivate_events for select to authenticated using (true);
-create policy "authenticated can view waitlist" on public.cultivate_waitlist for select to authenticated using (true);
+create policy "admin can view cultivate events" on public.cultivate_events for select to authenticated using ((auth.jwt() ->> 'email') = 'devonoverbey@gmail.com');
+create policy "admin can view cultivate waitlist" on public.cultivate_waitlist for select to authenticated using ((auth.jwt() ->> 'email') = 'devonoverbey@gmail.com');
 ```

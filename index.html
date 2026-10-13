@@ -53,7 +53,7 @@
           <li>
             <a href="/travel-bucketlist" class="group flex flex-col">
               <span class="text-blue-400 group-hover:text-blue-300 font-medium transition-colors">Travel Bucketlist</span>
-              <span class="text-sm text-slate-500 mt-1">Gamify your travel experiences. <span class="text-xs px-2 py-0.5 ml-1 bg-slate-800 rounded-full text-slate-400">Pre-Alpha!</span></span>
+              <span class="text-sm text-slate-500 mt-1">Gamify your travel experiences. <span class="text-xs px-2 py-0.5 ml-1 bg-slate-800 rounded-full text-slate-400">In development</span></span>
             </a>
           </li>
         </ul>
@@ -137,5 +137,68 @@
 
     </div>
   </main>
+
+  <script>
+    // Anonymous homepage analytics -> Supabase `site_events` (see site-analytics.sql).
+    (() => {
+      const SUPABASE_URL = 'https://mrgdthihogxrqsfnknxd.supabase.co';
+      const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1yZ2R0aGlob2d4cnFzZm5rbnhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyNDk4NTYsImV4cCI6MjEwNDgyNTg1Nn0.1fwcaGPGrzUut3zng2NNkYZt7hUguhKPhfqYyu8MA3s';
+      const ANON_ID_KEY = 'site_anon_id_v1';
+      const EXCLUDED_EMAILS = ['devonoverbey@gmail.com'];
+      const SESSION_KEYS = ['site_admin_session', 'cultivate_cloud_session', 'twelve_week_cloud_session'];
+      const isLocalPreview = location.protocol === 'file:' || ['localhost', '127.0.0.1'].includes(location.hostname);
+
+      function getAnonId() {
+        let id = localStorage.getItem(ANON_ID_KEY);
+        if (!id) {
+          id = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+          localStorage.setItem(ANON_ID_KEY, id);
+        }
+        return id;
+      }
+
+      function isExcludedUser() {
+        return SESSION_KEYS.some(key => {
+          try {
+            const email = JSON.parse(localStorage.getItem(key) || 'null')?.user?.email;
+            return email && EXCLUDED_EMAILS.includes(email.toLowerCase());
+          } catch {
+            return false;
+          }
+        });
+      }
+
+      function trackEvent(event, props = {}) {
+        if (isLocalPreview || isExcludedUser()) return;
+        fetch(`${SUPABASE_URL}/rest/v1/site_events`, {
+          method: 'POST',
+          keepalive: true,
+          headers: {
+            'Content-Type': 'application/json',
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            Prefer: 'return=minimal'
+          },
+          body: JSON.stringify({ anon_id: getAnonId(), event, props })
+        }).catch(() => {});
+      }
+
+      trackEvent('page_visit', {
+        referrer: document.referrer ? new URL(document.referrer).hostname : null,
+        path: location.pathname
+      });
+
+      function handleLinkClick(e) {
+        if (e.type === 'auxclick' && e.button !== 1) return;
+        const link = e.target.closest('a[href]');
+        if (!link) return;
+        const label = (link.querySelector('span') || link).textContent.trim().replace(/\s+/g, ' ').slice(0, 80);
+        const section = link.closest('.glow')?.querySelector('h2')?.textContent.trim() || null;
+        trackEvent('link_click', { href: link.getAttribute('href'), label, section });
+      }
+      document.addEventListener('click', handleLinkClick);
+      document.addEventListener('auxclick', handleLinkClick);
+    })();
+  </script>
 </body>
 </html>
