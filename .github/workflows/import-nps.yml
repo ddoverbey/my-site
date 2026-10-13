@@ -8,20 +8,20 @@ permissions:
 
 jobs:
   import:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'
       - name: Test importer
-        run: node Wanderlog/nps-catalog.test.mjs
+        run: node wanderlog/nps-catalog.test.mjs
       - name: Fetch complete official catalog
-        run: node Wanderlog/import-nps.mjs
+        run: node wanderlog/import-nps.mjs
         env:
           NPS_API_KEY: ${{ secrets.NPS_API_KEY }}
       - uses: actions/upload-artifact@v4
         with:
           name: nps-catalog
-          path: Wanderlog/nps-parks.json
+          path: wanderlog/nps-parks.json
           if-no-files-found: error

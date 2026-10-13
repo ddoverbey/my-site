@@ -12,7 +12,7 @@ Players do not need an API key, and no key is included in the site.
    Name the secret `NPS_API_KEY` and paste the key into its value.
 3. Push the importer and workflow changes, then open **Actions > Import NPS catalog > Run workflow**.
 4. Download the successful run's `nps-catalog` artifact, unzip it, and add `nps-parks.json` to the
-   tracked [`Wanderlog/`](Wanderlog/) directory (capitalization matters on GitHub Pages).
+   tracked [`wanderlog/`](wanderlog/) directory (capitalization matters on GitHub Pages).
 5. Commit and deploy that dataset with the site. Repeat steps 3-5 only when you want a refresh.
 
 The importer paginates the complete `/parks` endpoint, checks for 400+ unique records and valid metadata,
@@ -28,9 +28,9 @@ tags are retained, and other listings use matching NPS topics where available; t
 NPS biome classifications. The snapshot date and any catalog-loading failure are visible in the game.
 Until the generated dataset is published, only the international destinations are available.
 
-For local generation, set `NPS_API_KEY` in the current shell and run `node .\Wanderlog\import-nps.mjs`.
+For local generation, set `NPS_API_KEY` in the current shell and run `node .\wanderlog\import-nps.mjs`.
 Node 16+ is sufficient; the workflow uses Node 22. Test without a key using
-`node .\Wanderlog\nps-catalog.test.mjs`. No packages need installing.
+`node .\wanderlog\nps-catalog.test.mjs`. No packages need installing.
 
 ## Homepage analytics
 
