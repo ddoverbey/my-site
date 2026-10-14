@@ -38,6 +38,10 @@ Dataset load status and retry controls are available in the click/keyboard-acces
 not over the map legend. The header is layered above the map/fog. Fog uses an overscanned canvas
 that follows Leaflet's animated zoom transform before repainting at the final zoom, with
 geographic-radius scaling and radius-aware offscreen clearing.
+The fog-removal checkbox, its JavaScript hooks, and classic-mode fog removal are commented out
+for optional restoration; the map stays shrouded in either mode. Destination pins default to
+**None**, with **All**, **Visited**, and **Wishlist** still selectable. Hiding pins does not hide
+the home marker, erase visits, or stop visited destinations from clearing their fog.
 
 Wanderlog maps NPS and international destination **coordinates**, not park boundaries, to the
 [RESOLVE Ecoregions 2017](https://ecoregions.appspot.com/) polygons, an update of WWF's 2001

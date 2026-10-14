@@ -112,9 +112,11 @@
     }
     #settingsMenu summary { list-style: none; }
     #settingsMenu summary::-webkit-details-marker { display: none; }
+    /* Optional classic-mode fog removal:
     .mode-classic #fogCanvasOverlay {
       opacity: 0;
     }
+    */
 
     /* Pulse effect for home base & player cursor */
     @keyframes pulseAura {
@@ -261,20 +263,23 @@
         <div class="mt-3 pt-3 border-t border-slate-700/60 flex items-center justify-between text-[11px]">
           <span class="text-slate-400">Show pins:</span>
           <div class="flex gap-1" id="pinFilterBtns">
-            <button data-filt="all" class="px-2 py-0.5 rounded bg-blue-600/80 text-white font-medium">All</button>
-            <button data-filt="v" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white">Visited</button>
-            <button data-filt="w" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white">Wishlist</button>
+            <button data-filt="none" aria-pressed="true" class="px-2 py-0.5 rounded bg-blue-600/80 text-white font-medium">None</button>
+            <button data-filt="all" aria-pressed="false" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white">All</button>
+            <button data-filt="v" aria-pressed="false" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white">Visited</button>
+            <button data-filt="w" aria-pressed="false" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white">Wishlist</button>
           </div>
         </div>
       </div>
 
-      <!-- Fog of War Toggle Control & Legend (Bottom Left) -->
+      <!-- Map Legend (Bottom Left) -->
       <div class="absolute bottom-6 left-4 z-[460] rpg-panel rounded-xl px-3 py-2 text-xs flex items-center gap-4 text-slate-300">
+        <!-- Optional fog toggle: restore this control and its commented JavaScript hooks together.
         <label class="flex items-center gap-2 cursor-pointer">
           <input type="checkbox" id="fogToggleCheckbox" checked class="rounded border-slate-700 text-amber-500 focus:ring-0">
           <span class="font-medium text-amber-200">Dense Fog Shroud</span>
         </label>
         <span class="h-3 w-px bg-slate-700"></span>
+        -->
         <div class="flex items-center gap-3 text-[11px] text-slate-400">
           <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Visited (Aura)</span>
           <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span> Wishlist</span>
@@ -695,7 +700,7 @@
       regions: {},    // 'c:Country' | 's:State' -> 'v' | 'w'
       currentTab: 'map',
       mode: 'rpg',    // 'rpg' or 'classic'
-      pinFilter: 'all',
+      pinFilter: 'none',
       scratchDataset: 'world',
       viewOnly: false
     };
@@ -1005,11 +1010,9 @@
       fogCtx.setTransform(1, 0, 0, 1, 0, 0);
       fogCtx.clearRect(0, 0, width, height);
 
-      // If user turned fog off, exit
-      const isFogActive = document.getElementById('fogToggleCheckbox').checked;
-      if (!isFogActive || AppState.mode === 'classic') {
-        return;
-      }
+      // Optional fog toggle:
+      // const isFogActive = document.getElementById('fogToggleCheckbox').checked;
+      // if (!isFogActive || AppState.mode === 'classic') return;
 
       // Step 1: Draw Dense Shroud of War (Midnight Indigo with slight texture)
       fogCtx.fillStyle = 'rgba(5, 8, 16, 0.94)';
@@ -1067,6 +1070,7 @@
       // Clear existing
       Object.values(leafletMarkers).forEach(m => map.removeLayer(m));
       leafletMarkers = {};
+      if (AppState.pinFilter === 'none') return;
 
       PARKS.forEach(p => {
         if (p.lat === null || p.lng === null) return;
@@ -1549,7 +1553,7 @@
       document.getElementById('toggleRpgMode').className = 'px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 bg-amber-500 text-slate-950 font-bold shadow-md';
       document.getElementById('toggleClassicMode').className = 'px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 text-slate-400 hover:text-slate-200';
       document.getElementById('rpgMapHud').classList.remove('hidden');
-      document.getElementById('fogToggleCheckbox').checked = true;
+      // Optional fog toggle: document.getElementById('fogToggleCheckbox').checked = true;
       saveState();
       switchTab('map');
       drawFogOfWar();
@@ -1561,7 +1565,7 @@
       document.getElementById('toggleClassicMode').className = 'px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 bg-blue-600 text-white font-bold shadow-md';
       document.getElementById('toggleRpgMode').className = 'px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 text-slate-400 hover:text-slate-200';
       document.getElementById('rpgMapHud').classList.add('hidden');
-      document.getElementById('fogToggleCheckbox').checked = false;
+      // Optional fog toggle: document.getElementById('fogToggleCheckbox').checked = false;
       saveState();
       switchTab('bucketlist');
       drawFogOfWar();
@@ -1587,6 +1591,7 @@
       btn.addEventListener('click', () => {
         AppState.pinFilter = btn.dataset.filt;
         document.querySelectorAll('#pinFilterBtns button').forEach(b => {
+          b.setAttribute('aria-pressed', String(b === btn));
           b.className = b === btn 
             ? 'px-2 py-0.5 rounded bg-blue-600/80 text-white font-medium'
             : 'px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white';
@@ -1595,8 +1600,8 @@
       });
     });
 
-    // Fog Checkbox toggle
-    document.getElementById('fogToggleCheckbox').addEventListener('change', drawFogOfWar);
+    // Optional fog toggle:
+    // document.getElementById('fogToggleCheckbox').addEventListener('change', drawFogOfWar);
 
     // Recenter Home Button
     document.getElementById('btnRecenterHome').addEventListener('click', () => {

@@ -115,6 +115,12 @@ const context = vm.createContext({
   fetch: async () => ({ ok: true, json: async () => snapshot })
 });
 scripts.forEach(script => vm.runInContext(script, context));
+check('destination pins default to None and the fog toggle is not rendered', () => {
+  assert.equal(vm.runInContext('AppState.pinFilter', context), 'none');
+  const activeHtml = html.replace(/<!--[\s\S]*?-->/g, '');
+  assert.ok(!activeHtml.includes('id="fogToggleCheckbox"'));
+  assert.ok(activeHtml.includes('data-filt="none" aria-pressed="true"'));
+});
 await vm.runInContext('loadNpsCatalog()', context);
 check('app loads the complete snapshot without a player API key', () => {
   assert.equal(vm.runInContext('PARKS.length', context), 417);
@@ -259,5 +265,39 @@ vm.runInContext(`
 check('offscreen clearings are culled by their radius, not a fixed 200-pixel cutoff', () => {
   assert.equal(context.fogOperations.filter(operation => operation[0] === 'arc').length, 1);
   assert.ok(context.fogOperations.some(operation => operation[0] === 'transform' && operation[5] === 800 && operation[6] === 600));
+});
+context.removedMarkers = [];
+context.L = {
+  circleMarker: () => ({
+    addTo() { return this; }, bindTooltip() {}, bindPopup() {}
+  })
+};
+vm.runInContext(`
+  map.removeLayer = marker => removedMarkers.push(marker);
+  PARKS = [
+    { id: 'visited', lat: 1, lng: 1, name: 'Visited' },
+    { id: 'wish', lat: 2, lng: 2, name: 'Wishlist' },
+    { id: 'unknown', lat: 3, lng: 3, name: 'Unknown' }
+  ];
+  AppState.pins = { visited: 'v', wish: 'w' };
+`, context);
+check('all pin filters work and None removes previously rendered markers', () => {
+  for (const [filter, ids] of [
+    ['all', ['visited', 'wish', 'unknown']], ['v', ['visited']], ['w', ['wish']], ['none', []]
+  ]) {
+    vm.runInContext(`AppState.pinFilter = '${filter}'; renderParkMarkers();`, context);
+    assert.deepEqual(Array.from(vm.runInContext('Object.keys(leafletMarkers)', context)), ids);
+  }
+  assert.equal(context.removedMarkers.length, 5);
+  assert.equal(vm.runInContext('AppState.pins.visited', context), 'v');
+});
+context.fogOperations.length = 0;
+vm.runInContext(`
+  AppState.mode = 'classic';
+  document.getElementById('fogToggleCheckbox').checked = false;
+  drawFogOfWar();
+`, context);
+check('fog cannot be removed by classic mode or the disabled checkbox hooks', () => {
+  assert.ok(context.fogOperations.some(operation => operation[0] === 'fill'));
 });
 console.log(`${checks} checks passed.`);
