@@ -182,6 +182,23 @@ check('home-only counties do not reveal polygons but an expedition can explore t
   assert.deepEqual(ledger.loggedCountyStatuses(state, { includeHome: false }), { '06073': 'v' });
   assert.equal(JSON.stringify(state), before);
 });
+check('home growth requires logged travel, not home, wishlist or manually marked regions', () => {
+  const baseline = {
+    homeBase: { name: 'Home', lat: 33.55, lng: -117.2, radiusKm: 80, countyId: '06073' },
+    counties: { '06073': 'l', '08065': 'v' }, regions: { 's:Colorado': 'l' },
+    pins: { romo: 'w' }, customPois: [{ ...poi, status: 'w' }]
+  };
+  assert.equal(ledger.hasLoggedTravel(migrate(baseline)), false);
+  for (const status of ['t', 'v', 'l']) {
+    assert.equal(ledger.hasLoggedTravel(migrate({ ...baseline, pins: { romo: status } })), true);
+    assert.equal(ledger.hasLoggedTravel(migrate({ ...baseline, customPois: [{ ...poi, status }] })), true);
+  }
+  for (const change of [
+    { expeditions: [exp] }, { routes: [[[1, 1], [2, 2]]] },
+    { clearedPolygons: [{ type: 'Polygon', coordinates: [] }] }
+  ]) assert.equal(ledger.hasLoggedTravel(migrate({ ...baseline, ...change })), true);
+  assert.equal(ledger.hasLoggedTravel(migrate({})), false);
+});
 check('home containment marks county, state and country lived and retains previous homes', () => {
   const state = migrate({ homeBase: { name: 'Home', lat: 33.55, lng: -117.2, radiusKm: 75 } });
   const political = { countries: ['United States of America'], states: ['California'], counties: [{ id: '06065', name: 'Riverside' }] };

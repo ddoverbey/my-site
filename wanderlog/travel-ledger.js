@@ -210,6 +210,13 @@
     return state;
   }
 
+  function hasLoggedTravel(state) {
+    return state.expeditions.length > 0 ||
+      Object.values(state.pins).some(clearsFog) ||
+      state.customPois.some(poi => clearsFog(poi.status)) ||
+      (state.routes?.length || 0) > 0 || (state.clearedPolygons?.length || 0) > 0;
+  }
+
   function loggedCountyStatuses(state, { includeHome = true, ...options } = {}) {
     // Re-derive exploration without manual county/region marks or mutating the passport.
     return syncDerivedState({
@@ -240,7 +247,7 @@
 
   const api = {
     ranks, labels, colors, transitTags, purposeTags, isVisited, clearsFog, promote,
-    homeRadiusKm, validateStatuses, validateTags, validateExpeditions, normalizePoi, migrateState, syncDerivedState, loggedCountyStatuses, metadataProgress
+    homeRadiusKm, hasLoggedTravel, validateStatuses, validateTags, validateExpeditions, normalizePoi, migrateState, syncDerivedState, loggedCountyStatuses, metadataProgress
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TravelLedger = api;

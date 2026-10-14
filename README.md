@@ -438,8 +438,11 @@ have no hover targets or tooltips, including during expedition map picking. Norm
 never edit county statuses; explicit expedition picking adds draft stops without clearing fog.
 County polygons clear only from logged parks/custom POIs or expeditions, not manual Scratch Map
 statuses or home selection alone. Home still marks its county Lived, with hover context and Scratch Map
-completion, but clears only the small circular aura. Travel records clear their exact county polygon
-with a feathered canvas fill, including when a trip explores the home county.
+completion, but starts with only the small circular aura. Any logged park/POI transit, visit or Lived
+record, expedition, or legacy route/polygon clearing unlocks the entire home county, even if travel
+is elsewhere. Wishlist and manual county/state/country marks do not trigger this growth. The reveal
+is derived from saved travel records on reload/import; removing all qualifying travel restores the
+starting circle. Travel records clear their exact county polygon with a feathered canvas fill.
 State/country tiers describe completion in the Scratch Map; they do not erase
 entire nations on the canvas merely because home marks their parents Lived.
 Existing NPS/RESOLVE snapshots are reused without regeneration.

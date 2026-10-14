@@ -550,7 +550,7 @@
       <div>
         <h2 class="cinzel text-2xl sm:text-3xl font-extrabold text-amber-200">Establish Your Home Citadel</h2>
         <p class="text-sm text-slate-300 mt-2">
-          Every explorer begins somewhere. Set your home to reveal a small circle 15 miles across (7.5-mile radius) and permanently claim its county, state, and country as Lived. The home county is marked without revealing its entire polygon. Establishing your first Citadel grants +50 XP and unlocks the Scout class.
+          Every explorer begins somewhere. Set your home to reveal a small circle 15 miles across (7.5-mile radius) and permanently claim its county, state, and country as Lived. Your first logged travel anywhere unlocks the whole home county. Establishing your first Citadel grants +50 XP and unlocks the Scout class.
         </p>
       </div>
 
@@ -1781,7 +1781,7 @@
 
     function loggedCountyStatuses(includeHome = true) {
       return TravelLedger.loggedCountyStatuses(AppState, {
-        includeHome,
+        includeHome: includeHome || TravelLedger.hasLoggedTravel(AppState),
         parks: PARKS,
         politicalAt: (lat, lng) => coordinateIndexes
           ? CoordinateLookups.politicalRegion(lat, lng, coordinateIndexes, d3.geoContains) : null

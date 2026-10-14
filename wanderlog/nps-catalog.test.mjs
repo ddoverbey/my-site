@@ -1284,4 +1284,30 @@ check('saved Classic mode restores Travel Ledger, while every main-map entry ena
     element('tabContent-bucketlist').classList = originalLedger;
   }
 });
+check('travel anywhere grows the starting home circle into its county without changing the saved radius', () => {
+  vm.runInContext(`
+    applyPassport(migratePassport({
+      homeBase:{name:'Home',lat:37,lng:-120,radiusKm:80,countyId:'06073'},
+      counties:{'06073':'l','06065':'v'}, pins:{distant:'w'}
+    }));
+    coordinateIndexes=null;PARKS=[];AppState.mode='rpg';fogZoomAnimating=false;
+    fogCtx.fill=rule=>fogOperations.push(['polygonFill',rule]);
+    countyFeaturesById['06073']={geometry:{type:'Polygon',coordinates:[[[-120,37],[-119,37],[-119,38],[-120,37]]]}};
+    map={options:{crs:{scale:zoom=>256*2**zoom}},getZoom:()=>6,latLngToContainerPoint:()=>({x:0,y:0})};
+  `, context);
+  for (const [status, expected] of [['w', 0], ['t', 1], ['v', 1], ['l', 1]]) {
+    context.fogOperations.length = 0;
+    vm.runInContext(`AppState.pins.distant='${status}';drawFogOfWar()`, context);
+    assert.equal(context.fogOperations.filter(op => op[0] === 'polygonFill' && op[1] === 'evenodd').length, expected);
+    assert.equal(vm.runInContext('AppState.homeBase.radiusKm', context), travelLedger.homeRadiusKm);
+    assert.equal(vm.runInContext('AppState.counties["06073"]', context), 'l');
+  }
+  vm.runInContext('saveState();applyPassport(migratePassport(JSON.parse(localStorage.getItem("terra_incognita_state"))))', context);
+  assert.equal(vm.runInContext('loggedCountyStatuses(false)["06073"]', context), 'l');
+  vm.runInContext("AppState.pins={};AppState.expeditions=[testExpedition];", context);
+  assert.equal(vm.runInContext('loggedCountyStatuses(false)["06073"]', context), 'l');
+  vm.runInContext('AppState.expeditions=[]', context);
+  assert.equal(vm.runInContext('loggedCountyStatuses(false)["06073"]', context), undefined);
+  vm.runInContext('map=null', context);
+});
 console.log(`${checks} checks passed.`);
