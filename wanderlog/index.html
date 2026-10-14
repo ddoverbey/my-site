@@ -112,11 +112,9 @@
     }
     #settingsMenu summary { list-style: none; }
     #settingsMenu summary::-webkit-details-marker { display: none; }
-    /* Optional classic-mode fog removal:
     .mode-classic #fogCanvasOverlay {
       opacity: 0;
     }
-    */
 
     /* Pulse effect for home base & player cursor */
     @keyframes pulseAura {
@@ -795,6 +793,13 @@
         tiers: [{ goal: 5, title: 'Globetrotter', desc: 'Log 5 different nations' }]
       }
     ];
+    ACHIEVEMENTS.push({
+      id: 'waterfalls', title: 'Chasing Waterfalls', progress: s => s.metadataProgress.waterfalls,
+      tiers: [1, 5, 10].map(goal => ({
+        goal, title: 'Chasing Waterfalls',
+        desc: `Visit ${goal} custom waterfall location${goal === 1 ? '' : 's'}`
+      }))
+    });
     [
       ['subterranean', 'Subterranean Sky', 'Log a terrestrial stop below sea level', 1],
       ['thinAir', 'Thin Air', 'Log a stop above 10,000 ft', 1],
@@ -914,6 +919,10 @@
 
     function commitLedger(change) {
       const previous = JSON.stringify(passportPayload());
+      const visitedBefore = new Set([
+        ...Object.entries(AppState.pins).filter(([, status]) => TravelLedger.isVisited(status)).map(([id]) => `park:${id}`),
+        ...AppState.customPois.filter(p => TravelLedger.isVisited(p.status)).map(p => `poi:${p.id}`)
+      ]);
       try {
         change();
         syncDerivedState();
@@ -923,6 +932,13 @@
         showNotification('Travel record not saved', error.message, '⚠️');
         throw error;
       }
+      const discovered = [
+        ...PARKS.filter(p => TravelLedger.isVisited(AppState.pins[p.id]) && !visitedBefore.has(`park:${p.id}`))
+          .map(p => `park:${p.id}`),
+        ...AppState.customPois.filter(p => TravelLedger.isVisited(p.status) && !visitedBefore.has(`poi:${p.id}`))
+          .map(p => `poi:${p.id}`)
+      ];
+      if (discovered.length) pulseDiscoveries(discovered);
     }
 
     function addCustomPoi(poi) {
@@ -1080,12 +1096,19 @@
       exploredPct = Math.min(100, Math.max(0.5, exploredPct));
 
       // Archetype classification
+      const visitedLocations = [...visitedParks, ...visitedCustomLocations];
+      const countiesCount = (countyGeoJson || []).filter(feature =>
+        TravelLedger.isVisited(AppState.counties[String(feature.id).padStart(5, '0')])).length;
+      const tripsWith = (tags, field = 'transitTags') => AppState.expeditions.filter(exp =>
+        tags.some(tag => exp[field].includes(tag))).length;
       const archetypes = {
-        Nature: Math.min(1, visitedParks.length / 25),
-        Adventure: Math.min(1, visitedParks.filter(p => p.biomes.some(b => ['5','10','13'].includes(b))).length / 10),
-        Remoteness: Math.min(1, visitedParks.filter(p => p.biomes.some(b => ['6','11'].includes(b))).length / 6),
-        Worldly: Math.min(1, visitedCountries.size / 15),
-        Roadtrip: Math.min(1, visitedStates.size / 30)
+        Nature: Math.min(1, (visitedLocations.length + tripsWith(['photography'], 'purposeTags')) / 25),
+        Adventure: Math.min(1, (visitedLocations.filter(p => p.biomes.some(b => ['5','10','13'].includes(String(b)))).length +
+          tripsWith(['awd', 'foot'])) / 10),
+        Remoteness: Math.min(1, (visitedLocations.filter(p => p.biomes.some(b => ['6','11'].includes(String(b)))).length +
+          tripsWith(['foot'])) / 6),
+        Worldly: Math.min(1, (visitedCountries.size + tripsWith(['ferry', 'flight'])) / 15),
+        Roadtrip: Math.min(1, visitedStates.size / 30 + countiesCount / 100 + tripsWith(['awd']) / 30)
       };
 
       const sortedAxes = Object.entries(archetypes).sort((a,b) => b[1] - a[1]);
@@ -1095,7 +1118,8 @@
       let avatar = '🧭';
 
       if (sortedAxes[0][1] > 0.05 &&
-          (!AppState.homeBase || visitedParks.length || visitedCustomLocations.length || visitedCountries.size > 1 || visitedStates.size > 1)) {
+          (!AppState.homeBase || visitedLocations.length || AppState.expeditions.length || countiesCount > 1 ||
+            visitedCountries.size > 1 || visitedStates.size > 1)) {
         switch(sortedAxes[0][0]) {
           case 'Adventure':
             cls = 'Alpine Ranger';
@@ -1135,7 +1159,7 @@
         rareBiomesCount: unlockedRare.length,
         statesCount: visitedStates.size,
         countriesCount: visitedCountries.size,
-        countiesCount: (countyGeoJson || []).filter(feature => TravelLedger.isVisited(AppState.counties[String(feature.id).padStart(5, '0')])).length,
+        countiesCount,
         countyTotal: countyGeoJson?.length || 0,
         completedQuestsCount,
         xp,
@@ -1160,6 +1184,8 @@
     let fogZoomAnimating = false;
     let homeAuraPulseStarted = null;
     let homeAuraFrame = null;
+    const discoveryPulses = new Map();
+    let discoveryFrame = null;
     let leafletMarkers = {};
     let homeMarker = null;
     let countyLayer = null;
@@ -1261,10 +1287,11 @@
       // Clear previous canvas frame
       fogCtx.setTransform(1, 0, 0, 1, 0, 0);
       fogCtx.clearRect(0, 0, width, height);
+      if (AppState.mode === 'classic') return;
 
       // Optional fog toggle:
       // const isFogActive = document.getElementById('fogToggleCheckbox').checked;
-      // if (!isFogActive || AppState.mode === 'classic') return;
+      // if (!isFogActive) return;
 
       // Step 1: Draw Dense Shroud of War (Midnight Indigo with slight texture)
       fogCtx.fillStyle = 'rgba(5, 8, 16, 0.94)';
@@ -1286,16 +1313,19 @@
       // Punch out holes for all visited parks & pins
       PARKS.forEach(p => {
         const status = AppState.pins[p.id];
+        const pulse = TravelLedger.isVisited(status) ? discoveryPulseScale(`park:${p.id}`) : 1;
+        fogCtx.globalAlpha = pulse;
         if (TravelLedger.isVisited(status) && !p.intl && npsBoundariesByCode[p.id]?.length) {
           npsBoundariesByCode[p.id].forEach(geometry => {
             const coordinate = geometry.type === 'Polygon' ? geometry.coordinates[0][0] : geometry.coordinates[0][0][0];
-            punchFogPolygon(geometry, calculatePixelRadius(p.lat ?? coordinate[1], 10));
+            punchFogPolygon(geometry, calculatePixelRadius(p.lat ?? coordinate[1], 10) * pulse);
           });
+          fogCtx.globalAlpha = 1;
           return;
         }
         if (TravelLedger.clearsFog(status) && p.lat !== null && p.lng !== null) {
           const pt = map.latLngToContainerPoint([p.lat, p.lng]);
-          const radius = calculatePixelRadius(p.lat, status === 't' ? 85 * 0.6 : 85);
+          const radius = calculatePixelRadius(p.lat, status === 't' ? 85 * 0.6 : 85) * pulse;
           if (pt.x + radius >= -fogPadding.x && pt.x - radius <= width - fogPadding.x &&
               pt.y + radius >= -fogPadding.y && pt.y - radius <= height - fogPadding.y) {
             punchFogAura(pt.x, pt.y, radius, 0.95);
@@ -1304,14 +1334,18 @@
         if (TravelLedger.isVisited(status)) {
           const geometry = p.boundary || p.geometry || p.geojson?.geometry || p.geojson;
           if (geometry?.type === 'Polygon' || geometry?.type === 'MultiPolygon') {
-            punchFogPolygon(geometry);
+            punchFogPolygon(geometry, 25 * pulse);
           }
         }
+        fogCtx.globalAlpha = 1;
       });
       AppState.customLocations.forEach(p => {
         if (!TravelLedger.clearsFog(p.status)) return;
         const point = map.latLngToContainerPoint([p.lat, p.lng]);
-        punchFogAura(point.x, point.y, calculatePixelRadius(p.lat, p.status === 't' ? 85 * 0.6 : 85), 0.95);
+        const pulse = TravelLedger.isVisited(p.status) ? discoveryPulseScale(`poi:${p.id}`) : 1;
+        fogCtx.globalAlpha = pulse;
+        punchFogAura(point.x, point.y, calculatePixelRadius(p.lat, p.status === 't' ? 85 * 0.6 : 85) * pulse, 0.95);
+        fogCtx.globalAlpha = 1;
       });
 
       Object.keys(AppState.counties).forEach(id => {
@@ -1420,7 +1454,32 @@
         drawFogOfWar();
         homeAuraFrame = requestAnimationFrame(frame);
       }
+
       homeAuraFrame = requestAnimationFrame(frame);
+    }
+
+    function discoveryPulseScale(id) {
+      const started = discoveryPulses.get(id);
+      if (started === undefined) return 1;
+      const elapsed = Math.min(1, Math.max(0, (performance.now() - started) / 1200));
+      return 0.85 + 0.15 * elapsed + 0.05 * Math.sin(elapsed * Math.PI * 4) * (1 - elapsed);
+    }
+
+    function pulseDiscoveries(ids) {
+      if (!map || !fogCtx || AppState.mode === 'classic' ||
+          window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      const started = performance.now();
+      ids.forEach(id => discoveryPulses.set(id, started));
+      if (discoveryFrame !== null) return;
+      function frame() {
+        if (AppState.mode === 'classic') discoveryPulses.clear();
+        for (const [id, time] of discoveryPulses) {
+          if (performance.now() - time >= 1200) discoveryPulses.delete(id);
+        }
+        drawFogOfWar();
+        discoveryFrame = discoveryPulses.size ? requestAnimationFrame(frame) : null;
+      }
+      discoveryFrame = requestAnimationFrame(frame);
     }
 
     // Convert real-world kilometers to Leaflet screen pixels at current zoom
@@ -2104,6 +2163,9 @@
         `;
         achContainer.appendChild(card);
       });
+      if (!ACHIEVEMENTS.some(ach => ach.progress(stats) > 0)) {
+        achContainer.innerHTML = '<p class="col-span-full text-xs italic text-slate-400">Venture out into the fog to uncover hidden achievements.</p>';
+      }
     }
 
     function renderBucketListView() {

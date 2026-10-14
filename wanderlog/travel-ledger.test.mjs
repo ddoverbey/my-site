@@ -166,6 +166,23 @@ check('tag achievements reach exact counts without collapsing expeditions into s
       countyIds: index === 0 ? ['08065', '08097', '08001', '08003', '08005'] : exp.countyIds
     }))
   });
+  check('waterfalls count only visited/lived POIs with an exact normalized category', () => {
+    const state = migrate({ customPois: [
+      { ...poi, id: 'poi_falls_visit', category: 'waterfall' },
+      { ...poi, id: 'poi_falls_home', category: ' WaterFall ', status: 'l' },
+      { ...poi, id: 'poi_falls_transit', category: 'waterfall', status: 't' },
+      { ...poi, id: 'poi_falls_wish', category: 'waterfall', status: 'w' },
+      { ...poi, id: 'poi_falls_other', category: 'waterfall viewpoint' },
+      { ...poi, id: 'poi_falls_none' }
+    ] });
+    assert.equal(ledger.metadataProgress(state).waterfalls, 2);
+    for (const count of [1, 5, 10]) {
+      const progress = ledger.metadataProgress(migrate({
+        customPois: Array.from({ length: count }, (_, i) => ({ ...poi, id: `poi_waterfall_${i}`, category: 'waterfall' }))
+      }));
+      assert.equal(progress.waterfalls, count);
+    }
+  });
   let progress = ledger.metadataProgress(state);
   assert.equal(progress.overlander, 5);
   assert.equal(progress.mariner, 3);

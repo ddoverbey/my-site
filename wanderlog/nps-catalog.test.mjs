@@ -122,7 +122,7 @@ const context = vm.createContext({
   WanderlogConfig: { rarityEndpoint: 'https://api.devonoverbey.com/rarity' },
   tailwind: {}, console, Intl, URL, URLSearchParams, setTimeout() {},
   document: { getElementById: element, querySelectorAll: () => [], createElement: () => element(`created-${elements.size}`) },
-  window: { addEventListener() {} },
+  window: { addEventListener() {}, matchMedia: () => ({ matches: true }) },
   fetch: async url => ({ ok: true, json: async () => url.includes('wikidata') ? wikidata : url.includes('worldwide') ? worldwide : snapshot })
 });
 scripts.forEach(script => vm.runInContext(script, context));
@@ -384,7 +384,12 @@ vm.runInContext(`
   document.getElementById('fogToggleCheckbox').checked = false;
   drawFogOfWar();
 `, context);
-check('fog cannot be removed by classic mode or the disabled checkbox hooks', () => {
+check('classic mode clears the canvas and skips shroud painting while RPG still ignores the disabled checkbox', () => {
+  assert.ok(context.fogOperations.some(operation => operation[0] === 'clear'));
+  assert.ok(!context.fogOperations.some(operation => operation[0] === 'fill'));
+  assert.ok(html.includes('.mode-classic #fogCanvasOverlay {'));
+  context.fogOperations.length = 0;
+  vm.runInContext("AppState.mode='rpg';drawFogOfWar()", context);
   assert.ok(context.fogOperations.some(operation => operation[0] === 'fill'));
 });
 
@@ -562,12 +567,14 @@ vm.runInContext(`
 `, context);
 check('zero-progress achievements are entirely absent and started achievements show exact progress', () => {
   vm.runInContext('renderPassportView()', context);
-  assert.equal(element('achievementsContainer').innerHTML, '');
+  assert.equal(element('achievementsContainer').innerHTML,
+    '<p class="col-span-full text-xs italic text-slate-400">Venture out into the fog to uncover hidden achievements.</p>');
   vm.runInContext("AppState.pins.test='v'; renderPassportView()", context);
   assert.ok(element('achievementsContainer').innerHTML.includes('Trailblazer'));
   assert.ok(element('achievementsContainer').innerHTML.includes('value="1" max="5"'));
   assert.ok(!element('achievementsContainer').innerHTML.includes('The Overlander'));
   assert.ok(!element('achievementsContainer').innerHTML.includes('Subterranean Sky'));
+  assert.ok(!element('achievementsContainer').innerHTML.includes('Venture out'));
 });
 check('transited destinations clear exactly 60 percent of visited aura radius without visited stats', () => {
   vm.runInContext("AppState.pins={test:'t'};AppState.regions={};AppState.counties={}", context);
@@ -899,5 +906,134 @@ check('missing county data clears prior statistics and displays explicit retry g
   vm.runInContext('countyGeoJson=null;renderScratchMap()', context);
   assert.equal(element('scratchStatsLabel').textContent, 'Dataset unavailable');
   assert.ok(scratchNodes.some(n => String(n.text).includes('Retry datasets')));
+});
+check('waterfall tiers disclose exact 1, 5 and 10 goals and hide nonmatching/transit records', () => {
+  for (const count of [0, 1, 4, 5, 9, 10]) {
+    context.fallsCount = count;
+    vm.runInContext(`
+      applyPassport(migratePassport({}));PARKS=[];coordinateIndexes=null;AppState.currentTab='map';
+      AppState.customPois=Array.from({length:fallsCount},(_,i)=>({
+        ...customLocation,id:'falls_'+i,category:'waterfall',status:i===0?'l':'v'
+      }));
+      renderPassportView();
+    `, context);
+    const cards = element('achievementsContainer').innerHTML;
+    assert.equal(vm.runInContext('calculateStats().metadataProgress.waterfalls', context), count);
+    if (!count) assert.ok(!cards.includes('Chasing Waterfalls'));
+    else {
+      assert.ok(cards.includes('Chasing Waterfalls'));
+      const next = count < 5 ? 5 : 10;
+      assert.ok(cards.includes(`aria-label="Chasing Waterfalls progress" value="${Math.min(count, next)}" max="${next}"`));
+      if (count < 5) assert.ok(!cards.includes('Visit 10 custom waterfall'));
+      if (count >= 5) assert.ok(!cards.includes('Visit 1 custom waterfall location</p>'));
+    }
+  }
+});
+check('radar includes full custom visits and their biomes, loaded counties and each supported trip tag', () => {
+  vm.runInContext(`
+    applyPassport(migratePassport({}));PARKS=[];coordinateIndexes=null;
+    countyGeoJson=[{id:'06001'},{id:'06013'},{id:'06041'}];
+    AppState.counties={'06001':'l','06013':'v','06041':'t','99999':'v'};
+    AppState.customPois=[
+      {...customLocation,id:'nature',biomes:['5'],status:'v'},
+      {...customLocation,id:'remote',biomes:['11'],status:'l'},
+      {...customLocation,id:'wishlist',biomes:['10'],status:'w'},
+      {...customLocation,id:'transit',biomes:['6'],status:'t'}
+    ];
+  `, context);
+  const before = vm.runInContext('calculateStats().archetypes', context);
+  assert.equal(before.Nature, 2 / 25);
+  assert.equal(before.Adventure, 1 / 10);
+  assert.equal(before.Remoteness, 1 / 6);
+  assert.equal(before.Worldly, 1 / 15);
+  assert.equal(before.Roadtrip, 2 / 100);
+  vm.runInContext(`AppState.expeditions=[{...testExpedition,transitTags:['awd','foot','ferry','flight'],purposeTags:['photography']}];`, context);
+  const after = vm.runInContext('calculateStats().archetypes', context);
+  assert.equal(after.Nature, 3 / 25);
+  assert.equal(after.Adventure, 2 / 10);
+  assert.equal(after.Remoteness, 2 / 6);
+  assert.equal(after.Worldly, 2 / 15);
+  assert.equal(after.Roadtrip, 2 / 100 + 1 / 30);
+  for (const [tag, axis] of [['awd','Adventure'],['awd','Roadtrip'],['foot','Adventure'],
+    ['foot','Remoteness'],['ferry','Worldly'],['flight','Worldly']]) {
+    vm.runInContext(`AppState.expeditions=[{...testExpedition,transitTags:['${tag}'],purposeTags:[]}];`, context);
+    assert.ok(vm.runInContext(`calculateStats().archetypes.${axis}`, context) > before[axis], tag);
+  }
+  vm.runInContext(`AppState.expeditions=Array.from({length:200},()=>({...testExpedition,transitTags:['awd','foot','ferry','flight'],purposeTags:['photography']}));`, context);
+  assert.deepEqual(Object.values(vm.runInContext('calculateStats().archetypes', context)), [1,1,1,1,1]);
+});
+vm.runInContext(`
+  applyPassport(migratePassport({}));PARKS=[{id:'pulse',name:'Pulse Park',lat:37,lng:-120,biomes:[],states:[]}];
+  countyGeoJson=null;coordinateIndexes=null;AppState.currentTab='map';
+  map={options:{crs:{scale:zoom=>256*2**zoom}},getZoom:()=>8,
+    latLngToContainerPoint:()=>({x:100,y:100}),removeLayer(){}};
+`, context);
+context.window.matchMedia = () => ({ matches: false });
+animationTime = 0;
+check('new full park visits pulse for 1200ms without retriggering visited to lived promotion', () => {
+  vm.runInContext("setPinStatus('pulse','v')", context);
+  assert.equal(vm.runInContext('discoveryPulses.get("park:pulse")', context), 0);
+  context.fogOperations.length = 0;
+  animationTime = 600;
+  animationCallback();
+  const radius = context.fogOperations.find(op => op[0] === 'arc')[3];
+  assert.ok(radius < vm.runInContext('calculatePixelRadius(37,85)', context));
+  vm.runInContext("setPinStatus('pulse','l')", context);
+  assert.equal(vm.runInContext('discoveryPulses.get("park:pulse")', context), 0);
+  animationTime = 1200;
+  animationCallback();
+  assert.equal(vm.runInContext('discoveryPulses.size', context), 0);
+  assert.equal(vm.runInContext('discoveryFrame', context), null);
+  assert.equal(vm.runInContext('fogCtx.globalAlpha', context), 1);
+});
+check('new custom POI saves and expedition promotions trigger pulses only after successful persistence', () => {
+  animationTime = 2000;
+  vm.runInContext("addCustomPoi({...customLocation,id:'poi_pulse',status:'v'})", context);
+  assert.equal(vm.runInContext('discoveryPulses.get("poi:poi_pulse")', context), 2000);
+  vm.runInContext("addCustomPoi({...customLocation,id:'poi_transit',status:'t'})", context);
+  assert.equal(vm.runInContext('discoveryPulses.has("poi:poi_transit")', context), false);
+  vm.runInContext("addExpedition({...testExpedition,id:'pulse-exp',countyIds:[],parkIds:[],customPoiIds:['poi_transit']})", context);
+  assert.equal(vm.runInContext('discoveryPulses.has("poi:poi_transit")', context), true);
+  context.localStorage.setItem = () => { throw new Error('Storage full'); };
+  assert.throws(() => vm.runInContext("addCustomPoi({...customLocation,id:'poi_fail',status:'v'})", context), /Storage full/);
+  assert.equal(vm.runInContext('discoveryPulses.has("poi:poi_fail")', context), false);
+  context.localStorage.setItem = (key, value) => { savedJson = value; };
+  animationTime = 3200;
+  animationCallback();
+});
+check('reduced motion and classic mode do not schedule discovery pulses', () => {
+  context.window.matchMedia = () => ({ matches: true });
+  vm.runInContext("addCustomPoi({...customLocation,id:'poi_reduced',status:'v'})", context);
+  assert.equal(vm.runInContext('discoveryPulses.size', context), 0);
+  context.window.matchMedia = () => ({ matches: false });
+  vm.runInContext("AppState.mode='classic';addCustomPoi({...customLocation,id:'poi_classic',status:'l'})", context);
+  assert.equal(vm.runInContext('discoveryPulses.size', context), 0);
+  context.fogOperations.length = 0;
+  vm.runInContext('drawFogOfWar()', context);
+  assert.ok(!context.fogOperations.some(op => op[0] === 'fill'));
+  vm.runInContext("AppState.mode='rpg';drawFogOfWar()", context);
+  assert.ok(context.fogOperations.some(op => op[0] === 'fill'));
+});
+check('NPS discovery pulses preserve boundary geometry while animating opacity and perimeter feather', () => {
+  animationTime = 4000;
+  vm.runInContext(`
+    applyPassport(migratePassport({}));AppState.currentTab='map';
+    PARKS=[{id:'pulse',name:'Boundary Park',lat:37,lng:-120,biomes:[],states:[]}];
+    npsBoundariesByCode.pulse=[{type:'Polygon',coordinates:[[[-120,37],[-119,37],[-119,38],[-120,37]]]}];
+    fogCtx.fill=rule=>fogOperations.push(['boundaryFill',rule,fogCtx.globalAlpha,fogCtx.shadowBlur]);
+    setPinStatus('pulse','v');
+  `, context);
+  const geometry = vm.runInContext('JSON.stringify(npsBoundariesByCode.pulse)', context);
+  context.fogOperations.length = 0;
+  animationTime = 4600;
+  animationCallback();
+  const fill = context.fogOperations.find(op => op[0] === 'boundaryFill' && op[1] === 'evenodd');
+  assert.ok(fill[2] < 1 && fill[2] >= 0.8);
+  assert.ok(fill[3] < vm.runInContext('calculatePixelRadius(37,10)', context));
+  assert.equal(vm.runInContext('JSON.stringify(npsBoundariesByCode.pulse)', context), geometry);
+  assert.equal(vm.runInContext('fogCtx.globalAlpha', context), 1);
+  animationTime = 5200;
+  animationCallback();
+  assert.equal(vm.runInContext('discoveryPulses.size', context), 0);
 });
 console.log(`${checks} checks passed.`);

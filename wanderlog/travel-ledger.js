@@ -215,6 +215,7 @@
       thinAir: pois.filter(poi => poi.elevationFt > 10000).length +
         trips.filter(exp => exp.maxElevationFt !== null && exp.maxElevationFt > 10000).length,
       whispers: pois.filter(poi => ['Uncharted', 'Hidden Gem'].includes(poi.rarityTier)).length,
+      waterfalls: pois.filter(poi => poi.category?.trim().toLowerCase() === 'waterfall').length,
       overlander: trips.filter(exp => exp.transitTags.includes('awd')).length,
       mariner: trips.filter(exp => exp.transitTags.includes('ferry')).length,
       focal: pois.filter(poi => poi.purposeTags.includes('photography')).length +

@@ -111,8 +111,9 @@ Dataset load status and retry controls are available in the click/keyboard-acces
 not over the map legend. The header is layered above the map/fog. Fog uses an overscanned canvas
 that follows Leaflet's animated zoom transform before repainting at the final zoom, with
 geographic-radius scaling and radius-aware offscreen clearing.
-The fog-removal checkbox, its JavaScript hooks, and classic-mode fog removal are commented out
-for optional restoration; the map stays shrouded in either mode. Destination pins default to
+The fog-removal checkbox and its JavaScript hooks remain commented out.
+**Classic mode shows an unfogged map**: CSS hides the canvas, and the renderer clears it without
+painting the shroud. Returning to RPG mode restores exploration fog. Destination pins default to
 **None**, with **All**, **Visited**, **Wishlist**, **Transit**, and **Lived** selectable. Hiding pins does not hide
 the home marker, erase visits, or stop visited destinations from clearing their fog.
 
@@ -418,6 +419,11 @@ it adds no separate reveal layer. The Citadel grants a single derived +50 XP bon
 bonus each time home changes. New explorers unlock **Scout**; established explorer classes are
 still determined by their accumulated travel. Storage failures roll back home and region changes
 before any camera flight, pulse, or success notification.
+New Visited/Lived park and custom-POI discoveries run a 1.2-second reveal pulse on the same canvas.
+Point auras animate radius/opacity; NPS boundary reveals animate opacity and feathering without
+distorting their geometry. Pulses begin only after successful persistence, including new POIs and
+expedition promotions, and do not retrigger when an already visited location becomes Lived.
+Reduced-motion preferences and Classic mode skip discovery animation.
 
 County hitboxes use the existing `us-atlas@3/counties-10m.json` atlas. They remain transparent,
 with hover outlines/tooltips only. All `t`, `v`, and `l` counties clear their exact polygon with a
@@ -482,7 +488,8 @@ read-only, and invalid/future saves remain protected from overwrite.
 ### Progressive achievements
 
 Every achievement family uses numeric `progress(stats)` and a `tiers` array, rather than a boolean
-requirement. Achievements with zero progress are **not created in the DOM**. Each started family
+requirement. Achievements with zero progress are **not created in the DOM**. If none have started,
+the Passport displays: *Venture out into the fog to uncover hidden achievements.* Each started family
 shows only its highest completed tier and its next goal, with numeric counts and accessible progress
 bars; later tiers stay hidden. For example, one park visit shows **First Steps** complete and
 **Trailblazer** at 1/5, not the 15- and 30-visit goals. At the final tier only that completed milestone
@@ -498,11 +505,29 @@ Lived grants the same completion credit as Visited. Metadata badges:
 - **The Mariner:** 3 expeditions tagged Ferry.
 - **Focal Length:** 10 photography-tagged visited/lived POIs and/or expeditions.
 - **Borderlands:** 5 distinct explicitly selected counties in one expedition.
+- **Chasing Waterfalls:** 1, 5, and 10 visited/lived custom POIs whose category is exactly
+  `waterfall` after trimming and case normalization. Wishlist/transit POIs do not count.
 
 Transit and wishlist records cannot unlock full-visit achievements. Photography counts a tagged
 POI and a tagged expedition as independent logged records; repeating a POI across expeditions
 does not create extra POI records. Run `npm test` for migration, rank, threshold, fog, persistence,
 wizard-failure, and disclosure regression tests; no geography import is needed.
+
+### Radar contributions
+
+The radar preserves existing scales and adds custom visits and expedition metadata:
+
+- **Nature:** (visited catalog/custom locations + Photography expeditions) / 25.
+- **Adventure:** (visited locations in biomes 5/10/13 + AWD or Foot expeditions) / 10.
+- **Remoteness:** (visited locations in biomes 6/11 + Foot expeditions) / 6.
+- **Worldly:** (visited nations + Ferry or Flight expeditions) / 15.
+- **Roadtrip:** visited states / 30 + visited/lived loaded counties / 100 + AWD expeditions / 30.
+
+Each axis is capped at 1. Multiple matching tags within one axis count an expedition only once;
+the same expedition can contribute to different axes. Wishlist/transit locations do not earn
+full-visit radar credit, and unknown/unloaded county IDs do not count. Radar contributions affect
+the displayed archetype, not base visit XP or the one-time Citadel bonus. Straight-line expedition
+corridors are unchanged; no highway snapping or GPX/KML import is added.
 
 ## Homepage analytics
 
