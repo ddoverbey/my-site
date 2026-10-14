@@ -513,6 +513,15 @@ bars; later tiers stay hidden. For example, one park visit shows **First Steps**
 **Trailblazer** at 1/5, not the 15- and 30-visit goals. At the final tier only that completed milestone
 remains. Park (1/5/15/30), biome (3 / total−1 / total), and state (10/50) milestones are grouped; NPS completion,
 rare biomes, nations and metadata badges retain their separate families.
+
+Each family has distinct emoji artwork on a colored tile (Earth Sandwich uses 🌍🥪 on dark blue).
+Tier rarity represents achievement difficulty, not random drops or stat/XP multipliers:
+**Common** gray/white, **Uncommon** green, **Rare** blue, **Epic** purple, **Legendary** gold,
+and **Mythic / Exotic** a rainbow-gradient border/label. Rarity increases across multi-tier families.
+The character banner displays earned badge icons only, using the highest completed tier per family;
+partially progressed badges appear only on the Achievements page. Badge tooltips and accessible names
+include the earned title, rarity and requirement; clicking one opens Achievements. Badges are derived
+from saved progress rather than separately persisted, so edits/imports update them without duplicates.
 NPS completion uses the loaded catalog size and is unavailable when its source fails.
 Lived grants the same completion credit as Visited. Metadata badges:
 

@@ -161,6 +161,32 @@
     #achievementsContainer progress::-webkit-progress-bar { background: #0f172a; }
     #achievementsContainer progress::-webkit-progress-value { background: linear-gradient(90deg, #f59e0b, #fde68a); }
     #achievementsContainer progress::-moz-progress-bar { background: #f59e0b; }
+    .achievement-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      width: 3.5rem;
+      height: 3.5rem;
+      border-radius: 1rem;
+      background: var(--badge-background);
+      border: 2px solid var(--rarity-color);
+      font-size: 1.5rem;
+      box-shadow: 0 0 12px color-mix(in srgb, var(--rarity-color) 20%, transparent);
+    }
+    .achievement-icon[data-rarity="mythic"] {
+      background: linear-gradient(var(--badge-background), var(--badge-background)) padding-box,
+        linear-gradient(135deg, #fb7185, #fbbf24, #4ade80, #38bdf8, #c084fc) border-box;
+      border-color: transparent;
+    }
+    button.achievement-icon:hover { transform: translateY(-2px); }
+    button.achievement-icon:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+    .achievement-rarity { color: var(--rarity-color); }
+    .achievement-rarity[data-rarity="mythic"] {
+      background: linear-gradient(90deg, #fb7185, #fbbf24, #4ade80, #38bdf8, #c084fc);
+      background-clip: text;
+      color: transparent;
+    }
   </style>
 </head>
 <body class="h-screen w-screen flex flex-col bg-[#060913] text-slate-100 select-none">
@@ -406,6 +432,10 @@
               <svg id="radarSvg" viewBox="0 0 240 240" class="w-full h-full drop-shadow-lg"></svg>
             </div>
           </div>
+          <section class="relative z-10 mt-5 border-t border-slate-700/60 pt-4" aria-labelledby="earnedBadgesTitle">
+            <h3 id="earnedBadgesTitle" class="text-xs font-bold text-amber-200 mb-3">Earned Badges</h3>
+            <div id="earnedAchievementBadges" class="flex flex-wrap gap-3"></div>
+          </section>
         </div>
 
         <!-- Master Statistics Bento Box -->
@@ -489,6 +519,15 @@
           <h2 id="achievementsTitle" class="cinzel text-xl font-bold text-amber-200">Achievements</h2>
           <p class="text-xs text-slate-400 mt-2">Discover special milestones through your travels. Only started achievements appear; each shows your highest earned tier and your next goal.</p>
           <p class="text-xs text-slate-400 mt-2">Overnight stays are inferred from expedition dates. Same-day distance badges use only single-day expeditions, never undated pins or assumed dates on multi-day trips.</p>
+          <p class="text-xs text-slate-400 mt-2">Rarity reflects achievement difficulty, not stat bonuses. Earned badges appear on your Explorer Profile.</p>
+          <div class="flex flex-wrap gap-x-4 gap-y-2 mt-3 text-[10px] uppercase font-bold" aria-label="Achievement rarity levels">
+            <span class="achievement-rarity" style="--rarity-color: #cbd5e1">Common</span>
+            <span class="achievement-rarity" style="--rarity-color: #4ade80">Uncommon</span>
+            <span class="achievement-rarity" style="--rarity-color: #60a5fa">Rare</span>
+            <span class="achievement-rarity" style="--rarity-color: #c084fc">Epic</span>
+            <span class="achievement-rarity" style="--rarity-color: #fbbf24">Legendary</span>
+            <span class="achievement-rarity" data-rarity="mythic">Mythic / Exotic</span>
+          </div>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" id="achievementsContainer" aria-live="polite"></div>
       </section>
@@ -870,6 +909,47 @@
         tiers: [{ goal: s => s.atlasCountriesTotal, title: 'Citizen of the World', desc: 'Visit every country/territory represented in the World Nations atlas (not a sovereign-country census)' }]
       }
     );
+    const ACHIEVEMENT_RARITIES = {
+      common: { label: 'Common', color: '#cbd5e1' },
+      uncommon: { label: 'Uncommon', color: '#4ade80' },
+      rare: { label: 'Rare', color: '#60a5fa' },
+      epic: { label: 'Epic', color: '#c084fc' },
+      legendary: { label: 'Legendary', color: '#fbbf24' },
+      mythic: { label: 'Mythic / Exotic', color: '#f0abfc' }
+    };
+    const ACHIEVEMENT_ART = {
+      parks: ['🏕️', '#14332c', ['common', 'uncommon', 'rare', 'epic']],
+      nps: ['🏞️', '#422006', ['mythic']],
+      biomes: ['🌱', '#12352b', ['uncommon', 'legendary', 'mythic']],
+      rare_biomes: ['🔮', '#2e1065', ['rare']],
+      states: ['🇺🇸', '#172554', ['rare', 'legendary']],
+      countries: ['🛂', '#172554', ['rare']],
+      waterfalls: ['💧', '#0c4a6e', ['common', 'uncommon', 'rare']],
+      subterranean: ['🌊⬇️', '#082f49', ['uncommon']],
+      thinAir: ['🏔️', '#1e3a5f', ['rare']],
+      whispers: ['🌲✨', '#14332c', ['uncommon']],
+      overlander: ['🚙', '#365314', ['uncommon']],
+      mariner: ['⛴️', '#0c4a6e', ['uncommon']],
+      focal: ['📷', '#3b0764', ['rare']],
+      southernCross: ['🌌', '#172554', ['rare']],
+      localLore: ['🏰💎', '#14532d', ['rare']],
+      zeroMeridian: ['🏰', '#334155', ['common']],
+      beyondHorizon: ['🌅', '#431407', ['rare']],
+      international: ['🌍✈️', '#164e63', ['uncommon']],
+      touchGrass: ['🌿', '#14532d', ['common']],
+      fastTravel: ['⚡', '#312e81', ['epic']],
+      earthSandwich: ['🌍🥪', '#172554', ['legendary']],
+      longDark: ['❄️🌙', '#172554', ['epic']],
+      latitudeSpan: ['🌐↕️', '#1e3a5f', ['epic']],
+      counties: ['🗺️', '#422006', ['mythic']],
+      worldAtlas: ['🌍👑', '#2e1065', ['mythic']]
+    };
+    ACHIEVEMENTS.forEach(achievement => {
+      const [icon, background, rarities] = ACHIEVEMENT_ART[achievement.id];
+      achievement.icon = icon;
+      achievement.background = background;
+      achievement.tiers.forEach((tier, index) => { tier.rarity = rarities[index]; });
+    });
 
   </script>
 
@@ -2202,7 +2282,51 @@
         questsContainer.appendChild(card);
       });
 
+      renderEarnedAchievementBadges(stats);
       renderAchievementsView(stats);
+    }
+
+    function achievementDisclosure(achievement, stats) {
+      const progress = achievement.progress(stats);
+      const tiers = achievement.tiers.map(tier => ({
+        ...tier, goal: typeof tier.goal === 'function' ? tier.goal(stats) : tier.goal
+      })).filter(tier => tier.goal > 0);
+      return {
+        progress,
+        completed: tiers.filter(tier => progress >= tier.goal).at(-1),
+        next: tiers.find(tier => progress < tier.goal)
+      };
+    }
+
+    function achievementBadgeStyle(achievement, tier) {
+      return `--badge-background: ${achievement.background}; --rarity-color: ${ACHIEVEMENT_RARITIES[tier.rarity].color}`;
+    }
+
+    function renderEarnedAchievementBadges(stats) {
+      const container = document.getElementById('earnedAchievementBadges');
+      container.innerHTML = '';
+      let earnedCount = 0;
+      ACHIEVEMENTS.forEach(achievement => {
+        const { completed } = achievementDisclosure(achievement, stats);
+        if (!completed) return;
+        const rarity = ACHIEVEMENT_RARITIES[completed.rarity];
+        const label = `${completed.title} — ${rarity.label}: ${completed.desc}`;
+        const badge = document.createElement('button');
+        badge.type = 'button';
+        badge.className = 'achievement-icon';
+        badge.setAttribute('style', achievementBadgeStyle(achievement, completed));
+        badge.setAttribute('data-rarity', completed.rarity);
+        badge.setAttribute('data-achievement', achievement.id);
+        badge.setAttribute('title', label);
+        badge.setAttribute('aria-label', label);
+        badge.innerHTML = `<span aria-hidden="true">${achievement.icon}</span>`;
+        badge.addEventListener('click', () => switchTab('achievements'));
+        container.appendChild(badge);
+        earnedCount++;
+      });
+      if (!earnedCount) {
+        container.innerHTML = '<p class="text-xs italic text-slate-400">Your earned achievement badges will appear here.</p>';
+      }
     }
 
     function renderAchievementsView(stats = calculateStats()) {
@@ -2210,15 +2334,11 @@
       achContainer.innerHTML = '';
 
       ACHIEVEMENTS.forEach(ach => {
-        const progress = ach.progress(stats);
+        const { progress, completed, next } = achievementDisclosure(ach, stats);
         if (progress <= 0) return;
-        const tiers = ach.tiers.map(tier => ({
-          ...tier, goal: typeof tier.goal === 'function' ? tier.goal(stats) : tier.goal
-        })).filter(tier => tier.goal > 0);
-        if (!tiers.length) return;
-        const completed = tiers.filter(tier => progress >= tier.goal).at(-1);
-        const next = tiers.find(tier => progress < tier.goal);
+        if (!completed && !next) return;
         const visibleTiers = [completed, next].filter(Boolean);
+        const iconTier = completed || next;
         const card = document.createElement('div');
         card.className = `p-3.5 rounded-2xl border ${
           completed
@@ -2227,15 +2347,14 @@
         }`;
         card.innerHTML = `
           <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl flex items-center justify-center text-lg ${
-              completed ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-slate-500'
-            }">
-              ${completed ? '🏆' : '🔒'}
+            <div class="achievement-icon" data-rarity="${iconTier.rarity}" style="${achievementBadgeStyle(ach, iconTier)}" aria-hidden="true">
+              ${ach.icon}
             </div>
             <div class="min-w-0 flex-1">
               <h5 class="text-xs font-bold text-slate-200">${escapeHtml(ach.title)}</h5>
               ${visibleTiers.map(tier => `
                 <p class="text-xs text-slate-200 mt-2">${escapeHtml(tier.title)}</p>
+                <p class="achievement-rarity text-[10px] uppercase font-bold mt-1" data-rarity="${tier.rarity}" style="${achievementBadgeStyle(ach, tier)}">${ACHIEVEMENT_RARITIES[tier.rarity].label}</p>
                 <p class="text-[10px] text-slate-400 leading-tight mt-0.5">${escapeHtml(tier.desc)}</p>
                 <p class="text-[10px] text-amber-300 mt-1">${(Math.floor(Math.min(progress, tier.goal) * 10) / 10).toLocaleString('en')} / ${tier.goal}${progress >= tier.goal ? ' • Complete' : ''}</p>
                 <progress aria-label="${escapeHtml(tier.title)} progress" value="${Math.min(progress, tier.goal)}" max="${tier.goal}" class="w-full h-2 mt-1"></progress>

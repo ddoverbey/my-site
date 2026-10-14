@@ -1372,4 +1372,73 @@ check('atlas completion goals use actual datasets and exclude unknown countries 
   assert.ok(!element('achievementsContainer').innerHTML.includes('Citizen of the World'));
   assert.ok(!element('achievementsContainer').innerHTML.includes('Manifest Destiny'));
 });
+check('every achievement tier has valid difficulty rarity and distinct emoji artwork', () => {
+  assert.equal(vm.runInContext('ACHIEVEMENTS.every(a=>a.icon && /^#[0-9a-f]{6}$/i.test(a.background) && a.tiers.every(t=>ACHIEVEMENT_RARITIES[t.rarity]))', context), true);
+  assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='earthSandwich').icon", context), '🌍🥪');
+  assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='earthSandwich').background", context), '#172554');
+  assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='earthSandwich').tiers[0].rarity", context), 'legendary');
+  assert.ok(html.includes('.achievement-icon[data-rarity="mythic"]'));
+  assert.ok(html.includes('linear-gradient(135deg, #fb7185'));
+});
+check('character badges include only highest earned tiers and update without duplication or stale awards', () => {
+  const captured = [];
+  const container = element('earnedAchievementBadges');
+  const originalAppend = container.appendChild;
+  const originalCreate = context.document.createElement;
+  container.appendChild = badge => captured.push(badge);
+  context.document.createElement = () => ({
+    attributes: {}, handlers: {},
+    setAttribute(name, value) { this.attributes[name] = value; },
+    addEventListener(name, handler) { this.handlers[name] = handler; }
+  });
+  try {
+    vm.runInContext('applyPassport(migratePassport({}));PARKS=[];coordinateIndexes=null;renderPassportView()', context);
+    assert.equal(captured.length, 0);
+    assert.ok(container.innerHTML.includes('earned achievement badges'));
+    for (const [count, rarity] of [[1, 'common'], [4, 'common'], [5, 'uncommon'], [10, 'rare']]) {
+      captured.length = 0;
+      context.badgeWaterfalls = count;
+      vm.runInContext(`
+        applyPassport(migratePassport({}));
+        AppState.customPois=Array.from({length:badgeWaterfalls},(_,i)=>({
+          ...customLocation,id:'badge_falls_'+i,category:'waterfall',status:'v',biomes:[]
+        }));
+        renderPassportView();
+      `, context);
+      const badges = captured.filter(badge => badge.attributes['data-achievement'] === 'waterfalls');
+      assert.equal(badges.length, 1);
+      assert.equal(badges[0].attributes['data-rarity'], rarity);
+      assert.ok(badges[0].attributes['aria-label'].includes('Chasing Waterfalls'));
+      assert.equal(badges[0].attributes.title, badges[0].attributes['aria-label']);
+      assert.ok(badges[0].innerHTML.includes('💧'));
+      assert.equal(captured.some(badge => badge.attributes['data-achievement'] === 'localLore'), false);
+    }
+    const waterfall = captured.find(badge => badge.attributes['data-achievement'] === 'waterfalls');
+    waterfall.handlers.click();
+    assert.equal(vm.runInContext('AppState.currentTab', context), 'achievements');
+    captured.length = 0;
+    vm.runInContext("AppState.customPois.forEach(poi=>poi.status='w');renderPassportView()", context);
+    assert.equal(captured.length, 0);
+    vm.runInContext("AppState.homeBase={name:'Home',lat:0,lng:0,radiusKm:TravelLedger.homeRadiusKm};renderPassportView()", context);
+    assert.ok(captured.some(badge => badge.attributes['data-achievement'] === 'zeroMeridian'));
+  } finally {
+    container.appendChild = originalAppend;
+    context.document.createElement = originalCreate;
+  }
+});
+check('achievement cards show artwork and textual tier rarities without revealing zero-progress achievements', () => {
+  vm.runInContext(`
+    applyPassport(migratePassport({}));PARKS=[];coordinateIndexes=null;
+    AppState.customPois=[{...customLocation,id:'poi_rarity_fall',category:'waterfall',status:'v'}];
+    renderAchievementsView();
+  `, context);
+  const cards = element('achievementsContainer').innerHTML;
+  assert.ok(cards.includes('💧'));
+  assert.ok(cards.includes('data-rarity="common"'));
+  assert.ok(cards.includes('data-rarity="uncommon"'));
+  assert.ok(cards.includes('>Common</p>'));
+  assert.ok(cards.includes('>Uncommon</p>'));
+  assert.ok(!cards.includes('Southern Cross'));
+  assert.ok(!cards.includes('Zero Meridian'));
+});
 console.log(`${checks} checks passed.`);
