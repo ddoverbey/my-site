@@ -352,9 +352,9 @@
         -->
         <div class="flex flex-wrap items-center gap-3 text-[11px] text-slate-400">
           <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Visited (Aura)</span>
-          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span> Wishlist</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-pink-500"></span> Wishlist</span>
           <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-slate-500"></span> Transited</span>
-          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-yellow-400"></span> Lived 🏰</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span> Lived 🏰</span>
           <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-slate-600"></span> Unexplored</span>
         </div>
       </div>
@@ -372,7 +372,7 @@
         <div class="flex flex-wrap items-center justify-between gap-4 rpg-panel p-4 rounded-2xl">
           <div>
             <h2 class="cinzel text-lg font-bold text-amber-200">The Royal Cartography Records</h2>
-            <p class="text-xs text-slate-400">Counties: Unexplored → Visited → Wishlist → Unexplored. Countries and US states: Unexplored → Visited → Wishlist → Transited → Lived → Unexplored. Manual county marks track completion without clearing RPG fog. Home and logged visits retain their ledger-backed tiers.</p>
+            <p class="text-xs text-slate-400">Counties: Unexplored → Visited → Wishlist → Lived → Unexplored. Use Lived to mark previous homes. Countries and US states: Unexplored → Visited → Wishlist → Transited → Lived → Unexplored. Manual county marks track completion without clearing RPG fog. Home and logged visits retain their ledger-backed tiers.</p>
           </div>
           <div class="flex flex-wrap items-center gap-3">
             <div class="flex flex-wrap bg-slate-900 p-1 rounded-xl border border-slate-700 text-xs" role="group" aria-label="Scratch Map dataset">
@@ -384,10 +384,10 @@
               0 Visited/Lived · 0 Transited
             </div>
             <div class="flex flex-wrap gap-3 text-[11px] text-slate-400" aria-label="Scratch Map status legend">
-              <span><span class="text-[#fbbf24]">●</span> Lived</span>
+              <span><span class="text-[#3b82f6]">●</span> Lived</span>
               <span><span class="text-[#10b981]">●</span> Visited</span>
               <span><span class="text-[#64748b]">●</span> Transited</span>
-              <span><span class="text-[#d97706]">●</span> Wishlist</span>
+              <span><span class="text-[#ec4899]">●</span> Wishlist</span>
             </div>
           </div>
         </div>
@@ -1878,8 +1878,8 @@
             </div>
             <span class="text-xs px-2 py-0.5 rounded font-bold uppercase ${
               cur === 'v' ? 'bg-emerald-950 text-emerald-300 border border-emerald-500/40' :
-              cur === 'l' ? 'bg-yellow-950 text-yellow-300 border border-yellow-500/40' :
-              cur === 'w' ? 'bg-amber-950 text-amber-300 border border-amber-500/40' :
+              cur === 'l' ? 'bg-blue-950 text-blue-300 border border-blue-500/40' :
+              cur === 'w' ? 'bg-pink-950 text-pink-300 border border-pink-500/40' :
               'bg-slate-800 text-slate-400'
             }">
               ${TravelLedger.labels[cur] || 'Unvisited'}${cur === 'l' ? ' 🏰' : ''}
@@ -1895,9 +1895,9 @@
           <div class="flex flex-wrap gap-1 pt-1">${biomeTags}</div>
           <div class="grid grid-cols-3 gap-1.5 pt-2 border-t border-slate-800 text-xs font-semibold">
             <button onclick="setPinStatus('${p.id}', 'v')" class="py-1 px-2 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-center transition-all ${cur==='v'?'ring-2 ring-emerald-300':''}">Visited</button>
-            <button onclick="setPinStatus('${p.id}', 'w')" class="py-1 px-2 rounded bg-amber-600 hover:bg-amber-500 text-white text-center transition-all ${cur==='w'?'ring-2 ring-amber-300':''}">Wishlist</button>
+            <button onclick="setPinStatus('${p.id}', 'w')" class="py-1 px-2 rounded bg-pink-600 hover:bg-pink-500 text-white text-center transition-all ${cur==='w'?'ring-2 ring-pink-300':''}">Wishlist</button>
             <button onclick="setPinStatus('${p.id}', 't')" class="py-1 px-2 rounded bg-slate-600 text-white">Transited</button>
-            <button onclick="setPinStatus('${p.id}', 'l')" class="py-1 px-2 rounded bg-yellow-500 text-slate-950">Lived 🏰</button>
+            <button onclick="setPinStatus('${p.id}', 'l')" class="py-1 px-2 rounded bg-blue-500 text-white">Lived 🏰</button>
             <button onclick="setPinStatus('${p.id}', 'un')" class="py-1 px-2 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 text-center transition-all">Clear</button>
           </div>
         </div>
@@ -2292,7 +2292,7 @@
       if (AppState.viewOnly) return;
       const key = scratchStatusKey(feature);
       const next = AppState.scratchDataset === 'counties'
-        ? (scratchStatuses()[key] === 'v' ? 'w' : scratchStatuses()[key] === 'w' ? null : 'v')
+        ? ({ v: 'w', w: 'l' }[scratchStatuses()[key]] || (scratchStatuses()[key] === 'l' ? null : 'v'))
         : { v: 'w', w: 't', t: 'l' }[scratchStatuses()[key]] ||
         (scratchStatuses()[key] === 'l' ? null : 'v');
       try {
@@ -2318,7 +2318,7 @@
       const isWorld = AppState.scratchDataset === 'world';
       const isCounties = AppState.scratchDataset === 'counties';
       const features = isWorld ? (worldGeoJson || []) : isCounties ? (countyGeoJson || []) : (usaGeoJson || []);
-      const colors = { l: '#f59e0b', v: '#10b981', t: '#64748b', w: '#d97706' };
+      const colors = TravelLedger.colors;
       const status = feature => scratchStatuses()[scratchStatusKey(feature)];
       for (const [id, dataset] of [['btnScratchWorld', 'world'], ['btnScratchUsa', 'usa'], ['btnScratchCounties', 'counties']]) {
         const button = document.getElementById(id);
@@ -2349,7 +2349,7 @@
         .data(features)
         .join('path')
         .attr('d', pathGenerator)
-        .attr('stroke', d => status(d) === 'l' ? '#fbbf24' : '#1e293b')
+        .attr('stroke', d => status(d) === 'l' ? '#93c5fd' : '#1e293b')
         .attr('stroke-width', d => status(d) === 'l' ? 1 : isCounties ? 0.25 : 0.6)
         .attr('fill', d => colors[status(d)] || '#090d1a')
         .attr('cursor', AppState.viewOnly ? 'default' : 'pointer')
@@ -2659,9 +2659,9 @@
         const cur = destinationStatus(p);
         const card = document.createElement('div');
         card.className = `p-3.5 rounded-2xl border ledger-card flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
-          cur === 'l' ? 'border-yellow-500/40 bg-yellow-950/10' :
+          cur === 'l' ? 'border-blue-500/40 bg-blue-950/10' :
           cur === 'v' ? 'border-emerald-500/40 bg-emerald-950/10' :
-          cur === 'w' ? 'border-amber-500/40 bg-amber-950/10' : 'border-slate-800'
+          cur === 'w' ? 'border-pink-500/40 bg-pink-950/10' : 'border-slate-800'
         }`;
 
         card.innerHTML = `
@@ -2683,9 +2683,9 @@
           </div>
           <div class="flex flex-wrap max-w-full sm:max-w-44 gap-1 shrink-0">
             <button onclick="setPinStatus('${p.id}', 'v')" class="px-2.5 py-1 rounded-lg text-xs font-semibold ${cur==='v'?'bg-emerald-500 text-slate-950':'bg-slate-800 text-slate-400 hover:text-white'}">Visited</button>
-            <button onclick="setPinStatus('${p.id}', 'w')" class="px-2.5 py-1 rounded-lg text-xs font-semibold ${cur==='w'?'bg-amber-500 text-slate-950':'bg-slate-800 text-slate-400 hover:text-white'}">Wishlist</button>
+            <button onclick="setPinStatus('${p.id}', 'w')" class="px-2.5 py-1 rounded-lg text-xs font-semibold ${cur==='w'?'bg-pink-500 text-white':'bg-slate-800 text-slate-400 hover:text-white'}">Wishlist</button>
             <button onclick="setPinStatus('${p.id}', 't')" class="px-2 py-1 rounded-lg text-xs bg-slate-700">Transited</button>
-            <button onclick="setPinStatus('${p.id}', 'l')" class="px-2 py-1 rounded-lg text-xs bg-yellow-500 text-slate-950">Lived 🏰</button>
+            <button onclick="setPinStatus('${p.id}', 'l')" class="px-2 py-1 rounded-lg text-xs bg-blue-500 text-white">Lived 🏰</button>
             <button onclick="setPinStatus('${p.id}', 'un')" class="px-2 py-1 rounded-lg text-xs bg-slate-800 text-slate-400 hover:text-white" title="Clear">✕</button>
           </div>
         `;

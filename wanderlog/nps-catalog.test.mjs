@@ -900,22 +900,26 @@ check('all three Scratch Map buttons select their datasets with synchronized act
 check('county scratch view renders all four exact colors and noninteractive faint state mesh', () => {
   vm.runInContext("AppState.counties={'06001':'l','06013':'v','06041':'t','06075':'w','99999':'v'};renderScratchMap()", context);
   const regions = scratchNodes.find(n => n.attrs.class === 'scratch-regions');
-  assert.deepEqual(Array.from(regions.attrs.fill), ['#f59e0b', '#10b981', '#64748b', '#d97706']);
-  assert.equal(regions.attrs.stroke[0], '#fbbf24');
+  assert.deepEqual(Array.from(regions.attrs.fill), ['#3b82f6', '#10b981', '#64748b', '#ec4899']);
+  assert.equal(regions.attrs.stroke[0], '#93c5fd');
   const mesh = scratchNodes.find(n => n.attrs.class === 'scratch-state-borders');
   assert.equal(mesh.attrs['pointer-events'], 'none');
   assert.equal(mesh.attrs['stroke-opacity'], 0.35);
   assert.equal(element('scratchStatsLabel').textContent, '2 / 4 Visited/Lived · 1 Transited');
 });
-check('counties use a three-click scratch cycle while nations and states keep all four tiers', () => {
+check('counties can mark previous homes Lived while nations and states keep all four tiers', () => {
   for (const dataset of ['world', 'usa', 'counties']) {
     vm.runInContext(`applyPassport(migratePassport({}));AppState.scratchDataset='${dataset}';renderScratchMap()`, context);
-    for (const next of dataset === 'counties' ? ['v', 'w', undefined] : ['v', 'w', 't', 'l', undefined]) {
+    for (const next of dataset === 'counties' ? ['v', 'w', 'l', undefined] : ['v', 'w', 't', 'l', undefined]) {
       const regions = scratchNodes.find(n => n.attrs.class === 'scratch-regions');
       regions.click({}, regions.data[0]);
       const actual = vm.runInContext('scratchStatuses()[scratchStatusKey(' +
         (dataset === 'world' ? 'worldGeoJson' : dataset === 'usa' ? 'usaGeoJson' : 'countyGeoJson') + '[0])]', context);
       assert.equal(actual, next, dataset);
+      if (dataset === 'counties' && next === 'l') {
+        assert.equal(JSON.parse(savedJson).counties['06001'], 'l');
+        assert.equal(vm.runInContext('AppState.homeBase', context), null);
+      }
     }
   }
   assert.ok(!Object.hasOwn(JSON.parse(savedJson).counties, '06001'));

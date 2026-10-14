@@ -414,10 +414,10 @@ custom POIs, county FIPS codes and state/country keys:
 
 | Tier | Color | Map and completion behavior |
 | --- | --- | --- |
-| `w` Wishlist | Amber | No fog clearing, XP or visited completion |
+| `w` Wishlist | Pink | No fog clearing, XP or visited completion |
 | `t` Transited | Slate | Point aura is 60% of the normal 85 km radius; no visited XP/stats |
 | `v` Visited | Emerald | Full point/boundary clearing and visit XP/stats |
-| `l` Lived / Home Base | Gold | Full clearing and credit, permanent until a full reset |
+| `l` Lived / Home Base | Blue | Full clearing and credit for pins/POIs; manual county marks do not clear fog |
 
 Expedition promotion respects `w < t < v < l`. Manually marking a Lived destination as another
 tier cannot downgrade it. The map's Visited filter includes both Visited and Lived.
@@ -466,9 +466,10 @@ Existing NPS/RESOLVE snapshots are reused without regeneration.
 
 The Scratch Map offers **World Nations**, **United States**, and **US Counties**, reusing the
 already-loaded atlas features. County mode uses Albers USA with a faint, noninteractive state-border
-mesh for context. Colors are gold for Lived, emerald for Visited, slate for Transited, and darker amber
-for Wishlist; Lived polygons have a brighter gold border. Counties use
-**Unexplored → Visited → Wishlist → Unexplored** (three clicks). Nation/state editing retains
+mesh for context. Colors are blue for Lived, emerald for Visited, slate for Transited, and pink
+for Wishlist; Lived polygons have a lighter blue border. Counties use
+**Unexplored → Visited → Wishlist → Lived → Unexplored**. The third click marks a previous home
+without moving your current home base. Nation/state editing retains
 **Unexplored → Visited → Wishlist → Transited → Lived → Unexplored**.
 County edits use zero-padded FIPS IDs in `counties`; nation/state edits use `regions`.
 The counter reports Visited/Lived and Transited totals for the current dataset only.

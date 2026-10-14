@@ -2,7 +2,7 @@
   'use strict';
   const ranks = Object.freeze({ w: 1, t: 2, v: 3, l: 4 });
   const labels = Object.freeze({ w: 'Wishlist', t: 'Transited', v: 'Visited', l: 'Lived / Home Base' });
-  const colors = Object.freeze({ w: '#f59e0b', t: '#64748b', v: '#10b981', l: '#facc15' });
+  const colors = Object.freeze({ w: '#ec4899', t: '#64748b', v: '#10b981', l: '#3b82f6' });
   const transitTags = Object.freeze({ road: 'Drive / Road Trip', awd: 'AWD/Off-Road', ferry: 'Ferry / Boat', flight: 'Flight', foot: 'Walk / Hike' });
   const purposeTags = Object.freeze({
     photography: 'Photography', anniversary: 'Anniversary', family: 'Friends/Family', solo: 'Solo', work: 'Work'
