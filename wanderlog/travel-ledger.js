@@ -8,6 +8,7 @@
     photography: 'Photography', anniversary: 'Anniversary', family: 'Friends/Family', solo: 'Solo', work: 'Work'
   });
   const isVisited = status => status === 'v' || status === 'l';
+  const homeRadiusKm = 15 * 1.609344 / 2;
   const clearsFog = status => status === 't' || isVisited(status);
   const promote = (current, next) => {
     if (!Object.hasOwn(ranks, next)) throw new Error('Invalid status promotion.');
@@ -157,7 +158,10 @@
           !Number.isFinite(homeBase.radiusKm) || homeBase.radiusKm <= 0 ||
           (homeBase.countyId && !/^\d{5}$/.test(homeBase.countyId))) throw new Error('Invalid home base.');
     }
-    const migrated = { ...legacy, pins, regions, counties, customPois, expeditions };
+    const migrated = {
+      ...legacy, pins, regions, counties, customPois, expeditions,
+      homeBase: homeBase ? { ...homeBase, radiusKm: homeRadiusKm } : null
+    };
     delete migrated.customLocations;
     delete migrated.clearedCounties;
     return migrated;
@@ -206,13 +210,13 @@
     return state;
   }
 
-  function loggedCountyStatuses(state, options) {
+  function loggedCountyStatuses(state, { includeHome = true, ...options } = {}) {
     // Re-derive exploration without manual county/region marks or mutating the passport.
     return syncDerivedState({
       pins: { ...state.pins }, regions: {}, counties: {},
       customPois: state.customPois.map(poi => ({ ...poi })),
       expeditions: state.expeditions,
-      homeBase: state.homeBase ? { ...state.homeBase } : null
+      homeBase: includeHome && state.homeBase ? { ...state.homeBase } : null
     }, options).counties;
   }
 
@@ -236,7 +240,7 @@
 
   const api = {
     ranks, labels, colors, transitTags, purposeTags, isVisited, clearsFog, promote,
-    validateStatuses, validateTags, validateExpeditions, normalizePoi, migrateState, syncDerivedState, loggedCountyStatuses, metadataProgress
+    homeRadiusKm, validateStatuses, validateTags, validateExpeditions, normalizePoi, migrateState, syncDerivedState, loggedCountyStatuses, metadataProgress
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TravelLedger = api;

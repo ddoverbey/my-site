@@ -158,6 +158,30 @@ check('logged county derivation uses home containment and POI tiers without manu
   }), { '53059': 't', '06073': 'l' });
   assert.equal(JSON.stringify(state), before);
 });
+check('home migration normalizes existing radii to an exact 15-mile diameter without mutating input', () => {
+  for (const radiusKm of [75, 80, 12]) {
+    const homeBase = { name: 'Home', lat: 33.55, lng: -117.2, radiusKm, countyId: '06073' };
+    const state = migrate({ homeBase, counties: { '06073': 'l' } });
+    assert.equal(state.homeBase.radiusKm * 2 / 1.609344, 15);
+    assert.equal(state.homeBase.countyId, '06073');
+    assert.equal(state.counties['06073'], 'l');
+    assert.equal(homeBase.radiusKm, radiusKm);
+    assert.deepEqual(migrate(state), state);
+  }
+});
+check('home-only counties do not reveal polygons but an expedition can explore that same county', () => {
+  const state = migrate({
+    homeBase: { name: 'Home', lat: 33.55, lng: -117.2, radiusKm: 80, countyId: '06073' }
+  });
+  ledger.syncDerivedState(state);
+  assert.equal(state.counties['06073'], 'l');
+  assert.deepEqual(ledger.loggedCountyStatuses(state), { '06073': 'l' });
+  assert.deepEqual(ledger.loggedCountyStatuses(state, { includeHome: false }), {});
+  state.expeditions = [{ ...exp, countyIds: ['06073'] }];
+  const before = JSON.stringify(state);
+  assert.deepEqual(ledger.loggedCountyStatuses(state, { includeHome: false }), { '06073': 'v' });
+  assert.equal(JSON.stringify(state), before);
+});
 check('home containment marks county, state and country lived and retains previous homes', () => {
   const state = migrate({ homeBase: { name: 'Home', lat: 33.55, lng: -117.2, radiusKm: 75 } });
   const political = { countries: ['United States of America'], states: ['California'], counties: [{ id: '06065', name: 'Riverside' }] };

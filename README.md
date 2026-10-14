@@ -416,7 +416,8 @@ are submit-only (not autocomplete), and are throttled to at most one request per
 this tab. See the [Nominatim usage policy](https://operations.osmfoundation.org/policies/nominatim/);
 larger deployments must provide their own service rather than treating the public endpoint as unlimited.
 Local containment automatically sets the home county, state, and country to `l`; previous home
-territories remain Lived. New homes use an 80 km (about 50-mile) aura; old saved radii are retained. Missing geography
+territories remain Lived. All homes use a 15-mile-diameter circular aura (7.5-mile / 12.07 km radius);
+existing saved homes are normalized on load/import without losing their coordinates or Lived tiers. Missing geography
 blocks a new home save with a visible retry message. Simplified coast/border coverage can leave
 some parent matches unavailable; no county is guessed.
 Successful registration flies to zoom 8 over 1.8 seconds, then briefly pulses the home aura on the
@@ -435,8 +436,10 @@ County hitboxes use the existing `us-atlas@3/counties-10m.json` atlas. They rema
 with hover outlines/tooltips only for travel-backed counties in RPG mode. Unexplored counties
 have no hover targets or tooltips, including during expedition map picking. Normal main-map clicks
 never edit county statuses; explicit expedition picking adds draft stops without clearing fog.
-County polygons clear only from home, logged parks/custom POIs or expeditions, not manual Scratch Map
-statuses. These records clear their exact polygon with a feathered canvas fill.
+County polygons clear only from logged parks/custom POIs or expeditions, not manual Scratch Map
+statuses or home selection alone. Home still marks its county Lived, with hover context and Scratch Map
+completion, but clears only the small circular aura. Travel records clear their exact county polygon
+with a feathered canvas fill, including when a trip explores the home county.
 State/country tiers describe completion in the Scratch Map; they do not erase
 entire nations on the canvas merely because home marks their parents Lived.
 Existing NPS/RESOLVE snapshots are reused without regeneration.

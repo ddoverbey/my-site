@@ -767,9 +767,9 @@ vm.runInContext(`
   };
   map.once=mapOnce;map.flyTo=mapFly;
 `, context);
-check('first Citadel marks containing geography Lived, uses 80 km, flies at zoom 8 and unlocks Scout', () => {
+check('first Citadel marks containing geography Lived, uses a 15-mile diameter, flies at zoom 8 and unlocks Scout', () => {
   vm.runInContext("setHometownCoordinates('Test Citadel',37,-120)", context);
-  assert.equal(vm.runInContext('AppState.homeBase.radiusKm', context), 80);
+  assert.equal(vm.runInContext('AppState.homeBase.radiusKm', context), 15 * 1.609344 / 2);
   assert.equal(vm.runInContext('AppState.homeBase.countyId', context), '06073');
   assert.equal(vm.runInContext('AppState.counties["06073"]', context), 'l');
   assert.equal(vm.runInContext('AppState.regions["s:California"]', context), 'l');
@@ -787,7 +787,8 @@ check('home aura pulses on the existing canvas and settles to the exact saved ra
   context.fogOperations.length = 0;
   animationCallback();
   const arc = context.fogOperations.find(op => op[0] === 'arc');
-  assert.ok(Math.abs(arc[3] - vm.runInContext('calculatePixelRadius(37,80)*0.85', context)) < 1e-8);
+  assert.ok(Math.abs(arc[3] - vm.runInContext('calculatePixelRadius(37,TravelLedger.homeRadiusKm)*0.85', context)) < 1e-8);
+  assert.equal(context.fogOperations.filter(op => op[0] === 'polygonFill' && op[1] === 'evenodd').length, 0);
   animationTime = 1800;
   animationCallback();
   assert.equal(vm.runInContext('homeAuraPulseStarted', context), null);
@@ -796,15 +797,15 @@ check('home aura pulses on the existing canvas and settles to the exact saved ra
   vm.runInContext('pulseHomeAura()', context);
   assert.equal(vm.runInContext('homeAuraPulseStarted', context), null);
 });
-check('changing home never adds another Citadel bonus and saved homes retain their radius', () => {
+check('changing home never adds another Citadel bonus and oversized saved homes shrink on reload', () => {
   const previousXP = vm.runInContext('calculateStats().xp', context);
   vm.runInContext("setHometownCoordinates('Changed Citadel',38,-121)", context);
   assert.equal(vm.runInContext('calculateStats().xp', context), previousXP);
   assert.ok(!element('toastMsg').textContent.includes('+50'));
   vm.runInContext('saveState();loadPersistedState()', context);
-  assert.equal(vm.runInContext('AppState.homeBase.radiusKm', context), 80);
+  assert.equal(vm.runInContext('AppState.homeBase.radiusKm', context), travelLedger.homeRadiusKm);
   vm.runInContext('AppState.homeBase.radiusKm=75;saveState();loadPersistedState()', context);
-  assert.equal(vm.runInContext('AppState.homeBase.radiusKm', context), 75);
+  assert.equal(vm.runInContext('AppState.homeBase.radiusKm', context), travelLedger.homeRadiusKm);
 });
 check('home storage failures roll back geography and never fly or report success', () => {
   const before = vm.runInContext('JSON.stringify(passportPayload())', context);
