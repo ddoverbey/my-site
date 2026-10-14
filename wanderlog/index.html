@@ -281,11 +281,6 @@
         Add custom location
       </button>
       <button id="btnExpedition" type="button" class="absolute top-16 right-4 z-[460] rpg-panel rounded-xl px-3 py-2 text-xs text-amber-200">🗺️ Log Expedition</button>
-      <div id="expeditionMapPicker" class="hidden absolute top-28 right-4 z-[470] rpg-panel p-3 rounded-xl max-w-xs text-xs space-y-2">
-        <p>Click counties or destination markers in route order. This does not save visits yet.</p>
-        <p id="expeditionMapCount" role="status" aria-live="polite"></p>
-        <button id="btnResumeExpedition" type="button" class="bg-amber-500 text-slate-950 rounded px-3 py-2">Return to expedition</button>
-      </div>
 
       <!-- RPG Explorer Floating HUD (Top Left) -->
       <div id="rpgMapHud" class="absolute top-4 left-4 z-[460] rpg-panel rounded-2xl p-4 w-72 transition-all duration-300">
@@ -511,7 +506,10 @@
 
         <!-- Achievements Section -->
         <section aria-labelledby="expeditionHistoryTitle">
-          <h3 id="expeditionHistoryTitle" class="cinzel text-xl font-bold text-amber-200 mb-4">Expedition History</h3>
+          <div class="flex items-center justify-between gap-3 mb-4">
+            <h3 id="expeditionHistoryTitle" class="cinzel text-xl font-bold text-amber-200">Expedition History</h3>
+            <button id="btnHistoryExpedition" type="button" class="rounded-lg bg-emerald-600 px-3 py-2 text-xs">Log Expedition</button>
+          </div>
           <div id="expeditionHistory" class="space-y-3"></div>
         </section>
 
@@ -645,30 +643,34 @@
 
   <div id="expeditionModal" role="dialog" aria-modal="true" aria-labelledby="expeditionTitle" class="hidden fixed inset-0 z-[1000] bg-black/85 flex items-center justify-center p-4">
     <form id="expeditionForm" class="rpg-panel rpg-panel-gold max-w-2xl w-full max-h-[90vh] overflow-y-auto rounded-2xl p-6 space-y-4">
-      <h2 id="expeditionTitle" class="cinzel text-xl text-amber-200">New Expedition</h2>
+      <div class="flex items-center justify-between gap-3">
+        <h2 id="expeditionTitle" class="cinzel text-xl text-amber-200">New Expedition</h2>
+        <button id="btnExpeditionHistory" type="button" class="rounded-lg bg-slate-800 px-3 py-2 text-xs">View logged expeditions</button>
+      </div>
       <label class="block text-xs">Trip Name<input id="expeditionName" required maxlength="150" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2"></label>
       <div class="grid grid-cols-2 gap-3">
-        <label class="block text-xs">Start Date<input id="expeditionStart" type="date" required class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2"></label>
-        <label class="block text-xs">End Date<input id="expeditionEnd" type="date" required class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2"></label>
+        <label class="block text-xs">Start Date (optional)<input id="expeditionStart" type="date" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2"></label>
+        <label class="block text-xs">End Date (optional)<input id="expeditionEnd" type="date" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2"></label>
       </div>
-      <p class="text-xs text-slate-400">Overnight stays default to the number of nights between these dates. Southern Cross uses a multi-day expedition with a stop south of the equator; no separate overnight entry is needed.</p>
-      <fieldset class="text-xs"><legend>Transit modes</legend><div id="expeditionTransitTags" class="flex flex-wrap gap-3 mt-2"></div></fieldset>
-      <fieldset class="text-xs"><legend>Purpose tags</legend><div id="expeditionPurposeTags" class="flex flex-wrap gap-3 mt-2"></div></fieldset>
+      <label class="flex items-center gap-2 text-xs"><input id="expeditionDayTrip" type="checkbox">Day Trip?</label>
+      <label class="block text-xs">Reason for travel (optional)<input id="expeditionReason" maxlength="1000" placeholder="Vacation, visiting friends, work..." class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2"></label>
       <div class="space-y-2">
-        <h3 class="text-sm text-amber-200">Route / County Picker</h3>
-        <p class="text-xs text-slate-400">Add stops in travel order. Reorder or remove before saving. Counties use representative centroid coordinates. Corridors connect stops directly; they are not highway routing.</p>
-        <label class="block text-xs">Search counties, parks or saved custom POIs
-          <input id="expeditionSearch" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2" placeholder="County name or FIPS, park, POI">
+        <h3 class="text-sm text-amber-200">Where did you go?</h3>
+        <label class="block text-xs">Add stops in travel order
+          <input id="expeditionSearch" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2" placeholder="City, airport, park, or saved POI">
         </label>
+        <button id="btnSearchExpeditionPlaces" type="button" class="rounded-lg bg-slate-700 px-3 py-2 text-xs">Search cities &amp; airports</button>
         <div id="expeditionSearchResults" class="space-y-1 max-h-40 overflow-y-auto"></div>
-        <button id="btnPickExpeditionMap" type="button" class="rounded-lg bg-slate-700 px-3 py-2 text-xs">Pick route on map</button>
         <ol id="expeditionStops" class="space-y-2 text-xs"></ol>
+        <button id="btnPreviewExpedition" type="button" class="rounded-lg bg-sky-700 px-3 py-2 text-xs">Preview routes</button>
+        <div id="expeditionRoutePreview" class="hidden h-52 w-full rounded-lg overflow-hidden" aria-label="Expedition route preview"></div>
+        <p id="expeditionRouteSummary" class="text-xs text-slate-400"></p>
       </div>
-      <p class="text-[11px] text-slate-400">Saving samples elevation at the selected stops using Open-Meteo. Min/max values are sampled stop elevations, not the extremes along the corridor. Ocean-only samples do not unlock terrestrial elevation achievements. No rarity queries run here.</p>
+      <details class="text-[11px] text-slate-400"><summary>Map services &amp; privacy</summary>City searches use OpenStreetMap Nominatim. Road endpoints are sent to the FOSSGIS routing service (OSRM). Boat and walking paths connect stops directly. Elevations use Open-Meteo. © OpenStreetMap contributors.</details>
       <p id="expeditionStatus" role="status" aria-live="polite" class="text-xs text-amber-200"></p>
       <div class="flex justify-end gap-2">
         <button id="btnCancelExpedition" type="button" class="rounded-lg bg-slate-800 px-4 py-2 text-sm">Cancel</button>
-        <button id="btnSaveExpedition" type="submit" class="rounded-lg bg-emerald-600 px-4 py-2 text-sm">Save expedition</button>
+        <button id="btnSaveExpedition" type="submit" class="rounded-lg bg-emerald-600 px-4 py-2 text-sm disabled:opacity-40">Save expedition</button>
       </div>
     </form>
   </div>
@@ -1034,6 +1036,7 @@
       routes: [], // Arrays of [lat, lng] points
       customPois: [],
       expeditions: [],
+      expeditionPromotions: {},
       currentTab: 'map',
       mode: 'rpg',    // 'rpg' or 'classic'
       pinFilter: 'none',
@@ -1052,7 +1055,7 @@
     }
 
     function applyPassport(parsed) {
-      for (const field of ['homeBase', 'pins', 'regions', 'counties', 'customPois', 'expeditions']) AppState[field] = parsed[field] ?? (field === 'homeBase' ? null : field === 'customPois' || field === 'expeditions' ? [] : {});
+      for (const field of ['homeBase', 'pins', 'regions', 'counties', 'customPois', 'expeditions', 'expeditionPromotions']) AppState[field] = parsed[field] ?? (field === 'homeBase' ? null : field === 'customPois' || field === 'expeditions' ? [] : {});
       AppState.clearedPolygons = Array.isArray(parsed.clearedPolygons) ? parsed.clearedPolygons : [];
       AppState.routes = Array.isArray(parsed.routes) ? parsed.routes : [];
       AppState.mode = parsed.mode || 'rpg';
@@ -1062,6 +1065,7 @@
       return {
         version: 2, homeBase: AppState.homeBase, pins: AppState.pins, regions: AppState.regions,
         counties: AppState.counties, customPois: AppState.customPois, expeditions: AppState.expeditions,
+        expeditionPromotions: AppState.expeditionPromotions,
         clearedPolygons: AppState.clearedPolygons, routes: AppState.routes, mode: AppState.mode
       };
     }
@@ -1092,6 +1096,7 @@
         ...AppState.customPois.filter(p => TravelLedger.isVisited(p.status)).map(p => `poi:${p.id}`)
       ]);
       try {
+        TravelLedger.restoreExpeditionPromotions(AppState);
         change();
         syncDerivedState();
         saveState();
@@ -1122,6 +1127,15 @@
       if (AppState.expeditions.some(item => item.id === exp.id)) throw new Error('Duplicate expedition ID.');
       if (exp.customPoiIds.some(id => !AppState.customPois.some(poi => poi.id === id))) throw new Error('Unknown custom POI in expedition.');
       commitLedger(() => { AppState.expeditions.push(validated); });
+    }
+
+    function updateExpedition(exp) {
+      if (AppState.viewOnly) throw new Error('Shared passports are read-only.');
+      const validated = TravelLedger.validateExpeditions([exp], CoordinateLookups)[0];
+      const index = AppState.expeditions.findIndex(item => item.id === exp.id);
+      if (index < 0) throw new Error('This expedition no longer exists.');
+      if (exp.customPoiIds.some(id => !AppState.customPois.some(poi => poi.id === id))) throw new Error('Unknown custom POI in expedition.');
+      commitLedger(() => { AppState.expeditions[index] = validated; });
     }
 
     // Load state from localStorage or URL hash
@@ -1292,13 +1306,14 @@
       const tripsWith = (tags, field = 'transitTags') => AppState.expeditions.filter(exp =>
         tags.some(tag => exp[field].includes(tag))).length;
       const archetypes = {
-        Nature: Math.min(1, (visitedLocations.length + tripsWith(['photography'], 'purposeTags')) / 25),
+        Nature: Math.min(1, (visitedLocations.length + AppState.expeditions.filter(exp =>
+          exp.purposeTags.includes('photography') || /\bphotography\b/i.test(exp.reason || '')).length) / 25),
         Adventure: Math.min(1, (visitedLocations.filter(p => p.biomes.some(b => ['5','10','13'].includes(String(b)))).length +
           tripsWith(['awd', 'foot'])) / 10),
         Remoteness: Math.min(1, (visitedLocations.filter(p => p.biomes.some(b => ['6','11'].includes(String(b)))).length +
           tripsWith(['foot'])) / 6),
         Worldly: Math.min(1, (visitedCountries.size + tripsWith(['ferry', 'flight'])) / 15),
-        Roadtrip: Math.min(1, visitedStates.size / 30 + countiesCount / 100 + tripsWith(['awd']) / 30)
+        Roadtrip: Math.min(1, visitedStates.size / 30 + countiesCount / 100 + tripsWith(['road', 'awd']) / 30)
       };
 
       const sortedAxes = Object.entries(archetypes).sort((a,b) => b[1] - a[1]);
@@ -1561,7 +1576,7 @@
 
       AppState.clearedPolygons.forEach(geometry => punchFogPolygon(geometry));
       AppState.routes.forEach(route => punchFogRoute(route));
-      AppState.expeditions.forEach(exp => punchFogRoute(exp.routeCoords));
+      AppState.expeditions.forEach(exp => TravelLedger.fogRoutes(exp).forEach(route => punchFogRoute(route)));
 
       // Reset composite operation to normal
       fogCtx.globalCompositeOperation = 'source-over';
@@ -1652,8 +1667,51 @@
       });
     }
 
+    const fogRouteCache = new WeakMap();
     function punchFogRoute(route) {
       if (!Array.isArray(route) || route.length < 2) return;
+      if (map.project) {
+        const zoom = map.getZoom();
+        let cached = fogRouteCache.get(route);
+        if (!cached || cached.zoom !== zoom) {
+          const valid = route.filter(point => Array.isArray(point) && Number.isFinite(point[0]) && Number.isFinite(point[1]));
+          if (valid.length < 2) return;
+          const bounds = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+          const points = valid.map(([lat, lng]) => {
+            const point = map.project([lat, lng], zoom).round();
+            bounds.minX = Math.min(bounds.minX, point.x);
+            bounds.maxX = Math.max(bounds.maxX, point.x);
+            bounds.minY = Math.min(bounds.minY, point.y);
+            bounds.maxY = Math.max(bounds.maxY, point.y);
+            return point;
+          });
+          cached = { zoom, points, bounds, averageLat: valid.reduce((sum, point) => sum + point[0], 0) / valid.length };
+          fogRouteCache.set(route, cached);
+        }
+        const lineWidth = calculatePixelRadius(cached.averageLat, 40);
+        const margin = lineWidth / 2 + 50;
+        const origin = map.latLngToContainerPoint([0, 0]).subtract(map.project([0, 0], zoom).round());
+        const { bounds } = cached;
+        if (bounds.maxX + origin.x + margin < -fogPadding.x ||
+            bounds.minX + origin.x - margin > fogCanvas.width - fogPadding.x ||
+            bounds.maxY + origin.y + margin < -fogPadding.y ||
+            bounds.minY + origin.y - margin > fogCanvas.height - fogPadding.y) return;
+        fogCtx.save();
+        fogCtx.beginPath();
+        cached.points.forEach((point, index) => {
+          if (index === 0) fogCtx.moveTo(point.x + origin.x, point.y + origin.y);
+          else fogCtx.lineTo(point.x + origin.x, point.y + origin.y);
+        });
+        fogCtx.strokeStyle = 'rgba(0, 0, 0, 0.95)';
+        fogCtx.lineWidth = lineWidth;
+        fogCtx.lineCap = 'round';
+        fogCtx.lineJoin = 'round';
+        fogCtx.shadowColor = 'rgba(0, 0, 0, 0.95)';
+        fogCtx.shadowBlur = 25;
+        fogCtx.stroke();
+        fogCtx.restore();
+        return;
+      }
       const validRoute = route
         .filter(point => Array.isArray(point) && Number.isFinite(point[0]) && Number.isFinite(point[1]));
       const points = validRoute
@@ -2036,7 +2094,8 @@
       const key = JSON.stringify([
         revealHome ? AppState.homeBase : null, AppState.pins,
         AppState.customPois.map(poi => [poi.id, poi.status, poi.political]),
-        AppState.expeditions.map(exp => [exp.parkIds, exp.customPoiIds, exp.countyIds])
+        AppState.expeditions.map(exp => [exp.parkIds, exp.customPoiIds, exp.countyIds,
+          exp.routeLegs ? exp.routeCoords : null, exp.routeLegs?.map(leg => leg.countyIds)])
       ]);
       const cached = loggedCountyCache.get(includeHome);
       if (cached && cached.key === key && cached.parks === PARKS && cached.indexes === coordinateIndexes) return cached.value;
@@ -2666,6 +2725,7 @@
       renderCountyHitboxes();
       document.getElementById('btnCustomLocation').classList.toggle('hidden', AppState.viewOnly);
       document.getElementById('btnExpedition').classList.toggle('hidden', AppState.viewOnly);
+      document.getElementById('btnHistoryExpedition').classList.toggle('hidden', AppState.viewOnly);
       updateHud();
       if (AppState.currentTab === 'passport') renderPassportView();
       if (AppState.currentTab === 'scratch') renderScratchMap();
@@ -2875,6 +2935,7 @@
       AppState.regions = {};
       AppState.counties = {};
       AppState.expeditions = [];
+      AppState.expeditionPromotions = {};
       AppState.clearedPolygons = [];
       AppState.routes = [];
       AppState.customLocations = [];

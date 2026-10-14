@@ -80,6 +80,80 @@
     };
   }
 
+  async function lookupRoadRoute(from, to, fetcher = root.fetch) {
+    validateCoordinates(...from);
+    validateCoordinates(...to);
+    const coordinates = [from, to].map(([lat, lng]) => `${lng},${lat}`).join(';');
+    const data = await fetchJson(`https://routing.openstreetmap.de/routed-car/route/v1/driving/${coordinates}?overview=full&geometries=geojson&steps=false`, {}, fetcher);
+    if (data.code !== 'Ok' || !data.routes?.length ||
+        data.routes[0].geometry?.type !== 'LineString' || !Array.isArray(data.routes[0].geometry.coordinates) ||
+        data.routes[0].geometry.coordinates.length < 2) throw new Error('No road route found between these stops.');
+    return data.routes[0].geometry.coordinates.map(point => {
+      if (!Array.isArray(point) || point.length !== 2) throw new Error('Invalid road route returned.');
+      const [lng, lat] = point;
+      validateCoordinates(lat, lng);
+      return [lat, lng];
+    });
+  }
+
+  function routeCountyIds(route, countyIndex, geoContains) {
+    if (!Array.isArray(route) || route.length < 2) return [];
+    route.forEach(point => validateCoordinates(...point));
+    const segments = route.slice(1).map((point, index) => {
+      const a = [route[index][1], route[index][0]];
+      const b = [point[1], point[0]];
+      // Use the short crossing at the date line, never a segment across the whole world.
+      if (b[0] - a[0] > 180) b[0] -= 360;
+      if (a[0] - b[0] > 180) b[0] += 360;
+      return { a, b, west: Math.min(a[0], b[0]), east: Math.max(a[0], b[0]),
+        south: Math.min(a[1], b[1]), north: Math.max(a[1], b[1]) };
+    });
+    const envelope = segments.reduce((bounds, segment) => ({
+      west: Math.min(bounds.west, segment.west), east: Math.max(bounds.east, segment.east),
+      south: Math.min(bounds.south, segment.south), north: Math.max(bounds.north, segment.north)
+    }), { west: Infinity, east: -Infinity, south: Infinity, north: -Infinity });
+    const ids = [];
+    for (const { feature, bounds: [[west, south], [east, north]] } of countyIndex) {
+      if (envelope.north < south || envelope.south > north ||
+          (west <= east && ![-360, 0, 360].some(shift => envelope.east + shift >= west && envelope.west + shift <= east))) continue;
+      const polygons = feature.geometry.type === 'Polygon' ? [feature.geometry.coordinates] : feature.geometry.coordinates;
+      const matched = segments.some(segment => {
+        if (segment.north < south || segment.south > north) return false;
+        return [-360, 0, 360].some(shift => {
+          const left = segment.west + shift, right = segment.east + shift;
+          if (west <= east && (right < west || left > east)) return false;
+          const a = [segment.a[0] + shift, segment.a[1]];
+          const b = [segment.b[0] + shift, segment.b[1]];
+          if (geoContains(feature, a) || geoContains(feature, b)) return true;
+          const dx = b[0] - a[0], dy = b[1] - a[1];
+          const crossings = [0, 1];
+          polygons.forEach(rings => rings.forEach(ring => {
+            for (let i = 1; i < ring.length; i++) {
+              const c = [...ring[i - 1]], d = [...ring[i]];
+              c[0] += 360 * Math.round((a[0] - c[0]) / 360);
+              d[0] += 360 * Math.round((c[0] - d[0]) / 360);
+              const ex = d[0] - c[0], ey = d[1] - c[1];
+              const denominator = dx * ey - dy * ex;
+              if (Math.abs(denominator) < 1e-12) continue;
+              const cx = c[0] - a[0], cy = c[1] - a[1];
+              const t = (cx * ey - cy * ex) / denominator;
+              const u = (cx * dy - cy * dx) / denominator;
+              if (t > 0 && t < 1 && u >= 0 && u <= 1) crossings.push(t);
+            }
+          }));
+          crossings.sort((x, y) => x - y);
+          return crossings.slice(1).some((t, index) => {
+            if (t - crossings[index] < 1e-10) return false;
+            const midpoint = (t + crossings[index]) / 2;
+            return geoContains(feature, [a[0] + dx * midpoint, a[1] + dy * midpoint]);
+          });
+        });
+      });
+      if (matched) ids.push(String(feature.id).padStart(5, '0'));
+    }
+    return [...new Set(ids)];
+  }
+
   async function fetchJson(url, options, fetcher) {
     const response = await fetcher(url, { ...options, signal: AbortSignal.timeout(45000) });
     if (!response.ok) throw new Error(`Lookup request failed (HTTP ${response.status}).`);
@@ -318,6 +392,7 @@
 
   const api = {
     validateCoordinates, normalizeFeature, indexFeatures, findContaining, politicalRegion, biomeRegion,
+    lookupRoadRoute, routeCountyIds,
     lookupElevation, categoryForPoiCount, segmentDistanceKm, summarizeOsm, lookupRarity, lookupCoordinate,
     validateCustomLocations, migrateState, normalizeRarity, validateProviderRarity, coordinateDistanceKm,
     lookupRarityWithFallback, ELEVATION_URL, OVERPASS_URL, CACHE_TTL, NPS_SOURCE, npsBoundaryIndex

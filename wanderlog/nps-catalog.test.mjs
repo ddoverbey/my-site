@@ -487,6 +487,7 @@ check('custom metadata survives local save/load and read-only shared passports; 
 });
 context.fogOperations.length = 0;
 vm.runInContext(`
+  map.project = null;
   fogCtx.moveTo = (...args) => fogOperations.push(['moveTo', ...args]);
   fogCtx.lineTo = (...args) => fogOperations.push(['lineTo', ...args]);
   fogCtx.closePath = () => fogOperations.push(['closePath']);
@@ -681,6 +682,7 @@ check('failed expedition persistence rolls back every promoted region, county, p
 });
 context.CoordinateLookups = {
   ...coordinateLookups,
+  politicalRegion: () => null,
   biomeRegion: () => ({ biomes: ['5'] }),
   lookupElevation: async () => ({ feet: 12000 })
 };
@@ -691,13 +693,17 @@ vm.runInContext(`
     {kind:'county',id:'06059',name:'Orange',coords:[33.6,-117.8]},
     {kind:'county',id:'06065',name:'Riverside',coords:[33.5,-117.2]}
   ];
+  expeditionPreparedLegs=expeditionDraft.slice(1).map((stop,index)=>({
+    mode:'road',routeCoords:[expeditionDraft[index].coords,stop.coords],countyIds:[]
+  }));
+  expeditionPreparedKey=expeditionRouteKey();
 `, context);
 element('expeditionName').value = 'Wizard day trip';
 element('expeditionStart').value = '2026-09-10';
 element('expeditionEnd').value = '2026-09-10';
 await element('expeditionForm').handlers.submit({ preventDefault() {} });
 check('wizard samples elevation and commits one expedition with ordered coordinates', () => {
-  assert.equal(vm.runInContext('AppState.expeditions.length', context), 2);
+  assert.equal(vm.runInContext('AppState.expeditions.length', context), 2, element('expeditionStatus').textContent);
   assert.equal(vm.runInContext('AppState.expeditions[1].minElevationFt', context), 12000);
   assert.equal(vm.runInContext('AppState.counties["06065"]', context), 'v');
   assert.equal(vm.runInContext('AppState.expeditions[1].routeCoords.length', context), 3);
@@ -1652,6 +1658,43 @@ check('projected polygon paths are reused during pans, culled offscreen and rebu
     x, y, round() { return this; },
     subtract(other) { return point(this.x - other.x, this.y - other.y); }
   });
+  check('detailed road paths reuse projected geometry during pans and rebuild only at a new zoom', () => {
+    let projections=0,strokes=0,zoom=4,pan=0;
+    const pathPoints = [];
+    const point=(x,y)=>({x,y,round(){return this;},subtract(other){return point(x-other.x,y-other.y);}});
+    context.roadMap={options:{crs:{scale:z=>256*2**z}},getZoom:()=>zoom,
+      project([lat,lng]){projections++;return point(100000+lng,100000+lat);},latLngToContainerPoint:()=>point(pan,0)};
+    context.roadCtx={
+      save(){},restore(){},beginPath(){pathPoints.length=0;},
+      moveTo(x,y){pathPoints.push([x,y]);},lineTo(x,y){pathPoints.push([x,y]);},
+      stroke(){strokes++;}
+    };
+    try {
+      vm.runInContext(`
+        map=roadMap;fogCtx=roadCtx;fogPadding={x:100,y:100};fogCanvas.width=300;fogCanvas.height=300;
+        const detailedRoad=Array.from({length:1000},(_,i)=>[i/100,i/100]);
+        punchFogRoute(detailedRoad);
+      `,context);
+      assert.equal(strokes,1);
+      assert.deepEqual(pathPoints[0], [0, 0]);
+      assert.ok(pathPoints.every(([x,y]) => Math.abs(x) < 10 && Math.abs(y) < 10));
+      const first=projections;
+      pan=10;
+      vm.runInContext('punchFogRoute(detailedRoad)',context);
+      assert.equal(projections,first+1);
+      assert.equal(strokes,2);
+      assert.deepEqual(pathPoints[0], [10, 0]);
+      pan=10000;
+      vm.runInContext('punchFogRoute(detailedRoad)',context);
+      assert.equal(strokes,2);
+      pan=0;zoom++;
+      vm.runInContext('punchFogRoute(detailedRoad)',context);
+      assert.equal(projections, first + 1003);
+      assert.equal(strokes,3);
+    } finally {
+      vm.runInContext('map=null;fogCtx=null',context);
+    }
+  });
   context.Path2D = class {
     constructor() { paths++; }
     moveTo() {}
@@ -1691,4 +1734,198 @@ check('projected polygon paths are reused during pans, culled offscreen and rebu
     vm.runInContext('map=null;fogCtx=null', context);
   }
 });
+check('expedition form uses reason text, optional dates and a day-trip shortcut without map picking or tag clutter', () => {
+  assert.ok(!html.includes('id="btnPickExpeditionMap"'));
+  assert.ok(!html.includes('id="expeditionMapPicker"'));
+  assert.ok(!html.includes('id="expeditionPurposeTags"'));
+  assert.ok(!html.includes('Overnight stays default'));
+  assert.ok(!html.includes('Counties use representative centroid'));
+  assert.ok(html.includes('id="expeditionReason"'));
+  assert.ok(html.includes('id="expeditionDayTrip"'));
+  assert.ok(!/id="expedition(?:Start|End)"[^>]*required/.test(html));
+  assert.equal(travelLedger.transitTags.road,'Drive / Road Trip');
+  vm.runInContext('AppState.viewOnly=false;openExpedition()',context);
+  assert.equal(element('expeditionStart').value,'');
+  assert.equal(element('expeditionEnd').value,'');
+  element('expeditionDayTrip').checked=true;
+  element('expeditionDayTrip').handlers.change();
+  assert.match(element('expeditionStart').value,/^\d{4}-\d{2}-\d{2}$/);
+  assert.equal(element('expeditionEnd').value,element('expeditionStart').value);
+  assert.equal(element('expeditionEnd').disabled,true);
+  element('expeditionStart').value='2026-08-10';
+  element('expeditionStart').handlers.change();
+  assert.equal(element('expeditionEnd').value,'2026-08-10');
+  element('expeditionDayTrip').checked=false;
+  element('expeditionDayTrip').handlers.change();
+  assert.equal(element('expeditionEnd').disabled,false);
+  vm.runInContext('closeExpedition()',context);
+});
+const originalPlaceFetch=context.fetch;
+context.fetch=async url=>{
+  assert.ok(url.startsWith('https://nominatim.openstreetmap.org/search?'));
+  assert.equal(new URL(url).searchParams.get('q'),'San Diego International Airport');
+  return {ok:true,json:async()=>[{lat:'32.7338',lon:'-117.1933',display_name:'San Diego International Airport'}]};
+};
+vm.runInContext('openExpedition();lastCitySearch=0',context);
+element('expeditionSearch').value='SAN';
+const elementCountBeforePlace=elements.size;
+await element('btnSearchExpeditionPlaces').handlers.click();
+check('city and airport searches show selectable validated coordinates without creating visits', () => {
+  assert.equal(element('expeditionStatus').textContent,'Choose a place to add it.');
+  const result=[...elements.values()].slice(elementCountBeforePlace).find(item=>item.textContent==='San Diego International Airport');
+  assert.ok(result);
+  assert.equal(vm.runInContext('expeditionDraft.length',context),0);
+  result.handlers.click();
+  assert.equal(vm.runInContext('expeditionDraft[0].kind',context),'place');
+  assert.deepEqual(Array.from(vm.runInContext('expeditionDraft[0].coords',context)),[32.7338,-117.1933]);
+  assert.equal(vm.runInContext('AppState.expeditions.length',context),0);
+});
+context.fetch=async()=>({ok:true,json:async()=>[{lat:'bad',lon:'0',display_name:'Invalid'}]});
+vm.runInContext('lastCitySearch=0',context);
+await element('btnSearchExpeditionPlaces').handlers.click();
+check('invalid online places are reported and never appended to the itinerary',()=>{
+  assert.ok(element('expeditionStatus').textContent.includes('latitude'));
+  assert.equal(vm.runInContext('expeditionDraft.length',context),1);
+});
+let completeSearch;
+context.fetch=async()=>({ok:true,json:()=>new Promise(resolve=>{completeSearch=resolve;})});
+vm.runInContext('lastCitySearch=0',context);
+const pendingSearch=element('btnSearchExpeditionPlaces').handlers.click();
+await new Promise(resolve=>setImmediate(resolve));
+element('expeditionSearch').value='';
+element('expeditionSearch').handlers.input();
+completeSearch([{lat:'39',lon:'-105',display_name:'Stale city'}]);
+await pendingSearch;
+check('changing a search discards stale online results rather than appending the wrong city',()=>{
+  assert.equal(element('expeditionSearchResults').innerHTML,'');
+  assert.equal(vm.runInContext('expeditionDraft.length',context),1);
+});
+context.fetch=originalPlaceFetch;
+const originalExpeditionLookups=context.CoordinateLookups;
+const originalPreviewL=context.L;
+const originalPreviewTimeout=context.setTimeout;
+let roadRequests=0;
+const previewTooltipTexts=[];
+const previewLayer={addTo(){return this;},getBounds(){return {};},bindTooltip(text){previewTooltipTexts.push(text);return this;}};
+context.L={
+  ...context.L,map:()=>({removeLayer(){},invalidateSize(){},fitBounds(){}}),
+  tileLayer:()=>previewLayer,featureGroup:()=>previewLayer,polyline:()=>previewLayer,circleMarker:()=>previewLayer
+};
+context.setTimeout=callback=>{callback();return 0;};
+context.CoordinateLookups={
+  ...coordinateLookups,
+  politicalRegion:(lat,lng)=>({countries:['United States of America'],states:[lng < -110?'California':'Colorado'],
+    counties:[{id:lng < -110?'06073':lng < -106?'08097':'08031'}]}),
+  biomeRegion:()=>({biomes:['5']}),
+  lookupElevation:async()=>({feet:6000}),
+  lookupRoadRoute:async(from,to)=>{roadRequests++;return [[...from],[39.7,-105.5],[...to]];},
+  routeCountyIds:()=>['08059']
+};
+context.uiMixedStops=[
+  {kind:'place',id:'san',name:'SAN <airport>',coords:[32.7338,-117.1933],travelMode:'flight'},
+  {kind:'place',id:'den',name:'DEN',coords:[39.8561,-104.6737],travelMode:'road'},
+  {kind:'place',id:'aspen',name:'Aspen',coords:[39.1911,-106.8175],travelMode:'ferry'},
+  {kind:'place',id:'return',name:'DEN return',coords:[39.8561,-104.6737],travelMode:'road'}
+];
+vm.runInContext(`
+  applyPassport(migratePassport({counties:{'08001':'v'}}));map=null;PARKS=[];
+  coordinateIndexes={countries:[],states:[],counties:[],ecoregions:[]};
+  countyGeoJson=[{id:'08001'},{id:'08059'},{id:'06073'},{id:'08031'},{id:'08097'}];
+  openExpedition();expeditionDraft=uiMixedStops.map(stop=>({...stop,coords:[...stop.coords]}));invalidateExpeditionRoutes();
+`,context);
+element('expeditionDayTrip').checked=false;
+element('expeditionName').value='Mixed itinerary';
+element('expeditionReason').value='<friends> & photography';
+element('expeditionStart').value='';
+element('expeditionEnd').value='';
+const beforePreview=vm.runInContext('JSON.stringify(passportPayload())',context);
+await element('btnPreviewExpedition').handlers.click();
+check('mixed-mode route preview fetches only driving directions and never saves or clears fog',()=>{
+  assert.equal(vm.runInContext('JSON.stringify(passportPayload())',context),beforePreview);
+  assert.equal(roadRequests,1);
+  assert.equal(vm.runInContext('expeditionPreparedLegs[0].routeCoords.length',context),0);
+  assert.equal(vm.runInContext('expeditionPreparedLegs[0].countyIds.length',context),0);
+  assert.equal(vm.runInContext('expeditionPreparedLegs[1].countyIds[0]',context),'08059');
+  assert.equal(vm.runInContext('expeditionPreparedLegs[2].routeCoords.length',context),2);
+  assert.equal(element('btnSaveExpedition').disabled,false);
+  assert.ok(previewTooltipTexts.includes('Aspen'));
+  assert.ok(previewTooltipTexts.includes('SAN &lt;airport&gt;'));
+});
+context.crypto.randomUUID=()=> 'mixed-ui';
+await element('expeditionForm').handlers.submit({preventDefault(){}});
+check('mixed-mode trips save with blank dates, endpoint and road county credit, reason text and editable history',()=>{
+  assert.equal(vm.runInContext('AppState.expeditions.length',context),1,element('expeditionStatus').textContent);
+  const saved=JSON.parse(vm.runInContext('JSON.stringify(AppState.expeditions[0])',context));
+  assert.equal(saved.startDate,null);
+  assert.equal(saved.endDate,null);
+  assert.equal(saved.reason,'<friends> & photography');
+  assert.deepEqual(saved.transitTags,['flight','road','ferry']);
+  assert.deepEqual(saved.purposeTags,[]);
+  assert.deepEqual(Array.from(vm.runInContext('Object.keys(AppState.counties).sort()',context)),['06073','08001','08031','08059','08097']);
+  assert.equal(vm.runInContext('TravelLedger.fogRoutes(AppState.expeditions[0]).length',context),2);
+  vm.runInContext('renderExpeditionHistory()',context);
+  assert.ok(element('expeditionHistory').innerHTML.includes('data-edit-expedition="exp_mixed-ui"'));
+  assert.ok(element('expeditionHistory').innerHTML.includes('&lt;friends&gt; &amp; photography'));
+  assert.ok(element('expeditionHistory').innerHTML.includes('Dates not specified'));
+  assert.ok(!element('expeditionHistory').innerHTML.includes('overnight stay'));
+});
+vm.runInContext('openExpedition(AppState.expeditions[0].id)',context);
+check('editing a saved trip restores leg modes, reason and route preview without calling routing again',()=>{
+  assert.equal(element('expeditionTitle').textContent,'Edit Expedition');
+  assert.equal(element('expeditionReason').value,'<friends> & photography');
+  assert.equal(vm.runInContext('expeditionDraft[0].travelMode',context),'flight');
+  assert.equal(vm.runInContext('expeditionDraft[1].travelMode',context),'road');
+  assert.equal(element('btnSaveExpedition').disabled,false);
+  assert.equal(roadRequests,1);
+});
+vm.runInContext('expeditionDraft[1].travelMode="flight";invalidateExpeditionRoutes()',context);
+await element('expeditionForm').handlers.submit({preventDefault(){}});
+check('itinerary changes require a fresh preview and cannot accidentally save outdated driving geometry',()=>{
+  assert.equal(element('btnSaveExpedition').disabled,true);
+  assert.ok(element('expeditionStatus').textContent.includes('Preview your routes'));
+  assert.equal(vm.runInContext('AppState.expeditions[0].routeLegs[1].mode',context),'road');
+});
+await element('btnPreviewExpedition').handlers.click();
+context.localStorage.setItem=()=>{throw new Error('Edit storage full');};
+const beforeFailedEdit=vm.runInContext('JSON.stringify(passportPayload())',context);
+await element('expeditionForm').handlers.submit({preventDefault(){}});
+check('failed edits retain their draft and roll back route, county and promotion changes together',()=>{
+  assert.equal(vm.runInContext('JSON.stringify(passportPayload())',context),beforeFailedEdit);
+  assert.equal(vm.runInContext('expeditionDraft.length',context),4);
+  assert.ok(element('expeditionStatus').textContent.includes('Edit storage full'));
+});
+context.localStorage.setItem=(key,value)=>{savedJson=value;};
+await element('expeditionForm').handlers.submit({preventDefault(){}});
+check('editing driving to flight removes driven-only county credit while preserving separate manual visits',()=>{
+  assert.equal(vm.runInContext('AppState.expeditions.length',context),1);
+  assert.equal(vm.runInContext('AppState.expeditions[0].routeLegs[1].mode',context),'flight');
+  assert.equal(vm.runInContext('AppState.counties["08059"]',context),undefined);
+  assert.equal(vm.runInContext('AppState.counties["08001"]',context),'v');
+  assert.equal(vm.runInContext('AppState.counties["06073"]',context),'v');
+  assert.equal(vm.runInContext('TravelLedger.fogRoutes(AppState.expeditions[0]).length',context),1);
+});
+vm.runInContext('AppState.viewOnly=true;renderExpeditionHistory()',context);
+check('shared passports show expedition history but cannot open an editor or update records',()=>{
+  assert.ok(!element('expeditionHistory').innerHTML.includes('data-edit-expedition'));
+  assert.throws(()=>vm.runInContext('updateExpedition(AppState.expeditions[0])',context),/read-only/);
+  vm.runInContext('openExpedition(AppState.expeditions[0].id)',context);
+  assert.equal(vm.runInContext('expeditionEditingId',context),null);
+});
+vm.runInContext(`
+  AppState.viewOnly=false;openExpedition();expeditionRoadCache.clear();
+  expeditionDraft=uiMixedStops.map(stop=>({...stop,coords:[...stop.coords]}));invalidateExpeditionRoutes();
+`,context);
+context.CoordinateLookups.lookupRoadRoute=async()=>{throw new Error('Road routing HTTP 503');};
+await element('btnPreviewExpedition').handlers.click();
+check('road service failures keep the draft and never substitute a straight-line road or save a trip',()=>{
+  assert.equal(vm.runInContext('expeditionPreparedLegs',context),null);
+  assert.equal(element('btnSaveExpedition').disabled,true);
+  assert.ok(element('expeditionStatus').textContent.includes('Road routing HTTP 503'));
+  assert.equal(vm.runInContext('expeditionDraft.length',context),4);
+  assert.equal(vm.runInContext('AppState.expeditions.length',context),1);
+});
+context.CoordinateLookups=originalExpeditionLookups;
+context.L=originalPreviewL;
+context.setTimeout=originalPreviewTimeout;
+vm.runInContext('AppState.viewOnly=false;map=null;',context);
 console.log(`${checks} checks passed.`);

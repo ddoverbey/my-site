@@ -265,4 +265,45 @@ await check('legacy rarity migrates to v2 without changing visits, inventing rev
   assert.deepEqual(lookups.migrateState(result), result);
   assert.throws(() => lookups.migrateState({ ...legacy, version: 3 }), /Unsupported/);
 });
+await check('road routing uses the requested endpoints and validates full GeoJSON directions', async () => {
+  let requested;
+  const route=await lookups.lookupRoadRoute([39,-105],[40,-106],async url=>{
+    requested=url;
+    return response({code:'Ok',routes:[{geometry:{type:'LineString',coordinates:[[-105,39],[-105.5,39.5],[-106,40]]}}]});
+  });
+  assert.ok(requested.includes('/driving/-105,39;-106,40'));
+  assert.ok(requested.includes('overview=full&geometries=geojson'));
+  assert.deepEqual(route,[[39,-105],[39.5,-105.5],[40,-106]]);
+  for (const data of [
+    {code:'NoRoute',routes:[]},{code:'Ok',routes:[{geometry:{type:'Polygon',coordinates:[]}}]},
+    {code:'Ok',routes:[{geometry:{type:'LineString',coordinates:[[0,0],[181,0]]}}]},
+    {code:'Ok',routes:[{geometry:{type:'LineString',coordinates:[[0,0]]}}]}
+  ]) await assert.rejects(lookups.lookupRoadRoute([39,-105],[40,-106],async()=>response(data)));
+  await assert.rejects(lookups.lookupRoadRoute([39,-105],[40,-106],async()=>({ok:false,status:503})),/503/);
+});
+await check('road county intersections include narrow crossed counties without mistaking nearby counties or polygon holes', () => {
+  const features=[
+    {...polygon([ring(0,0,1,1)]),id:'01001'},
+    {...polygon([ring(1,0,1.01,1)]),id:'01003'},
+    {...polygon([ring(1.01,0,2,1)]),id:'01005'},
+    {...polygon([ring(0,2,2,3)]),id:'01007'},
+    {...polygon([ring(3,0,6,3),ring(4,1,5,2).reverse()]),id:'01009'}
+  ];
+  const countyIndex=lookups.indexFeatures(features,geo);
+  assert.deepEqual(lookups.routeCountyIds([[0.5,0.5],[0.5,1.5]],countyIndex,geo.geoContains),['01001','01003','01005']);
+  assert.deepEqual(lookups.routeCountyIds([[1.2,4.2],[1.8,4.8]],countyIndex,geo.geoContains),[]);
+  assert.deepEqual(lookups.routeCountyIds([[1.5,3.5],[1.5,5.5]],countyIndex,geo.geoContains),['01009']);
+  assert.deepEqual(lookups.routeCountyIds([[0.5,0.5],[0.5,1.5],[0.5,0.5]],countyIndex,geo.geoContains),['01001','01003','01005']);
+  assert.deepEqual(lookups.routeCountyIds([[50,100],[51,101]],countyIndex,geo.geoContains),[]);
+});
+await check('county routing handles islands and the short date-line crossing, not a path across the globe', () => {
+  const features=[
+    {type:'Feature',id:'02001',properties:{},geometry:{type:'MultiPolygon',coordinates:[[ring(0,0,1,1)],[ring(2,0,3,1)]]}},
+    {...polygon([ring(179,-1,-179,1)]),id:'02003'},
+    {...polygon([ring(-10,-1,10,1)]),id:'02005'}
+  ];
+  const index=lookups.indexFeatures(features,geo);
+  assert.deepEqual(lookups.routeCountyIds([[0.5,1.5],[0.5,3.5]],index.slice(0,1),geo.geoContains),['02001']);
+  assert.deepEqual(lookups.routeCountyIds([[0,178],[0,-178]],index,geo.geoContains),['02003']);
+});
 console.log(`${checks} coordinate/geography checks passed.`);

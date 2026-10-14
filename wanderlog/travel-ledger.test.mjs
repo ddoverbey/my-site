@@ -482,4 +482,144 @@ check('existing unchanged terrestrial snapshot recognizes real below-sea-level a
   assert.ok(lookups.biomeRegion(39.1083, -106.564, ecoregions, d3.geoContains).biomes.length);
   assert.equal(lookups.biomeRegion(0, -140, ecoregions, d3.geoContains).biomes.length, 0);
 });
+const mixedStops = [
+  {kind:'place',id:'san',name:'San Diego airport',coords:[32.7338,-117.1933]},
+  {kind:'place',id:'den',name:'Denver airport',coords:[39.8561,-104.6737]},
+  {kind:'place',id:'aspen',name:'Aspen',coords:[39.1911,-106.8175]},
+  {kind:'place',id:'den_return',name:'Denver return',coords:[39.8561,-104.6737]}
+];
+const mixedExpedition = {
+  ...exp, id:'mixed', name:'Fly then drive', reason:'Visiting friends', startDate:null, endDate:null, dayTrip:false,
+  transitTags:['flight','road'], purposeTags:[], countyIds:[], parkIds:[], customPoiIds:[],
+  routeStops:mixedStops, routeCoords:mixedStops.map(stop=>stop.coords),
+  routeLegs:[
+    {mode:'flight',routeCoords:[],countyIds:[]},
+    {mode:'road',routeCoords:[mixedStops[1].coords,[39.7,-105.5],mixedStops[2].coords],countyIds:['08059','08097']},
+    {mode:'road',routeCoords:[mixedStops[2].coords,[39.7,-105.5],mixedStops[3].coords],countyIds:['08059','08097']}
+  ],
+  minElevationFt:null,maxElevationFt:null
+};
+check('mixed city and airport itineraries support optional dates, reason text and separate travel legs', () => {
+  assert.deepEqual(ledger.validateExpeditions([mixedExpedition],lookups)[0], mixedExpedition);
+  assert.equal(ledger.validateExpeditions([{...mixedExpedition,startDate:'2026-10-01'}],lookups).length,1);
+  assert.equal(ledger.validateExpeditions([{...mixedExpedition,endDate:'2026-10-01'}],lookups).length,1);
+  assert.equal(ledger.validateExpeditions([{...mixedExpedition,dayTrip:true,startDate:'2026-10-01',endDate:'2026-10-01'}],lookups).length,1);
+  for (const change of [{startDate:0},{endDate:false},{dayTrip:true},{reason:123},{reason:'a'.repeat(1001)}]) {
+    assert.throws(()=>ledger.validateExpeditions([{...mixedExpedition,...change}],lookups));
+  }
+  assert.equal(ledger.overnightNights(mixedExpedition),0);
+  assert.equal(ledger.metadataProgress(migrate({expeditions:[mixedExpedition]})).fastTravel,0);
+  assert.equal(ledger.metadataProgress(migrate({expeditions:[{...mixedExpedition,startDate:null,endDate:null}]})).southernCross,0);
+});
+check('flight legs cannot carry path geometry or intermediate counties and legacy flights never clear corridors', () => {
+  assert.equal(ledger.fogRoutes(mixedExpedition).length,2);
+  assert.deepEqual(ledger.fogRoutes({...exp,transitTags:['flight']}),[]);
+  assert.deepEqual(ledger.fogRoutes({...exp,transitTags:['road']}),[exp.routeCoords]);
+  for (const flight of [
+    {mode:'flight',routeCoords:[mixedStops[0].coords,mixedStops[1].coords],countyIds:[]},
+    {mode:'flight',routeCoords:[],countyIds:['04001']},
+    {mode:'teleport',routeCoords:[],countyIds:[]}
+  ]) assert.throws(()=>ledger.validateExpeditions([{...mixedExpedition,routeLegs:[flight,...mixedExpedition.routeLegs.slice(1)]}],lookups));
+});
+check('leg validation rejects missing legs, mismatched tags, malformed coordinates and distant snapped roads', () => {
+  for (const change of [
+    {routeLegs:[]}, {routeLegs:mixedExpedition.routeLegs.slice(1)}, {transitTags:['road']},
+    {routeLegs:[mixedExpedition.routeLegs[0],{mode:'road',routeCoords:[[0,0],[1,1]],countyIds:[]},mixedExpedition.routeLegs[2]]},
+    {routeLegs:[mixedExpedition.routeLegs[0],{...mixedExpedition.routeLegs[1],countyIds:['08059','08059']},mixedExpedition.routeLegs[2]]}
+  ]) assert.throws(()=>ledger.validateExpeditions([{...mixedExpedition,...change}],lookups));
+  const ferry = {...mixedExpedition,transitTags:['ferry'],routeStops:mixedStops.slice(0,2),
+    routeCoords:mixedStops.slice(0,2).map(stop=>stop.coords),
+    routeLegs:[{mode:'ferry',routeCoords:mixedStops.slice(0,2).map(stop=>stop.coords),countyIds:[]}]};
+  assert.equal(ledger.fogRoutes(ledger.validateExpeditions([ferry],lookups)[0]).length,1);
+});
+const mixedPoliticalAt = (lat,lng) => ({
+  countries:['United States of America'],states:[lng < -110 ? 'California' : 'Colorado'],
+  counties:[{id:lng < -110 ? '06073' : lng < -106 ? '08097' : '08031'}]
+});
+const mixedOptions = {
+  politicalAt:mixedPoliticalAt,countyRegions:{
+    '08059':{countries:['United States of America'],states:['Colorado']},
+    '08097':{countries:['United States of America'],states:['Colorado']}
+  }
+};
+check('mixed flights and drives credit airport counties and driven counties, never flyover counties', () => {
+  const state=migrate({expeditions:[mixedExpedition]});
+  ledger.syncDerivedState(state,mixedOptions);
+  assert.deepEqual(Object.keys(state.counties).sort(),['06073','08031','08059','08097']);
+  assert.equal(state.counties['04001'],undefined);
+  assert.deepEqual(ledger.loggedCountyStatuses(state,mixedOptions),state.counties);
+  assert.deepEqual(ledger.fogRoutes(state.expeditions[0]),mixedExpedition.routeLegs.slice(1).map(leg=>leg.routeCoords));
+  assert.equal(state.regions['s:California'],'v');
+  assert.equal(state.regions['s:Colorado'],'v');
+});
+check('editing tracked expeditions retracts obsolete credit while preserving manual marks, home and other trips', () => {
+  const state=migrate({
+    counties:{'08059':'l','08001':'v'},homeBase:{name:'Home',lat:40,lng:-104,radiusKm:12,countyId:'08031'},
+    expeditions:[mixedExpedition]
+  });
+  ledger.syncDerivedState(state,mixedOptions);
+  const before=JSON.stringify(state);
+  ledger.syncDerivedState(state,mixedOptions);
+  assert.equal(JSON.stringify(state),before);
+  assert.deepEqual(migrate(state),state);
+  // Keep just the flight: Denver/San Diego remain visited, but the drive to Aspen no longer does.
+  const flightOnly={...mixedExpedition,transitTags:['flight'],routeStops:mixedStops.slice(0,2),
+    routeCoords:mixedStops.slice(0,2).map(stop=>stop.coords),routeLegs:[mixedExpedition.routeLegs[0]]};
+  state.expeditions=[flightOnly];
+  ledger.syncDerivedState(state,mixedOptions);
+  assert.equal(state.counties['08097'],undefined);
+  assert.equal(state.counties['08059'],'l');
+  assert.equal(state.counties['08001'],'v');
+  assert.equal(state.counties['08031'],'l');
+  assert.equal(state.counties['06073'],'v');
+  state.expeditions.push({...mixedExpedition,id:'another'});
+  ledger.syncDerivedState(state,mixedOptions);
+  state.expeditions=[state.expeditions[1]];
+  ledger.syncDerivedState(state,mixedOptions);
+  assert.equal(state.counties['08097'],'v');
+});
+check('new manual promotions survive expedition edits and legacy ambiguous marks are retained', () => {
+  const state=migrate({expeditions:[mixedExpedition]});
+  ledger.syncDerivedState(state,mixedOptions);
+  ledger.restoreExpeditionPromotions(state);
+  state.counties['08097']='v';
+  ledger.syncDerivedState(state,mixedOptions);
+  state.expeditions=[];
+  ledger.syncDerivedState(state,mixedOptions);
+  assert.deepEqual(state.counties,{'08097':'v'});
+  const legacy=migrate({counties:{'08097':'v'},expeditions:[exp]});
+  ledger.syncDerivedState(legacy,mixedOptions);
+  legacy.expeditions=[];
+  ledger.syncDerivedState(legacy,mixedOptions);
+  assert.equal(legacy.counties['08097'],'v');
+});
+check('tracked park and custom POI promotions revert to their prior tiers without deleting independent visits', () => {
+  const state=migrate({pins:{romo:'w'},customPois:[{...poi,status:'t'}],
+    expeditions:[{...exp,customPoiIds:[poi.id]}]});
+  const options={parks:[{id:'romo',states:['Colorado']}],...mixedOptions};
+  ledger.syncDerivedState(state,options);
+  assert.equal(state.pins.romo,'v');
+  assert.equal(state.customPois[0].status,'v');
+  assert.equal(state.counties['53059'],'v');
+  state.expeditions=[];
+  ledger.syncDerivedState(state,options);
+  assert.equal(state.pins.romo,'w');
+  assert.equal(state.customPois[0].status,'t');
+  assert.equal(state.counties['53059'],'t');
+});
+check('bad promotion provenance is rejected rather than downgrading lived tiers or injecting keys', () => {
+  for (const expeditionPromotions of [
+    [],{bad:{}},{pins:{romo:{before:'w',after:'l'}}},{counties:{'8065':{before:null,after:'v'}}},
+    {pins:{romo:{before:'v',after:'v'}}},{poiStatuses:{poi_test:{before:null,after:'v'}}}
+  ]) assert.throws(()=>migrate({expeditionPromotions}));
+});
+check('AWD achievement counts only the endpoints of AWD legs and photography reason preserves existing badge logic', () => {
+  const trip={...mixedExpedition,reason:'Landscape photography',transitTags:['flight','awd','road'],
+    routeLegs:[mixedExpedition.routeLegs[0],{...mixedExpedition.routeLegs[1],mode:'awd'},mixedExpedition.routeLegs[2]]};
+  const stats=ledger.metadataProgress(migrate({expeditions:[trip]}));
+  assert.equal(stats.overlander,2);
+  assert.equal(stats.focal,1);
+  const repeated={...trip,id:'repeat',routeStops:trip.routeStops.map(stop=>({...stop,id:'other_'+stop.id}))};
+  assert.equal(ledger.metadataProgress(migrate({expeditions:[trip,repeated]})).overlander,2);
+});
 console.log(`${checks} travel ledger checks passed.`);

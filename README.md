@@ -451,8 +451,8 @@ Reduced-motion preferences and Classic mode skip discovery animation.
 
 County hitboxes use the existing `us-atlas@3/counties-10m.json` atlas. They remain transparent,
 with hover outlines/tooltips only for travel-backed counties in RPG mode. Unexplored counties
-have no hover targets or tooltips, including during expedition map picking. Normal main-map clicks
-never edit county statuses; explicit expedition picking adds draft stops without clearing fog.
+have no hover targets or tooltips. Normal main-map clicks never edit county statuses.
+Expedition map picking is temporarily unavailable; the itinerary uses searchable stops instead.
 County polygons clear only from logged parks/custom POIs or expeditions, not manual Scratch Map
 statuses or home selection alone. Home still marks its county Lived, with hover context and Scratch Map
 completion, but starts with only the small circular aura. Any logged park/POI transit, visit or Lived
@@ -476,42 +476,67 @@ Edits persist transactionally and refresh Passport stats without revealing count
 records still restore their derived tiers; a retained tier is explained in the notification.
 Shared passports are read-only. No TopoJSON generation is needed for this view.
 
-### New Expedition
+### Logging and editing expeditions
 
 **🗺️ Log Expedition** on the map opens the wizard implemented in
 [`expedition-ui.js`](wanderlog/expedition-ui.js):
 
-1. Set trip name and start/end dates (equal dates are valid day trips).
-2. Select transit tags (AWD/Off-Road, Ferry, Flight, Foot) and purpose tags (Photography,
-   Anniversary, Friends/Family, Solo, Work).
-3. Search/select counties by name/FIPS, parks, or saved custom POIs, or switch to map picking.
-   County/park clicks append stops without saving visits. Destination markers temporarily appear
-   even when the pin filter is None. Reorder/remove stops before saving; cancel discards the draft.
-4. Save **one** expedition, with distinct county/park/POI IDs, ordered `[lat,lng]` route coordinates,
-   and sampled terrestrial stop elevation min/max. Routes may revisit a stop; location IDs are
-   deduplicated for credit and county achievements. Open-Meteo elevation requests use batches of
-   four; already-looked-up POI elevation is reused.
+1. Enter a trip name and an optional free-text **Reason for travel**. Start/end dates are optional;
+   undated trips still earn location credit. **Day Trip?** sets both dates to the selected start date
+   (or today if blank), keeps them synchronized, and records a single calendar day.
+2. Search parks, saved POIs or counties locally. **Search cities & airports** explicitly queries
+   OpenStreetMap Nominatim; choose the result to add its coordinates. `SAN` and `DEN` expand to
+   their full airport names; other airports can be searched by full name or code.
+3. Add stops in travel order, with a separate mode between each pair:
+   **Drive / Road Trip**, **AWD/Off-Road**, **Flight**, **Ferry / Boat**, or **Walk / Hike**.
+   Reorder/remove stops as needed. Changing the itinerary invalidates its old preview.
+4. **Preview routes**, then save. Driving/AWD legs use the FOSSGIS public OSRM road-routing
+   service, with cached responses and requests spaced at least 1.1 seconds apart. Add intermediate
+   stops if the suggested road route differs from your actual drive. US county credit uses segment
+   intersections with the existing simplified county polygons, including narrow crossed counties.
+   Flights have **no connecting path or flyover county credit**; only their stops count.
+   Boat/walking legs currently connect stops directly and do not infer intermediate county visits.
+   Those paths are approximations, not ferry timetables or walking directions.
 
-County centroids are representative samples, not trailheads. Straight-line 40 km canvas corridors
-join ordered stops; they are **not** highway directions. Route preview is a dashed line and does
-not clear fog. Sampled elevations are not minimum/maximum terrain along the corridor; ocean-only
-samples are excluded from terrestrial min/max. A failed elevation or storage operation retains
-the draft, displays the error, and saves no expedition or partial tier promotions.
+The preview does not save visits or clear fog. No map picker is displayed.
+For SAN → DEN → Aspen → DEN, select Flight, Drive, Drive: credit the airport/destination
+counties and the counties on the approved drives, not those between San Diego and Denver.
+The existing 40 km fog corridor follows each non-flight leg; flight legs never carve a corridor.
+The modal's collapsed **Map services & privacy** section explains which services receive searches
+or coordinates and includes attribution. Routing failure is explicit, never replaced with a fake
+straight-line road route.
 
-The Passport's **Expedition History** lists dates, ordered locations, sampled elevation extremes,
-and transit/purpose badges. Old imports without stop snapshots show IDs/resolved names instead.
-Saving promotes included locations and their known parent regions to `v`, preserving `l`.
+Saving samples terrestrial stop elevations through Open-Meteo in batches of four, reusing existing
+stop/POI elevations. These are stop samples, not terrain extremes along the drive; ocean-only
+samples do not earn terrestrial elevation badges. A failed route/elevation/storage operation
+retains the draft, displays the error, and saves no partial expedition or tier promotions.
+
+**View logged expeditions** opens the profile's **Expedition History**, which lists locations,
+per-leg modes, optional dates/reason, elevations and an **Edit expedition** button. History also
+has a Log Expedition button. Editing a new-format trip restores its approved preview without
+requiring another routing request unless its itinerary changes. Edits replace the original record,
+not append a duplicate. Shared passports display history but cannot edit it.
+Old imports without stop snapshots use their ordered coordinates as editable stops.
+Saving promotes stops, driven counties and their known parent regions to `v`, preserving `l`.
+New expedition-only promotions are tracked and recalculated on edits without deleting separate
+manual visits, home credit or other trips' credit. Older ambiguous marks are preserved because
+their original manual-versus-expedition source cannot be recovered.
 Custom visited/lived POIs earn the same 25 base visit XP as catalog stops plus existing region/
 biome collection credit; they remain excluded from NPS/park completion. Expeditions do not add
 duplicate base XP for locations already visited, and badges do not add a separate XP bonus.
 
 ### Schema and migration
 
-New v2 saves, exports and shares serialize `counties`, `customPois` and `expeditions` alongside
+New v2 saves, exports and shares serialize `counties`, `customPois`, `expeditions` and
+`expeditionPromotions` (prior-tier provenance for reversible trip edits) alongside
 `pins`, `regions`, `homeBase`, legacy `routes` and `clearedPolygons`. `customLocations` remains an
 internal compatibility accessor, not a second serialized ledger. Legacy `customLocations` retain
 their rich lookup/provenance metadata and gain flat fields (`elevationFt`, `countyId`, `rarityTier`,
 etc.); legacy `clearedCounties: {FIPS: true}` becomes Visited unless a stronger tier already exists.
+New expeditions store optional `reason`, nullable start/end dates, `dayTrip`, and `routeLegs`
+(`mode`, path `routeCoords`, crossed `countyIds`). Top-level `routeCoords` remain ordered stop
+coordinates for location achievements; they are not a mixed-mode fog path. Flight legs store empty
+path/county arrays. Route stops can be searchable `place` records as well as county/park/POI records.
 Rich provider metadata remains intact; imported flat POIs without provider provenance are labeled
 as such rather than given invented sources. Conflicting dual POI ledgers are rejected.
 Migration is idempotent and performs no API lookups. Imports are validated before transactional
@@ -545,14 +570,15 @@ Lived grants the same completion credit as Visited. Metadata badges:
 - **Under Pressure:** a visited/lived terrestrial POI or expedition stop below 0 ft.
 - **Thin Air:** a visited/lived POI or sampled terrestrial expedition stop at or above 10,000 ft.
 - **Whisper in the Woods:** a visited/lived Uncharted or Hidden Gem custom POI.
-- **The Overlander:** 5 distinct park/POI/county stops across AWD/Off-Road expeditions.
+- **The Overlander:** 5 distinct stops on AWD/Off-Road legs; legacy trip-wide AWD tags remain supported.
 - **The Mariner:** 3 expeditions tagged Ferry / Boat (the existing `ferry` tag).
-- **Focal Length:** 10 photography-tagged visited/lived POIs and/or expeditions.
+- **Focal Length:** 10 photography-tagged visited/lived POIs and/or expeditions whose reason includes
+  the word Photography. Legacy expedition purpose tags remain supported until edited.
 - **Chasing Waterfalls:** 1, 5, and 10 visited/lived custom POIs whose category is exactly
   `waterfall` after trimming and case normalization. Wishlist/transit POIs do not count.
 - **Southern Cross:** a multi-day expedition with a southern-hemisphere stop. Overnight stays
   default to the calendar-day difference between start and end dates; this is an itinerary-based
-  inference, not verified overnight GPS data. Single-day southern trips do not qualify.
+  inference, not verified overnight GPS data. Undated or single-day southern trips do not qualify.
 - **Local Lore:** 5 distinct visited/lived Hidden Gem POIs in the current home county.
 - **Zero Meridian:** establish a home base.
 - **Junior Ecologist / Almost There! / Adventuring Time:** collect 3, all-but-one, and all
@@ -565,7 +591,7 @@ Lived grants the same completion credit as Visited. Metadata badges:
   catalog classifications remain subject to their existing source-quality caveats.
 - **Fast Travel:** two stops more than 500 miles apart on the same calendar day, using single-day
   expeditions only. Stops from separate expeditions on the same date can qualify. Undated pins and
-  multi-day itinerary stops never receive fabricated visit dates.
+  undated expeditions and multi-day itinerary stops never receive fabricated visit dates.
 - **Earth Sandwich:** two visited/lived points within 100 miles of exact antipodes.
 - **The Long Dark:** a visited/lived point strictly north of 66.5° N or south of 66.5° S.
 - **Pole to Pole:** at least 60 degrees between the northernmost and southernmost logged points.
@@ -624,13 +650,15 @@ The radar preserves existing scales and adds custom visits and expedition metada
 - **Adventure:** (visited locations in biomes 5/10/13 + AWD or Foot expeditions) / 10.
 - **Remoteness:** (visited locations in biomes 6/11 + Foot expeditions) / 6.
 - **Worldly:** (visited nations + Ferry or Flight expeditions) / 15.
-- **Roadtrip:** visited states / 30 + visited/lived loaded counties / 100 + AWD expeditions / 30.
+- **Roadtrip:** visited states / 30 + visited/lived loaded counties / 100 + Road/AWD expeditions / 30.
 
 Each axis is capped at 1. Multiple matching tags within one axis count an expedition only once;
 the same expedition can contribute to different axes. Wishlist/transit locations do not earn
 full-visit radar credit, and unknown/unloaded county IDs do not count. Radar contributions affect
-the displayed archetype, not base visit XP or the one-time Citadel bonus. Straight-line expedition
-corridors are unchanged; no highway snapping or GPX/KML import is added.
+the displayed archetype, not base visit XP or the one-time Citadel bonus. New road legs follow
+OSRM road geometry; legacy non-flight routes retain their stored paths. Legacy mixed-mode trips
+with a Flight tag conservatively draw no corridor until edited into explicit legs.
+GPX/KML import is not included.
 
 ## Homepage analytics
 

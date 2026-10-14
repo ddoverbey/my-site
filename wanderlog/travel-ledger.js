@@ -3,7 +3,7 @@
   const ranks = Object.freeze({ w: 1, t: 2, v: 3, l: 4 });
   const labels = Object.freeze({ w: 'Wishlist', t: 'Transited', v: 'Visited', l: 'Lived / Home Base' });
   const colors = Object.freeze({ w: '#f59e0b', t: '#64748b', v: '#10b981', l: '#facc15' });
-  const transitTags = Object.freeze({ awd: 'AWD/Off-Road', ferry: 'Ferry / Boat', flight: 'Flight', foot: 'Foot' });
+  const transitTags = Object.freeze({ road: 'Drive / Road Trip', awd: 'AWD/Off-Road', ferry: 'Ferry / Boat', flight: 'Flight', foot: 'Walk / Hike' });
   const purposeTags = Object.freeze({
     photography: 'Photography', anniversary: 'Anniversary', family: 'Friends/Family', solo: 'Solo', work: 'Work'
   });
@@ -50,7 +50,11 @@
     return expeditions.map(exp => {
       if (!exp || !validId(exp.id) || ids.has(exp.id) ||
           typeof exp.name !== 'string' || !exp.name.trim() || exp.name.length > 150 ||
-          !validDate(exp.startDate) || !validDate(exp.endDate) || exp.startDate > exp.endDate) {
+          ([exp.startDate, exp.endDate].some(date => date !== undefined && date !== null && date !== '' && !validDate(date))) ||
+          (exp.startDate && exp.endDate && exp.startDate > exp.endDate) ||
+          (exp.dayTrip !== undefined && typeof exp.dayTrip !== 'boolean') ||
+          (exp.dayTrip && (!validDate(exp.startDate) || exp.startDate !== exp.endDate)) ||
+          (exp.reason !== undefined && (typeof exp.reason !== 'string' || exp.reason.length > 1000))) {
         throw new Error('Invalid expedition name, ID or date range.');
       }
       ids.add(exp.id);
@@ -60,7 +64,7 @@
           throw new Error('Invalid expedition location IDs.');
         }
       }
-      if (!exp.countyIds.length && !exp.parkIds.length && !exp.customPoiIds.length) {
+      if (!exp.countyIds.length && !exp.parkIds.length && !exp.customPoiIds.length && !exp.routeStops?.length) {
         throw new Error('Select at least one expedition location.');
       }
       if (!Array.isArray(exp.routeCoords)) throw new Error('Invalid expedition route.');
@@ -76,14 +80,43 @@
       }
       if (exp.routeStops !== undefined) {
         if (!Array.isArray(exp.routeStops) || exp.routeStops.length !== exp.routeCoords.length || exp.routeStops.some((stop, index) =>
-          !stop || !['county', 'park', 'poi'].includes(stop.kind) || !validId(stop.id) ||
+          !stop || !['county', 'park', 'poi', 'place'].includes(stop.kind) || !validId(stop.id) ||
           typeof stop.name !== 'string' || !stop.name.trim() ||
           !Array.isArray(stop.coords) || stop.coords.length !== 2 ||
           JSON.stringify(stop.coords) !== JSON.stringify(exp.routeCoords[index]) ||
-          !(stop.kind === 'county' ? exp.countyIds : stop.kind === 'park' ? exp.parkIds : exp.customPoiIds).includes(stop.id) ||
+          (stop.kind !== 'place' && !(stop.kind === 'county' ? exp.countyIds : stop.kind === 'park' ? exp.parkIds : exp.customPoiIds).includes(stop.id)) ||
           (stop.elevationFt !== undefined && !Number.isFinite(stop.elevationFt)) ||
           (stop.terrestrial !== undefined && typeof stop.terrestrial !== 'boolean'))) throw new Error('Invalid expedition stops.');
         exp.routeStops.forEach(stop => lookups.validateCoordinates(...stop.coords));
+      }
+      if (exp.routeLegs !== undefined) {
+        if (!exp.routeStops?.length || exp.routeStops.length > 100 || !Array.isArray(exp.routeLegs) ||
+            exp.routeLegs.length !== exp.routeStops.length - 1) throw new Error('Invalid expedition travel legs.');
+        exp.routeLegs.forEach((leg, index) => {
+          if (!leg || !Object.hasOwn(transitTags, leg.mode) || !Array.isArray(leg.routeCoords) ||
+              !Array.isArray(leg.countyIds) || new Set(leg.countyIds).size !== leg.countyIds.length ||
+              leg.countyIds.some(id => !/^\d{5}$/.test(id)) ||
+              (leg.mode === 'flight' ? leg.routeCoords.length || leg.countyIds.length : leg.routeCoords.length < 2)) {
+            throw new Error('Invalid expedition travel leg.');
+          }
+          leg.routeCoords.forEach(point => {
+            if (!Array.isArray(point) || point.length !== 2) throw new Error('Invalid leg coordinate.');
+            lookups.validateCoordinates(...point);
+          });
+          if (leg.mode !== 'flight') {
+            const endpoints = [leg.routeCoords[0], leg.routeCoords[leg.routeCoords.length - 1]];
+            endpoints.forEach((point, offset) => {
+              const stop = exp.routeStops[index + offset].coords;
+              if (distanceMiles({lat:point[0],lng:point[1]}, {lat:stop[0],lng:stop[1]}) > 1) {
+                throw new Error('Travel leg does not connect its selected stops.');
+              }
+            });
+          }
+        });
+        const modes = [...new Set(exp.routeLegs.map(leg => leg.mode))];
+        if (exp.routeLegs.length && JSON.stringify([...exp.transitTags].sort()) !== JSON.stringify(modes.sort())) {
+          throw new Error('Expedition transit modes do not match its travel legs.');
+        }
       }
       return {
         ...exp, transitTags: validateTags(exp.transitTags, transitTags),
@@ -167,6 +200,7 @@
     }
     const migrated = {
       ...legacy, pins, regions, counties, customPois, expeditions,
+      expeditionPromotions: validatePromotions(parsed.expeditionPromotions),
       homeBase: homeBase ? { ...homeBase, radiusKm: homeRadiusKm } : null
     };
     delete migrated.customLocations;
@@ -175,6 +209,7 @@
   }
 
   function syncDerivedState(state, { parks = [], countyRegions = {}, politicalAt = () => null } = {}) {
+    restoreExpeditionPromotions(state);
     const markRegions = (political, status) => {
       if (!political) return;
       for (const name of political.countries || []) state.regions[`c:${name}`] = promote(state.regions[`c:${name}`], status);
@@ -196,14 +231,6 @@
         states: park.intl ? [] : park.states || []
       }, status);
     };
-    for (const exp of state.expeditions) {
-      exp.parkIds.forEach(id => markPark(id, 'v'));
-      exp.countyIds.forEach(id => markCounty(id, 'v'));
-      exp.customPoiIds.forEach(id => {
-        const poi = state.customPois.find(p => p.id === id);
-        if (poi) poi.status = promote(poi.status, 'v');
-      });
-    }
     state.customPois.forEach(poi => markRegions(poi.political, poi.status));
     for (const [id, status] of Object.entries(state.pins)) markPark(id, status);
     for (const [id, status] of Object.entries(state.counties)) markCounty(id, status);
@@ -214,7 +241,76 @@
         markRegions(political, 'l');
       } else if (state.homeBase.countyId) markCounty(state.homeBase.countyId, 'l');
     }
+    const before = promotionValues(state);
+    for (const exp of state.expeditions) {
+      exp.parkIds.forEach(id => markPark(id, 'v'));
+      exp.countyIds.forEach(id => markCounty(id, 'v'));
+      exp.customPoiIds.forEach(id => {
+        const poi = state.customPois.find(p => p.id === id);
+        if (poi) {
+          poi.status = promote(poi.status, 'v');
+          markRegions(poi.political, poi.status);
+        }
+      });
+      if (exp.routeLegs) {
+        exp.routeCoords.forEach(([lat, lng]) => markRegions(politicalAt(lat, lng), 'v'));
+        exp.routeLegs.forEach(leg => leg.countyIds.forEach(id => markCounty(id, 'v')));
+      }
+    }
+    const after = promotionValues(state);
+    state.expeditionPromotions = {};
+    for (const field of Object.keys(after)) {
+      const changes = {};
+      for (const [id, status] of Object.entries(after[field])) {
+        if (before[field][id] !== status) changes[id] = { before: before[field][id] ?? null, after: status };
+      }
+      if (Object.keys(changes).length) state.expeditionPromotions[field] = changes;
+    }
     return state;
+  }
+
+  function promotionValues(state) {
+    return { pins: { ...state.pins }, regions: { ...state.regions }, counties: { ...state.counties },
+      poiStatuses: Object.fromEntries(state.customPois.map(poi => [poi.id, poi.status])) };
+  }
+
+  function validatePromotions(value = {}) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Invalid expedition promotion records.');
+    const result = {};
+    for (const [field, changes] of Object.entries(value)) {
+      if (!['pins', 'regions', 'counties', 'poiStatuses'].includes(field) || !changes ||
+          typeof changes !== 'object' || Array.isArray(changes)) throw new Error('Invalid expedition promotion records.');
+      result[field] = {};
+      for (const [id, change] of Object.entries(changes)) {
+        if (!id || ['__proto__', 'constructor', 'prototype'].includes(id) ||
+            (field === 'counties' && !/^\d{5}$/.test(id)) || !change ||
+            (change.before !== null && !Object.hasOwn(ranks, change.before)) || change.after !== 'v' ||
+            (field === 'poiStatuses' && change.before === null) ||
+            (ranks[change.before] || 0) >= ranks[change.after]) throw new Error('Invalid expedition promotion records.');
+        result[field][id] = { before: change.before, after: change.after };
+      }
+    }
+    return result;
+  }
+
+  function restoreExpeditionPromotions(state) {
+    for (const [field, changes] of Object.entries(state.expeditionPromotions || {})) {
+      for (const [id, change] of Object.entries(changes)) {
+        if (field === 'poiStatuses') {
+          const poi = state.customPois.find(poi => poi.id === id);
+          if (poi?.status === change.after) poi.status = change.before;
+        } else if (state[field][id] === change.after) {
+          if (change.before === null) delete state[field][id];
+          else state[field][id] = change.before;
+        }
+      }
+    }
+    state.expeditionPromotions = {};
+  }
+
+  function fogRoutes(expedition) {
+    if (expedition.routeLegs) return expedition.routeLegs.filter(leg => leg.mode !== 'flight').map(leg => leg.routeCoords);
+    return expedition.transitTags.includes('flight') ? [] : [expedition.routeCoords];
   }
 
   function hasLoggedTravel(state) {
@@ -235,7 +331,8 @@
   }
 
   function overnightNights(expedition) {
-    return (Date.parse(expedition.endDate) - Date.parse(expedition.startDate)) / 86400000;
+    return validDate(expedition.startDate) && validDate(expedition.endDate)
+      ? (Date.parse(expedition.endDate) - Date.parse(expedition.startDate)) / 86400000 : 0;
   }
 
   function distanceMiles(a, b) {
@@ -274,12 +371,20 @@
       ? sample(state.homeBase.lat, state.homeBase.lng, 'political')?.countries || [] : []);
     const awdLocations = new Set();
     trips.filter(trip => trip.transitTags.includes('awd')).forEach(trip => {
+      if (trip.routeLegs) {
+        trip.routeLegs.forEach((leg, index) => {
+          if (leg.mode !== 'awd') return;
+          trip.routeStops.slice(index, index + 2).forEach(stop =>
+            awdLocations.add(stop.kind === 'place' ? `place:${stop.coords.join(',')}` : `${stop.kind}:${stop.id}`));
+        });
+        return;
+      }
       for (const [field, prefix] of [['parkIds', 'park'], ['customPoiIds', 'poi'], ['countyIds', 'county']]) {
         trip[field].forEach(id => awdLocations.add(`${prefix}:${id}`));
       }
     });
     const datedPoints = new Map();
-    trips.filter(trip => trip.startDate === trip.endDate).forEach(trip => {
+    trips.filter(trip => validDate(trip.startDate) && trip.startDate === trip.endDate).forEach(trip => {
       if (!datedPoints.has(trip.startDate)) datedPoints.set(trip.startDate, []);
       trip.routeCoords.forEach(([lat, lng]) => datedPoints.get(trip.startDate).push({ lat, lng }));
     });
@@ -334,7 +439,7 @@
       overlander: awdLocations.size,
       mariner: trips.filter(exp => exp.transitTags.includes('ferry')).length,
       focal: pois.filter(poi => poi.purposeTags.includes('photography')).length +
-        trips.filter(exp => exp.purposeTags.includes('photography')).length,
+        trips.filter(exp => exp.purposeTags.includes('photography') || /\bphotography\b/i.test(exp.reason || '')).length,
       southernCross: trips.filter(trip => overnightNights(trip) >= 1 &&
         trip.routeCoords.some(([lat]) => lat < 0)).length,
       localLore: pois.filter(poi => poi.rarityTier === 'Hidden Gem' &&
@@ -360,7 +465,8 @@
 
   const api = {
     ranks, labels, colors, transitTags, purposeTags, isVisited, clearsFog, promote,
-    homeRadiusKm, hasLoggedTravel, overnightNights, distanceMiles, validateStatuses, validateTags, validateExpeditions, normalizePoi, migrateState, syncDerivedState, loggedCountyStatuses, metadataProgress
+    homeRadiusKm, hasLoggedTravel, overnightNights, distanceMiles, fogRoutes, restoreExpeditionPromotions,
+    validateStatuses, validateTags, validateExpeditions, normalizePoi, migrateState, syncDerivedState, loggedCountyStatuses, metadataProgress
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TravelLedger = api;
