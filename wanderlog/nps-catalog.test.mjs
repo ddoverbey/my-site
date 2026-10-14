@@ -142,7 +142,7 @@ vm.runInContext("AppState.pins = NpsCatalog.migratePins({ yellowstone: 'v' }); u
 check('dynamic counters and multi-state stats', () => {
   assert.equal(element('hudParksCount').textContent, '1 / 405');
   assert.equal(vm.runInContext('calculateStats().statesCount', context), 3);
-  assert.equal(vm.runInContext("ACHIEVEMENTS.find(a => a.id === 'park_63').req(calculateStats())", context), false);
+  assert.ok(vm.runInContext("ACHIEVEMENTS.find(a => a.id === 'nps').progress(calculateStats()) < ACHIEVEMENTS.find(a => a.id === 'nps').tiers[0].goal(calculateStats())", context));
   assert.equal(vm.runInContext("QUESTLINES.find(q => q.id === 'giants').parkIds.length", context), 3);
 });
 element('bucketSearch').value = 'national seashore';
@@ -396,7 +396,7 @@ const customLocation = {
   rarity: { method: 'osm-poi-density', category: 'Deep Cut', nearbyPoiCount: 30, nearestHighwayKm: null },
   lookedUpAt: new Date().toISOString()
 };
-context.customLocation = customLocation;
+context.customLocation = travelLedger.normalizePoi(customLocation, coordinateLookups);
 vm.runInContext(`
   AppState.customLocations = [customLocation];
   AppState.pins = {};
@@ -685,5 +685,129 @@ vm.runInContext('AppState.viewOnly=true', context);
 check('read-only passports cannot add expeditions or POIs', () => {
   assert.throws(() => vm.runInContext('addExpedition({...testExpedition,id:"readonly"})', context), /read-only/);
   assert.throws(() => vm.runInContext('addCustomPoi(customLocation)', context), /read-only/);
+});
+check('achievement families reveal only the highest completed tier and next goal at exact boundaries', () => {
+  vm.runInContext(`
+    AppState.viewOnly=false; applyPassport(migratePassport({}));
+    coordinateIndexes=null; npsCatalogLoaded=true;
+    PARKS=Array.from({length:30},(_,i)=>({id:'tier'+i,name:'Park '+i,lat:37,lng:-120,biomes:[],states:[]}));
+  `, context);
+  for (const [count, shown, hidden] of [
+    [1, ['First Steps', 'Trailblazer'], ['Master Ranger', 'Grand Voyager']],
+    [4, ['First Steps', 'Trailblazer'], ['Master Ranger', 'Grand Voyager']],
+    [5, ['Trailblazer', 'Master Ranger'], ['First Steps', 'Grand Voyager']],
+    [15, ['Master Ranger', 'Grand Voyager'], ['First Steps', 'Trailblazer']],
+    [30, ['Grand Voyager'], ['First Steps', 'Trailblazer', 'Master Ranger']]
+  ]) {
+    vm.runInContext(`AppState.pins=Object.fromEntries(PARKS.slice(0,${count}).map(p=>[p.id,'v']));renderPassportView()`, context);
+    const cards = element('achievementsContainer').innerHTML;
+    for (const name of shown) assert.ok(cards.includes(name), `${count}: ${name}`);
+    for (const name of hidden) assert.ok(!cards.includes(name), `${count}: hidden ${name}`);
+    assert.equal((cards.match(/<h5[^>]*>Park Ranger<\/h5>/g) || []).length, 1);
+  }
+  vm.runInContext('npsCatalogLoaded=false;renderPassportView()', context);
+  assert.ok(!element('achievementsContainer').innerHTML.includes('Completionist Legend'));
+  assert.ok(vm.runInContext('ACHIEVEMENTS.every(a => Array.isArray(a.tiers) && typeof a.progress(calculateStats()) === "number" && !("req" in a))', context));
+});
+
+let animationTime = 0;
+let animationCallback;
+let movementCallback;
+let flight;
+context.performance = { now: () => animationTime };
+context.requestAnimationFrame = callback => { animationCallback = callback; return 1; };
+context.cancelAnimationFrame = () => { animationCallback = null; };
+context.window.matchMedia = () => ({ matches: false });
+context.CoordinateLookups = coordinateLookups;
+context.d3.geoContains = () => true;
+context.mapFly = (...args) => { flight = args; };
+context.mapOnce = (event, callback) => { assert.equal(event, 'moveend'); movementCallback = callback; };
+context.L.marker = () => ({ addTo() { return this; }, bindTooltip() {} });
+context.L.divIcon = () => ({});
+vm.runInContext(`
+  applyPassport(migratePassport({})); PARKS=[]; AppState.regions={};
+  coordinateIndexes={
+    countries:[{feature:{properties:{name:'United States of America'}},bounds:[[-180,-90],[180,90]]}],
+    states:[{feature:{properties:{name:'California'}},bounds:[[-180,-90],[180,90]]}],
+    counties:[{feature:{id:'06073',properties:{name:'San Diego'}},bounds:[[-180,-90],[180,90]]}]
+  };
+  map.once=mapOnce;map.flyTo=mapFly;
+`, context);
+check('first Citadel marks containing geography Lived, uses 80 km, flies at zoom 8 and unlocks Scout', () => {
+  vm.runInContext("setHometownCoordinates('Test Citadel',37,-120)", context);
+  assert.equal(vm.runInContext('AppState.homeBase.radiusKm', context), 80);
+  assert.equal(vm.runInContext('AppState.homeBase.countyId', context), '06073');
+  assert.equal(vm.runInContext('AppState.counties["06073"]', context), 'l');
+  assert.equal(vm.runInContext('AppState.regions["s:California"]', context), 'l');
+  assert.equal(vm.runInContext('calculateStats().cls', context), 'Scout');
+  const stats = vm.runInContext('calculateStats()', context);
+  assert.equal(stats.xp - stats.statesCount * 10 - stats.countriesCount * 20, 50);
+  assert.equal(flight[1], 8);
+  assert.equal(flight[2].duration, 1.8);
+  assert.ok(element('toastMsg').textContent.includes('+50'));
+});
+check('home aura pulses on the existing canvas and settles to the exact saved radius', () => {
+  movementCallback();
+  assert.equal(vm.runInContext('homeAuraPulseStarted', context), 0);
+  animationTime = 450;
+  context.fogOperations.length = 0;
+  animationCallback();
+  const arc = context.fogOperations.find(op => op[0] === 'arc');
+  assert.ok(Math.abs(arc[3] - vm.runInContext('calculatePixelRadius(37,80)*0.85', context)) < 1e-8);
+  animationTime = 1800;
+  animationCallback();
+  assert.equal(vm.runInContext('homeAuraPulseStarted', context), null);
+  assert.equal(vm.runInContext('homeAuraFrame', context), null);
+  context.window.matchMedia = () => ({ matches: true });
+  vm.runInContext('pulseHomeAura()', context);
+  assert.equal(vm.runInContext('homeAuraPulseStarted', context), null);
+});
+check('changing home never adds another Citadel bonus and saved homes retain their radius', () => {
+  const previousXP = vm.runInContext('calculateStats().xp', context);
+  vm.runInContext("setHometownCoordinates('Changed Citadel',38,-121)", context);
+  assert.equal(vm.runInContext('calculateStats().xp', context), previousXP);
+  assert.ok(!element('toastMsg').textContent.includes('+50'));
+  vm.runInContext('saveState();loadPersistedState()', context);
+  assert.equal(vm.runInContext('AppState.homeBase.radiusKm', context), 80);
+  vm.runInContext('AppState.homeBase.radiusKm=75;saveState();loadPersistedState()', context);
+  assert.equal(vm.runInContext('AppState.homeBase.radiusKm', context), 75);
+});
+check('home storage failures roll back geography and never fly or report success', () => {
+  const before = vm.runInContext('JSON.stringify(passportPayload())', context);
+  flight = null;
+  context.localStorage.setItem = () => { throw new Error('Storage full'); };
+  assert.throws(() => vm.runInContext("setHometownCoordinates('Failed Citadel',39,-122)", context), /Storage full/);
+  assert.equal(vm.runInContext('JSON.stringify(passportPayload())', context), before);
+  assert.equal(flight, null);
+  context.localStorage.setItem = (key, value) => { savedJson = value; };
+});
+context.AbortSignal = { timeout: () => undefined };
+let geocoderCalls = 0;
+context.fetch = async () => {
+  geocoderCalls++;
+  return { ok: true, json: async () => [{ lat: '40', lon: '-110', display_name: 'New City' }] };
+};
+context.document.querySelectorAll = selector => selector === '.quick-city-chip' ? [{
+  textContent: 'Seattle', dataset: { name: 'Seattle, WA', lat: '47.6062', lng: '-122.3321' }
+}] : [];
+element('cityInput').value = 'seattle';
+await vm.runInContext('searchHometown()', context);
+check('known quick-pick cities establish home locally without a geocoder request', () => {
+  assert.equal(geocoderCalls, 0);
+  assert.equal(vm.runInContext('AppState.homeBase.name', context), 'Seattle, WA');
+});
+element('cityInput').value = 'New City';
+await vm.runInContext('searchHometown()', context);
+check('unknown city search offers explicit selection and never auto-assigns San Francisco', () => {
+  assert.equal(geocoderCalls, 1);
+  assert.equal(vm.runInContext('AppState.homeBase.name', context), 'Seattle, WA');
+  assert.ok(element('homeLookupStatus').textContent.includes('Choose your city'));
+});
+vm.runInContext('lastCitySearch=0', context);
+context.fetch = async () => ({ ok: true, json: async () => [{ lat: '', lon: '0', display_name: 'Invalid City' }] });
+await vm.runInContext('searchHometown()', context);
+check('invalid geocoder coordinates show an error and leave the existing home unchanged', () => {
+  assert.ok(element('homeLookupStatus').textContent.includes('Invalid city search coordinates'));
+  assert.equal(vm.runInContext('AppState.homeBase.name', context), 'Seattle, WA');
 });
 console.log(`${checks} checks passed.`);

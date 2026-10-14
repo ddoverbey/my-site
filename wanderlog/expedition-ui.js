@@ -230,6 +230,12 @@ async function searchHometown() {
   results.replaceChildren();
   try {
     if (!query) throw new Error('Enter a city name.');
+    const knownCity = [...document.querySelectorAll('.quick-city-chip')].find(chip =>
+      [chip.dataset.name, chip.textContent.trim()].some(name => name.toLowerCase() === query.toLowerCase()));
+    if (knownCity) {
+      setHometownCoordinates(knownCity.dataset.name, Number(knownCity.dataset.lat), Number(knownCity.dataset.lng));
+      return;
+    }
     if (Date.now() - lastCitySearch < 1100) throw new Error('Wait a moment before searching again (Nominatim rate limit).');
     citySearchPending = true;
     document.getElementById('btnSubmitCity').disabled = true;
@@ -242,6 +248,8 @@ async function searchHometown() {
     const matches = await response.json();
     if (!Array.isArray(matches) || !matches.length) throw new Error('No city found. Try including the state or country.');
     matches.forEach(match => {
+      if (!match || typeof match.lat !== 'string' || !match.lat.trim() ||
+          typeof match.lon !== 'string' || !match.lon.trim()) throw new Error('Invalid city search coordinates.');
       CoordinateLookups.validateCoordinates(Number(match.lat), Number(match.lon));
       if (typeof match.display_name !== 'string') throw new Error('Invalid city search result.');
     });

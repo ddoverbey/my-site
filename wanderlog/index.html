@@ -509,7 +509,7 @@
       <div>
         <h2 class="cinzel text-2xl sm:text-3xl font-extrabold text-amber-200">Establish Your Home Citadel</h2>
         <p class="text-sm text-slate-300 mt-2">
-          Every explorer begins somewhere. Set your home to reveal a 75 km radius and permanently claim its county, state, and country as Lived.
+          Every explorer begins somewhere. Set your home to reveal an 80 km (about 50-mile) radius and permanently claim its county, state, and country as Lived. Establishing your first Citadel grants +50 XP and unlocks the Scout class.
         </p>
       </div>
 
@@ -750,31 +750,44 @@
 
     /* Dynamic Achievements */
     const ACHIEVEMENTS = [
-      { id: 'first_park', title: 'First Steps', desc: 'Visit your 1st park or heritage destination', req: (s) => s.visitedParks.length >= 1 },
-      { id: 'park_5', title: 'Trailblazer', desc: 'Visit 5 park or heritage destinations', req: (s) => s.visitedParks.length >= 5 },
-      { id: 'park_15', title: 'Master Ranger', desc: 'Visit 15 park or heritage destinations', req: (s) => s.visitedParks.length >= 15 },
-      { id: 'park_30', title: 'Grand Voyager', desc: 'Visit 30 park or heritage destinations', req: (s) => s.visitedParks.length >= 30 },
-      { id: 'park_63', title: 'Completionist Legend', desc: 'Visit every NPS listing in the current catalog', req: (s) => npsCatalogLoaded && s.npsTotal > 0 && s.usParksCount === s.npsTotal },
-      { id: 'biome_5', title: 'Biome Explorer', desc: 'Collect 5 unique biomes', req: (s) => s.biomesSet.size >= 5 },
-      { id: 'biome_10', title: 'Ecologist', desc: 'Collect 10 unique biomes', req: (s) => s.biomesSet.size >= 10 },
-      { id: 'biome_all', title: 'Gaia Wanderer', desc: 'Discover all 14 terrestrial biomes', req: (s) => biomeCatalogLoaded && s.biomesSet.size === Object.keys(BIOMES).length },
-      { id: 'rare_3', title: 'Anomaly Seeker', desc: 'Unlock 3 Rare Biomes', req: (s) => s.rareBiomesCount >= 3 },
-      { id: 'states_10', title: 'Continental Traveler', desc: 'Claim 10 US States', req: (s) => s.statesCount >= 10 },
-      { id: 'states_50', title: 'Union Pioneer', desc: 'Visit all 50 US States', req: (s) => s.statesCount >= 50 },
-      { id: 'countries_5', title: 'Globetrotter', desc: 'Log 5 different nations', req: (s) => s.countriesCount >= 5 }
+      {
+        id: 'parks', title: 'Park Ranger', progress: s => s.visitedParks.length,
+        tiers: [
+          { goal: 1, title: 'First Steps', desc: 'Visit your 1st park or heritage destination' },
+          { goal: 5, title: 'Trailblazer', desc: 'Visit 5 park or heritage destinations' },
+          { goal: 15, title: 'Master Ranger', desc: 'Visit 15 park or heritage destinations' },
+          { goal: 30, title: 'Grand Voyager', desc: 'Visit 30 park or heritage destinations' }
+        ]
+      },
+      {
+        id: 'nps', title: 'NPS Explorer',
+        progress: s => npsCatalogLoaded && s.npsTotal > 0 ? s.usParksCount : 0,
+        tiers: [{ goal: s => s.npsTotal, title: 'Completionist Legend', desc: 'Visit every NPS listing in the current catalog' }]
+      },
+      {
+        id: 'biomes', title: 'Biome Collector', progress: s => s.biomesSet.size,
+        tiers: [
+          { goal: 5, title: 'Biome Explorer', desc: 'Collect 5 unique biomes' },
+          { goal: 10, title: 'Ecologist', desc: 'Collect 10 unique biomes' },
+          { goal: 14, title: 'Gaia Wanderer', desc: 'Discover all 14 terrestrial biomes' }
+        ]
+      },
+      {
+        id: 'rare_biomes', title: 'Anomaly Seeker', progress: s => s.rareBiomesCount,
+        tiers: [{ goal: 3, title: 'Anomaly Seeker', desc: 'Unlock 3 Rare Biomes' }]
+      },
+      {
+        id: 'states', title: 'Continental Explorer', progress: s => s.statesCount,
+        tiers: [
+          { goal: 10, title: 'Continental Traveler', desc: 'Claim 10 US States' },
+          { goal: 50, title: 'Union Pioneer', desc: 'Visit all 50 US States' }
+        ]
+      },
+      {
+        id: 'countries', title: 'Globetrotter', progress: s => s.countriesCount,
+        tiers: [{ goal: 5, title: 'Globetrotter', desc: 'Log 5 different nations' }]
+      }
     ];
-    const achievementTargets = {
-      first_park: 1, park_5: 5, park_15: 15, park_30: 30, park_63: s => Math.max(1, s.npsTotal),
-      biome_5: 5, biome_10: 10, biome_all: 14, rare_3: 3, states_10: 10, states_50: 50, countries_5: 5
-    };
-    ACHIEVEMENTS.forEach(ach => {
-      ach.target = achievementTargets[ach.id] || 1;
-      ach.progress = s => ach.id.startsWith('states_') ? s.statesCount :
-        ach.id.startsWith('countries_') ? s.countriesCount :
-        ach.id.startsWith('biome_') ? s.biomesSet.size :
-        ach.id.includes('rare') ? s.rareBiomesCount :
-        ach.id === 'park_63' ? s.usParksCount : s.visitedParks.length;
-    });
     [
       ['subterranean', 'Subterranean Sky', 'Log a terrestrial stop below sea level', 1],
       ['thinAir', 'Thin Air', 'Log a stop above 10,000 ft', 1],
@@ -783,9 +796,8 @@
       ['mariner', 'The Mariner', 'Log 3 expeditions with Ferry', 3],
       ['focal', 'Focal Length', 'Log 10 locations/expeditions with Photography', 10],
       ['borderlands', 'Borderlands', 'Log 5 distinct counties in one expedition', 5]
-    ].forEach(([id, title, desc, target]) => ACHIEVEMENTS.push({
-      id, title, desc, target, progress: () => TravelLedger.metadataProgress(AppState)[id],
-      req: () => TravelLedger.metadataProgress(AppState)[id] >= target
+    ].forEach(([id, title, desc, goal]) => ACHIEVEMENTS.push({
+      id, title, tiers: [{ goal, title, desc }], progress: s => s.metadataProgress[id]
     }));
 
   </script>
@@ -1070,11 +1082,13 @@
       };
 
       const sortedAxes = Object.entries(archetypes).sort((a,b) => b[1] - a[1]);
-      let cls = 'Fresh Recruit';
-      let titleDesc = 'The journey of ten thousand leagues begins with a single step.';
+      let cls = AppState.homeBase ? 'Scout' : 'Fresh Recruit';
+      let titleDesc = AppState.homeBase ? 'Citadel established. Your first expedition awaits.' :
+        'The journey of ten thousand leagues begins with a single step.';
       let avatar = '🧭';
 
-      if (sortedAxes[0][1] > 0.05) {
+      if (sortedAxes[0][1] > 0.05 &&
+          (!AppState.homeBase || visitedParks.length || visitedCustomLocations.length || visitedCountries.size > 1 || visitedStates.size > 1)) {
         switch(sortedAxes[0][0]) {
           case 'Adventure':
             cls = 'Alpine Ranger';
@@ -1125,7 +1139,8 @@
         archetypes,
         cls,
         titleDesc,
-        avatar
+        avatar,
+        metadataProgress: TravelLedger.metadataProgress(AppState)
       };
     }
   </script>
@@ -1136,6 +1151,8 @@
     let fogCtx = null;
     let fogPadding = { x: 0, y: 0 };
     let fogZoomAnimating = false;
+    let homeAuraPulseStarted = null;
+    let homeAuraFrame = null;
     let leafletMarkers = {};
     let homeMarker = null;
     let countyLayer = null;
@@ -1253,7 +1270,9 @@
       // Punch out hole for Home Base
       if (AppState.homeBase) {
         const homePoint = map.latLngToContainerPoint([AppState.homeBase.lat, AppState.homeBase.lng]);
-        const radius = calculatePixelRadius(AppState.homeBase.lat, AppState.homeBase.radiusKm);
+        const pulse = homeAuraPulseStarted === null ? 1 :
+          0.925 + 0.075 * Math.cos((performance.now() - homeAuraPulseStarted) / 1800 * Math.PI * 4);
+        const radius = calculatePixelRadius(AppState.homeBase.lat, AppState.homeBase.radiusKm) * pulse;
         punchFogAura(homePoint.x, homePoint.y, radius, 1.0);
       }
 
@@ -1373,6 +1392,28 @@
       fogCtx.beginPath();
       fogCtx.arc(x, y, radius, 0, Math.PI * 2);
       fogCtx.fill();
+    }
+
+    function pulseHomeAura() {
+      if (homeAuraFrame !== null) cancelAnimationFrame(homeAuraFrame);
+      homeAuraFrame = null;
+      homeAuraPulseStarted = null;
+      if (!map || !fogCtx || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        drawFogOfWar();
+        return;
+      }
+      homeAuraPulseStarted = performance.now();
+      function frame() {
+        if (performance.now() - homeAuraPulseStarted >= 1800 || !AppState.homeBase) {
+          homeAuraPulseStarted = null;
+          homeAuraFrame = null;
+          drawFogOfWar();
+          return;
+        }
+        drawFogOfWar();
+        homeAuraFrame = requestAnimationFrame(frame);
+      }
+      homeAuraFrame = requestAnimationFrame(frame);
     }
 
     // Convert real-world kilometers to Leaflet screen pixels at current zoom
@@ -1551,7 +1592,7 @@
       });
 
       homeMarker = L.marker([AppState.homeBase.lat, AppState.homeBase.lng], { icon: customIcon }).addTo(map);
-      homeMarker.bindTooltip(`<b>Home Base:</b> ${AppState.homeBase.name}`, { direction: 'top', offset: [0, -10] });
+      homeMarker.bindTooltip(`<b>Home Base:</b> ${escapeHtml(AppState.homeBase.name)}`, { direction: 'top', offset: [0, -10] });
     }
   </script>
 
@@ -1988,26 +2029,33 @@
       ACHIEVEMENTS.forEach(ach => {
         const progress = ach.progress(stats);
         if (progress <= 0) return;
-        const target = typeof ach.target === 'function' ? ach.target(stats) : ach.target;
-        const unlocked = ach.req(stats);
+        const tiers = ach.tiers.map(tier => ({
+          ...tier, goal: typeof tier.goal === 'function' ? tier.goal(stats) : tier.goal
+        }));
+        const completed = tiers.filter(tier => progress >= tier.goal).at(-1);
+        const next = tiers.find(tier => progress < tier.goal);
+        const visibleTiers = [completed, next].filter(Boolean);
         const card = document.createElement('div');
         card.className = `p-3.5 rounded-2xl border ${
-          unlocked 
+          completed
             ? 'bg-amber-950/20 border-amber-500/40 shadow-md shadow-amber-500/5' 
             : 'bg-slate-950/50 border-slate-700'
         }`;
         card.innerHTML = `
           <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-xl flex items-center justify-center text-lg ${
-              unlocked ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-slate-500'
+              completed ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-slate-500'
             }">
-              ${unlocked ? '🏆' : '🔒'}
+              ${completed ? '🏆' : '🔒'}
             </div>
             <div>
-              <h5 class="text-xs font-bold text-slate-200">${ach.title}</h5>
-              <p class="text-[10px] text-slate-400 leading-tight mt-0.5">${ach.desc}</p>
-              <p class="text-[10px] text-amber-300 mt-1">${Math.min(progress, target)} / ${target}${unlocked ? ' • Complete' : ''}</p>
-              <progress aria-label="${ach.title} progress" value="${Math.min(progress, target)}" max="${target}" class="w-full h-2 mt-1"></progress>
+              <h5 class="text-xs font-bold text-slate-200">${escapeHtml(ach.title)}</h5>
+              ${visibleTiers.map(tier => `
+                <p class="text-xs text-slate-200 mt-2">${escapeHtml(tier.title)}</p>
+                <p class="text-[10px] text-slate-400 leading-tight mt-0.5">${escapeHtml(tier.desc)}</p>
+                <p class="text-[10px] text-amber-300 mt-1">${Math.min(progress, tier.goal)} / ${tier.goal}${progress >= tier.goal ? ' • Complete' : ''}</p>
+                <progress aria-label="${escapeHtml(tier.title)} progress" value="${Math.min(progress, tier.goal)}" max="${tier.goal}" class="w-full h-2 mt-1"></progress>
+              `).join('')}
             </div>
           </div>
         `;
@@ -2315,25 +2363,30 @@
     function setHometownCoordinates(name, lat, lng) {
       if (AppState.viewOnly) return;
       CoordinateLookups.validateCoordinates(Number(lat), Number(lng));
+      if (typeof name !== 'string' || !name.trim()) throw new Error('Enter a home name.');
       if (!coordinateIndexes) {
         showNotification('Geography unavailable', 'Retry datasets before establishing your home county.', '⚠️');
         return;
       }
+      const firstCitadel = !AppState.homeBase;
       commitLedger(() => { AppState.homeBase = {
-        name,
+        name: name.trim(),
         lat: parseFloat(lat),
         lng: parseFloat(lng),
-        radiusKm: 75
+        radiusKm: 80
       }; });
       closeHomeModal();
       updateHomeBaseMarker();
       if (map) {
-        map.flyTo([lat, lng], 7, { duration: 1.5 });
-      }
+        map.once('moveend', pulseHomeAura);
+        map.flyTo([Number(lat), Number(lng)], 8, { duration: 1.8 });
+      } else pulseHomeAura();
       drawFogOfWar();
       updateAllUI();
       AudioEngine.playChime('discover');
-      showNotification('🏰 Citadel Established!', `${name} is now your home base! The surrounding fog has cleared!`, '✨');
+      showNotification('🏰 Citadel Established!', firstCitadel
+        ? `${name} is now your home base! +50 Citadel XP — Scout Class Unlocked.`
+        : `${name} is now your home base! Citadel XP is retained, not awarded again.`, '✨');
     }
 
     // Geolocation trigger

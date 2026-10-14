@@ -403,14 +403,21 @@ fixed. Pins/custom POIs have explicit tier buttons. Ledger-backed trip visits ar
 is disallowed to prevent dangling history references.
 
 Geolocation, quick picks, and **Nominatim search with explicit result selection** establish home.
+Typed names matching a quick-pick city are resolved locally before making any geocoder request.
 Unknown city searches never silently fall back to San Francisco. Searches send text to Nominatim,
 are submit-only (not autocomplete), and are throttled to at most one request per 1.1 seconds in
 this tab. See the [Nominatim usage policy](https://operations.osmfoundation.org/policies/nominatim/);
 larger deployments must provide their own service rather than treating the public endpoint as unlimited.
 Local containment automatically sets the home county, state, and country to `l`; previous home
-territories remain Lived. New homes use a 75 km aura; old saved radii are retained. Missing geography
+territories remain Lived. New homes use an 80 km (about 50-mile) aura; old saved radii are retained. Missing geography
 blocks a new home save with a visible retry message. Simplified coast/border coverage can leave
 some parent matches unavailable; no county is guessed.
+Successful registration flies to zoom 8 over 1.8 seconds, then briefly pulses the home aura on the
+existing fog canvas. The pulse respects reduced-motion preferences and settles at the saved radius;
+it adds no separate reveal layer. The Citadel grants a single derived +50 XP bonus, not another
+bonus each time home changes. New explorers unlock **Scout**; established explorer classes are
+still determined by their accumulated travel. Storage failures roll back home and region changes
+before any camera flight, pulse, or success notification.
 
 County hitboxes use the existing `us-atlas@3/counties-10m.json` atlas. They remain transparent,
 with hover outlines/tooltips only. All `t`, `v`, and `l` counties clear their exact polygon with a
@@ -463,9 +470,15 @@ read-only, and invalid/future saves remain protected from overwrite.
 
 ### Progressive achievements
 
-Achievements with zero progress are **not created in the DOM**. Started achievements show a
-numeric count and progress bar; completed ones show their trophy. Existing park/state/biome
-milestones remain, with Lived granting the same completion credit as Visited. New metadata badges:
+Every achievement family uses numeric `progress(stats)` and a `tiers` array, rather than a boolean
+requirement. Achievements with zero progress are **not created in the DOM**. Each started family
+shows only its highest completed tier and its next goal, with numeric counts and accessible progress
+bars; later tiers stay hidden. For example, one park visit shows **First Steps** complete and
+**Trailblazer** at 1/5, not the 15- and 30-visit goals. At the final tier only that completed milestone
+remains. Park (1/5/15/30), biome (5/10/14), and state (10/50) milestones are grouped; NPS completion,
+rare biomes, nations and metadata badges retain their separate families.
+NPS completion uses the loaded catalog size and is unavailable when its source fails.
+Lived grants the same completion credit as Visited. Metadata badges:
 
 - **Subterranean Sky:** a visited/lived terrestrial POI or expedition stop below 0 ft.
 - **Thin Air:** a visited/lived POI or expedition stop strictly above 10,000 ft.
