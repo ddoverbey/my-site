@@ -697,6 +697,7 @@
       <label class="block text-xs text-slate-300">Category (optional)
         <input id="customLocationCategory" maxlength="60" placeholder="e.g. waterfall" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2">
       </label>
+      <p class="text-[11px] text-slate-400">Country Roads recognizes visited/lived locations categorized exactly as Blue Ridge Mountains or Shenandoah River (case-insensitive).</p>
       <fieldset class="text-xs text-slate-300"><legend>Purpose tags</legend><div id="customPurposeTags" class="flex flex-wrap gap-3 mt-2"></div></fieldset>
       <p class="text-[11px] text-slate-400">Simplified boundaries give approximate classifications. Rarity uses the configured provider, with a direct OSM fallback. Open-data scores estimate density, not review counts or verified popularity.</p>
       <p id="customLocationLookupStatus" role="status" aria-live="polite" class="text-xs text-amber-200"></p>
@@ -901,6 +902,17 @@
     }));
     ACHIEVEMENTS.push(
       {
+        id: 'countryRoads', title: 'Country Roads, Take Me Home', progress: s => s.metadataProgress.countryRoads,
+        tiers: [{ goal: 2, title: 'Country Roads, Take Me Home',
+          desc: 'Visit West Virginia plus Shenandoah National Park, OR West Virginia plus Blue Ridge Mountains / Great Smoky Mountains NP and Shenandoah River. Blue Ridge Parkway also qualifies; custom POI categories must be exactly Blue Ridge Mountains or Shenandoah River. Mountains and river each contribute half of the destination milestone.' }]
+      },
+      {
+        id: 'rockyMountainHigh', title: 'Rocky Mountain High', progress: s => s.metadataProgress.rockyMountainHigh,
+        tiers: [{ goal: 1, title: 'Rocky Mountain High', desc: 'Visit a Colorado county outside the 16 excluded plains counties' }]
+      }
+    );
+    ACHIEVEMENTS.push(
+      {
         id: 'counties', title: 'Manifest Destiny', progress: s => s.countiesCount,
         tiers: [{ goal: s => s.countyTotal, title: 'Manifest Destiny', desc: 'Visit every county in the loaded US county atlas' }]
       },
@@ -942,7 +954,9 @@
       longDark: ['❄️🌙', '#172554', ['epic']],
       latitudeSpan: ['🌐↕️', '#1e3a5f', ['epic']],
       counties: ['🗺️', '#422006', ['mythic']],
-      worldAtlas: ['🌍👑', '#2e1065', ['mythic']]
+      worldAtlas: ['🌍👑', '#2e1065', ['mythic']],
+      countryRoads: ['🛣️🏡', '#14532d', ['rare']],
+      rockyMountainHigh: ['🏔️🎵', '#1e3a5f', ['uncommon']]
     };
     ACHIEVEMENTS.forEach(achievement => {
       const [icon, background, rarities] = ACHIEVEMENT_ART[achievement.id];

@@ -9,6 +9,13 @@
   });
   const isVisited = status => status === 'v' || status === 'l';
   const homeRadiusKm = 15 * 1.609344 / 2;
+  const coloradoPlainsCounties = new Set([
+    '08075', '08087', '08115', '08095', '08121', '08125', '08063', '08017',
+    '08073', '08039', '08061', '08025', '08009', '08011', '08089', '08099'
+  ]);
+  const coloradoCounties = new Set([
+    ...Array.from({ length: 63 }, (_, index) => `08${String(index * 2 + 1).padStart(3, '0')}`), '08014'
+  ]);
   const clearsFog = status => status === 't' || isVisited(status);
   const promote = (current, next) => {
     if (!Object.hasOwn(ranks, next)) throw new Error('Invalid status promotion.');
@@ -300,7 +307,24 @@
         }
       }
     }
+    const visitedCountyIds = new Set(Object.entries(state.counties)
+      .filter(([, status]) => isVisited(status)).map(([id]) => id));
+    pois.forEach(poi => poi.political.counties.forEach(county => visitedCountyIds.add(county.id)));
+    trips.forEach(trip => trip.countyIds.forEach(id => visitedCountyIds.add(id)));
+    coordinates.forEach(point => {
+      sample(point.lat, point.lng, 'political')?.counties?.forEach(county => visitedCountyIds.add(county.id));
+    });
+    const westVirginia = isVisited(state.regions['s:West Virginia']) ||
+      locations.some(location => !location.intl && (location.states || location.political?.states || []).includes('West Virginia')) ||
+      coordinates.some(point => sample(point.lat, point.lng, 'political')?.states?.includes('West Virginia'));
+    const visitedPark = id => isVisited(state.pins[id]) || trips.some(trip => trip.parkIds.includes(id));
+    const categoryVisited = category => pois.some(poi => poi.category?.trim().toLowerCase() === category);
+    const mountains = visitedPark('blri') || visitedPark('grsm') || categoryVisited('blue ridge mountains');
+    const river = categoryVisited('shenandoah river');
+    const countryRoadsDestination = visitedPark('shen') ? 1 : (Number(mountains) + Number(river)) / 2;
     return {
+      countryRoads: Number(westVirginia) + countryRoadsDestination,
+      rockyMountainHigh: [...visitedCountyIds].filter(id => coloradoCounties.has(id) && !coloradoPlainsCounties.has(id)).length,
       subterranean: pois.filter(poi => poi.biomes.length && poi.elevationFt < 0).length +
         trips.filter(exp => exp.minElevationFt !== null && exp.minElevationFt < 0).length,
       thinAir: pois.filter(poi => poi.elevationFt >= 10000).length +

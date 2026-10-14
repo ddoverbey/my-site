@@ -1327,7 +1327,7 @@ check('dedicated achievement page hides untouched badges and does not duplicate 
   `, context);
   assert.ok(element('achievementsContainer').innerHTML.includes('Chasing Waterfalls'));
   assert.ok(element('achievementsContainer').innerHTML.includes('value="1" max="5"'));
-  for (const id of ['borderlands', 'offGrid', 'ghostTown', 'dateLine', 'continents', 'countryRoads']) {
+  for (const id of ['borderlands', 'offGrid', 'ghostTown', 'dateLine', 'continents']) {
     assert.equal(vm.runInContext(`ACHIEVEMENTS.some(achievement=>achievement.id==='${id}')`, context), false);
   }
 });
@@ -1440,5 +1440,31 @@ check('achievement cards show artwork and textual tier rarities without revealin
   assert.ok(cards.includes('>Uncommon</p>'));
   assert.ok(!cards.includes('Southern Cross'));
   assert.ok(!cards.includes('Zero Meridian'));
+});
+check('regional music achievements disclose partial prerequisites and award colored badges only on completion', () => {
+  vm.runInContext(`
+    applyPassport(migratePassport({}));PARKS=[];coordinateIndexes=null;map=null;
+    renderPassportView();
+  `, context);
+  assert.ok(!element('achievementsContainer').innerHTML.includes('Country Roads, Take Me Home'));
+  assert.ok(!element('achievementsContainer').innerHTML.includes('Rocky Mountain High'));
+  vm.runInContext(`
+    AppState.regions={'s:West Virginia':'v'};
+    AppState.counties={'08075':'v'};
+    renderPassportView();
+  `, context);
+  assert.ok(element('achievementsContainer').innerHTML.includes('Country Roads, Take Me Home'));
+  assert.ok(element('achievementsContainer').innerHTML.includes('value="1" max="2"'));
+  assert.ok(!element('earnedAchievementBadges').innerHTML.includes('🛣️🏡'));
+  assert.ok(!element('achievementsContainer').innerHTML.includes('Rocky Mountain High'));
+  vm.runInContext("AppState.pins.shen='v';AppState.counties['08065']='l';renderPassportView()", context);
+  const badges = element('earnedAchievementBadges').innerHTML;
+  assert.ok(badges.includes('🛣️🏡'));
+  assert.ok(badges.includes('🏔️🎵'));
+  assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='countryRoads').tiers[0].rarity", context), 'rare');
+  assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='rockyMountainHigh').tiers[0].rarity", context), 'uncommon');
+  vm.runInContext('saveState();applyPassport(migratePassport(JSON.parse(localStorage.getItem("terra_incognita_state"))));renderPassportView()', context);
+  assert.equal(vm.runInContext('calculateStats().metadataProgress.countryRoads', context), 2);
+  assert.equal(vm.runInContext('calculateStats().metadataProgress.rockyMountainHigh', context), 1);
 });
 console.log(`${checks} checks passed.`);

@@ -556,6 +556,18 @@ Lived grants the same completion credit as Visited. Metadata badges:
 - **Fifty-Nifty:** visited/lived completion of all 50 US states.
 - **How???? (Citizen of the World):** complete all countries/territories represented in the loaded
   World Nations atlas. This is atlas coverage, not a complete sovereign-country census.
+- **Country Roads, Take Me Home (Rare, 🛣️🏡):** visit/live in West Virginia and Shenandoah
+  National Park, **or** West Virginia plus Blue Ridge Mountains (Blue Ridge Parkway qualifies)
+  / Great Smoky Mountains National Park **and** Shenandoah River. Custom POIs qualify through
+  exact trimmed, case-insensitive categories `Blue Ridge Mountains` and `Shenandoah River`.
+  Progress has two milestones: West Virginia and the destination combination; mountains and river
+  each supply half of the second milestone unless Shenandoah NP completes it outright.
+- **Rocky Mountain High (Uncommon, 🏔️🎵):** visit/live in any Colorado county except Logan,
+  Morgan, Sedgwick, Phillips, Washington, Yuma, Kit Carson, Cheyenne, Lincoln, Elbert, Kiowa,
+  Crowley, Baca, Bent, Otero and Prowers. Matches known Colorado FIPS IDs, using county records,
+  full custom POI counties, logged expedition counties and coordinate containment. Wishlist/transit
+  county marks do not qualify; a home county marked Lived does. State-only Colorado marks do not
+  establish which county was visited.
 
 Transit and wishlist records cannot unlock full-visit achievements. Photography counts a tagged
 POI and a tagged expedition as independent logged records; repeating a POI across expeditions
@@ -565,7 +577,7 @@ remain representative centroids. All progress is derived from saved records and 
 edits, imports and home changes; no new passport fields or external requests are required.
 **Deferred:** Borderlands (international-border metadata), Off the Grid (highway/city distances),
 Ghost Town (settlement/population evidence), Standing on the Edge of Tomorrow (timezone crossing),
-Mr. Worldwide and Pangea Reconstructed (continent mapping), and Country Roads, Take Me Home.
+Mr. Worldwide and Pangea Reconstructed (continent mapping).
 These badges have no cards until their prerequisites can be supported.
 Run `npm test` for migration, rank, threshold, fog, persistence,
 wizard-failure, and disclosure regression tests; no geography import is needed.

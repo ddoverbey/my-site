@@ -392,6 +392,84 @@ check('biome achievements include expedition coordinates but do not invent ocean
   assert.deepEqual([...progress.collectedBiomes].sort(), ['10', '11', '5']);
   assert.equal(JSON.stringify(state), before);
 });
+check('Country Roads supports both alternate routes with prerequisite progress and no wishlist/transit credit', () => {
+  const westVirginia = { 's:West Virginia': 'v' };
+  const progress = input => ledger.metadataProgress(migrate(input)).countryRoads;
+  assert.equal(progress({}), 0);
+  assert.equal(progress({ regions: westVirginia }), 1);
+  assert.equal(progress({ pins: { shen: 'v' } }), 1);
+  for (const status of ['v', 'l']) {
+    assert.equal(progress({ regions: { 's:West Virginia': status }, pins: { shen: status } }), 2);
+    for (const id of ['blri', 'grsm']) {
+      assert.equal(progress({
+        regions: westVirginia, pins: { [id]: status },
+        customPois: [{ ...poi, status, category: ' Shenandoah River ' }]
+      }), 2);
+    }
+  }
+  for (const status of ['w', 't']) {
+    assert.equal(progress({
+      regions: { 's:West Virginia': status }, pins: { shen: status },
+      customPois: [{ ...poi, status, category: 'Shenandoah River' }]
+    }), 0);
+  }
+  const mountains = { ...poi, id: 'poi_mountains', category: ' bLuE rIdGe MoUnTaInS ' };
+  const river = { ...poi, id: 'poi_river', category: 'SHENANDOAH RIVER' };
+  assert.equal(progress({ regions: westVirginia, customPois: [mountains] }), 1.5);
+  assert.equal(progress({ regions: westVirginia, customPois: [river] }), 1.5);
+  assert.equal(progress({ regions: westVirginia, customPois: [mountains, river] }), 2);
+  assert.equal(progress({ regions: westVirginia, customPois: [
+    { ...mountains, category: 'Blue Ridge Mountains viewpoint' },
+    { ...river, category: 'Shenandoah River nearby' }
+  ] }), 1);
+  assert.equal(progress({ regions: westVirginia, expeditions: [{ ...exp, parkIds: ['shen'] }] }), 2);
+});
+check('Rocky Mountain High excludes exactly the requested Colorado plains counties and unknown IDs', () => {
+  const excluded = [
+    '08075', '08087', '08115', '08095', '08121', '08125', '08063', '08017',
+    '08073', '08039', '08061', '08025', '08009', '08011', '08089', '08099'
+  ];
+  for (const id of excluded) {
+    assert.equal(ledger.metadataProgress(migrate({ counties: { [id]: 'v' } })).rockyMountainHigh, 0, id);
+    assert.equal(ledger.metadataProgress(migrate({ counties: { [id]: 'l' } })).rockyMountainHigh, 0, id);
+  }
+  const allColorado = [...Array.from({ length: 63 }, (_, i) => `08${String(i * 2 + 1).padStart(3, '0')}`), '08014'];
+  const state = migrate({ counties: Object.fromEntries(allColorado.map(id => [id, 'v'])) });
+  assert.equal(ledger.metadataProgress(state).rockyMountainHigh, 48);
+  for (const id of ['08001', '08014', '08031', '08065', '08117']) {
+    for (const status of ['v', 'l', 'w', 't']) {
+      assert.equal(ledger.metadataProgress(migrate({ counties: { [id]: status } })).rockyMountainHigh,
+        ['v', 'l'].includes(status) ? 1 : 0, `${id}: ${status}`);
+    }
+  }
+  for (const id of ['08999', '08002', '06073']) {
+    assert.equal(ledger.metadataProgress(migrate({ counties: { [id]: 'l' } })).rockyMountainHigh, 0, id);
+  }
+  assert.equal(ledger.metadataProgress(migrate({ regions: { 's:Colorado': 'v' } })).rockyMountainHigh, 0);
+});
+check('regional music badges include logged POIs, park coordinates and expedition stops without changing saves', () => {
+  const state = migrate({
+    customPois: [{ ...poi, countyId: '08065', state: 'Colorado' }],
+    pins: { shen: 'v', wv: 'v' },
+    expeditions: [{ ...exp, countyIds: ['08065'] }]
+  });
+  const before = JSON.stringify(state);
+  const options = {
+    parks: [
+      { id: 'wv', lat: 38, lng: -81, states: ['West Virginia'], biomes: [] },
+      { id: 'shen', lat: 38, lng: -78, states: ['Virginia'], biomes: [] }
+    ],
+    politicalAt: lat => lat === 39.24 ? { counties: [{ id: '08097' }] } : null
+  };
+  const progress = ledger.metadataProgress(state, options);
+  assert.equal(progress.countryRoads, 2);
+  assert.equal(progress.rockyMountainHigh, 2);
+  assert.equal(JSON.stringify(state), before);
+  assert.equal(ledger.metadataProgress(migrate({
+    homeBase: { name: 'Home', lat: 39, lng: -105, radiusKm: 80, countyId: '08031' },
+    counties: { '08031': 'l' }
+  })).rockyMountainHigh, 1);
+});
 check('unknown international labels never fabricate country completion', () => {
   const state = migrate({ pins: { unknown: 'v' } });
   ledger.syncDerivedState(state, { parks: [{ id: 'unknown', intl: true, country: 'Unverified region' }] });
