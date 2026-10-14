@@ -5,6 +5,7 @@ import catalog from './nps-catalog.js';
 import ecoregions from './ecoregions.js';
 import internationalCatalog from './international-parks.js';
 import coordinateLookups from './coordinate-lookups.js';
+import travelLedger from './travel-ledger.js';
 import { collectParks } from './import-nps.mjs';
 const worldwide = JSON.parse(await readFile(new URL('./worldwide-national-parks.json', import.meta.url), 'utf8'));
 const wikidata = JSON.parse(await readFile(new URL('./wikidata-national-parks-query.json', import.meta.url), 'utf8'));
@@ -96,7 +97,9 @@ checks++;
 console.log('PASS changing API totals rejected');
 
 const html = await readFile(new URL('./index.html', import.meta.url), 'utf8');
-const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(match => match[1]);
+const expeditionUi = await readFile(new URL('./expedition-ui.js', import.meta.url), 'utf8');
+const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)]
+  .map(match => match[0].includes('src="./expedition-ui.js"') ? expeditionUi : match[1]);
 check('every inline script parses', () => scripts.forEach(script => new vm.Script(script)));
 
 const elements = new Map();
@@ -108,16 +111,17 @@ function element(id) {
       classList: { add() {}, remove() {}, toggle() {} },
       handlers: {}, addEventListener(name, handler) { this.handlers[name] = handler; },
       querySelectorAll: () => [], focus() {},
+      replaceChildren() { this.innerHTML = ''; }, reset() {}, setAttribute() {},
       appendChild(child) { this.innerHTML += child.innerHTML; }
     });
   }
   return elements.get(id);
 }
 const context = vm.createContext({
-  NpsCatalog: catalog, Ecoregions: ecoregions, InternationalParks: internationalCatalog, CoordinateLookups: coordinateLookups,
+  NpsCatalog: catalog, Ecoregions: ecoregions, InternationalParks: internationalCatalog, CoordinateLookups: coordinateLookups, TravelLedger: travelLedger,
   WanderlogConfig: { rarityEndpoint: 'https://api.devonoverbey.com/rarity' },
   tailwind: {}, console, Intl, URL, URLSearchParams, setTimeout() {},
-  document: { getElementById: element, querySelectorAll: () => [], createElement: () => ({ innerHTML: '' }) },
+  document: { getElementById: element, querySelectorAll: () => [], createElement: () => element(`created-${elements.size}`) },
   window: { addEventListener() {} },
   fetch: async url => ({ ok: true, json: async () => url.includes('wikidata') ? wikidata : url.includes('worldwide') ? worldwide : snapshot })
 });
@@ -351,7 +355,7 @@ context.markerOptions = [];
 context.L = {
   circleMarker: (point, options) => {
     context.markerOptions.push(options);
-    return { addTo() { return this; }, bindTooltip() {}, bindPopup() {} };
+    return { addTo() { return this; }, bindTooltip() {}, bindPopup() {}, on() {} };
   }
 };
 vm.runInContext(`
@@ -407,7 +411,7 @@ check('custom coordinates collect real biomes and countries without counting as 
   assert.equal(vm.runInContext('calculateStats().visitedParks.length', context), 0);
   assert.equal(vm.runInContext('calculateStats().countriesCount', context), 1);
   assert.deepEqual(Array.from(vm.runInContext('calculateStats().biomesSet', context)), ['12']);
-  assert.equal(vm.runInContext('calculateStats().xp', context), 50);
+  assert.equal(vm.runInContext('calculateStats().xp', context), 75);
   vm.runInContext("AppState.customLocations[0].status = 'w'", context);
   assert.equal(vm.runInContext('calculateStats().countriesCount', context), 0);
   assert.equal(vm.runInContext('calculateStats().biomesSet.size', context), 0);
@@ -502,7 +506,7 @@ check('existing route corridors remain round-capped and 40 km wide', () => {
 context.CoordinateLookups = { ...coordinateLookups, lookupCoordinate: async () => customLocation };
 context.crypto = { randomUUID: () => 'saved-reference' };
 context.d3 = { geoContains() {} };
-vm.runInContext('coordinateIndexes = {}; AppState.customLocations = [];', context);
+vm.runInContext('coordinateIndexes = null; AppState.customLocations = [];', context);
 element('customLocationName').value = 'Colosseum';
 element('customLocationLat').value = '41.8902';
 element('customLocationLng').value = '12.4922';
@@ -510,7 +514,7 @@ element('customLocationStatus').value = 'v';
 await element('customLocationForm').handlers.submit({ preventDefault() {} });
 check('the custom-coordinate form saves only after lookup completion', () => {
   assert.equal(vm.runInContext('AppState.customLocations.length', context), 1);
-  assert.equal(JSON.parse(savedJson).customLocations[0].id, 'custom-saved-reference');
+  assert.equal(JSON.parse(savedJson).customPois[0].id, 'poi_saved-reference');
 });
 context.CoordinateLookups.lookupCoordinate = async () => { throw new Error('Overpass HTTP 503'); };
 await element('customLocationForm').handlers.submit({ preventDefault() {} });
@@ -549,5 +553,137 @@ check('future passport versions are surfaced and cannot overwrite the original s
   assert.equal(savedJson, '{"version":3,"pins":{"yose":"v"}}');
   assert.equal(vm.runInContext('AppState.viewOnly', context), true);
   assert.equal(element('toastTitle').textContent, 'Saved passport unavailable');
+});
+vm.runInContext(`
+  AppState.viewOnly=false;
+  applyPassport(migratePassport({}));
+  PARKS = [{id:'test',name:'Test park',lat:37,lng:-120,biomes:[],states:['California']}];
+  coordinateIndexes=null;
+`, context);
+check('zero-progress achievements are entirely absent and started achievements show exact progress', () => {
+  vm.runInContext('renderPassportView()', context);
+  assert.equal(element('achievementsContainer').innerHTML, '');
+  vm.runInContext("AppState.pins.test='v'; renderPassportView()", context);
+  assert.ok(element('achievementsContainer').innerHTML.includes('Trailblazer'));
+  assert.ok(element('achievementsContainer').innerHTML.includes('value="1" max="5"'));
+  assert.ok(!element('achievementsContainer').innerHTML.includes('The Overlander'));
+  assert.ok(!element('achievementsContainer').innerHTML.includes('Subterranean Sky'));
+});
+check('transited destinations clear exactly 60 percent of visited aura radius without visited stats', () => {
+  vm.runInContext("AppState.pins={test:'t'};AppState.regions={};AppState.counties={}", context);
+  context.fogOperations.length = 0;
+  vm.runInContext('drawFogOfWar()', context);
+  const radius = context.fogOperations.find(operation => operation[0] === 'arc')[3];
+  assert.equal(radius, vm.runInContext('calculatePixelRadius(37,85*0.6)', context));
+  assert.equal(vm.runInContext('calculateStats().visitedParks.length', context), 0);
+  assert.equal(vm.runInContext('calculateStats().statesCount', context), 0);
+  vm.runInContext("AppState.pins.test='l'", context);
+  assert.equal(vm.runInContext('calculateStats().visitedParks.length', context), 1);
+});
+check('lived pin cannot be manually cleared or downgraded', () => {
+  vm.runInContext("setPinStatus('test','v');setPinStatus('test','un')", context);
+  assert.equal(vm.runInContext('AppState.pins.test', context), 'l');
+});
+check('all revealing county tiers punch exact polygons, wishlist does not', () => {
+  vm.runInContext(`
+    PARKS=[]; AppState.pins={}; AppState.counties={};
+    countyFeaturesById['06073']={geometry:{type:'Polygon',coordinates:[[[-120,37],[-119,37],[-119,38],[-120,37]]]}};
+  `, context);
+  for (const tier of ['w', 't', 'v', 'l']) {
+    context.fogOperations.length = 0;
+    vm.runInContext(`AppState.counties={'06073':'${tier}'};drawFogOfWar()`, context);
+    assert.equal(context.fogOperations.filter(op => op[0] === 'polygonFill' && op[1] === 'evenodd').length, tier === 'w' ? 0 : 1);
+  }
+});
+check('county completion counts only visited/lived loaded FIPS records, never transits or unknown IDs', () => {
+  vm.runInContext(`
+    countyGeoJson=[{id:'06073'},{id:'06065'},{id:'06001'},{id:'06059'}];
+    AppState.counties={'06073':'l','06065':'v','06001':'t','06059':'w','99999':'v'};
+  `, context);
+  assert.equal(vm.runInContext('calculateStats().countiesCount', context), 2);
+  assert.equal(vm.runInContext('calculateStats().countyTotal', context), 4);
+  vm.runInContext('countyGeoJson=null;AppState.counties={"06073":"l"}', context);
+});
+context.testExpedition = {
+  id: 'exp_test', name: '<script>Trip</script>', startDate: '2026-09-01', endDate: '2026-09-01',
+  transitTags: ['awd', 'ferry'], purposeTags: ['photography'],
+  countyIds: ['06073'], parkIds: [], customPoiIds: [],
+  routeCoords: [[37,-120],[38,-119]], minElevationFt: -100, maxElevationFt: 11000
+};
+vm.runInContext('addExpedition(testExpedition);renderPassportView()', context);
+check('expedition history escapes names, shows date/elevation/tags and starts metadata badges', () => {
+  const history = element('expeditionHistory').innerHTML;
+  assert.ok(history.includes('&lt;script&gt;Trip&lt;/script&gt;'));
+  assert.ok(history.includes('2026-09-01'));
+  assert.ok(history.includes('-100 to 11,000 ft'));
+  assert.ok(history.includes('AWD/Off-Road'));
+  assert.ok(history.includes('Photography'));
+  const achievements = element('achievementsContainer').innerHTML;
+  assert.ok(achievements.includes('Subterranean Sky'));
+  assert.ok(achievements.includes('Thin Air'));
+  assert.ok(achievements.includes('value="1" max="5"'));
+});
+check('logged expedition routes join legacy route corridors in the same canvas', () => {
+  context.fogOperations.length = 0;
+  vm.runInContext('drawFogOfWar()', context);
+  assert.equal(context.fogOperations.filter(op => op[0] === 'stroke').length, 1);
+});
+check('all ledger fields survive local and shared payload migration', () => {
+  vm.runInContext('saveState();applyPassport(migratePassport(JSON.parse(localStorage.getItem("terra_incognita_state"))))', context);
+  const saved = JSON.parse(savedJson);
+  assert.equal(saved.expeditions.length, 1);
+  assert.equal(saved.counties['06073'], 'l');
+  assert.ok(Array.isArray(saved.customPois));
+  assert.equal(saved.customLocations, undefined);
+  assert.equal(saved.clearedCounties, undefined);
+  assert.deepEqual(JSON.parse(vm.runInContext('JSON.stringify(passportPayload())', context)), saved);
+});
+check('failed expedition persistence rolls back every promoted region, county, pin and ledger', () => {
+  const before = vm.runInContext('JSON.stringify(passportPayload())', context);
+  context.localStorage.setItem = () => { throw new Error('Storage full'); };
+  assert.throws(() => vm.runInContext(`addExpedition({...testExpedition,id:'exp_second',countyIds:['06065']})`, context), /Storage full/);
+  assert.equal(vm.runInContext('JSON.stringify(passportPayload())', context), before);
+  context.localStorage.setItem = (key, value) => { savedJson = value; };
+});
+context.CoordinateLookups = {
+  ...coordinateLookups,
+  biomeRegion: () => ({ biomes: ['5'] }),
+  lookupElevation: async () => ({ feet: 12000 })
+};
+vm.runInContext(`
+  coordinateIndexes={ecoregions:[]};
+  expeditionDraft=[
+    {kind:'county',id:'06065',name:'Riverside',coords:[33.5,-117.2]},
+    {kind:'county',id:'06059',name:'Orange',coords:[33.6,-117.8]},
+    {kind:'county',id:'06065',name:'Riverside',coords:[33.5,-117.2]}
+  ];
+`, context);
+element('expeditionName').value = 'Wizard day trip';
+element('expeditionStart').value = '2026-09-10';
+element('expeditionEnd').value = '2026-09-10';
+await element('expeditionForm').handlers.submit({ preventDefault() {} });
+check('wizard samples elevation and commits one expedition with ordered coordinates', () => {
+  assert.equal(vm.runInContext('AppState.expeditions.length', context), 2);
+  assert.equal(vm.runInContext('AppState.expeditions[1].minElevationFt', context), 12000);
+  assert.equal(vm.runInContext('AppState.counties["06065"]', context), 'v');
+  assert.equal(vm.runInContext('AppState.expeditions[1].routeCoords.length', context), 3);
+  assert.equal(vm.runInContext('AppState.expeditions[1].countyIds.length', context), 2);
+  assert.deepEqual(JSON.parse(vm.runInContext('JSON.stringify(AppState.expeditions[1].routeCoords)', context)),
+    [[33.5, -117.2], [33.6, -117.8], [33.5, -117.2]]);
+});
+context.crypto.randomUUID = () => 'failed-wizard';
+context.CoordinateLookups.lookupElevation = async () => { throw new Error('Elevation HTTP 503'); };
+vm.runInContext("expeditionDraft=[{kind:'county',id:'06001',name:'Alameda',coords:[37,-122]}]", context);
+await element('expeditionForm').handlers.submit({ preventDefault() {} });
+check('failed elevation lookup retains draft with no visits, route or expedition persisted', () => {
+  assert.equal(vm.runInContext('AppState.expeditions.length', context), 2);
+  assert.equal(vm.runInContext('expeditionDraft.length', context), 1);
+  assert.equal(vm.runInContext('AppState.counties["06001"]', context), undefined);
+  assert.ok(element('expeditionStatus').textContent.includes('Not saved: Elevation HTTP 503'));
+});
+vm.runInContext('AppState.viewOnly=true', context);
+check('read-only passports cannot add expeditions or POIs', () => {
+  assert.throws(() => vm.runInContext('addExpedition({...testExpedition,id:"readonly"})', context), /read-only/);
+  assert.throws(() => vm.runInContext('addCustomPoi(customLocation)', context), /read-only/);
 });
 console.log(`${checks} checks passed.`);

@@ -86,7 +86,7 @@
     return response.json();
   }
 
-  async function lookupElevation(lat, lng, fetcher) {
+  async function lookupElevation(lat, lng, fetcher = root.fetch) {
     validateCoordinates(lat, lng);
     const data = await fetchJson(`${ELEVATION_URL}?${new URLSearchParams({ latitude: lat, longitude: lng })}`, {}, fetcher);
     if (!Array.isArray(data.elevation) || data.elevation.length !== 1 || !Number.isFinite(data.elevation[0])) {
@@ -277,9 +277,9 @@
     if (!Array.isArray(locations)) throw new Error('Custom locations must be an array.');
     const ids = new Set();
     for (const location of locations) {
-      if (!location || typeof location.id !== 'string' || !/^custom-[a-zA-Z0-9-]+$/.test(location.id) ||
+      if (!location || typeof location.id !== 'string' || !/^(?:custom-|poi_)[a-zA-Z0-9_-]+$/.test(location.id) ||
           ids.has(location.id) || typeof location.name !== 'string' || !location.name.trim() ||
-          !['v', 'w'].includes(location.status)) throw new Error('Invalid custom location.');
+          !['v', 'w', 't', 'l'].includes(location.status)) throw new Error('Invalid custom location.');
       ids.add(location.id);
       validateCoordinates(location.lat, location.lng);
       if (!Number.isFinite(location.elevation?.meters) || !Number.isFinite(location.elevation?.feet) ||

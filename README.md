@@ -22,7 +22,7 @@ The endpoint includes NPS listings of multiple designations and related areas; i
 necessarily the administrative count of NPS units. Combined API listings such as Sequoia and Kings Canyon
 count once. Missing coordinates remain in the ledger but do not get invented map locations.
 
-Existing saves, imports, and shared passports migrate to NPS park codes. Visited status takes precedence
+Existing saves, imports, and shared passports migrate to NPS park codes. The highest status tier takes precedence
 when old IDs map to a combined listing. Quest targets and completion totals use those same listing IDs.
 International destinations come from the user-supplied Parks of the World and Wikidata datasets described below.
 The snapshot date and any catalog-loading failure are visible in the game.
@@ -113,7 +113,7 @@ that follows Leaflet's animated zoom transform before repainting at the final zo
 geographic-radius scaling and radius-aware offscreen clearing.
 The fog-removal checkbox, its JavaScript hooks, and classic-mode fog removal are commented out
 for optional restoration; the map stays shrouded in either mode. Destination pins default to
-**None**, with **All**, **Visited**, and **Wishlist** still selectable. Hiding pins does not hide
+**None**, with **All**, **Visited**, **Wishlist**, **Transit**, and **Lived** selectable. Hiding pins does not hide
 the home marker, erase visits, or stop visited destinations from clearing their fog.
 
 Wanderlog maps NPS and international destination **coordinates**, not park boundaries, to the
@@ -190,7 +190,7 @@ Fog remains entirely in the existing overscanned canvas. Visited NPS listings us
 85 km point aura. A 10 km-equivalent canvas shadow softens their edges at the current zoom.
 International point-only destinations, and NPS listings with no matching boundary, retain their
 existing auras. County hitboxes, cleared polygons, route corridors, zoom animation, and the home
-aura continue using the same canvas. Visiting a custom point does not implicitly claim its county.
+aura continue using the same canvas. The tiered ledger now also promotes a custom point's containing county.
 
 The source is the official [NPS Land Resources Division boundary service](https://services1.arcgis.com/fBc8EJBxQRMcHlei/ArcGIS/rest/services/NPS_Land_Resources_Division_Boundary_and_Tract_Data_Service/FeatureServer/2),
 linked through [NPS GIS data resources](https://www.nps.gov/subjects/gisandmapping/tools-and-data.htm).
@@ -203,8 +203,9 @@ Settings reports mapped listings and loading failures; failure leaves point-aura
 ### Logging a custom coordinate
 
 Choose **Add custom location** or right-click/long-press the world map, enter a name and WGS84
-latitude/longitude, and select Visited or Wishlist. This is a small coordinate-entry form, not
-the future date/transit/purpose expedition wizard. Before saving, `Promise.all()` resolves:
+latitude/longitude, and select Wishlist, Transited, Visited, or Lived. Optional category and purpose
+tags attach to the POI itself. For trip dates, transit tags, and multiple stops, use Log Expedition.
+Before saving a custom point, `Promise.all()` resolves:
 
 - **Elevation:** the keyless [Open-Meteo elevation API](https://open-meteo.com/en/docs/elevation-api).
   Stored as meters and feet (`meters * 3.28084`); this is terrain elevation, not building height.
@@ -239,11 +240,11 @@ can reject requests from a `file://` preview's null origin. The app still report
 instead of saving incomplete data.
 
 Custom locations live separately from catalog IDs and survive local storage, export/import,
-shared read-only passports, dataset retries, and reset. Visited customs clear point auras and
+shared read-only passports, and dataset retries. Reset removes them. Visited/Lived customs clear point auras and
 contribute their real biomes/countries/states to the existing collection and XP calculations.
-Wishlist customs do not. They appear in map filters and the searchable ledger but **do not count
+Wishlist/Transited customs do not earn visit credit. They appear in map filters and the searchable ledger but **do not count
 as NPS/park visits or satisfy park-specific quests/achievements**. Elevation and density estimates
-are displayed, but no new elevation/rarity XP or achievement rules are introduced. Open-Meteo and
+are displayed and power the progressive achievements described below. Open-Meteo and
 OpenStreetMap contributor/ODbL credits appear with custom metadata.
 
 ### Regenerating compact geography
@@ -375,12 +376,109 @@ matched coordinates through imports/exports/shares.
 
 Invalid/custom future-version passports produce visible errors. A stored unsupported version is
 not overwritten by a new empty v2 save; editing is disabled until the issue is resolved.
-This v2 upgrade adds only rarity metadata/version migration, **not** a Trip/Expedition schema,
-date/transit tags, onboarding changes, or new rarity achievements/XP.
+Step 3 introduced rarity migration. The next phase extends the same v2 envelope with a compatible
+trip ledger, tiered counties/custom POIs, and progressive achievements as described below.
 
 Run `npm test` for repository and Worker tests. The tests mock upstream providers and KV:
 they do not incur provider charges or deploy resources. `wrangler deploy --dry-run` verifies
 the Worker bundle and declared bindings without a production deployment.
+
+## Tiered travel ledger, expeditions and progressive achievements
+
+[`travel-ledger.js`](wanderlog/travel-ledger.js) defines the four status tiers for catalog pins,
+custom POIs, county FIPS codes and state/country keys:
+
+| Tier | Color | Map and completion behavior |
+| --- | --- | --- |
+| `w` Wishlist | Amber | No fog clearing, XP or visited completion |
+| `t` Transited | Slate | Point aura is 60% of the normal 85 km radius; no visited XP/stats |
+| `v` Visited | Emerald | Full point/boundary clearing and visit XP/stats |
+| `l` Lived / Home Base | Gold | Full clearing and credit, permanent until a full reset |
+
+Expedition promotion respects `w < t < v < l`. Manually marking a Lived destination as another
+tier cannot downgrade it. The map's Visited filter includes both Visited and Lived. Scratch-map
+regions and county hitboxes cycle Unexplored → Wishlist → Transited → Visited → Lived; Lived remains
+fixed. Pins/custom POIs have explicit tier buttons. Ledger-backed trip visits are restored by
+`syncDerivedState()` if their derived tier is changed. Clearing a custom POI that belongs to a trip
+is disallowed to prevent dangling history references.
+
+Geolocation, quick picks, and **Nominatim search with explicit result selection** establish home.
+Unknown city searches never silently fall back to San Francisco. Searches send text to Nominatim,
+are submit-only (not autocomplete), and are throttled to at most one request per 1.1 seconds in
+this tab. See the [Nominatim usage policy](https://operations.osmfoundation.org/policies/nominatim/);
+larger deployments must provide their own service rather than treating the public endpoint as unlimited.
+Local containment automatically sets the home county, state, and country to `l`; previous home
+territories remain Lived. New homes use a 75 km aura; old saved radii are retained. Missing geography
+blocks a new home save with a visible retry message. Simplified coast/border coverage can leave
+some parent matches unavailable; no county is guessed.
+
+County hitboxes use the existing `us-atlas@3/counties-10m.json` atlas. They remain transparent,
+with hover outlines/tooltips only. All `t`, `v`, and `l` counties clear their exact polygon with a
+feathered canvas fill (a transit county clears its polygon, even though transit **point** auras
+are narrower). State/country tiers describe completion in the Scratch Map; they do not erase
+entire nations on the canvas merely because home marks their parents Lived.
+Existing NPS/RESOLVE snapshots are reused without regeneration.
+
+### New Expedition
+
+**🗺️ Log Expedition** on the map opens the wizard implemented in
+[`expedition-ui.js`](wanderlog/expedition-ui.js):
+
+1. Set trip name and start/end dates (equal dates are valid day trips).
+2. Select transit tags (AWD/Off-Road, Ferry, Flight, Foot) and purpose tags (Photography,
+   Anniversary, Friends/Family, Solo, Work).
+3. Search/select counties by name/FIPS, parks, or saved custom POIs, or switch to map picking.
+   County/park clicks append stops without saving visits. Destination markers temporarily appear
+   even when the pin filter is None. Reorder/remove stops before saving; cancel discards the draft.
+4. Save **one** expedition, with distinct county/park/POI IDs, ordered `[lat,lng]` route coordinates,
+   and sampled terrestrial stop elevation min/max. Routes may revisit a stop; location IDs are
+   deduplicated for credit and county achievements. Open-Meteo elevation requests use batches of
+   four; already-looked-up POI elevation is reused.
+
+County centroids are representative samples, not trailheads. Straight-line 40 km canvas corridors
+join ordered stops; they are **not** highway directions. Route preview is a dashed line and does
+not clear fog. Sampled elevations are not minimum/maximum terrain along the corridor; ocean-only
+samples are excluded from terrestrial min/max. A failed elevation or storage operation retains
+the draft, displays the error, and saves no expedition or partial tier promotions.
+
+The Passport's **Expedition History** lists dates, ordered locations, sampled elevation extremes,
+and transit/purpose badges. Old imports without stop snapshots show IDs/resolved names instead.
+Saving promotes included locations and their known parent regions to `v`, preserving `l`.
+Custom visited/lived POIs earn the same 25 base visit XP as catalog stops plus existing region/
+biome collection credit; they remain excluded from NPS/park completion. Expeditions do not add
+duplicate base XP for locations already visited, and badges do not add a separate XP bonus.
+
+### Schema and migration
+
+New v2 saves, exports and shares serialize `counties`, `customPois` and `expeditions` alongside
+`pins`, `regions`, `homeBase`, legacy `routes` and `clearedPolygons`. `customLocations` remains an
+internal compatibility accessor, not a second serialized ledger. Legacy `customLocations` retain
+their rich lookup/provenance metadata and gain flat fields (`elevationFt`, `countyId`, `rarityTier`,
+etc.); legacy `clearedCounties: {FIPS: true}` becomes Visited unless a stronger tier already exists.
+Rich provider metadata remains intact; imported flat POIs without provider provenance are labeled
+as such rather than given invented sources. Conflicting dual POI ledgers are rejected.
+Migration is idempotent and performs no API lookups. Imports are validated before transactional
+application; storage failures roll back the ledger and its derived tiers. Shared passports stay
+read-only, and invalid/future saves remain protected from overwrite.
+
+### Progressive achievements
+
+Achievements with zero progress are **not created in the DOM**. Started achievements show a
+numeric count and progress bar; completed ones show their trophy. Existing park/state/biome
+milestones remain, with Lived granting the same completion credit as Visited. New metadata badges:
+
+- **Subterranean Sky:** a visited/lived terrestrial POI or expedition stop below 0 ft.
+- **Thin Air:** a visited/lived POI or expedition stop strictly above 10,000 ft.
+- **Whisper in the Woods:** a visited/lived Uncharted or Hidden Gem custom POI.
+- **The Overlander:** 5 expeditions tagged AWD/Off-Road.
+- **The Mariner:** 3 expeditions tagged Ferry.
+- **Focal Length:** 10 photography-tagged visited/lived POIs and/or expeditions.
+- **Borderlands:** 5 distinct explicitly selected counties in one expedition.
+
+Transit and wishlist records cannot unlock full-visit achievements. Photography counts a tagged
+POI and a tagged expedition as independent logged records; repeating a POI across expeditions
+does not create extra POI records. Run `npm test` for migration, rank, threshold, fog, persistence,
+wizard-failure, and disclosure regression tests; no geography import is needed.
 
 ## Homepage analytics
 

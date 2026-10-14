@@ -137,6 +137,16 @@
       background: linear-gradient(90deg, #10b981 0%, #34d399 50%, #10b981 100%);
       background-size: 200% 100%;
     }
+    #achievementsContainer progress {
+      appearance: none;
+      border: 1px solid #334155;
+      border-radius: 999px;
+      overflow: hidden;
+      background: #0f172a;
+    }
+    #achievementsContainer progress::-webkit-progress-bar { background: #0f172a; }
+    #achievementsContainer progress::-webkit-progress-value { background: linear-gradient(90deg, #f59e0b, #fde68a); }
+    #achievementsContainer progress::-moz-progress-bar { background: #f59e0b; }
   </style>
 </head>
 <body class="h-screen w-screen flex flex-col bg-[#060913] text-slate-100 select-none">
@@ -225,6 +235,12 @@
       <button id="btnCustomLocation" type="button" class="absolute top-4 right-4 z-[460] rpg-panel rounded-xl px-3 py-2 text-xs text-amber-200">
         Add custom location
       </button>
+      <button id="btnExpedition" type="button" class="absolute top-16 right-4 z-[460] rpg-panel rounded-xl px-3 py-2 text-xs text-amber-200">🗺️ Log Expedition</button>
+      <div id="expeditionMapPicker" class="hidden absolute top-28 right-4 z-[470] rpg-panel p-3 rounded-xl max-w-xs text-xs space-y-2">
+        <p>Click counties or destination markers in route order. This does not save visits yet.</p>
+        <p id="expeditionMapCount" role="status" aria-live="polite"></p>
+        <button id="btnResumeExpedition" type="button" class="bg-amber-500 text-slate-950 rounded px-3 py-2">Return to expedition</button>
+      </div>
 
       <!-- RPG Explorer Floating HUD (Top Left) -->
       <div id="rpgMapHud" class="absolute top-4 left-4 z-[460] rpg-panel rounded-2xl p-4 w-72 transition-all duration-300">
@@ -265,22 +281,28 @@
             <span class="text-[10px] text-slate-400 block uppercase">Quests Complete</span>
             <span class="font-bold text-purple-400 font-mono text-sm" id="hudQuestsCount">0 / 7</span>
           </div>
+          <div class="col-span-2 bg-slate-900/70 p-2 rounded-xl border border-slate-800">
+            <span class="text-[10px] text-slate-400 block uppercase">Counties Visited / Lived</span>
+            <span class="font-bold text-yellow-300 font-mono text-sm" id="hudCountiesCount">0 / --</span>
+          </div>
         </div>
 
         <!-- Quick filter for Leaflet pins -->
-        <div class="mt-3 pt-3 border-t border-slate-700/60 flex items-center justify-between text-[11px]">
+        <div class="mt-3 pt-3 border-t border-slate-700/60 flex flex-wrap gap-2 items-center justify-between text-[11px]">
           <span class="text-slate-400">Show pins:</span>
-          <div class="flex gap-1" id="pinFilterBtns">
+          <div class="flex flex-wrap gap-1" id="pinFilterBtns">
             <button data-filt="none" aria-pressed="true" class="px-2 py-0.5 rounded bg-blue-600/80 text-white font-medium">None</button>
             <button data-filt="all" aria-pressed="false" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white">All</button>
             <button data-filt="v" aria-pressed="false" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white">Visited</button>
             <button data-filt="w" aria-pressed="false" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white">Wishlist</button>
+            <button data-filt="t" aria-pressed="false" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white">Transit</button>
+            <button data-filt="l" aria-pressed="false" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white">Lived</button>
           </div>
         </div>
       </div>
 
       <!-- Map Legend (Bottom Left) -->
-      <div class="absolute bottom-6 left-4 z-[460] rpg-panel rounded-xl px-3 py-2 text-xs flex items-center gap-4 text-slate-300">
+      <div class="absolute bottom-20 sm:bottom-6 left-4 max-w-[calc(100%-2rem)] z-[460] rpg-panel rounded-xl px-3 py-2 text-xs flex items-center gap-4 text-slate-300">
         <!-- Optional fog toggle: restore this control and its commented JavaScript hooks together.
         <label class="flex items-center gap-2 cursor-pointer">
           <input type="checkbox" id="fogToggleCheckbox" checked class="rounded border-slate-700 text-amber-500 focus:ring-0">
@@ -288,9 +310,11 @@
         </label>
         <span class="h-3 w-px bg-slate-700"></span>
         -->
-        <div class="flex items-center gap-3 text-[11px] text-slate-400">
+        <div class="flex flex-wrap items-center gap-3 text-[11px] text-slate-400">
           <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Visited (Aura)</span>
           <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span> Wishlist</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-slate-500"></span> Transited</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-yellow-400"></span> Lived 🏰</span>
           <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-slate-600"></span> Unexplored</span>
         </div>
       </div>
@@ -308,7 +332,7 @@
         <div class="flex flex-wrap items-center justify-between gap-4 rpg-panel p-4 rounded-2xl">
           <div>
             <h2 class="cinzel text-lg font-bold text-amber-200">The Royal Cartography Records</h2>
-            <p class="text-xs text-slate-400">Click countries or US states to claim territory: Unexplored → Visited → Wishlist</p>
+            <p class="text-xs text-slate-400">Click countries or US states: Unexplored → Wishlist → Transited → Visited → Lived (permanent). Reset clears lived records.</p>
           </div>
           <div class="flex items-center gap-3">
             <div class="flex bg-slate-900 p-1 rounded-xl border border-slate-700 text-xs">
@@ -430,6 +454,10 @@
         </div>
 
         <!-- Achievements Section -->
+        <section aria-labelledby="expeditionHistoryTitle">
+          <h3 id="expeditionHistoryTitle" class="cinzel text-xl font-bold text-amber-200 mb-4">Expedition History</h3>
+          <div id="expeditionHistory" class="space-y-3"></div>
+        </section>
         <div>
           <div class="mb-4">
             <h3 class="cinzel text-xl font-bold text-amber-200">Milestone Achievements</h3>
@@ -457,6 +485,8 @@
               <option value="all">All Items</option>
               <option value="v">Visited Only</option>
               <option value="w">Wishlist Only</option>
+              <option value="t">Transited Only</option>
+              <option value="l">Lived / Home Base Only</option>
               <option value="un">Unexplored Only</option>
             </select>
           </div>
@@ -479,7 +509,7 @@
       <div>
         <h2 class="cinzel text-2xl sm:text-3xl font-extrabold text-amber-200">Establish Your Home Citadel</h2>
         <p class="text-sm text-slate-300 mt-2">
-          Every explorer begins somewhere. Set your starting home coordinates to clear the initial shroud of fog (75-mile radius) around your home sanctuary!
+          Every explorer begins somewhere. Set your home to reveal a 75 km radius and permanently claim its county, state, and country as Lived.
         </p>
       </div>
 
@@ -500,6 +530,9 @@
             Confirm
           </button>
         </div>
+        <p class="text-[11px] text-slate-400">City searches use OpenStreetMap Nominatim and send your search text to that service. Choose the correct result before confirming.</p>
+        <div id="citySearchResults" class="space-y-2 text-left"></div>
+        <p id="homeLookupStatus" role="status" aria-live="polite" class="text-xs text-amber-200"></p>
 
         <div class="flex flex-wrap gap-1.5 justify-center pt-2">
           <span class="text-[11px] text-slate-400 self-center mr-1">Quick Picks:</span>
@@ -517,6 +550,35 @@
     </div>
   </div>
 
+  <div id="expeditionModal" role="dialog" aria-modal="true" aria-labelledby="expeditionTitle" class="hidden fixed inset-0 z-[1000] bg-black/85 flex items-center justify-center p-4">
+    <form id="expeditionForm" class="rpg-panel rpg-panel-gold max-w-2xl w-full max-h-[90vh] overflow-y-auto rounded-2xl p-6 space-y-4">
+      <h2 id="expeditionTitle" class="cinzel text-xl text-amber-200">New Expedition</h2>
+      <label class="block text-xs">Trip Name<input id="expeditionName" required maxlength="150" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2"></label>
+      <div class="grid grid-cols-2 gap-3">
+        <label class="block text-xs">Start Date<input id="expeditionStart" type="date" required class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2"></label>
+        <label class="block text-xs">End Date<input id="expeditionEnd" type="date" required class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2"></label>
+      </div>
+      <fieldset class="text-xs"><legend>Transit modes</legend><div id="expeditionTransitTags" class="flex flex-wrap gap-3 mt-2"></div></fieldset>
+      <fieldset class="text-xs"><legend>Purpose tags</legend><div id="expeditionPurposeTags" class="flex flex-wrap gap-3 mt-2"></div></fieldset>
+      <div class="space-y-2">
+        <h3 class="text-sm text-amber-200">Route / County Picker</h3>
+        <p class="text-xs text-slate-400">Add stops in travel order. Reorder or remove before saving. Counties use representative centroid coordinates. Corridors connect stops directly; they are not highway routing.</p>
+        <label class="block text-xs">Search counties, parks or saved custom POIs
+          <input id="expeditionSearch" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2" placeholder="County name or FIPS, park, POI">
+        </label>
+        <div id="expeditionSearchResults" class="space-y-1 max-h-40 overflow-y-auto"></div>
+        <button id="btnPickExpeditionMap" type="button" class="rounded-lg bg-slate-700 px-3 py-2 text-xs">Pick route on map</button>
+        <ol id="expeditionStops" class="space-y-2 text-xs"></ol>
+      </div>
+      <p class="text-[11px] text-slate-400">Saving samples elevation at the selected stops using Open-Meteo. Min/max values are sampled stop elevations, not the extremes along the corridor. Ocean-only samples do not unlock terrestrial elevation achievements. No rarity queries run here.</p>
+      <p id="expeditionStatus" role="status" aria-live="polite" class="text-xs text-amber-200"></p>
+      <div class="flex justify-end gap-2">
+        <button id="btnCancelExpedition" type="button" class="rounded-lg bg-slate-800 px-4 py-2 text-sm">Cancel</button>
+        <button id="btnSaveExpedition" type="submit" class="rounded-lg bg-emerald-600 px-4 py-2 text-sm">Save expedition</button>
+      </div>
+    </form>
+  </div>
+
   <div id="toastNotification" class="fixed top-20 right-6 z-[1100] transform translate-y-4 opacity-0 pointer-events-none transition-all duration-300 rpg-panel rounded-2xl p-4 shadow-2xl flex items-center gap-3 border-amber-500/50 max-w-sm">
     <div class="text-2xl" id="toastIcon">🏆</div>
     <div>
@@ -526,7 +588,7 @@
   </div>
 
   <div id="customLocationModal" role="dialog" aria-modal="true" aria-labelledby="customLocationTitle" class="hidden fixed inset-0 z-[1000] bg-black/85 flex items-center justify-center p-4">
-    <form id="customLocationForm" class="rpg-panel rpg-panel-gold max-w-lg w-full rounded-2xl p-6 space-y-4">
+    <form id="customLocationForm" class="rpg-panel rpg-panel-gold max-w-lg w-full max-h-[90vh] overflow-y-auto rounded-2xl p-6 space-y-4">
       <h2 id="customLocationTitle" class="cinzel text-xl text-amber-200">Custom Location</h2>
       <p class="text-xs text-slate-400">Enter coordinates or right-click the map. Elevation and rarity lookups send coordinates to their providers. Region and biome lookups stay on your device.</p>
       <label class="block text-xs text-slate-300">Name
@@ -544,8 +606,14 @@
         <select id="customLocationStatus" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2">
           <option value="v">Visited</option>
           <option value="w">Wishlist</option>
+          <option value="t">Transited</option>
+          <option value="l">Lived / Home Base</option>
         </select>
       </label>
+      <label class="block text-xs text-slate-300">Category (optional)
+        <input id="customLocationCategory" maxlength="60" placeholder="e.g. waterfall" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2">
+      </label>
+      <fieldset class="text-xs text-slate-300"><legend>Purpose tags</legend><div id="customPurposeTags" class="flex flex-wrap gap-3 mt-2"></div></fieldset>
       <p class="text-[11px] text-slate-400">Simplified boundaries give approximate classifications. Rarity uses the configured provider, with a direct OSM fallback. Open-data scores estimate density, not review counts or verified popularity.</p>
       <p id="customLocationLookupStatus" role="status" aria-live="polite" class="text-xs text-amber-200"></p>
       <div class="flex justify-end gap-2">
@@ -559,6 +627,7 @@
   <script src="./international-parks.js"></script>
   <script src="./ecoregions.js"></script>
   <script src="./coordinate-lookups.js"></script>
+  <script src="./travel-ledger.js"></script>
   <script src="./rarity-config.js"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
@@ -694,31 +763,31 @@
       { id: 'states_50', title: 'Union Pioneer', desc: 'Visit all 50 US States', req: (s) => s.statesCount >= 50 },
       { id: 'countries_5', title: 'Globetrotter', desc: 'Log 5 different nations', req: (s) => s.countriesCount >= 5 }
     ];
-
-    /* Known City Lookup Coordinates for text input */
-    const CITY_LOOKUP = {
-      'seattle': { name: 'Seattle, WA', lat: 47.6062, lng: -122.3321 },
-      'seattle, wa': { name: 'Seattle, WA', lat: 47.6062, lng: -122.3321 },
-      'portland': { name: 'Portland, OR', lat: 45.5152, lng: -122.6784 },
-      'san francisco': { name: 'San Francisco, CA', lat: 37.7749, lng: -122.4194 },
-      'los angeles': { name: 'Los Angeles, CA', lat: 34.0522, lng: -118.2437 },
-      'san diego': { name: 'San Diego, CA', lat: 32.7157, lng: -117.1611 },
-      'murrieta': { name: 'Murrieta, CA', lat: 33.5539, lng: -117.2139 },
-      'murrieta, ca': { name: 'Murrieta, CA', lat: 33.5539, lng: -117.2139 },
-      'temecula': { name: 'Temecula, CA', lat: 33.4936, lng: -117.1484 },
-      'temecula, ca': { name: 'Temecula, CA', lat: 33.4936, lng: -117.1484 },
-      'denver': { name: 'Denver, CO', lat: 39.7392, lng: -104.9903 },
-      'salt lake city': { name: 'Salt Lake City, UT', lat: 40.7608, lng: -111.8910 },
-      'phoenix': { name: 'Phoenix, AZ', lat: 33.4484, lng: -112.0740 },
-      'austin': { name: 'Austin, TX', lat: 30.2672, lng: -97.7431 },
-      'chicago': { name: 'Chicago, IL', lat: 41.8781, lng: -87.6298 },
-      'new york': { name: 'New York, NY', lat: 40.7128, lng: -74.0060 },
-      'boston': { name: 'Boston, MA', lat: 42.3601, lng: -71.0589 },
-      'miami': { name: 'Miami, FL', lat: 25.7617, lng: -80.1918 },
-      'london': { name: 'London, UK', lat: 51.5074, lng: -0.1278 },
-      'paris': { name: 'Paris, France', lat: 48.8566, lng: 2.3522 },
-      'tokyo': { name: 'Tokyo, Japan', lat: 35.6762, lng: 139.6503 }
+    const achievementTargets = {
+      first_park: 1, park_5: 5, park_15: 15, park_30: 30, park_63: s => Math.max(1, s.npsTotal),
+      biome_5: 5, biome_10: 10, biome_all: 14, rare_3: 3, states_10: 10, states_50: 50, countries_5: 5
     };
+    ACHIEVEMENTS.forEach(ach => {
+      ach.target = achievementTargets[ach.id] || 1;
+      ach.progress = s => ach.id.startsWith('states_') ? s.statesCount :
+        ach.id.startsWith('countries_') ? s.countriesCount :
+        ach.id.startsWith('biome_') ? s.biomesSet.size :
+        ach.id.includes('rare') ? s.rareBiomesCount :
+        ach.id === 'park_63' ? s.usParksCount : s.visitedParks.length;
+    });
+    [
+      ['subterranean', 'Subterranean Sky', 'Log a terrestrial stop below sea level', 1],
+      ['thinAir', 'Thin Air', 'Log a stop above 10,000 ft', 1],
+      ['whispers', 'Whisper in the Woods', 'Visit an Uncharted or Hidden Gem custom location', 1],
+      ['overlander', 'The Overlander', 'Log 5 expeditions with AWD/Off-Road', 5],
+      ['mariner', 'The Mariner', 'Log 3 expeditions with Ferry', 3],
+      ['focal', 'Focal Length', 'Log 10 locations/expeditions with Photography', 10],
+      ['borderlands', 'Borderlands', 'Log 5 distinct counties in one expedition', 5]
+    ].forEach(([id, title, desc, target]) => ACHIEVEMENTS.push({
+      id, title, desc, target, progress: () => TravelLedger.metadataProgress(AppState)[id],
+      req: () => TravelLedger.metadataProgress(AppState)[id] >= target
+    }));
+
   </script>
 
   <script>
@@ -771,18 +840,86 @@
     const AppState = {
       version: 2,
       homeBase: null, // { name, lat, lng, radiusKm }
-      pins: {},       // id -> 'v' (visited) | 'w' (wishlist)
-      regions: {},    // 'c:Country' | 's:State' -> 'v' | 'w'
-      clearedCounties: {}, // FIPS id -> true
+      pins: {},       // Catalog ID -> w | t | v | l
+      regions: {},    // c:Country | s:State -> w | t | v | l
+      counties: {},   // FIPS -> w | t | v | l
       clearedPolygons: [], // GeoJSON Polygon/MultiPolygon geometries
       routes: [], // Arrays of [lat, lng] points
-      customLocations: [], // Validated coordinates and lookup metadata, separate from catalog IDs
+      customPois: [],
+      expeditions: [],
       currentTab: 'map',
       mode: 'rpg',    // 'rpg' or 'classic'
       pinFilter: 'none',
       scratchDataset: 'world',
       viewOnly: false
     };
+    let expeditionPicking = false;
+    // Compatibility for existing UI helpers; only the canonical ledger is serialized.
+    Object.defineProperty(AppState, 'customLocations', {
+      get() { return this.customPois; },
+      set(value) { this.customPois = value; }
+    });
+
+    function migratePassport(parsed) {
+      return TravelLedger.migrateState(parsed, CoordinateLookups, NpsCatalog);
+    }
+
+    function applyPassport(parsed) {
+      for (const field of ['homeBase', 'pins', 'regions', 'counties', 'customPois', 'expeditions']) AppState[field] = parsed[field] ?? (field === 'homeBase' ? null : field === 'customPois' || field === 'expeditions' ? [] : {});
+      AppState.clearedPolygons = Array.isArray(parsed.clearedPolygons) ? parsed.clearedPolygons : [];
+      AppState.routes = Array.isArray(parsed.routes) ? parsed.routes : [];
+      AppState.mode = parsed.mode || 'rpg';
+    }
+
+    function passportPayload() {
+      return {
+        version: 2, homeBase: AppState.homeBase, pins: AppState.pins, regions: AppState.regions,
+        counties: AppState.counties, customPois: AppState.customPois, expeditions: AppState.expeditions,
+        clearedPolygons: AppState.clearedPolygons, routes: AppState.routes, mode: AppState.mode
+      };
+    }
+
+    function syncDerivedState() {
+      const countyRegions = {};
+      countyGeoJson?.forEach(feature => {
+        const id = String(feature.id).padStart(5, '0');
+        const state = usaRegionGeoJson?.find(state => String(state.id).padStart(2, '0') === id.slice(0, 2));
+        countyRegions[id] = { countries: ['United States of America'], states: state ? [state.properties.name] : [], counties: [] };
+      });
+      return TravelLedger.syncDerivedState(AppState, {
+        parks: PARKS, countyRegions,
+        politicalAt: (lat, lng) => coordinateIndexes
+          ? CoordinateLookups.politicalRegion(lat, lng, coordinateIndexes, d3.geoContains) : null
+      });
+    }
+
+    function commitLedger(change) {
+      const previous = JSON.stringify(passportPayload());
+      try {
+        change();
+        syncDerivedState();
+        saveState();
+      } catch (error) {
+        applyPassport(JSON.parse(previous));
+        showNotification('Travel record not saved', error.message, '⚠️');
+        throw error;
+      }
+    }
+
+    function addCustomPoi(poi) {
+      if (AppState.viewOnly) throw new Error('Shared passports are read-only.');
+      const normalized = TravelLedger.normalizePoi(poi, CoordinateLookups);
+      if (AppState.customPois.some(item => item.id === poi.id)) throw new Error('Duplicate custom POI ID.');
+      commitLedger(() => { AppState.customPois.push(normalized); });
+    }
+
+    function addExpedition(exp) {
+      if (AppState.viewOnly) throw new Error('Shared passports are read-only.');
+      const validated = TravelLedger.validateExpeditions([exp], CoordinateLookups)[0];
+      if (AppState.expeditions.some(item => item.id === exp.id)) throw new Error('Duplicate expedition ID.');
+      if (exp.customPoiIds.some(id => !AppState.customPois.some(poi => poi.id === id))) throw new Error('Unknown custom POI in expedition.');
+      commitLedger(() => { AppState.expeditions.push(validated); });
+    }
 
     // Load state from localStorage or URL hash
     function loadPersistedState() {
@@ -791,15 +928,8 @@
       const sharedData = params.get('d');
       if (sharedData) {
         try {
-          const parsed = CoordinateLookups.migrateState(JSON.parse(decodeURIComponent(atob(sharedData))));
-          const customLocations = CoordinateLookups.validateCustomLocations(parsed.customLocations || []);
-          AppState.homeBase = parsed.homeBase || null;
-          AppState.pins = NpsCatalog.migratePins(parsed.pins || {});
-          AppState.regions = parsed.regions || {};
-          AppState.clearedCounties = parsed.clearedCounties || {};
-          AppState.clearedPolygons = Array.isArray(parsed.clearedPolygons) ? parsed.clearedPolygons : [];
-          AppState.routes = Array.isArray(parsed.routes) ? parsed.routes : [];
-          AppState.customLocations = customLocations;
+          const parsed = migratePassport(JSON.parse(decodeURIComponent(atob(sharedData))));
+          applyPassport(parsed);
           AppState.viewOnly = true;
           showNotification('📜 Passport Loaded', 'Viewing a shared explorer log (read-only).', '🧭');
           return;
@@ -814,16 +944,8 @@
       const stored = localStorage.getItem('terra_incognita_state');
       if (stored) {
         try {
-          const parsed = CoordinateLookups.migrateState(JSON.parse(stored));
-          const customLocations = CoordinateLookups.validateCustomLocations(parsed.customLocations || []);
-          AppState.homeBase = parsed.homeBase || null;
-          AppState.pins = NpsCatalog.migratePins(parsed.pins || {});
-          AppState.regions = parsed.regions || {};
-          AppState.clearedCounties = parsed.clearedCounties || {};
-          AppState.clearedPolygons = Array.isArray(parsed.clearedPolygons) ? parsed.clearedPolygons : [];
-          AppState.routes = Array.isArray(parsed.routes) ? parsed.routes : [];
-          AppState.customLocations = customLocations;
-          AppState.mode = parsed.mode || 'rpg';
+          const parsed = migratePassport(JSON.parse(stored));
+          applyPassport(parsed);
           if (!AppState.viewOnly) saveState();
         } catch (e) {
           console.error("Failed to load local storage state", e);
@@ -835,17 +957,7 @@
 
     function saveState() {
       if (AppState.viewOnly) return;
-      localStorage.setItem('terra_incognita_state', JSON.stringify({
-        version: 2,
-        homeBase: AppState.homeBase,
-        pins: AppState.pins,
-        regions: AppState.regions,
-        clearedCounties: AppState.clearedCounties,
-        clearedPolygons: AppState.clearedPolygons,
-        routes: AppState.routes,
-        customLocations: AppState.customLocations,
-        mode: AppState.mode
-      }));
+      localStorage.setItem('terra_incognita_state', JSON.stringify(passportPayload()));
     }
 
     function showNotification(title, message, icon = '🏆') {
@@ -866,9 +978,9 @@
 
   <script>
     function calculateStats() {
-      const visitedParks = PARKS.filter(p => AppState.pins[p.id] === 'v');
+      const visitedParks = PARKS.filter(p => TravelLedger.isVisited(AppState.pins[p.id]));
       const wishlistParks = PARKS.filter(p => AppState.pins[p.id] === 'w');
-      const visitedCustomLocations = AppState.customLocations.filter(p => p.status === 'v');
+      const visitedCustomLocations = AppState.customLocations.filter(p => TravelLedger.isVisited(p.status));
       
       const biomesSet = new Set();
       visitedParks.forEach(p => p.biomes.forEach(b => biomesSet.add(b)));
@@ -883,7 +995,7 @@
 
       // Add direct regions
       Object.keys(AppState.regions).forEach(k => {
-        if (AppState.regions[k] === 'v') {
+        if (TravelLedger.isVisited(AppState.regions[k])) {
           if (k.startsWith('s:') && NpsCatalog.isUsState(k.substring(2))) visitedStates.add(k.substring(2));
           if (k.startsWith('c:')) visitedCountries.add(k.substring(2));
         }
@@ -911,6 +1023,7 @@
       // Experience Points Calculation
       let xp = 0;
       xp += visitedParks.length * 25;
+      xp += visitedCustomLocations.length * 25;
       xp += visitedStates.size * 10;
       xp += visitedCountries.size * 20;
 
@@ -925,7 +1038,7 @@
       // Completed quests bonus
       let completedQuestsCount = 0;
       QUESTLINES.forEach(q => {
-        const isDone = q.parkIds.every(pid => AppState.pins[pid] === 'v');
+        const isDone = q.parkIds.every(pid => TravelLedger.isVisited(AppState.pins[pid]));
         if (isDone) {
           completedQuestsCount++;
           xp += q.bonusXp;
@@ -1001,6 +1114,8 @@
         rareBiomesCount: unlockedRare.length,
         statesCount: visitedStates.size,
         countriesCount: visitedCountries.size,
+        countiesCount: (countyGeoJson || []).filter(feature => TravelLedger.isVisited(AppState.counties[String(feature.id).padStart(5, '0')])).length,
+        countyTotal: countyGeoJson?.length || 0,
         completedQuestsCount,
         xp,
         level,
@@ -1138,28 +1253,29 @@
       // Punch out hole for Home Base
       if (AppState.homeBase) {
         const homePoint = map.latLngToContainerPoint([AppState.homeBase.lat, AppState.homeBase.lng]);
-        const radius = calculatePixelRadius(AppState.homeBase.lat, 110); // ~110km radius
+        const radius = calculatePixelRadius(AppState.homeBase.lat, AppState.homeBase.radiusKm);
         punchFogAura(homePoint.x, homePoint.y, radius, 1.0);
       }
 
       // Punch out holes for all visited parks & pins
       PARKS.forEach(p => {
-        if (AppState.pins[p.id] === 'v' && !p.intl && npsBoundariesByCode[p.id]?.length) {
+        const status = AppState.pins[p.id];
+        if (TravelLedger.isVisited(status) && !p.intl && npsBoundariesByCode[p.id]?.length) {
           npsBoundariesByCode[p.id].forEach(geometry => {
             const coordinate = geometry.type === 'Polygon' ? geometry.coordinates[0][0] : geometry.coordinates[0][0][0];
             punchFogPolygon(geometry, calculatePixelRadius(p.lat ?? coordinate[1], 10));
           });
           return;
         }
-        if (AppState.pins[p.id] === 'v' && p.lat !== null && p.lng !== null) {
+        if (TravelLedger.clearsFog(status) && p.lat !== null && p.lng !== null) {
           const pt = map.latLngToContainerPoint([p.lat, p.lng]);
-          const radius = calculatePixelRadius(p.lat, 85);
+          const radius = calculatePixelRadius(p.lat, status === 't' ? 85 * 0.6 : 85);
           if (pt.x + radius >= -fogPadding.x && pt.x - radius <= width - fogPadding.x &&
               pt.y + radius >= -fogPadding.y && pt.y - radius <= height - fogPadding.y) {
             punchFogAura(pt.x, pt.y, radius, 0.95);
           }
         }
-        if (AppState.pins[p.id] === 'v') {
+        if (TravelLedger.isVisited(status)) {
           const geometry = p.boundary || p.geometry || p.geojson?.geometry || p.geojson;
           if (geometry?.type === 'Polygon' || geometry?.type === 'MultiPolygon') {
             punchFogPolygon(geometry);
@@ -1167,19 +1283,20 @@
         }
       });
       AppState.customLocations.forEach(p => {
-        if (p.status !== 'v') return;
+        if (!TravelLedger.clearsFog(p.status)) return;
         const point = map.latLngToContainerPoint([p.lat, p.lng]);
-        punchFogAura(point.x, point.y, calculatePixelRadius(p.lat, 85), 0.95);
+        punchFogAura(point.x, point.y, calculatePixelRadius(p.lat, p.status === 't' ? 85 * 0.6 : 85), 0.95);
       });
 
-      Object.keys(AppState.clearedCounties).forEach(id => {
-        if (!AppState.clearedCounties[id]) return;
+      Object.keys(AppState.counties).forEach(id => {
+        if (!TravelLedger.clearsFog(AppState.counties[id])) return;
         const feature = countyFeaturesById[id];
         if (feature) punchFogPolygon(feature.geometry);
       });
 
       AppState.clearedPolygons.forEach(geometry => punchFogPolygon(geometry));
       AppState.routes.forEach(route => punchFogRoute(route));
+      AppState.expeditions.forEach(exp => punchFogRoute(exp.routeCoords));
 
       // Reset composite operation to normal
       fogCtx.globalCompositeOperation = 'source-over';
@@ -1270,23 +1387,23 @@
       // Clear existing
       Object.values(leafletMarkers).forEach(m => map.removeLayer(m));
       leafletMarkers = {};
-      if (AppState.pinFilter === 'none') return;
+      if (AppState.pinFilter === 'none' && !expeditionPicking) return;
 
       [...PARKS, ...customDestinations()].forEach(p => {
         if (p.lat === null || p.lng === null) return;
         const status = destinationStatus(p);
         
         // Filter by pin visibility state
-        if (AppState.pinFilter === 'v' && status !== 'v') return;
-        if (AppState.pinFilter === 'w' && status !== 'w') return;
+        if (!expeditionPicking && !['all', 'none'].includes(AppState.pinFilter) &&
+            (AppState.pinFilter === 'v' ? !TravelLedger.isVisited(status) : status !== AppState.pinFilter)) return;
 
         // Custom pin color based on status
-        const color = status === 'v' ? '#10b981' : (status === 'w' ? '#f59e0b' : '#475569');
-        const borderColor = status === 'v' ? '#6ee7b7' : (status === 'w' ? '#fde68a' : '#94a3b8');
+        const color = TravelLedger.colors[status] || '#475569';
+        const borderColor = TravelLedger.isVisited(status) ? '#fde68a' : '#94a3b8';
 
         const marker = L.circleMarker([p.lat, p.lng], {
           pane: 'destinationMarkerPane',
-          radius: status === 'v' ? 8 : 6,
+          radius: TravelLedger.isVisited(status) ? 8 : 6,
           fillColor: color,
           fillOpacity: 0.9,
           color: borderColor,
@@ -1303,6 +1420,12 @@
         // Popup with interactive status toggling
         marker.bindPopup(() => createPopupContent(p), {
           maxWidth: 280
+        });
+        marker.on('click', () => {
+          if (expeditionPicking) {
+            addExpeditionStop(p.custom ? 'poi' : 'park', p.id);
+            marker.closePopup();
+          }
         });
 
         leafletMarkers[p.id] = marker;
@@ -1327,10 +1450,11 @@
             </div>
             <span class="text-xs px-2 py-0.5 rounded font-bold uppercase ${
               cur === 'v' ? 'bg-emerald-950 text-emerald-300 border border-emerald-500/40' :
+              cur === 'l' ? 'bg-yellow-950 text-yellow-300 border border-yellow-500/40' :
               cur === 'w' ? 'bg-amber-950 text-amber-300 border border-amber-500/40' :
               'bg-slate-800 text-slate-400'
             }">
-              ${cur === 'v' ? 'Visited' : cur === 'w' ? 'Wishlist' : 'Unvisited'}
+              ${TravelLedger.labels[cur] || 'Unvisited'}${cur === 'l' ? ' 🏰' : ''}
             </span>
           </div>
           ${p.designation ? `<p class="text-xs text-amber-300">${escapeHtml(p.designation)}</p>` : ''}
@@ -1344,6 +1468,8 @@
           <div class="grid grid-cols-3 gap-1.5 pt-2 border-t border-slate-800 text-xs font-semibold">
             <button onclick="setPinStatus('${p.id}', 'v')" class="py-1 px-2 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-center transition-all ${cur==='v'?'ring-2 ring-emerald-300':''}">Visited</button>
             <button onclick="setPinStatus('${p.id}', 'w')" class="py-1 px-2 rounded bg-amber-600 hover:bg-amber-500 text-white text-center transition-all ${cur==='w'?'ring-2 ring-amber-300':''}">Wishlist</button>
+            <button onclick="setPinStatus('${p.id}', 't')" class="py-1 px-2 rounded bg-slate-600 text-white">Transited</button>
+            <button onclick="setPinStatus('${p.id}', 'l')" class="py-1 px-2 rounded bg-yellow-500 text-slate-950">Lived 🏰</button>
             <button onclick="setPinStatus('${p.id}', 'un')" class="py-1 px-2 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 text-center transition-all">Clear</button>
           </div>
         </div>
@@ -1353,28 +1479,39 @@
     function setPinStatus(parkId, status) {
       if (AppState.viewOnly) return;
       const custom = AppState.customLocations.find(p => p.id === parkId);
+      if (status !== 'un' && !Object.hasOwn(TravelLedger.ranks, status)) {
+        showNotification('Invalid status', 'Choose a supported travel status.', '⚠️');
+        return;
+      }
+      if ((custom?.status || AppState.pins[parkId]) === 'l') {
+        showNotification('Lived status preserved', 'Lived locations remain permanently revealed until a full reset.', '🏰');
+        return;
+      }
       if (custom) {
-        if (status === 'un') AppState.customLocations = AppState.customLocations.filter(p => p.id !== parkId);
-        else custom.status = status;
-        saveState();
+        if (status === 'un' && AppState.expeditions.some(exp => exp.customPoiIds.includes(parkId))) {
+          showNotification('Location retained', 'This POI belongs to an expedition. Its record cannot be removed.', '⚠️');
+          return;
+        }
+        commitLedger(() => {
+          if (status === 'un') AppState.customLocations = AppState.customLocations.filter(p => p.id !== parkId);
+          else custom.status = status;
+        });
         renderParkMarkers();
         drawFogOfWar();
         updateAllUI();
         return;
       }
       const prev = AppState.pins[parkId];
-      if (status === 'un') {
-        delete AppState.pins[parkId];
-      } else {
-        AppState.pins[parkId] = status;
-        if (status === 'v' && prev !== 'v') {
+      commitLedger(() => {
+        if (status === 'un') delete AppState.pins[parkId];
+        else AppState.pins[parkId] = status;
+      });
+        if (TravelLedger.isVisited(status) && !TravelLedger.isVisited(prev)) {
           AudioEngine.playChime('discover');
           const p = PARKS.find(item => item.id === parkId);
           showNotification('🗺️ Fog Pierced!', `You cleared the fog around ${p ? p.name : 'new territory'}!`, '✨');
         }
 
-      }
-      saveState();
       renderParkMarkers();
       drawFogOfWar();
       updateAllUI();
@@ -1513,7 +1650,7 @@
         onEachFeature(feature, layer) {
           const countyId = String(feature.id).padStart(5, '0');
           const countyName = feature.properties?.name || `County ${countyId}`;
-          layer.bindTooltip(countyName, { sticky: true, direction: 'top' });
+          layer.bindTooltip(() => `${escapeHtml(countyName)} • ${TravelLedger.labels[AppState.counties[countyId]] || 'Unexplored'}${AppState.counties[countyId] === 'l' ? ' 🏰' : ''}`, { sticky: true, direction: 'top' });
           layer.on({
             mouseover() {
               layer.setStyle({ opacity: 0.65, fillOpacity: 0.05 });
@@ -1523,16 +1660,17 @@
             },
             click() {
               if (AppState.viewOnly) return;
-              if (AppState.clearedCounties[countyId]) {
-                delete AppState.clearedCounties[countyId];
-              } else {
-                AppState.clearedCounties[countyId] = true;
+              if (expeditionPicking) {
+                addExpeditionStop('county', countyId);
+                return;
               }
-              saveState();
+              const next = nextTravelStatus(AppState.counties[countyId]);
+              commitLedger(() => { AppState.counties[countyId] = next; });
               drawFogOfWar();
+              updateAllUI();
               showNotification(
                 'Territory Revealed!',
-                `${countyName} ${AppState.clearedCounties[countyId] ? 'cleared' : 'returned to the fog'}.`,
+                `${countyName}: ${TravelLedger.labels[next]}.`,
                 '🗺️'
               );
             }
@@ -1555,6 +1693,10 @@
 
     function customLocationMetadata(p) {
       if (!p.custom) return '';
+      const tags = `<p class="text-[11px] text-amber-300">${[
+        p.category || '', ...(p.purposeTags || []).map(tag => TravelLedger.purposeTags[tag])
+      ].filter(Boolean).map(escapeHtml).join(' · ')}</p>`;
+      if (!p.rarity) return `<p class="text-[11px] text-slate-400">Elevation: ${Math.round(p.elevationFt).toLocaleString('en')} ft. ${escapeHtml(p.rarityTier || 'Rarity unavailable')}. Imported POI; no provider provenance supplied.</p>${tags}`;
       const rarity = CoordinateLookups.normalizeRarity(p.rarity, p.lat, p.lng);
       const rarityDescription = rarity.method === 'osm-poi-density'
         ? `OSM rarity estimate: ${escapeHtml(rarity.rarityTier)} (${rarity.popularityScore.toLocaleString('en')} mapped POI nodes within 5 km).`
@@ -1573,7 +1715,7 @@
         ${rarity.reviewCount === null ? '<p>Density/popularity estimate, not review-count popularity.</p>' : ''}
         ${rarity.source === 'OpenStreetMap contributors (ODbL)' ? '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" class="text-sky-300 underline">&copy; OpenStreetMap contributors (ODbL)</a>' : ''}
         ${rarity.osmDataTimestamp ? `<p>OSM data timestamp: ${escapeHtml(rarity.osmDataTimestamp)}.</p>` : ''}
-      </div>`;
+      </div>${tags}`;
     }
 
     let customLookupPending = false;
@@ -1583,6 +1725,8 @@
       document.getElementById('customLocationLat').value = lat ?? center?.lat ?? '';
       document.getElementById('customLocationLng').value = lng ?? center?.lng ?? '';
       document.getElementById('customLocationName').value = '';
+      document.getElementById('customLocationCategory').value = '';
+      document.querySelectorAll('#customPurposeTags input').forEach(input => { input.checked = false; });
       document.getElementById('customLocationStatus').value = 'v';
       document.getElementById('customLocationLookupStatus').textContent = '';
       document.getElementById('customLocationModal').classList.remove('hidden');
@@ -1636,16 +1780,13 @@
             status.textContent = `Rarity endpoint unavailable (${error.message}). Trying the direct OSM density estimate...`;
           }
         });
-        const location = { ...metadata, id: `custom-${crypto.randomUUID()}`, name, status: pinStatus };
+        const location = {
+          ...metadata, id: `poi_${crypto.randomUUID()}`, name, status: pinStatus,
+          category: document.getElementById('customLocationCategory').value.trim(),
+          purposeTags: [...document.querySelectorAll('#customPurposeTags input:checked')].map(input => input.value)
+        };
         CoordinateLookups.validateCustomLocations([location]);
-        const previous = AppState.customLocations;
-        AppState.customLocations = [...previous, location];
-        try {
-          saveState();
-        } catch (error) {
-          AppState.customLocations = previous;
-          throw error;
-        }
+        addCustomPoi(location);
         renderParkMarkers();
         drawFogOfWar();
         updateAllUI();
@@ -1695,9 +1836,7 @@
         .attr('fill', d => {
           const name = d.properties.name;
           const status = AppState.regions[prefix + name];
-          if (status === 'v') return '#10b981'; // Visited Emerald
-          if (status === 'w') return '#f59e0b'; // Wishlist Amber
-          return '#090d1a'; // Shrouded Parchment Dark
+          return TravelLedger.colors[status] || '#090d1a';
         })
         .attr('cursor', 'pointer')
         .on('click', (e, d) => {
@@ -1705,25 +1844,20 @@
           const name = d.properties.name;
           const key = prefix + name;
           const cur = AppState.regions[key];
-          // Cycle: unvisited -> visited -> wishlist -> unvisited
-          if (!cur) {
-            AppState.regions[key] = 'v';
-            AudioEngine.playChime('discover');
-            showNotification('Territory Claimed!', `${name} marked as Visited.`, '🗺️');
-          } else if (cur === 'v') {
-            AppState.regions[key] = 'w';
-          } else {
-            delete AppState.regions[key];
-          }
-          saveState();
+          const next = nextTravelStatus(cur);
+          commitLedger(() => { AppState.regions[key] = next; });
+          showNotification('Territory Claimed!', `${name}: ${TravelLedger.labels[next]}.`, '🗺️');
           renderScratchMap();
           updateAllUI();
         })
         .append('title')
-        .text(d => `${d.properties.name} • Click to cycle status`);
+        .text(d => {
+          const status = AppState.regions[prefix + d.properties.name];
+          return `${d.properties.name} • ${TravelLedger.labels[status] || 'Unexplored'}${status === 'l' ? ' 🏰' : ' • Click to promote status'}`;
+        });
 
       // Update scratch counter
-      const claimedCount = Object.keys(AppState.regions).filter(k => k.startsWith(prefix) && AppState.regions[k] === 'v').length;
+      const claimedCount = Object.keys(AppState.regions).filter(k => k.startsWith(prefix) && TravelLedger.isVisited(AppState.regions[k])).length;
       document.getElementById('scratchStatsLabel').textContent = `${claimedCount} of ${features.length} Explored`;
     }
   </script>
@@ -1757,6 +1891,7 @@
 
     function renderPassportView() {
       const stats = calculateStats();
+      renderExpeditionHistory();
 
       // Hero banner
       document.getElementById('passportClassName').textContent = stats.cls;
@@ -1817,7 +1952,7 @@
       questsContainer.innerHTML = '';
 
       QUESTLINES.forEach(q => {
-        const visitedInQuest = q.parkIds.filter(pid => AppState.pins[pid] === 'v').length;
+        const visitedInQuest = q.parkIds.filter(pid => TravelLedger.isVisited(AppState.pins[pid])).length;
         const isComplete = visitedInQuest === q.parkIds.length;
         const pct = Math.round((visitedInQuest / q.parkIds.length) * 100);
 
@@ -1851,12 +1986,15 @@
       achContainer.innerHTML = '';
 
       ACHIEVEMENTS.forEach(ach => {
+        const progress = ach.progress(stats);
+        if (progress <= 0) return;
+        const target = typeof ach.target === 'function' ? ach.target(stats) : ach.target;
         const unlocked = ach.req(stats);
         const card = document.createElement('div');
         card.className = `p-3.5 rounded-2xl border ${
           unlocked 
             ? 'bg-amber-950/20 border-amber-500/40 shadow-md shadow-amber-500/5' 
-            : 'bg-slate-950/50 border-slate-800 opacity-50'
+            : 'bg-slate-950/50 border-slate-700'
         }`;
         card.innerHTML = `
           <div class="flex items-center gap-3">
@@ -1868,6 +2006,8 @@
             <div>
               <h5 class="text-xs font-bold text-slate-200">${ach.title}</h5>
               <p class="text-[10px] text-slate-400 leading-tight mt-0.5">${ach.desc}</p>
+              <p class="text-[10px] text-amber-300 mt-1">${Math.min(progress, target)} / ${target}${unlocked ? ' • Complete' : ''}</p>
+              <progress aria-label="${ach.title} progress" value="${Math.min(progress, target)}" max="${target}" class="w-full h-2 mt-1"></progress>
             </div>
           </div>
         `;
@@ -1905,6 +2045,7 @@
         const cur = destinationStatus(p);
         const card = document.createElement('div');
         card.className = `p-3.5 rounded-2xl border rpg-panel flex items-center justify-between gap-3 ${
+          cur === 'l' ? 'border-yellow-500/40 bg-yellow-950/10' :
           cur === 'v' ? 'border-emerald-500/40 bg-emerald-950/10' :
           cur === 'w' ? 'border-amber-500/40 bg-amber-950/10' : 'border-slate-800'
         }`;
@@ -1912,6 +2053,7 @@
         card.innerHTML = `
           <div class="min-w-0">
             <h4 class="font-bold text-sm text-slate-200">${escapeHtml(p.name)}</h4>
+            <p class="text-xs" style="color:${TravelLedger.colors[cur] || '#94a3b8'}">${TravelLedger.labels[cur] || 'Unexplored'}${cur === 'l' ? ' 🏰' : ''}</p>
             ${p.designation ? `<p class="text-[11px] text-amber-300">${escapeHtml(p.designation)}</p>` : ''}
             ${p.url ? `<a href="${escapeHtml(p.url)}" target="_blank" rel="noopener noreferrer" class="text-[11px] text-sky-300 underline">${p.intl ? 'Park information source' : 'Official NPS site'}</a>` : ''}
             ${internationalMetadata(p)}
@@ -1925,9 +2067,11 @@
               <span class="text-[11px] text-amber-300">${p.biomes.map(b => BIOMES[b] ? BIOMES[b].icon : '').join('')}</span>
             </div>
           </div>
-          <div class="flex items-center gap-1 shrink-0">
+          <div class="flex flex-wrap max-w-44 gap-1 shrink-0">
             <button onclick="setPinStatus('${p.id}', 'v')" class="px-2.5 py-1 rounded-lg text-xs font-semibold ${cur==='v'?'bg-emerald-500 text-slate-950':'bg-slate-800 text-slate-400 hover:text-white'}">Visited</button>
             <button onclick="setPinStatus('${p.id}', 'w')" class="px-2.5 py-1 rounded-lg text-xs font-semibold ${cur==='w'?'bg-amber-500 text-slate-950':'bg-slate-800 text-slate-400 hover:text-white'}">Wishlist</button>
+            <button onclick="setPinStatus('${p.id}', 't')" class="px-2 py-1 rounded-lg text-xs bg-slate-700">Transited</button>
+            <button onclick="setPinStatus('${p.id}', 'l')" class="px-2 py-1 rounded-lg text-xs bg-yellow-500 text-slate-950">Lived 🏰</button>
             <button onclick="setPinStatus('${p.id}', 'un')" class="px-2 py-1 rounded-lg text-xs bg-slate-800 text-slate-400 hover:text-white" title="Clear">✕</button>
           </div>
         `;
@@ -1954,6 +2098,7 @@
       document.getElementById('statNpsTotal').textContent = npsCatalogLoaded ? `of ${stats.npsTotal} NPS listings` : 'Catalog unavailable';
       document.getElementById('hudBiomesCount').textContent = `${biomeCatalogLoaded ? stats.biomesSet.size : '--'} / ${Object.keys(BIOMES).length}`;
       document.getElementById('hudQuestsCount').textContent = `${stats.completedQuestsCount} / ${QUESTLINES.length}`;
+      document.getElementById('hudCountiesCount').textContent = `${stats.countiesCount} / ${stats.countyTotal || '--'}`;
       document.getElementById('hudClassIcon').textContent = stats.avatar;
 
       if (AppState.homeBase) {
@@ -1963,6 +2108,7 @@
 
     function updateAllUI() {
       document.getElementById('btnCustomLocation').classList.toggle('hidden', AppState.viewOnly);
+      document.getElementById('btnExpedition').classList.toggle('hidden', AppState.viewOnly);
       updateHud();
       if (AppState.currentTab === 'passport') renderPassportView();
       if (AppState.currentTab === 'scratch') renderScratchMap();
@@ -2085,16 +2231,7 @@
 
     // Share link generator (base64 URL param)
     document.getElementById('btnShare').addEventListener('click', () => {
-      const sharePayload = {
-        version: 2,
-        homeBase: AppState.homeBase,
-        pins: AppState.pins,
-        regions: AppState.regions,
-        clearedCounties: AppState.clearedCounties,
-        clearedPolygons: AppState.clearedPolygons,
-        routes: AppState.routes,
-        customLocations: AppState.customLocations
-      };
+      const sharePayload = passportPayload();
       const encoded = btoa(encodeURIComponent(JSON.stringify(sharePayload)));
       const shareUrl = `${window.location.origin}${window.location.pathname}?d=${encoded}`;
       
@@ -2130,17 +2267,9 @@
       const reader = new FileReader();
       reader.onload = (event) => {
         try {
-          const parsed = CoordinateLookups.migrateState(JSON.parse(event.target.result));
-          const customLocations = CoordinateLookups.validateCustomLocations(parsed.customLocations || []);
-          AppState.homeBase = parsed.homeBase || null;
-          AppState.pins = NpsCatalog.migratePins(parsed.pins || {});
-          AppState.regions = parsed.regions || {};
-          AppState.clearedCounties = parsed.clearedCounties || {};
-          AppState.clearedPolygons = Array.isArray(parsed.clearedPolygons) ? parsed.clearedPolygons : [];
-          AppState.routes = Array.isArray(parsed.routes) ? parsed.routes : [];
-          AppState.customLocations = customLocations;
-          AppState.mode = parsed.mode || 'rpg';
-          saveState();
+          if (AppState.viewOnly) throw new Error('Read-only passport: import is disabled.');
+          const parsed = migratePassport(JSON.parse(event.target.result));
+          commitLedger(() => applyPassport(parsed));
           initMap();
           updateHomeBaseMarker();
           renderParkMarkers();
@@ -2157,10 +2286,12 @@
 
     // Reset progress
     document.getElementById('btnResetData').addEventListener('click', () => {
+      if (AppState.viewOnly) return;
       AppState.homeBase = null;
       AppState.pins = {};
       AppState.regions = {};
-      AppState.clearedCounties = {};
+      AppState.counties = {};
+      AppState.expeditions = [];
       AppState.clearedPolygons = [];
       AppState.routes = [];
       AppState.customLocations = [];
@@ -2169,6 +2300,7 @@
     });
   </script>
 
+  <script src="./expedition-ui.js"></script>
   <script>
     function openHomeModal() {
       document.getElementById('homeBaseModal').classList.remove('hidden');
@@ -2181,13 +2313,18 @@
     document.getElementById('btnHomeConfig').addEventListener('click', openHomeModal);
 
     function setHometownCoordinates(name, lat, lng) {
-      AppState.homeBase = {
+      if (AppState.viewOnly) return;
+      CoordinateLookups.validateCoordinates(Number(lat), Number(lng));
+      if (!coordinateIndexes) {
+        showNotification('Geography unavailable', 'Retry datasets before establishing your home county.', '⚠️');
+        return;
+      }
+      commitLedger(() => { AppState.homeBase = {
         name,
         lat: parseFloat(lat),
         lng: parseFloat(lng),
-        radiusKm: 110
-      };
-      saveState();
+        radiusKm: 75
+      }; });
       closeHomeModal();
       updateHomeBaseMarker();
       if (map) {
@@ -2209,7 +2346,8 @@
         (pos) => {
           const lat = pos.coords.latitude;
           const lng = pos.coords.longitude;
-          setHometownCoordinates('Home Sanctuary', lat, lng);
+          try { setHometownCoordinates('Home Sanctuary', lat, lng); }
+          catch (error) { console.error('Home save failed', error); showNotification('Home not saved', error.message, '⚠️'); }
         },
         (err) => {
           showNotification('Location Access', 'Could not detect location. Please type your city name.', '⚠️');
@@ -2218,23 +2356,16 @@
     });
 
     // City text input submission
-    document.getElementById('btnSubmitCity').addEventListener('click', () => {
-      const query = (document.getElementById('cityInput').value || '').trim().toLowerCase();
-      if (!query) return;
-
-      if (CITY_LOOKUP[query]) {
-        const item = CITY_LOOKUP[query];
-        setHometownCoordinates(item.name, item.lat, item.lng);
-      } else {
-        // Fallback default coordinates or approximate US center
-        setHometownCoordinates(document.getElementById('cityInput').value, 37.7749, -122.4194);
-      }
+    document.getElementById('btnSubmitCity').addEventListener('click', searchHometown);
+    document.getElementById('cityInput').addEventListener('keydown', event => {
+      if (event.key === 'Enter') { event.preventDefault(); searchHometown(); }
     });
 
     // Quick city chips
     document.querySelectorAll('.quick-city-chip').forEach(chip => {
       chip.addEventListener('click', () => {
-        setHometownCoordinates(chip.dataset.name, chip.dataset.lat, chip.dataset.lng);
+        try { setHometownCoordinates(chip.dataset.name, chip.dataset.lat, chip.dataset.lng); }
+        catch (error) { console.error('Home save failed', error); showNotification('Home not saved', error.message, '⚠️'); }
       });
     });
 
@@ -2245,6 +2376,8 @@
       await loadBiomeCatalog();
       await loadGeoDatasets();
       await Promise.all([loadNpsBoundaries(), loadCoordinateGeography()]);
+      syncDerivedState();
+      saveState();
       if (map) {
         renderCountyHitboxes();
         renderParkMarkers();
@@ -2258,6 +2391,8 @@
       await Promise.all([loadGeoDatasets(), loadNpsCatalog(), loadWorldwideCatalog()]);
       await loadBiomeCatalog();
       await Promise.all([loadNpsBoundaries(), loadCoordinateGeography()]);
+      syncDerivedState();
+      saveState();
       initMap();
       updateAllUI();
 

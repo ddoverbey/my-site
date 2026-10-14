@@ -39,8 +39,8 @@
     const migrated = {};
     for (const [id, status] of Object.entries(pins)) {
       const code = aliases[id] || id;
-      // Combined NPS units retain a visit if either legacy park was visited.
-      if (migrated[code] !== 'v') migrated[code] = status;
+      const rank = { w: 1, t: 2, v: 3, l: 4 };
+      if ((rank[status] || 0) > (rank[migrated[code]] || 0)) migrated[code] = status;
     }
     return migrated;
   }
