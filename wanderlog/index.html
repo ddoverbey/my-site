@@ -106,6 +106,12 @@
       z-index: 450;
       transition: opacity 0.5s ease;
     }
+    #fogCanvasOverlay.fog-zoom-animating {
+      transition: transform 0.25s cubic-bezier(0, 0, 0.25, 1), opacity 0.5s ease;
+      will-change: transform;
+    }
+    #settingsMenu summary { list-style: none; }
+    #settingsMenu summary::-webkit-details-marker { display: none; }
     .mode-classic #fogCanvasOverlay {
       opacity: 0;
     }
@@ -133,7 +139,7 @@
 </head>
 <body class="h-screen w-screen flex flex-col bg-[#060913] text-slate-100 select-none">
 
-  <header class="h-16 border-b border-slate-800 bg-[#0c1222]/95 px-4 flex items-center justify-between z-50 shrink-0 backdrop-blur-md">
+  <header class="relative h-16 border-b border-slate-800 bg-[#0c1222]/95 px-4 flex items-center justify-between z-[600] shrink-0 backdrop-blur-md">
     <div class="flex items-center gap-3">
       <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center text-xl shadow-lg shadow-amber-500/20 border border-amber-400/40">
         🧭
@@ -178,11 +184,11 @@
         🔗
       </button>
 
-      <div class="relative group">
-        <button class="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-xs text-slate-200 transition-all">
+      <details id="settingsMenu" class="relative">
+        <summary aria-label="Settings" title="Settings" class="cursor-pointer p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-xs text-slate-200 transition-all">
           ⚙️
-        </button>
-        <div class="absolute right-0 mt-2 w-48 py-2 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all z-50">
+        </summary>
+        <div class="absolute right-0 mt-2 w-64 max-w-[calc(100vw-2rem)] py-2 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl">
           <button id="btnExport" class="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-800 flex items-center gap-2">
             <span>💾</span> Export Passport (.json)
           </button>
@@ -194,12 +200,16 @@
           <button id="btnResetData" class="w-full text-left px-4 py-2 text-xs text-rose-400 hover:bg-rose-950/40 flex items-center gap-2">
             <span>⚠️</span> Reset All Progress
           </button>
+          <div class="border-t border-slate-700 mt-2 px-4 pt-3 pb-1 text-[11px] text-slate-400" role="status" aria-live="polite">
+            <span id="npsCatalogStatus">Loading official NPS catalog...</span>
+            <button id="btnRetryNps" class="hidden mt-2 block text-amber-300 underline" type="button">Retry datasets</button>
+          </div>
         </div>
-      </div>
+      </details>
     </div>
   </header>
 
-  <main class="flex-1 relative overflow-hidden">
+  <main class="flex-1 relative isolate z-0 overflow-hidden">
 
     <!-- VIEW 1: INTERACTIVE FOG-OF-WAR & PARKS MAP -->
     <div id="tabContent-map" class="w-full h-full relative">
@@ -502,10 +512,6 @@
     </div>
   </div>
 
-  <div class="fixed bottom-3 left-3 z-[900] rpg-panel rounded-xl px-3 py-2 text-xs text-slate-300 max-w-sm" role="status" aria-live="polite">
-    <span id="npsCatalogStatus">Loading official NPS catalog...</span>
-    <button id="btnRetryNps" class="hidden ml-2 text-amber-300 underline" type="button">Retry</button>
-  </div>
   <script src="./nps-catalog.js"></script>
   <script src="./international-parks.js"></script>
   <script src="./ecoregions.js"></script>
@@ -900,6 +906,8 @@
     let map = null;
     let fogCanvas = null;
     let fogCtx = null;
+    let fogPadding = { x: 0, y: 0 };
+    let fogZoomAnimating = false;
     let leafletMarkers = {};
     let homeMarker = null;
 
@@ -941,6 +949,13 @@
 
       // Setup map event listeners to re-render the fog canvas on pan/zoom
       map.on('move', drawFogOfWar);
+      map.on('zoomanim', animateFogZoom);
+      map.on('zoomend', () => {
+        fogZoomAnimating = false;
+        fogCanvas.classList.remove('fog-zoom-animating');
+        fogCanvas.style.transform = '';
+        drawFogOfWar();
+      });
       map.on('resize', () => {
         resizeFogCanvas();
         drawFogOfWar();
@@ -960,18 +975,34 @@
     function resizeFogCanvas() {
       if (!fogCanvas || !map) return;
       const size = map.getSize();
-      fogCanvas.width = size.x;
-      fogCanvas.height = size.y;
+      // Overscan keeps the viewport covered while the bitmap scales down during zoom-out.
+      fogPadding = { x: size.x, y: size.y };
+      fogCanvas.width = size.x * 3;
+      fogCanvas.height = size.y * 3;
+      fogCanvas.style.width = `${fogCanvas.width}px`;
+      fogCanvas.style.height = `${fogCanvas.height}px`;
+      fogCanvas.style.left = `${-fogPadding.x}px`;
+      fogCanvas.style.top = `${-fogPadding.y}px`;
+      fogCanvas.style.transformOrigin = `${fogPadding.x + size.x / 2}px ${fogPadding.y + size.y / 2}px`;
+    }
+
+    function animateFogZoom(event) {
+      const scale = map.getZoomScale(event.zoom);
+      const offset = map.project(map.getCenter(), event.zoom).subtract(map.project(event.center, event.zoom));
+      fogZoomAnimating = true;
+      fogCanvas.classList.add('fog-zoom-animating');
+      fogCanvas.style.transform = `translate(${offset.x}px, ${offset.y}px) scale(${scale})`;
     }
 
     /* Fog of War Rendering Routine */
     function drawFogOfWar() {
-      if (!fogCtx || !map) return;
+      if (!fogCtx || !map || fogZoomAnimating) return;
 
       const width = fogCanvas.width;
       const height = fogCanvas.height;
 
       // Clear previous canvas frame
+      fogCtx.setTransform(1, 0, 0, 1, 0, 0);
       fogCtx.clearRect(0, 0, width, height);
 
       // If user turned fog off, exit
@@ -983,6 +1014,7 @@
       // Step 1: Draw Dense Shroud of War (Midnight Indigo with slight texture)
       fogCtx.fillStyle = 'rgba(5, 8, 16, 0.94)';
       fogCtx.fillRect(0, 0, width, height);
+      fogCtx.setTransform(1, 0, 0, 1, fogPadding.x, fogPadding.y);
 
       // Step 2: Use Destination-Out blend mode to carve out glowing exploration circles
       fogCtx.globalCompositeOperation = 'destination-out';
@@ -998,9 +1030,9 @@
       PARKS.forEach(p => {
         if (AppState.pins[p.id] === 'v' && p.lat !== null && p.lng !== null) {
           const pt = map.latLngToContainerPoint([p.lat, p.lng]);
-          // Check if point is roughly within viewport
-          if (pt.x >= -200 && pt.x <= width + 200 && pt.y >= -200 && pt.y <= height + 200) {
-            const radius = calculatePixelRadius(p.lat, 85); // 85km clear radius
+          const radius = calculatePixelRadius(p.lat, 85);
+          if (pt.x + radius >= -fogPadding.x && pt.x - radius <= width - fogPadding.x &&
+              pt.y + radius >= -fogPadding.y && pt.y - radius <= height - fogPadding.y) {
             punchFogAura(pt.x, pt.y, radius, 0.95);
           }
         }
@@ -1026,12 +1058,9 @@
 
     // Convert real-world kilometers to Leaflet screen pixels at current zoom
     function calculatePixelRadius(lat, km) {
-      const meters = km * 1000;
-      const point1 = map.latLngToContainerPoint([lat, 0]);
-      // Approximate 1 deg latitude ~ 111km
-      const dLat = (meters / 111320);
-      const point2 = map.latLngToContainerPoint([lat + dLat, 0]);
-      return Math.max(25, Math.abs(point1.y - point2.y));
+      const metersPerPixel = 2 * Math.PI * 6378137 * Math.cos(lat * Math.PI / 180) /
+        map.options.crs.scale(map.getZoom());
+      return km * 1000 / metersPerPixel;
     }
 
     function renderParkMarkers() {

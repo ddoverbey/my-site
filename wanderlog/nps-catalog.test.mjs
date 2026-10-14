@@ -194,4 +194,70 @@ check('catalog failures are surfaced', () => {
   assert.ok(element('npsCatalogStatus').textContent.includes('unavailable'));
   assert.equal(element('toastTitle').textContent, 'NPS catalog unavailable');
 });
+check('dataset status lives inside Settings rather than over the map legend', () => {
+  const settings = html.slice(html.indexOf('<details id="settingsMenu"'), html.indexOf('</details>'));
+  assert.ok(settings.includes('id="npsCatalogStatus"'));
+  assert.ok(settings.includes('id="btnRetryNps"'));
+  assert.ok(settings.includes('aria-label="Settings"'));
+  assert.ok(html.includes('isolate z-0 overflow-hidden'));
+});
+vm.runInContext(`
+  map = {
+    options: { crs: { scale: zoom => 256 * Math.pow(2, zoom) } },
+    getZoom: () => 4,
+    getSize: () => ({ x: 800, y: 600 }),
+    getZoomScale: zoom => Math.pow(2, zoom - 4),
+    getCenter: () => ({ lat: 0, lng: 0 }),
+    project: (point, zoom) => ({
+      x: point.lng * Math.pow(2, zoom), y: point.lat * Math.pow(2, zoom),
+      subtract(other) { return { x: this.x - other.x, y: this.y - other.y }; }
+    }),
+    latLngToContainerPoint: () => ({ x: -500, y: 300 })
+  };
+  fogCanvas = document.getElementById('fogCanvasOverlay');
+`, context);
+check('fog radius scales continuously with zoom without a 25-pixel floor', () => {
+  const radius = vm.runInContext('calculatePixelRadius(0, 85)', context);
+  assert.ok(radius < 25 && radius > 0);
+  vm.runInContext('map.getZoom = () => 5;', context);
+  assert.equal(vm.runInContext('calculatePixelRadius(0, 85)', context), radius * 2);
+  vm.runInContext('map.getZoom = () => 4;', context);
+});
+check('zoom bitmap overscan and transforms follow Leaflet scale and target center', () => {
+  vm.runInContext('resizeFogCanvas(); animateFogZoom({ zoom: 5, center: { lat: 1, lng: 2 } });', context);
+  assert.equal(element('fogCanvasOverlay').width, 2400);
+  assert.equal(element('fogCanvasOverlay').height, 1800);
+  assert.equal(element('fogCanvasOverlay').style.left, '-800px');
+  assert.equal(element('fogCanvasOverlay').style.transformOrigin, '1200px 900px');
+  assert.equal(element('fogCanvasOverlay').style.transform, 'translate(-64px, -32px) scale(2)');
+  assert.equal(vm.runInContext('fogZoomAnimating', context), true);
+});
+context.fogOperations = [];
+vm.runInContext(`
+  fogCtx = {
+    setTransform(...args) { fogOperations.push(['transform', ...args]); },
+    clearRect(...args) { fogOperations.push(['clear', ...args]); },
+    fillRect(...args) { fogOperations.push(['fill', ...args]); },
+    createRadialGradient() { return { addColorStop() {} }; },
+    beginPath() {}, arc(...args) { fogOperations.push(['arc', ...args]); }, fill() {}
+  };
+  document.getElementById('fogToggleCheckbox').checked = true;
+  AppState.mode = 'rpg';
+  drawFogOfWar();
+`, context);
+check('fog redraws do not interrupt a running zoom animation', () => {
+  assert.equal(context.fogOperations.length, 0);
+});
+vm.runInContext(`
+  fogZoomAnimating = false;
+  AppState.homeBase = null;
+  PARKS = [{ id: 'edge', lat: 0, lng: 0 }];
+  AppState.pins = { edge: 'v' };
+  map.getZoom = () => 10;
+  drawFogOfWar();
+`, context);
+check('offscreen clearings are culled by their radius, not a fixed 200-pixel cutoff', () => {
+  assert.equal(context.fogOperations.filter(operation => operation[0] === 'arc').length, 1);
+  assert.ok(context.fogOperations.some(operation => operation[0] === 'transform' && operation[5] === 800 && operation[6] === 600));
+});
 console.log(`${checks} checks passed.`);

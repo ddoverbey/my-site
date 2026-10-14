@@ -34,6 +34,11 @@ test suite use the development dependencies in `wanderlog/package.json`.
 
 ## Real terrestrial biomes and ecoregions
 
+Dataset load status and retry controls are available in the click/keyboard-accessible Settings menu,
+not over the map legend. The header is layered above the map/fog. Fog uses an overscanned canvas
+that follows Leaflet's animated zoom transform before repainting at the final zoom, with
+geographic-radius scaling and radius-aware offscreen clearing.
+
 Wanderlog maps NPS and international destination **coordinates**, not park boundaries, to the
 [RESOLVE Ecoregions 2017](https://ecoregions.appspot.com/) polygons, an update of WWF's 2001
 Terrestrial Ecoregions framework. The 14 biome types replace all former curated game biome tags.
