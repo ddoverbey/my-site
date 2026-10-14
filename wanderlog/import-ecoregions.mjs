@@ -79,7 +79,8 @@ async function main() {
   }
   const nps = JSON.parse(await readFile(new URL('./nps-parks.json', import.meta.url), 'utf8'));
   const worldwide = JSON.parse(await readFile(new URL('./worldwide-national-parks.json', import.meta.url), 'utf8'));
-  const internationalParks = internationalCatalog.normalizeParks(worldwide).parks;
+  const wikidata = JSON.parse(await readFile(new URL('./wikidata-national-parks-query.json', import.meta.url), 'utf8'));
+  const internationalParks = internationalCatalog.combineParks(worldwide, wikidata).parks;
   const parks = [...catalog.normalizeParks(nps.data), ...internationalParks];
   const snapshot = await buildSnapshot(await open(shapefilePath), parks);
   ecoregions.validateSnapshot(snapshot);

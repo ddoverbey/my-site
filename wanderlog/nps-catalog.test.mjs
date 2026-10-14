@@ -6,7 +6,8 @@ import ecoregions from './ecoregions.js';
 import internationalCatalog from './international-parks.js';
 import { collectParks } from './import-nps.mjs';
 const worldwide = JSON.parse(await readFile(new URL('./worldwide-national-parks.json', import.meta.url), 'utf8'));
-const internationalParks = internationalCatalog.normalizeParks(worldwide).parks;
+const wikidata = JSON.parse(await readFile(new URL('./wikidata-national-parks-query.json', import.meta.url), 'utf8'));
+const internationalParks = internationalCatalog.combineParks(worldwide, wikidata).parks;
 
 const records = Array.from({ length: 405 }, (_, index) => ({
   id: `official-${index}`, parkCode: index.toString(36).padStart(4, '0'),
@@ -114,7 +115,7 @@ const context = vm.createContext({
   tailwind: {}, console, Intl, URL, URLSearchParams, setTimeout() {},
   document: { getElementById: element, querySelectorAll: () => [], createElement: () => ({ innerHTML: '' }) },
   window: { addEventListener() {} },
-  fetch: async url => ({ ok: true, json: async () => url.includes('worldwide') ? worldwide : snapshot })
+  fetch: async url => ({ ok: true, json: async () => url.includes('wikidata') ? wikidata : url.includes('worldwide') ? worldwide : snapshot })
 });
 scripts.forEach(script => vm.runInContext(script, context));
 check('destination pins default to None and the fog toggle is not rendered', () => {
@@ -151,7 +152,7 @@ check('popup escapes API text and shows metadata', () => {
 const actualSnapshot = JSON.parse(await readFile(new URL('./nps-parks.json', import.meta.url), 'utf8'));
 const actualBiomes = JSON.parse(await readFile(new URL('./ecoregion-mapping.json', import.meta.url), 'utf8'));
 context.fetch = async url => ({
-  ok: true, json: async () => url.includes('ecoregion-mapping') ? actualBiomes : url.includes('worldwide') ? worldwide : actualSnapshot
+  ok: true, json: async () => url.includes('ecoregion-mapping') ? actualBiomes : url.includes('wikidata') ? wikidata : url.includes('worldwide') ? worldwide : actualSnapshot
 });
 await vm.runInContext('loadNpsCatalog();', context);
 await vm.runInContext('loadWorldwideCatalog();', context);
@@ -186,13 +187,13 @@ check('pokedex and rare totals use the 14 real biome types', () => {
   assert.ok(element('biomePokedexContainer').innerHTML.includes('0.23% of classified biome land'));
   assert.ok(!element('biomePokedexContainer').innerHTML.includes('Subterranean Cavern'));
 });
-vm.runInContext("AppState.pins = { fiordland: 'v', banff: 'v', 'world-af-band-e-amir': 'v', npsa: 'v' }; updateHud();", context);
+vm.runInContext("AppState.pins = { fiordland: 'v', retired_destination: 'v', 'world-af-band-e-amir': 'v', npsa: 'v' }; updateHud();", context);
 check('international visits, retired saves and NPS-only US counts stay distinct', () => {
   assert.equal(vm.runInContext('calculateStats().usParksCount', context), 1);
   assert.equal(vm.runInContext('calculateStats().visitedParks.length', context), 3);
   assert.equal(vm.runInContext('calculateStats().countriesCount', context), 3);
   assert.ok(element('savedCatalogStatus').textContent.includes('1 saved destination'));
-  assert.equal(vm.runInContext('AppState.pins.banff', context), 'v');
+  assert.equal(vm.runInContext('AppState.pins.retired_destination', context), 'v');
 });
 element('bucketSearch').value = 'afghanistan';
 vm.runInContext('renderBucketListView()', context);
@@ -205,7 +206,7 @@ check('international ledger searches countries and shows attributed source metad
   assert.ok(popup.includes('UNESCO World Heritage'));
   assert.ok(popup.includes('Park information source'));
 });
-context.fetch = async url => url.includes('worldwide')
+context.fetch = async url => url.includes('worldwide') || url.includes('wikidata')
   ? { ok: false, status: 404 }
   : { ok: true, json: async () => actualSnapshot };
 context.console = { error() {} };
@@ -216,7 +217,41 @@ check('international loading failures preserve NPS data and saved international 
   assert.ok(element('worldwideCatalogStatus').textContent.includes('unavailable'));
 });
 context.fetch = async url => ({
-  ok: true, json: async () => url.includes('worldwide') ? worldwide : actualBiomes
+  ok: true, json: async () => url.includes('wikidata') ? wikidata : url.includes('worldwide') ? worldwide : actualBiomes
+});
+await vm.runInContext('loadWorldwideCatalog();', context);
+await vm.runInContext('loadBiomeCatalog();', context);
+check('Wikidata destinations have distinct provenance and searchable country metadata', () => {
+  const popup = vm.runInContext("createPopupContent(PARKS.find(p => p.name === 'Banff National Park'))", context);
+  assert.ok(popup.includes('Wikidata query'));
+  assert.ok(!popup.includes('Parks of the World'));
+  assert.ok(!popup.includes('Official NPS site'));
+  assert.ok(element('wikidataCatalogStatus').textContent.includes('curated overlaps merged'));
+});
+vm.runInContext("AppState.pins = Object.fromEntries(PARKS.filter(p => p.intl && !p.countryCode).map(p => [p.id, 'v']));", context);
+check('unknown and non-country labels count as visits, never fabricated country credit', () => {
+  assert.ok(vm.runInContext('calculateStats().visitedParks.length', context) > 0);
+  assert.equal(vm.runInContext('calculateStats().countriesCount', context), 0);
+});
+context.fetch = async url => url.includes('wikidata') ? { ok: false, status: 503 } :
+  { ok: true, json: async () => worldwide };
+await vm.runInContext('loadWorldwideCatalog()', context);
+check('Wikidata failure retains curated parks and NPS while reporting partial coverage', () => {
+  assert.equal(vm.runInContext('PARKS.length', context), actualSnapshot.total + 72);
+  assert.equal(vm.runInContext('wikidataCatalogLoaded', context), false);
+  assert.ok(element('wikidataCatalogStatus').textContent.includes('unavailable'));
+  assert.ok(vm.runInContext("PARKS.some(p => p.id === 'fiordland')", context));
+});
+context.fetch = async url => url.includes('worldwide') ? { ok: false, status: 503 } :
+  { ok: true, json: async () => wikidata };
+await vm.runInContext('loadWorldwideCatalog()', context);
+check('curated source failure does not discard independently loaded Wikidata parks', () => {
+  assert.equal(vm.runInContext('PARKS.length', context), actualSnapshot.total + internationalCatalog.normalizeWikidata(wikidata).parks.length);
+  assert.equal(vm.runInContext('worldwideCatalogLoaded', context), false);
+  assert.equal(vm.runInContext('wikidataCatalogLoaded', context), true);
+});
+context.fetch = async url => ({
+  ok: true, json: async () => url.includes('wikidata') ? wikidata : url.includes('worldwide') ? worldwide : actualBiomes
 });
 await vm.runInContext('loadWorldwideCatalog();', context);
 await vm.runInContext('loadBiomeCatalog();', context);

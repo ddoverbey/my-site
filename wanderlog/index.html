@@ -205,6 +205,7 @@
           <div class="border-t border-slate-700 mt-2 px-4 pt-3 pb-1 text-[11px] text-slate-400" role="status" aria-live="polite">
             <span id="npsCatalogStatus">Loading official NPS catalog...</span>
             <p id="worldwideCatalogStatus" class="mt-2">Loading international park catalog...</p>
+            <p id="wikidataCatalogStatus" class="mt-2">Loading Wikidata park query...</p>
             <p id="savedCatalogStatus" class="hidden mt-2"></p>
             <button id="btnRetryNps" class="hidden mt-2 block text-amber-300 underline" type="button">Retry datasets</button>
           </div>
@@ -527,6 +528,7 @@
     let PARKS = [];
     let npsCatalogLoaded = false;
     let worldwideCatalogLoaded = false;
+    let wikidataCatalogLoaded = false;
     let biomeCatalogLoaded = false;
     const escapeHtml = NpsCatalog.escapeHtml;
 
@@ -545,7 +547,7 @@
         const mapped = PARKS.filter(p => p.biomeStatus === 'matched').length;
         const outdated = PARKS.filter(p => p.biomeStatus === 'mapping-outdated').length;
         status.textContent = `${mapped}/${PARKS.length} destination points mapped. ${PARKS.length - mapped - outdated} have no terrestrial match.${outdated ? ` ${outdated} mappings need regeneration after a coordinate/catalog change.` : ''}`;
-        document.getElementById('btnRetryNps').classList.toggle('hidden', npsCatalogLoaded && worldwideCatalogLoaded && !outdated);
+        document.getElementById('btnRetryNps').classList.toggle('hidden', npsCatalogLoaded && worldwideCatalogLoaded && wikidataCatalogLoaded && !outdated);
         if (outdated) showNotification('Ecoregion mappings outdated', 'The site owner must regenerate mappings for new or changed destination coordinates.', '⚠️');
       } catch (error) {
         console.error('Failed to load ecoregion mappings', error);
@@ -564,22 +566,37 @@
     }
 
     async function loadWorldwideCatalog() {
-      const status = document.getElementById('worldwideCatalogStatus');
-      status.textContent = 'Loading international park catalog...';
       PARKS = PARKS.filter(p => !p.intl);
       worldwideCatalogLoaded = false;
-      try {
-        const response = await fetch('./worldwide-national-parks.json', { cache: 'no-cache' });
-        if (!response.ok) throw new Error(`Worldwide catalog request failed (HTTP ${response.status}).`);
-        const result = InternationalParks.normalizeParks(await response.json());
-        PARKS = [...PARKS, ...result.parks];
-        worldwideCatalogLoaded = true;
-        status.textContent = `${result.parks.length} international parks loaded from Parks of the World; ${result.excludedCount} U.S./territory entries excluded.`;
-      } catch (error) {
-        console.error('Failed to load worldwide park catalog', error);
-        status.textContent = 'International catalog unavailable. International progress is temporarily unavailable; saved records are retained.';
-        document.getElementById('btnRetryNps').classList.remove('hidden');
-        showNotification('International catalog unavailable', 'Retry loading the datasets. NPS destinations remain available.', '⚠️');
+      wikidataCatalogLoaded = false;
+      async function load(path, statusId, label, normalize) {
+        const status = document.getElementById(statusId);
+        status.textContent = `Loading ${label}...`;
+        try {
+          const response = await fetch(path, { cache: 'no-cache' });
+          if (!response.ok) throw new Error(`${label} request failed (HTTP ${response.status}).`);
+          const result = normalize(await response.json());
+          status.textContent = `${result.parks.length} ${label} parks; ${result.excludedCount} U.S./territory rows excluded.${result.duplicateRowCount ? ` ${result.duplicateRowCount} repeated rows grouped.` : ''}`;
+          return result;
+        } catch (error) {
+          console.error(`Failed to load ${label}`, error);
+          status.textContent = `${label} unavailable. Saved records are retained; other sources remain available.`;
+          document.getElementById('btnRetryNps').classList.remove('hidden');
+          showNotification(`${label} unavailable`, 'Retry loading the datasets. Saved progress is retained.', '⚠️');
+          return null;
+        }
+      }
+      const [curated, wikidata] = await Promise.all([
+        load('./worldwide-national-parks.json', 'worldwideCatalogStatus', 'Parks of the World', InternationalParks.normalizeParks),
+        load('./wikidata-national-parks-query.json', 'wikidataCatalogStatus', 'Wikidata', InternationalParks.normalizeWikidata)
+      ]);
+      worldwideCatalogLoaded = curated !== null;
+      wikidataCatalogLoaded = wikidata !== null;
+      const merged = InternationalParks.mergeParks(curated?.parks || [], wikidata?.parks || []);
+      PARKS = [...PARKS.filter(p => !p.intl), ...merged.parks];
+      if (wikidata) {
+        const warnings = merged.parks.filter(p => p.warnings.length).length;
+        document.getElementById('wikidataCatalogStatus').textContent += ` ${merged.matchedCount} curated overlaps merged; ${merged.parks.length} international destinations. ${warnings} entries have data-quality notes.`;
       }
     }
 
@@ -815,7 +832,7 @@
           });
           visitedCountries.add('United States of America');
         }
-        if (p.country) {
+        if (p.country && (!p.intl || p.countryCode)) {
           visitedCountries.add(p.country);
         }
       });
@@ -1197,7 +1214,9 @@
       ].filter(Boolean);
       return `<p class="text-[11px] text-slate-400">${details.map(escapeHtml).join(' · ')}</p>
         ${p.memberships.length ? `<p class="text-[11px] text-amber-300">${p.memberships.map(escapeHtml).join(' · ')}</p>` : ''}
-        <a href="${InternationalParks.source}" target="_blank" rel="noopener noreferrer" class="text-[11px] text-sky-300 underline">Parks of the World (curated data)</a>`;
+        <a href="${escapeHtml(p.source)}" target="_blank" rel="noopener noreferrer" class="text-[11px] text-sky-300 underline">${p.source === InternationalParks.wikidataSource ? 'Wikidata query (CC0; unverified park classification)' : 'Parks of the World (curated data)'}</a>
+        ${p.wikidataUrl ? `<a href="${escapeHtml(p.wikidataUrl)}" target="_blank" rel="noopener noreferrer" class="text-[11px] text-sky-300 underline">Matched Wikidata query entry</a>` : ''}
+        ${(p.warnings || []).map(note => `<p class="text-[11px] text-amber-300">${escapeHtml(note)}</p>`).join('')}`;
     }
 
     function updateHomeBaseMarker() {

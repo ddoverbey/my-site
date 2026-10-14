@@ -24,7 +24,7 @@ count once. Missing coordinates remain in the ledger but do not get invented map
 
 Existing saves, imports, and shared passports migrate to NPS park codes. Visited status takes precedence
 when old IDs map to a combined listing. Quest targets and completion totals use those same listing IDs.
-International destinations come from the user-supplied Parks of the World dataset described below.
+International destinations come from the user-supplied Parks of the World and Wikidata datasets described below.
 The snapshot date and any catalog-loading failure are visible in the game.
 Until the generated dataset is published, only the international destinations are available.
 
@@ -43,29 +43,67 @@ country fields use two-letter region codes, including dependencies and territori
 The game excludes `US`, `AS`, `GU`, `MP`, `PR`, `VI`, and `UM` entries **before merging**.
 All U.S./U.S.-territory destinations remain sourced exclusively from `nps-parks.json`, even if
 the NPS catalog fails to load; there is no worldwide-data fallback for U.S. parks.
-The supplied American Samoa entry is therefore excluded, leaving 72 international parks and
-546 total destinations alongside the 474 NPS listings.
+The supplied American Samoa entry and 127 U.S. Wikidata rows are excluded.
+The merged catalog contains 3,388 international destinations and 474 NPS listings: 3,862 total.
+
+[`wikidata-national-parks-query.json`](wanderlog/wikidata-national-parks-query.json) supplies
+4,784 query rows, not 4,784 unique parks. Wikidata structured data is
+[CC0](https://www.wikidata.org/wiki/Wikidata:Licensing), but the query is not an official global
+registry: classifications, labels and current designation/status may be incomplete or inaccurate.
+This export contains only `parkLabel`, `countryLabel`, `lat` and `lon`, with **no entity IDs or
+coordinate ranks**. Repeated rows are grouped by normalized country/name, removing the phrase
+"National Park" and normalizing accents/punctuation. Identical name and full coordinate sets
+under multiple country labels are also grouped, retaining those labels in data-quality notes.
+Country aliases use canonical region codes; historical, non-country and missing country labels
+are retained explicitly rather than silently guessed or discarded.
+
+After U.S. exclusion and grouping, the query contributes 3,369 destinations. Country-aware exact
+name matching and explicit aliases merge 53 curated overlaps, preserving curated IDs, metadata
+and coordinates. Aliases include Tajik/Pamir, Shebenik-Jabllanice/Shebenik, Fir of Drenova/Drenove,
+Fir of Hotove/Hotova, Theth/Thethi and Tynwald's longer query name. Territory-aware matches cover
+Guadeloupe/France and Green Mountain/United Kingdom. Aoraki's punctuation variant normalizes
+directly; Australia's Mount Cook is not merged with New Zealand's Aoraki Mount Cook.
+No broad substring, fuzzy proximity or nearest-park matching is used.
+All 19 identified Wikidata blind spots remain as curated supplements.
+
+Where a query group has multiple coordinates, the lowest latitude/longitude source point is
+selected deterministically, independent of row order; no averaged or invented point is used.
+Alternative coordinates remain in normalized metadata and a warning appears on the park.
+This is a reproducibility policy, **not evidence that one source point is more accurate**.
+Same-name parks within a country cannot always be distinguished without entity IDs; large
+coordinate spreads are flagged rather than treated as verified identities.
+Curated/query conflicts over 50 km are shown using the nearest query point, with curated
+coordinates retained: Nosy Ve-Androka (265.4 km), Hwange (52.9 km), and Tajik/Pamir (91.7 km).
+Raw Q-number labels and uncertain country fields are also shown with quality notes.
+Unknown/non-country labels can count as park visits but do not award country collection credit or country XP.
 
 This file **replaces**, rather than supplements, the former 12 curated international destinations.
 Fiordland retains its existing saved ID, but uses the supplied file's name, coordinates and metadata.
 Other retired destination IDs remain in saved/imported/shared passports and exports, but do not
 count toward active progress. Settings reports saved records outside the loaded catalogs.
-International IDs use `world-<country-code>-<normalized-name>`; IDs do not depend on array order
-or coordinates. Renaming a park changes its ID, so deliberate renames require a saved-ID migration.
-Duplicate normalized country/name IDs fail explicitly.
+Curated international IDs use `world-<country-code>-<normalized-name>`; new query-only IDs use
+an encoded `wiki-<country>:<normalized-name>` key. IDs do not depend on array order or coordinates.
+Returning Banff, Torres del Paine, Serengeti, Plitvice, Thingvellir, Kruger and Uluru query entries
+retain their original saved IDs. Other retired IDs remain retained but inactive.
+Renaming a park changes its ID, so deliberate renames require a saved-ID migration.
+Duplicate curated normalized country/name IDs fail explicitly.
 
 Country names, coordinates, descriptions, establishment dates, areas, visitor estimates and
 memberships are normalized for the map/ledger. Source links are labeled **Park information source**,
 not **Official NPS site**. Dark Sky Reserve/Sanctuary distinctions are retained. Memberships and
 visitor counts are curated source claims, not independently verified/current annual measurements.
-Images are not hotlinked or redistributed by the UI. Credits link back to Parks of the World
-and each record's information source. NPS counts/quests remain NPS-only; international visits
+Images are not hotlinked or redistributed by the UI. Credits distinguish Parks of the World
+from Wikidata. Since named query rows lack entity IDs, their source links lead to Wikidata searches;
+raw Q-number labels link to their entity pages. NPS counts/quests remain NPS-only; international visits
 contribute to global visits, country counts, fog clearings and their mapped terrestrial biomes.
 
-Catalog loading failures are reported separately and do not erase saves or the other catalog.
-To update, replace the supplied JSON file, regenerate `ecoregion-mapping.json` using the combined
+Each international source loads independently; failures are reported separately in Settings,
+do not erase saves, and leave the other international source and NPS available. Retry reloads
+both sources and the biome mappings.
+To update, replace the supplied JSON files, regenerate `ecoregion-mapping.json` using the combined
 refresh workflow or local importer, run `npm test` in `wanderlog`, and deploy the files together.
-The workflow reads the checked-in worldwide file; it does not download or silently replace it.
+The workflow reads both checked-in international files through the same merge helper used by
+the browser; it does not download or silently replace them.
 
 ## Real terrestrial biomes and ecoregions
 
@@ -87,9 +125,9 @@ collections, biome XP, achievements, and related character classes are recalcula
 No coastline, cave, volcanic, urban, or island label is passed off as a WWF terrestrial biome.
 
 The published [`ecoregion-mapping.json`](wanderlog/ecoregion-mapping.json) is a small derived snapshot,
-so browsers never download or process the 243 MB source shapefile. The initial snapshot matches
-517 of 546 destination points after adding the worldwide file. The other 29 points have no terrestrial
-intersection, including some offshore/coastal NPS coordinates and four international coordinates. These points
+so browsers never download or process the 243 MB source shapefile. The current snapshot matches
+3,624 of 3,862 destination points after merging the Wikidata query. The other 238 points have no terrestrial
+intersection, including offshore/coastal NPS and international coordinates. These points
 still count as visits but earn no terrestrial biome. No nearest-land snapping is performed.
 Mappings include their sampled coordinates; new/changed coordinates are explicitly marked as
 needing a refresh and cannot award stale biome credit.
