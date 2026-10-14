@@ -113,7 +113,7 @@ that follows Leaflet's animated zoom transform before repainting at the final zo
 geographic-radius scaling and radius-aware offscreen clearing.
 The fog-removal checkbox and its JavaScript hooks remain commented out.
 The header uses compact emoji buttons: Explore (the RPG map), Travel Ledger (Classic mode),
-Scratch Map, and Explorer Profile (character/stats). Explore is the only main-map navigation button;
+Scratch Map, Explorer Profile (character/stats), and Achievements. Explore is the only main-map navigation button;
 entering that map always enables RPG fog. Reloading or importing restores the saved mode's matching
 page (Explore or Travel Ledger), body styling and HUD together. Each button has a tooltip and accessible
 label, visible keyboard focus, and an active-state indicator. Navigation wraps onto its own row
@@ -505,28 +505,60 @@ read-only, and invalid/future saves remain protected from overwrite.
 
 Every achievement family uses numeric `progress(stats)` and a `tiers` array, rather than a boolean
 requirement. Achievements with zero progress are **not created in the DOM**. If none have started,
-the Passport displays: *Venture out into the fog to uncover hidden achievements.* Each started family
+the dedicated **Achievements** page (🏆 in the header) displays:
+*Venture out into the fog to uncover hidden achievements.* The profile retains biomes, quests and
+expedition history; special achievement cards live on their own page. Each started family
 shows only its highest completed tier and its next goal, with numeric counts and accessible progress
 bars; later tiers stay hidden. For example, one park visit shows **First Steps** complete and
 **Trailblazer** at 1/5, not the 15- and 30-visit goals. At the final tier only that completed milestone
-remains. Park (1/5/15/30), biome (5/10/14), and state (10/50) milestones are grouped; NPS completion,
+remains. Park (1/5/15/30), biome (3 / total−1 / total), and state (10/50) milestones are grouped; NPS completion,
 rare biomes, nations and metadata badges retain their separate families.
 NPS completion uses the loaded catalog size and is unavailable when its source fails.
 Lived grants the same completion credit as Visited. Metadata badges:
 
-- **Subterranean Sky:** a visited/lived terrestrial POI or expedition stop below 0 ft.
-- **Thin Air:** a visited/lived POI or expedition stop strictly above 10,000 ft.
+- **Under Pressure:** a visited/lived terrestrial POI or expedition stop below 0 ft.
+- **Thin Air:** a visited/lived POI or sampled terrestrial expedition stop at or above 10,000 ft.
 - **Whisper in the Woods:** a visited/lived Uncharted or Hidden Gem custom POI.
-- **The Overlander:** 5 expeditions tagged AWD/Off-Road.
-- **The Mariner:** 3 expeditions tagged Ferry.
+- **The Overlander:** 5 distinct park/POI/county stops across AWD/Off-Road expeditions.
+- **The Mariner:** 3 expeditions tagged Ferry / Boat (the existing `ferry` tag).
 - **Focal Length:** 10 photography-tagged visited/lived POIs and/or expeditions.
-- **Borderlands:** 5 distinct explicitly selected counties in one expedition.
 - **Chasing Waterfalls:** 1, 5, and 10 visited/lived custom POIs whose category is exactly
   `waterfall` after trimming and case normalization. Wishlist/transit POIs do not count.
+- **Southern Cross:** a multi-day expedition with a southern-hemisphere stop. Overnight stays
+  default to the calendar-day difference between start and end dates; this is an itinerary-based
+  inference, not verified overnight GPS data. Single-day southern trips do not qualify.
+- **Local Lore:** 5 distinct visited/lived Hidden Gem POIs in the current home county.
+- **Zero Meridian:** establish a home base.
+- **Junior Ecologist / Almost There! / Adventuring Time:** collect 3, all-but-one, and all
+  terrestrial biomes, including existing expedition coordinate samples.
+- **Beyond the Horizon:** a visited/lived coordinate more than 1,000 miles from the current home.
+- **A Whole New World:** a visited/lived coordinate in a known country other than the home country;
+  requires country containment for home and never guesses from missing labels.
+- **Touch Grass:** visit a catalog entry designated as a National, State or Provincial Park.
+  This uses catalog classification, not a new protected-area containment dataset; international
+  catalog classifications remain subject to their existing source-quality caveats.
+- **Fast Travel:** two stops more than 500 miles apart on the same calendar day, using single-day
+  expeditions only. Stops from separate expeditions on the same date can qualify. Undated pins and
+  multi-day itinerary stops never receive fabricated visit dates.
+- **Earth Sandwich:** two visited/lived points within 100 miles of exact antipodes.
+- **The Long Dark:** a visited/lived point strictly north of 66.5° N or south of 66.5° S.
+- **Pole to Pole:** at least 60 degrees between the northernmost and southernmost logged points.
+- **Manifest Destiny:** visited/lived completion across the loaded US county atlas.
+- **Fifty-Nifty:** visited/lived completion of all 50 US states.
+- **How???? (Citizen of the World):** complete all countries/territories represented in the loaded
+  World Nations atlas. This is atlas coverage, not a complete sovereign-country census.
 
 Transit and wishlist records cannot unlock full-visit achievements. Photography counts a tagged
 POI and a tagged expedition as independent logged records; repeating a POI across expeditions
-does not create extra POI records. Run `npm test` for migration, rank, threshold, fog, persistence,
+does not create extra POI records. Distance/span badges use coordinates from full-visited catalog
+entries, custom POIs and logged expeditions, not the home point alone. County expedition coordinates
+remain representative centroids. All progress is derived from saved records and updates after
+edits, imports and home changes; no new passport fields or external requests are required.
+**Deferred:** Borderlands (international-border metadata), Off the Grid (highway/city distances),
+Ghost Town (settlement/population evidence), Standing on the Edge of Tomorrow (timezone crossing),
+Mr. Worldwide and Pangea Reconstructed (continent mapping), and Country Roads, Take Me Home.
+These badges have no cards until their prerequisites can be supported.
+Run `npm test` for migration, rank, threshold, fog, persistence,
 wizard-failure, and disclosure regression tests; no geography import is needed.
 
 ### Bucket List filtering

@@ -3,7 +3,7 @@
   const ranks = Object.freeze({ w: 1, t: 2, v: 3, l: 4 });
   const labels = Object.freeze({ w: 'Wishlist', t: 'Transited', v: 'Visited', l: 'Lived / Home Base' });
   const colors = Object.freeze({ w: '#f59e0b', t: '#64748b', v: '#10b981', l: '#facc15' });
-  const transitTags = Object.freeze({ awd: 'AWD/Off-Road', ferry: 'Ferry', flight: 'Flight', foot: 'Foot' });
+  const transitTags = Object.freeze({ awd: 'AWD/Off-Road', ferry: 'Ferry / Boat', flight: 'Flight', foot: 'Foot' });
   const purposeTags = Object.freeze({
     photography: 'Photography', anniversary: 'Anniversary', family: 'Friends/Family', solo: 'Solo', work: 'Work'
   });
@@ -227,27 +227,116 @@
     }, options).counties;
   }
 
-  function metadataProgress(state) {
+  function overnightNights(expedition) {
+    return (Date.parse(expedition.endDate) - Date.parse(expedition.startDate)) / 86400000;
+  }
+
+  function distanceMiles(a, b) {
+    const radians = Math.PI / 180;
+    const haversine = Math.sin((b.lat - a.lat) * radians / 2) ** 2 +
+      Math.cos(a.lat * radians) * Math.cos(b.lat * radians) *
+      Math.sin((b.lng - a.lng) * radians / 2) ** 2;
+    return 3958.7613 * 2 * Math.asin(Math.sqrt(Math.min(1, Math.max(0, haversine))));
+  }
+
+  function metadataProgress(state, { parks = [], politicalAt = () => null, biomeAt = () => [] } = {}) {
     const pois = state.customPois.filter(poi => isVisited(poi.status));
     const trips = state.expeditions;
+    const visitedParks = parks.filter(park => isVisited(state.pins[park.id]));
+    const locations = [...visitedParks, ...pois];
+    const samples = new Map();
+    const sample = (lat, lng, kind) => {
+      const key = `${lat},${lng},${kind}`;
+      if (!samples.has(key)) samples.set(key, kind === 'political' ? politicalAt(lat, lng) : biomeAt(lat, lng));
+      return samples.get(key);
+    };
+    const points = new Map();
+    const addPoint = point => {
+      if (Number.isFinite(point.lat) && Number.isFinite(point.lng)) points.set(`${point.lat},${point.lng}`, point);
+    };
+    locations.forEach(addPoint);
+    trips.forEach(trip => trip.routeCoords.forEach(([lat, lng]) => addPoint({ lat, lng })));
+    const coordinates = [...points.values()];
+    const collectedBiomes = new Set(locations.flatMap(location => location.biomes).map(String));
+    trips.forEach(trip => trip.routeCoords.forEach(([lat, lng]) =>
+      sample(lat, lng, 'biomes').forEach(biome => collectedBiomes.add(String(biome)))));
+    const homeCounties = new Set(state.homeBase
+      ? (sample(state.homeBase.lat, state.homeBase.lng, 'political')?.counties?.map(county => county.id) ||
+        (state.homeBase.countyId ? [state.homeBase.countyId] : [])) : []);
+    const homeCountries = new Set(state.homeBase
+      ? sample(state.homeBase.lat, state.homeBase.lng, 'political')?.countries || [] : []);
+    const awdLocations = new Set();
+    trips.filter(trip => trip.transitTags.includes('awd')).forEach(trip => {
+      for (const [field, prefix] of [['parkIds', 'park'], ['customPoiIds', 'poi'], ['countyIds', 'county']]) {
+        trip[field].forEach(id => awdLocations.add(`${prefix}:${id}`));
+      }
+    });
+    const datedPoints = new Map();
+    trips.filter(trip => trip.startDate === trip.endDate).forEach(trip => {
+      if (!datedPoints.has(trip.startDate)) datedPoints.set(trip.startDate, []);
+      trip.routeCoords.forEach(([lat, lng]) => datedPoints.get(trip.startDate).push({ lat, lng }));
+    });
+    let fastTravel = 0;
+    for (const dailyPoints of datedPoints.values()) {
+      if (dailyPoints.length) fastTravel = Math.max(fastTravel, 1);
+      for (let i = 0; i < dailyPoints.length && fastTravel < 2; i++) {
+        for (let j = i + 1; j < dailyPoints.length; j++) {
+          if (distanceMiles(dailyPoints[i], dailyPoints[j]) > 500) { fastTravel = 2; break; }
+        }
+      }
+      if (fastTravel === 2) break;
+    }
+    const radians = Math.PI / 180;
+    const vectors = coordinates.map(point => [
+      Math.cos(point.lat * radians) * Math.cos(point.lng * radians),
+      Math.cos(point.lat * radians) * Math.sin(point.lng * radians), Math.sin(point.lat * radians)
+    ]);
+    const antipodeLimit = -Math.cos(100 / 3958.7613);
+    let earthSandwich = coordinates.length ? 1 : 0;
+    for (let i = 0; i < vectors.length && earthSandwich < 2; i++) {
+      for (let j = i + 1; j < vectors.length; j++) {
+        if (vectors[i][0] * vectors[j][0] + vectors[i][1] * vectors[j][1] + vectors[i][2] * vectors[j][2] <= antipodeLimit) {
+          earthSandwich = 2; break;
+        }
+      }
+    }
     return {
       subterranean: pois.filter(poi => poi.biomes.length && poi.elevationFt < 0).length +
         trips.filter(exp => exp.minElevationFt !== null && exp.minElevationFt < 0).length,
-      thinAir: pois.filter(poi => poi.elevationFt > 10000).length +
-        trips.filter(exp => exp.maxElevationFt !== null && exp.maxElevationFt > 10000).length,
+      thinAir: pois.filter(poi => poi.elevationFt >= 10000).length +
+        trips.filter(exp => exp.maxElevationFt !== null && exp.maxElevationFt >= 10000).length,
       whispers: pois.filter(poi => ['Uncharted', 'Hidden Gem'].includes(poi.rarityTier)).length,
       waterfalls: pois.filter(poi => poi.category?.trim().toLowerCase() === 'waterfall').length,
-      overlander: trips.filter(exp => exp.transitTags.includes('awd')).length,
+      overlander: awdLocations.size,
       mariner: trips.filter(exp => exp.transitTags.includes('ferry')).length,
       focal: pois.filter(poi => poi.purposeTags.includes('photography')).length +
         trips.filter(exp => exp.purposeTags.includes('photography')).length,
-      borderlands: Math.max(0, ...trips.map(exp => exp.countyIds.length))
+      southernCross: trips.filter(trip => overnightNights(trip) >= 1 &&
+        trip.routeCoords.some(([lat]) => lat < 0)).length,
+      localLore: pois.filter(poi => poi.rarityTier === 'Hidden Gem' &&
+        poi.political.counties.some(county => homeCounties.has(county.id))).length,
+      zeroMeridian: state.homeBase ? 1 : 0,
+      beyondHorizon: coordinates.some(point => state.homeBase && distanceMiles(state.homeBase, point) > 1000) ? 1 : 0,
+      international: homeCountries.size ? coordinates.filter(point => {
+        const countries = point.political?.countries ||
+          (point.intl && point.countryCode ? [point.country] : sample(point.lat, point.lng, 'political')?.countries || []);
+        return countries.some(country => !homeCountries.has(country));
+      }).length : 0,
+      touchGrass: visitedParks.filter(park =>
+        /\b(?:National|State|Provincial) (?:Park(?:s)?|and State Parks)\b/i.test(park.designation || '') ||
+        (!park.intl && park.id === 'npsa')).length,
+      fastTravel,
+      earthSandwich,
+      longDark: coordinates.filter(point => point.lat > 66.5 || point.lat < -66.5).length,
+      latitudeSpan: coordinates.length
+        ? Math.max(...coordinates.map(point => point.lat)) - Math.min(...coordinates.map(point => point.lat)) : 0,
+      collectedBiomes
     };
   }
 
   const api = {
     ranks, labels, colors, transitTags, purposeTags, isVisited, clearsFog, promote,
-    homeRadiusKm, hasLoggedTravel, validateStatuses, validateTags, validateExpeditions, normalizePoi, migrateState, syncDerivedState, loggedCountyStatuses, metadataProgress
+    homeRadiusKm, hasLoggedTravel, overnightNights, distanceMiles, validateStatuses, validateTags, validateExpeditions, normalizePoi, migrateState, syncDerivedState, loggedCountyStatuses, metadataProgress
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TravelLedger = api;

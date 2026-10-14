@@ -211,7 +211,7 @@ check('home containment marks county, state and country lived and retains previo
   assert.equal(state.counties['06065'], 'l');
   assert.equal(state.counties['06073'], 'l');
 });
-check('achievement metadata uses strict elevation thresholds and full visits only', () => {
+check('achievement metadata uses inclusive high-altitude and strict below-sea thresholds for terrestrial full visits', () => {
   const state = migrate({ customPois: [
     { ...poi, id: 'poi_zero', elevationFt: 0 }, { ...poi, id: 'poi_low', elevationFt: -1 },
     { ...poi, id: 'poi_ocean', elevationFt: -50, biomes: [] },
@@ -222,7 +222,7 @@ check('achievement metadata uses strict elevation thresholds and full visits onl
   ] });
   const progress = ledger.metadataProgress(state);
   assert.equal(progress.subterranean, 2);
-  assert.equal(progress.thinAir, 1);
+  assert.equal(progress.thinAir, 2);
   assert.equal(progress.whispers, 6);
   assert.equal(progress.focal, 6);
 });
@@ -252,14 +252,145 @@ check('tag achievements reach exact counts without collapsing expeditions into s
     }
   });
   let progress = ledger.metadataProgress(state);
-  assert.equal(progress.overlander, 5);
+  assert.equal(progress.overlander, 6);
   assert.equal(progress.mariner, 3);
   assert.equal(progress.focal, 6);
-  assert.equal(progress.borderlands, 5);
+  assert.equal(progress.borderlands, undefined);
   state.expeditions.push(...Array.from({ length: 4 }, (_, index) => ({ ...exp, id: `exp_extra_${index}` })));
   progress = ledger.metadataProgress(state);
   assert.equal(progress.focal, 10);
-  assert.equal(progress.borderlands, 5);
+  assert.equal(progress.overlander, 6);
+});
+check('AWD locations deduplicate across trips while Ferry / Boat counts individual trips at exact goals', () => {
+  const trip = {
+    ...exp, countyIds: ['08001', '08003', '08005', '08007'], parkIds: ['romo'],
+    transitTags: ['awd', 'ferry']
+  };
+  const state = migrate({ expeditions: [{ ...trip, id: 'trip_one' }, { ...trip, id: 'trip_two' }] });
+  let progress = ledger.metadataProgress(state);
+  assert.equal(progress.overlander, 5);
+  assert.equal(progress.mariner, 2);
+  state.expeditions.push({ ...trip, id: 'trip_three' });
+  progress = ledger.metadataProgress(state);
+  assert.equal(progress.overlander, 5);
+  assert.equal(progress.mariner, 3);
+  state.expeditions.forEach(expedition => { expedition.countyIds = expedition.countyIds.slice(0, 3); });
+  assert.equal(ledger.metadataProgress(state).overlander, 4);
+});
+check('overnights use exact calendar dates including leap days; Southern Cross ignores day trips and northern nights', () => {
+  const trip = (id, startDate, endDate, lat) => ({
+    ...exp, id, startDate, endDate, routeCoords: [[lat, 20]]
+  });
+  const state = migrate({ expeditions: [
+    trip('southern_day', '2024-02-28', '2024-02-28', -1),
+    trip('northern_night', '2024-02-28', '2024-02-29', 1),
+    trip('equator_night', '2024-02-28', '2024-02-29', 0),
+    trip('southern_night', '2024-02-28', '2024-02-29', -1),
+    trip('southern_leap', '2024-02-28', '2024-03-01', -1)
+  ] });
+  assert.equal(ledger.overnightNights(state.expeditions[0]), 0);
+  assert.equal(ledger.overnightNights(state.expeditions[3]), 1);
+  assert.equal(ledger.overnightNights(state.expeditions[4]), 2);
+  assert.equal(ledger.metadataProgress(state).southernCross, 2);
+  assert.throws(() => migrate({ expeditions: [trip('bad', '2024-03-01', '2024-02-28', -1)] }), /date range/);
+});
+check('Local Lore requires full Hidden Gem visits in the current home county and ignores unknown home geography', () => {
+  const homeBase = { name: 'Home', lat: 45, lng: -121, radiusKm: 80, countyId: '53059' };
+  const customPois = [
+    ...Array.from({ length: 5 }, (_, index) => ({ ...poi, id: `lore_${index}`, status: index === 0 ? 'l' : 'v' })),
+    { ...poi, id: 'lore_transit', status: 't' },
+    { ...poi, id: 'lore_wish', status: 'w' },
+    { ...poi, id: 'lore_uncharted', rarityTier: 'Uncharted' },
+    { ...poi, id: 'lore_elsewhere', countyId: '06073' }
+  ];
+  assert.equal(ledger.metadataProgress(migrate({ homeBase, customPois })).localLore, 5);
+  assert.equal(ledger.metadataProgress(migrate({ customPois })).localLore, 0);
+  assert.equal(ledger.metadataProgress(migrate({ homeBase: { ...homeBase, countyId: '06073' }, customPois })).localLore, 1);
+});
+check('distance and latitude badges use full logged coordinates, not wishlist, transits or home alone', () => {
+  const homeBase = { name: 'Home', lat: 0, lng: 0, radiusKm: 80 };
+  const longitude = miles => miles / 3958.7613 * 180 / Math.PI;
+  const parks = [
+    { id: 'near', lat: 0, lng: longitude(999), biomes: [] },
+    { id: 'far', lat: 0, lng: longitude(1001), biomes: [] }
+  ];
+  assert.equal(ledger.metadataProgress(migrate({ homeBase }), { parks }).zeroMeridian, 1);
+  assert.equal(ledger.metadataProgress(migrate({ homeBase }), { parks }).latitudeSpan, 0);
+  assert.equal(ledger.metadataProgress(migrate({ homeBase }), { parks }).earthSandwich, 0);
+  for (const status of ['w', 't']) {
+    assert.equal(ledger.metadataProgress(migrate({ homeBase, pins: { far: status } }), { parks }).beyondHorizon, 0);
+  }
+  assert.equal(ledger.metadataProgress(migrate({ homeBase, pins: { near: 'v' } }), { parks }).beyondHorizon, 0);
+  assert.equal(ledger.metadataProgress(migrate({ homeBase, pins: { far: 'l' } }), { parks }).beyondHorizon, 1);
+  assert.equal(ledger.metadataProgress(migrate({ pins: { far: 'v' } }), { parks }).beyondHorizon, 0);
+  assert.ok(Math.abs(ledger.distanceMiles({ lat: 0, lng: 179 }, { lat: 0, lng: -179 }) - 138.18684) < 0.01);
+  const latitudeParks = [
+    { id: 'north', lat: 66.5, lng: 0, biomes: [] },
+    { id: 'south', lat: -66.5, lng: 0, biomes: [] },
+    { id: 'arctic', lat: 66.5001, lng: 0, biomes: [] },
+    { id: 'antarctic', lat: -66.5001, lng: 0, biomes: [] }
+  ];
+  const extreme = ledger.metadataProgress(migrate({ pins: { north: 'v', south: 'v', arctic: 'v', antarctic: 'l' } }), { parks: latitudeParks });
+  assert.equal(extreme.longDark, 2);
+  assert.equal(extreme.latitudeSpan, 133.0002);
+  const span = ledger.metadataProgress(migrate({
+    expeditions: [{ ...exp, routeCoords: [[-30, 0], [30, 0]] }]
+  }));
+  assert.equal(span.latitudeSpan, 60);
+});
+check('Fast Travel pairs only explicitly same-day itinerary points, including separate day trips', () => {
+  const longitude = miles => miles / 3958.7613 * 180 / Math.PI;
+  const trip = (id, miles, startDate = '2026-09-10', endDate = startDate) => ({
+    ...exp, id, startDate, endDate, routeCoords: [[0, 0], [0, longitude(miles)]]
+  });
+  assert.equal(ledger.metadataProgress(migrate({ expeditions: [trip('close', 499)] })).fastTravel, 1);
+  assert.equal(ledger.metadataProgress(migrate({ expeditions: [trip('far', 501)] })).fastTravel, 2);
+  assert.equal(ledger.metadataProgress(migrate({ expeditions: [trip('multi', 501, '2026-09-10', '2026-09-11')] })).fastTravel, 0);
+  const a = { ...trip('first', 0), routeCoords: [[0, 0]] };
+  const b = { ...trip('second', 501), routeCoords: [[0, longitude(501)]] };
+  assert.equal(ledger.metadataProgress(migrate({ expeditions: [a, b] })).fastTravel, 2);
+  assert.equal(ledger.metadataProgress(migrate({ expeditions: [a, { ...b, startDate: '2026-09-11', endDate: '2026-09-11' }] })).fastTravel, 1);
+  assert.equal(ledger.metadataProgress(migrate({ customPois: [poi] })).fastTravel, 0);
+});
+check('Earth Sandwich uses the configured 100-mile antipode tolerance without mistaking dateline neighbors', () => {
+  const offset = miles => miles / 3958.7613 * 180 / Math.PI;
+  const progress = longitude => ledger.metadataProgress(migrate({
+    expeditions: [{ ...exp, routeCoords: [[0, 0], [0, longitude]] }]
+  })).earthSandwich;
+  assert.equal(progress(180), 2);
+  assert.equal(progress(180 - offset(99)), 2);
+  assert.equal(progress(180 - offset(101)), 1);
+  assert.equal(ledger.metadataProgress(migrate({
+    expeditions: [{ ...exp, routeCoords: [[0, 179], [0, -179]] }]
+  })).earthSandwich, 1);
+});
+check('international coordinates require a known home country; Touch Grass requires a park designation', () => {
+  const state = migrate({
+    homeBase: { name: 'Home', lat: 45, lng: -121, radiusKm: 80 },
+    pins: { us: 'v', canada: 'l', unknown: 'v', history: 'v', npsa: 'v' }
+  });
+  const parks = [
+    { id: 'us', lat: 45, lng: -121, designation: 'National Park', biomes: [] },
+    { id: 'canada', lat: 51, lng: -115, designation: 'Provincial Park', biomes: [], intl: true, country: 'Canada', countryCode: 'CA' },
+    { id: 'unknown', lat: 52, lng: -115, biomes: [], intl: true, country: 'Unknown label', countryCode: null },
+    { id: 'history', lat: 45, lng: -121, designation: 'National Historical Park', biomes: [] },
+    { id: 'npsa', lat: -14, lng: -170, designation: '', biomes: [] }
+  ];
+  const options = { parks, politicalAt: lat => lat === 45 ? { countries: ['United States of America'] } : null };
+  const progress = ledger.metadataProgress(state, options);
+  assert.equal(progress.international, 1);
+  assert.equal(progress.touchGrass, 3);
+  assert.equal(ledger.metadataProgress({ ...state, homeBase: null }, options).international, 0);
+});
+check('biome achievements include expedition coordinates but do not invent ocean biomes or use wishlist locations', () => {
+  const state = migrate({
+    customPois: [{ ...poi, biomes: ['5', '10'] }, { ...poi, id: 'wish_biome', status: 'w', biomes: ['14'] }],
+    expeditions: [{ ...exp, routeCoords: [[45, 0], [0, 0], [45, 0]] }]
+  });
+  const before = JSON.stringify(state);
+  const progress = ledger.metadataProgress(state, { biomeAt: lat => lat === 45 ? ['11'] : [] });
+  assert.deepEqual([...progress.collectedBiomes].sort(), ['10', '11', '5']);
+  assert.equal(JSON.stringify(state), before);
 });
 check('unknown international labels never fabricate country completion', () => {
   const state = migrate({ pins: { unknown: 'v' } });

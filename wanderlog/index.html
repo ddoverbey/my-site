@@ -195,6 +195,7 @@
       <nav id="navTabs" aria-label="Atlas pages" class="flex gap-1 bg-slate-900/60 p-1 rounded-xl border border-slate-800">
         <button data-tab="scratch" type="button" class="header-icon" title="Scratch Map" aria-label="Scratch Map" aria-pressed="false" aria-controls="tabContent-scratch"><span aria-hidden="true">🗺️</span></button>
         <button data-tab="passport" type="button" class="header-icon" title="Explorer Profile — Character & Stats" aria-label="Explorer Profile — Character & Stats" aria-pressed="false" aria-controls="tabContent-passport"><span aria-hidden="true">👤</span></button>
+        <button data-tab="achievements" type="button" class="header-icon" title="Achievements" aria-label="Achievements" aria-pressed="false" aria-controls="tabContent-achievements"><span aria-hidden="true">🏆</span></button>
       </nav>
     </div>
 
@@ -478,17 +479,19 @@
           <h3 id="expeditionHistoryTitle" class="cinzel text-xl font-bold text-amber-200 mb-4">Expedition History</h3>
           <div id="expeditionHistory" class="space-y-3"></div>
         </section>
-        <div>
-          <div class="mb-4">
-            <h3 class="cinzel text-xl font-bold text-amber-200">Milestone Achievements</h3>
-            <p class="text-xs text-slate-400">Earn renown as you venture farther into the unknown</p>
-          </div>
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3" id="achievementsContainer">
-            <!-- Dynamically populated -->
-          </div>
-        </div>
 
       </div>
+    </div>
+
+    <div id="tabContent-achievements" class="w-full h-full p-4 md:p-8 overflow-y-auto hidden">
+      <section class="max-w-6xl mx-auto space-y-6 pb-20" aria-labelledby="achievementsTitle">
+        <div class="rpg-panel p-6 rounded-2xl">
+          <h2 id="achievementsTitle" class="cinzel text-xl font-bold text-amber-200">Achievements</h2>
+          <p class="text-xs text-slate-400 mt-2">Discover special milestones through your travels. Only started achievements appear; each shows your highest earned tier and your next goal.</p>
+          <p class="text-xs text-slate-400 mt-2">Overnight stays are inferred from expedition dates. Same-day distance badges use only single-day expeditions, never undated pins or assumed dates on multi-day trips.</p>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" id="achievementsContainer" aria-live="polite"></div>
+      </section>
     </div>
 
     <!-- VIEW 4: BUCKET LIST MODE (OVERLAY DRAWER / FULL VIEW) -->
@@ -599,6 +602,7 @@
         <label class="block text-xs">Start Date<input id="expeditionStart" type="date" required class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2"></label>
         <label class="block text-xs">End Date<input id="expeditionEnd" type="date" required class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2"></label>
       </div>
+      <p class="text-xs text-slate-400">Overnight stays default to the number of nights between these dates. Southern Cross uses a multi-day expedition with a stop south of the equator; no separate overnight entry is needed.</p>
       <fieldset class="text-xs"><legend>Transit modes</legend><div id="expeditionTransitTags" class="flex flex-wrap gap-3 mt-2"></div></fieldset>
       <fieldset class="text-xs"><legend>Purpose tags</legend><div id="expeditionPurposeTags" class="flex flex-wrap gap-3 mt-2"></div></fieldset>
       <div class="space-y-2">
@@ -808,9 +812,9 @@
       {
         id: 'biomes', title: 'Biome Collector', progress: s => s.biomesSet.size,
         tiers: [
-          { goal: 5, title: 'Biome Explorer', desc: 'Collect 5 unique biomes' },
-          { goal: 10, title: 'Ecologist', desc: 'Collect 10 unique biomes' },
-          { goal: 14, title: 'Gaia Wanderer', desc: 'Discover all 14 terrestrial biomes' }
+          { goal: 3, title: 'Junior Ecologist', desc: 'Log locations in 3 different terrestrial biomes' },
+          { goal: () => Object.keys(BIOMES).length - 1, title: 'Almost There!', desc: 'Log all but one of the terrestrial biomes' },
+          { goal: () => Object.keys(BIOMES).length, title: 'Adventuring Time', desc: 'Log every terrestrial biome' }
         ]
       },
       {
@@ -821,7 +825,7 @@
         id: 'states', title: 'Continental Explorer', progress: s => s.statesCount,
         tiers: [
           { goal: 10, title: 'Continental Traveler', desc: 'Claim 10 US States' },
-          { goal: 50, title: 'Union Pioneer', desc: 'Visit all 50 US States' }
+          { goal: 50, title: 'Fifty-Nifty', desc: 'Visit all 50 US states' }
         ]
       },
       {
@@ -837,16 +841,35 @@
       }))
     });
     [
-      ['subterranean', 'Subterranean Sky', 'Log a terrestrial stop below sea level', 1],
-      ['thinAir', 'Thin Air', 'Log a stop above 10,000 ft', 1],
+      ['subterranean', 'Under Pressure', 'Log a land-based stop below sea level', 1],
+      ['thinAir', 'Thin Air', 'Log a stop at 10,000 ft or higher', 1],
       ['whispers', 'Whisper in the Woods', 'Visit an Uncharted or Hidden Gem custom location', 1],
-      ['overlander', 'The Overlander', 'Log 5 expeditions with AWD/Off-Road', 5],
-      ['mariner', 'The Mariner', 'Log 3 expeditions with Ferry', 3],
+      ['overlander', 'The Overlander', 'Log 5 distinct locations in AWD/Off-Road expeditions', 5],
+      ['mariner', 'The Mariner', 'Log 3 Ferry / Boat expeditions', 3],
       ['focal', 'Focal Length', 'Log 10 locations/expeditions with Photography', 10],
-      ['borderlands', 'Borderlands', 'Log 5 distinct counties in one expedition', 5]
+      ['southernCross', 'Southern Cross', 'Log a multi-day expedition with a southern-hemisphere stop (overnight inferred from dates)', 1],
+      ['localLore', 'Local Lore', 'Uncover 5 distinct Hidden Gems within your home county', 5],
+      ['zeroMeridian', 'Zero Meridian', 'Set your home base', 1],
+      ['beyondHorizon', 'Beyond the Horizon', 'Log a location more than 1,000 miles from home', 1],
+      ['international', 'A Whole New World', 'Log your first coordinate outside your home country', 1],
+      ['touchGrass', 'Touch Grass', 'Visit a catalog destination designated as a National, State or Provincial Park', 1],
+      ['fastTravel', 'Fast Travel', 'Log two stops more than 500 miles apart on the same day in single-day expeditions', 2],
+      ['earthSandwich', 'Earth Sandwich', 'Log two points within 100 miles of exact antipodes', 2],
+      ['longDark', 'The Long Dark', 'Log a location north of 66.5° N or south of 66.5° S', 1],
+      ['latitudeSpan', 'Pole to Pole', 'Log coordinates spanning at least 60 degrees of latitude', 60]
     ].forEach(([id, title, desc, goal]) => ACHIEVEMENTS.push({
       id, title, tiers: [{ goal, title, desc }], progress: s => s.metadataProgress[id]
     }));
+    ACHIEVEMENTS.push(
+      {
+        id: 'counties', title: 'Manifest Destiny', progress: s => s.countiesCount,
+        tiers: [{ goal: s => s.countyTotal, title: 'Manifest Destiny', desc: 'Visit every county in the loaded US county atlas' }]
+      },
+      {
+        id: 'worldAtlas', title: 'How???? (Citizen of the World)', progress: s => s.atlasCountriesCount,
+        tiers: [{ goal: s => s.atlasCountriesTotal, title: 'Citizen of the World', desc: 'Visit every country/territory represented in the World Nations atlas (not a sovereign-country census)' }]
+      }
+    );
 
   </script>
 
@@ -1052,10 +1075,15 @@
       const visitedParks = PARKS.filter(p => TravelLedger.isVisited(AppState.pins[p.id]));
       const wishlistParks = PARKS.filter(p => AppState.pins[p.id] === 'w');
       const visitedCustomLocations = AppState.customLocations.filter(p => TravelLedger.isVisited(p.status));
+      const metadataProgress = TravelLedger.metadataProgress(AppState, {
+        parks: PARKS,
+        politicalAt: (lat, lng) => coordinateIndexes
+          ? CoordinateLookups.politicalRegion(lat, lng, coordinateIndexes, d3.geoContains) : null,
+        biomeAt: (lat, lng) => coordinateIndexes
+          ? CoordinateLookups.biomeRegion(lat, lng, coordinateIndexes.ecoregions, d3.geoContains).biomes : []
+      });
       
-      const biomesSet = new Set();
-      visitedParks.forEach(p => p.biomes.forEach(b => biomesSet.add(b)));
-      visitedCustomLocations.forEach(p => p.biomes.forEach(b => biomesSet.add(b)));
+      const biomesSet = metadataProgress.collectedBiomes;
 
       const rareBiomesList = Object.keys(BIOMES).filter(b => BIOMES[b].rarity === 'rare');
       const unlockedRare = rareBiomesList.filter(b => biomesSet.has(b));
@@ -1195,6 +1223,8 @@
         rareBiomesCount: unlockedRare.length,
         statesCount: visitedStates.size,
         countriesCount: visitedCountries.size,
+        atlasCountriesCount: (worldGeoJson || []).filter(feature => visitedCountries.has(feature.properties.name)).length,
+        atlasCountriesTotal: worldGeoJson?.length || 0,
         countiesCount,
         countyTotal: countyGeoJson?.length || 0,
         completedQuestsCount,
@@ -1207,7 +1237,7 @@
         cls,
         titleDesc,
         avatar,
-        metadataProgress: TravelLedger.metadataProgress(AppState)
+        metadataProgress
       };
     }
   </script>
@@ -2172,7 +2202,10 @@
         questsContainer.appendChild(card);
       });
 
-      // Achievements
+      renderAchievementsView(stats);
+    }
+
+    function renderAchievementsView(stats = calculateStats()) {
       const achContainer = document.getElementById('achievementsContainer');
       achContainer.innerHTML = '';
 
@@ -2181,7 +2214,8 @@
         if (progress <= 0) return;
         const tiers = ach.tiers.map(tier => ({
           ...tier, goal: typeof tier.goal === 'function' ? tier.goal(stats) : tier.goal
-        }));
+        })).filter(tier => tier.goal > 0);
+        if (!tiers.length) return;
         const completed = tiers.filter(tier => progress >= tier.goal).at(-1);
         const next = tiers.find(tier => progress < tier.goal);
         const visibleTiers = [completed, next].filter(Boolean);
@@ -2198,12 +2232,12 @@
             }">
               ${completed ? '🏆' : '🔒'}
             </div>
-            <div>
+            <div class="min-w-0 flex-1">
               <h5 class="text-xs font-bold text-slate-200">${escapeHtml(ach.title)}</h5>
               ${visibleTiers.map(tier => `
                 <p class="text-xs text-slate-200 mt-2">${escapeHtml(tier.title)}</p>
                 <p class="text-[10px] text-slate-400 leading-tight mt-0.5">${escapeHtml(tier.desc)}</p>
-                <p class="text-[10px] text-amber-300 mt-1">${Math.min(progress, tier.goal)} / ${tier.goal}${progress >= tier.goal ? ' • Complete' : ''}</p>
+                <p class="text-[10px] text-amber-300 mt-1">${(Math.floor(Math.min(progress, tier.goal) * 10) / 10).toLocaleString('en')} / ${tier.goal}${progress >= tier.goal ? ' • Complete' : ''}</p>
                 <progress aria-label="${escapeHtml(tier.title)} progress" value="${Math.min(progress, tier.goal)}" max="${tier.goal}" class="w-full h-2 mt-1"></progress>
               `).join('')}
             </div>
@@ -2350,6 +2384,7 @@
       if (AppState.currentTab === 'passport') renderPassportView();
       if (AppState.currentTab === 'scratch') renderScratchMap();
       if (AppState.currentTab === 'bucketlist') renderBucketListView();
+      if (AppState.currentTab === 'achievements') renderAchievementsView();
     }
   </script>
 
@@ -2379,6 +2414,7 @@
       document.getElementById('tabContent-scratch').classList.add('hidden');
       document.getElementById('tabContent-passport').classList.add('hidden');
       document.getElementById('tabContent-bucketlist').classList.add('hidden');
+      document.getElementById('tabContent-achievements').classList.add('hidden');
 
       if (tabId === 'map') {
         document.getElementById('tabContent-map').classList.remove('hidden');
@@ -2398,6 +2434,9 @@
       } else if (tabId === 'bucketlist') {
         document.getElementById('tabContent-bucketlist').classList.remove('hidden');
         renderBucketListView();
+      } else if (tabId === 'achievements') {
+        document.getElementById('tabContent-achievements').classList.remove('hidden');
+        renderAchievementsView();
       }
     }
 

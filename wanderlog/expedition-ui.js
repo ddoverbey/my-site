@@ -214,6 +214,7 @@ function renderExpeditionHistory() {
     return `<article class="rpg-panel rounded-2xl p-4 space-y-2">
       <h4 class="font-bold text-amber-200">${escapeHtml(exp.name)}</h4>
       <p class="text-xs text-slate-400">${escapeHtml(exp.startDate)} – ${escapeHtml(exp.endDate)}</p>
+      <p class="text-xs text-slate-400">${TravelLedger.overnightNights(exp)} overnight stay${TravelLedger.overnightNights(exp) === 1 ? '' : 's'} inferred from dates</p>
       <p class="text-xs text-slate-300">${names.map(escapeHtml).join(' → ')}</p>
       <p class="text-xs text-slate-400">${exp.minElevationFt === null ? 'No terrestrial stop elevations available' :
         `Sampled terrestrial stop elevations: ${Math.round(exp.minElevationFt).toLocaleString('en')} to ${Math.round(exp.maxElevationFt).toLocaleString('en')} ft`}</p>

@@ -127,7 +127,7 @@ const context = vm.createContext({
 });
 scripts.forEach(script => vm.runInContext(script, context));
 check('header navigation uses compact icons with accessible labels and synchronized pressed states', () => {
-  for (const label of ['Explore — RPG mode', 'Travel Ledger — Classic mode', 'Scratch Map', 'Explorer Profile — Character & Stats']) {
+  for (const label of ['Explore — RPG mode', 'Travel Ledger — Classic mode', 'Scratch Map', 'Explorer Profile — Character & Stats', 'Achievements']) {
     assert.ok(html.includes(`aria-label="${label}"`));
     assert.ok(html.includes(`title="${label}"`));
   }
@@ -599,7 +599,7 @@ check('zero-progress achievements are entirely absent and started achievements s
   assert.ok(element('achievementsContainer').innerHTML.includes('Trailblazer'));
   assert.ok(element('achievementsContainer').innerHTML.includes('value="1" max="5"'));
   assert.ok(!element('achievementsContainer').innerHTML.includes('The Overlander'));
-  assert.ok(!element('achievementsContainer').innerHTML.includes('Subterranean Sky'));
+  assert.ok(!element('achievementsContainer').innerHTML.includes('Under Pressure'));
   assert.ok(!element('achievementsContainer').innerHTML.includes('Venture out'));
 });
 check('transited destinations clear exactly 60 percent of visited aura radius without visited stats', () => {
@@ -652,7 +652,7 @@ check('expedition history escapes names, shows date/elevation/tags and starts me
   assert.ok(history.includes('AWD/Off-Road'));
   assert.ok(history.includes('Photography'));
   const achievements = element('achievementsContainer').innerHTML;
-  assert.ok(achievements.includes('Subterranean Sky'));
+  assert.ok(achievements.includes('Under Pressure'));
   assert.ok(achievements.includes('Thin Air'));
   assert.ok(achievements.includes('value="1" max="5"'));
 });
@@ -1309,5 +1309,67 @@ check('travel anywhere grows the starting home circle into its county without ch
   vm.runInContext('AppState.expeditions=[]', context);
   assert.equal(vm.runInContext('loggedCountyStatuses(false)["06073"]', context), undefined);
   vm.runInContext('map=null', context);
+});
+check('dedicated achievement page hides untouched badges and does not duplicate cards in the profile', () => {
+  assert.equal((html.match(/id="achievementsContainer"/g) || []).length, 1);
+  assert.ok(html.indexOf('id="achievementsContainer"') > html.indexOf('id="tabContent-achievements"'));
+  assert.ok(html.includes('data-tab="achievements"'));
+  vm.runInContext('applyPassport(migratePassport({}));PARKS=[];coordinateIndexes=null;map=null', context);
+  vm.runInContext("switchTab('achievements')", context);
+  assert.equal(vm.runInContext('AppState.currentTab', context), 'achievements');
+  assert.ok(element('achievementsContainer').innerHTML.includes('Venture out'));
+  for (const title of ['Chasing Waterfalls', 'Southern Cross', 'Local Lore', 'Zero Meridian', 'Thin Air', 'Earth Sandwich']) {
+    assert.ok(!element('achievementsContainer').innerHTML.includes(title), title);
+  }
+  vm.runInContext(`
+    AppState.customPois=[{...customLocation,id:'poi_first_fall',category:'waterfall',status:'v'}];
+    updateAllUI();
+  `, context);
+  assert.ok(element('achievementsContainer').innerHTML.includes('Chasing Waterfalls'));
+  assert.ok(element('achievementsContainer').innerHTML.includes('value="1" max="5"'));
+  for (const id of ['borderlands', 'offGrid', 'ghostTown', 'dateLine', 'continents', 'countryRoads']) {
+    assert.equal(vm.runInContext(`ACHIEVEMENTS.some(achievement=>achievement.id==='${id}')`, context), false);
+  }
+});
+check('biome achievement tiers use 3, total minus one and total with progressive disclosure', () => {
+  for (const [count, visible, hidden] of [
+    [0, [], ['Junior Ecologist', 'Almost There!', 'Adventuring Time']],
+    [1, ['Junior Ecologist'], ['Almost There!', 'Adventuring Time']],
+    [3, ['Junior Ecologist', 'Almost There!'], ['Adventuring Time']],
+    [13, ['Almost There!', 'Adventuring Time'], ['Junior Ecologist']],
+    [14, ['Adventuring Time'], ['Junior Ecologist', 'Almost There!']]
+  ]) {
+    context.biomeCount = count;
+    vm.runInContext(`
+      applyPassport(migratePassport({}));PARKS=[];coordinateIndexes=null;
+      AppState.customPois=biomeCount ? [{...customLocation,id:'poi_biome_tiers',status:'v',
+        biomes:Array.from({length:biomeCount},(_,i)=>String(i+1))}] : [];
+      renderAchievementsView();
+    `, context);
+    const cards = element('achievementsContainer').innerHTML;
+    visible.forEach(title => assert.ok(cards.includes(title), `${count}: ${title}`));
+    hidden.forEach(title => assert.ok(!cards.includes(title), `${count}: hidden ${title}`));
+  }
+  vm.runInContext("BIOMES={...BIOMES,'15':{}}", context);
+  assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='biomes').tiers[1].goal()", context), 14);
+  assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='biomes').tiers[2].goal()", context), 15);
+  vm.runInContext("delete BIOMES['15']", context);
+});
+check('atlas completion goals use actual datasets and exclude unknown countries and FIPS IDs', () => {
+  vm.runInContext(`
+    applyPassport(migratePassport({}));PARKS=[];coordinateIndexes=null;
+    worldGeoJson=[{properties:{name:'Canada'}},{properties:{name:'United States of America'}}];
+    countyGeoJson=[{id:'06073'},{id:'06065'}];
+    AppState.regions={'c:Canada':'v','c:Unknown land':'l','c:United States of America':'t'};
+    AppState.counties={'06073':'v','06065':'t','99999':'l'};
+    renderAchievementsView();
+  `, context);
+  assert.equal(vm.runInContext('calculateStats().atlasCountriesCount', context), 1);
+  assert.equal(vm.runInContext('calculateStats().countiesCount', context), 1);
+  assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='worldAtlas').tiers[0].goal(calculateStats())", context), 2);
+  assert.ok(element('achievementsContainer').innerHTML.includes('value="1" max="2"'));
+  vm.runInContext('worldGeoJson=null;countyGeoJson=null;renderAchievementsView()', context);
+  assert.ok(!element('achievementsContainer').innerHTML.includes('Citizen of the World'));
+  assert.ok(!element('achievementsContainer').innerHTML.includes('Manifest Destiny'));
 });
 console.log(`${checks} checks passed.`);
