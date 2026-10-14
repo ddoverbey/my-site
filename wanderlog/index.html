@@ -735,6 +735,9 @@
       homeBase: null, // { name, lat, lng, radiusKm }
       pins: {},       // id -> 'v' (visited) | 'w' (wishlist)
       regions: {},    // 'c:Country' | 's:State' -> 'v' | 'w'
+      clearedCounties: {}, // FIPS id -> true
+      clearedPolygons: [], // GeoJSON Polygon/MultiPolygon geometries
+      routes: [], // Arrays of [lat, lng] points
       currentTab: 'map',
       mode: 'rpg',    // 'rpg' or 'classic'
       pinFilter: 'none',
@@ -753,6 +756,9 @@
           AppState.homeBase = parsed.homeBase || null;
           AppState.pins = NpsCatalog.migratePins(parsed.pins || {});
           AppState.regions = parsed.regions || {};
+          AppState.clearedCounties = parsed.clearedCounties || {};
+          AppState.clearedPolygons = Array.isArray(parsed.clearedPolygons) ? parsed.clearedPolygons : [];
+          AppState.routes = Array.isArray(parsed.routes) ? parsed.routes : [];
           AppState.viewOnly = true;
           showNotification('📜 Passport Loaded', 'Viewing a shared explorer log (read-only).', '🧭');
           return;
@@ -768,6 +774,9 @@
           AppState.homeBase = parsed.homeBase || null;
           AppState.pins = NpsCatalog.migratePins(parsed.pins || {});
           AppState.regions = parsed.regions || {};
+          AppState.clearedCounties = parsed.clearedCounties || {};
+          AppState.clearedPolygons = Array.isArray(parsed.clearedPolygons) ? parsed.clearedPolygons : [];
+          AppState.routes = Array.isArray(parsed.routes) ? parsed.routes : [];
           AppState.mode = parsed.mode || 'rpg';
         } catch (e) {
           console.error("Failed to load local storage state", e);
@@ -781,6 +790,9 @@
         homeBase: AppState.homeBase,
         pins: AppState.pins,
         regions: AppState.regions,
+        clearedCounties: AppState.clearedCounties,
+        clearedPolygons: AppState.clearedPolygons,
+        routes: AppState.routes,
         mode: AppState.mode
       }));
     }
@@ -952,6 +964,7 @@
     let fogZoomAnimating = false;
     let leafletMarkers = {};
     let homeMarker = null;
+    let countyLayer = null;
 
     function initMap() {
       if (map) return;
@@ -988,6 +1001,7 @@
 
       // Render park markers
       renderParkMarkers();
+      renderCountyHitboxes();
 
       // Setup map event listeners to re-render the fog canvas on pan/zoom
       map.on('move', drawFogOfWar);
@@ -1076,10 +1090,84 @@
             punchFogAura(pt.x, pt.y, radius, 0.95);
           }
         }
+        if (AppState.pins[p.id] === 'v') {
+          const geometry = p.boundary || p.geometry || p.geojson?.geometry || p.geojson;
+          if (geometry?.type === 'Polygon' || geometry?.type === 'MultiPolygon') {
+            punchFogPolygon(geometry);
+          }
+        }
       });
+
+      Object.keys(AppState.clearedCounties).forEach(id => {
+        if (!AppState.clearedCounties[id]) return;
+        const feature = countyFeaturesById[id];
+        if (feature) punchFogPolygon(feature.geometry);
+      });
+
+      AppState.clearedPolygons.forEach(geometry => punchFogPolygon(geometry));
+      AppState.routes.forEach(route => punchFogRoute(route));
 
       // Reset composite operation to normal
       fogCtx.globalCompositeOperation = 'source-over';
+      fogCtx.shadowBlur = 0;
+      fogCtx.shadowColor = 'transparent';
+    }
+
+    function punchFogPolygon(geometry) {
+      if (!geometry || !map || !Array.isArray(geometry.coordinates)) return;
+      const polygons = geometry.type === 'Polygon'
+        ? [geometry.coordinates]
+        : geometry.type === 'MultiPolygon'
+          ? geometry.coordinates
+          : [];
+
+      polygons.forEach(rings => {
+        if (!Array.isArray(rings)) return;
+        fogCtx.beginPath();
+        rings.forEach(ring => {
+          if (!Array.isArray(ring) || ring.length < 3) return;
+          let hasPoint = false;
+          ring.forEach(coordinate => {
+            if (!Array.isArray(coordinate) || coordinate.length < 2) return;
+            const [lng, lat] = coordinate;
+            if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+            const point = map.latLngToContainerPoint([lat, lng]);
+            if (!hasPoint) fogCtx.moveTo(point.x, point.y);
+            else fogCtx.lineTo(point.x, point.y);
+            hasPoint = true;
+          });
+          if (hasPoint) fogCtx.closePath();
+        });
+        fogCtx.fillStyle = 'rgba(0, 0, 0, 1)';
+        fogCtx.shadowColor = 'rgba(0, 0, 0, 0.95)';
+        fogCtx.shadowBlur = 25;
+        fogCtx.fill('evenodd');
+        fogCtx.shadowBlur = 0;
+        fogCtx.shadowColor = 'transparent';
+      });
+    }
+
+    function punchFogRoute(route) {
+      if (!Array.isArray(route) || route.length < 2) return;
+      const validRoute = route
+        .filter(point => Array.isArray(point) && Number.isFinite(point[0]) && Number.isFinite(point[1]));
+      const points = validRoute
+        .map(([lat, lng]) => map.latLngToContainerPoint([lat, lng]));
+      if (points.length < 2) return;
+
+      const averageLat = validRoute.reduce((sum, point) => sum + point[0], 0) / validRoute.length;
+      fogCtx.beginPath();
+      fogCtx.moveTo(points[0].x, points[0].y);
+      points.slice(1).forEach(point => fogCtx.lineTo(point.x, point.y));
+      fogCtx.strokeStyle = 'rgba(0, 0, 0, 0.95)';
+      fogCtx.lineWidth = calculatePixelRadius(averageLat, 40);
+      fogCtx.lineCap = 'round';
+      fogCtx.lineJoin = 'round';
+      fogCtx.shadowColor = 'rgba(0, 0, 0, 0.95)';
+      fogCtx.shadowBlur = 25;
+      fogCtx.stroke();
+      fogCtx.shadowBlur = 0;
+      fogCtx.shadowColor = 'transparent';
     }
 
     // Punch a radial gradient with soft glowing feather edges
@@ -1246,6 +1334,8 @@
   <script>
     let worldGeoJson = null;
     let usaGeoJson = null;
+    let countyGeoJson = null;
+    const countyFeaturesById = {};
 
     async function loadGeoDatasets() {
       try {
@@ -1258,6 +1348,61 @@
       } catch (e) {
         console.error("Failed to load geographic atlas boundaries", e);
       }
+      try {
+        const countiesRes = await fetch('https://cdn.jsdelivr.net/npm/us-atlas@3/counties-10m.json').then(r => r.json());
+        countyGeoJson = topojson.feature(countiesRes, countiesRes.objects.counties).features;
+        countyGeoJson.forEach(feature => {
+          countyFeaturesById[String(feature.id).padStart(5, '0')] = feature;
+        });
+      } catch (e) {
+        console.error("Failed to load US county boundaries", e);
+      }
+    }
+
+    function renderCountyHitboxes() {
+      if (!map || !countyGeoJson || countyLayer) return;
+      map.createPane('countyHitboxPane');
+      map.getPane('countyHitboxPane').style.zIndex = '440';
+      const countyRenderer = L.svg({ pane: 'countyHitboxPane' });
+      countyLayer = L.geoJSON({ type: 'FeatureCollection', features: countyGeoJson }, {
+        pane: 'countyHitboxPane',
+        renderer: countyRenderer,
+        style: {
+          color: '#fbbf24',
+          weight: 1,
+          opacity: 0,
+          fillColor: '#fbbf24',
+          fillOpacity: 0
+        },
+        onEachFeature(feature, layer) {
+          const countyId = String(feature.id).padStart(5, '0');
+          const countyName = feature.properties?.name || `County ${countyId}`;
+          layer.bindTooltip(countyName, { sticky: true, direction: 'top' });
+          layer.on({
+            mouseover() {
+              layer.setStyle({ opacity: 0.65, fillOpacity: 0.05 });
+            },
+            mouseout() {
+              layer.setStyle({ opacity: 0, fillOpacity: 0 });
+            },
+            click() {
+              if (AppState.viewOnly) return;
+              if (AppState.clearedCounties[countyId]) {
+                delete AppState.clearedCounties[countyId];
+              } else {
+                AppState.clearedCounties[countyId] = true;
+              }
+              saveState();
+              drawFogOfWar();
+              showNotification(
+                'Territory Revealed!',
+                `${countyName} ${AppState.clearedCounties[countyId] ? 'cleared' : 'returned to the fog'}.`,
+                '🗺️'
+              );
+            }
+          });
+        }
+      }).addTo(map);
     }
 
     function renderScratchMap() {
@@ -1684,7 +1829,10 @@
       const sharePayload = {
         homeBase: AppState.homeBase,
         pins: AppState.pins,
-        regions: AppState.regions
+        regions: AppState.regions,
+        clearedCounties: AppState.clearedCounties,
+        clearedPolygons: AppState.clearedPolygons,
+        routes: AppState.routes
       };
       const encoded = btoa(encodeURIComponent(JSON.stringify(sharePayload)));
       const shareUrl = `${window.location.origin}${window.location.pathname}?d=${encoded}`;
@@ -1725,6 +1873,9 @@
           AppState.homeBase = parsed.homeBase || null;
           AppState.pins = NpsCatalog.migratePins(parsed.pins || {});
           AppState.regions = parsed.regions || {};
+          AppState.clearedCounties = parsed.clearedCounties || {};
+          AppState.clearedPolygons = Array.isArray(parsed.clearedPolygons) ? parsed.clearedPolygons : [];
+          AppState.routes = Array.isArray(parsed.routes) ? parsed.routes : [];
           AppState.mode = parsed.mode || 'rpg';
           saveState();
           initMap();
@@ -1745,6 +1896,9 @@
       AppState.homeBase = null;
       AppState.pins = {};
       AppState.regions = {};
+      AppState.clearedCounties = {};
+      AppState.clearedPolygons = [];
+      AppState.routes = [];
       saveState();
       location.reload();
     });
