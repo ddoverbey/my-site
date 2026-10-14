@@ -11,8 +11,8 @@ Players do not need an API key, and no key is included in the site.
 2. In this GitHub repository, open **Settings > Secrets and variables > Actions > New repository secret**.
    Name the secret `NPS_API_KEY` and paste the key into its value.
 3. Push the importer and workflow changes, then open **Actions > Import NPS catalog > Run workflow**.
-4. Download the successful run's `nps-catalog` artifact, unzip it, and add both `nps-parks.json` and
-   `ecoregion-mapping.json` to the
+4. Download the successful run's `nps-catalog` artifact, unzip it, and add `nps-parks.json`,
+   `ecoregion-mapping.json`, `nps-boundaries.topojson`, and `ecoregions.topojson` to the
    tracked [`wanderlog/`](wanderlog/) directory (capitalization matters on GitHub Pages).
 5. Commit and deploy that dataset with the site. Repeat steps 3-5 only when you want a refresh.
 
@@ -154,13 +154,13 @@ every type may require expanding the destination catalog.
 
 For a combined refresh, run **Actions > Import NPS catalog**. The workflow downloads NPS data,
 regenerates biome mappings from the licensed RESOLVE source, and tests both datasets before
-publishing them in the same artifact. Deploy the two JSON files together.
+publishing them with compact boundary/coordinate geography in the same artifact. Deploy all four files together.
 
 For an offline/local mapping refresh:
 
 1. Download the [RESOLVE 2017 shapefile ZIP](https://storage.googleapis.com/teow2016/Ecoregions2017.zip)
    and extract it **outside the repository**. Keep the `.shp`, `.dbf`, and `.prj` files together.
-2. From `wanderlog`, run `npm ci` (Node 16+), then
+2. From `wanderlog`, run `npm ci` (Node 22+ for the current data tooling), then
    `npm run import:ecoregions -- "C:\path\to\Ecoregions2017.shp"`.
 3. Run `npm test`. Commit the regenerated `ecoregion-mapping.json` together with any changed
    `nps-parks.json` or international destination coordinates and deploy them together.
@@ -182,6 +182,95 @@ updating WWF Terrestrial Ecoregions. Source geometry is licensed under
 [Creative Commons Attribution 4.0](https://creativecommons.org/licenses/by/4.0/).
 Changes: point-intersection mappings and aggregated geodesic biome areas/game rarity.
 Attribution and licensing are also displayed in the game and included in the derived dataset.
+
+## NPS boundaries and custom coordinates (Step 2)
+
+Fog remains entirely in the existing overscanned canvas. Visited NPS listings use polygons from
+[`nps-boundaries.topojson`](wanderlog/nps-boundaries.topojson) when available, **instead of** an
+85 km point aura. A 10 km-equivalent canvas shadow softens their edges at the current zoom.
+International point-only destinations, and NPS listings with no matching boundary, retain their
+existing auras. County hitboxes, cleared polygons, route corridors, zoom animation, and the home
+aura continue using the same canvas. Visiting a custom point does not implicitly claim its county.
+
+The source is the official [NPS Land Resources Division boundary service](https://services1.arcgis.com/fBc8EJBxQRMcHlei/ArcGIS/rest/services/NPS_Land_Resources_Division_Boundary_and_Tract_Data_Service/FeatureServer/2),
+linked through [NPS GIS data resources](https://www.nps.gov/subjects/gisandmapping/tools-and-data.htm).
+It contains legislative boundaries, not necessarily NPS-owned land, legal surveys, or navigational
+guidance. Four-letter `UNIT_CODE` values match catalog IDs where possible. The combined API listing
+`seki` explicitly uses both `sequ` and `kica` boundary geometries; other unmatched listings are
+not guessed from names, nearby points, or parent parks. Multiple polygons per code are retained.
+Settings reports mapped listings and loading failures; failure leaves point-aura fog functional.
+
+### Logging a custom coordinate
+
+Choose **Add custom location** or right-click/long-press the world map, enter a name and WGS84
+latitude/longitude, and select Visited or Wishlist. This is a small coordinate-entry form, not
+the future date/transit/purpose expedition wizard. Before saving, `Promise.all()` resolves:
+
+- **Elevation:** the keyless [Open-Meteo elevation API](https://open-meteo.com/en/docs/elevation-api).
+  Stored as meters and feet (`meters * 3.28084`); this is terrain elevation, not building height.
+- **Political geography:** local D3 spherical containment against the loaded world/state/county
+  atlases. Countries can be global; state and county coverage is U.S. only. Unmatched points remain
+  unmatched, not snapped to a nearby landmass. Simplified atlases can miss small islands and give
+  approximate coastal/border matches.
+- **Biome/ecoregion:** local containment against [`ecoregions.topojson`](wanderlog/ecoregions.topojson),
+  derived from the same CC-BY-4.0 RESOLVE source as the catalog snapshot. D3 ring winding is normalized
+  and holes, multipart polygons, and antimeridian bounds are respected. Simplification makes this
+  an approximate classification, **not guaranteed exact near a boundary**. Rock/ice and water
+  are excluded. Existing catalog points still use their unsimplified precomputed mappings.
+- **Location rarity estimate:** a direct, keyless [Overpass](https://overpass-api.de/) request for
+  distinct tourism/amenity **nodes** and motorway/trunk ways within 5 km. The label uses mapped
+  POI density with the requested bands: Uncharted `<10`, Hidden Gem `10–29`, Deep Cut `30–99`,
+  Regional Staple `100–999`, Beaten Path `1,000–10,000`, Tourist Trap `>10,000`. These counts
+  **are not review counts, visitor counts, or evidence of verified popularity**. OSM coverage
+  varies, and node-only counts omit amenities represented only as ways/relations. Highway distance
+  is a local point-to-segment estimate, reported separately; no road within the query radius means
+  "not detected within 5 km", not a guessed wilderness-distance score.
+
+Elevation and OSM requests disclose coordinates to their providers; the form explains this before
+submission. No geocoding, Google/Mapbox keys, billing, or deployed Worker is added. OSM results use
+a versioned 30-day browser cache keyed to a 0.001-degree coordinate grid (about 111 m north/south).
+The query uses that same rounded point, avoiding inconsistent cache samples. No external requests
+run merely for browsing saved pins. Failed/partial lookups do not save a pin or invent metadata:
+the form reports a retryable error. Overpass may rate-limit or time out, especially in dense cities.
+This personal-use cache is not a shared server cache; a future Worker can provide shared caching
+without changing the meaning of the stored estimate.
+
+Use an HTTP development server or the deployed HTTPS site for API testing; external providers
+can reject requests from a `file://` preview's null origin. The app still reports such failures
+instead of saving incomplete data.
+
+Custom locations live separately from catalog IDs and survive local storage, export/import,
+shared read-only passports, dataset retries, and reset. Visited customs clear point auras and
+contribute their real biomes/countries/states to the existing collection and XP calculations.
+Wishlist customs do not. They appear in map filters and the searchable ledger but **do not count
+as NPS/park visits or satisfy park-specific quests/achievements**. Elevation and density estimates
+are displayed, but no new elevation/rarity XP or achievement rules are introduced. Open-Meteo and
+OpenStreetMap contributor/ODbL credits appear with custom metadata.
+
+### Regenerating compact geography
+
+Run `npm ci` in `wanderlog` using Node 22+, extract the licensed RESOLVE ZIP outside the repository,
+then run:
+
+```sh
+npm run import:geography -- "/path/to/Ecoregions2017.shp"
+npm test
+```
+
+[`import-geography.mjs`](wanderlog/import-geography.mjs) paginates the current NPS service in WGS84,
+checks completeness and exact unit codes, and simplifies locally with Mapshaper weighted
+Visvalingam and `keep-shapes`. No data is uploaded to mapshaper.org. NPS keeps 1.5% of vertices;
+fine TopoJSON quantization preserves tiny historic-site polygons. RESOLVE keeps 0.8% to meet the
+1.8 MB uncompressed download budget (the published file is approximately 1.64 MiB, substantially
+smaller over HTTP compression). NPS is approximately 559 KiB with a 750 KB uncompressed budget. These are measured limits,
+not a promise that every future source refresh will fit the same size. Generation fails rather
+than silently removing small boundaries or exceeding the budgets. Source hashes, dates, methods,
+attribution, and RESOLVE licensing are embedded in both snapshots.
+
+The **Import NPS catalog** workflow regenerates and tests all four datasets together.
+Public datasets and API metadata can change; regenerate explicitly rather than relying on
+runtime downloads of the large source geometries. Custom-coordinate classifications are retained
+as their original sampled metadata, rather than silently rewritten when a dataset refreshes.
 
 ## Homepage analytics
 

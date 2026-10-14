@@ -2,12 +2,16 @@
   "name": "wanderlog-data",
   "private": true,
   "scripts": {
-    "test": "node international-parks.test.mjs && node nps-catalog.test.mjs && node ecoregions.test.mjs",
-    "import:ecoregions": "node import-ecoregions.mjs"
+    "test": "node international-parks.test.mjs && node nps-catalog.test.mjs && node ecoregions.test.mjs && node coordinate-lookups.test.mjs",
+    "import:ecoregions": "node import-ecoregions.mjs",
+    "import:geography": "node import-geography.mjs"
   },
   "devDependencies": {
     "@turf/area": "^7.3.0",
     "@turf/boolean-point-in-polygon": "^7.3.0",
+    "d3-geo": "^3.1.1",
+    "mapshaper": "^0.7.85",
+    "topojson-client": "^3.1.0",
     "shapefile": "^0.6.6"
   }
 }

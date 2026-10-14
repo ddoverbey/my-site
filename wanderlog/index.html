@@ -206,6 +206,8 @@
             <span id="npsCatalogStatus">Loading official NPS catalog...</span>
             <p id="worldwideCatalogStatus" class="mt-2">Loading international park catalog...</p>
             <p id="wikidataCatalogStatus" class="mt-2">Loading Wikidata park query...</p>
+            <p id="npsBoundaryStatus" class="mt-2">Loading NPS boundaries...</p>
+            <p id="coordinateGeographyStatus" class="mt-2">Loading custom-coordinate geography...</p>
             <p id="savedCatalogStatus" class="hidden mt-2"></p>
             <button id="btnRetryNps" class="hidden mt-2 block text-amber-300 underline" type="button">Retry datasets</button>
           </div>
@@ -220,6 +222,9 @@
     <div id="tabContent-map" class="w-full h-full relative">
       <div id="leafletMap" class="w-full h-full z-0"></div>
       <canvas id="fogCanvasOverlay"></canvas>
+      <button id="btnCustomLocation" type="button" class="absolute top-4 right-4 z-[460] rpg-panel rounded-xl px-3 py-2 text-xs text-amber-200">
+        Add custom location
+      </button>
 
       <!-- RPG Explorer Floating HUD (Top Left) -->
       <div id="rpgMapHud" class="absolute top-4 left-4 z-[460] rpg-panel rounded-2xl p-4 w-72 transition-all duration-300">
@@ -520,9 +525,40 @@
     </div>
   </div>
 
+  <div id="customLocationModal" role="dialog" aria-modal="true" aria-labelledby="customLocationTitle" class="hidden fixed inset-0 z-[1000] bg-black/85 flex items-center justify-center p-4">
+    <form id="customLocationForm" class="rpg-panel rpg-panel-gold max-w-lg w-full rounded-2xl p-6 space-y-4">
+      <h2 id="customLocationTitle" class="cinzel text-xl text-amber-200">Custom Location</h2>
+      <p class="text-xs text-slate-400">Enter coordinates or right-click the map. Elevation and OSM lookups send coordinates to their providers. Region and biome lookups stay on your device.</p>
+      <label class="block text-xs text-slate-300">Name
+        <input id="customLocationName" required maxlength="150" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2" placeholder="e.g. Colosseum">
+      </label>
+      <div class="grid grid-cols-2 gap-3">
+        <label class="block text-xs text-slate-300">Latitude
+          <input id="customLocationLat" type="number" step="any" min="-90" max="90" required class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2">
+        </label>
+        <label class="block text-xs text-slate-300">Longitude
+          <input id="customLocationLng" type="number" step="any" min="-180" max="180" required class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2">
+        </label>
+      </div>
+      <label class="block text-xs text-slate-300">Status
+        <select id="customLocationStatus" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2">
+          <option value="v">Visited</option>
+          <option value="w">Wishlist</option>
+        </select>
+      </label>
+      <p class="text-[11px] text-slate-400">Simplified boundaries give approximate classifications. OSM rarity estimates nearby mapped POI density, not review counts or verified popularity.</p>
+      <p id="customLocationLookupStatus" role="status" aria-live="polite" class="text-xs text-amber-200"></p>
+      <div class="flex justify-end gap-2">
+        <button id="btnCancelCustomLocation" type="button" class="px-4 py-2 rounded-lg bg-slate-800 text-sm">Cancel</button>
+        <button id="btnSaveCustomLocation" type="submit" class="px-4 py-2 rounded-lg bg-amber-500 text-slate-950 font-semibold text-sm">Look up &amp; save</button>
+      </div>
+    </form>
+  </div>
+
   <script src="./nps-catalog.js"></script>
   <script src="./international-parks.js"></script>
   <script src="./ecoregions.js"></script>
+  <script src="./coordinate-lookups.js"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -738,6 +774,7 @@
       clearedCounties: {}, // FIPS id -> true
       clearedPolygons: [], // GeoJSON Polygon/MultiPolygon geometries
       routes: [], // Arrays of [lat, lng] points
+      customLocations: [], // Validated coordinates and lookup metadata, separate from catalog IDs
       currentTab: 'map',
       mode: 'rpg',    // 'rpg' or 'classic'
       pinFilter: 'none',
@@ -753,12 +790,14 @@
       if (sharedData) {
         try {
           const parsed = JSON.parse(decodeURIComponent(atob(sharedData)));
+          const customLocations = CoordinateLookups.validateCustomLocations(parsed.customLocations || []);
           AppState.homeBase = parsed.homeBase || null;
           AppState.pins = NpsCatalog.migratePins(parsed.pins || {});
           AppState.regions = parsed.regions || {};
           AppState.clearedCounties = parsed.clearedCounties || {};
           AppState.clearedPolygons = Array.isArray(parsed.clearedPolygons) ? parsed.clearedPolygons : [];
           AppState.routes = Array.isArray(parsed.routes) ? parsed.routes : [];
+          AppState.customLocations = customLocations;
           AppState.viewOnly = true;
           showNotification('📜 Passport Loaded', 'Viewing a shared explorer log (read-only).', '🧭');
           return;
@@ -771,12 +810,14 @@
       if (stored) {
         try {
           const parsed = JSON.parse(stored);
+          const customLocations = CoordinateLookups.validateCustomLocations(parsed.customLocations || []);
           AppState.homeBase = parsed.homeBase || null;
           AppState.pins = NpsCatalog.migratePins(parsed.pins || {});
           AppState.regions = parsed.regions || {};
           AppState.clearedCounties = parsed.clearedCounties || {};
           AppState.clearedPolygons = Array.isArray(parsed.clearedPolygons) ? parsed.clearedPolygons : [];
           AppState.routes = Array.isArray(parsed.routes) ? parsed.routes : [];
+          AppState.customLocations = customLocations;
           AppState.mode = parsed.mode || 'rpg';
         } catch (e) {
           console.error("Failed to load local storage state", e);
@@ -793,6 +834,7 @@
         clearedCounties: AppState.clearedCounties,
         clearedPolygons: AppState.clearedPolygons,
         routes: AppState.routes,
+        customLocations: AppState.customLocations,
         mode: AppState.mode
       }));
     }
@@ -817,9 +859,11 @@
     function calculateStats() {
       const visitedParks = PARKS.filter(p => AppState.pins[p.id] === 'v');
       const wishlistParks = PARKS.filter(p => AppState.pins[p.id] === 'w');
+      const visitedCustomLocations = AppState.customLocations.filter(p => p.status === 'v');
       
       const biomesSet = new Set();
       visitedParks.forEach(p => p.biomes.forEach(b => biomesSet.add(b)));
+      visitedCustomLocations.forEach(p => p.biomes.forEach(b => biomesSet.add(b)));
 
       const rareBiomesList = Object.keys(BIOMES).filter(b => BIOMES[b].rarity === 'rare');
       const unlockedRare = rareBiomesList.filter(b => biomesSet.has(b));
@@ -847,6 +891,12 @@
         if (p.country && (!p.intl || p.countryCode)) {
           visitedCountries.add(p.country);
         }
+      });
+      visitedCustomLocations.forEach(p => {
+        p.political.states.forEach(state => {
+          if (NpsCatalog.isUsState(state)) visitedStates.add(state);
+        });
+        p.political.countries.forEach(country => visitedCountries.add(country));
       });
 
       // Experience Points Calculation
@@ -993,6 +1043,8 @@
 
       // Custom Zoom control in bottom right
       L.control.zoom({ position: 'bottomright' }).addTo(map);
+      map.createPane('destinationMarkerPane');
+      map.getPane('destinationMarkerPane').style.zIndex = '460';
 
       // Initialize Fog Canvas Overlay
       fogCanvas = document.getElementById('fogCanvasOverlay');
@@ -1005,6 +1057,7 @@
 
       // Setup map event listeners to re-render the fog canvas on pan/zoom
       map.on('move', drawFogOfWar);
+      map.on('contextmenu', event => openCustomLocation(event.latlng.lat, event.latlng.lng));
       map.on('zoomanim', animateFogZoom);
       map.on('zoomend', () => {
         fogZoomAnimating = false;
@@ -1070,7 +1123,7 @@
       fogCtx.fillRect(0, 0, width, height);
       fogCtx.setTransform(1, 0, 0, 1, fogPadding.x, fogPadding.y);
 
-      // Step 2: Use Destination-Out blend mode to carve out glowing exploration circles
+      // All exploration geometry is carved into the same canvas.
       fogCtx.globalCompositeOperation = 'destination-out';
 
       // Punch out hole for Home Base
@@ -1082,6 +1135,13 @@
 
       // Punch out holes for all visited parks & pins
       PARKS.forEach(p => {
+        if (AppState.pins[p.id] === 'v' && !p.intl && npsBoundariesByCode[p.id]?.length) {
+          npsBoundariesByCode[p.id].forEach(geometry => {
+            const coordinate = geometry.type === 'Polygon' ? geometry.coordinates[0][0] : geometry.coordinates[0][0][0];
+            punchFogPolygon(geometry, calculatePixelRadius(p.lat ?? coordinate[1], 10));
+          });
+          return;
+        }
         if (AppState.pins[p.id] === 'v' && p.lat !== null && p.lng !== null) {
           const pt = map.latLngToContainerPoint([p.lat, p.lng]);
           const radius = calculatePixelRadius(p.lat, 85);
@@ -1096,6 +1156,11 @@
             punchFogPolygon(geometry);
           }
         }
+      });
+      AppState.customLocations.forEach(p => {
+        if (p.status !== 'v') return;
+        const point = map.latLngToContainerPoint([p.lat, p.lng]);
+        punchFogAura(point.x, point.y, calculatePixelRadius(p.lat, 85), 0.95);
       });
 
       Object.keys(AppState.clearedCounties).forEach(id => {
@@ -1113,7 +1178,7 @@
       fogCtx.shadowColor = 'transparent';
     }
 
-    function punchFogPolygon(geometry) {
+    function punchFogPolygon(geometry, featherPixels = 25) {
       if (!geometry || !map || !Array.isArray(geometry.coordinates)) return;
       const polygons = geometry.type === 'Polygon'
         ? [geometry.coordinates]
@@ -1140,7 +1205,7 @@
         });
         fogCtx.fillStyle = 'rgba(0, 0, 0, 1)';
         fogCtx.shadowColor = 'rgba(0, 0, 0, 0.95)';
-        fogCtx.shadowBlur = 25;
+        fogCtx.shadowBlur = featherPixels;
         fogCtx.fill('evenodd');
         fogCtx.shadowBlur = 0;
         fogCtx.shadowColor = 'transparent';
@@ -1186,7 +1251,8 @@
 
     // Convert real-world kilometers to Leaflet screen pixels at current zoom
     function calculatePixelRadius(lat, km) {
-      const metersPerPixel = 2 * Math.PI * 6378137 * Math.cos(lat * Math.PI / 180) /
+      const projectedLat = Math.max(-85.05112878, Math.min(85.05112878, lat));
+      const metersPerPixel = 2 * Math.PI * 6378137 * Math.cos(projectedLat * Math.PI / 180) /
         map.options.crs.scale(map.getZoom());
       return km * 1000 / metersPerPixel;
     }
@@ -1197,9 +1263,9 @@
       leafletMarkers = {};
       if (AppState.pinFilter === 'none') return;
 
-      PARKS.forEach(p => {
+      [...PARKS, ...customDestinations()].forEach(p => {
         if (p.lat === null || p.lng === null) return;
-        const status = AppState.pins[p.id] || 'un'; // 'v', 'w', 'un'
+        const status = destinationStatus(p);
         
         // Filter by pin visibility state
         if (AppState.pinFilter === 'v' && status !== 'v') return;
@@ -1210,6 +1276,7 @@
         const borderColor = status === 'v' ? '#6ee7b7' : (status === 'w' ? '#fde68a' : '#94a3b8');
 
         const marker = L.circleMarker([p.lat, p.lng], {
+          pane: 'destinationMarkerPane',
           radius: status === 'v' ? 8 : 6,
           fillColor: color,
           fillOpacity: 0.9,
@@ -1234,7 +1301,7 @@
     }
 
     function createPopupContent(p) {
-      const cur = AppState.pins[p.id] || 'un';
+      const cur = destinationStatus(p);
       const biomeTags = p.biomes.map(b => {
         const info = BIOMES[b] || { name: b, icon: '🌿' };
         return `<span class="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-200">
@@ -1261,6 +1328,7 @@
           <p class="text-xs text-slate-300">${escapeHtml(p.desc || '')}</p>
           ${p.url ? `<a href="${escapeHtml(p.url)}" target="_blank" rel="noopener noreferrer" class="text-xs text-sky-300 underline">${p.intl ? 'Park information source' : 'Official NPS site'}</a>` : ''}
           ${internationalMetadata(p)}
+          ${customLocationMetadata(p)}
           ${p.activities?.length ? `<p class="text-[11px] text-slate-400">Activities: ${p.activities.map(escapeHtml).join(', ')}</p>` : ''}
           <p class="text-[11px] text-slate-400">${escapeHtml(biomeLocationLabel(p))}</p>
           <div class="flex flex-wrap gap-1 pt-1">${biomeTags}</div>
@@ -1275,6 +1343,16 @@
 
     function setPinStatus(parkId, status) {
       if (AppState.viewOnly) return;
+      const custom = AppState.customLocations.find(p => p.id === parkId);
+      if (custom) {
+        if (status === 'un') AppState.customLocations = AppState.customLocations.filter(p => p.id !== parkId);
+        else custom.status = status;
+        saveState();
+        renderParkMarkers();
+        drawFogOfWar();
+        updateAllUI();
+        return;
+      }
       const prev = AppState.pins[parkId];
       if (status === 'un') {
         delete AppState.pins[parkId];
@@ -1336,6 +1414,54 @@
     let usaGeoJson = null;
     let countyGeoJson = null;
     const countyFeaturesById = {};
+    let usaRegionGeoJson = null;
+    let npsBoundariesByCode = {};
+    let coordinateIndexes = null;
+
+    async function loadCoordinateGeography() {
+      coordinateIndexes = null;
+      const status = document.getElementById('coordinateGeographyStatus');
+      try {
+        const response = await fetch('./ecoregions.topojson', { cache: 'no-cache' });
+        if (!response.ok) throw new Error(`Ecoregion geography request failed (HTTP ${response.status}).`);
+        const topology = await response.json();
+        if (topology.metadata?.source !== Ecoregions.SOURCE || topology.metadata.license !== 'CC-BY-4.0' ||
+            topology.metadata.version !== 1 || !topology.objects?.ecoregions) throw new Error('Invalid ecoregion geography snapshot.');
+        if (!worldGeoJson?.length || !usaRegionGeoJson?.length || !countyGeoJson?.length) throw new Error('Political atlas boundaries unavailable.');
+        const features = topojson.feature(topology, topology.objects.ecoregions).features;
+        if (features.length < 800 || features.some(feature =>
+          !Number.isInteger(feature.properties.BIOME_NUM) || feature.properties.BIOME_NUM < 1 || feature.properties.BIOME_NUM > 14)) {
+          throw new Error('Incomplete terrestrial ecoregion geography.');
+        }
+        coordinateIndexes = {
+          countries: CoordinateLookups.indexFeatures(worldGeoJson, d3),
+          states: CoordinateLookups.indexFeatures(usaRegionGeoJson, d3),
+          counties: CoordinateLookups.indexFeatures(countyGeoJson, d3),
+          ecoregions: CoordinateLookups.indexFeatures(features, d3)
+        };
+        status.textContent = 'Custom-coordinate geography ready. Region and biome matches use simplified polygons.';
+      } catch (error) {
+        console.error('Failed to load coordinate geography', error);
+        status.textContent = 'Custom-coordinate geography unavailable. Retry datasets; existing visits remain available.';
+        document.getElementById('btnRetryNps').classList.remove('hidden');
+      }
+    }
+
+    async function loadNpsBoundaries() {
+      npsBoundariesByCode = {};
+      const status = document.getElementById('npsBoundaryStatus');
+      try {
+        const response = await fetch('./nps-boundaries.topojson', { cache: 'no-cache' });
+        if (!response.ok) throw new Error(`NPS boundaries request failed (HTTP ${response.status}).`);
+        npsBoundariesByCode = CoordinateLookups.npsBoundaryIndex(await response.json(), topojson.feature);
+        const mapped = PARKS.filter(p => !p.intl && npsBoundariesByCode[p.id]).length;
+        status.textContent = `${mapped} catalog listings have simplified NPS legislative boundaries. Other listings use point auras. Boundaries are not ownership or survey data.`;
+      } catch (error) {
+        console.error('Failed to load NPS boundaries', error);
+        status.textContent = 'NPS boundaries unavailable; point auras remain active. Retry datasets.';
+        document.getElementById('btnRetryNps').classList.remove('hidden');
+      }
+    }
 
     async function loadGeoDatasets() {
       try {
@@ -1344,7 +1470,8 @@
           fetch('https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json').then(r => r.json())
         ]);
         worldGeoJson = topojson.feature(worldRes, worldRes.objects.countries).features;
-        usaGeoJson = topojson.feature(usaRes, usaRes.objects.states).features.filter(f => +f.id <= 56 && f.id !== '11');
+        usaRegionGeoJson = topojson.feature(usaRes, usaRes.objects.states).features;
+        usaGeoJson = usaRegionGeoJson.filter(f => +f.id <= 56 && f.id !== '11');
       } catch (e) {
         console.error("Failed to load geographic atlas boundaries", e);
       }
@@ -1404,6 +1531,112 @@
         }
       }).addTo(map);
     }
+
+    function customDestinations() {
+      return AppState.customLocations.map(location => ({
+        ...location, custom: true, states: location.political.states,
+        state: location.political.states.join(', '), country: location.political.countries.join(', '),
+        designation: 'Custom location', desc: `${location.lat}, ${location.lng}`
+      }));
+    }
+
+    function destinationStatus(p) {
+      return p.custom ? p.status : AppState.pins[p.id] || 'un';
+    }
+
+    function customLocationMetadata(p) {
+      if (!p.custom) return '';
+      return `<div class="text-[11px] text-slate-400 space-y-1">
+        <p>Coordinates: ${p.lat}, ${p.lng}</p>
+        <p>Elevation: ${Math.round(p.elevation.meters).toLocaleString('en')} m / ${Math.round(p.elevation.feet).toLocaleString('en')} ft
+          (<a href="https://open-meteo.com/en/docs/elevation-api" target="_blank" rel="noopener noreferrer" class="text-sky-300 underline">Open-Meteo</a>)</p>
+        <p>${escapeHtml([...p.political.countries, ...p.political.states, ...p.political.counties.map(county => `${county.name} (${county.id})`)].join(' / ') || 'No political polygon match')}</p>
+        <p>OSM rarity estimate: ${escapeHtml(p.rarity.category)} (${p.rarity.nearbyPoiCount.toLocaleString('en')} mapped POI nodes within 5 km).</p>
+        <p>${p.rarity.nearestHighwayKm === null ? 'No mapped motorway/trunk detected within 5 km.' : `Nearest mapped motorway/trunk: ${p.rarity.nearestHighwayKm.toFixed(2)} km.`}</p>
+        <p>Approximate polygon matches; OSM density is not review-count popularity.
+          <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" class="text-sky-300 underline">&copy; OpenStreetMap contributors (ODbL)</a></p>
+      </div>`;
+    }
+
+    let customLookupPending = false;
+    function openCustomLocation(lat, lng) {
+      if (AppState.viewOnly || customLookupPending) return;
+      const center = map?.getCenter();
+      document.getElementById('customLocationLat').value = lat ?? center?.lat ?? '';
+      document.getElementById('customLocationLng').value = lng ?? center?.lng ?? '';
+      document.getElementById('customLocationName').value = '';
+      document.getElementById('customLocationStatus').value = 'v';
+      document.getElementById('customLocationLookupStatus').textContent = '';
+      document.getElementById('customLocationModal').classList.remove('hidden');
+      document.getElementById('customLocationName').focus();
+    }
+
+    function closeCustomLocation() {
+      if (customLookupPending) return;
+      document.getElementById('customLocationModal').classList.add('hidden');
+      document.getElementById('btnCustomLocation').focus();
+    }
+
+    document.getElementById('btnCustomLocation').addEventListener('click', () => openCustomLocation());
+    document.getElementById('btnCancelCustomLocation').addEventListener('click', closeCustomLocation);
+    document.getElementById('customLocationModal').addEventListener('keydown', event => {
+      if (event.key === 'Escape') closeCustomLocation();
+      if (event.key === 'Tab') {
+        const controls = [...document.getElementById('customLocationForm').querySelectorAll('input, select, button')]
+          .filter(control => !control.disabled);
+        const first = controls[0];
+        const last = controls[controls.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
+    });
+    document.getElementById('customLocationForm').addEventListener('submit', async event => {
+      event.preventDefault();
+      if (AppState.viewOnly || customLookupPending) return;
+      const status = document.getElementById('customLocationLookupStatus');
+      const name = document.getElementById('customLocationName').value.trim();
+      const latText = document.getElementById('customLocationLat').value.trim();
+      const lngText = document.getElementById('customLocationLng').value.trim();
+      const pinStatus = document.getElementById('customLocationStatus').value;
+      const controls = [...document.getElementById('customLocationForm').querySelectorAll('input, select, button')];
+      customLookupPending = true;
+      controls.forEach(control => { control.disabled = true; });
+      status.textContent = 'Looking up elevation, region, ecoregion, and OSM proximity...';
+      try {
+        if (!name || !latText || !lngText) throw new Error('Enter a name and both coordinates.');
+        const metadata = await CoordinateLookups.lookupCoordinate(Number(latText), Number(lngText), {
+          indexes: coordinateIndexes, geoContains: d3.geoContains, storage: localStorage
+        });
+        const location = { ...metadata, id: `custom-${crypto.randomUUID()}`, name, status: pinStatus };
+        CoordinateLookups.validateCustomLocations([location]);
+        const previous = AppState.customLocations;
+        AppState.customLocations = [...previous, location];
+        try {
+          saveState();
+        } catch (error) {
+          AppState.customLocations = previous;
+          throw error;
+        }
+        renderParkMarkers();
+        drawFogOfWar();
+        updateAllUI();
+        customLookupPending = false;
+        closeCustomLocation();
+        showNotification('Location saved', `${name}: ${metadata.rarity.category} (OSM density estimate).`, '🗺️');
+      } catch (error) {
+        console.error('Custom-coordinate lookup failed', error);
+        status.textContent = `Not saved: ${error.message} You can retry.`;
+        showNotification('Location lookup failed', 'The location was not saved. See the form for details and retry.', '⚠️');
+      } finally {
+        customLookupPending = false;
+        controls.forEach(control => { control.disabled = false; });
+      }
+    });
 
     function renderScratchMap() {
       const svg = d3.select('#svgScratchMap').html('');
@@ -1624,8 +1857,8 @@
       const grid = document.getElementById('bucketListGrid');
       grid.innerHTML = '';
 
-      const filtered = PARKS.filter(p => {
-        const status = AppState.pins[p.id] || 'un';
+      const filtered = [...PARKS, ...customDestinations()].filter(p => {
+        const status = destinationStatus(p);
         if (filter !== 'all' && status !== filter) return false;
         if (!search) return true;
         return p.name.toLowerCase().includes(search) || 
@@ -1645,7 +1878,7 @@
       }
 
       filtered.forEach(p => {
-        const cur = AppState.pins[p.id] || 'un';
+        const cur = destinationStatus(p);
         const card = document.createElement('div');
         card.className = `p-3.5 rounded-2xl border rpg-panel flex items-center justify-between gap-3 ${
           cur === 'v' ? 'border-emerald-500/40 bg-emerald-950/10' :
@@ -1658,6 +1891,7 @@
             ${p.designation ? `<p class="text-[11px] text-amber-300">${escapeHtml(p.designation)}</p>` : ''}
             ${p.url ? `<a href="${escapeHtml(p.url)}" target="_blank" rel="noopener noreferrer" class="text-[11px] text-sky-300 underline">${p.intl ? 'Park information source' : 'Official NPS site'}</a>` : ''}
             ${internationalMetadata(p)}
+            ${customLocationMetadata(p)}
             ${p.lat === null || p.lng === null ? '<p class="text-[11px] text-slate-400">Coordinates unavailable; list only</p>' : ''}
             <p class="text-[11px] text-slate-400">${escapeHtml(biomeLocationLabel(p))}</p>
             <p class="text-[11px] text-teal-300">${p.biomes.map(b => escapeHtml(BIOMES[b].name)).join('; ')}</p>
@@ -1704,6 +1938,7 @@
     }
 
     function updateAllUI() {
+      document.getElementById('btnCustomLocation').classList.toggle('hidden', AppState.viewOnly);
       updateHud();
       if (AppState.currentTab === 'passport') renderPassportView();
       if (AppState.currentTab === 'scratch') renderScratchMap();
@@ -1832,7 +2067,8 @@
         regions: AppState.regions,
         clearedCounties: AppState.clearedCounties,
         clearedPolygons: AppState.clearedPolygons,
-        routes: AppState.routes
+        routes: AppState.routes,
+        customLocations: AppState.customLocations
       };
       const encoded = btoa(encodeURIComponent(JSON.stringify(sharePayload)));
       const shareUrl = `${window.location.origin}${window.location.pathname}?d=${encoded}`;
@@ -1870,12 +2106,14 @@
       reader.onload = (event) => {
         try {
           const parsed = JSON.parse(event.target.result);
+          const customLocations = CoordinateLookups.validateCustomLocations(parsed.customLocations || []);
           AppState.homeBase = parsed.homeBase || null;
           AppState.pins = NpsCatalog.migratePins(parsed.pins || {});
           AppState.regions = parsed.regions || {};
           AppState.clearedCounties = parsed.clearedCounties || {};
           AppState.clearedPolygons = Array.isArray(parsed.clearedPolygons) ? parsed.clearedPolygons : [];
           AppState.routes = Array.isArray(parsed.routes) ? parsed.routes : [];
+          AppState.customLocations = customLocations;
           AppState.mode = parsed.mode || 'rpg';
           saveState();
           initMap();
@@ -1899,6 +2137,7 @@
       AppState.clearedCounties = {};
       AppState.clearedPolygons = [];
       AppState.routes = [];
+      AppState.customLocations = [];
       saveState();
       location.reload();
     });
@@ -1978,7 +2217,10 @@
       await loadNpsCatalog();
       await loadWorldwideCatalog();
       await loadBiomeCatalog();
+      await loadGeoDatasets();
+      await Promise.all([loadNpsBoundaries(), loadCoordinateGeography()]);
       if (map) {
+        renderCountyHitboxes();
         renderParkMarkers();
         drawFogOfWar();
       }
@@ -1989,6 +2231,7 @@
       loadPersistedState();
       await Promise.all([loadGeoDatasets(), loadNpsCatalog(), loadWorldwideCatalog()]);
       await loadBiomeCatalog();
+      await Promise.all([loadNpsBoundaries(), loadCoordinateGeography()]);
       initMap();
       updateAllUI();
 

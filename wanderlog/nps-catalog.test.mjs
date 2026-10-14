@@ -4,6 +4,7 @@ import vm from 'node:vm';
 import catalog from './nps-catalog.js';
 import ecoregions from './ecoregions.js';
 import internationalCatalog from './international-parks.js';
+import coordinateLookups from './coordinate-lookups.js';
 import { collectParks } from './import-nps.mjs';
 const worldwide = JSON.parse(await readFile(new URL('./worldwide-national-parks.json', import.meta.url), 'utf8'));
 const wikidata = JSON.parse(await readFile(new URL('./wikidata-national-parks-query.json', import.meta.url), 'utf8'));
@@ -104,14 +105,16 @@ function element(id) {
     elements.set(id, {
       value: id === 'bucketFilterStatus' ? 'all' : '',
       textContent: '', innerHTML: '', style: {}, dataset: {},
-      classList: { add() {}, remove() {}, toggle() {} }, addEventListener() {},
+      classList: { add() {}, remove() {}, toggle() {} },
+      handlers: {}, addEventListener(name, handler) { this.handlers[name] = handler; },
+      querySelectorAll: () => [], focus() {},
       appendChild(child) { this.innerHTML += child.innerHTML; }
     });
   }
   return elements.get(id);
 }
 const context = vm.createContext({
-  NpsCatalog: catalog, Ecoregions: ecoregions, InternationalParks: internationalCatalog,
+  NpsCatalog: catalog, Ecoregions: ecoregions, InternationalParks: internationalCatalog, CoordinateLookups: coordinateLookups,
   tailwind: {}, console, Intl, URL, URLSearchParams, setTimeout() {},
   document: { getElementById: element, querySelectorAll: () => [], createElement: () => ({ innerHTML: '' }) },
   window: { addEventListener() {} },
@@ -302,6 +305,8 @@ check('fog radius scales continuously with zoom without a 25-pixel floor', () =>
   vm.runInContext('map.getZoom = () => 5;', context);
   assert.equal(vm.runInContext('calculatePixelRadius(0, 85)', context), radius * 2);
   vm.runInContext('map.getZoom = () => 4;', context);
+  assert.equal(vm.runInContext('calculatePixelRadius(90, 85)', context),
+    vm.runInContext('calculatePixelRadius(85.05112878, 85)', context));
 });
 check('zoom bitmap overscan and transforms follow Leaflet scale and target center', () => {
   vm.runInContext('resizeFogCanvas(); animateFogZoom({ zoom: 5, center: { lat: 1, lng: 2 } });', context);
@@ -341,10 +346,12 @@ check('offscreen clearings are culled by their radius, not a fixed 200-pixel cut
   assert.ok(context.fogOperations.some(operation => operation[0] === 'transform' && operation[5] === 800 && operation[6] === 600));
 });
 context.removedMarkers = [];
+context.markerOptions = [];
 context.L = {
-  circleMarker: () => ({
-    addTo() { return this; }, bindTooltip() {}, bindPopup() {}
-  })
+  circleMarker: (point, options) => {
+    context.markerOptions.push(options);
+    return { addTo() { return this; }, bindTooltip() {}, bindPopup() {} };
+  }
 };
 vm.runInContext(`
   map.removeLayer = marker => removedMarkers.push(marker);
@@ -363,6 +370,7 @@ check('all pin filters work and None removes previously rendered markers', () =>
     assert.deepEqual(Array.from(vm.runInContext('Object.keys(leafletMarkers)', context)), ids);
   }
   assert.equal(context.removedMarkers.length, 5);
+  assert.ok(context.markerOptions.every(options => options.pane === 'destinationMarkerPane'));
   assert.equal(vm.runInContext('AppState.pins.visited', context), 'v');
 });
 context.fogOperations.length = 0;
@@ -373,5 +381,146 @@ vm.runInContext(`
 `, context);
 check('fog cannot be removed by classic mode or the disabled checkbox hooks', () => {
   assert.ok(context.fogOperations.some(operation => operation[0] === 'fill'));
+});
+
+const customLocation = {
+  id: 'custom-reference', name: 'Colosseum <test>', lat: 41.8902, lng: 12.4922, status: 'v',
+  elevation: { meters: 100, feet: 328.084 }, political: { countries: ['Italy'], states: [], counties: [] },
+  ecoregions: [{ id: 1, name: 'Italian forests', biomeId: 12, realm: 'Palearctic' }],
+  biomes: ['12'], biomeStatus: 'matched',
+  rarity: { method: 'osm-poi-density', category: 'Deep Cut', nearbyPoiCount: 30, nearestHighwayKm: null },
+  lookedUpAt: new Date().toISOString()
+};
+context.customLocation = customLocation;
+vm.runInContext(`
+  AppState.customLocations = [customLocation];
+  AppState.pins = {};
+  AppState.regions = {};
+  AppState.homeBase = null;
+  BIOMES = Ecoregions.biomeDefinitions();
+  BIOMES['12'].xp = 30;
+  PARKS = [{ id: 'yose', name: 'Yosemite', lat: 37.75, lng: -119.59, biomes: [] }];
+`, context);
+check('custom coordinates collect real biomes and countries without counting as NPS visits or park achievements', () => {
+  assert.equal(vm.runInContext('calculateStats().usParksCount', context), 0);
+  assert.equal(vm.runInContext('calculateStats().visitedParks.length', context), 0);
+  assert.equal(vm.runInContext('calculateStats().countriesCount', context), 1);
+  assert.deepEqual(Array.from(vm.runInContext('calculateStats().biomesSet', context)), ['12']);
+  assert.equal(vm.runInContext('calculateStats().xp', context), 50);
+  vm.runInContext("AppState.customLocations[0].status = 'w'", context);
+  assert.equal(vm.runInContext('calculateStats().countriesCount', context), 0);
+  assert.equal(vm.runInContext('calculateStats().biomesSet.size', context), 0);
+  vm.runInContext("AppState.customLocations[0].status = 'v'", context);
+});
+element('bucketSearch').value = 'italian forests';
+vm.runInContext('renderBucketListView()', context);
+check('custom ledger and popup show elevation, regions, source credits, and clearly labeled density estimates', () => {
+  assert.ok(element('bucketListGrid').innerHTML.includes('Colosseum &lt;test&gt;'));
+  assert.ok(element('bucketListGrid').innerHTML.includes('328 ft'));
+  assert.ok(element('bucketListGrid').innerHTML.includes('OSM rarity estimate'));
+  assert.ok(element('bucketListGrid').innerHTML.includes('not review-count popularity'));
+  const popup = vm.runInContext('createPopupContent(customDestinations()[0])', context);
+  assert.ok(popup.includes('OpenStreetMap contributors'));
+  assert.ok(!popup.includes('Official NPS'));
+});
+let savedJson;
+context.localStorage = {
+  setItem(key, value) { savedJson = value; },
+  getItem() { return savedJson; }
+};
+context.window.location = { search: '' };
+context.atob = value => Buffer.from(value, 'base64').toString('binary');
+vm.runInContext('saveState(); AppState.customLocations = []; loadPersistedState();', context);
+check('custom metadata survives local save/load and read-only shared passports; legacy files default to empty custom locations', () => {
+  assert.equal(vm.runInContext('AppState.customLocations[0].name', context), customLocation.name);
+  context.window.location.search = '?d=' + encodeURIComponent(Buffer.from(encodeURIComponent(savedJson)).toString('base64'));
+  vm.runInContext('AppState.customLocations = []; loadPersistedState()', context);
+  assert.equal(vm.runInContext('AppState.viewOnly', context), true);
+  assert.equal(vm.runInContext('AppState.customLocations.length', context), 1);
+  const before = savedJson;
+  vm.runInContext("setPinStatus('custom-reference', 'un')", context);
+  assert.equal(vm.runInContext('AppState.customLocations.length', context), 1);
+  assert.equal(savedJson, before);
+  context.window.location.search = '';
+  savedJson = '{"pins":{},"regions":{}}';
+  vm.runInContext('AppState.viewOnly = false; loadPersistedState()', context);
+  assert.equal(vm.runInContext('AppState.customLocations.length', context), 0);
+});
+context.fogOperations.length = 0;
+vm.runInContext(`
+  fogCtx.moveTo = (...args) => fogOperations.push(['moveTo', ...args]);
+  fogCtx.lineTo = (...args) => fogOperations.push(['lineTo', ...args]);
+  fogCtx.closePath = () => fogOperations.push(['closePath']);
+  fogCtx.fill = rule => fogOperations.push(['polygonFill', rule, fogCtx.shadowBlur]);
+  fogCtx.stroke = () => fogOperations.push(['stroke', fogCtx.lineWidth, fogCtx.lineCap]);
+  npsBoundariesByCode = { yose: [{ type: 'Polygon', coordinates: [[[-120,37],[-119,37],[-119,38],[-120,37]]] }] };
+  PARKS = [{ id: 'yose', lat: null, lng: null }];
+  AppState.pins = { yose: 'v' };
+  drawFogOfWar();
+`, context);
+check('visited NPS boundaries replace radial auras, retain parks without points, and use a zoom-scaled 10 km feather', () => {
+  assert.equal(context.fogOperations.filter(operation => operation[0] === 'arc').length, 0);
+  const fill = context.fogOperations.find(operation => operation[0] === 'polygonFill');
+  assert.equal(fill[1], 'evenodd');
+  assert.equal(fill[2], vm.runInContext('calculatePixelRadius(37, 10)', context));
+});
+context.fogOperations.length = 0;
+vm.runInContext(`
+  PARKS = [{ id: 'wiki-reference', lat: 41.89, lng: 12.49, intl: true }];
+  AppState.pins = { 'wiki-reference': 'v' };
+  drawFogOfWar();
+`, context);
+check('international point destinations keep their existing radial fallback', () => {
+  assert.equal(context.fogOperations.filter(operation => operation[0] === 'arc').length, 1);
+  assert.equal(context.fogOperations.filter(operation => operation[0] === 'polygonFill' && operation[1] === 'evenodd').length, 0);
+});
+context.fogOperations.length = 0;
+vm.runInContext(`
+  PARKS = [];
+  AppState.customLocations = [{ ...customLocation, status: 'w' }];
+  drawFogOfWar();
+`, context);
+check('wishlist custom pins do not clear fog', () => {
+  assert.equal(context.fogOperations.filter(operation => operation[0] === 'arc').length, 0);
+});
+context.fogOperations.length = 0;
+vm.runInContext(`
+  AppState.customLocations = [];
+  AppState.routes = [[[37,-120],[38,-119]]];
+  drawFogOfWar();
+  AppState.routes = [];
+`, context);
+check('existing route corridors remain round-capped and 40 km wide', () => {
+  const stroke = context.fogOperations.find(operation => operation[0] === 'stroke');
+  assert.equal(stroke[1], vm.runInContext('calculatePixelRadius(37.5, 40)', context));
+  assert.equal(stroke[2], 'round');
+});
+context.CoordinateLookups = { ...coordinateLookups, lookupCoordinate: async () => customLocation };
+context.crypto = { randomUUID: () => 'saved-reference' };
+context.d3 = { geoContains() {} };
+vm.runInContext('coordinateIndexes = {}; AppState.customLocations = [];', context);
+element('customLocationName').value = 'Colosseum';
+element('customLocationLat').value = '41.8902';
+element('customLocationLng').value = '12.4922';
+element('customLocationStatus').value = 'v';
+await element('customLocationForm').handlers.submit({ preventDefault() {} });
+check('the custom-coordinate form saves only after lookup completion', () => {
+  assert.equal(vm.runInContext('AppState.customLocations.length', context), 1);
+  assert.equal(JSON.parse(savedJson).customLocations[0].id, 'custom-saved-reference');
+});
+context.CoordinateLookups.lookupCoordinate = async () => { throw new Error('Overpass HTTP 503'); };
+await element('customLocationForm').handlers.submit({ preventDefault() {} });
+check('lookup failure leaves saved pins unchanged and presents a retryable error', () => {
+  assert.equal(vm.runInContext('AppState.customLocations.length', context), 1);
+  assert.ok(element('customLocationLookupStatus').textContent.includes('Not saved'));
+  assert.ok(element('customLocationLookupStatus').textContent.includes('503'));
+});
+context.CoordinateLookups.lookupCoordinate = async () => customLocation;
+context.crypto.randomUUID = () => 'another-reference';
+context.localStorage.setItem = () => { throw new Error('Storage full'); };
+await element('customLocationForm').handlers.submit({ preventDefault() {} });
+check('failed persistence rolls back a new custom location rather than leaving an unsaved success', () => {
+  assert.equal(vm.runInContext('AppState.customLocations.length', context), 1);
+  assert.ok(element('customLocationLookupStatus').textContent.includes('Storage full'));
 });
 console.log(`${checks} checks passed.`);

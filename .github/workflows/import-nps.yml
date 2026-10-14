@@ -27,6 +27,8 @@ jobs:
           unzip -q "$RUNNER_TEMP/Ecoregions2017.zip" -d "$RUNNER_TEMP/ecoregions"
       - name: Refresh terrestrial biome mappings
         run: node wanderlog/import-ecoregions.mjs "$RUNNER_TEMP/ecoregions/Ecoregions2017.shp"
+      - name: Refresh compact park boundaries and coordinate geography
+        run: node wanderlog/import-geography.mjs "$RUNNER_TEMP/ecoregions/Ecoregions2017.shp"
       - name: Test generated catalogs and game integration
         working-directory: wanderlog
         run: npm test
@@ -36,4 +38,6 @@ jobs:
           path: |
             wanderlog/nps-parks.json
             wanderlog/ecoregion-mapping.json
+            wanderlog/nps-boundaries.topojson
+            wanderlog/ecoregions.topojson
           if-no-files-found: error
