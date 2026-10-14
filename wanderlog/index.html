@@ -496,22 +496,24 @@
             </select>
             <select id="bucketFilterType" aria-label="Destination type" aria-describedby="bucketTypeHint" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none">
               <option value="all">All Destination Types</option>
-              <option value="parks">National Parks</option>
-              <option value="monuments">National Monuments</option>
-              <option value="historic">Historic Sites &amp; Historical Parks</option>
-              <option value="memorials">Memorials</option>
-              <option value="battlefields">Battlefields &amp; Military Parks</option>
-              <option value="preserves">Preserves &amp; Reserves</option>
-              <option value="shores">Seashores &amp; Lakeshores</option>
-              <option value="recreation">Recreation Areas</option>
-              <option value="rivers">Rivers &amp; Riverways</option>
-              <option value="trails">Trails</option>
-              <option value="parkways">Parkways</option>
+              <option value="parks">National Parks — Worldwide</option>
+              <option value="nps-parks">US National Parks (NPS)</option>
+              <option value="nps">All NPS Sites</option>
+              <option value="monuments">NPS — National Monuments</option>
+              <option value="historic">NPS — Historic Sites &amp; Historical Parks</option>
+              <option value="memorials">NPS — Memorials</option>
+              <option value="battlefields">NPS — Battlefields &amp; Military Parks</option>
+              <option value="preserves">NPS — Preserves &amp; Reserves</option>
+              <option value="shores">NPS — Seashores &amp; Lakeshores</option>
+              <option value="recreation">NPS — Recreation Areas</option>
+              <option value="rivers">NPS — Rivers &amp; Riverways</option>
+              <option value="trails">NPS — Trails</option>
+              <option value="parkways">NPS — Parkways</option>
               <option value="other">Other NPS Designations</option>
               <option value="international">International Catalog</option>
               <option value="custom">Custom Locations</option>
             </select>
-            <p id="bucketTypeHint" class="w-full text-[11px] text-slate-400">National Parks includes the international catalog (curated/Wikidata classifications are unverified). Combined NPS designations can match more than one type.</p>
+            <p id="bucketTypeHint" class="w-full text-[11px] text-slate-400">US National Parks and NPS filters use only the official NPS catalog, including U.S. territories. Worldwide includes international entries with unverified curated/Wikidata classifications. Combined designations can match multiple types; combined NPS listings count once.</p>
             <p id="bucketResultsCount" role="status" aria-live="polite" class="w-full text-xs text-amber-300"></p>
           </div>
         </div>
@@ -2205,7 +2207,16 @@
         parkways: /\bParkway\b/i
       };
       const types = Object.entries(patterns).filter(([, pattern]) => pattern.test(designation)).map(([type]) => type);
+      // NPS leaves the designation blank for National Park of American Samoa.
+      if (!designation && p.id === 'npsa') types.push('parks');
       return types.length ? types : ['other'];
+    }
+
+    function matchesBucketType(p, type) {
+      if (type === 'all') return true;
+      if (type === 'nps') return !p.custom && !p.intl;
+      if (type === 'nps-parks') return !p.custom && !p.intl && bucketDestinationTypes(p).includes('parks');
+      return bucketDestinationTypes(p).includes(type);
     }
 
     function renderBucketListView() {
@@ -2218,7 +2229,7 @@
       const filtered = [...PARKS, ...customDestinations()].filter(p => {
         const status = destinationStatus(p);
         if (filter !== 'all' && status !== filter) return false;
-        if (type !== 'all' && !bucketDestinationTypes(p).includes(type)) return false;
+        if (!matchesBucketType(p, type)) return false;
         if (!search) return true;
         return p.name.toLowerCase().includes(search) || 
                (p.state && p.state.toLowerCase().includes(search)) ||

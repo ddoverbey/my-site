@@ -516,7 +516,13 @@ wizard-failure, and disclosure regression tests; no geography import is needed.
 ### Bucket List filtering
 
 The Bucket List's **Destination type** filter combines with search and travel status, with a live
-matching-result count. National Parks includes international catalog entries with the existing
+matching-result count. **US National Parks (NPS)** selects only official NPS national-park
+designations, including combined Park & Preserve listings. **All NPS Sites** includes every NPS
+designation. Both exclude international and custom locations, include U.S. territories, and count
+combined API listings once (not necessarily the administrative count of national parks).
+American Samoa is included explicitly because its official NPS record leaves `designation` blank.
+The other designation filters are explicitly labeled **NPS**.
+**National Parks — Worldwide** includes international catalog entries with the existing
 curated/Wikidata classification caveats. NPS categories use official `designation`, not words in
 the destination name: monuments, historic sites/parks, memorials, battlefields, preserves,
 shores, recreation areas, rivers, trails and parkways are selectable. Combined designations

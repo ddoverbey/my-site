@@ -1106,4 +1106,39 @@ check('international, custom and all type options keep separate destinations dis
     assert.equal(element('bucketResultsCount').textContent, `${count} / 5 destinations shown`);
   }
 });
+check('US national parks and all NPS filters explicitly exclude international and custom entries', () => {
+  element('bucketSearch').value = '';
+  element('bucketFilterStatus').value = 'all';
+  for (const [type, count, shown, hidden] of [
+    ['nps-parks', 1, 'Test National Park', ['International Test','Test Monument','Test Historical Park','Colosseum']],
+    ['nps', 3, 'Test Monument', ['International Test','Colosseum']],
+    ['monuments', 1, 'Test Monument', ['International Test','Test National Park']]
+  ]) {
+    element('bucketFilterType').value = type;
+    element('bucketFilterType').handlers.change();
+    assert.ok(element('bucketListGrid').innerHTML.includes(shown));
+    for (const name of hidden) assert.ok(!element('bucketListGrid').innerHTML.includes(name));
+    assert.equal(element('bucketResultsCount').textContent, `${count} / 5 destinations shown`);
+  }
+  assert.equal(vm.runInContext('matchesBucketType({intl:true,designation:"National Park"},"nps-parks")', context), false);
+  assert.equal(vm.runInContext('matchesBucketType({custom:true,designation:"National Park"},"nps")', context), false);
+  assert.equal(vm.runInContext('matchesBucketType({designation:"National Park & Preserve"},"nps-parks")', context), true);
+  assert.equal(vm.runInContext('matchesBucketType({designation:"National Historical Park"},"nps-parks")', context), false);
+});
+check('real NPS filters return the official catalog exclusively and preserve combined park listings', () => {
+  context.realUnits = catalog.normalizeParks(actualSnapshot.data);
+  context.realInternational = internationalParks;
+  vm.runInContext('PARKS=[...realUnits,...realInternational];AppState.customPois=[]', context);
+  element('bucketFilterType').value = 'nps';
+  vm.runInContext('renderBucketListView()', context);
+  assert.equal(element('bucketResultsCount').textContent, `${actualSnapshot.total} / ${actualSnapshot.total + internationalParks.length} destinations shown`);
+  element('bucketFilterType').value = 'nps-parks';
+  vm.runInContext('renderBucketListView()', context);
+  const filtered = vm.runInContext('PARKS.filter(p=>matchesBucketType(p,"nps-parks"))', context);
+  assert.equal(filtered.length, 62);
+  assert.ok(filtered.every(p => !p.intl));
+  assert.equal(filtered.filter(p => p.id === 'seki').length, 1);
+  assert.ok(filtered.some(p => p.id === 'npsa'));
+  assert.ok(!element('bucketListGrid').innerHTML.includes('Banff'));
+});
 console.log(`${checks} checks passed.`);
