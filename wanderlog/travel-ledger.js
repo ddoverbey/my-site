@@ -206,6 +206,16 @@
     return state;
   }
 
+  function loggedCountyStatuses(state, options) {
+    // Re-derive exploration without manual county/region marks or mutating the passport.
+    return syncDerivedState({
+      pins: { ...state.pins }, regions: {}, counties: {},
+      customPois: state.customPois.map(poi => ({ ...poi })),
+      expeditions: state.expeditions,
+      homeBase: state.homeBase ? { ...state.homeBase } : null
+    }, options).counties;
+  }
+
   function metadataProgress(state) {
     const pois = state.customPois.filter(poi => isVisited(poi.status));
     const trips = state.expeditions;
@@ -226,7 +236,7 @@
 
   const api = {
     ranks, labels, colors, transitTags, purposeTags, isVisited, clearsFog, promote,
-    validateStatuses, validateTags, validateExpeditions, normalizePoi, migrateState, syncDerivedState, metadataProgress
+    validateStatuses, validateTags, validateExpeditions, normalizePoi, migrateState, syncDerivedState, loggedCountyStatuses, metadataProgress
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TravelLedger = api;

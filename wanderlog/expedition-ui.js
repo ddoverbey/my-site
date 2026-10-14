@@ -4,10 +4,6 @@ let expeditionPreview = null;
 let citySearchPending = false;
 let lastCitySearch = 0;
 
-function nextTravelStatus(status) {
-  return { w: 't', t: 'v', v: 'l', l: 'l' }[status] || 'w';
-}
-
 function refreshTravelUI() {
   if (map) {
     renderParkMarkers();
@@ -128,7 +124,10 @@ function resumeExpedition() {
   document.getElementById('expeditionMapPicker').classList.add('hidden');
   document.getElementById('expeditionModal').classList.remove('hidden');
   renderExpeditionStops();
-  if (map) renderParkMarkers();
+  if (map) {
+    renderParkMarkers();
+    renderCountyHitboxes();
+  }
 }
 
 function closeExpedition() {
@@ -138,7 +137,10 @@ function closeExpedition() {
   document.getElementById('expeditionModal').classList.add('hidden');
   document.getElementById('expeditionMapPicker').classList.add('hidden');
   renderExpeditionStops();
-  if (map) renderParkMarkers();
+  if (map) {
+    renderParkMarkers();
+    renderCountyHitboxes();
+  }
   document.getElementById('btnExpedition').focus();
 }
 
@@ -286,6 +288,7 @@ document.getElementById('btnPickExpeditionMap').addEventListener('click', () => 
   document.getElementById('expeditionMapPicker').classList.remove('hidden');
   switchTab('map');
   renderParkMarkers();
+  renderCountyHitboxes();
   renderExpeditionStops();
   document.getElementById('btnResumeExpedition').focus();
 });

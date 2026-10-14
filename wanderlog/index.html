@@ -330,7 +330,7 @@
         <div class="flex flex-wrap items-center justify-between gap-4 rpg-panel p-4 rounded-2xl">
           <div>
             <h2 class="cinzel text-lg font-bold text-amber-200">The Royal Cartography Records</h2>
-            <p class="text-xs text-slate-400">Click countries, US states, or counties: Unexplored → Visited → Wishlist → Transited → Lived → Unexplored. Home and logged visits retain their ledger-backed tiers.</p>
+            <p class="text-xs text-slate-400">Counties: Unexplored → Visited → Wishlist → Unexplored. Countries and US states: Unexplored → Visited → Wishlist → Transited → Lived → Unexplored. Manual county marks track completion without clearing RPG fog. Home and logged visits retain their ledger-backed tiers.</p>
           </div>
           <div class="flex flex-wrap items-center gap-3">
             <div class="flex flex-wrap bg-slate-900 p-1 rounded-xl border border-slate-700 text-xs" role="group" aria-label="Scratch Map dataset">
@@ -1210,6 +1210,8 @@
     let leafletMarkers = {};
     let homeMarker = null;
     let countyLayer = null;
+    let countyRenderer = null;
+    let countyHitboxKey = null;
 
     function initMap() {
       if (map) return;
@@ -1369,8 +1371,8 @@
         fogCtx.globalAlpha = 1;
       });
 
-      Object.keys(AppState.counties).forEach(id => {
-        if (!TravelLedger.clearsFog(AppState.counties[id])) return;
+      Object.entries(loggedCountyStatuses()).forEach(([id, status]) => {
+        if (!TravelLedger.clearsFog(status)) return;
         const feature = countyFeaturesById[id];
         if (feature) punchFogPolygon(feature.geometry);
       });
@@ -1762,12 +1764,27 @@
       }
     }
 
+    function loggedCountyStatuses() {
+      return TravelLedger.loggedCountyStatuses(AppState, {
+        parks: PARKS,
+        politicalAt: (lat, lng) => coordinateIndexes
+          ? CoordinateLookups.politicalRegion(lat, lng, coordinateIndexes, d3.geoContains) : null
+      });
+    }
+
     function renderCountyHitboxes() {
-      if (!map || !countyGeoJson || countyLayer) return;
-      map.createPane('countyHitboxPane');
+      if (!map || !countyGeoJson) return;
+      const logged = loggedCountyStatuses();
+      const key = JSON.stringify([AppState.mode, expeditionPicking, logged]);
+      if (countyLayer && countyHitboxKey === key) return;
+      if (countyLayer) map.removeLayer(countyLayer);
+      countyHitboxKey = key;
+      if (!map.getPane('countyHitboxPane')) map.createPane('countyHitboxPane');
       map.getPane('countyHitboxPane').style.zIndex = '440';
-      const countyRenderer = L.svg({ pane: 'countyHitboxPane' });
-      countyLayer = L.geoJSON({ type: 'FeatureCollection', features: countyGeoJson }, {
+      if (!countyRenderer) countyRenderer = L.svg({ pane: 'countyHitboxPane' });
+      const features = countyGeoJson.filter(feature => AppState.mode === 'classic' || expeditionPicking ||
+        TravelLedger.clearsFog(logged[String(feature.id).padStart(5, '0')]));
+      countyLayer = L.geoJSON({ type: 'FeatureCollection', features }, {
         pane: 'countyHitboxPane',
         renderer: countyRenderer,
         style: {
@@ -1780,29 +1797,21 @@
         onEachFeature(feature, layer) {
           const countyId = String(feature.id).padStart(5, '0');
           const countyName = feature.properties?.name || `County ${countyId}`;
-          layer.bindTooltip(() => `${escapeHtml(countyName)} • ${TravelLedger.labels[AppState.counties[countyId]] || 'Unexplored'}${AppState.counties[countyId] === 'l' ? ' 🏰' : ''}`, { sticky: true, direction: 'top' });
+          const canHover = AppState.mode === 'classic' || TravelLedger.clearsFog(logged[countyId]);
+          if (canHover) layer.bindTooltip(() => `${escapeHtml(countyName)} • ${TravelLedger.labels[
+            AppState.mode === 'classic' ? AppState.counties[countyId] : logged[countyId]
+          ] || 'Unexplored'}`, { sticky: true, direction: 'top' });
           layer.on({
             mouseover() {
+              if (!canHover) return;
               layer.setStyle({ opacity: 0.65, fillOpacity: 0.05 });
             },
             mouseout() {
               layer.setStyle({ opacity: 0, fillOpacity: 0 });
             },
             click() {
-              if (AppState.viewOnly) return;
-              if (expeditionPicking) {
-                addExpeditionStop('county', countyId);
-                return;
-              }
-              const next = nextTravelStatus(AppState.counties[countyId]);
-              commitLedger(() => { AppState.counties[countyId] = next; });
-              drawFogOfWar();
-              updateAllUI();
-              showNotification(
-                'Territory Revealed!',
-                `${countyName}: ${TravelLedger.labels[next]}.`,
-                '🗺️'
-              );
+              if (AppState.viewOnly || !expeditionPicking) return;
+              addExpeditionStop('county', countyId);
             }
           });
         }
@@ -1945,7 +1954,9 @@
     function cycleScratchStatus(feature) {
       if (AppState.viewOnly) return;
       const key = scratchStatusKey(feature);
-      const next = { v: 'w', w: 't', t: 'l' }[scratchStatuses()[key]] ||
+      const next = AppState.scratchDataset === 'counties'
+        ? (scratchStatuses()[key] === 'v' ? 'w' : scratchStatuses()[key] === 'w' ? null : 'v')
+        : { v: 'w', w: 't', t: 'l' }[scratchStatuses()[key]] ||
         (scratchStatuses()[key] === 'l' ? null : 'v');
       try {
         commitLedger(() => {
@@ -2315,6 +2326,7 @@
     }
 
     function updateAllUI() {
+      renderCountyHitboxes();
       document.getElementById('btnCustomLocation').classList.toggle('hidden', AppState.viewOnly);
       document.getElementById('btnExpedition').classList.toggle('hidden', AppState.viewOnly);
       updateHud();
@@ -2377,6 +2389,7 @@
       // Optional fog toggle: document.getElementById('fogToggleCheckbox').checked = true;
       saveState();
       switchTab('map');
+      renderCountyHitboxes();
       drawFogOfWar();
     });
 
@@ -2389,6 +2402,7 @@
       // Optional fog toggle: document.getElementById('fogToggleCheckbox').checked = false;
       saveState();
       switchTab('bucketlist');
+      renderCountyHitboxes();
       drawFogOfWar();
     });
 

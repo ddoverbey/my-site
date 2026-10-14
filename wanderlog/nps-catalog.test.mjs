@@ -591,7 +591,7 @@ check('lived pin cannot be manually cleared or downgraded', () => {
   vm.runInContext("setPinStatus('test','v');setPinStatus('test','un')", context);
   assert.equal(vm.runInContext('AppState.pins.test', context), 'l');
 });
-check('all revealing county tiers punch exact polygons, wishlist does not', () => {
+check('manual county tiers never clear fog, including existing saved visited and lived marks', () => {
   vm.runInContext(`
     PARKS=[]; AppState.pins={}; AppState.counties={};
     countyFeaturesById['06073']={geometry:{type:'Polygon',coordinates:[[[-120,37],[-119,37],[-119,38],[-120,37]]]}};
@@ -599,7 +599,7 @@ check('all revealing county tiers punch exact polygons, wishlist does not', () =
   for (const tier of ['w', 't', 'v', 'l']) {
     context.fogOperations.length = 0;
     vm.runInContext(`AppState.counties={'06073':'${tier}'};drawFogOfWar()`, context);
-    assert.equal(context.fogOperations.filter(op => op[0] === 'polygonFill' && op[1] === 'evenodd').length, tier === 'w' ? 0 : 1);
+    assert.equal(context.fogOperations.filter(op => op[0] === 'polygonFill' && op[1] === 'evenodd').length, 0);
   }
 });
 check('county completion counts only visited/lived loaded FIPS records, never transits or unknown IDs', () => {
@@ -634,6 +634,7 @@ check('logged expedition routes join legacy route corridors in the same canvas',
   context.fogOperations.length = 0;
   vm.runInContext('drawFogOfWar()', context);
   assert.equal(context.fogOperations.filter(op => op[0] === 'stroke').length, 1);
+  assert.equal(context.fogOperations.filter(op => op[0] === 'polygonFill' && op[1] === 'evenodd').length, 1);
 });
 check('all ledger fields survive local and shared payload migration', () => {
   vm.runInContext('saveState();applyPassport(migratePassport(JSON.parse(localStorage.getItem("terra_incognita_state"))))', context);
@@ -873,10 +874,10 @@ check('county scratch view renders all four exact colors and noninteractive fain
   assert.equal(mesh.attrs['stroke-opacity'], 0.35);
   assert.equal(element('scratchStatsLabel').textContent, '2 / 4 Visited/Lived · 1 Transited');
 });
-check('scratch paths cycle unexplored, visited, wishlist, transited, lived, then delete the status', () => {
+check('counties use a three-click scratch cycle while nations and states keep all four tiers', () => {
   for (const dataset of ['world', 'usa', 'counties']) {
     vm.runInContext(`applyPassport(migratePassport({}));AppState.scratchDataset='${dataset}';renderScratchMap()`, context);
-    for (const next of ['v', 'w', 't', 'l', undefined]) {
+    for (const next of dataset === 'counties' ? ['v', 'w', undefined] : ['v', 'w', 't', 'l', undefined]) {
       const regions = scratchNodes.find(n => n.attrs.class === 'scratch-regions');
       regions.click({}, regions.data[0]);
       const actual = vm.runInContext('scratchStatuses()[scratchStatusKey(' +
@@ -1140,5 +1141,80 @@ check('real NPS filters return the official catalog exclusively and preserve com
   assert.equal(filtered.filter(p => p.id === 'seki').length, 1);
   assert.ok(filtered.some(p => p.id === 'npsa'));
   assert.ok(!element('bucketListGrid').innerHTML.includes('Banff'));
+});
+
+check('RPG county hitboxes exclude unexplored and manually marked counties; normal clicks never edit', () => {
+  const layers = [];
+  const panes = {};
+  let removed = 0;
+  let renderers = 0;
+  context.L.svg = () => { renderers++; return {}; };
+  context.L.geoJSON = (collection, options) => {
+    layers.length = 0;
+    for (const feature of collection.features) {
+      const layer = {
+        feature, styles: [], tooltip: null,
+        bindTooltip(tooltip) { this.tooltip = tooltip; },
+        setStyle(style) { this.styles.push(style); },
+        on(handlers) { this.handlers = handlers; }
+      };
+      options.onEachFeature(feature, layer);
+      layers.push(layer);
+    }
+    return { addTo() { return this; } };
+  };
+  context.countyMapMock = {
+    getPane: name => panes[name],
+    createPane: name => { panes[name] = { style: {} }; },
+    removeLayer() { removed++; }
+  };
+  vm.runInContext(`
+    applyPassport(migratePassport({}));AppState.mode='rpg';AppState.viewOnly=false;
+    coordinateIndexes=null;PARKS=[];countyLayer=null;countyRenderer=null;countyHitboxKey=null;expeditionPicking=false;
+    countyGeoJson=[
+      {id:'06001',properties:{name:'Alameda'}},
+      {id:'06013',properties:{name:'Contra Costa'}},
+      {id:'06041',properties:{name:'Marin'}}
+    ];
+    AppState.counties={'06013':'v','06041':'l'};
+    AppState.expeditions=[{...testExpedition,countyIds:['06001']}];
+    map=countyMapMock;renderCountyHitboxes();
+  `, context);
+  assert.deepEqual(layers.map(layer => layer.feature.id), ['06001']);
+  assert.ok(layers[0].tooltip().includes('Visited'));
+  layers[0].handlers.mouseover();
+  assert.equal(layers[0].styles[0].opacity, 0.65);
+  const before = vm.runInContext('JSON.stringify(passportPayload())', context);
+  layers[0].handlers.click();
+  assert.equal(vm.runInContext('JSON.stringify(passportPayload())', context), before);
+  vm.runInContext('renderCountyHitboxes()', context);
+  assert.equal(removed, 0);
+  vm.runInContext('AppState.expeditions=[];renderCountyHitboxes()', context);
+  assert.equal(layers.length, 0);
+  assert.equal(removed, 1);
+
+  vm.runInContext('expeditionPicking=true;renderCountyHitboxes()', context);
+  assert.equal(layers.length, 3);
+  for (const layer of layers) {
+    assert.equal(layer.tooltip, null);
+    layer.handlers.mouseover();
+    assert.equal(layer.styles.length, 0);
+  }
+  context.pickedCounties = [];
+  vm.runInContext("addExpeditionStop=(kind,id)=>pickedCounties.push([kind,id])", context);
+  const beforePicking = vm.runInContext('JSON.stringify(passportPayload())', context);
+  layers[0].handlers.click();
+  assert.deepEqual(Array.from(context.pickedCounties[0]), ['county', '06001']);
+  assert.equal(vm.runInContext('JSON.stringify(passportPayload())', context), beforePicking);
+  vm.runInContext('AppState.viewOnly=true', context);
+  layers[0].handlers.click();
+  assert.equal(context.pickedCounties.length, 1);
+  vm.runInContext('AppState.viewOnly=false;expeditionPicking=false;renderCountyHitboxes()', context);
+  assert.equal(layers.length, 0);
+  vm.runInContext("AppState.mode='classic';renderCountyHitboxes()", context);
+  assert.equal(layers.length, 3);
+  assert.ok(layers.every(layer => layer.tooltip));
+  assert.equal(renderers, 1);
+  vm.runInContext('map=null;countyLayer=null;countyRenderer=null;countyHitboxKey=null', context);
 });
 console.log(`${checks} checks passed.`);

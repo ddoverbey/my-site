@@ -426,20 +426,24 @@ expedition promotions, and do not retrigger when an already visited location bec
 Reduced-motion preferences and Classic mode skip discovery animation.
 
 County hitboxes use the existing `us-atlas@3/counties-10m.json` atlas. They remain transparent,
-with hover outlines/tooltips only. All `t`, `v`, and `l` counties clear their exact polygon with a
-feathered canvas fill (a transit county clears its polygon, even though transit **point** auras
-are narrower). State/country tiers describe completion in the Scratch Map; they do not erase
+with hover outlines/tooltips only for travel-backed counties in RPG mode. Unexplored counties
+have no hover targets or tooltips, including during expedition map picking. Normal main-map clicks
+never edit county statuses; explicit expedition picking adds draft stops without clearing fog.
+County polygons clear only from home, logged parks/custom POIs or expeditions, not manual Scratch Map
+statuses. These records clear their exact polygon with a feathered canvas fill.
+State/country tiers describe completion in the Scratch Map; they do not erase
 entire nations on the canvas merely because home marks their parents Lived.
 Existing NPS/RESOLVE snapshots are reused without regeneration.
 
 The Scratch Map offers **World Nations**, **United States**, and **US Counties**, reusing the
 already-loaded atlas features. County mode uses Albers USA with a faint, noninteractive state-border
 mesh for context. Colors are gold for Lived, emerald for Visited, slate for Transited, and darker amber
-for Wishlist; Lived polygons have a brighter gold border. Its separate editing cycle is
+for Wishlist; Lived polygons have a brighter gold border. Counties use
+**Unexplored → Visited → Wishlist → Unexplored** (three clicks). Nation/state editing retains
 **Unexplored → Visited → Wishlist → Transited → Lived → Unexplored**.
 County edits use zero-padded FIPS IDs in `counties`; nation/state edits use `regions`.
 The counter reports Visited/Lived and Transited totals for the current dataset only.
-Edits persist transactionally and refresh Passport stats and map fog. Home, park, POI and expedition
+Edits persist transactionally and refresh Passport stats without revealing county fog. Home, park, POI and expedition
 records still restore their derived tiers; a retained tier is explained in the notification.
 Shared passports are read-only. No TopoJSON generation is needed for this view.
 

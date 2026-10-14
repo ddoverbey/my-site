@@ -131,6 +131,33 @@ check('expeditions promote parks, POIs, counties and parent regions without down
   ledger.syncDerivedState(state);
   assert.equal(JSON.stringify(state), before);
 });
+check('fog county derivation ignores manual tiers and leaves the passport unchanged', () => {
+  const state = migrate({
+    counties: { '06001': 'v', '06013': 't', '06041': 'l', '06075': 'w' },
+    customPois: [{ ...poi, status: 'w' }],
+    expeditions: [{ ...exp, customPoiIds: [poi.id] }],
+    pins: { park: 't', wish: 'w' },
+    homeBase: { name: 'Home', lat: 33, lng: -117, radiusKm: 80, countyId: '06073' }
+  });
+  const before = JSON.stringify(state);
+  const result = ledger.loggedCountyStatuses(state, {
+    parks: [{ id: 'park', lat: 40, lng: -120 }, { id: 'wish', lat: 40, lng: -120 }],
+    politicalAt: lat => lat === 40 ? { counties: [{ id: '06065' }] } : null
+  });
+  assert.deepEqual(result, { '08065': 'v', '08097': 'v', '06065': 't', '53059': 'v', '06073': 'l' });
+  assert.equal(JSON.stringify(state), before);
+});
+check('logged county derivation uses home containment and POI tiers without manual rank promotion', () => {
+  const state = migrate({
+    counties: { '53059': 'l' }, customPois: [{ ...poi, status: 't' }],
+    homeBase: { name: 'Home', lat: 33, lng: -117, radiusKm: 80 }
+  });
+  const before = JSON.stringify(state);
+  assert.deepEqual(ledger.loggedCountyStatuses(state, {
+    politicalAt: () => ({ counties: [{ id: '06073' }] })
+  }), { '53059': 't', '06073': 'l' });
+  assert.equal(JSON.stringify(state), before);
+});
 check('home containment marks county, state and country lived and retains previous homes', () => {
   const state = migrate({ homeBase: { name: 'Home', lat: 33.55, lng: -117.2, radiusKm: 75 } });
   const political = { countries: ['United States of America'], states: ['California'], counties: [{ id: '06065', name: 'Riverside' }] };
