@@ -226,14 +226,13 @@ the future date/transit/purpose expedition wizard. Before saving, `Promise.all()
   is a local point-to-segment estimate, reported separately; no road within the query radius means
   "not detected within 5 km", not a guessed wilderness-distance score.
 
-Elevation and OSM requests disclose coordinates to their providers; the form explains this before
-submission. No geocoding, Google/Mapbox keys, billing, or deployed Worker is added. OSM results use
+Elevation and rarity requests disclose coordinates to their providers; the form explains this before
+submission. No geocoding, Google/Mapbox keys, billing, or deployed Worker is added. Direct OSM fallback results use
 a versioned 30-day browser cache keyed to a 0.001-degree coordinate grid (about 111 m north/south).
 The query uses that same rounded point, avoiding inconsistent cache samples. No external requests
 run merely for browsing saved pins. Failed/partial lookups do not save a pin or invent metadata:
 the form reports a retryable error. Overpass may rate-limit or time out, especially in dense cities.
-This personal-use cache is not a shared server cache; a future Worker can provide shared caching
-without changing the meaning of the stored estimate.
+This personal-use fallback cache is separate from the shared Worker cache described in Step 3 below.
 
 Use an HTTP development server or the deployed HTTPS site for API testing; external providers
 can reject requests from a `file://` preview's null origin. The app still reports such failures
@@ -271,6 +270,117 @@ The **Import NPS catalog** workflow regenerates and tests all four datasets toge
 Public datasets and API metadata can change; regenerate explicitly rather than relying on
 runtime downloads of the large source geometries. Custom-coordinate classifications are retained
 as their original sampled metadata, rather than silently rewritten when a dataset refreshes.
+
+## Provider-agnostic rarity proxy and AppState v2 (Step 3)
+
+[`rarity-config.js`](wanderlog/rarity-config.js) configures `rarityEndpoint`, defaulting to
+`https://api.devonoverbey.com/rarity`. Set it to another HTTPS URL or `''` for direct OSM only.
+There are no provider secrets in this configuration. New custom-coordinate lookups call the endpoint
+with `lat` and `lng`. Saved-pin browsing, map redraws, and passport migration do not call it.
+The client validates the returned contract before saving:
+
+```json
+{
+  "placeName": "OSM vicinity (not a matched place)",
+  "reviewCount": null,
+  "popularityScore": 19,
+  "rarityTier": "Hidden Gem",
+  "matchedLat": 45.727,
+  "matchedLng": -121.636,
+  "cached": true,
+  "source": "OpenStreetMap contributors (ODbL)"
+}
+```
+
+`reviewCount` is a nonnegative integer **or null**, never fabricated from open data.
+`popularityScore` is a nonnegative count-like integer; tiers use `reviewCount` when present,
+otherwise this score. Thresholds are unambiguous: `<10`, `10–29`, `30–99`, `100–999`,
+`1,000–10,000`, and `>10,000`. The source and sampled/matched coordinates are shown alongside the
+metadata. The current match-distance guard is 1 km; a provider must resolve the intended POI
+rather than substitute a famous nearby place. A proximity check alone cannot establish POI identity.
+For the included Worker, these coordinates identify a **grid sample**, not an actual place match.
+
+On timeout (35 seconds), HTTP error, invalid metadata, or a match over 1 km away, the client logs
+the error and the form explicitly reports a switch to the direct Overpass lookup. It retains the
+30-day browser-cached OSM density estimate and contributor attribution. If both paths fail, the
+location remains unsaved. There is no automatic switch to Google, Mapbox, scraping, or paid APIs.
+Any future review-count endpoint must independently license indefinite storage, derived tiers,
+map display, exports, and share links; the adapter itself grants no data-use rights.
+
+### Included open-data Cloudflare Worker
+
+[`rarity-worker/worker.mjs`](wanderlog/rarity-worker/worker.mjs) uses only OpenStreetMap data
+under ODbL. It returns `reviewCount: null`, a mapped tourism/amenity node count within 5 km,
+and the corresponding **density estimate**. It includes source attribution, query time,
+OSM database timestamp where provided, and separately calculated motorway/trunk proximity.
+No Google/Mapbox credential, request, or review data is included. No Wikidata lookup is needed
+for this density-based default.
+
+The approximately 500 m grid adjusts longitude spacing to latitude, wraps the antimeridian,
+and handles polar coordinates. The query always uses the cell's reported sample coordinates;
+the versioned KV key refers to that same sample. This is not three-decimal rounding.
+Successful OSM-derived results are written without KV expiration. They are historical samples,
+not promises of current popularity; refresh/delete entries manually or change the versioned key
+when a new snapshot is wanted. Neither HTTP nor failed/partial Overpass results are cached.
+Concurrent misses are deduplicated within a Worker isolate, but KV is eventually consistent:
+different isolates can still issue duplicate misses.
+
+Responses include ODbL contributor attribution; retain it when displaying, exporting, or
+redistributing this derived dataset and meet the applicable ODbL obligations. Open-data licensing
+does not guarantee provider availability, current data, unlimited upstream usage, or legal
+compliance for every future use.
+
+The Worker restricts browser origins, accepts only `GET /rarity`, validates coordinates, and uses
+a Cloudflare rate-limiting binding (20 requests/minute per client IP, per Cloudflare location).
+CORS is not authentication; non-browser callers can still access this open endpoint. Rate
+limiting is not a global quota guarantee. Configure Cloudflare account-level budgets/limits as
+appropriate. The Worker never accepts a user-supplied upstream URL.
+
+### Deployment (not performed automatically)
+
+From `wanderlog`, install the declared tooling with `npm ci`, then:
+
+```sh
+npx wrangler login
+npx wrangler kv namespace create RARITY_CACHE --config rarity-worker/wrangler.jsonc
+```
+
+Replace `REPLACE_WITH_CREATED_KV_NAMESPACE_ID` in
+[`wrangler.jsonc`](wanderlog/rarity-worker/wrangler.jsonc) with the returned namespace ID.
+Verify the custom domain route and `ALLOWED_ORIGINS` for your deployed site, and ensure rate-limit
+namespace `1001` does not unintentionally share counters with another Worker. For local browser
+testing, use a separate config with a localhost origin in the allowlist; never allow the `null`
+origin in production just to accommodate `file://` previews.
+
+```sh
+npx wrangler deploy --dry-run --config rarity-worker/wrangler.jsonc
+npx wrangler deploy --config rarity-worker/wrangler.jsonc
+```
+
+Deployment requires your authorized Cloudflare account and zone. Neither a KV namespace nor a
+production Worker/custom domain is created by the source change. Until deployed, the default
+endpoint can fail and trigger direct OSM fallback. Worker requests, KV reads/writes/storage,
+and upstream capacity have separate limits; permanent caching is not a guarantee of zero cost
+or a fixed 10 ms latency. Check your current plan before deployment. Development secrets/state
+are ignored through `.dev.vars*` and `.wrangler/`.
+
+### Passport versioning
+
+AppState and new local saves, exports, and shared passports use `version: 2`.
+Legacy/unversioned and version-1 passports migrate their existing OSM metadata to the canonical
+rarity fields, preserving their coordinates, visits, biomes, counties, routes, and other records.
+Old OSM counts remain density scores and **never become review counts**. Migration is idempotent
+and does not re-query or reclassify saved visits. New provider metadata retains its source and
+matched coordinates through imports/exports/shares.
+
+Invalid/custom future-version passports produce visible errors. A stored unsupported version is
+not overwritten by a new empty v2 save; editing is disabled until the issue is resolved.
+This v2 upgrade adds only rarity metadata/version migration, **not** a Trip/Expedition schema,
+date/transit tags, onboarding changes, or new rarity achievements/XP.
+
+Run `npm test` for repository and Worker tests. The tests mock upstream providers and KV:
+they do not incur provider charges or deploy resources. `wrangler deploy --dry-run` verifies
+the Worker bundle and declared bindings without a production deployment.
 
 ## Homepage analytics
 

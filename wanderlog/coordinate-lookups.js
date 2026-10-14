@@ -105,6 +105,80 @@
     return 'Uncharted';
   }
 
+  function validateProviderRarity(data) {
+    if (!data || typeof data.placeName !== 'string' || !data.placeName.trim() ||
+        !(data.reviewCount === null || (Number.isSafeInteger(data.reviewCount) && data.reviewCount >= 0)) ||
+        !Number.isSafeInteger(data.popularityScore) || data.popularityScore < 0 ||
+        typeof data.cached !== 'boolean' || typeof data.source !== 'string' || !data.source.trim() ||
+        data.source.length > 500 || data.placeName.length > 300 ||
+        data.rarityTier !== categoryForPoiCount(data.reviewCount ?? data.popularityScore)) {
+      throw new Error('Rarity endpoint returned invalid provider metadata.');
+    }
+    validateCoordinates(data.matchedLat, data.matchedLng);
+    return data;
+  }
+
+  function normalizeRarity(rarity, lat, lng) {
+    if (rarity?.method === 'osm-poi-density') {
+      if (rarity.category !== categoryForPoiCount(rarity.nearbyPoiCount) ||
+          !(rarity.nearestHighwayKm === null || (Number.isFinite(rarity.nearestHighwayKm) &&
+            rarity.nearestHighwayKm >= 0 && rarity.nearestHighwayKm <= 5))) {
+        throw new Error('Invalid OSM rarity metadata.');
+      }
+      const matchedLat = rarity.sampledAt?.lat ?? lat;
+      const matchedLng = rarity.sampledAt?.lng ?? lng;
+      validateCoordinates(matchedLat, matchedLng);
+      return {
+        ...rarity, placeName: rarity.placeName || 'OSM vicinity (not a matched place)',
+        reviewCount: null, popularityScore: rarity.nearbyPoiCount, rarityTier: rarity.category,
+        matchedLat, matchedLng, cached: rarity.cached ?? false,
+        source: 'OpenStreetMap contributors (ODbL)'
+      };
+    }
+    validateProviderRarity(rarity);
+    return {
+      ...rarity, category: rarity.rarityTier,
+      method: rarity.reviewCount === null ? 'provider-popularity' : 'provider-review-count'
+    };
+  }
+
+  function coordinateDistanceKm(lat, lng, matchedLat, matchedLng) {
+    const radians = Math.PI / 180;
+    const a = Math.sin((matchedLat - lat) * radians / 2) ** 2 +
+      Math.cos(lat * radians) * Math.cos(matchedLat * radians) *
+      Math.sin((matchedLng - lng) * radians / 2) ** 2;
+    return 12742 * Math.asin(Math.sqrt(Math.min(1, a)));
+  }
+
+  async function lookupRarityWithFallback(lat, lng, {
+    fetcher = root.fetch, storage, rarityEndpoint = '', onFallback = () => {}
+  } = {}) {
+    validateCoordinates(lat, lng);
+    if (rarityEndpoint) {
+      try {
+        const url = new URL(rarityEndpoint);
+        if (url.protocol !== 'https:' && !(url.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(url.hostname))) {
+          throw new Error('Rarity endpoint must use HTTPS (HTTP is allowed only on localhost).');
+        }
+        url.searchParams.set('lat', lat);
+        url.searchParams.set('lng', lng);
+        const response = await fetcher(url.toString(), { signal: AbortSignal.timeout(35000) });
+        if (!response.ok) throw new Error(`Rarity endpoint failed (HTTP ${response.status}).`);
+        const data = validateProviderRarity(await response.json());
+        if (coordinateDistanceKm(lat, lng, data.matchedLat, data.matchedLng) > 1) {
+          throw new Error('Rarity endpoint matched a location more than 1 km from the requested point.');
+        }
+        return normalizeRarity({
+          ...data, method: data.reviewCount === null ? 'provider-popularity' : 'provider-review-count'
+        }, lat, lng);
+      } catch (error) {
+        console.warn('Rarity endpoint unavailable; using the direct OSM density lookup.', error);
+        onFallback(error);
+      }
+    }
+    return normalizeRarity(await lookupRarity(lat, lng, fetcher, storage), lat, lng);
+  }
+
   function segmentDistanceKm(lat, lng, a, b) {
     const scale = Math.cos(lat * Math.PI / 180);
     const relative = point => {
@@ -163,7 +237,7 @@
                 cached.data.nearestHighwayKm >= 0 && cached.data.nearestHighwayKm <= 5))) {
             throw new Error('Invalid cached OSM metadata.');
           }
-          if (now - cached.savedAt >= 0 && now - cached.savedAt < CACHE_TTL) return cached.data;
+          if (now - cached.savedAt >= 0 && now - cached.savedAt < CACHE_TTL) return { ...cached.data, cached: true };
         } catch (error) {
           console.warn('Discarding invalid OSM cache entry', key, error);
           storage.removeItem(key);
@@ -180,10 +254,12 @@
     if (result.remark) throw new Error(`Overpass could not complete the query: ${result.remark}`);
     const data = summarizeOsm(result.elements, gridLat, gridLng);
     if (storage) storage.setItem(key, JSON.stringify({ version: 1, savedAt: now, data }));
-    return data;
+    return { ...data, cached: false };
   }
 
-  async function lookupCoordinate(lat, lng, { indexes, geoContains, fetcher = root.fetch, storage }) {
+  async function lookupCoordinate(lat, lng, {
+    indexes, geoContains, fetcher = root.fetch, storage, rarityEndpoint = '', onFallback
+  }) {
     validateCoordinates(lat, lng);
     if (!indexes?.countries?.length || !indexes?.states?.length || !indexes?.counties?.length || !indexes?.ecoregions?.length) {
       throw new Error('Coordinate geography is unavailable. Retry datasets before saving a custom location.');
@@ -192,7 +268,7 @@
       lookupElevation(lat, lng, fetcher),
       Promise.resolve().then(() => politicalRegion(lat, lng, indexes, geoContains)),
       Promise.resolve().then(() => biomeRegion(lat, lng, indexes.ecoregions, geoContains)),
-      lookupRarity(lat, lng, fetcher, storage)
+      lookupRarityWithFallback(lat, lng, { fetcher, storage, rarityEndpoint, onFallback })
     ]);
     return { lat, lng, elevation, political, ...biome, rarity, lookedUpAt: new Date().toISOString() };
   }
@@ -218,21 +294,33 @@
           !Array.isArray(location.biomes) ||
           JSON.stringify([...new Set(location.ecoregions.map(region => String(region.biomeId)))]) !== JSON.stringify(location.biomes) ||
           location.biomeStatus !== (location.ecoregions.length ? 'matched' : 'no-terrestrial-match') ||
-          location.rarity?.method !== 'osm-poi-density' ||
-          location.rarity.category !== categoryForPoiCount(location.rarity.nearbyPoiCount) ||
-          !(location.rarity.nearestHighwayKm === null || (Number.isFinite(location.rarity.nearestHighwayKm) &&
-            location.rarity.nearestHighwayKm >= 0 && location.rarity.nearestHighwayKm <= 5)) ||
           !Number.isFinite(Date.parse(location.lookedUpAt))) {
         throw new Error(`Invalid lookup metadata for ${location.name}.`);
       }
+      normalizeRarity(location.rarity, location.lat, location.lng);
     }
     return locations;
+  }
+
+  function migrateState(parsed) {
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed) ||
+        (parsed.version !== undefined && parsed.version !== 1 && parsed.version !== 2)) {
+      throw new Error('Unsupported passport version. Expected legacy data or version 2.');
+    }
+    const locations = validateCustomLocations(parsed.customLocations ?? []);
+    return {
+      ...parsed, version: 2,
+      customLocations: locations.map(location => ({
+        ...location, rarity: normalizeRarity(location.rarity, location.lat, location.lng)
+      }))
+    };
   }
 
   const api = {
     validateCoordinates, normalizeFeature, indexFeatures, findContaining, politicalRegion, biomeRegion,
     lookupElevation, categoryForPoiCount, segmentDistanceKm, summarizeOsm, lookupRarity, lookupCoordinate,
-    validateCustomLocations, ELEVATION_URL, OVERPASS_URL, CACHE_TTL, NPS_SOURCE, npsBoundaryIndex
+    validateCustomLocations, migrateState, normalizeRarity, validateProviderRarity, coordinateDistanceKm,
+    lookupRarityWithFallback, ELEVATION_URL, OVERPASS_URL, CACHE_TTL, NPS_SOURCE, npsBoundaryIndex
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CoordinateLookups = api;

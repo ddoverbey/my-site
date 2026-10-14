@@ -115,6 +115,7 @@ function element(id) {
 }
 const context = vm.createContext({
   NpsCatalog: catalog, Ecoregions: ecoregions, InternationalParks: internationalCatalog, CoordinateLookups: coordinateLookups,
+  WanderlogConfig: { rarityEndpoint: 'https://api.devonoverbey.com/rarity' },
   tailwind: {}, console, Intl, URL, URLSearchParams, setTimeout() {},
   document: { getElementById: element, querySelectorAll: () => [], createElement: () => ({ innerHTML: '' }) },
   window: { addEventListener() {} },
@@ -433,6 +434,9 @@ context.atob = value => Buffer.from(value, 'base64').toString('binary');
 vm.runInContext('saveState(); AppState.customLocations = []; loadPersistedState();', context);
 check('custom metadata survives local save/load and read-only shared passports; legacy files default to empty custom locations', () => {
   assert.equal(vm.runInContext('AppState.customLocations[0].name', context), customLocation.name);
+  assert.equal(JSON.parse(savedJson).version, 2);
+  assert.equal(vm.runInContext('AppState.customLocations[0].rarity.reviewCount', context), null);
+  assert.equal(vm.runInContext('AppState.customLocations[0].rarity.rarityTier', context), 'Deep Cut');
   context.window.location.search = '?d=' + encodeURIComponent(Buffer.from(encodeURIComponent(savedJson)).toString('base64'));
   vm.runInContext('AppState.customLocations = []; loadPersistedState()', context);
   assert.equal(vm.runInContext('AppState.viewOnly', context), true);
@@ -522,5 +526,28 @@ await element('customLocationForm').handlers.submit({ preventDefault() {} });
 check('failed persistence rolls back a new custom location rather than leaving an unsaved success', () => {
   assert.equal(vm.runInContext('AppState.customLocations.length', context), 1);
   assert.ok(element('customLocationLookupStatus').textContent.includes('Storage full'));
+});
+check('provider review metadata displays independently of OSM estimates and escapes provider names', () => {
+  context.providerLocation = {
+    ...customLocation,
+    rarity: {
+      placeName: '<script>Matched place</script>', reviewCount: 10001, popularityScore: 10001,
+      rarityTier: 'Tourist Trap', matchedLat: customLocation.lat, matchedLng: customLocation.lng,
+      cached: true, source: '<b>Licensed provider</b>'
+    }
+  };
+  const metadata = vm.runInContext('customLocationMetadata({...providerLocation,custom:true})', context);
+  assert.ok(metadata.includes('10,001 reviews'));
+  assert.ok(metadata.includes('&lt;b&gt;Licensed provider&lt;/b&gt;'));
+  assert.ok(metadata.includes('&lt;script&gt;'));
+  assert.ok(!metadata.includes('mapped POI nodes'));
+});
+context.localStorage.setItem = (key, value) => { savedJson = value; };
+savedJson = '{"version":3,"pins":{"yose":"v"}}';
+vm.runInContext('AppState.viewOnly=false; loadPersistedState(); saveState();', context);
+check('future passport versions are surfaced and cannot overwrite the original stored data', () => {
+  assert.equal(savedJson, '{"version":3,"pins":{"yose":"v"}}');
+  assert.equal(vm.runInContext('AppState.viewOnly', context), true);
+  assert.equal(element('toastTitle').textContent, 'Saved passport unavailable');
 });
 console.log(`${checks} checks passed.`);

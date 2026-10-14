@@ -171,4 +171,98 @@ await check('missing geography and upstream failures cannot produce success-shap
       url.includes('elevation') ? response({ elevation: [1] }) : { ok: false, status: 503 }
   }), /503/);
 });
+const provider = {
+  placeName: 'Matched POI', reviewCount: 30, popularityScore: 30, rarityTier: 'Deep Cut',
+  matchedLat: 1, matchedLng: 1, cached: true, source: 'Licensed provider'
+};
+await check('provider endpoint succeeds without Overpass and preserves actual review count/source', async () => {
+  const urls = [];
+  const result = await lookups.lookupRarityWithFallback(1, 1, {
+    rarityEndpoint: 'https://api.devonoverbey.com/rarity', fetcher: async url => {
+      urls.push(url);
+      return response(provider);
+    }
+  });
+  assert.equal(urls.length, 1);
+  assert.equal(new URL(urls[0]).searchParams.get('lat'), '1');
+  assert.equal(result.method, 'provider-review-count');
+  assert.equal(result.reviewCount, 30);
+  assert.equal(result.cached, true);
+});
+await check('an open-data endpoint score is never transformed into a review count', async () => {
+  const result = await lookups.lookupRarityWithFallback(1, 1, {
+    rarityEndpoint: 'https://api.devonoverbey.com/rarity',
+    fetcher: async () => response({ ...provider, reviewCount: null, source: 'OpenStreetMap contributors (ODbL)' })
+  });
+  assert.equal(result.reviewCount, null);
+  assert.equal(result.method, 'provider-popularity');
+});
+await check('provider transport metadata cannot masquerade as legacy OSM or discard real reviews', async () => {
+  const result = await lookups.lookupRarityWithFallback(1, 1, {
+    rarityEndpoint: 'https://api.devonoverbey.com/rarity',
+    fetcher: async () => response({ ...provider, method: 'osm-poi-density' })
+  });
+  assert.equal(result.method, 'provider-review-count');
+  assert.equal(result.reviewCount, 30);
+});
+await check('endpoint network timeouts and JSON errors also trigger the explicit OSM fallback', async () => {
+  for (const error of [new DOMException('Timed out', 'TimeoutError'), new SyntaxError('Invalid JSON')]) {
+    let fallbacks = 0;
+    const result = await lookups.lookupRarityWithFallback(1, 1, {
+      rarityEndpoint: 'https://api.devonoverbey.com/rarity',
+      onFallback: () => { fallbacks++; },
+      fetcher: async url => {
+        if (url.includes('api.devonoverbey.com')) throw error;
+        return response({ elements: [] });
+      }
+    });
+    assert.equal(fallbacks, 1);
+    assert.equal(result.reviewCount, null);
+  }
+});
+await check('unavailable, malformed, or distant provider results explicitly fall back to cached direct OSM', async () => {
+  for (const result of [{ ok: false, status: 503 }, response({ ...provider, matchedLat: 40 }),
+    response({ ...provider, reviewCount: -1 }), response({ ...provider, rarityTier: 'Hidden Gem' })]) {
+    let fallback = 0;
+    const urls = [];
+    const rarity = await lookups.lookupRarityWithFallback(1, 1, {
+      rarityEndpoint: 'https://api.devonoverbey.com/rarity', storage: storage(),
+      onFallback: () => { fallback++; },
+      fetcher: async url => {
+        urls.push(url);
+        return url.includes('api.devonoverbey.com') ? result : response({ elements: [] });
+      }
+    });
+    assert.equal(fallback, 1);
+    assert.equal(urls.length, 2);
+    assert.equal(rarity.method, 'osm-poi-density');
+    assert.equal(rarity.reviewCount, null);
+    assert.equal(rarity.rarityTier, 'Uncharted');
+  }
+});
+await check('both endpoint and OSM failures propagate rather than saving unknown rarity', async () => {
+  await assert.rejects(lookups.lookupRarityWithFallback(1, 1, {
+    rarityEndpoint: 'https://api.devonoverbey.com/rarity', fetcher: async () => ({ ok: false, status: 503 })
+  }), /503/);
+});
+await check('legacy rarity migrates to v2 without changing visits, inventing reviews, or mutating input', () => {
+  const legacy = {
+    pins: { yose: 'v' }, customLocations: [{
+      id: 'custom-legacy', name: 'Legacy', lat: 1, lng: 1, status: 'v',
+      elevation: { meters: 100, feet: 328.084 }, political: { countries: [], states: [], counties: [] },
+      ecoregions: [], biomes: [], biomeStatus: 'no-terrestrial-match',
+      rarity: { method: 'osm-poi-density', category: 'Hidden Gem', nearbyPoiCount: 10, nearestHighwayKm: null },
+      lookedUpAt: new Date().toISOString()
+    }]
+  };
+  const result = lookups.migrateState(legacy);
+  assert.equal(result.version, 2);
+  assert.deepEqual(result.pins, legacy.pins);
+  assert.equal(result.customLocations[0].rarity.reviewCount, null);
+  assert.equal(result.customLocations[0].rarity.popularityScore, 10);
+  assert.equal(result.customLocations[0].rarity.matchedLat, 1);
+  assert.equal(legacy.customLocations[0].rarity.reviewCount, undefined);
+  assert.deepEqual(lookups.migrateState(result), result);
+  assert.throws(() => lookups.migrateState({ ...legacy, version: 3 }), /Unsupported/);
+});
 console.log(`${checks} coordinate/geography checks passed.`);
