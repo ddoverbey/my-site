@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { buildSnapshot } from './import-ecoregions.mjs';
 import ecoregions from './ecoregions.js';
 import catalog from './nps-catalog.js';
-import internationalParks from './international-parks.js';
+import internationalCatalog from './international-parks.js';
 
 let checks = 0;
 function check(name, action) {
@@ -62,6 +62,8 @@ check('geodesic area totals are positive and exclude rock/ice', () => {
 
 const snapshot = JSON.parse(await readFile(new URL('./ecoregion-mapping.json', import.meta.url), 'utf8'));
 const nps = JSON.parse(await readFile(new URL('./nps-parks.json', import.meta.url), 'utf8'));
+const worldwide = JSON.parse(await readFile(new URL('./worldwide-national-parks.json', import.meta.url), 'utf8'));
+const internationalParks = internationalCatalog.normalizeParks(worldwide).parks;
 const parks = [...catalog.normalizeParks(nps.data), ...internationalParks];
 const applied = ecoregions.applySnapshot(parks, snapshot);
 check('published mappings validate and cover every current destination coordinate', () => {
@@ -76,7 +78,8 @@ check('real-world reference points map to named ecoregions and WWF biome types',
     ['acad', 4, 'New England-Acadian forests'],
     ['arch', 13, 'Colorado Plateau shrublands'],
     ['ever', 14, 'Bahamian-Antillean mangroves'],
-    ['uluru', 13, 'Great Sandy-Tanami desert']
+    ['world-af-band-e-amir', 10, 'Ghorat-Hazarajat alpine meadow'],
+    ['fiordland', 4, 'Fiordland temperate forests']
   ]) {
     const region = snapshot.locations[id].ecoregions[0];
     assert.equal(region.biomeId, biomeId);
@@ -84,7 +87,7 @@ check('real-world reference points map to named ecoregions and WWF biome types',
   }
 });
 check('unclassified coastal points get no invented terrestrial biome', () => {
-  for (const id of ['galapagos', 'halong', 'drto']) {
+  for (const id of ['world-mg-nosy-tanikely', 'world-mg-nosy-ve-androka', 'drto']) {
     const park = applied.parks.find(p => p.id === id);
     assert.deepEqual(park.biomes, []);
     assert.equal(park.biomeStatus, 'no-terrestrial-match');

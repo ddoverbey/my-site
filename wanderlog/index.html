@@ -204,6 +204,8 @@
           </button>
           <div class="border-t border-slate-700 mt-2 px-4 pt-3 pb-1 text-[11px] text-slate-400" role="status" aria-live="polite">
             <span id="npsCatalogStatus">Loading official NPS catalog...</span>
+            <p id="worldwideCatalogStatus" class="mt-2">Loading international park catalog...</p>
+            <p id="savedCatalogStatus" class="hidden mt-2"></p>
             <button id="btnRetryNps" class="hidden mt-2 block text-amber-300 underline" type="button">Retry datasets</button>
           </div>
         </div>
@@ -444,7 +446,7 @@
             <p class="text-xs text-slate-400">Explore NPS parks, monuments, seashores, historic sites, and international destinations</p>
           </div>
           <div class="flex flex-wrap items-center gap-3">
-            <input type="text" id="bucketSearch" placeholder="Search name, state, designation..." class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-400 w-56">
+            <input type="text" id="bucketSearch" placeholder="Search park, country, ecoregion..." class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-400 w-56">
             <select id="bucketFilterStatus" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none">
               <option value="all">All Items</option>
               <option value="v">Visited Only</option>
@@ -522,11 +524,9 @@
   <script src="./ecoregions.js"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
-    const INTERNATIONAL_PARKS = InternationalParks.map(p => ({
-      ...p, biomes: [], ecoregions: [], biomeStatus: 'unavailable'
-    }));
-    let PARKS = [...INTERNATIONAL_PARKS];
+    let PARKS = [];
     let npsCatalogLoaded = false;
+    let worldwideCatalogLoaded = false;
     let biomeCatalogLoaded = false;
     const escapeHtml = NpsCatalog.escapeHtml;
 
@@ -545,7 +545,7 @@
         const mapped = PARKS.filter(p => p.biomeStatus === 'matched').length;
         const outdated = PARKS.filter(p => p.biomeStatus === 'mapping-outdated').length;
         status.textContent = `${mapped}/${PARKS.length} destination points mapped. ${PARKS.length - mapped - outdated} have no terrestrial match.${outdated ? ` ${outdated} mappings need regeneration after a coordinate/catalog change.` : ''}`;
-        document.getElementById('btnRetryNps').classList.toggle('hidden', npsCatalogLoaded && !outdated);
+        document.getElementById('btnRetryNps').classList.toggle('hidden', npsCatalogLoaded && worldwideCatalogLoaded && !outdated);
         if (outdated) showNotification('Ecoregion mappings outdated', 'The site owner must regenerate mappings for new or changed destination coordinates.', '⚠️');
       } catch (error) {
         console.error('Failed to load ecoregion mappings', error);
@@ -563,6 +563,26 @@
       return 'Ecoregion data unavailable';
     }
 
+    async function loadWorldwideCatalog() {
+      const status = document.getElementById('worldwideCatalogStatus');
+      status.textContent = 'Loading international park catalog...';
+      PARKS = PARKS.filter(p => !p.intl);
+      worldwideCatalogLoaded = false;
+      try {
+        const response = await fetch('./worldwide-national-parks.json', { cache: 'no-cache' });
+        if (!response.ok) throw new Error(`Worldwide catalog request failed (HTTP ${response.status}).`);
+        const result = InternationalParks.normalizeParks(await response.json());
+        PARKS = [...PARKS, ...result.parks];
+        worldwideCatalogLoaded = true;
+        status.textContent = `${result.parks.length} international parks loaded from Parks of the World; ${result.excludedCount} U.S./territory entries excluded.`;
+      } catch (error) {
+        console.error('Failed to load worldwide park catalog', error);
+        status.textContent = 'International catalog unavailable. International progress is temporarily unavailable; saved records are retained.';
+        document.getElementById('btnRetryNps').classList.remove('hidden');
+        showNotification('International catalog unavailable', 'Retry loading the datasets. NPS destinations remain available.', '⚠️');
+      }
+    }
+
     async function loadNpsCatalog() {
       const status = document.getElementById('npsCatalogStatus');
       const retry = document.getElementById('btnRetryNps');
@@ -577,15 +597,15 @@
           throw new Error('Invalid NPS catalog metadata.');
         }
         const units = NpsCatalog.normalizeParks(dataset.data);
-        PARKS = [...units, ...INTERNATIONAL_PARKS];
+        PARKS = [...units, ...PARKS.filter(p => p.intl)];
         npsCatalogLoaded = true;
         const unmapped = units.filter(p => p.lat === null || p.lng === null).length;
         status.textContent = `${units.length} official NPS listings loaded (snapshot ${dataset.fetchedAt.slice(0, 10)})${unmapped ? `; ${unmapped} without map coordinates` : ''}.`;
       } catch (error) {
-        PARKS = [...INTERNATIONAL_PARKS];
+        PARKS = PARKS.filter(p => p.intl);
         npsCatalogLoaded = false;
         console.error('Failed to load NPS catalog', error);
-        status.textContent = 'NPS catalog unavailable. International destinations only; NPS progress is temporarily unavailable.';
+        status.textContent = 'NPS catalog unavailable. NPS progress is temporarily unavailable; saved records are retained.';
         retry.classList.remove('hidden');
         showNotification('NPS catalog unavailable', 'Please retry. The site owner must generate and publish the NPS dataset if it is missing.', '⚠️');
       }
@@ -1134,7 +1154,8 @@
           </div>
           ${p.designation ? `<p class="text-xs text-amber-300">${escapeHtml(p.designation)}</p>` : ''}
           <p class="text-xs text-slate-300">${escapeHtml(p.desc || '')}</p>
-          ${p.url ? `<a href="${escapeHtml(p.url)}" target="_blank" rel="noopener noreferrer" class="text-xs text-sky-300 underline">Official NPS site</a>` : ''}
+          ${p.url ? `<a href="${escapeHtml(p.url)}" target="_blank" rel="noopener noreferrer" class="text-xs text-sky-300 underline">${p.intl ? 'Park information source' : 'Official NPS site'}</a>` : ''}
+          ${internationalMetadata(p)}
           ${p.activities?.length ? `<p class="text-[11px] text-slate-400">Activities: ${p.activities.map(escapeHtml).join(', ')}</p>` : ''}
           <p class="text-[11px] text-slate-400">${escapeHtml(biomeLocationLabel(p))}</p>
           <div class="flex flex-wrap gap-1 pt-1">${biomeTags}</div>
@@ -1159,11 +1180,24 @@
           const p = PARKS.find(item => item.id === parkId);
           showNotification('🗺️ Fog Pierced!', `You cleared the fog around ${p ? p.name : 'new territory'}!`, '✨');
         }
+
       }
       saveState();
       renderParkMarkers();
       drawFogOfWar();
       updateAllUI();
+    }
+
+    function internationalMetadata(p) {
+      if (!p.intl) return '';
+      const details = [
+        p.established ? `Established: ${p.established}` : '',
+        p.areaKm2 !== null ? `Area: ${p.areaKm2.toLocaleString('en')} km²` : '',
+        p.visitorCount !== null ? `Visitors (source estimate): ${p.visitorCount.toLocaleString('en')}` : ''
+      ].filter(Boolean);
+      return `<p class="text-[11px] text-slate-400">${details.map(escapeHtml).join(' · ')}</p>
+        ${p.memberships.length ? `<p class="text-[11px] text-amber-300">${p.memberships.map(escapeHtml).join(' · ')}</p>` : ''}
+        <a href="${InternationalParks.source}" target="_blank" rel="noopener noreferrer" class="text-[11px] text-sky-300 underline">Parks of the World (curated data)</a>`;
     }
 
     function updateHomeBaseMarker() {
@@ -1433,6 +1467,8 @@
         return p.name.toLowerCase().includes(search) || 
                (p.state && p.state.toLowerCase().includes(search)) ||
                (p.country && p.country.toLowerCase().includes(search)) ||
+               (p.countryCode && p.countryCode.toLowerCase() === search) ||
+               (p.memberships && p.memberships.some(name => name.toLowerCase().includes(search))) ||
                (p.designation && p.designation.toLowerCase().includes(search)) ||
                (p.topics && p.topics.some(topic => topic.toLowerCase().includes(search))) ||
                (p.ecoregions && p.ecoregions.some(region => region.name.toLowerCase().includes(search) || region.realm.toLowerCase().includes(search))) ||
@@ -1456,8 +1492,9 @@
           <div class="min-w-0">
             <h4 class="font-bold text-sm text-slate-200">${escapeHtml(p.name)}</h4>
             ${p.designation ? `<p class="text-[11px] text-amber-300">${escapeHtml(p.designation)}</p>` : ''}
-            ${p.url ? `<a href="${escapeHtml(p.url)}" target="_blank" rel="noopener noreferrer" class="text-[11px] text-sky-300 underline">Official NPS site</a>` : ''}
-            ${p.lat === null || p.lng === null ? '<p class="text-[11px] text-slate-400">NPS coordinates unavailable; list only</p>' : ''}
+            ${p.url ? `<a href="${escapeHtml(p.url)}" target="_blank" rel="noopener noreferrer" class="text-[11px] text-sky-300 underline">${p.intl ? 'Park information source' : 'Official NPS site'}</a>` : ''}
+            ${internationalMetadata(p)}
+            ${p.lat === null || p.lng === null ? '<p class="text-[11px] text-slate-400">Coordinates unavailable; list only</p>' : ''}
             <p class="text-[11px] text-slate-400">${escapeHtml(biomeLocationLabel(p))}</p>
             <p class="text-[11px] text-teal-300">${p.biomes.map(b => escapeHtml(BIOMES[b].name)).join('; ')}</p>
             <div class="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
@@ -1478,6 +1515,13 @@
 
     function updateHud() {
       const stats = calculateStats();
+      const activeIds = new Set(PARKS.map(p => p.id));
+      const retainedCount = Object.keys(AppState.pins).filter(id => !activeIds.has(id)).length;
+      const retainedStatus = document.getElementById('savedCatalogStatus');
+      retainedStatus.classList.toggle('hidden', retainedCount === 0);
+      retainedStatus.textContent = retainedCount
+        ? `${retainedCount} saved destination records are outside the loaded catalogs. Retained for export, but not counted in progress.`
+        : '';
       document.getElementById('hudClassName').textContent = stats.cls;
       document.getElementById('hudLevel').textContent = stats.level;
       document.getElementById('hudXp').textContent = stats.xp;
@@ -1759,6 +1803,7 @@
     // App Startup Entry Point
     document.getElementById('btnRetryNps').addEventListener('click', async () => {
       await loadNpsCatalog();
+      await loadWorldwideCatalog();
       await loadBiomeCatalog();
       if (map) {
         renderParkMarkers();
@@ -1769,7 +1814,7 @@
 
     window.addEventListener('DOMContentLoaded', async () => {
       loadPersistedState();
-      await Promise.all([loadGeoDatasets(), loadNpsCatalog()]);
+      await Promise.all([loadGeoDatasets(), loadNpsCatalog(), loadWorldwideCatalog()]);
       await loadBiomeCatalog();
       initMap();
       updateAllUI();

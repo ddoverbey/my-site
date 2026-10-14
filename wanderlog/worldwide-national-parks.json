@@ -1,0 +1,1376 @@
+[
+  {
+    "name": "Band-e Amir",
+    "color": "#9d826f",
+    "country": "AF",
+    "description": "Afghanistan's first national park, Band-e-Amir is a chain of six lakes in the mountainous desert of central Afghanistan. The lakes formed from mineral-rich water that seeped out of faults and cracks in the rocky landscape. Over time, the water deposited layers of hardened mineral (travertine) that built up into walls that now contain the water. ",
+    "established": "2009",
+    "images": [
+      "https://upload.wikimedia.org/wikipedia/commons/a/aa/Afghanistan%27s_Grand_Canyon.jpg",
+      "https://i.ytimg.com/vi/pCuYORp7koU/maxresdefault.jpg",
+      "https://cdn.cnn.com/cnnnext/dam/assets/190515141657-band-e-amir-national-park--getty-images-full-169.jpg"
+    ],
+    "latitude": "34.84578974650147",
+    "longitude": "67.22497609759894",
+    "memberships": {},
+    "size_in_km": 606.16,
+    "url": "https://en.wikivoyage.org/wiki/Band-e_Amir_National_Park",
+    "visitor_count": 6000
+  },
+  {
+    "name": "Wakhan",
+    "color": "#3a241a",
+    "country": "AF",
+    "description": "The park comprises the entire district of Wakhan, containing some 600 plant species, the snow leopard, lynx, wolf, brown bear, stone marten, red fox, Pallas's cat, ibex, Marco Polo sheep, and urial.",
+    "established": "2014",
+    "images": [
+      "https://secretcompass.com/wp-content/uploads/2015/08/afghanistan_header_image-1.jpg",
+      "https://i.natgeofe.com/n/e36c7db8-da01-4834-ad4b-23336006e03d/78359_4x3.jpg",
+      "https://ychef.files.bbci.co.uk/976x549/p09mg0pg.jpg"
+    ],
+    "latitude": "37.10212809208673",
+    "longitude": "73.74780715533139",
+    "memberships": {},
+    "size_in_km": 10910.12,
+    "url": "https://en.wikivoyage.org/wiki/Wakhan_Corridor",
+    "visitor_count": null
+  },
+  {
+    "name": "Butrint",
+    "color": "#b5aba2",
+    "country": "AL",
+    "description": "The archaeological heritage of Butrint is one of the most important archaeological sites in the country, containing different artefacts and structures, dating from the Iron Age up until the Middle Ages. Additionally, the park's significance for conservation is reflected in the large number of species with over 1,200 different animals and plants.",
+    "established": "2000",
+    "images": [
+      "https://www.anadventurousworld.com/wp-content/uploads/2014/07/butrint-national-park.jpg",
+      "https://www.anadventurousworld.com/wp-content/uploads/2014/07/butrint-albania.jpg",
+      "https://ionian-cruises.com/wp-content/uploads/2018/04/Butrint-National-Park-Albania-2.jpg"
+    ],
+    "latitude": "39.74391065376822",
+    "longitude": "20.019119417344495",
+    "memberships": {
+      "ramsar": true,
+      "unesco": true
+    },
+    "size_in_km": 94.24,
+    "url": "https://albania.al/destinations/butrint/",
+    "visitor_count": null
+  },
+  {
+    "name": "Dajti",
+    "color": "#3681aa",
+    "country": "AL",
+    "description": "Recognised as an Important Plant Area of international importance by Plantlife, the park is marked by an extremely fragmented, rugged topography which creates favourable conditions for a great diversity of ecosystems and biodiversity.",
+    "established": "1966",
+    "images": [
+      "https://upload.wikimedia.org/wikipedia/commons/9/98/Dajti_National_Park%2C_Tirana.jpg",
+      "https://i0.wp.com/www.thebalkansandbeyond.com/wp-content/uploads/2020/10/Untitled-design-9-4.png?fit=2240%2C1260&ssl=1",
+      "https://images.squarespace-cdn.com/content/v1/5980e801d482e93f58785fef/1599686822548-J10I52TRIS1QCKF4LEYI/view+from+the+top+of+Dajti+Mountain?format=1500w"
+    ],
+    "latitude": "41.36694673572922",
+    "longitude": "19.922143106291355",
+    "memberships": {},
+    "size_in_km": 293.84,
+    "url": "https://albania.al/dajti-mountain-tirana-national-park/",
+    "visitor_count": null
+  },
+  {
+    "name": "Divjakë-Karavasta",
+    "color": "#b89894",
+    "country": "AL",
+    "description": "The park is one of the country's foremost birding destinations featuring an astounding mix of more than 228 species of resident and migratory birds, of which almost 15 species are globally endangered. The sheltered open waters of the wetlands and the outlying coasts provide resting areas for migrating birds on their way between Europe and Africa through the Adriatic flyway.",
+    "established": "2007",
+    "images": [
+      "https://thebalkanista.com/wp-content/uploads/2018/12/div.jpg",
+      "https://i2.wp.com/www.btours.al/wp-content/uploads/2020/12/divjaka_lagun_albania-2.jpg?ssl=1",
+      "https://medwet.org/wp-content/uploads/2019/02/Forests-in-the-National-Park-Divjake-Karavasta.-Photo-Pictame.com_.jpg"
+    ],
+    "latitude": "40.92959144630015",
+    "longitude": "19.497244347857272",
+    "memberships": {
+      "ramsar": true
+    },
+    "size_in_km": 222.3,
+    "url": "https://albania.al/destinations/national-parks/",
+    "visitor_count": null
+  },
+  {
+    "name": "Fir of Drenova",
+    "color": "#383537",
+    "country": "AL",
+    "description": "Featuring Morava Mountain, the national park is host to many rock formations such as the Stone of Capi, and also many water features such as the Lenies Lakes and the Karstic Cavity.",
+    "established": "1966",
+    "images": [
+      "https://i0.wp.com/www.btours.al/wp-content/uploads/2020/12/fir_of_drenove_park.jpg?fit=1920%2C1080&ssl=1",
+      "https://images.prismic.io/nationalparks/9ccb8de3-3703-4344-9faf-068f33f3e4e5_fir-of-drenove-national-park-entrance.jpeg",
+      "http://balkancultureheritage.com/storage/categories/1124/images/1080_5.jpg"
+    ],
+    "latitude": "40.566287981866864",
+    "longitude": "20.82548959776326",
+    "memberships": {},
+    "size_in_km": 10.3,
+    "url": "https://albania.al/destinations/national-parks/",
+    "visitor_count": null
+  },
+  {
+    "name": "Fir of Hotovë",
+    "color": "#d0b592",
+    "country": "AL",
+    "description": "The largest national park in Albania, the park takes its name from the Hotova Fir, which is considered one of the most important Mediterranean plant relics of the country. The park also includes 11 natural monuments.",
+    "established": "1996",
+    "images": [
+      "https://libertytravel.al/wp-content/uploads/2019/01/hotova.jpg",
+      "https://www.intoalbania.com/wp-content/uploads/2020/06/NAT-BREDHI-I-HOTOVES_-FOTO-AZM-GJIROKASTER-07.jpg",
+      "https://www.westend61.de/images/0001021164pw/albania-gjirokaster-fir-of-hotove-dangelli-national-park-lengarica-canyon-lengarica-river-SIEF07838.jpg"
+    ],
+    "latitude": "40.367602343465165",
+    "longitude": "20.428032568922173",
+    "memberships": {},
+    "size_in_km": 343.61,
+    "url": "https://albania.al/destinations/national-parks/",
+    "visitor_count": null
+  },
+  {
+    "name": "Karaburun-Sazan",
+    "color": "#173d6c",
+    "country": "AL",
+    "description": "Containing ecosystems and habitats that are specific to the Mediterranean Basin, the park is home to a vast array of landforms, including mountains, caves, islands, depressions, bays, cliffs, canyons and rocky coasts, all contributing to an exceptionally considerable biological diversity.",
+    "established": "2010",
+    "images": [
+      "https://miro.medium.com/max/1400/1*UZv8YjLmjzao5WzLdnGZLg.jpeg",
+      "https://miro.medium.com/max/1480/1*4UIMVklcx2qFoFKwZKFYow.jpeg",
+      "https://elitetravel-albania.com/wp-content/uploads/2021/08/karaburun-sazan.jpg"
+    ],
+    "latitude": "40.49184160195074",
+    "longitude": "19.27414574009081",
+    "memberships": {},
+    "size_in_km": 125.71,
+    "url": "https://albania.al/destinations/national-parks/",
+    "visitor_count": null
+  },
+  {
+    "name": "Llogara",
+    "color": "#384320",
+    "country": "AL",
+    "description": "Centered on the Ceraunian Mountains along the Albanian Riviera in Southwestern Albania, the park's terrain includes large alpine meadows, vertical rock faces, precipices and dense forests.",
+    "established": "1966",
+    "images": [
+      "https://nationalparks-15bc7.kxcdn.com/images/parks/llogara/Llogara%20National%20Park.jpg",
+      "https://nationalparks-15bc7.kxcdn.com/images/parks/llogara/Llogara%20National%20Park%20overlook.jpg",
+      "https://nationalparks-15bc7.kxcdn.com/images/parks/llogara/Llogara%20National%20Park%20landscape.jpg"
+    ],
+    "latitude": "40.2181794353346",
+    "longitude": "19.562759317023836",
+    "memberships": {},
+    "size_in_km": 10.1,
+    "url": "https://albania.al/destinations/national-parks/",
+    "visitor_count": null
+  },
+  {
+    "name": "Lurë-Dejë Mountain",
+    "color": "#a6a698",
+    "country": "AL",
+    "description": "The park was originally established in 1966 to protect the various ecosystems and biodiversity as Lura National Park, and further expanded in 2018 to include the former Zall-Gjocaj National Park.",
+    "established": "1966",
+    "images": [
+      "https://peakvisor.com/photo/SD/Lura-Dejes-Mt-National-Park-Albania-lake2.jpg",
+      "https://libertytravel.al/wp-content/uploads/2019/01/lura-2.jpg",
+      "https://peakvisor.com/photo/SD/Lura-Dejes-Mt-National-Park-Albania-forest2.jpg"
+    ],
+    "latitude": "41.78791264204799",
+    "longitude": "20.19451753147613",
+    "memberships": {},
+    "size_in_km": 202.42,
+    "url": "https://albania.al/destinations/national-parks/",
+    "visitor_count": null
+  },
+  {
+    "name": "Prespa",
+    "color": "#908e90",
+    "country": "AL",
+    "description": "The park encompasses the country's sections of the Great and Small Prespa Lake. It is considerably characterised by high mountains, narrow islands, vast freshwater wetlands, salt marshes, meadows, reed beds and dense forests. The park is dotted with many natural and cultural features containing prehistoric dwellings and Byzantine churches.",
+    "established": "1999",
+    "images": [
+      "https://www.nature-experience-albania.com/wp-content/uploads/photo-prespa-national-park-48.jpg",
+      "https://www.nature-experience-albania.com/wp-content/uploads/photo-prespa-national-park-12.jpg",
+      "https://www.nature-experience-albania.com/wp-content/uploads/photo-prespa-national-park-49.jpg"
+    ],
+    "latitude": "40.79666551338369",
+    "longitude": "20.87963024133273",
+    "memberships": {
+      "ramsar": true
+    },
+    "size_in_km": 277.5,
+    "url": "https://albania.al/destinations/national-parks/",
+    "visitor_count": null
+  },
+  {
+    "name": "Shebenik-Jabllanicë",
+    "color": "#ab7126",
+    "country": "AL",
+    "description": "The park offers some of the most rugged scenery in the eastern section of country that were carved into their present shapes by the glaciers of the last ice age. It is home to 14 glacial lakes, the highest situated between 1,500 and 1,900 metres elevation above the Adriatic.",
+    "established": "2008",
+    "images": [
+      "https://cms.pine.al/media/images/2022/07/27/62e19f5f3c26e-s1.jpg",
+      "https://invest-in-albania.org/wp-content/uploads/shebenik.jpg",
+      "https://www.infoglobe.cz/res/archive/975/109671.jpg?seek=1498225048"
+    ],
+    "latitude": "41.23286197881351",
+    "longitude": "20.45446451577757",
+    "memberships": {
+      "unesco": true
+    },
+    "size_in_km": 339.28,
+    "url": "https://albania.al/destinations/national-parks/",
+    "visitor_count": null
+  },
+  {
+    "name": "Shtamë Pass",
+    "color": "#4c5140",
+    "country": "AL",
+    "description": "The park is named after the Qafë-Shtamë passage, and has an area of 2000 hectares, with a beautiful mountain scenery consisting mainly of pine forests, some small lakes and major water sources. Most recently, the park has become a popular attraction for hiking.",
+    "established": "1996",
+    "images": [
+      "https://mediaim.expedia.com/localexpert/3278507/e0abb112-028c-486b-ad4e-64e71b72f317.jpg?impolicy=resizecrop&rw=1005&rh=565",
+      "https://shkreliresort.al/wp-content/uploads/2018/10/KRJZ2450.jpg",
+      "https://4elementstravel.com/wp-content/uploads/2020/03/1-7.jpg"
+    ],
+    "latitude": "41.52087503621269",
+    "longitude": "19.892390644697947",
+    "memberships": {},
+    "size_in_km": 20,
+    "url": "https://albania.al/destinations/national-parks/",
+    "visitor_count": null
+  },
+  {
+    "name": "Theth",
+    "color": "#484330",
+    "country": "AL",
+    "description": "Despite its limited area, the park is distinguished by a highly diverse flora with estimates which vary between 1500 and 1650 species of plants among which 70 species are endangered.",
+    "established": "1966",
+    "images": [
+      "https://nationalparks-15bc7.kxcdn.com/images/parks/theth/Theth%20National%20Park%20blue%20eye%20lake.jpg",
+      "https://i0.wp.com/thethi-guide.com/wp-content/uploads/2020/09/Thethi-Best-Destination-1.jpg?ssl=1",
+      "https://nationalparks-15bc7.kxcdn.com/images/parks/theth/Theth%20National%20Park%20riverbed%20landscape.jpg"
+    ],
+    "latitude": "42.39628790457006",
+    "longitude": "19.773109997820246",
+    "memberships": {},
+    "size_in_km": 26.3,
+    "url": "https://albania.al/destinations/national-parks/",
+    "visitor_count": null
+  },
+  {
+    "name": "Tomorr Mountain",
+    "color": "#91aaca",
+    "country": "AL",
+    "description": "Tomorr is an anticline composed of limestones and karst. The mountain is one of the highest natural points of southern Albania, and is considered a sacred site of both Christians and Bekatshis.",
+    "established": "1956",
+    "images": [
+      "https://i0.wp.com/www.btours.al/wp-content/uploads/2020/12/tomorri_mountain-1.jpg?fit=1920%2C1440&ssl=1",
+      "https://libertytravel.al/wp-content/uploads/2019/01/TOMORR.jpg",
+      "https://www.tryalbania.com/wp-content/uploads/2022/02/IMG_3318-e1646464896984.jpg"
+    ],
+    "latitude": "40.709550239450515",
+    "longitude": "20.128304082427217",
+    "memberships": {},
+    "size_in_km": 261.06,
+    "url": "https://albania.al/destinations/national-parks/",
+    "visitor_count": null
+  },
+  {
+    "name": "Valbonë Valley",
+    "color": "#384c34",
+    "country": "AL",
+    "description": "Encompassing the Valbona River and Valley, this vast pristine ecosystem is the centrepiece of what has been referred to as the Albanian Miracle of the Alps.",
+    "established": "1996",
+    "images": [
+      "https://i0.wp.com/thethi-guide.com/wp-content/uploads/2020/01/valbona-valley.jpg?fit=1000%2C714&ssl=1",
+      "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/17/4d/5f/13/viaggio-in-albania.jpg?w=1200&h=-1&s=1",
+      "https://i0.wp.com/alpventurer.com/wp-content/uploads/2020/02/Valbona-Valley-Albania-scaled.jpeg?fit=2560%2C1920&ssl=1"
+    ],
+    "latitude": "42.425967532591805",
+    "longitude": "19.925835811315814",
+    "memberships": {
+      "unesco": true
+    },
+    "size_in_km": 80,
+    "url": "https://albania.al/destinations/national-parks/",
+    "visitor_count": null
+  },
+  {
+    "name": "Arikok",
+    "color": "#419794",
+    "country": "AW",
+    "description": "Aruba's only national park comprises 20% of the island and consists of rugged terrain, desert-like hills filled with tall cacti, a breathtaking coastline, and protected native flora and fauna.",
+    "established": "2000",
+    "images": [
+      "https://afar.brightspotcdn.com/dims4/default/ac319eb/2147483647/strip/true/crop/800x400+0+50/resize/1440x720!/quality/90/?url=https%3A%2F%2Fafar-media-production-web.s3.amazonaws.com%2Fbrightspot%2Fa5%2F07%2Fa37e92c20b865e7dd3220e8baaa5%2Foriginal-c4152750d91c55b777f3647fabb54e75.jpg",
+      "https://lp-cms-production.imgix.net/2021-11/Aruba-Ayo-Rock-formation.jpg",
+      "https://image.arrivalguides.com/x/15/72ff3f0dc8dc2ecd0249a6cb3d2ffa04.jpg"
+    ],
+    "latitude": "12.499081504431066",
+    "longitude": "-69.94632390229094",
+    "size_in_km": 34,
+    "url": "https://www.arubanationalpark.org/main/park-information/",
+    "visitor_count": 10000
+  },
+  {
+    "name": "Ahaggar",
+    "color": "#c89e89",
+    "country": "DZ",
+    "description": "The park protects the Hogger mountain range and forms part of the West Saharan montane xeric woodlands – an ecoregion of isolated refuges where plants and animals survive the otherwise harsh conditions of the Saharan desert.",
+    "established": "1987",
+    "images": [
+      "https://www.mosaicnorthafrica.com/wp-content/uploads/2017/01/view-from-assekrem-plateau-in-ahaggar-national-park.jpg",
+      "https://upload.wikimedia.org/wikipedia/commons/thumb/2/29/Assekrem_%28ahaggar_national_park%29.jpg/1200px-Assekrem_%28ahaggar_national_park%29.jpg",
+      "https://megustavolar.iberia.com/wp-content/uploads/mgv/Ahaggar.jpg"
+    ],
+    "latitude": "23.067862932012627",
+    "longitude": "6.235451403451865",
+    "size_in_km": 450000,
+    "url": "https://www.algeria.com/attractions/national-parks/ahaggar-national-park/",
+    "visitor_count": null
+  },
+  {
+    "name": "American Samoa",
+    "color": "#446433",
+    "country": "AS",
+    "description": "Distributed across four islands, the park preserves and protects coral reefs, tropical rainforests, fruit bats, and the Samoan culture.",
+    "established": "1988",
+    "images": [
+      "https://afar.brightspotcdn.com/dims4/default/c27d0ee/2147483647/strip/false/crop/1600x1040+0+0/resize/1486x966!/quality/90/?url=https%3A%2F%2Fafar-media-production-web.s3.amazonaws.com%2Fbrightspot%2Fea%2F5b%2F4c899d88311a81df2509ed52fd7d%2Foriginal-lede-alava-danita-20delmont-shutterstock-1280511463-20copy.jpg",
+      "https://npf-prod.imgix.net/uploads/9109117816_0273acc123_o.jpg?auto=compress%2Cformat&fit=max&q=80&w=1600",
+      "https://media.cnn.com/api/v1/images/stellar/prod/230301142318-01-least-visited-national-parks-2022-natl-park-american-samoa.jpg?c=original&q=w_1280,c_fill"
+    ],
+    "latitude": "-14.257339366238584",
+    "longitude": "-170.68559426484939",
+    "size_in_km": 33,
+    "url": "https://www.nps.gov/npsa/index.htm",
+    "visitor_count": 28626
+  },
+  {
+    "name": "Green Mountain",
+    "color": "#7b9e3a",
+    "country": "AC",
+    "description": "The highest point on Ascension Island, which has gained some fame for claims that it is one of very few large-scale artificial forests.",
+    "established": "2005",
+    "images": [
+      "https://www.ascension.gov.ac/wp-content/uploads/2019/09/Terrestrial-Conservation.jpg",
+      "https://ychef.files.bbci.co.uk/976x549/p08fwkxy.jpg",
+      "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/09/da/a7/f4/green-mountain-national.jpg?w=1200&h=1200&s=1"
+    ],
+    "latitude": "-7.949863615550642",
+    "longitude": "-14.345047666855507",
+    "memberships": {},
+    "size_in_km": null,
+    "url": "https://www.ascension.gov.ac/map-marker/green-mountain",
+    "visitor_count": null
+  },
+  {
+    "name": "Northeast Greenland",
+    "color": "#7b90a3",
+    "country": "GL",
+    "description": "The world's largest and northernmost national park, Greenland’s only national park is a vast Arctic paradise. It is home to an incredible range of wildlife and most spectacular scenery.",
+    "established": "1974",
+    "images": [
+      "https://farm1.staticflickr.com/630/31942372692_b3b6c3030d_o.jpg",
+      "https://storage.googleapis.com/oceanwide_web/media-dynamic/cache/widen_1600/v2-gallery_media/media600eef7e34f12956679612.jpg",
+      "https://s3.amazonaws.com/qblog/lib/blog_greenlandparks_2.jpg"
+    ],
+    "latitude": "76.00127418800315",
+    "longitude": "-30.007434020763295",
+    "memberships": {},
+    "size_in_km": 972000,
+    "url": "https://visitgreenland.com/about-greenland/national-park-2/",
+    "visitor_count": 150
+  },
+  {
+    "name": "Guadeloupe",
+    "color": "#c1b64f",
+    "country": "GP",
+    "description": "Part of the Guadeloupe Archipelago biosphere reserve, the only park in this overseas department of France was created to recognise the exceptional biodiversity of Basse-Terre's tropical forest and mountain massif.",
+    "established": "1989",
+    "images": [
+      "https://superuser.attenvo.com/storage/n0euK95oZtbxUpP81koVZutviA458CIjRF0EJUCK.jpg",
+      "https://www.guadeloupe-islands.com/wp-content/uploads/2017/08/Basse-Terre-Guadeloupe-1845.jpg",
+      "https://www.guadeloupe-islands.com/wp-content/uploads/2017/08/carbet-falls-and-the-summit-of-la-soufriere-volcano-GI.jpg"
+    ],
+    "latitude": "16.131785367647794",
+    "longitude": "-61.68159938251921",
+    "memberships": {
+      "iucn_green": true,
+      "ramsar": true
+    },
+    "size_in_km": 335,
+    "url": "http://www.guadeloupe-parcnational.fr/fr",
+    "visitor_count": null
+  },
+  {
+    "name": "Tynwald",
+    "color": "#9b4e6f",
+    "country": "IM",
+    "description": "Tynwald National Park was opened to commemorate the millennium of the ancient Tynwald. The small park encompasses various species of trees.",
+    "established": "1979",
+    "images": [
+      "https://www.visitiom.co.uk/images/tynwald_national_park_slideshow_3/travelfinderss",
+      "https://eu-assets.simpleview-europe.com/isleofman2019/imageresizer/?image=%2Fdmsimgs%2Farboretum_55243888.jpg&action=ProductDetailProFullWidth",
+      "https://www.gov.im/lib/images/daff/news/tynwald2009.jpg"
+    ],
+    "latitude": "54.205503325315696",
+    "longitude": "-4.637681453271592",
+    "memberships": {},
+    "size_in_km": 0.1,
+    "url": "https://www.gov.im/categories/leisure-and-entertainment/parks-and-gardens/tynwald-national-park-and-arboretum/",
+    "visitor_count": null
+  },
+  {
+    "name": "Amber Mountain",
+    "color": "#8dbd41",
+    "country": "MG",
+    "description": "The park is known for its endemic flora and fauna, water falls and crater lakes. It is one of the most biologically diverse places in all of Madagascar with seventy-five species of birds, twenty-five species of mammals, and fifty-nine species of reptiles known to inhabit the park.",
+    "established": "1958",
+    "images": [
+      "https://www.tripsavvy.com/thmb/aXPiyDG64trSaHej7tbd5pvlpr4=/3504x1971/smart/filters:no_upscale()/GettyImages-804605482-5c8b6caa46e0fb000177002c.jpg",
+      "https://www.naturalworldsafaris.com/media/3268/nws-st-madagascar-lemur-aye-aye-at-night.jpg",
+      "https://www.madamagazine.com/wp-content/uploads/2013/07/Montagne-dAmbre-Campground.jpg"
+    ],
+    "latitude": "-12.61875891606798",
+    "longitude": "49.14997854232979",
+    "memberships": {},
+    "size_in_km": 182,
+    "url": "http://www.parcs-madagascar.com/parcs/montagne%20d%20ambre.php",
+    "visitor_count": 10770
+  },
+  {
+    "name": "Analamazaotra",
+    "color": "#8dbd41",
+    "country": "MG",
+    "description": "The real draw of this reserve is the rare indri, Madagascar’s largest lemur, whose unforgettable wail can be heard emanating from the misty forest throughout the day, most commonly in the early morning. There are about 60 resident family groups of two to five indris each.",
+    "established": "1989",
+    "images": [
+      "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/09/44/06/fe/analamazaotra-special.jpg?w=1200&h=-1&s=1",
+      "https://upload.wikimedia.org/wikipedia/commons/0/07/Lake_in_the_Forest_%289654486219%29.jpg",
+      "https://www.parcs-madagascar.com/parcs/images/analamazaotra/indri.jpg"
+    ],
+    "latitude": "-18.938757515688774",
+    "longitude": "48.433704791406925",
+    "memberships": {},
+    "size_in_km": 8.1,
+    "url": "https://www.parcs-madagascar.com/parcs/analamazaotra.php",
+    "visitor_count": null
+  },
+  {
+    "name": "Andasibe-Mantadia",
+    "color": "#878f97",
+    "country": "MG",
+    "description": "This rainforest is habitat to a vast species biodiversity, including many endemic rare species and endangered species, including 11 lemur species. The park's two component parts are Mantadia National Park and Analamazoatra Reserve, which is best known for its population of Madagascar's largest lemur, the indri.",
+    "established": "1989",
+    "images": [
+      "https://madagascar-tourisme.com/wp-content/uploads/2017/07/34478786680_cf16ad7adc_k.jpg",
+      "https://static.vecteezy.com/system/resources/previews/001/358/496/large_2x/waterfall-andasibe-mantadia-national-park-madagascar-photo.jpg",
+      "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/1b/1e/84/29/the-main-entrance-of.jpg?w=1200&h=-1&s=1"
+    ],
+    "latitude": "-18.83481753061349",
+    "longitude": "48.459017149712764",
+    "memberships": {},
+    "size_in_km": 154.8,
+    "url": "http://www.parcs-madagascar.com/parcs/mantadia.php",
+    "visitor_count": 22110
+  },
+  {
+    "name": "Andohahela",
+    "color": "#286371",
+    "country": "MG",
+    "description": "Andohahela National Park is located in southeastern Madagascar and is characterized by two extreme ecosystems: endemic dry spiny forest and tropical rainforest, as well as a transitional zone. The park also houses a wetland and is only place where the rare Triangle Palm (Dypsis decaryi) palm grows in the wild.",
+    "established": "1998",
+    "images": [
+      "https://madagascar-tourisme.com/wp-content/uploads/2017/06/34693326942_583139ba88_h.jpg",
+      "https://media02.stockfood.com/largepreviews/MjIxMTk5NDU1Mw==/71354663-Andohahela-National-Park-entrance-Anosy-Mountains-south-east-Madagascar-Africa.jpg",
+      "https://i.pinimg.com/736x/07/43/44/074344afefdb685b5d03f187ece7e765--madagascar-national-parks.jpg"
+    ],
+    "latitude": "-24.75400988559863",
+    "longitude": "46.76654587075342",
+    "memberships": {
+      "unesco": true
+    },
+    "size_in_km": 760.2,
+    "url": "http://www.parcs-madagascar.com/parcs/andohahela.php",
+    "visitor_count": 1300
+  },
+  {
+    "name": "Andringitra",
+    "color": "#afa4ac",
+    "country": "MG",
+    "description": "The park is one of the most biologically diverse places in Madagascar, with many endemic species. The eastern flank of the massif is covered with humid forest, and humid grassland and scrub in the higher areas. On the western flank there is relatively dry forest. There are over one thousand species of plants, one hundred species of birds, and fifty-five species of frogs are known to inhabit the park.",
+    "established": "1999",
+    "images": [
+      "https://travellersworldwide.com/wp-content/uploads/2021/07/shutterstock_1122191246.jpg",
+      "https://upload.wikimedia.org/wikipedia/commons/1/13/Andringitra%2C_Madagascar_by_Effervescing_Elephant-10.jpg",
+      "https://madagascar-visite.com/holidays/wp-content/uploads/2020/01/andringitra.jpg"
+    ],
+    "latitude": "-22.21165571317014",
+    "longitude": "46.922407990707256",
+    "memberships": {
+      "unesco": true
+    },
+    "size_in_km": 311.6,
+    "url": "http://www.parcs-madagascar.com/parcs/andringitra.php",
+    "visitor_count": 3156
+  },
+  {
+    "name": "Ankarafantsika",
+    "color": "#e49e56",
+    "country": "MG",
+    "description": "The park consists of patches of thick dry tropical forest interspersed with less dense areas. There are also savannah, scrub and sandy eroded rock areas and some land is farmed by the indigenous Sakalava people.",
+    "established": "2002",
+    "images": [
+      "https://www.madamagazine.com/wp-content/uploads/2013/07/DSC_6854.jpg",
+      "https://www.travel2mada.com/uploads/ankarafantsika.png",
+      "https://upload.wikimedia.org/wikipedia/commons/f/f6/Lake_Ravelobe%2C_Ankarafantsika_National_Park%2C_Madagascar.jpg"
+    ],
+    "latitude": "-16.22247461248744",
+    "longitude": "46.94165676415938",
+    "memberships": {
+      "ramsar": true
+    },
+    "size_in_km": 1365.13,
+    "url": "http://www.parcs-madagascar.com/parcs/ankarafantsika.php",
+    "visitor_count": 4421
+  },
+  {
+    "name": "Bay of Baly",
+    "color": "#e7d7b3",
+    "country": "MG",
+    "description": "The Baie de Baly National Park is the only known natural habitat of the critically endangered Angonoka tortoise or ploughshare tortoise (Astrochelys yniphora). Other rare animals found in this park is the Madagascan sideneck turtle (Erymnochelys madagascariensis), as well as the dugong, a marine mammal and the Madagascar fish eagle.",
+    "established": "1997",
+    "images": [
+      "https://ndaoitravel.com/wp-content/uploads/2017/06/BB.jpg",
+      "https://upload.wikimedia.org/wikipedia/commons/c/ce/Astrochelys_yniphora.jpg",
+      "https://wildsafariguide.com/wp-content/uploads/2021/04/Pirogue.png"
+    ],
+    "latitude": "-16.021551356168267",
+    "longitude": "45.24100992817163",
+    "memberships": {},
+    "size_in_km": 571.42,
+    "url": "http://www.parcs-madagascar.com/parcs/baie_de_baly.php",
+    "visitor_count": 100
+  },
+  {
+    "name": "Isalo",
+    "color": "#9ae34b",
+    "country": "MG",
+    "description": "A sandstone landscape that has been dissected by wind and water erosion into rocky outcrops, plateaus, extensive plains and up to 200 meter deep canyons.",
+    "established": "1962",
+    "images": [
+      "https://www.tripsavvy.com/thmb/ngFwcB5gnSU9_nH9F7LEN0BZ3U4=/1880x1410/smart/filters:no_upscale()/GettyImages-119090690-5ba3594d4cedfd002516551e.jpg",
+      "https://www.abercrombiekent.co.uk/-/media/abercrombieandkent/images/page-header-images/africa/madagascar/isalo-national-park/isalo_0000_madagascar-la-fenetre-shutterstock_195250958.jpg?la=en&hash=ACB957836065F2721D40520A42EF3832522BC4FC",
+      "https://www.naturalworldsafaris.com/media/3247/madagascar-tourist-board-queen-of-isalo.jpg"
+    ],
+    "latitude": "-22.465435422068516",
+    "longitude": "45.26180308382561",
+    "memberships": {},
+    "size_in_km": 815.4,
+    "url": "http://www.parcs-madagascar.com/parcs/isalo.php",
+    "visitor_count": 28375
+  },
+  {
+    "name": "Kirindy Mitea",
+    "color": "#7d8287",
+    "country": "MG",
+    "description": "Situated on the south-west coast of the Mozambique Channel, this park includes a marine area with seven small islands. The park contains many endemic animals and plants and claims to have the greatest density of primates in the world.",
+    "established": "1997",
+    "images": [
+      "https://labs.la.utexas.edu/ankoatsifaka/files/2014/12/IMG_8551.jpg",
+      "https://www.madamagazine.com/wp-content/uploads/2017/07/Kirindy-Weg-RN8.jpg",
+      "https://www.africatouroperators.org/wp-content/uploads/lemurs-Madagascar.jpg"
+    ],
+    "latitude": "-20.739645883016635",
+    "longitude": "44.17200513962035",
+    "memberships": {},
+    "size_in_km": 722,
+    "url": "http://www.parcs-madagascar.com/parcs/kirindy-mite.php",
+    "visitor_count": null
+  },
+  {
+    "name": "Lokobe",
+    "color": "#b0dfb4",
+    "country": "MG",
+    "description": "Located on southeastern side of Nosy Be, an island off the coast of Madagascar, the park is known for its black lemurs and the beautiful Nosy Be panther chameleon.",
+    "established": "2014",
+    "images": [
+      "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2d/Panther_chameleon_%28Furcifer_pardalis%29_male_Nosy_Be.jpg/568px-Panther_chameleon_%28Furcifer_pardalis%29_male_Nosy_Be.jpg",
+      "https://www.madamagazine.com/wp-content/uploads/2016/07/Lokobe-Nationalpark-2-1000x525.jpg",
+      "https://www.hollandamerica.com/content/dam/hal/inventory-assets/excursions/grand-voyages/lokobe-national-park-lunch-021219-50008-c037.jpg.image.750.563.low.jpg"
+    ],
+    "latitude": "-13.395337781527795",
+    "longitude": "48.324468677481384",
+    "memberships": {},
+    "size_in_km": 15.23,
+    "url": "http://www.parcs-madagascar.com/parcs/lokobe.php",
+    "visitor_count": null
+  },
+  {
+    "name": "Mananara Nord",
+    "color": "#3c5e85",
+    "country": "MG",
+    "description": "The Mananara Nord National Park consists of a land and marine park that are both rich in biodiversity as well as natural and original beauty. The marine park is the first created in Madagascar.",
+    "established": "1989",
+    "images": [
+      "https://en.unesco.org/sites/default/files/cover_mananara_biosphere_reserve_unesco_madagascar2_.jpg",
+      "https://www.parcs-madagascar.com/parcs/images/mananara%20nord/mananara%20nord.jpg",
+      "https://static1.evcdn.net/images/reduction/461931_w-1200_h-630_q-70_m-crop.jpg"
+    ],
+    "latitude": "-16.49218801488088",
+    "longitude": "49.711593583952585",
+    "memberships": {},
+    "size_in_km": 240,
+    "url": "http://www.parcs-madagascar.com/parcs/mananara-nord.php",
+    "visitor_count": 100
+  },
+  {
+    "name": "Marojejy",
+    "color": "#323530",
+    "country": "MG",
+    "description": "Part of the World Heritage Site known as the Rainforests of the Atsinanana, Marojejy National Park is centered on the Marojejy Massif, a mountain chain that rises to an elevation of 2,132 meters.",
+    "established": "1998",
+    "images": [
+      "https://www.madamagazine.com/wp-content/uploads/2013/07/Marojejy1.jpg",
+      "https://www.booking-hotel-madagascar.com/wp-content/uploads/2017/07/marojejy.jpg",
+      "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/15/2f/46/a2/start-of-hike-to-marojejy.jpg?w=700&h=-1&s=1"
+    ],
+    "latitude": "-14.457470800896697",
+    "longitude": "49.79435932349952",
+    "memberships": {
+      "unesco": true
+    },
+    "size_in_km": 600.5,
+    "url": "http://www.parcs-madagascar.com/parcs/marojejy.php",
+    "visitor_count": 1362
+  },
+  {
+    "name": "Marolambo",
+    "color": "#a3a3ac",
+    "country": "MG",
+    "description": "Marolambo National Park is primarily a wet dense forest, located between several regions including Atsinanana, Vatovavy-Fitovinany, Vakinankaratra and Amoron'i Mania.",
+    "established": "2015",
+    "images": [
+      "https://www.parcs-madagascar.com/parcs/images/marolambo/ChuteRianambo_secteur%20Nord-ouest.jpg",
+      "https://www.ser-rrc.org/wp-content/uploads/2019/08/Fandriana-4.png",
+      "https://maison-de-madagascar.ch/files/2019/08/Parc-National-de-Marolambo.jpg"
+    ],
+    "latitude": "-19.672096947174722",
+    "longitude": "47.51324881076798",
+    "memberships": {},
+    "size_in_km": 1942.9,
+    "url": "http://www.parcs-madagascar.com/parcs/marolambo.php",
+    "visitor_count": null
+  },
+  {
+    "name": "Masoala",
+    "color": "#518b9a",
+    "country": "MG",
+    "description": "The largest of Madagascar's protected areas, The Masoala National Park is exceptionally diverse due to its large size, and variety of habitats. Altogether, the park protects tropical rainforest, coastal forest, flooded forest, marsh, and mangrove.",
+    "established": "1997",
+    "images": [
+      "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/04/75/3a/20/masoala-national-park.jpg?w=1200&h=-1&s=1",
+      "https://www.naturalworldsafaris.com/media/3272/nws-st-madagascar-masoala-national-park.jpg",
+      "https://www.aqua-firma.com/contentFiles/image/madagascar/masoala/masoala-national-park-rainforest-coast-ralph-pannell-aqua-firma-v.jpg"
+    ],
+    "latitude": "-15.637486608508189",
+    "longitude": "50.100845439545445",
+    "memberships": {
+      "unesco": true
+    },
+    "size_in_km": 2405.2,
+    "url": "http://www.parcs-madagascar.com/parcs/masoala.php",
+    "visitor_count": 2480
+  },
+  {
+    "name": "Midongy du Sud",
+    "color": "#897247",
+    "country": "MG",
+    "description": "The park is the second largest rainforest on the island and is rich in endemic animals and plants, especially medicinal plants.",
+    "established": "1997",
+    "images": [
+      "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6c/Diademed_ready_to_push_off.jpg/1200px-Diademed_ready_to_push_off.jpg",
+      "https://www.parcs-madagascar.com/parcs/images/midongy%20du%20sud/fb2.jpg",
+      "https://ndaoitravel.com/wp-content/uploads/2017/12/Midongy4.jpg"
+    ],
+    "latitude": "-23.702939377750745",
+    "longitude": "47.096661804430425",
+    "memberships": {},
+    "size_in_km": 1922,
+    "url": "http://www.parcs-madagascar.com/parcs/midongy%20du%20sud.php",
+    "visitor_count": null
+  },
+  {
+    "name": "Mikea",
+    "color": "#ab6e41",
+    "country": "MG",
+    "description": "Named after the Mikea, one of Madagascar's last hunter-gatherer societies, this park is known for its stunted Grandidier’s baobab trees, the trunks of which are shorter and wider than specimens found elsewhere in Madagascar.",
+    "established": "2007",
+    "images": [
+      "https://www.naturalworldsafaris.com/media/3190/madagascar-joshua-barton-jumping-ringtailed-lemur.jpg",
+      "https://imgs.mongabay.com/wp-content/uploads/sites/20/2019/10/03141842/SFriedberg_Mikea_3-768x512.jpg",
+      "https://imgs.mongabay.com/wp-content/uploads/sites/20/2019/10/03141855/SFriedberg_Mikea_5.jpg"
+    ],
+    "latitude": "-22.33736157640095",
+    "longitude": "43.35100179731799",
+    "memberships": {},
+    "size_in_km": 2367.37,
+    "url": "http://www.parcs-madagascar.com/parcs/mikea.php",
+    "visitor_count": null
+  },
+  {
+    "name": "Nosy Hara",
+    "color": "#6a9fe6",
+    "country": "MG",
+    "description": "An uninhabited limestone islet off the northwest coast of Madagascar, it is the habitat of Brookesia micra, the smallest known chameleon.",
+    "established": "2012",
+    "images": [
+      "https://www.madamagazine.com/wp-content/uploads/2016/06/Nationalpark-Nosy-Hara-6-1050x525.jpg",
+      "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Brookesia_micra_female.jpg/800px-Brookesia_micra_female.jpg",
+      "https://upload.wikimedia.org/wikipedia/commons/c/c1/Brookesia_micra_habitat.jpg"
+    ],
+    "latitude": "-12.237823460274576",
+    "longitude": "49.013566357668445",
+    "memberships": {
+      "iucn_green": true
+    },
+    "size_in_km": 2.7,
+    "url": "http://www.parcs-madagascar.com/parcs/nosy%20hara.php",
+    "visitor_count": null
+  },
+  {
+    "name": "Nosy Tanikely",
+    "color": "#419696",
+    "country": "MG",
+    "description": "Nosy Tanikely is recognized for its remarkable marine and land biodiversity. The site is one of Madagascar’s most important in terms of marine characteristics.",
+    "established": "2011",
+    "images": [
+      "https://nosybe-tourisme.com/wp-content/uploads/2017/08/Nosy-tanikely-e1504189633398.jpg",
+      "https://www.madamagazine.com/wp-content/uploads/2016/05/nosytanikely10-1050x525.jpg",
+      "https://www.madamagazine.com/wp-content/uploads/2016/05/nosytanikely5-1050x525.jpg"
+    ],
+    "latitude": "-13.481982371651696",
+    "longitude": "48.23648358914496",
+    "memberships": {},
+    "size_in_km": 3.1,
+    "url": "http://www.parcs-madagascar.com/parcs/nosy-tanihely.php",
+    "visitor_count": 22051
+  },
+  {
+    "name": "Nosy Ve-Androka",
+    "color": "#cdcd77",
+    "country": "MG",
+    "description": "The Nosy Ve-Androka National Park contains about 140 species of coral and 240 species of fish. There are also rare species such as Coelacanths, marine turtle species, Dugongs, Dolphins and Whales and sandy beaches that are used by nesting sea turtles.",
+    "established": "2015",
+    "images": [
+      "http://awsassets.panda.org/img/tsimanampesotse_09_486_flamingos_1_651619.jpg",
+      "https://upload.wikimedia.org/wikipedia/commons/a/aa/Coral_Nosy_Ve-Androka_National_Park.jpg",
+      "https://www.parcs-madagascar.com/parcs/images/nosy%20ve%20androka/decouverte-nosy-be-9-1024x647.jpg"
+    ],
+    "latitude": "-23.645618103616865",
+    "longitude": "43.603372423886746",
+    "memberships": {
+      "ramsar": true
+    },
+    "size_in_km": 19.6,
+    "url": "http://www.parcs-madagascar.com/parcs/nosy-ve-androka.php",
+    "visitor_count": null
+  },
+  {
+    "name": "Ranomafana",
+    "color": "#91aa37",
+    "country": "MG",
+    "description": "With more than 41,600 hectares of tropical rainforest, it is home to several rare species of flora and fauna including the golden bamboo lemur, the greater bamboo lemur, black and white ruffed lemur and Milne-Edwards sifaka, and over 130 species of frogs.",
+    "established": "1991",
+    "images": [
+      "https://www.naturalworldsafaris.com/media/3216/madagascar-robin-hoskyns-golden-bamboo-lemur-critically-endangered-ranomafana.jpg",
+      "https://assets.traveltriangle.com/blog/wp-content/uploads/2018/09/acj-1309-ranomafana-national-park-12.jpg",
+      "https://www.madamagazine.com/wp-content/uploads/2013/07/IB_calumma-parsonii12.jpg"
+    ],
+    "latitude": "-21.26390111130698",
+    "longitude": "47.419280968464406",
+    "memberships": {
+      "unesco": true
+    },
+    "size_in_km": 416,
+    "url": "http://www.parcs-madagascar.com/parcs/ranomafana.php",
+    "visitor_count": 21032
+  },
+  {
+    "name": "Sahamalaza",
+    "color": "#a3bfb9",
+    "country": "MG",
+    "description": "The national park is home to some of the last remaining populations of the critically endangered blue-eyed black lemur and the Sahamalaza sportive lemur, both endemic to this region.",
+    "established": "2007",
+    "images": [
+      "https://en.unesco.org/sites/default/files/cover_sahamalaza_ilesradama_biosphere_reserve_madagascar_wikimedia.jpg",
+      "https://www.iucn.org/sites/default/files/content/images/2017/15b-014-022_eulemur_flavifrons_male_c_guy_randriatahina.jpg",
+      "https://www.iucn.org/sites/default/files/content/images/2017/15b-014-023_eulemur_flavifrons_female_c_guy_randriatahina.jpg"
+    ],
+    "latitude": "-14.196360773487214",
+    "longitude": "47.9560889530228",
+    "memberships": {
+      "ramsar": true
+    },
+    "size_in_km": 260,
+    "url": "http://www.parcs-madagascar.com/parcs/sahamalaza.php",
+    "visitor_count": null
+  },
+  {
+    "name": "Tsimanampetsotsa",
+    "color": "#df7930",
+    "country": "MG",
+    "description": "The national park contains and is named after Lake Tsimanampetsotsa, an important wetland which is registered as a Ramsar Wetland of International Importance. Subfossil remains of many different species, including giant tortoise, crocodiles, and eggshell fragments of elephant birds have been discovered in the park.",
+    "established": "1927",
+    "images": [
+      "https://upload.wikimedia.org/wikipedia/commons/d/d0/Pachypodium_geayi_in_Tsimanampetsotsa%2C_Madagascar.jpg",
+      "https://www.madamagazine.com/wp-content/uploads/2006/12/IB_Strasse1.jpg",
+      "https://farm1.staticflickr.com/649/31715590666_142927cecb_o.jpg"
+    ],
+    "latitude": "-24.144299467344002",
+    "longitude": "43.82915350883988",
+    "memberships": {
+      "ramsar": true
+    },
+    "size_in_km": 432,
+    "url": "http://www.parcs-madagascar.com/parcs/tsimanapesotse.php",
+    "visitor_count": 1186
+  },
+  {
+    "name": "Tsingy de Bemaraha",
+    "color": "#73787f",
+    "country": "MG",
+    "description": "The Tsingys are karstic plateaus in which groundwater has undercut the elevated uplands, and has gouged caverns and fissures into the limestone. In several regions on western Madagascar, centering on the park and adjacent Nature Reserve, the superposition of vertical and horizontal erosion patterns has created dramatic \"forests\" of limestone needles.",
+    "established": "1997",
+    "images": [
+      "https://www.tripsavvy.com/thmb/IQIsds9agn43rwnQCQmBw1VyVto=/2121x1414/filters:no_upscale():max_bytes(150000):strip_icc()/tsingy-de-bemaraha-in-madagascar-1211285286-7b7db92120ff4c3f91b704827c2c7104.jpg",
+      "https://upload.wikimedia.org/wikipedia/commons/2/28/Tsingy_de_Bemaraha_Strict_Nature_Reserve.jpg",
+      "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Tsingy_de_Bemaraha.jpg/568px-Tsingy_de_Bemaraha.jpg"
+    ],
+    "latitude": "-18.919823498556685",
+    "longitude": "44.79439112609672",
+    "memberships": {
+      "unesco": true
+    },
+    "size_in_km": 723.4,
+    "url": "http://www.parcs-madagascar.com/parcs/bemaraha.php",
+    "visitor_count": 9561
+  },
+  {
+    "name": "Zahamena",
+    "color": "#488c2a",
+    "country": "MG",
+    "description": "Part of the Rainforests of the Atsinanana, the park is habitat for 112 bird species, 46 reptile species, 62 species of amphibians and 48 species of mammals, including 13 species of lemurs.",
+    "established": "1997",
+    "images": [
+      "https://lh3.googleusercontent.com/p/AF1QipO5SivfYel-SMnH93JcVe5i7ZrQvd_6TddUng29=h1000-w1000",
+      "https://www.madamagazine.com/wp-content/uploads/2017/02/zahamena13.jpg",
+      "http://zahamenatropicalrainforest.weebly.com/uploads/2/8/3/9/28395645/7476276_orig.jpg"
+    ],
+    "latitude": "-17.612158250804594",
+    "longitude": "48.779387439572005",
+    "memberships": {
+      "unesco": true
+    },
+    "size_in_km": 423,
+    "url": "http://www.parcs-madagascar.com/parcs/zahamena.php",
+    "visitor_count": null
+  },
+  {
+    "name": "Zombitse-Vohibasia",
+    "color": "#9e968a",
+    "country": "MG",
+    "description": "The national park falls within the ecoregion classified as Madagascar succulent woodlands, an ecoregion that is known for high local endemicity and that is transitional between the spiny thicket and the dry deciduous woodland ecoregions.",
+    "established": "1997",
+    "images": [
+      "https://www.matoketours.com/media/1171522/Zombitse%20National%20Park.jpg",
+      "https://www.madamagazine.com/wp-content/uploads/2015/05/Zombitse-Vohibasia-5-Larvensifaka.jpg",
+      "https://www.africatouroperators.org/wp-content/uploads/Zombitse.jpg"
+    ],
+    "latitude": "-22.841584735117248",
+    "longitude": "44.68184842616237",
+    "memberships": {},
+    "size_in_km": 363.1,
+    "url": "http://www.parcs-madagascar.com/parcs/zombitse.php",
+    "visitor_count": 2822
+  },
+  {
+    "name": "Abel Tasman",
+    "color": "#449b7a",
+    "country": "NZ",
+    "description": "The smallest of New Zealand's national parks, Abel Tasman consists of forested, hilly country to the north of the valleys of the Tākaka and Riwaka Rivers, and is bounded to the north by the waters of Golden Bay and Tasman Bay",
+    "established": "1942",
+    "images": [
+      "https://www.doc.govt.nz/thumbs/hero/contentassets/14d29b93cecf4d39bbb46b7e039f98d6/abel-tasman-water-sand-hero.jpg",
+      "https://www.moatrek.com/sites/default/files/styles/1200_x_630/public/2016-10/Able-Tasman-National-Park-Kayaks.jpg?itok=BssKbCTu",
+      "https://a.storyblok.com/f/95452/4549x3033/eae0ffd715/new-zealand-abel-tasman-national-park-estuary.jpg/m/1200x630/filters:focal(1989x1860:1990x1861)"
+    ],
+    "latitude": "-40.90494648233701",
+    "longitude": "172.96707416893855",
+    "memberships": {},
+    "size_in_km": 237.1,
+    "url": "https://www.doc.govt.nz/parks-and-recreation/places-to-go/nelson-tasman/places/abel-tasman-national-park",
+    "visitor_count": null
+  },
+  {
+    "name": "Aoraki Mount Cook",
+    "color": "#d5d5d4",
+    "country": "NZ",
+    "description": "Aoraki / Mount Cook, New Zealand's highest mountain, and the eponymous village lie within the park. Additionally, glaciers cover 40% of the park area, most notably the Tasman Glacier.",
+    "established": "1953",
+    "images": [
+      "https://www.newzealand.com/assets/Tourism-NZ/Christchurch-Canterbury/9aa11093e3/img-1536989144-436-6533-p-4AE01862-F0F6-45CC-A4A8B61D309D3D12-2544003__aWxvdmVrZWxseQo_FocalPointCropWzM1MiwxMDI0LDUzLDUwLDc1LCJqcGciLDY1LDIuNV0.jpg",
+      "https://www.newzealand.com/assets/Tourism-NZ/Christchurch-Canterbury/4d8e0c5290/img-1536920282-5439-18788-p-66E27231-0F68-5D13-7EBBA7C0E3E95F82-2544003__aWxvdmVrZWxseQo_CropResizeWzEyMDAsNjMwLDc1LCJwbmciXQ.png",
+      "https://peakvisor.com/img/news/Mount-Cook-National-Park.jpg"
+    ],
+    "latitude": "-43.593003781682874",
+    "longitude": "170.262224665067",
+    "memberships": {
+      "dark_sky": "Reserve",
+      "unesco": true
+    },
+    "size_in_km": 721.6,
+    "url": "https://www.doc.govt.nz/parks-and-recreation/places-to-go/canterbury/places/aoraki-mount-cook-national-park",
+    "visitor_count": null
+  },
+  {
+    "name": "Arthur's Pass",
+    "color": "#b2993a",
+    "country": "NZ",
+    "description": "The park is very distinctly split by the main divide of the South Island. The eastern side is typically drier and consists of mountain beech forest and wide riverbeds, while the western side contains dense rainforest.",
+    "established": "1929",
+    "images": [
+      "https://myqueenstowndiary.com/wp-content/uploads/2021/07/Otira-Viaduct-Lookout.jpg",
+      "https://peakvisor.com/img/news/Arthurs-Pass-national-park.jpg",
+      "https://www.doc.govt.nz/thumbs/hero/contentassets/e3587832b8884bb9bf34aebe3a047fbd/walking-arthurs-pass-hero.jpg"
+    ],
+    "latitude": "-42.93242834981011",
+    "longitude": "171.7252384566362",
+    "memberships": {},
+    "size_in_km": 1184.7,
+    "url": "https://www.doc.govt.nz/parks-and-recreation/places-to-go/canterbury/places/arthurs-pass-national-park",
+    "visitor_count": null
+  },
+  {
+    "name": "Egmont",
+    "color": "#27557a",
+    "country": "NZ",
+    "description": "Egmont National Park covers the dormant stratovolcano Mount Taranaki and its surrounding forest. The forest is surrounded by vast plains, giving the park a distinct circular shape.",
+    "established": "1900",
+    "images": [
+      "https://www.newzealand.com/assets/Tourism-NZ/Taranaki/Taranaki-0004_credit-Sophie-Kelly__aWxvdmVrZWxseQo_CropResizeWzEyMDAsNjMwLDc1LCJqcGciXQ.jpg",
+      "https://lh3.googleusercontent.com/-RuwjZ-nOZWU/Vpc7jOPgfgI/AAAAAAABKuE/K5X8TxCJlgw/mount-taranaki-56.jpg?imgmax=800",
+      "https://www.tripsavvy.com/thmb/dJTUAG8MFvA3-2lTZlWKBB3CFEg=/2000x1500/filters:fill(auto,1)/Taranaki-c2077790762847a29cc057ab61ee957a.jpg"
+    ],
+    "latitude": "-39.29881667025322",
+    "longitude": "174.06621330745693",
+    "memberships": {},
+    "size_in_km": 341.7,
+    "url": "https://www.doc.govt.nz/parks-and-recreation/places-to-go/taranaki/places/egmont-national-park",
+    "visitor_count": null
+  },
+  {
+    "name": "Fiordland",
+    "color": "#e1dddc",
+    "country": "NZ",
+    "description": "Fiordland is by far the largest of the national parks in New Zealand, with an area of 12,607 square kilometres, and a major part of the Te Wahipounamu World Heritage Site.",
+    "established": "1952",
+    "images": [
+      "https://cdn.britannica.com/51/59851-050-02ED07E5/Mitre-Peak-waters-Milford-Sound-Fiordland-National.jpg",
+      "https://www.worldatlas.com/upload/bc/3e/37/shutterstock-1402082300.jpg",
+      "https://a.travel-assets.com/findyours-php/viewfinder/images/res70/181000/181041-Southland.jpg"
+    ],
+    "latitude": "-45.462838730570425",
+    "longitude": "167.5422022979201",
+    "memberships": {
+      "unesco": true
+    },
+    "size_in_km": 12607,
+    "url": "https://www.doc.govt.nz/parks-and-recreation/places-to-go/fiordland/places/fiordland-national-park",
+    "visitor_count": null
+  },
+  {
+    "name": "Kahurangi",
+    "color": "#d09dae",
+    "country": "NZ",
+    "description": "Kahurangi is New Zealand's second largest national park. In places it is an untracked wilderness, elsewhere a wonderful network of tracks lets you explore wild rivers, high plateaux and alpine herbfields, and coastal forests.",
+    "established": "1996",
+    "images": [
+      "https://www.doc.govt.nz/thumbs/hero/contentassets/b739b40e82a94caf8d2388624cec0e9b/kahurangi-nat-park-hero.jpg",
+      "https://upload.wikimedia.org/wikipedia/commons/thumb/3/33/Lake_Sylvester_during_the_sunrise%2C_Kahurangi%2C_New_Zealand.jpg/650px-Lake_Sylvester_during_the_sunrise%2C_Kahurangi%2C_New_Zealand.jpg",
+      "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2e/View_towards_Mt_Patriarch%2C_Wangapeka_Track%2C_Kahurangi%2C_New_Zealand_04.jpg/1200px-View_towards_Mt_Patriarch%2C_Wangapeka_Track%2C_Kahurangi%2C_New_Zealand_04.jpg"
+    ],
+    "latitude": "-41.09848453912171",
+    "longitude": "172.53507656894448",
+    "memberships": {},
+    "size_in_km": 4529,
+    "url": "https://www.doc.govt.nz/parks-and-recreation/places-to-go/nelson-tasman/places/kahurangi-national-park",
+    "visitor_count": null
+  },
+  {
+    "name": "Mount Aspiring",
+    "color": "#707779",
+    "country": "NZ",
+    "description": "Named for Mt Aspiring, one of New Zealand's highest peaks, this park is a dreamland of mountains, glaciers, river valleys and alpine lakes.",
+    "established": "1964",
+    "images": [
+      "https://upload.wikimedia.org/wikipedia/commons/6/65/Matukituki_valley.jpg",
+      "https://www.newzealand.com/assets/Tourism-NZ/Wanaka/8658819e32/img-1536369210-7334-12947-F4583862-F565-BA1E-776D9795DDE5E0BF__aWxvdmVrZWxseQo_CropResizeWzEyMDAsNjMwLDc1LCJqcGciXQ.jpg",
+      "https://peakvisor.com/photo/Mount-Aspiring-National-Park-Mount-Aspiring.jpg"
+    ],
+    "latitude": "-44.23016683374218",
+    "longitude": "168.83702366772664",
+    "memberships": {
+      "unesco": true
+    },
+    "size_in_km": 3562,
+    "url": "https://www.doc.govt.nz/parks-and-recreation/places-to-go/otago/places/mount-aspiring-national-park",
+    "visitor_count": null
+  },
+  {
+    "name": "Nelson Lakes",
+    "color": "#356092",
+    "country": "NZ",
+    "description": "Centered at two large lakes, Rotoiti and Rotoroa, the park contains beech forests, multiple lakes, snow-covered mountains and valleys created by glaciers during the ice ages.",
+    "established": "1956",
+    "images": [
+      "https://www.doc.govt.nz/thumbs/hero/contentassets/289ca40948d14ab690a82c08794e5f11/lake-rotoiti-nelson-lakes-hero.jpg",
+      "https://seethesouthisland.com/wp-content/uploads/2019/06/lake-rotoiti-reflections-nelson-lakes-new-zealand.jpg",
+      "https://images.mapsofworld.com/allwonders/2015/09/lake-angelus-nelson-lakes-national-park-new-zealand.jpg"
+    ],
+    "latitude": "-42.007423585637675",
+    "longitude": "172.63167682664312",
+    "memberships": {},
+    "size_in_km": 1018.8,
+    "url": "https://www.doc.govt.nz/parks-and-recreation/places-to-go/nelson-tasman/places/nelson-lakes-national-park",
+    "visitor_count": null
+  },
+  {
+    "name": "Paparoa",
+    "color": "#a5a09c",
+    "country": "NZ",
+    "description": "Luxuriant coastal forest, limestone cliffs and canyons, caves and underground streams, and an absolutely spectacular coastline, are all packed into one national park. The bizarre ‘pancake-stack’ coastal formations attract visitors to the area.",
+    "established": "1987",
+    "images": [
+      "https://www.doc.govt.nz/thumbs/hero/contentassets/0a1dd08a4e4c4b99a8120f9b149edfdd/paparoa-national-park-hero.jpg",
+      "https://newzealandtrails.com/assets/Uploads/_resampled/FillWyIxMjAwIiwiNjMwIl0/paparoa-national-park-new-zealand2.jpg",
+      "https://images.mapsofworld.com/allwonders/2015/09/punakaki-pancake-rocks-in-paparoa-national-park.jpg"
+    ],
+    "latitude": "-42.091660595601105",
+    "longitude": "171.44965775999984",
+    "memberships": {},
+    "size_in_km": 429.7,
+    "url": "https://www.doc.govt.nz/parks-and-recreation/places-to-go/west-coast/places/paparoa-national-park",
+    "visitor_count": null
+  },
+  {
+    "name": "Rakiura",
+    "color": "#356b71",
+    "country": "NZ",
+    "description": "The newest national park in New Zealand, it covers about 85% of Stewart Island / Rakiura, New Zealand's third-largest island. Many native birds can be found within the park, and Rakiura offers perhaps the best opportunity anywhere in New Zealand for viewing kiwi in the wild.",
+    "established": "2002",
+    "images": [
+      "https://www.newzealand.com/assets/Tourism-NZ/Stewart-Island-Rakiura/c5313d5a2c/img-1536145513-9408-10607-p-6751B78B-FD4F-C557-29E5E1AFB1B14430-2544003__aWxvdmVrZWxseQo_CropResizeWzUwMCwzNzUsODAsInBuZyJd.png",
+      "https://images.alltrails.com/eyJidWNrZXQiOiJhc3NldHMuYWxsdHJhaWxzLmNvbSIsImtleSI6InVwbG9hZHMvcGhvdG8vaW1hZ2UvMzM1NjA4MzQvM2QxMDc0Y2QxNDRkNjU3YjEyYTVjYTEwMTM0NGYyODYuanBnIiwiZWRpdHMiOnsidG9Gb3JtYXQiOiJqcGVnIiwicmVzaXplIjp7IndpZHRoIjo1MDAsImhlaWdodCI6NTAwLCJmaXQiOiJpbnNpZGUifSwicm90YXRlIjpudWxsLCJqcGVnIjp7InRyZWxsaXNRdWFudGlzYXRpb24iOnRydWUsIm92ZXJzaG9vdERlcmluZ2luZyI6dHJ1ZSwib3B0aW1pc2VTY2FucyI6dHJ1ZSwicXVhbnRpc2F0aW9uVGFibGUiOjN9fX0=",
+      "https://parksandtrips.com/wp-content/uploads/2022/03/sebastien-goldberg-NmNye-Ky190-unsplash.jpg"
+    ],
+    "latitude": "-46.997210822315786",
+    "longitude": "167.8372221268074",
+    "memberships": {
+      "dark_sky": "Sanctuary"
+    },
+    "size_in_km": 1399.6,
+    "url": "https://www.doc.govt.nz/parks-and-recreation/places-to-go/southland/places/stewart-island-rakiura/rakiura-national-park",
+    "visitor_count": null
+  },
+  {
+    "name": "Tongariro",
+    "color": "#5fd5ac",
+    "country": "NZ",
+    "description": "New Zealand's oldest national park, and the sixth national park established in the world, Tongariro is a dual UNESCO World Heritage Site of mixed cultural and natural values.",
+    "established": "1887",
+    "images": [
+      "https://static.dw.com/image/46562005_401.jpg",
+      "https://www.lovetaupo.com/media/2960345/tongariro-national-park-mt-ngauruhoe-winter.jpg?anchor=center&mode=crop&width=1920&height=1080&rnd=132300517769900000",
+      "https://cdn.audleytravel.com/4431/3164/79/7992507-emerald-lakes-tongariro-national-park.jpg"
+    ],
+    "latitude": "-39.192096290819634",
+    "longitude": "175.5935176564929",
+    "memberships": {
+      "unesco": true
+    },
+    "size_in_km": 795.96,
+    "url": "https://www.doc.govt.nz/parks-and-recreation/places-to-go/central-north-island/places/tongariro-national-park",
+    "visitor_count": null
+  },
+  {
+    "name": "Westland Tai Poutini",
+    "color": "#8e97aa",
+    "country": "NZ",
+    "description": "The park extends from the highest peaks of the Southern Alps/Kā Tiritiri o te Moana, to the rugged and remote beaches of the wild West Coast.",
+    "established": "1960",
+    "images": [
+      "https://www.doc.govt.nz/thumbs/hero/globalassets/images/places/west-coast/westland-tai-poutini-national-park/lake-matheson/lake-matheson-aoraki-1920.jpg",
+      "https://cdn.britannica.com/44/124844-050-889D7067/Franz-Josef-Glacier-Westland-Tai-Poutini-National.jpg",
+      "https://previews.123rf.com/images/hzind/hzind1707/hzind170700217/90040925-franz-josef-glacier-located-in-westland-tai-poutini-national-park-on-the-west-coast-of-new-zealand.jpg"
+    ],
+    "latitude": "-43.49992215485115",
+    "longitude": "170.1666345113502",
+    "memberships": {
+      "unesco": true
+    },
+    "size_in_km": 1319.8,
+    "url": "https://www.doc.govt.nz/parks-and-recreation/places-to-go/west-coast/places/westland-tai-poutini-national-park",
+    "visitor_count": null
+  },
+  {
+    "name": "Whanganui",
+    "color": "#3a4015",
+    "country": "NZ",
+    "description": "Despite bordering the Whanganui River, the river itself is not part of the park. The park protects the habitat of several thousand North Island brown kiwi, and the also-endangered blue duck.",
+    "established": "1986",
+    "images": [
+      "https://www.doc.govt.nz/globalassets/images/places/manawatu-whanganui/bridge-to-nowhere/bridge-to-nowhere-1200.jpg",
+      "https://www.doc.govt.nz/thumbs/hero/contentassets/0f8cda4fd80c419283f871d4660a7991/whanganui-river-lookout-hero.jpg",
+      "https://resources.stuff.co.nz/content/dam/images/4/y/p/1/w/a/image.related.StuffLandscapeThreeByTwo.1464x976.21cas9.png/1603912531391.jpg"
+    ],
+    "latitude": "-39.27222233965185",
+    "longitude": "174.91931892655936",
+    "memberships": {},
+    "size_in_km": 742,
+    "url": "https://www.doc.govt.nz/parks-and-recreation/places-to-go/manawatu-whanganui/places/whanganui-national-park",
+    "visitor_count": null
+  },
+  {
+    "name": "Tajik",
+    "color": "#5fadbc",
+    "country": "TJ",
+    "description": "Tajik National Park encompasses almost the entire Pamir Mountains, the third highest mountain ecosystem in the world. The outstanding scenic values are enhanced by the landform juxtaposition of heavily-glaciated high peaks and high plateaux with an alpine desert character.",
+    "established": "1992",
+    "images": [
+      "https://www.naturalworldheritagesites.org/wp-content/uploads/2021/04/Tajik-National-Park-Mountains-of-the-Pamirs.jpg",
+      "https://news.cgtn.com/news/3d3d414e32416a4e34457a6333566d54/img/3a4053e6d6f14a829de531540f14c302/3a4053e6d6f14a829de531540f14c302.jpg",
+      "https://cdn.elebase.io/173fe953-8a63-4a8a-8ca3-1bacb56d78a5/b54fe1da-4d05-4049-80c6-e2f3198d3ed0-1638499542_4-krot-info-p-natsionalnii-park-tadzhikistana-krasivie-f-6---.jpg?w=1000&h=500&fit=crop&q=75"
+    ],
+    "latitude": "38.41286648572102",
+    "longitude": "73.087748997699",
+    "memberships": {
+      "unesco": true
+    },
+    "size_in_km": 26116.74,
+    "url": "https://whc.unesco.org/en/list/1252/",
+    "visitor_count": null
+  },
+  {
+    "name": "Chimanimani",
+    "color": "#1d1f13",
+    "country": "ZW",
+    "description": "This park borders Mozambique in an area of rugged mountain grandeur, enhanced by many spectacular gorges and high peaks rising to 2436 metres. There are several streams cascading through the mountain formations as well as numerous mountain springs.",
+    "established": "2020",
+    "images": [
+      "https://chimanimani.com/wp-content/uploads/2020/08/Chimanimani-Mountain-12.jpg",
+      "https://i.pinimg.com/736x/8f/f8/5a/8ff85a0e6206f5c4a2fa2b13069f2629.jpg",
+      "https://maps.prodafrica.com/wp-content/uploads/2019/09/9014_CHIMANIMANI_002_PHOTO_BY_Brian-Gratwicke_FLICKR.jpg"
+    ],
+    "latitude": "-19.91216499537235",
+    "longitude": "33.01531085101209",
+    "memberships": {},
+    "size_in_km": 171,
+    "url": "https://www.zimparks.org.zw/places-to-visit/chimanimani-national-park/",
+    "visitor_count": null
+  },
+  {
+    "name": "Chizarira",
+    "color": "#454949",
+    "country": "ZW",
+    "description": "This park is situated on top of the great Zambezi escarpment in the north western part of Zimbabwe, overlooking the mighty Zambezi Valley and upper waters of Lake Kariba.",
+    "established": "1975",
+    "images": [
+      "https://www.masaimaramigration.com/wp-content/uploads/2021/12/chizarira-national-park-2.png",
+      "https://blog.tracks4africa.co.za/wp-content/uploads/2018/11/Johann-Groenewald-Chizarira-National-Park-Kabombo-Vlei-3527.jpg",
+      "https://maps.prodafrica.com/wp-content/uploads/2019/09/8859_CHIZA_001_PHOTO_BY_Avel-Chuklanov_UNSPLASH.jpg"
+    ],
+    "latitude": "-17.744061581573295",
+    "longitude": "27.878117015420194",
+    "memberships": {},
+    "size_in_km": 2000,
+    "url": "https://www.zimparks.org.zw/places-to-visit/chizarira-national-park/",
+    "visitor_count": null
+  },
+  {
+    "name": "Gonarezhou",
+    "color": "#df9362",
+    "country": "ZW",
+    "description": "The Gonarezhou National Park is one of the iconic wilderness areas of Africa, with relatively few tourists but boasting an amazing diversity of landscapes, features, and growing wildlife populations. By far, the most well known and prominent feature of the Park is the Chilojo Cliffs, sandstone cliffs towering 180 meters high and running for some 20 kilometers along the south bank of the Runde River.",
+    "established": "1975",
+    "images": [
+      "https://lp-cms-production.imgix.net/image_browser/chilo-cliff-gonarezhou-GettyImages-1164289885.jpg",
+      "https://fzs.org/wp-content/uploads/2020/11/dji_0453_elephant-scaled.jpg",
+      "https://s3-eu-west-2.amazonaws.com/newzimlive/wp-content/uploads/2018/04/19152657/Gonarezhou.jpg"
+    ],
+    "latitude": "-21.60817677692169",
+    "longitude": "31.85828316198861",
+    "memberships": {},
+    "size_in_km": 5053,
+    "url": "https://www.zimparks.org.zw/places-to-visit/gonarezhou-national-park/",
+    "visitor_count": null
+  },
+  {
+    "name": "Hwange",
+    "color": "#937761",
+    "country": "ZW",
+    "description": "The largest natural reserve in Zimbabwe, the park has plentiful wildlife. Additionally, people have lived in the Hwange region for tens of thousands of years, as attested by numerous archaeological sites ranging from early Stone Age to the historic era.",
+    "established": "1961",
+    "images": [
+      "https://upload.wikimedia.org/wikipedia/commons/8/80/Down_the_water_hole.jpg",
+      "https://africanbushcamps.com/wp-content/uploads/2018/05/Hwange-National-Park_11.jpg",
+      "https://www.matriarchafrica.com/wp-content/uploads/2019/01/Somalisa-Camp-Wildlife.jpg"
+    ],
+    "latitude": "-19.055718211980917",
+    "longitude": "26.583470664372218",
+    "memberships": {},
+    "size_in_km": 14651,
+    "url": "https://www.zimparks.org.zw/places-to-visit/hwange-national-park/",
+    "visitor_count": null
+  },
+  {
+    "name": "Kazuma Pan",
+    "color": "#967045",
+    "country": "ZW",
+    "description": "Kazuma Pan is virtually unspoilt wilderness with an open landscape of grassy plains which is reminiscent of the great East African plains and is thus dissimilar to the usual Zimbabwean bush or woodland landscapes. A special species to the Kazuma Pan National Park is the oribi, a small antelope, which is rather rare in Zimbabwe.",
+    "established": "1975",
+    "images": [
+      "https://maps.prodafrica.com/wp-content/uploads/2019/11/9411_KAZUMA_001_PHOTO_BY_ZIMPARKS.jpg",
+      "https://byolife.co.zw/wp-content/uploads/2019/08/Kazuma-Pan-National-Park-1.jpg",
+      "https://www.wonderfulzimbabwe.com/wp-content/uploads/2015/02/Kazuma-Pan.jpg"
+    ],
+    "latitude": "-18.336341063349057",
+    "longitude": "25.616841897022965",
+    "memberships": {},
+    "size_in_km": 313,
+    "url": "https://www.zimparks.org.zw/places-to-visit/kazuma-pan-national-park/",
+    "visitor_count": null
+  },
+  {
+    "name": "Mana Pools",
+    "color": "#d9c2a9",
+    "country": "ZW",
+    "description": "Mana Pools National Park is located in a region of the lower Zambezi River where the flood plain turns into a broad expanse of lakes after each rainy season. As the lakes gradually dry up and recede, the region attracts many large animals in search of water, making it one of Africa's most renowned game-viewing regions.",
+    "established": "1984",
+    "images": [
+      "https://piperandheath.com/wp-content/uploads/2017/04/Ruckomechi_2016-05-10_1020x525_acf_cropped-1.jpg",
+      "https://www.andbeyond.com/wp-content/uploads/sites/5/Elephant-drinking-water-in-Mana-Pools-National-Park-Zimbabwe.jpg",
+      "https://sunnewsonline.com/wp-content/uploads/2020/06/mana-pools-national-park-1024x680.jpg"
+    ],
+    "latitude": "-15.937055824373946",
+    "longitude": "29.456982268384447",
+    "memberships": {
+      "ramsar": true,
+      "unesco": true
+    },
+    "size_in_km": 6766,
+    "url": "https://www.zimparks.org.zw/places-to-visit/mana-pools-national-park/",
+    "visitor_count": null
+  },
+  {
+    "name": "Matobo",
+    "color": "#c2ab85",
+    "country": "ZW",
+    "description": "The Matobo National Park forms the core of the Matobo or Matopos Hills, an area of granite kopjes and wooded valleys. The hills were formed over 2 billion years ago with granite being forced to the surface, this has eroded to produce smooth \"whaleback dwalas\" and broken kopjes, strewn with boulders and interspersed with thickets of vegetation.",
+    "established": "1926",
+    "images": [
+      "https://lp-cms-production.imgix.net/2019-06/1d21e6b7e65f622670508b02c4217e0c-matobo-national-park.jpg",
+      "https://cdn.audleytravel.com/941/672/79/402512-rhodes-grave-matopos-hills.jpg",
+      "https://cdn.britannica.com/63/145863-050-33048AED/Matopo-Hills-Zimbabwe.jpg"
+    ],
+    "latitude": "-20.557091592819255",
+    "longitude": "28.51246781078223",
+    "memberships": {
+      "unesco": true
+    },
+    "size_in_km": 424,
+    "url": "https://www.zimparks.org.zw/places-to-visit/matobo-national-park/",
+    "visitor_count": null
+  },
+  {
+    "name": "Matusadona",
+    "color": "#727d83",
+    "country": "ZW",
+    "description": "Matusadona National Park gets its name from the rolling Matusadona hills that form part of its water rich landscape. It is flanked by Lake Kariba in the north, and two perennial rivers, the Ume and the Sanyati.",
+    "established": "1975",
+    "images": [
+      "https://www.robinpopesafaris.net/wp-content/uploads/hippos-matusadona-national-park-zimbabwe-1000x563.jpg",
+      "https://zimbabwetourism.net/wp-content/uploads/2021/10/matusadona-national-park-zimbabwe-4-1024x681-1-770x550.jpg",
+      "https://cdn.audleytravel.com/3272/2336/79/391875-breeding-herd-of-elephant.jpg"
+    ],
+    "latitude": "-16.94294166220487",
+    "longitude": "28.626543370243628",
+    "memberships": {},
+    "size_in_km": 1400,
+    "url": "https://www.zimparks.org.zw/places-to-visit/matusadona-national-park/",
+    "visitor_count": null
+  },
+  {
+    "name": "Nyanga",
+    "color": "#c4ce9b",
+    "country": "ZW",
+    "description": "Nyanga National Park is one of the first national parks to be declared in the country. Mount Nyangani, the highest point in Zimbabwe, lies in the centre of the park and Mutarazi Falls, Zimbabwe's highest waterfall, is in the south of the park.",
+    "established": "1926",
+    "images": [
+      "https://upload.wikimedia.org/wikipedia/commons/9/96/Central_nyanga_np.jpg",
+      "https://live.staticflickr.com/5020/5487618619_1c1662f023_b.jpg",
+      "https://www.pindula.co.zw/images/c/cc/Nyanga_Mountain.jpg"
+    ],
+    "latitude": "-18.430641952667944",
+    "longitude": "32.76330359725416",
+    "memberships": {},
+    "size_in_km": 472,
+    "url": "https://www.zimparks.org.zw/places-to-visit/nyanga-national-park/",
+    "visitor_count": null
+  },
+  {
+    "name": "Victoria Falls",
+    "color": "#3e5560",
+    "country": "ZW",
+    "description": "Victoria Falls National Park in north-western Zimbabwe protects the south and east bank of the Zambezi River in the area of the world-famous Victoria Falls. A notable feature of the park is the rainforest which grows in the spray of the falls, including ferns, palms, liana vines, and a number of trees such as mahogany not seen elsewhere in the region.",
+    "established": "1952",
+    "images": [
+      "https://nationalparks-15bc7.kxcdn.com/images/parks/victoria-falls/Victoria%20Falls%20National%20Park%20aireal.jpg",
+      "https://torntackies.b-cdn.net/wp-content/uploads/2017/10/victoria-falls-national-park-zimbabwe-1024x683.jpg",
+      "https://www.masaimaramigration.com/wp-content/uploads/2021/07/victoria-falls-zimbabwe-1-1200x675.jpg"
+    ],
+    "latitude": "-17.923518857421662",
+    "longitude": "25.864419371371447",
+    "memberships": {
+      "ramsar": true,
+      "unesco": true
+    },
+    "size_in_km": 23.4,
+    "url": "https://www.zimparks.org.zw/victoria-falls-national-park/",
+    "visitor_count": null
+  },
+  {
+    "name": "Zambezi",
+    "color": "#f0dbc7",
+    "country": "ZW",
+    "description": "Located upstream from Victoria Falls on the Zambezi River, the parj was split off from Victoria Falls National Park in 1979. The Zambezi National Park plays host to a wide variety of larger mammals including African elephant, lion, Cape buffalo and leopard.",
+    "established": "1979",
+    "images": [
+      "https://www.victoriafalls-guide.net/images/zambezi-national-park-1.jpg",
+      "https://www.siyabona.com/images/zambezi-national-park-elephants-786x416.jpg",
+      "https://www.discoverafrica.com/wp-content/uploads/2021/11/lower_zambezi_np_lioness.jpg"
+    ],
+    "latitude": "-17.978175637842924",
+    "longitude": "25.710178897247594",
+    "memberships": {
+      "unesco": true
+    },
+    "size_in_km": 560,
+    "url": "https://www.zimparks.org.zw/zambezi-national-park/",
+    "visitor_count": null
+  }
+]

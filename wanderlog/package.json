@@ -2,7 +2,7 @@
   "name": "wanderlog-data",
   "private": true,
   "scripts": {
-    "test": "node nps-catalog.test.mjs && node ecoregions.test.mjs",
+    "test": "node international-parks.test.mjs && node nps-catalog.test.mjs && node ecoregions.test.mjs",
     "import:ecoregions": "node import-ecoregions.mjs"
   },
   "devDependencies": {

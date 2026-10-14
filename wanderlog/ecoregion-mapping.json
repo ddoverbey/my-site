@@ -4,7 +4,7 @@
   "license": "CC-BY-4.0",
   "attribution": "RESOLVE Ecoregions 2017, Dinerstein et al. (2017), updating WWF Terrestrial Ecoregions.",
   "citation": "https://doi.org/10.1093/biosci/bix014",
-  "generatedAt": "2026-10-13T23:45:12.687Z",
+  "generatedAt": "2026-10-14T00:28:37.320Z",
   "ecoregionCount": 847,
   "method": "WGS84 destination point intersects unsimplified terrestrial ecoregion polygons. Rarity uses spherical geodesic area: rare <2%, uncommon <10%, common >=10% of classified biome land. Rock/ice and water excluded.",
   "biomes": [
@@ -6095,80 +6095,164 @@
       ],
       "status": "matched"
     },
-    "banff": {
-      "lat": 51.5,
-      "lng": -116.15,
+    "world-af-band-e-amir": {
+      "lat": 34.84578974650147,
+      "lng": 67.22497609759894,
       "ecoregions": [
         {
-          "id": 361,
-          "name": "Northern Rockies conifer forests",
-          "biomeId": 5,
-          "realm": "Nearctic"
+          "id": 752,
+          "name": "Ghorat-Hazarajat alpine meadow",
+          "biomeId": 10,
+          "realm": "Palearctic"
         }
       ],
       "status": "matched"
     },
-    "torres": {
-      "lat": -51,
-      "lng": -73,
+    "world-af-wakhan": {
+      "lat": 37.10212809208673,
+      "lng": 73.74780715533139,
       "ecoregions": [
         {
-          "id": 561,
-          "name": "Magellanic subpolar forests",
-          "biomeId": 4,
-          "realm": "Neotropic"
+          "id": 762,
+          "name": "Pamir alpine desert and tundra",
+          "biomeId": 10,
+          "realm": "Palearctic"
         }
       ],
       "status": "matched"
     },
-    "serengeti": {
-      "lat": -2.33,
-      "lng": 34.83,
+    "world-al-butrint": {
+      "lat": 39.74391065376822,
+      "lng": 20.019119417344495,
       "ecoregions": [
         {
-          "id": 57,
-          "name": "Southern Acacia-Commiphora bushlands and thickets",
-          "biomeId": 7,
-          "realm": "Afrotropic"
+          "id": 794,
+          "name": "Illyrian deciduous forests",
+          "biomeId": 12,
+          "realm": "Palearctic"
         }
       ],
       "status": "matched"
     },
-    "galapagos": {
-      "lat": -0.67,
-      "lng": -90.55,
+    "world-al-dajti": {
+      "lat": 41.36694673572922,
+      "lng": 19.922143106291355,
+      "ecoregions": [
+        {
+          "id": 801,
+          "name": "Pindus Mountains mixed forests",
+          "biomeId": 12,
+          "realm": "Palearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-al-divjake-karavasta": {
+      "lat": 40.92959144630015,
+      "lng": 19.497244347857272,
       "ecoregions": [],
       "status": "no-terrestrial-match"
     },
-    "iguazu": {
-      "lat": -25.69,
-      "lng": -54.44,
+    "world-al-fir-of-drenova": {
+      "lat": 40.566287981866864,
+      "lng": 20.82548959776326,
       "ecoregions": [
         {
-          "id": 439,
-          "name": "Alto Paraná Atlantic forests",
-          "biomeId": 1,
-          "realm": "Neotropic"
+          "id": 801,
+          "name": "Pindus Mountains mixed forests",
+          "biomeId": 12,
+          "realm": "Palearctic"
         }
       ],
       "status": "matched"
     },
-    "fiordland": {
-      "lat": -45.4,
-      "lng": 167.7,
+    "world-al-fir-of-hotove": {
+      "lat": 40.367602343465165,
+      "lng": 20.428032568922173,
       "ecoregions": [
         {
-          "id": 169,
-          "name": "Fiordland temperate forests",
-          "biomeId": 4,
-          "realm": "Australasia"
+          "id": 801,
+          "name": "Pindus Mountains mixed forests",
+          "biomeId": 12,
+          "realm": "Palearctic"
         }
       ],
       "status": "matched"
     },
-    "plitvice": {
-      "lat": 44.88,
-      "lng": 15.62,
+    "world-al-karaburun-sazan": {
+      "lat": 40.49184160195074,
+      "lng": 19.27414574009081,
+      "ecoregions": [],
+      "status": "no-terrestrial-match"
+    },
+    "world-al-llogara": {
+      "lat": 40.2181794353346,
+      "lng": 19.562759317023836,
+      "ecoregions": [
+        {
+          "id": 794,
+          "name": "Illyrian deciduous forests",
+          "biomeId": 12,
+          "realm": "Palearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-al-lure-deje-mountain": {
+      "lat": 41.78791264204799,
+      "lng": 20.19451753147613,
+      "ecoregions": [
+        {
+          "id": 801,
+          "name": "Pindus Mountains mixed forests",
+          "biomeId": 12,
+          "realm": "Palearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-al-prespa": {
+      "lat": 40.79666551338369,
+      "lng": 20.87963024133273,
+      "ecoregions": [
+        {
+          "id": 801,
+          "name": "Pindus Mountains mixed forests",
+          "biomeId": 12,
+          "realm": "Palearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-al-shebenik-jabllanice": {
+      "lat": 41.23286197881351,
+      "lng": 20.45446451577757,
+      "ecoregions": [
+        {
+          "id": 801,
+          "name": "Pindus Mountains mixed forests",
+          "biomeId": 12,
+          "realm": "Palearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-al-shtame-pass": {
+      "lat": 41.52087503621269,
+      "lng": 19.892390644697947,
+      "ecoregions": [
+        {
+          "id": 801,
+          "name": "Pindus Mountains mixed forests",
+          "biomeId": 12,
+          "realm": "Palearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-al-theth": {
+      "lat": 42.39628790457006,
+      "lng": 19.773109997820246,
       "ecoregions": [
         {
           "id": 660,
@@ -6179,28 +6263,658 @@
       ],
       "status": "matched"
     },
-    "thingvellir": {
-      "lat": 64.26,
-      "lng": -21.12,
+    "world-al-tomorr-mountain": {
+      "lat": 40.709550239450515,
+      "lng": 20.128304082427217,
       "ecoregions": [
         {
-          "id": 711,
-          "name": "Iceland boreal birch forests and alpine tundra",
-          "biomeId": 6,
+          "id": 801,
+          "name": "Pindus Mountains mixed forests",
+          "biomeId": 12,
           "realm": "Palearctic"
         }
       ],
       "status": "matched"
     },
-    "halong": {
-      "lat": 20.91,
-      "lng": 107.18,
+    "world-al-valbone-valley": {
+      "lat": 42.425967532591805,
+      "lng": 19.925835811315814,
+      "ecoregions": [
+        {
+          "id": 660,
+          "name": "Dinaric Mountains mixed forests",
+          "biomeId": 4,
+          "realm": "Palearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-dz-ahaggar": {
+      "lat": 23.067862932012627,
+      "lng": 6.235451403451865,
+      "ecoregions": [
+        {
+          "id": 846,
+          "name": "West Saharan montane xeric woodlands",
+          "biomeId": 13,
+          "realm": "Palearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-aw-arikok": {
+      "lat": 12.499081504431066,
+      "lng": -69.94632390229094,
+      "ecoregions": [
+        {
+          "id": 599,
+          "name": "Caribbean shrublands",
+          "biomeId": 13,
+          "realm": "Neotropic"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-ac-green-mountain": {
+      "lat": -7.949863615550642,
+      "lng": -14.345047666855507,
+      "ecoregions": [
+        {
+          "id": 37,
+          "name": "Ascension scrub and grasslands",
+          "biomeId": 7,
+          "realm": "Afrotropic"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-gl-northeast-greenland": {
+      "lat": 76.00127418800315,
+      "lng": -30.007434020763295,
+      "ecoregions": [
+        {
+          "id": 0,
+          "name": "Rock and Ice",
+          "biomeId": 11,
+          "realm": "N/A"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-gp-guadeloupe": {
+      "lat": 16.131785367647794,
+      "lng": -61.68159938251921,
+      "ecoregions": [
+        {
+          "id": 475,
+          "name": "Leeward Islands moist forests",
+          "biomeId": 1,
+          "realm": "Neotropic"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-im-tynwald": {
+      "lat": 54.205503325315696,
+      "lng": -4.637681453271592,
+      "ecoregions": [
+        {
+          "id": 651,
+          "name": "Celtic broadleaf forests",
+          "biomeId": 4,
+          "realm": "Palearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-mg-amber-mountain": {
+      "lat": -12.61875891606798,
+      "lng": 49.14997854232979,
+      "ecoregions": [
+        {
+          "id": 18,
+          "name": "Madagascar subhumid forests",
+          "biomeId": 1,
+          "realm": "Afrotropic"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-mg-analamazaotra": {
+      "lat": -18.938757515688774,
+      "lng": 48.433704791406925,
+      "ecoregions": [
+        {
+          "id": 17,
+          "name": "Madagascar humid forests",
+          "biomeId": 1,
+          "realm": "Afrotropic"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-mg-andasibe-mantadia": {
+      "lat": -18.83481753061349,
+      "lng": 48.459017149712764,
+      "ecoregions": [
+        {
+          "id": 17,
+          "name": "Madagascar humid forests",
+          "biomeId": 1,
+          "realm": "Afrotropic"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-mg-andohahela": {
+      "lat": -24.75400988559863,
+      "lng": 46.76654587075342,
+      "ecoregions": [
+        {
+          "id": 17,
+          "name": "Madagascar humid forests",
+          "biomeId": 1,
+          "realm": "Afrotropic"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-mg-andringitra": {
+      "lat": -22.21165571317014,
+      "lng": 46.922407990707256,
+      "ecoregions": [
+        {
+          "id": 83,
+          "name": "Madagascar ericoid thickets",
+          "biomeId": 10,
+          "realm": "Afrotropic"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-mg-ankarafantsika": {
+      "lat": -16.22247461248744,
+      "lng": 46.94165676415938,
+      "ecoregions": [
+        {
+          "id": 32,
+          "name": "Madagascar dry deciduous forests",
+          "biomeId": 2,
+          "realm": "Afrotropic"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-mg-bay-of-baly": {
+      "lat": -16.021551356168267,
+      "lng": 45.24100992817163,
+      "ecoregions": [
+        {
+          "id": 32,
+          "name": "Madagascar dry deciduous forests",
+          "biomeId": 2,
+          "realm": "Afrotropic"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-mg-isalo": {
+      "lat": -22.465435422068516,
+      "lng": 45.26180308382561,
+      "ecoregions": [
+        {
+          "id": 18,
+          "name": "Madagascar subhumid forests",
+          "biomeId": 1,
+          "realm": "Afrotropic"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-mg-kirindy-mitea": {
+      "lat": -20.739645883016635,
+      "lng": 44.17200513962035,
+      "ecoregions": [
+        {
+          "id": 100,
+          "name": "Madagascar succulent woodlands",
+          "biomeId": 13,
+          "realm": "Afrotropic"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-mg-lokobe": {
+      "lat": -13.395337781527795,
+      "lng": 48.324468677481384,
+      "ecoregions": [
+        {
+          "id": 18,
+          "name": "Madagascar subhumid forests",
+          "biomeId": 1,
+          "realm": "Afrotropic"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-mg-mananara-nord": {
+      "lat": -16.49218801488088,
+      "lng": 49.711593583952585,
+      "ecoregions": [
+        {
+          "id": 17,
+          "name": "Madagascar humid forests",
+          "biomeId": 1,
+          "realm": "Afrotropic"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-mg-marojejy": {
+      "lat": -14.457470800896697,
+      "lng": 49.79435932349952,
+      "ecoregions": [
+        {
+          "id": 17,
+          "name": "Madagascar humid forests",
+          "biomeId": 1,
+          "realm": "Afrotropic"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-mg-marolambo": {
+      "lat": -19.672096947174722,
+      "lng": 47.51324881076798,
+      "ecoregions": [
+        {
+          "id": 18,
+          "name": "Madagascar subhumid forests",
+          "biomeId": 1,
+          "realm": "Afrotropic"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-mg-masoala": {
+      "lat": -15.637486608508189,
+      "lng": 50.100845439545445,
+      "ecoregions": [
+        {
+          "id": 17,
+          "name": "Madagascar humid forests",
+          "biomeId": 1,
+          "realm": "Afrotropic"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-mg-midongy-du-sud": {
+      "lat": -23.702939377750745,
+      "lng": 47.096661804430425,
+      "ecoregions": [
+        {
+          "id": 18,
+          "name": "Madagascar subhumid forests",
+          "biomeId": 1,
+          "realm": "Afrotropic"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-mg-mikea": {
+      "lat": -22.33736157640095,
+      "lng": 43.35100179731799,
+      "ecoregions": [
+        {
+          "id": 99,
+          "name": "Madagascar spiny thickets",
+          "biomeId": 13,
+          "realm": "Afrotropic"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-mg-nosy-hara": {
+      "lat": -12.237823460274576,
+      "lng": 49.013566357668445,
+      "ecoregions": [
+        {
+          "id": 32,
+          "name": "Madagascar dry deciduous forests",
+          "biomeId": 2,
+          "realm": "Afrotropic"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-mg-nosy-tanikely": {
+      "lat": -13.481982371651696,
+      "lng": 48.23648358914496,
       "ecoregions": [],
       "status": "no-terrestrial-match"
     },
-    "kruger": {
-      "lat": -23.99,
-      "lng": 31.55,
+    "world-mg-nosy-ve-androka": {
+      "lat": -23.645618103616865,
+      "lng": 43.603372423886746,
+      "ecoregions": [],
+      "status": "no-terrestrial-match"
+    },
+    "world-mg-ranomafana": {
+      "lat": -21.26390111130698,
+      "lng": 47.419280968464406,
+      "ecoregions": [
+        {
+          "id": 17,
+          "name": "Madagascar humid forests",
+          "biomeId": 1,
+          "realm": "Afrotropic"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-mg-sahamalaza": {
+      "lat": -14.196360773487214,
+      "lng": 47.9560889530228,
+      "ecoregions": [
+        {
+          "id": 114,
+          "name": "Madagascar mangroves",
+          "biomeId": 14,
+          "realm": "Afrotropic"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-mg-tsimanampetsotsa": {
+      "lat": -24.144299467344002,
+      "lng": 43.82915350883988,
+      "ecoregions": [
+        {
+          "id": 99,
+          "name": "Madagascar spiny thickets",
+          "biomeId": 13,
+          "realm": "Afrotropic"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-mg-tsingy-de-bemaraha": {
+      "lat": -18.919823498556685,
+      "lng": 44.79439112609672,
+      "ecoregions": [
+        {
+          "id": 32,
+          "name": "Madagascar dry deciduous forests",
+          "biomeId": 2,
+          "realm": "Afrotropic"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-mg-zahamena": {
+      "lat": -17.612158250804594,
+      "lng": 48.779387439572005,
+      "ecoregions": [
+        {
+          "id": 17,
+          "name": "Madagascar humid forests",
+          "biomeId": 1,
+          "realm": "Afrotropic"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-mg-zombitse-vohibasia": {
+      "lat": -22.841584735117248,
+      "lng": 44.68184842616237,
+      "ecoregions": [
+        {
+          "id": 100,
+          "name": "Madagascar succulent woodlands",
+          "biomeId": 13,
+          "realm": "Afrotropic"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-nz-abel-tasman": {
+      "lat": -40.90494648233701,
+      "lng": 172.96707416893855,
+      "ecoregions": [
+        {
+          "id": 170,
+          "name": "Nelson Coast temperate forests",
+          "biomeId": 4,
+          "realm": "Australasia"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-nz-aoraki-mount-cook": {
+      "lat": -43.593003781682874,
+      "lng": 170.262224665067,
+      "ecoregions": [
+        {
+          "id": 194,
+          "name": "New Zealand South Island montane grasslands",
+          "biomeId": 10,
+          "realm": "Australasia"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-nz-arthur-s-pass": {
+      "lat": -42.93242834981011,
+      "lng": 171.7252384566362,
+      "ecoregions": [
+        {
+          "id": 194,
+          "name": "New Zealand South Island montane grasslands",
+          "biomeId": 10,
+          "realm": "Australasia"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-nz-egmont": {
+      "lat": -39.29881667025322,
+      "lng": 174.06621330745693,
+      "ecoregions": [
+        {
+          "id": 171,
+          "name": "New Zealand North Island temperate forests",
+          "biomeId": 4,
+          "realm": "Australasia"
+        }
+      ],
+      "status": "matched"
+    },
+    "fiordland": {
+      "lat": -45.462838730570425,
+      "lng": 167.5422022979201,
+      "ecoregions": [
+        {
+          "id": 169,
+          "name": "Fiordland temperate forests",
+          "biomeId": 4,
+          "realm": "Australasia"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-nz-kahurangi": {
+      "lat": -41.09848453912171,
+      "lng": 172.53507656894448,
+      "ecoregions": [
+        {
+          "id": 170,
+          "name": "Nelson Coast temperate forests",
+          "biomeId": 4,
+          "realm": "Australasia"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-nz-mount-aspiring": {
+      "lat": -44.23016683374218,
+      "lng": 168.83702366772664,
+      "ecoregions": [
+        {
+          "id": 194,
+          "name": "New Zealand South Island montane grasslands",
+          "biomeId": 10,
+          "realm": "Australasia"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-nz-nelson-lakes": {
+      "lat": -42.007423585637675,
+      "lng": 172.63167682664312,
+      "ecoregions": [
+        {
+          "id": 194,
+          "name": "New Zealand South Island montane grasslands",
+          "biomeId": 10,
+          "realm": "Australasia"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-nz-paparoa": {
+      "lat": -42.091660595601105,
+      "lng": 171.44965775999984,
+      "ecoregions": [
+        {
+          "id": 170,
+          "name": "Nelson Coast temperate forests",
+          "biomeId": 4,
+          "realm": "Australasia"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-nz-rakiura": {
+      "lat": -46.997210822315786,
+      "lng": 167.8372221268074,
+      "ecoregions": [
+        {
+          "id": 174,
+          "name": "Rakiura Island temperate forests",
+          "biomeId": 4,
+          "realm": "Australasia"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-nz-tongariro": {
+      "lat": -39.192096290819634,
+      "lng": 175.5935176564929,
+      "ecoregions": [
+        {
+          "id": 171,
+          "name": "New Zealand North Island temperate forests",
+          "biomeId": 4,
+          "realm": "Australasia"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-nz-westland-tai-poutini": {
+      "lat": -43.49992215485115,
+      "lng": 170.1666345113502,
+      "ecoregions": [
+        {
+          "id": 194,
+          "name": "New Zealand South Island montane grasslands",
+          "biomeId": 10,
+          "realm": "Australasia"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-nz-whanganui": {
+      "lat": -39.27222233965185,
+      "lng": 174.91931892655936,
+      "ecoregions": [
+        {
+          "id": 171,
+          "name": "New Zealand North Island temperate forests",
+          "biomeId": 4,
+          "realm": "Australasia"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-tj-tajik": {
+      "lat": 38.41286648572102,
+      "lng": 73.087748997699,
+      "ecoregions": [
+        {
+          "id": 762,
+          "name": "Pamir alpine desert and tundra",
+          "biomeId": 10,
+          "realm": "Palearctic"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-zw-chimanimani": {
+      "lat": -19.91216499537235,
+      "lng": 33.01531085101209,
+      "ecoregions": [
+        {
+          "id": 28,
+          "name": "Southern Swahili coastal forests and woodlands",
+          "biomeId": 1,
+          "realm": "Afrotropic"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-zw-chizarira": {
+      "lat": -17.744061581573295,
+      "lng": 27.878117015420194,
+      "ecoregions": [
+        {
+          "id": 42,
+          "name": "Dry miombo woodlands",
+          "biomeId": 7,
+          "realm": "Afrotropic"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-zw-gonarezhou": {
+      "lat": -21.60817677692169,
+      "lng": 31.85828316198861,
+      "ecoregions": [
+        {
+          "id": 66,
+          "name": "Zambezian-Limpopo mixed woodlands",
+          "biomeId": 7,
+          "realm": "Afrotropic"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-zw-hwange": {
+      "lat": -19.055718211980917,
+      "lng": 26.583470664372218,
+      "ecoregions": [
+        {
+          "id": 64,
+          "name": "Zambezian Baikiaea woodlands",
+          "biomeId": 7,
+          "realm": "Afrotropic"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-zw-kazuma-pan": {
+      "lat": -18.336341063349057,
+      "lng": 25.616841897022965,
       "ecoregions": [
         {
           "id": 65,
@@ -6211,28 +6925,80 @@
       ],
       "status": "matched"
     },
-    "uluru": {
-      "lat": -25.34,
-      "lng": 131.04,
+    "world-zw-mana-pools": {
+      "lat": -15.937055824373946,
+      "lng": 29.456982268384447,
       "ecoregions": [
         {
-          "id": 210,
-          "name": "Great Sandy-Tanami desert",
-          "biomeId": 13,
-          "realm": "Australasia"
+          "id": 65,
+          "name": "Zambezian mopane woodlands",
+          "biomeId": 7,
+          "realm": "Afrotropic"
         }
       ],
       "status": "matched"
     },
-    "jungfrau": {
-      "lat": 46.54,
-      "lng": 7.96,
+    "world-zw-matobo": {
+      "lat": -20.557091592819255,
+      "lng": 28.51246781078223,
       "ecoregions": [
         {
-          "id": 689,
-          "name": "Alps conifer and mixed forests",
-          "biomeId": 5,
-          "realm": "Palearctic"
+          "id": 66,
+          "name": "Zambezian-Limpopo mixed woodlands",
+          "biomeId": 7,
+          "realm": "Afrotropic"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-zw-matusadona": {
+      "lat": -16.94294166220487,
+      "lng": 28.626543370243628,
+      "ecoregions": [
+        {
+          "id": 42,
+          "name": "Dry miombo woodlands",
+          "biomeId": 7,
+          "realm": "Afrotropic"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-zw-nyanga": {
+      "lat": -18.430641952667944,
+      "lng": 32.76330359725416,
+      "ecoregions": [
+        {
+          "id": 42,
+          "name": "Dry miombo woodlands",
+          "biomeId": 7,
+          "realm": "Afrotropic"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-zw-victoria-falls": {
+      "lat": -17.923518857421662,
+      "lng": 25.864419371371447,
+      "ecoregions": [
+        {
+          "id": 64,
+          "name": "Zambezian Baikiaea woodlands",
+          "biomeId": 7,
+          "realm": "Afrotropic"
+        }
+      ],
+      "status": "matched"
+    },
+    "world-zw-zambezi": {
+      "lat": -17.978175637842924,
+      "lng": 25.710178897247594,
+      "ecoregions": [
+        {
+          "id": 64,
+          "name": "Zambezian Baikiaea woodlands",
+          "biomeId": 7,
+          "realm": "Afrotropic"
         }
       ],
       "status": "matched"

@@ -3,8 +3,10 @@ import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 import catalog from './nps-catalog.js';
 import ecoregions from './ecoregions.js';
-import internationalParks from './international-parks.js';
+import internationalCatalog from './international-parks.js';
 import { collectParks } from './import-nps.mjs';
+const worldwide = JSON.parse(await readFile(new URL('./worldwide-national-parks.json', import.meta.url), 'utf8'));
+const internationalParks = internationalCatalog.normalizeParks(worldwide).parks;
 
 const records = Array.from({ length: 405 }, (_, index) => ({
   id: `official-${index}`, parkCode: index.toString(36).padStart(4, '0'),
@@ -108,11 +110,11 @@ function element(id) {
   return elements.get(id);
 }
 const context = vm.createContext({
-  NpsCatalog: catalog, Ecoregions: ecoregions, InternationalParks: internationalParks,
-  tailwind: {}, console, URLSearchParams, setTimeout() {},
+  NpsCatalog: catalog, Ecoregions: ecoregions, InternationalParks: internationalCatalog,
+  tailwind: {}, console, Intl, URL, URLSearchParams, setTimeout() {},
   document: { getElementById: element, querySelectorAll: () => [], createElement: () => ({ innerHTML: '' }) },
   window: { addEventListener() {} },
-  fetch: async () => ({ ok: true, json: async () => snapshot })
+  fetch: async url => ({ ok: true, json: async () => url.includes('worldwide') ? worldwide : snapshot })
 });
 scripts.forEach(script => vm.runInContext(script, context));
 check('destination pins default to None and the fog toggle is not rendered', () => {
@@ -122,8 +124,9 @@ check('destination pins default to None and the fog toggle is not rendered', () 
   assert.ok(activeHtml.includes('data-filt="none" aria-pressed="true"'));
 });
 await vm.runInContext('loadNpsCatalog()', context);
+await vm.runInContext('loadWorldwideCatalog()', context);
 check('app loads the complete snapshot without a player API key', () => {
-  assert.equal(vm.runInContext('PARKS.length', context), 417);
+  assert.equal(vm.runInContext('PARKS.length', context), 405 + internationalParks.length);
   assert.ok(element('npsCatalogStatus').textContent.includes('405 official NPS'));
 });
 vm.runInContext("AppState.pins = NpsCatalog.migratePins({ yellowstone: 'v' }); updateHud();", context);
@@ -148,9 +151,10 @@ check('popup escapes API text and shows metadata', () => {
 const actualSnapshot = JSON.parse(await readFile(new URL('./nps-parks.json', import.meta.url), 'utf8'));
 const actualBiomes = JSON.parse(await readFile(new URL('./ecoregion-mapping.json', import.meta.url), 'utf8'));
 context.fetch = async url => ({
-  ok: true, json: async () => url.includes('ecoregion-mapping') ? actualBiomes : actualSnapshot
+  ok: true, json: async () => url.includes('ecoregion-mapping') ? actualBiomes : url.includes('worldwide') ? worldwide : actualSnapshot
 });
 await vm.runInContext('loadNpsCatalog();', context);
+await vm.runInContext('loadWorldwideCatalog();', context);
 await vm.runInContext('loadBiomeCatalog();', context);
 check('published dataset, all legacy targets and real ecoregion mappings load', () => {
   assert.ok(actualSnapshot.total >= 400);
@@ -182,6 +186,41 @@ check('pokedex and rare totals use the 14 real biome types', () => {
   assert.ok(element('biomePokedexContainer').innerHTML.includes('0.23% of classified biome land'));
   assert.ok(!element('biomePokedexContainer').innerHTML.includes('Subterranean Cavern'));
 });
+vm.runInContext("AppState.pins = { fiordland: 'v', banff: 'v', 'world-af-band-e-amir': 'v', npsa: 'v' }; updateHud();", context);
+check('international visits, retired saves and NPS-only US counts stay distinct', () => {
+  assert.equal(vm.runInContext('calculateStats().usParksCount', context), 1);
+  assert.equal(vm.runInContext('calculateStats().visitedParks.length', context), 3);
+  assert.equal(vm.runInContext('calculateStats().countriesCount', context), 3);
+  assert.ok(element('savedCatalogStatus').textContent.includes('1 saved destination'));
+  assert.equal(vm.runInContext('AppState.pins.banff', context), 'v');
+});
+element('bucketSearch').value = 'afghanistan';
+vm.runInContext('renderBucketListView()', context);
+check('international ledger searches countries and shows attributed source metadata', () => {
+  assert.ok(element('bucketListGrid').innerHTML.includes('Band-e Amir'));
+  assert.ok(element('bucketListGrid').innerHTML.includes('Parks of the World'));
+  assert.ok(!element('bucketListGrid').innerHTML.includes('Official NPS site'));
+  assert.ok(element('bucketListGrid').innerHTML.includes('Established: 2009'));
+  const popup = vm.runInContext("createPopupContent(PARKS.find(p => p.id === 'world-al-butrint'))", context);
+  assert.ok(popup.includes('UNESCO World Heritage'));
+  assert.ok(popup.includes('Park information source'));
+});
+context.fetch = async url => url.includes('worldwide')
+  ? { ok: false, status: 404 }
+  : { ok: true, json: async () => actualSnapshot };
+context.console = { error() {} };
+await vm.runInContext('loadWorldwideCatalog()', context);
+check('international loading failures preserve NPS data and saved international records', () => {
+  assert.equal(vm.runInContext('PARKS.length', context), actualSnapshot.total);
+  assert.equal(vm.runInContext('AppState.pins.fiordland', context), 'v');
+  assert.ok(element('worldwideCatalogStatus').textContent.includes('unavailable'));
+});
+context.fetch = async url => ({
+  ok: true, json: async () => url.includes('worldwide') ? worldwide : actualBiomes
+});
+await vm.runInContext('loadWorldwideCatalog();', context);
+await vm.runInContext('loadBiomeCatalog();', context);
+vm.runInContext("AppState.pins = { yell: 'v', ever: 'v', drto: 'v' }; updateHud();", context);
 context.fetch = async () => ({ ok: false, status: 404 });
 context.console = { error() {} };
 await vm.runInContext('loadBiomeCatalog()', context);

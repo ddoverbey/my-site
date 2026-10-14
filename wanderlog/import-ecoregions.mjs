@@ -5,7 +5,7 @@ import { readFile, writeFile, rename } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import catalog from './nps-catalog.js';
-import internationalParks from './international-parks.js';
+import internationalCatalog from './international-parks.js';
 import ecoregions from './ecoregions.js';
 
 export function geometryBounds(geometry) {
@@ -78,6 +78,8 @@ async function main() {
     throw new Error('Expected RESOLVE WGS84 longitude/latitude coordinates.');
   }
   const nps = JSON.parse(await readFile(new URL('./nps-parks.json', import.meta.url), 'utf8'));
+  const worldwide = JSON.parse(await readFile(new URL('./worldwide-national-parks.json', import.meta.url), 'utf8'));
+  const internationalParks = internationalCatalog.normalizeParks(worldwide).parks;
   const parks = [...catalog.normalizeParks(nps.data), ...internationalParks];
   const snapshot = await buildSnapshot(await open(shapefilePath), parks);
   ecoregions.validateSnapshot(snapshot);

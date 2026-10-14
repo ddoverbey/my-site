@@ -24,13 +24,48 @@ count once. Missing coordinates remain in the ledger but do not get invented map
 
 Existing saves, imports, and shared passports migrate to NPS park codes. Visited status takes precedence
 when old IDs map to a combined listing. Quest targets and completion totals use those same listing IDs.
-International destinations remain curated separately. The snapshot date and any catalog-loading failure are visible in the game.
+International destinations come from the user-supplied Parks of the World dataset described below.
+The snapshot date and any catalog-loading failure are visible in the game.
 Until the generated dataset is published, only the international destinations are available.
 
 For local generation, set `NPS_API_KEY` in the current shell and run `node .\wanderlog\import-nps.mjs`.
 Node 16+ is sufficient; the workflow uses Node 22. Test without a key using
 `node .\wanderlog\nps-catalog.test.mjs`. That test needs no packages; the ecoregion importer and full
 test suite use the development dependencies in `wanderlog/package.json`.
+
+## International national parks
+
+[`worldwide-national-parks.json`](wanderlog/worldwide-national-parks.json) is the supplied
+[Parks of the World](https://github.com/RohanNagar/parksoftheworld) curated dataset. It is not an
+official global park registry. Its current 73 entries cover a subset of the world's parks, and
+country fields use two-letter region codes, including dependencies and territories.
+
+The game excludes `US`, `AS`, `GU`, `MP`, `PR`, `VI`, and `UM` entries **before merging**.
+All U.S./U.S.-territory destinations remain sourced exclusively from `nps-parks.json`, even if
+the NPS catalog fails to load; there is no worldwide-data fallback for U.S. parks.
+The supplied American Samoa entry is therefore excluded, leaving 72 international parks and
+546 total destinations alongside the 474 NPS listings.
+
+This file **replaces**, rather than supplements, the former 12 curated international destinations.
+Fiordland retains its existing saved ID, but uses the supplied file's name, coordinates and metadata.
+Other retired destination IDs remain in saved/imported/shared passports and exports, but do not
+count toward active progress. Settings reports saved records outside the loaded catalogs.
+International IDs use `world-<country-code>-<normalized-name>`; IDs do not depend on array order
+or coordinates. Renaming a park changes its ID, so deliberate renames require a saved-ID migration.
+Duplicate normalized country/name IDs fail explicitly.
+
+Country names, coordinates, descriptions, establishment dates, areas, visitor estimates and
+memberships are normalized for the map/ledger. Source links are labeled **Park information source**,
+not **Official NPS site**. Dark Sky Reserve/Sanctuary distinctions are retained. Memberships and
+visitor counts are curated source claims, not independently verified/current annual measurements.
+Images are not hotlinked or redistributed by the UI. Credits link back to Parks of the World
+and each record's information source. NPS counts/quests remain NPS-only; international visits
+contribute to global visits, country counts, fog clearings and their mapped terrestrial biomes.
+
+Catalog loading failures are reported separately and do not erase saves or the other catalog.
+To update, replace the supplied JSON file, regenerate `ecoregion-mapping.json` using the combined
+refresh workflow or local importer, run `npm test` in `wanderlog`, and deploy the files together.
+The workflow reads the checked-in worldwide file; it does not download or silently replace it.
 
 ## Real terrestrial biomes and ecoregions
 
@@ -53,8 +88,8 @@ No coastline, cave, volcanic, urban, or island label is passed off as a WWF terr
 
 The published [`ecoregion-mapping.json`](wanderlog/ecoregion-mapping.json) is a small derived snapshot,
 so browsers never download or process the 243 MB source shapefile. The initial snapshot matches
-459 of 486 destination points. The other 27 points have no terrestrial intersection, including
-some offshore/coastal NPS coordinates and two curated international coordinates. These points
+517 of 546 destination points after adding the worldwide file. The other 29 points have no terrestrial
+intersection, including some offshore/coastal NPS coordinates and four international coordinates. These points
 still count as visits but earn no terrestrial biome. No nearest-land snapping is performed.
 Mappings include their sampled coordinates; new/changed coordinates are explicitly marked as
 needing a refresh and cannot award stale biome credit.
