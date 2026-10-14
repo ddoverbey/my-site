@@ -332,15 +332,22 @@
         <div class="flex flex-wrap items-center justify-between gap-4 rpg-panel p-4 rounded-2xl">
           <div>
             <h2 class="cinzel text-lg font-bold text-amber-200">The Royal Cartography Records</h2>
-            <p class="text-xs text-slate-400">Click countries or US states: Unexplored → Wishlist → Transited → Visited → Lived (permanent). Reset clears lived records.</p>
+            <p class="text-xs text-slate-400">Click countries, US states, or counties: Unexplored → Visited → Wishlist → Transited → Lived → Unexplored. Home and logged visits retain their ledger-backed tiers.</p>
           </div>
-          <div class="flex items-center gap-3">
-            <div class="flex bg-slate-900 p-1 rounded-xl border border-slate-700 text-xs">
-              <button id="btnScratchWorld" class="px-3 py-1.5 rounded-lg bg-blue-600 text-white font-medium">World Nations</button>
-              <button id="btnScratchUsa" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white">United States</button>
+          <div class="flex flex-wrap items-center gap-3">
+            <div class="flex flex-wrap bg-slate-900 p-1 rounded-xl border border-slate-700 text-xs" role="group" aria-label="Scratch Map dataset">
+              <button id="btnScratchWorld" aria-pressed="true" class="px-3 py-1.5 rounded-lg bg-blue-600 text-white font-medium">World Nations</button>
+              <button id="btnScratchUsa" aria-pressed="false" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white">United States</button>
+              <button id="btnScratchCounties" aria-pressed="false" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white">US Counties</button>
             </div>
             <div class="text-xs font-mono text-amber-300 bg-amber-950/40 border border-amber-500/30 px-3 py-1.5 rounded-xl" id="scratchStatsLabel">
-              0 Claimed
+              0 Visited/Lived · 0 Transited
+            </div>
+            <div class="flex flex-wrap gap-3 text-[11px] text-slate-400" aria-label="Scratch Map status legend">
+              <span><span class="text-[#fbbf24]">●</span> Lived</span>
+              <span><span class="text-[#10b981]">●</span> Visited</span>
+              <span><span class="text-[#64748b]">●</span> Transited</span>
+              <span><span class="text-[#d97706]">●</span> Wishlist</span>
             </div>
           </div>
         </div>
@@ -1602,6 +1609,7 @@
     let countyGeoJson = null;
     const countyFeaturesById = {};
     let usaRegionGeoJson = null;
+    let scratchStateMesh = null;
     let npsBoundariesByCode = {};
     let coordinateIndexes = null;
 
@@ -1658,6 +1666,7 @@
         ]);
         worldGeoJson = topojson.feature(worldRes, worldRes.objects.countries).features;
         usaRegionGeoJson = topojson.feature(usaRes, usaRes.objects.states).features;
+        scratchStateMesh = topojson.mesh(usaRes, usaRes.objects.states, (a, b) => a !== b);
         usaGeoJson = usaRegionGeoJson.filter(f => +f.id <= 56 && f.id !== '11');
       } catch (e) {
         console.error("Failed to load geographic atlas boundaries", e);
@@ -1844,17 +1853,59 @@
       }
     });
 
+    function scratchStatusKey(feature) {
+      if (AppState.scratchDataset === 'counties') return String(feature.id).padStart(5, '0');
+      return `${AppState.scratchDataset === 'world' ? 'c:' : 's:'}${feature.properties.name}`;
+    }
+
+    function scratchStatuses() {
+      return AppState.scratchDataset === 'counties' ? AppState.counties : AppState.regions;
+    }
+
+    function cycleScratchStatus(feature) {
+      if (AppState.viewOnly) return;
+      const key = scratchStatusKey(feature);
+      const next = { v: 'w', w: 't', t: 'l' }[scratchStatuses()[key]] ||
+        (scratchStatuses()[key] === 'l' ? null : 'v');
+      try {
+        commitLedger(() => {
+          if (next) scratchStatuses()[key] = next;
+          else delete scratchStatuses()[key];
+        });
+      } catch (error) {
+        console.error('Scratch Map status not saved', error);
+        return;
+      }
+      const actual = scratchStatuses()[key];
+      const name = AppState.scratchDataset === 'counties' ? countyLabel(key) : feature.properties.name;
+      showNotification('Cartography Updated', `${name}: ${TravelLedger.labels[actual] || 'Unexplored'}.${
+        actual !== (next || undefined) ? ' Home or logged travel retains this tier.' : ''
+      }`, '🗺️');
+      renderScratchMap();
+      refreshTravelUI();
+    }
+
     function renderScratchMap() {
       const svg = d3.select('#svgScratchMap').html('');
       const isWorld = AppState.scratchDataset === 'world';
-      const features = isWorld ? (worldGeoJson || []) : (usaGeoJson || []);
+      const isCounties = AppState.scratchDataset === 'counties';
+      const features = isWorld ? (worldGeoJson || []) : isCounties ? (countyGeoJson || []) : (usaGeoJson || []);
+      const colors = { l: '#f59e0b', v: '#10b981', t: '#64748b', w: '#d97706' };
+      const status = feature => scratchStatuses()[scratchStatusKey(feature)];
+      for (const [id, dataset] of [['btnScratchWorld', 'world'], ['btnScratchUsa', 'usa'], ['btnScratchCounties', 'counties']]) {
+        const button = document.getElementById(id);
+        const active = AppState.scratchDataset === dataset;
+        button.className = `px-3 py-1.5 rounded-lg ${active ? 'bg-blue-600 text-white font-medium' : 'text-slate-400 hover:text-white'}`;
+        button.setAttribute('aria-pressed', String(active));
+      }
 
       if (!features.length) {
+        document.getElementById('scratchStatsLabel').textContent = 'Dataset unavailable';
         svg.append('text')
           .attr('x', '50%').attr('y', '50%')
           .attr('text-anchor', 'middle')
           .attr('fill', '#94a3b8')
-          .text('Loading imperial cartographic charts...');
+          .text('Map dataset unavailable. Retry datasets in Settings.');
         return;
       }
 
@@ -1866,40 +1917,32 @@
       projection.fitSize([W, H], { type: 'FeatureCollection', features });
       const pathGenerator = d3.geoPath(projection);
 
-      const prefix = isWorld ? 'c:' : 's:';
-
-      svg.selectAll('path')
+      svg.append('g').attr('class', 'scratch-regions').selectAll('path')
         .data(features)
         .join('path')
         .attr('d', pathGenerator)
-        .attr('stroke', '#1e293b')
-        .attr('stroke-width', 0.6)
-        .attr('fill', d => {
-          const name = d.properties.name;
-          const status = AppState.regions[prefix + name];
-          return TravelLedger.colors[status] || '#090d1a';
-        })
-        .attr('cursor', 'pointer')
-        .on('click', (e, d) => {
-          if (AppState.viewOnly) return;
-          const name = d.properties.name;
-          const key = prefix + name;
-          const cur = AppState.regions[key];
-          const next = nextTravelStatus(cur);
-          commitLedger(() => { AppState.regions[key] = next; });
-          showNotification('Territory Claimed!', `${name}: ${TravelLedger.labels[next]}.`, '🗺️');
-          renderScratchMap();
-          updateAllUI();
-        })
+        .attr('stroke', d => status(d) === 'l' ? '#fbbf24' : '#1e293b')
+        .attr('stroke-width', d => status(d) === 'l' ? 1 : isCounties ? 0.25 : 0.6)
+        .attr('fill', d => colors[status(d)] || '#090d1a')
+        .attr('cursor', AppState.viewOnly ? 'default' : 'pointer')
+        .on('click', (e, d) => cycleScratchStatus(d))
         .append('title')
         .text(d => {
-          const status = AppState.regions[prefix + d.properties.name];
-          return `${d.properties.name} • ${TravelLedger.labels[status] || 'Unexplored'}${status === 'l' ? ' 🏰' : ' • Click to promote status'}`;
+          const name = isCounties ? countyLabel(scratchStatusKey(d)) : d.properties.name;
+          return `${name} • ${TravelLedger.labels[status(d)] || 'Unexplored'}${AppState.viewOnly ? ' • Read-only' : ' • Click to cycle status'}`;
         });
 
+      if (isCounties && scratchStateMesh) {
+        svg.append('path').attr('class', 'scratch-state-borders')
+          .attr('d', pathGenerator(scratchStateMesh)).attr('fill', 'none')
+          .attr('stroke', '#cbd5e1').attr('stroke-opacity', 0.35).attr('stroke-width', 0.8)
+          .attr('pointer-events', 'none');
+      }
       // Update scratch counter
-      const claimedCount = Object.keys(AppState.regions).filter(k => k.startsWith(prefix) && TravelLedger.isVisited(AppState.regions[k])).length;
-      document.getElementById('scratchStatsLabel').textContent = `${claimedCount} of ${features.length} Explored`;
+      const claimedCount = features.filter(feature => TravelLedger.isVisited(status(feature))).length;
+      const transitedCount = features.filter(feature => status(feature) === 't').length;
+      document.getElementById('scratchStatsLabel').textContent =
+        `${claimedCount} / ${features.length} Visited/Lived · ${transitedCount} Transited`;
     }
   </script>
 
@@ -2233,19 +2276,12 @@
     });
 
     // Scratch Map Dataset Switch
-    document.getElementById('btnScratchWorld').addEventListener('click', () => {
-      AppState.scratchDataset = 'world';
-      document.getElementById('btnScratchWorld').className = 'px-3 py-1.5 rounded-lg bg-blue-600 text-white font-medium';
-      document.getElementById('btnScratchUsa').className = 'px-3 py-1.5 rounded-lg text-slate-400 hover:text-white';
-      renderScratchMap();
-    });
-
-    document.getElementById('btnScratchUsa').addEventListener('click', () => {
-      AppState.scratchDataset = 'usa';
-      document.getElementById('btnScratchUsa').className = 'px-3 py-1.5 rounded-lg bg-blue-600 text-white font-medium';
-      document.getElementById('btnScratchWorld').className = 'px-3 py-1.5 rounded-lg text-slate-400 hover:text-white';
-      renderScratchMap();
-    });
+    for (const [id, dataset] of [['btnScratchWorld', 'world'], ['btnScratchUsa', 'usa'], ['btnScratchCounties', 'counties']]) {
+      document.getElementById(id).addEventListener('click', () => {
+        AppState.scratchDataset = dataset;
+        renderScratchMap();
+      });
+    }
 
     // Pin filtering on Leaflet Map
     document.querySelectorAll('#pinFilterBtns button').forEach(btn => {

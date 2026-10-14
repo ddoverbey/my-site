@@ -810,4 +810,94 @@ check('invalid geocoder coordinates show an error and leave the existing home un
   assert.ok(element('homeLookupStatus').textContent.includes('Invalid city search coordinates'));
   assert.equal(vm.runInContext('AppState.homeBase.name', context), 'Seattle, WA');
 });
+const scratchNodes = [];
+let scratchFeatures = [];
+const projectionCalls = [];
+function scratchSelection(tag = 'svg', data = []) {
+  const node = { tag, attrs: {}, data };
+  scratchNodes.push(node);
+  return {
+    html() { scratchNodes.length = 0; return this; },
+    append(tag) { return scratchSelection(tag, node.data); },
+    attr(name, value) { node.attrs[name] = typeof value === 'function' ? node.data.map(value) : value; return this; },
+    selectAll() { return this; },
+    data(values) { node.data = values; scratchFeatures = values; return this; },
+    join() { return this; },
+    on(name, handler) { node[name] = handler; return this; },
+    text(value) { node.text = typeof value === 'function' ? node.data.map(value) : value; return this; }
+  };
+}
+context.d3 = {
+  geoContains: () => true, select: () => scratchSelection(),
+  geoAlbersUsa: () => ({ fitSize() { projectionCalls.push('usa'); } }),
+  geoNaturalEarth1: () => ({ fitSize() { projectionCalls.push('world'); } }),
+  geoPath: () => feature => `path-${feature.id || 'mesh'}`
+};
+vm.runInContext(`
+  AppState.viewOnly=false;applyPassport(migratePassport({}));
+  coordinateIndexes=null;map=null;PARKS=[];
+  worldGeoJson=[{id:'001',properties:{name:'Example Nation'}}];
+  usaGeoJson=[{id:'06',properties:{name:'California'}}];usaRegionGeoJson=usaGeoJson;
+  countyGeoJson=[
+    {id:6001,properties:{name:'Alameda'}},{id:'06013',properties:{name:'Contra Costa'}},
+    {id:'06041',properties:{name:'Marin'}},{id:'06075',properties:{name:'San Francisco'}}
+  ];
+  countyGeoJson.forEach(f=>countyFeaturesById[String(f.id).padStart(5,'0')]=f);
+  scratchStateMesh={type:'MultiLineString',coordinates:[]};
+`, context);
+check('all three Scratch Map buttons select their datasets with synchronized active state', () => {
+  for (const [id, dataset, count] of [
+    ['btnScratchWorld', 'world', 1], ['btnScratchUsa', 'usa', 1], ['btnScratchCounties', 'counties', 4]
+  ]) {
+    element(id).handlers.click();
+    assert.equal(vm.runInContext('AppState.scratchDataset', context), dataset);
+    assert.equal(scratchFeatures.length, count);
+    assert.ok(element(id).className.includes('bg-blue-600'));
+  }
+  assert.deepEqual(projectionCalls, ['world', 'usa', 'usa']);
+});
+check('county scratch view renders all four exact colors and noninteractive faint state mesh', () => {
+  vm.runInContext("AppState.counties={'06001':'l','06013':'v','06041':'t','06075':'w','99999':'v'};renderScratchMap()", context);
+  const regions = scratchNodes.find(n => n.attrs.class === 'scratch-regions');
+  assert.deepEqual(Array.from(regions.attrs.fill), ['#f59e0b', '#10b981', '#64748b', '#d97706']);
+  assert.equal(regions.attrs.stroke[0], '#fbbf24');
+  const mesh = scratchNodes.find(n => n.attrs.class === 'scratch-state-borders');
+  assert.equal(mesh.attrs['pointer-events'], 'none');
+  assert.equal(mesh.attrs['stroke-opacity'], 0.35);
+  assert.equal(element('scratchStatsLabel').textContent, '2 / 4 Visited/Lived · 1 Transited');
+});
+check('scratch paths cycle unexplored, visited, wishlist, transited, lived, then delete the status', () => {
+  for (const dataset of ['world', 'usa', 'counties']) {
+    vm.runInContext(`applyPassport(migratePassport({}));AppState.scratchDataset='${dataset}';renderScratchMap()`, context);
+    for (const next of ['v', 'w', 't', 'l', undefined]) {
+      const regions = scratchNodes.find(n => n.attrs.class === 'scratch-regions');
+      regions.click({}, regions.data[0]);
+      const actual = vm.runInContext('scratchStatuses()[scratchStatusKey(' +
+        (dataset === 'world' ? 'worldGeoJson' : dataset === 'usa' ? 'usaGeoJson' : 'countyGeoJson') + '[0])]', context);
+      assert.equal(actual, next, dataset);
+    }
+  }
+  assert.ok(!Object.hasOwn(JSON.parse(savedJson).counties, '06001'));
+});
+check('Scratch Map clicks are read-only for shared passports and roll back failed saves', () => {
+  vm.runInContext('AppState.viewOnly=true', context);
+  vm.runInContext('cycleScratchStatus(countyGeoJson[0])', context);
+  assert.equal(vm.runInContext('AppState.counties["06001"]', context), undefined);
+  vm.runInContext('AppState.viewOnly=false', context);
+  context.localStorage.setItem = () => { throw new Error('Storage full'); };
+  vm.runInContext('cycleScratchStatus(countyGeoJson[0])', context);
+  assert.equal(vm.runInContext('AppState.counties["06001"]', context), undefined);
+  assert.equal(element('toastTitle').textContent, 'Travel record not saved');
+  context.localStorage.setItem = (key, value) => { savedJson = value; };
+});
+check('county scratch cycling preserves ledger-backed expedition visits and explains retained status', () => {
+  vm.runInContext("AppState.expeditions=[{...testExpedition,id:'scratch-trip',countyIds:['06001']}];syncDerivedState();cycleScratchStatus(countyGeoJson[0])", context);
+  assert.equal(vm.runInContext('AppState.counties["06001"]', context), 'v');
+  assert.ok(element('toastMsg').textContent.includes('retains this tier'));
+});
+check('missing county data clears prior statistics and displays explicit retry guidance', () => {
+  vm.runInContext('countyGeoJson=null;renderScratchMap()', context);
+  assert.equal(element('scratchStatsLabel').textContent, 'Dataset unavailable');
+  assert.ok(scratchNodes.some(n => String(n.text).includes('Retry datasets')));
+});
 console.log(`${checks} checks passed.`);

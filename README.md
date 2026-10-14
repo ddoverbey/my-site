@@ -396,9 +396,9 @@ custom POIs, county FIPS codes and state/country keys:
 | `l` Lived / Home Base | Gold | Full clearing and credit, permanent until a full reset |
 
 Expedition promotion respects `w < t < v < l`. Manually marking a Lived destination as another
-tier cannot downgrade it. The map's Visited filter includes both Visited and Lived. Scratch-map
-regions and county hitboxes cycle Unexplored → Wishlist → Transited → Visited → Lived; Lived remains
-fixed. Pins/custom POIs have explicit tier buttons. Ledger-backed trip visits are restored by
+tier cannot downgrade it. The map's Visited filter includes both Visited and Lived.
+Leaflet county hitboxes cycle Unexplored → Wishlist → Transited → Visited → Lived; Lived remains
+fixed there. Pins/custom POIs have explicit tier buttons. Ledger-backed trip visits are restored by
 `syncDerivedState()` if their derived tier is changed. Clearing a custom POI that belongs to a trip
 is disallowed to prevent dangling history references.
 
@@ -425,6 +425,17 @@ feathered canvas fill (a transit county clears its polygon, even though transit 
 are narrower). State/country tiers describe completion in the Scratch Map; they do not erase
 entire nations on the canvas merely because home marks their parents Lived.
 Existing NPS/RESOLVE snapshots are reused without regeneration.
+
+The Scratch Map offers **World Nations**, **United States**, and **US Counties**, reusing the
+already-loaded atlas features. County mode uses Albers USA with a faint, noninteractive state-border
+mesh for context. Colors are gold for Lived, emerald for Visited, slate for Transited, and darker amber
+for Wishlist; Lived polygons have a brighter gold border. Its separate editing cycle is
+**Unexplored → Visited → Wishlist → Transited → Lived → Unexplored**.
+County edits use zero-padded FIPS IDs in `counties`; nation/state edits use `regions`.
+The counter reports Visited/Lived and Transited totals for the current dataset only.
+Edits persist transactionally and refresh Passport stats and map fog. Home, park, POI and expedition
+records still restore their derived tiers; a retained tier is explained in the notification.
+Shared passports are read-only. No TopoJSON generation is needed for this view.
 
 ### New Expedition
 
