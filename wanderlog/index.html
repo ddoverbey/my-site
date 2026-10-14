@@ -193,7 +193,6 @@
 
       <!-- Navigation Tabs -->
       <nav id="navTabs" aria-label="Atlas pages" class="flex gap-1 bg-slate-900/60 p-1 rounded-xl border border-slate-800">
-        <button data-tab="map" type="button" class="header-icon" title="World Map" aria-label="World Map" aria-pressed="true" aria-controls="tabContent-map"><span aria-hidden="true">🌍</span></button>
         <button data-tab="scratch" type="button" class="header-icon" title="Scratch Map" aria-label="Scratch Map" aria-pressed="false" aria-controls="tabContent-scratch"><span aria-hidden="true">🗺️</span></button>
         <button data-tab="passport" type="button" class="header-icon" title="Explorer Profile — Character & Stats" aria-label="Explorer Profile — Character & Stats" aria-pressed="false" aria-controls="tabContent-passport"><span aria-hidden="true">👤</span></button>
       </nav>
@@ -2356,6 +2355,8 @@
   <script>
     // Tab Switching
     function updateHeaderNavigation() {
+      document.body.classList.toggle('mode-classic', AppState.mode === 'classic');
+      document.getElementById('rpgMapHud').classList.toggle('hidden', AppState.mode === 'classic');
       document.getElementById('toggleRpgMode').setAttribute('aria-pressed', String(AppState.mode === 'rpg'));
       document.getElementById('toggleClassicMode').setAttribute('aria-pressed', String(AppState.mode === 'classic'));
       document.querySelectorAll('#navTabs button').forEach(button => {
@@ -2364,8 +2365,13 @@
     }
 
     function switchTab(tabId) {
+      if (tabId === 'map' && AppState.mode !== 'rpg') {
+        AppState.mode = 'rpg';
+        saveState();
+      }
       AppState.currentTab = tabId;
       updateHeaderNavigation();
+      if (tabId === 'map') renderCountyHitboxes();
 
       // Hide all tabs
       document.getElementById('tabContent-map').classList.add('hidden');
@@ -2397,6 +2403,11 @@
     document.querySelectorAll('#navTabs button').forEach(btn => {
       btn.addEventListener('click', () => switchTab(btn.dataset.tab));
     });
+
+    function restoreModeView() {
+      switchTab(AppState.mode === 'classic' ? 'bucketlist' : 'map');
+      drawFogOfWar();
+    }
 
     // Toggle Mode: RPG vs Classic
     document.getElementById('toggleRpgMode').addEventListener('click', () => {
@@ -2502,6 +2513,7 @@
           const parsed = migratePassport(JSON.parse(event.target.result));
           commitLedger(() => applyPassport(parsed));
           initMap();
+          restoreModeView();
           updateHomeBaseMarker();
           renderParkMarkers();
           drawFogOfWar();
@@ -2630,6 +2642,7 @@
       syncDerivedState();
       saveState();
       initMap();
+      restoreModeView();
       updateAllUI();
 
       // If user has never set a home base and is not viewing a shared link, open onboarding modal

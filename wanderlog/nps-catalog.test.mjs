@@ -121,18 +121,19 @@ const context = vm.createContext({
   NpsCatalog: catalog, Ecoregions: ecoregions, InternationalParks: internationalCatalog, CoordinateLookups: coordinateLookups, TravelLedger: travelLedger,
   WanderlogConfig: { rarityEndpoint: 'https://api.devonoverbey.com/rarity' },
   tailwind: {}, console, Intl, URL, URLSearchParams, setTimeout() {},
-  document: { getElementById: element, querySelectorAll: () => [], createElement: () => element(`created-${elements.size}`) },
+  document: { body: { classList: { toggle() {}, add() {}, remove() {} } }, getElementById: element, querySelectorAll: () => [], createElement: () => element(`created-${elements.size}`) },
   window: { addEventListener() {}, matchMedia: () => ({ matches: true }) },
   fetch: async url => ({ ok: true, json: async () => url.includes('wikidata') ? wikidata : url.includes('worldwide') ? worldwide : snapshot })
 });
 scripts.forEach(script => vm.runInContext(script, context));
 check('header navigation uses compact icons with accessible labels and synchronized pressed states', () => {
-  for (const label of ['Explore — RPG mode', 'Travel Ledger — Classic mode', 'World Map', 'Scratch Map', 'Explorer Profile — Character & Stats']) {
+  for (const label of ['Explore — RPG mode', 'Travel Ledger — Classic mode', 'Scratch Map', 'Explorer Profile — Character & Stats']) {
     assert.ok(html.includes(`aria-label="${label}"`));
     assert.ok(html.includes(`title="${label}"`));
   }
   assert.ok(!html.includes('<span class="hidden md:inline">RPG Explorer</span>'));
   assert.ok(html.includes('.header-icon:focus-visible'));
+  assert.ok(!html.includes('data-tab="map"'));
   const originalQuery = context.document.querySelectorAll;
   const buttons = ['map', 'scratch', 'passport'].map(tab => ({
     dataset: { tab }, attributes: {},
@@ -1241,5 +1242,45 @@ check('RPG county hitboxes exclude unexplored and manually marked counties; norm
   assert.ok(layers.every(layer => layer.tooltip));
   assert.equal(renderers, 1);
   vm.runInContext('map=null;countyLayer=null;countyRenderer=null;countyHitboxKey=null', context);
+});
+check('saved Classic mode restores Travel Ledger, while every main-map entry enables persisted RPG fog', () => {
+  const classes = new Map();
+  const originalBody = context.document.body.classList;
+  const originalHud = element('rpgMapHud').classList;
+  const originalMap = element('tabContent-map').classList;
+  const originalLedger = element('tabContent-bucketlist').classList;
+  const classList = id => ({
+    add(name) { classes.set(`${id}:${name}`, true); },
+    remove(name) { classes.set(`${id}:${name}`, false); },
+    toggle(name, value) { classes.set(`${id}:${name}`, value); }
+  });
+  context.document.body.classList = classList('body');
+  element('rpgMapHud').classList = classList('hud');
+  element('tabContent-map').classList = classList('map');
+  element('tabContent-bucketlist').classList = classList('ledger');
+  try {
+    vm.runInContext("map=null;applyPassport(migratePassport({mode:'classic'}));restoreModeView()", context);
+    assert.equal(vm.runInContext('AppState.currentTab', context), 'bucketlist');
+    assert.equal(vm.runInContext('AppState.mode', context), 'classic');
+    assert.equal(classes.get('body:mode-classic'), true);
+    assert.equal(classes.get('hud:hidden'), true);
+    assert.equal(classes.get('map:hidden'), true);
+    assert.equal(classes.get('ledger:hidden'), false);
+    vm.runInContext("switchTab('map')", context);
+    assert.equal(vm.runInContext('AppState.mode', context), 'rpg');
+    assert.equal(JSON.parse(savedJson).mode, 'rpg');
+    assert.equal(classes.get('body:mode-classic'), false);
+    assert.equal(classes.get('hud:hidden'), false);
+    assert.equal(classes.get('map:hidden'), false);
+    assert.equal(classes.get('ledger:hidden'), true);
+    vm.runInContext('applyPassport(migratePassport(JSON.parse(localStorage.getItem("terra_incognita_state"))));restoreModeView()', context);
+    assert.equal(vm.runInContext('AppState.currentTab', context), 'map');
+    assert.equal(vm.runInContext('AppState.mode', context), 'rpg');
+  } finally {
+    context.document.body.classList = originalBody;
+    element('rpgMapHud').classList = originalHud;
+    element('tabContent-map').classList = originalMap;
+    element('tabContent-bucketlist').classList = originalLedger;
+  }
 });
 console.log(`${checks} checks passed.`);

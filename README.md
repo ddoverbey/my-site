@@ -112,8 +112,10 @@ not over the map legend. The header is layered above the map/fog. Fog uses an ov
 that follows Leaflet's animated zoom transform before repainting at the final zoom, with
 geographic-radius scaling and radius-aware offscreen clearing.
 The fog-removal checkbox and its JavaScript hooks remain commented out.
-The header uses compact emoji buttons: Explore (RPG mode), Travel Ledger (Classic mode),
-World Map, Scratch Map, and Explorer Profile (character/stats). Each has a tooltip and accessible
+The header uses compact emoji buttons: Explore (the RPG map), Travel Ledger (Classic mode),
+Scratch Map, and Explorer Profile (character/stats). Explore is the only main-map navigation button;
+entering that map always enables RPG fog. Reloading or importing restores the saved mode's matching
+page (Explore or Travel Ledger), body styling and HUD together. Each button has a tooltip and accessible
 label, visible keyboard focus, and an active-state indicator. Navigation wraps onto its own row
 on small screens; mode behavior and saved travel records are unchanged.
 **Classic mode shows an unfogged map**: CSS hides the canvas, and the renderer clears it without
