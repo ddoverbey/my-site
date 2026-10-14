@@ -126,6 +126,31 @@ const context = vm.createContext({
   fetch: async url => ({ ok: true, json: async () => url.includes('wikidata') ? wikidata : url.includes('worldwide') ? worldwide : snapshot })
 });
 scripts.forEach(script => vm.runInContext(script, context));
+check('header navigation uses compact icons with accessible labels and synchronized pressed states', () => {
+  for (const label of ['Explore — RPG mode', 'Travel Ledger — Classic mode', 'World Map', 'Scratch Map', 'Explorer Profile — Character & Stats']) {
+    assert.ok(html.includes(`aria-label="${label}"`));
+    assert.ok(html.includes(`title="${label}"`));
+  }
+  assert.ok(!html.includes('<span class="hidden md:inline">RPG Explorer</span>'));
+  assert.ok(html.includes('.header-icon:focus-visible'));
+  const originalQuery = context.document.querySelectorAll;
+  const buttons = ['map', 'scratch', 'passport'].map(tab => ({
+    dataset: { tab }, attributes: {},
+    setAttribute(name, value) { this.attributes[name] = value; }
+  }));
+  context.document.querySelectorAll = selector => selector === '#navTabs button' ? buttons : originalQuery(selector);
+  const modeAttributes = {};
+  const originalSet = element('toggleClassicMode').setAttribute;
+  element('toggleClassicMode').setAttribute = (name, value) => { modeAttributes[name] = value; };
+  vm.runInContext("AppState.mode='classic';AppState.currentTab='scratch';updateHeaderNavigation()", context);
+  assert.equal(modeAttributes['aria-pressed'], 'true');
+  assert.deepEqual(buttons.map(button => button.attributes['aria-pressed']), ['false', 'true', 'false']);
+  vm.runInContext("AppState.mode='rpg';AppState.currentTab='map';updateHeaderNavigation()", context);
+  assert.equal(modeAttributes['aria-pressed'], 'false');
+  assert.deepEqual(buttons.map(button => button.attributes['aria-pressed']), ['true', 'false', 'false']);
+  context.document.querySelectorAll = originalQuery;
+  element('toggleClassicMode').setAttribute = originalSet;
+});
 check('destination pins default to None and the fog toggle is not rendered', () => {
   assert.equal(vm.runInContext('AppState.pinFilter', context), 'none');
   const activeHtml = html.replace(/<!--[\s\S]*?-->/g, '');

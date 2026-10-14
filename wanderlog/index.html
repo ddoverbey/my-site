@@ -112,6 +112,22 @@
     }
     #settingsMenu summary { list-style: none; }
     #settingsMenu summary::-webkit-details-marker { display: none; }
+    .header-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 2.25rem;
+      height: 2.25rem;
+      flex-shrink: 0;
+      border-radius: 0.625rem;
+      color: #94a3b8;
+      font-size: 1.125rem;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+    .header-icon:hover { background: #1e293b; color: #f8fafc; }
+    .header-icon:focus-visible { outline: 2px solid #fbbf24; outline-offset: 2px; }
+    .header-icon[aria-pressed="true"] { background: #1e3a5f; color: #fff; }
+    #toggleRpgMode[aria-pressed="true"] { background: #78350f; color: #fde68a; }
     .mode-classic #fogCanvasOverlay {
       opacity: 0;
     }
@@ -149,53 +165,53 @@
 </head>
 <body class="h-screen w-screen flex flex-col bg-[#060913] text-slate-100 select-none">
 
-  <header class="relative h-16 border-b border-slate-800 bg-[#0c1222]/95 px-4 flex items-center justify-between z-[600] shrink-0 backdrop-blur-md">
-    <div class="flex items-center gap-3">
+  <header class="relative min-h-16 border-b border-slate-800 bg-[#0c1222]/95 px-3 py-2 sm:px-4 flex flex-wrap sm:flex-nowrap items-center justify-between gap-x-3 gap-y-2 z-[600] shrink-0 backdrop-blur-md">
+    <div class="flex items-center gap-3 min-w-0">
       <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center text-xl shadow-lg shadow-amber-500/20 border border-amber-400/40">
         🧭
       </div>
-      <div>
+      <div class="hidden lg:block">
         <div class="flex items-center gap-2">
-          <h1 class="cinzel text-lg font-bold tracking-wider text-amber-200">TERRA INCOGNITA</h1>
-          <span class="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30">RPG Atlas</span>
+          <h1 class="cinzel text-sm xl:text-lg font-bold tracking-wider text-amber-200">TERRA INCOGNITA</h1>
+          <span class="hidden xl:inline text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30">RPG Atlas</span>
         </div>
         <p class="text-xs text-slate-400 font-sans hidden sm:block">A Gamified Fog-of-War Travel Odyssey</p>
       </div>
     </div>
 
     <!-- Mode Selector & Nav Tabs -->
-    <div class="flex items-center gap-2 sm:gap-4">
+    <div class="order-last sm:order-none w-full sm:w-auto flex items-center justify-center gap-2">
       <!-- RPG vs Classic Bucket List Toggle -->
-      <div class="bg-slate-900/90 p-1 rounded-xl border border-slate-700 flex text-xs font-semibold">
-        <button id="toggleRpgMode" class="px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 bg-amber-500 text-slate-950 font-bold shadow-md">
-          <span>⚔️</span> <span class="hidden md:inline">RPG Explorer</span>
+      <div role="group" aria-label="Travel mode" class="bg-slate-900/60 p-1 rounded-xl border border-slate-800 flex gap-1">
+        <button id="toggleRpgMode" type="button" class="header-icon" title="Explore — RPG mode" aria-label="Explore — RPG mode" aria-pressed="true">
+          <span aria-hidden="true">🧭</span>
         </button>
-        <button id="toggleClassicMode" class="px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 text-slate-400 hover:text-slate-200">
-          <span>📋</span> <span class="hidden md:inline">Bucket List</span>
+        <button id="toggleClassicMode" type="button" class="header-icon" title="Travel Ledger — Classic mode" aria-label="Travel Ledger — Classic mode" aria-pressed="false">
+          <span aria-hidden="true">📋</span>
         </button>
       </div>
 
       <!-- Navigation Tabs -->
-      <nav id="navTabs" class="flex gap-1 bg-slate-900/60 p-1 rounded-xl border border-slate-800">
-        <button data-tab="map" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-600 text-white transition-all">World Map</button>
-        <button data-tab="scratch" class="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white transition-all">Scratch Map</button>
-        <button data-tab="passport" class="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white transition-all">Character / Stats</button>
+      <nav id="navTabs" aria-label="Atlas pages" class="flex gap-1 bg-slate-900/60 p-1 rounded-xl border border-slate-800">
+        <button data-tab="map" type="button" class="header-icon" title="World Map" aria-label="World Map" aria-pressed="true" aria-controls="tabContent-map"><span aria-hidden="true">🌍</span></button>
+        <button data-tab="scratch" type="button" class="header-icon" title="Scratch Map" aria-label="Scratch Map" aria-pressed="false" aria-controls="tabContent-scratch"><span aria-hidden="true">🗺️</span></button>
+        <button data-tab="passport" type="button" class="header-icon" title="Explorer Profile — Character & Stats" aria-label="Explorer Profile — Character & Stats" aria-pressed="false" aria-controls="tabContent-passport"><span aria-hidden="true">👤</span></button>
       </nav>
     </div>
 
     <!-- Quick Utilities -->
-    <div class="flex items-center gap-2">
-      <button id="btnHomeConfig" title="Change Home Base" class="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-xs text-amber-300 transition-all flex items-center gap-1">
+    <div class="flex items-center gap-1 shrink-0">
+      <button id="btnHomeConfig" aria-label="Change Home Base" title="Change Home Base" class="header-icon">
         <span>🏰</span>
-        <span id="headerHometownText" class="max-w-[90px] truncate hidden lg:inline">Home Base</span>
+        <span id="headerHometownText" class="sr-only">Home Base</span>
       </button>
 
-      <button id="btnShare" title="Copy Shareable Link" class="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-xs text-slate-200 transition-all">
+      <button id="btnShare" aria-label="Copy Shareable Link" title="Copy Shareable Link" class="header-icon">
         🔗
       </button>
 
       <details id="settingsMenu" class="relative">
-        <summary aria-label="Settings" title="Settings" class="cursor-pointer p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-xs text-slate-200 transition-all">
+        <summary aria-label="Settings" title="Settings" class="header-icon cursor-pointer">
           ⚙️
         </summary>
         <div class="absolute right-0 mt-2 w-64 max-w-[calc(100vw-2rem)] py-2 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl">
@@ -2326,6 +2342,7 @@
     }
 
     function updateAllUI() {
+      updateHeaderNavigation();
       renderCountyHitboxes();
       document.getElementById('btnCustomLocation').classList.toggle('hidden', AppState.viewOnly);
       document.getElementById('btnExpedition').classList.toggle('hidden', AppState.viewOnly);
@@ -2338,15 +2355,17 @@
 
   <script>
     // Tab Switching
+    function updateHeaderNavigation() {
+      document.getElementById('toggleRpgMode').setAttribute('aria-pressed', String(AppState.mode === 'rpg'));
+      document.getElementById('toggleClassicMode').setAttribute('aria-pressed', String(AppState.mode === 'classic'));
+      document.querySelectorAll('#navTabs button').forEach(button => {
+        button.setAttribute('aria-pressed', String(button.dataset.tab === AppState.currentTab));
+      });
+    }
+
     function switchTab(tabId) {
       AppState.currentTab = tabId;
-
-      document.querySelectorAll('#navTabs button').forEach(b => {
-        const isActive = b.dataset.tab === tabId;
-        b.className = isActive 
-          ? 'px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-600 text-white transition-all'
-          : 'px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white transition-all';
-      });
+      updateHeaderNavigation();
 
       // Hide all tabs
       document.getElementById('tabContent-map').classList.add('hidden');
@@ -2383,8 +2402,6 @@
     document.getElementById('toggleRpgMode').addEventListener('click', () => {
       AppState.mode = 'rpg';
       document.body.classList.remove('mode-classic');
-      document.getElementById('toggleRpgMode').className = 'px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 bg-amber-500 text-slate-950 font-bold shadow-md';
-      document.getElementById('toggleClassicMode').className = 'px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 text-slate-400 hover:text-slate-200';
       document.getElementById('rpgMapHud').classList.remove('hidden');
       // Optional fog toggle: document.getElementById('fogToggleCheckbox').checked = true;
       saveState();
@@ -2396,8 +2413,6 @@
     document.getElementById('toggleClassicMode').addEventListener('click', () => {
       AppState.mode = 'classic';
       document.body.classList.add('mode-classic');
-      document.getElementById('toggleClassicMode').className = 'px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 bg-blue-600 text-white font-bold shadow-md';
-      document.getElementById('toggleRpgMode').className = 'px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 text-slate-400 hover:text-slate-200';
       document.getElementById('rpgMapHud').classList.add('hidden');
       // Optional fog toggle: document.getElementById('fogToggleCheckbox').checked = false;
       saveState();
