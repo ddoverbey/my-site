@@ -494,6 +494,25 @@
               <option value="l">Lived / Home Base Only</option>
               <option value="un">Unexplored Only</option>
             </select>
+            <select id="bucketFilterType" aria-label="Destination type" aria-describedby="bucketTypeHint" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none">
+              <option value="all">All Destination Types</option>
+              <option value="parks">National Parks</option>
+              <option value="monuments">National Monuments</option>
+              <option value="historic">Historic Sites &amp; Historical Parks</option>
+              <option value="memorials">Memorials</option>
+              <option value="battlefields">Battlefields &amp; Military Parks</option>
+              <option value="preserves">Preserves &amp; Reserves</option>
+              <option value="shores">Seashores &amp; Lakeshores</option>
+              <option value="recreation">Recreation Areas</option>
+              <option value="rivers">Rivers &amp; Riverways</option>
+              <option value="trails">Trails</option>
+              <option value="parkways">Parkways</option>
+              <option value="other">Other NPS Designations</option>
+              <option value="international">International Catalog</option>
+              <option value="custom">Custom Locations</option>
+            </select>
+            <p id="bucketTypeHint" class="w-full text-[11px] text-slate-400">National Parks includes the international catalog (curated/Wikidata classifications are unverified). Combined NPS designations can match more than one type.</p>
+            <p id="bucketResultsCount" role="status" aria-live="polite" class="w-full text-xs text-amber-300"></p>
           </div>
         </div>
 
@@ -2168,15 +2187,38 @@
       }
     }
 
+    function bucketDestinationTypes(p) {
+      if (p.custom) return ['custom'];
+      if (p.intl) return ['parks', 'international'];
+      const designation = p.designation || '';
+      const patterns = {
+        parks: /\bNational (?:Park(?:s)?|and State Parks)\b/i,
+        monuments: /\bNational Monument\b/i,
+        historic: /\bHistoric(?:al)? (?:Site|Park|Area|Reserve|Trail)\b/i,
+        memorials: /\bMemorial\b/i,
+        battlefields: /\bBattlefield(?:s)?\b|\bMilitary Park\b/i,
+        preserves: /\bPreserve\b|\bReserve\b/i,
+        shores: /\bSeashore\b|\bLakeshore\b/i,
+        recreation: /\bRecreation Area\b/i,
+        rivers: /\bRiver(?:s|way|ways)?\b/i,
+        trails: /\bTrail\b/i,
+        parkways: /\bParkway\b/i
+      };
+      const types = Object.entries(patterns).filter(([, pattern]) => pattern.test(designation)).map(([type]) => type);
+      return types.length ? types : ['other'];
+    }
+
     function renderBucketListView() {
       const search = (document.getElementById('bucketSearch').value || '').toLowerCase();
       const filter = document.getElementById('bucketFilterStatus').value;
+      const type = document.getElementById('bucketFilterType').value;
       const grid = document.getElementById('bucketListGrid');
       grid.innerHTML = '';
 
       const filtered = [...PARKS, ...customDestinations()].filter(p => {
         const status = destinationStatus(p);
         if (filter !== 'all' && status !== filter) return false;
+        if (type !== 'all' && !bucketDestinationTypes(p).includes(type)) return false;
         if (!search) return true;
         return p.name.toLowerCase().includes(search) || 
                (p.state && p.state.toLowerCase().includes(search)) ||
@@ -2188,6 +2230,8 @@
                (p.ecoregions && p.ecoregions.some(region => region.name.toLowerCase().includes(search) || region.realm.toLowerCase().includes(search))) ||
                p.biomes.some(b => (BIOMES[b] && BIOMES[b].name.toLowerCase().includes(search)));
       });
+      document.getElementById('bucketResultsCount').textContent =
+        `${filtered.length} / ${PARKS.length + AppState.customPois.length} destinations shown`;
 
       if (!filtered.length) {
         grid.innerHTML = '<div class="col-span-2 text-center text-slate-500 py-12 text-sm">No destination matches your filter criteria.</div>';
@@ -2374,6 +2418,7 @@
     // Bucket List Search & Filter listeners
     document.getElementById('bucketSearch').addEventListener('input', renderBucketListView);
     document.getElementById('bucketFilterStatus').addEventListener('change', renderBucketListView);
+    document.getElementById('bucketFilterType').addEventListener('change', renderBucketListView);
 
     // Share link generator (base64 URL param)
     document.getElementById('btnShare').addEventListener('click', () => {

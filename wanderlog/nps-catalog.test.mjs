@@ -106,7 +106,7 @@ const elements = new Map();
 function element(id) {
   if (!elements.has(id)) {
     elements.set(id, {
-      value: id === 'bucketFilterStatus' ? 'all' : '',
+      value: ['bucketFilterStatus', 'bucketFilterType'].includes(id) ? 'all' : '',
       textContent: '', innerHTML: '', style: {}, dataset: {},
       classList: { add() {}, remove() {}, toggle() {} },
       handlers: {}, addEventListener(name, handler) { this.handlers[name] = handler; },
@@ -1035,5 +1035,75 @@ check('NPS discovery pulses preserve boundary geometry while animating opacity a
   animationTime = 5200;
   animationCallback();
   assert.equal(vm.runInContext('discoveryPulses.size', context), 0);
+});
+check('destination type groups use official designations, preserving combined categories and separate sources', () => {
+  for (const [designation, expected] of [
+    ['National Park', ['parks']], ['National Park & Preserve', ['parks','preserves']],
+    ['National and State Parks', ['parks']], ['National Parks', ['parks']],
+    ['National Monument & Preserve', ['monuments','preserves']],
+    ['Part of Statue of Liberty National Monument', ['monuments']],
+    ['National Historical Park', ['historic']], ['National Historic Trail', ['historic','trails']],
+    ['National Battlefield Park', ['battlefields']], ['National Military Park', ['battlefields']],
+    ['National Seashore', ['shores']], ['National Lakeshore', ['shores']],
+    ['National River & Recreation Area', ['recreation','rivers']], ['Memorial Parkway', ['memorials','parkways']],
+    ['Affiliated Area', ['other']], ['', ['other']]
+  ]) {
+    context.typeFixture = { designation };
+    assert.deepEqual(Array.from(vm.runInContext('bucketDestinationTypes(typeFixture)', context)), expected, designation);
+  }
+  assert.deepEqual(Array.from(vm.runInContext('bucketDestinationTypes({intl:true})', context)), ['parks','international']);
+  assert.deepEqual(Array.from(vm.runInContext('bucketDestinationTypes({custom:true,intl:true})', context)), ['custom']);
+  assert.deepEqual(Array.from(vm.runInContext('bucketDestinationTypes({name:"National Monument",designation:"Park"})', context)), ['other']);
+});
+vm.runInContext(`
+  applyPassport(migratePassport({}));AppState.currentTab='map';
+  PARKS=[
+    {id:'filter_park',name:'Test National Park',designation:'National Park',lat:37,lng:-120,biomes:[],states:['California']},
+    {id:'filter_monument',name:'Test Monument',designation:'National Monument',lat:37,lng:-120,biomes:[],states:['Utah']},
+    {id:'filter_historic',name:'Test Historical Park',designation:'National Historical Park',lat:37,lng:-120,biomes:[],states:[]},
+    {id:'filter_intl',name:'International Test',intl:true,country:'Canada',biomes:[],lat:51,lng:-115,
+      source:InternationalParks.wikidataSource,memberships:[],areaKm2:null,visitorCount:null}
+  ];
+  AppState.pins={filter_park:'v',filter_monument:'w'};
+  AppState.customPois=[{...customLocation,id:'poi_filter',status:'v'}];
+`, context);
+element('bucketSearch').value = '';
+element('bucketFilterStatus').value = 'all';
+check('type filter change renders only matching destinations and updates result count', () => {
+  element('bucketFilterType').value = 'parks';
+  element('bucketFilterType').handlers.change();
+  const cards = element('bucketListGrid').innerHTML;
+  assert.ok(cards.includes('Test National Park'));
+  assert.ok(cards.includes('International Test'));
+  assert.ok(!cards.includes('Test Monument'));
+  assert.ok(!cards.includes('Test Historical Park'));
+  assert.ok(!cards.includes('Colosseum'));
+  assert.equal(element('bucketResultsCount').textContent, '2 / 5 destinations shown');
+});
+check('type, search and status filters combine and remain selected after marking a destination', () => {
+  element('bucketFilterType').value = 'monuments';
+  element('bucketFilterStatus').value = 'w';
+  element('bucketSearch').value = 'test';
+  vm.runInContext('renderBucketListView()', context);
+  assert.ok(element('bucketListGrid').innerHTML.includes('Test Monument'));
+  assert.equal(element('bucketResultsCount').textContent, '1 / 5 destinations shown');
+  context.window.matchMedia = () => ({ matches: true });
+  vm.runInContext("AppState.currentTab='bucketlist';setPinStatus('filter_monument','v')", context);
+  assert.ok(element('bucketListGrid').innerHTML.includes('No destination matches'));
+  assert.equal(element('bucketFilterType').value, 'monuments');
+  assert.equal(element('bucketFilterStatus').value, 'w');
+  assert.equal(element('bucketResultsCount').textContent, '0 / 5 destinations shown');
+});
+check('international, custom and all type options keep separate destinations discoverable', () => {
+  element('bucketFilterStatus').value = 'all';
+  element('bucketSearch').value = '';
+  for (const [type, count, name] of [
+    ['international',1,'International Test'], ['custom',1,'Colosseum'], ['all',5,'Test Historical Park']
+  ]) {
+    element('bucketFilterType').value = type;
+    element('bucketFilterType').handlers.change();
+    assert.ok(element('bucketListGrid').innerHTML.includes(name));
+    assert.equal(element('bucketResultsCount').textContent, `${count} / 5 destinations shown`);
+  }
 });
 console.log(`${checks} checks passed.`);

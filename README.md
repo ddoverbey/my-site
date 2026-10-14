@@ -513,6 +513,17 @@ POI and a tagged expedition as independent logged records; repeating a POI acros
 does not create extra POI records. Run `npm test` for migration, rank, threshold, fog, persistence,
 wizard-failure, and disclosure regression tests; no geography import is needed.
 
+### Bucket List filtering
+
+The Bucket List's **Destination type** filter combines with search and travel status, with a live
+matching-result count. National Parks includes international catalog entries with the existing
+curated/Wikidata classification caveats. NPS categories use official `designation`, not words in
+the destination name: monuments, historic sites/parks, memorials, battlefields, preserves,
+shores, recreation areas, rivers, trails and parkways are selectable. Combined designations
+can appear in multiple applicable groups (e.g. National Park & Preserve). Other NPS designations,
+the international catalog, and custom locations have separate options. Filters stay selected
+while marking destinations off; changing a visit status can remove it from the current results.
+
 ### Radar contributions
 
 The radar preserves existing scales and adds custom visits and expedition metadata:
