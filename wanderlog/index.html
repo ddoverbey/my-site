@@ -94,6 +94,11 @@
       border: 1px solid rgba(245, 158, 11, 0.4);
       box-shadow: 0 0 20px rgba(245, 158, 11, 0.15), inset 0 0 12px rgba(245, 158, 11, 0.05);
     }
+    .ledger-card {
+      background: #11182b;
+      content-visibility: auto;
+      contain-intrinsic-size: auto 180px;
+    }
 
     /* Fog Canvas Layer styles */
     #fogCanvasOverlay {
@@ -579,6 +584,11 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3" id="bucketListGrid">
           <!-- Dynamically populated -->
         </div>
+        <nav aria-label="Travel Ledger pages" class="flex items-center justify-center gap-4 text-xs">
+          <button id="bucketPrevPage" type="button" aria-controls="bucketListGrid" class="px-3 py-2 rounded-lg bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed">Previous</button>
+          <span id="bucketPageLabel" role="status" aria-live="polite"></span>
+          <button id="bucketNextPage" type="button" aria-controls="bucketListGrid" class="px-3 py-2 rounded-lg bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed">Next</button>
+        </nav>
       </div>
     </div>
 
@@ -1057,18 +1067,23 @@
     }
 
     function syncDerivedState() {
-      const countyRegions = {};
-      countyGeoJson?.forEach(feature => {
-        const id = String(feature.id).padStart(5, '0');
-        const state = usaRegionGeoJson?.find(state => String(state.id).padStart(2, '0') === id.slice(0, 2));
-        countyRegions[id] = { countries: ['United States of America'], states: state ? [state.properties.name] : [], counties: [] };
-      });
+      if (!countyRegionCache || countyRegionCache.counties !== countyGeoJson || countyRegionCache.states !== usaRegionGeoJson) {
+        const states = new Map((usaRegionGeoJson || []).map(state =>
+          [String(state.id).padStart(2, '0'), state.properties.name]));
+        const regions = {};
+        countyGeoJson?.forEach(feature => {
+          const id = String(feature.id).padStart(5, '0');
+          const state = states.get(id.slice(0, 2));
+          regions[id] = { countries: ['United States of America'], states: state ? [state] : [], counties: [] };
+        });
+        countyRegionCache = { counties: countyGeoJson, states: usaRegionGeoJson, regions };
+      }
       return TravelLedger.syncDerivedState(AppState, {
-        parks: PARKS, countyRegions,
-        politicalAt: (lat, lng) => coordinateIndexes
-          ? CoordinateLookups.politicalRegion(lat, lng, coordinateIndexes, d3.geoContains) : null
+        parks: PARKS, countyRegions: countyRegionCache.regions,
+        politicalAt: cachedPoliticalAt
       });
     }
+    let countyRegionCache = null;
 
     function commitLedger(change) {
       const previous = JSON.stringify(passportPayload());
@@ -1166,15 +1181,32 @@
 
   <script>
     function calculateStats() {
+      const key = travelStateKey();
+      const datasets = [PARKS, BIOMES, coordinateIndexes, worldGeoJson, countyGeoJson];
+      if (statsCache && statsCache.key === key &&
+          datasets.every((dataset, index) => dataset === statsCache.datasets[index])) return statsCache.value;
+      const value = computeStats();
+      statsCache = { key, datasets, value };
+      return value;
+    }
+
+    let statsCache = null;
+
+    function travelStateKey() {
+      return JSON.stringify([
+        AppState.homeBase, AppState.pins, AppState.regions, AppState.counties,
+        AppState.customPois, AppState.expeditions
+      ]);
+    }
+
+    function computeStats() {
       const visitedParks = PARKS.filter(p => TravelLedger.isVisited(AppState.pins[p.id]));
       const wishlistParks = PARKS.filter(p => AppState.pins[p.id] === 'w');
       const visitedCustomLocations = AppState.customLocations.filter(p => TravelLedger.isVisited(p.status));
       const metadataProgress = TravelLedger.metadataProgress(AppState, {
         parks: PARKS,
-        politicalAt: (lat, lng) => coordinateIndexes
-          ? CoordinateLookups.politicalRegion(lat, lng, coordinateIndexes, d3.geoContains) : null,
-        biomeAt: (lat, lng) => coordinateIndexes
-          ? CoordinateLookups.biomeRegion(lat, lng, coordinateIndexes.ecoregions, d3.geoContains).biomes : []
+        politicalAt: cachedPoliticalAt,
+        biomeAt: cachedBiomeAt
       });
       
       const biomesSet = metadataProgress.collectedBiomes;
@@ -1351,6 +1383,7 @@
     let countyLayer = null;
     let countyRenderer = null;
     let countyHitboxKey = null;
+    let countyHitboxDataset = null;
 
     function initMap() {
       if (map) return;
@@ -1392,7 +1425,7 @@
       renderCountyHitboxes();
 
       // Setup map event listeners to re-render the fog canvas on pan/zoom
-      map.on('move', drawFogOfWar);
+      map.on('move', scheduleFogDraw);
       map.on('contextmenu', event => openCustomLocation(event.latlng.lat, event.latlng.lng));
       map.on('zoomanim', animateFogZoom);
       map.on('zoomend', () => {
@@ -1418,7 +1451,7 @@
     }
 
     function resizeFogCanvas() {
-      if (!fogCanvas || !map) return;
+      if (!fogCanvas || !map || AppState.currentTab !== 'map') return;
       const size = map.getSize();
       // Overscan keeps the viewport covered while the bitmap scales down during zoom-out.
       fogPadding = { x: size.x, y: size.y };
@@ -1432,6 +1465,7 @@
     }
 
     function animateFogZoom(event) {
+      if (AppState.currentTab !== 'map') return;
       const scale = map.getZoomScale(event.zoom);
       const offset = map.project(map.getCenter(), event.zoom).subtract(map.project(event.center, event.zoom));
       fogZoomAnimating = true;
@@ -1440,8 +1474,17 @@
     }
 
     /* Fog of War Rendering Routine */
+    let fogDrawFrame = null;
+    function scheduleFogDraw() {
+      if (AppState.currentTab !== 'map' || AppState.mode === 'classic' || fogDrawFrame !== null) return;
+      fogDrawFrame = requestAnimationFrame(() => {
+        fogDrawFrame = null;
+        drawFogOfWar();
+      });
+    }
+
     function drawFogOfWar() {
-      if (!fogCtx || !map || fogZoomAnimating) return;
+      if (!fogCtx || !map || fogZoomAnimating || AppState.currentTab !== 'map') return;
 
       const width = fogCanvas.width;
       const height = fogCanvas.height;
@@ -1526,8 +1569,57 @@
       fogCtx.shadowColor = 'transparent';
     }
 
+    const fogPolygonCache = new WeakMap();
     function punchFogPolygon(geometry, featherPixels = 25) {
       if (!geometry || !map || !Array.isArray(geometry.coordinates)) return;
+      if (typeof Path2D !== 'undefined' && map.project) {
+        const zoom = map.getZoom();
+        let cached = fogPolygonCache.get(geometry);
+        if (!cached || cached.zoom !== zoom) {
+          const polygons = geometry.type === 'Polygon' ? [geometry.coordinates] :
+            geometry.type === 'MultiPolygon' ? geometry.coordinates : [];
+          const paths = polygons.filter(Array.isArray).map(rings => {
+            const path = new Path2D();
+            const bounds = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+            rings.forEach(ring => {
+              if (!Array.isArray(ring) || ring.length < 3) return;
+              let hasPoint = false;
+              ring.forEach(coordinate => {
+                if (!Array.isArray(coordinate) || !Number.isFinite(coordinate[0]) || !Number.isFinite(coordinate[1])) return;
+                const point = map.project([coordinate[1], coordinate[0]], zoom).round();
+                bounds.minX = Math.min(bounds.minX, point.x);
+                bounds.maxX = Math.max(bounds.maxX, point.x);
+                bounds.minY = Math.min(bounds.minY, point.y);
+                bounds.maxY = Math.max(bounds.maxY, point.y);
+                if (!hasPoint) path.moveTo(point.x, point.y);
+                else path.lineTo(point.x, point.y);
+                hasPoint = true;
+              });
+              if (hasPoint) path.closePath();
+            });
+            return { path, bounds };
+          });
+          cached = { zoom, paths };
+          fogPolygonCache.set(geometry, cached);
+        }
+        // World-pixel paths stay fixed during a pan; only their canvas translation changes.
+        const origin = map.latLngToContainerPoint([0, 0]).subtract(map.project([0, 0], zoom).round());
+        const margin = Math.max(0, featherPixels) * 2;
+        fogCtx.save();
+        fogCtx.translate(origin.x, origin.y);
+        cached.paths.forEach(({ path, bounds }) => {
+          if (bounds.maxX + origin.x + margin < -fogPadding.x ||
+              bounds.minX + origin.x - margin > fogCanvas.width - fogPadding.x ||
+              bounds.maxY + origin.y + margin < -fogPadding.y ||
+              bounds.minY + origin.y - margin > fogCanvas.height - fogPadding.y) return;
+          fogCtx.fillStyle = 'rgba(0, 0, 0, 1)';
+          fogCtx.shadowColor = 'rgba(0, 0, 0, 0.95)';
+          fogCtx.shadowBlur = featherPixels;
+          fogCtx.fill(path, 'evenodd');
+        });
+        fogCtx.restore();
+        return;
+      }
       const polygons = geometry.type === 'Polygon'
         ? [geometry.coordinates]
         : geometry.type === 'MultiPolygon'
@@ -1569,11 +1661,17 @@
       if (points.length < 2) return;
 
       const averageLat = validRoute.reduce((sum, point) => sum + point[0], 0) / validRoute.length;
+      const lineWidth = calculatePixelRadius(averageLat, 40);
+      const margin = lineWidth / 2 + 50;
+      if (points.every(point => point.x + margin < -fogPadding.x) ||
+          points.every(point => point.x - margin > fogCanvas.width - fogPadding.x) ||
+          points.every(point => point.y + margin < -fogPadding.y) ||
+          points.every(point => point.y - margin > fogCanvas.height - fogPadding.y)) return;
       fogCtx.beginPath();
       fogCtx.moveTo(points[0].x, points[0].y);
       points.slice(1).forEach(point => fogCtx.lineTo(point.x, point.y));
       fogCtx.strokeStyle = 'rgba(0, 0, 0, 0.95)';
-      fogCtx.lineWidth = calculatePixelRadius(averageLat, 40);
+      fogCtx.lineWidth = lineWidth;
       fogCtx.lineCap = 'round';
       fogCtx.lineJoin = 'round';
       fogCtx.shadowColor = 'rgba(0, 0, 0, 0.95)';
@@ -1586,6 +1684,8 @@
     // Punch a radial gradient with soft glowing feather edges
     function punchFogAura(x, y, radius, opacityMultiplier = 1.0) {
       if (radius <= 0) return;
+      if (x + radius < -fogPadding.x || x - radius > fogCanvas.width - fogPadding.x ||
+          y + radius < -fogPadding.y || y - radius > fogCanvas.height - fogPadding.y) return;
       const grad = fogCtx.createRadialGradient(x, y, radius * 0.25, x, y, radius);
       grad.addColorStop(0, `rgba(0, 0, 0, ${1.0 * opacityMultiplier})`);
       grad.addColorStop(0.7, `rgba(0, 0, 0, ${0.85 * opacityMultiplier})`);
@@ -1653,6 +1753,7 @@
     }
 
     function renderParkMarkers() {
+      if (!map || AppState.currentTab !== 'map') return;
       // Clear existing
       Object.values(leafletMarkers).forEach(m => map.removeLayer(m));
       leafletMarkers = {};
@@ -1833,6 +1934,32 @@
     let scratchStateMesh = null;
     let npsBoundariesByCode = {};
     let coordinateIndexes = null;
+    let coordinateCacheIndexes = null;
+    const politicalCache = new Map();
+    const biomeCache = new Map();
+
+    function cachedCoordinate(cache, lat, lng, lookup) {
+      if (coordinateCacheIndexes !== coordinateIndexes) {
+        politicalCache.clear();
+        biomeCache.clear();
+        coordinateCacheIndexes = coordinateIndexes;
+      }
+      const key = `${lat},${lng}`;
+      if (!cache.has(key)) cache.set(key, lookup());
+      return cache.get(key);
+    }
+
+    function cachedPoliticalAt(lat, lng) {
+      if (!coordinateIndexes) return null;
+      return cachedCoordinate(politicalCache, lat, lng, () =>
+        CoordinateLookups.politicalRegion(lat, lng, coordinateIndexes, d3.geoContains));
+    }
+
+    function cachedBiomeAt(lat, lng) {
+      if (!coordinateIndexes) return [];
+      return cachedCoordinate(biomeCache, lat, lng, () =>
+        CoordinateLookups.biomeRegion(lat, lng, coordinateIndexes.ecoregions, d3.geoContains).biomes);
+    }
 
     async function loadCoordinateGeography() {
       coordinateIndexes = null;
@@ -1903,22 +2030,33 @@
       }
     }
 
+    const loggedCountyCache = new Map();
     function loggedCountyStatuses(includeHome = true) {
-      return TravelLedger.loggedCountyStatuses(AppState, {
-        includeHome: includeHome || TravelLedger.hasLoggedTravel(AppState),
+      const revealHome = includeHome || TravelLedger.hasLoggedTravel(AppState);
+      const key = JSON.stringify([
+        revealHome ? AppState.homeBase : null, AppState.pins,
+        AppState.customPois.map(poi => [poi.id, poi.status, poi.political]),
+        AppState.expeditions.map(exp => [exp.parkIds, exp.customPoiIds, exp.countyIds])
+      ]);
+      const cached = loggedCountyCache.get(includeHome);
+      if (cached && cached.key === key && cached.parks === PARKS && cached.indexes === coordinateIndexes) return cached.value;
+      const value = TravelLedger.loggedCountyStatuses(AppState, {
+        includeHome: revealHome,
         parks: PARKS,
-        politicalAt: (lat, lng) => coordinateIndexes
-          ? CoordinateLookups.politicalRegion(lat, lng, coordinateIndexes, d3.geoContains) : null
+        politicalAt: cachedPoliticalAt
       });
+      loggedCountyCache.set(includeHome, { key, parks: PARKS, indexes: coordinateIndexes, value });
+      return value;
     }
 
     function renderCountyHitboxes() {
-      if (!map || !countyGeoJson) return;
+      if (!map || !countyGeoJson || AppState.currentTab !== 'map') return;
       const logged = loggedCountyStatuses();
       const key = JSON.stringify([AppState.mode, expeditionPicking, logged]);
-      if (countyLayer && countyHitboxKey === key) return;
+      if (countyLayer && countyHitboxKey === key && countyHitboxDataset === countyGeoJson) return;
       if (countyLayer) map.removeLayer(countyLayer);
       countyHitboxKey = key;
+      countyHitboxDataset = countyGeoJson;
       if (!map.getPane('countyHitboxPane')) map.createPane('countyHitboxPane');
       map.getPane('countyHitboxPane').style.zIndex = '440';
       if (!countyRenderer) countyRenderer = L.svg({ pane: 'countyHitboxPane' });
@@ -2413,10 +2551,18 @@
       return bucketDestinationTypes(p).includes(type);
     }
 
+    const BUCKET_PAGE_SIZE = 50;
+    let bucketPage = 0;
+    let bucketFilterKey = null;
+    let bucketSearchTimer = null;
+
     function renderBucketListView() {
       const search = (document.getElementById('bucketSearch').value || '').toLowerCase();
       const filter = document.getElementById('bucketFilterStatus').value;
       const type = document.getElementById('bucketFilterType').value;
+      const filterKey = JSON.stringify([search, filter, type]);
+      if (bucketFilterKey !== filterKey) bucketPage = 0;
+      bucketFilterKey = filterKey;
       const grid = document.getElementById('bucketListGrid');
       grid.innerHTML = '';
 
@@ -2435,25 +2581,32 @@
                (p.ecoregions && p.ecoregions.some(region => region.name.toLowerCase().includes(search) || region.realm.toLowerCase().includes(search))) ||
                p.biomes.some(b => (BIOMES[b] && BIOMES[b].name.toLowerCase().includes(search)));
       });
+      const pageCount = Math.max(1, Math.ceil(filtered.length / BUCKET_PAGE_SIZE));
+      bucketPage = Math.max(0, Math.min(bucketPage, pageCount - 1));
+      const start = bucketPage * BUCKET_PAGE_SIZE;
+      const end = Math.min(start + BUCKET_PAGE_SIZE, filtered.length);
       document.getElementById('bucketResultsCount').textContent =
-        `${filtered.length} / ${PARKS.length + AppState.customPois.length} destinations shown`;
+        `${filtered.length} / ${PARKS.length + AppState.customPois.length} destinations match · Showing ${filtered.length ? start + 1 : 0}–${end}`;
+      document.getElementById('bucketPageLabel').textContent = `Page ${bucketPage + 1} of ${pageCount}`;
+      document.getElementById('bucketPrevPage').disabled = bucketPage === 0;
+      document.getElementById('bucketNextPage').disabled = bucketPage >= pageCount - 1;
 
       if (!filtered.length) {
         grid.innerHTML = '<div class="col-span-2 text-center text-slate-500 py-12 text-sm">No destination matches your filter criteria.</div>';
         return;
       }
 
-      filtered.forEach(p => {
+      filtered.slice(start, end).forEach(p => {
         const cur = destinationStatus(p);
         const card = document.createElement('div');
-        card.className = `p-3.5 rounded-2xl border rpg-panel flex items-center justify-between gap-3 ${
+        card.className = `p-3.5 rounded-2xl border ledger-card flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
           cur === 'l' ? 'border-yellow-500/40 bg-yellow-950/10' :
           cur === 'v' ? 'border-emerald-500/40 bg-emerald-950/10' :
           cur === 'w' ? 'border-amber-500/40 bg-amber-950/10' : 'border-slate-800'
         }`;
 
         card.innerHTML = `
-          <div class="min-w-0">
+          <div class="min-w-0 w-full sm:w-auto">
             <h4 class="font-bold text-sm text-slate-200">${escapeHtml(p.name)}</h4>
             <p class="text-xs" style="color:${TravelLedger.colors[cur] || '#94a3b8'}">${TravelLedger.labels[cur] || 'Unexplored'}${cur === 'l' ? ' 🏰' : ''}</p>
             ${p.designation ? `<p class="text-[11px] text-amber-300">${escapeHtml(p.designation)}</p>` : ''}
@@ -2469,7 +2622,7 @@
               <span class="text-[11px] text-amber-300">${p.biomes.map(b => BIOMES[b] ? BIOMES[b].icon : '').join('')}</span>
             </div>
           </div>
-          <div class="flex flex-wrap max-w-44 gap-1 shrink-0">
+          <div class="flex flex-wrap max-w-full sm:max-w-44 gap-1 shrink-0">
             <button onclick="setPinStatus('${p.id}', 'v')" class="px-2.5 py-1 rounded-lg text-xs font-semibold ${cur==='v'?'bg-emerald-500 text-slate-950':'bg-slate-800 text-slate-400 hover:text-white'}">Visited</button>
             <button onclick="setPinStatus('${p.id}', 'w')" class="px-2.5 py-1 rounded-lg text-xs font-semibold ${cur==='w'?'bg-amber-500 text-slate-950':'bg-slate-800 text-slate-400 hover:text-white'}">Wishlist</button>
             <button onclick="setPinStatus('${p.id}', 't')" class="px-2 py-1 rounded-lg text-xs bg-slate-700">Transited</button>
@@ -2552,7 +2705,9 @@
       if (tabId === 'map') {
         document.getElementById('tabContent-map').classList.remove('hidden');
         if (map) {
+          renderParkMarkers();
           setTimeout(() => {
+            if (AppState.currentTab !== 'map') return;
             map.invalidateSize();
             resizeFogCanvas();
             drawFogOfWar();
@@ -2640,9 +2795,21 @@
     });
 
     // Bucket List Search & Filter listeners
-    document.getElementById('bucketSearch').addEventListener('input', renderBucketListView);
+    document.getElementById('bucketSearch').addEventListener('input', () => {
+      clearTimeout(bucketSearchTimer);
+      bucketSearchTimer = setTimeout(() => {
+        if (AppState.currentTab === 'bucketlist') renderBucketListView();
+      }, 150);
+    });
     document.getElementById('bucketFilterStatus').addEventListener('change', renderBucketListView);
     document.getElementById('bucketFilterType').addEventListener('change', renderBucketListView);
+    for (const [id, direction] of [['bucketPrevPage', -1], ['bucketNextPage', 1]]) {
+      document.getElementById(id).addEventListener('click', () => {
+        bucketPage += direction;
+        renderBucketListView();
+        document.getElementById('tabContent-bucketlist').scrollTo({ top: 0, behavior: 'auto' });
+      });
+    }
 
     // Share link generator (base64 URL param)
     document.getElementById('btnShare').addEventListener('click', () => {

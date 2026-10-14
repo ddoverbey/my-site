@@ -110,7 +110,7 @@ function element(id) {
       textContent: '', innerHTML: '', style: {}, dataset: {},
       classList: { add() {}, remove() {}, toggle() {} },
       handlers: {}, addEventListener(name, handler) { this.handlers[name] = handler; },
-      querySelectorAll: () => [], focus() {},
+      querySelectorAll: () => [], focus() {}, scrollTo() {},
       replaceChildren() { this.innerHTML = ''; }, reset() {}, setAttribute() {},
       appendChild(child) { this.innerHTML += child.innerHTML; }
     });
@@ -120,7 +120,7 @@ function element(id) {
 const context = vm.createContext({
   NpsCatalog: catalog, Ecoregions: ecoregions, InternationalParks: internationalCatalog, CoordinateLookups: coordinateLookups, TravelLedger: travelLedger,
   WanderlogConfig: { rarityEndpoint: 'https://api.devonoverbey.com/rarity' },
-  tailwind: {}, console, Intl, URL, URLSearchParams, setTimeout() {},
+  tailwind: {}, console, Intl, URL, URLSearchParams, setTimeout() {}, clearTimeout() {},
   document: { body: { classList: { toggle() {}, add() {}, remove() {} } }, getElementById: element, querySelectorAll: () => [], createElement: () => element(`created-${elements.size}`) },
   window: { addEventListener() {}, matchMedia: () => ({ matches: true }) },
   fetch: async url => ({ ok: true, json: async () => url.includes('wikidata') ? wikidata : url.includes('worldwide') ? worldwide : snapshot })
@@ -1106,7 +1106,7 @@ check('type filter change renders only matching destinations and updates result 
   assert.ok(!cards.includes('Test Monument'));
   assert.ok(!cards.includes('Test Historical Park'));
   assert.ok(!cards.includes('Colosseum'));
-  assert.equal(element('bucketResultsCount').textContent, '2 / 5 destinations shown');
+  assert.equal(element('bucketResultsCount').textContent, '2 / 5 destinations match · Showing 1–2');
 });
 check('type, search and status filters combine and remain selected after marking a destination', () => {
   element('bucketFilterType').value = 'monuments';
@@ -1114,13 +1114,13 @@ check('type, search and status filters combine and remain selected after marking
   element('bucketSearch').value = 'test';
   vm.runInContext('renderBucketListView()', context);
   assert.ok(element('bucketListGrid').innerHTML.includes('Test Monument'));
-  assert.equal(element('bucketResultsCount').textContent, '1 / 5 destinations shown');
+  assert.equal(element('bucketResultsCount').textContent, '1 / 5 destinations match · Showing 1–1');
   context.window.matchMedia = () => ({ matches: true });
   vm.runInContext("AppState.currentTab='bucketlist';setPinStatus('filter_monument','v')", context);
   assert.ok(element('bucketListGrid').innerHTML.includes('No destination matches'));
   assert.equal(element('bucketFilterType').value, 'monuments');
   assert.equal(element('bucketFilterStatus').value, 'w');
-  assert.equal(element('bucketResultsCount').textContent, '0 / 5 destinations shown');
+  assert.equal(element('bucketResultsCount').textContent, '0 / 5 destinations match · Showing 0–0');
 });
 check('international, custom and all type options keep separate destinations discoverable', () => {
   element('bucketFilterStatus').value = 'all';
@@ -1131,7 +1131,7 @@ check('international, custom and all type options keep separate destinations dis
     element('bucketFilterType').value = type;
     element('bucketFilterType').handlers.change();
     assert.ok(element('bucketListGrid').innerHTML.includes(name));
-    assert.equal(element('bucketResultsCount').textContent, `${count} / 5 destinations shown`);
+    assert.equal(element('bucketResultsCount').textContent, `${count} / 5 destinations match · Showing 1–${count}`);
   }
 });
 check('US national parks and all NPS filters explicitly exclude international and custom entries', () => {
@@ -1146,7 +1146,7 @@ check('US national parks and all NPS filters explicitly exclude international an
     element('bucketFilterType').handlers.change();
     assert.ok(element('bucketListGrid').innerHTML.includes(shown));
     for (const name of hidden) assert.ok(!element('bucketListGrid').innerHTML.includes(name));
-    assert.equal(element('bucketResultsCount').textContent, `${count} / 5 destinations shown`);
+    assert.equal(element('bucketResultsCount').textContent, `${count} / 5 destinations match · Showing 1–${count}`);
   }
   assert.equal(vm.runInContext('matchesBucketType({intl:true,designation:"National Park"},"nps-parks")', context), false);
   assert.equal(vm.runInContext('matchesBucketType({custom:true,designation:"National Park"},"nps")', context), false);
@@ -1159,7 +1159,7 @@ check('real NPS filters return the official catalog exclusively and preserve com
   vm.runInContext('PARKS=[...realUnits,...realInternational];AppState.customPois=[]', context);
   element('bucketFilterType').value = 'nps';
   vm.runInContext('renderBucketListView()', context);
-  assert.equal(element('bucketResultsCount').textContent, `${actualSnapshot.total} / ${actualSnapshot.total + internationalParks.length} destinations shown`);
+  assert.equal(element('bucketResultsCount').textContent, `${actualSnapshot.total} / ${actualSnapshot.total + internationalParks.length} destinations match · Showing 1–50`);
   element('bucketFilterType').value = 'nps-parks';
   vm.runInContext('renderBucketListView()', context);
   const filtered = vm.runInContext('PARKS.filter(p=>matchesBucketType(p,"nps-parks"))', context);
@@ -1196,7 +1196,7 @@ check('RPG county hitboxes exclude unexplored and manually marked counties; norm
     removeLayer() { removed++; }
   };
   vm.runInContext(`
-    applyPassport(migratePassport({}));AppState.mode='rpg';AppState.viewOnly=false;
+    applyPassport(migratePassport({}));AppState.mode='rpg';AppState.currentTab='map';AppState.viewOnly=false;
     coordinateIndexes=null;PARKS=[];countyLayer=null;countyRenderer=null;countyHitboxKey=null;expeditionPicking=false;
     countyGeoJson=[
       {id:'06001',properties:{name:'Alameda'}},
@@ -1466,5 +1466,229 @@ check('regional music achievements disclose partial prerequisites and award colo
   vm.runInContext('saveState();applyPassport(migratePassport(JSON.parse(localStorage.getItem("terra_incognita_state"))));renderPassportView()', context);
   assert.equal(vm.runInContext('calculateStats().metadataProgress.countryRoads', context), 2);
   assert.equal(vm.runInContext('calculateStats().metadataProgress.rockyMountainHigh', context), 1);
+});
+check('ledger renders at most 50 cards and every real destination is reachable exactly once', () => {
+  vm.runInContext('PARKS=[...realUnits,...realInternational];applyPassport(migratePassport({}));AppState.currentTab="bucketlist"', context);
+  element('bucketSearch').value = '';
+  element('bucketFilterType').value = 'all';
+  element('bucketFilterStatus').value = 'all';
+  vm.runInContext('renderBucketListView()', context);
+  const found = new Set();
+  const pageCount = Math.ceil((actualSnapshot.total + internationalParks.length) / 50);
+  for (let page = 0; page < pageCount; page++) {
+    assert.equal(element('bucketPageLabel').textContent, `Page ${page + 1} of ${pageCount}`);
+    assert.equal(element('bucketPrevPage').disabled, page === 0);
+    assert.equal(element('bucketNextPage').disabled, page === pageCount - 1);
+    const ids = [...element('bucketListGrid').innerHTML.matchAll(/onclick="setPinStatus\('([^']+)', 'v'\)/g)].map(match => match[1]);
+    assert.ok(ids.length > 0 && ids.length <= 50);
+    for (const id of ids) {
+      assert.ok(!found.has(id), `duplicate ${id}`);
+      found.add(id);
+    }
+    if (page < pageCount - 1) element('bucketNextPage').handlers.click();
+  }
+  assert.equal(found.size, actualSnapshot.total + internationalParks.length);
+  assert.equal(vm.runInContext('bucketPage', context), pageCount - 1);
+  element('bucketPrevPage').handlers.click();
+  assert.equal(vm.runInContext('bucketPage', context), pageCount - 2);
+  assert.ok(html.includes('aria-label="Travel Ledger pages"'));
+  assert.ok(!element('bucketListGrid').innerHTML.includes('rpg-panel'));
+});
+check('ledger filters reset the page, edits preserve it and shrinking results clamp it', () => {
+  vm.runInContext('bucketPage=7;renderBucketListView()', context);
+  element('bucketFilterType').value = 'nps-parks';
+  element('bucketFilterType').handlers.change();
+  assert.equal(vm.runInContext('bucketPage', context), 0);
+  element('bucketNextPage').handlers.click();
+  assert.equal(vm.runInContext('bucketPage', context), 1);
+  vm.runInContext("AppState.pins.yell='v';renderBucketListView()", context);
+  assert.equal(vm.runInContext('bucketPage', context), 1);
+  element('bucketSearch').value = 'American Samoa';
+  vm.runInContext('renderBucketListView()', context);
+  assert.equal(vm.runInContext('bucketPage', context), 0);
+  assert.ok(element('bucketListGrid').innerHTML.includes('National Park of American Samoa'));
+  element('bucketSearch').value = '';
+  element('bucketFilterType').value = 'all';
+  element('bucketFilterStatus').value = 'w';
+  vm.runInContext("AppState.pins=Object.fromEntries(PARKS.slice(0,51).map(p=>[p.id,'w']));renderBucketListView();bucketPage=1;renderBucketListView()", context);
+  assert.equal(element('bucketPageLabel').textContent, 'Page 2 of 2');
+  vm.runInContext("delete AppState.pins[PARKS[50].id];renderBucketListView()", context);
+  assert.equal(element('bucketPageLabel').textContent, 'Page 1 of 1');
+  vm.runInContext('AppState.pins={};renderBucketListView()', context);
+  assert.ok(element('bucketListGrid').innerHTML.includes('No destination matches'));
+  assert.equal(element('bucketPrevPage').disabled, true);
+  assert.equal(element('bucketNextPage').disabled, true);
+});
+check('search debounces rapid input and does not rebuild a hidden ledger', () => {
+  const originalSet = context.setTimeout;
+  const originalClear = context.clearTimeout;
+  const timers = new Map();
+  let id = 0;
+  context.setTimeout = (callback, delay) => { assert.equal(delay, 150); timers.set(++id, callback); return id; };
+  context.clearTimeout = timer => timers.delete(timer);
+  try {
+    element('bucketFilterStatus').value = 'all';
+    element('bucketSearch').value = '';
+    vm.runInContext('renderBucketListView()', context);
+    const before = element('bucketListGrid').innerHTML;
+    element('bucketSearch').value = 'American';
+    element('bucketSearch').handlers.input();
+    element('bucketSearch').value = 'American Samoa';
+    element('bucketSearch').handlers.input();
+    assert.equal(timers.size, 1);
+    assert.equal(element('bucketListGrid').innerHTML, before);
+    [...timers.values()][0]();
+    assert.ok(element('bucketListGrid').innerHTML.includes('National Park of American Samoa'));
+    assert.ok(!element('bucketListGrid').innerHTML.includes('Yellowstone'));
+    vm.runInContext('AppState.currentTab="map"', context);
+    const filtered = element('bucketListGrid').innerHTML;
+    element('bucketSearch').value = 'Yellowstone';
+    element('bucketSearch').handlers.input();
+    [...timers.values()][0]();
+    assert.equal(element('bucketListGrid').innerHTML, filtered);
+  } finally {
+    context.setTimeout = originalSet;
+    context.clearTimeout = originalClear;
+    element('bucketSearch').value = '';
+  }
+});
+check('statistics cache survives navigation but not travel edits, dataset reloads, imports or rollback', () => {
+  vm.runInContext(`
+    applyPassport(migratePassport({}));coordinateIndexes=null;
+    PARKS=[{id:'cache',name:'Cache Park',lat:37,lng:-120,states:[],biomes:[]}];
+    countyGeoJson=[];worldGeoJson=[];
+    const cachedStats=calculateStats();
+    AppState.currentTab='passport';AppState.mode='classic';
+  `, context);
+  assert.equal(vm.runInContext('calculateStats()===cachedStats', context), true);
+  vm.runInContext("AppState.pins.cache='v'", context);
+  assert.equal(vm.runInContext('calculateStats()===cachedStats', context), false);
+  assert.equal(vm.runInContext('calculateStats().visitedParks.length', context), 1);
+  vm.runInContext('const visitedStats=calculateStats();PARKS=[...PARKS]', context);
+  assert.equal(vm.runInContext('calculateStats()===visitedStats', context), false);
+  vm.runInContext('applyPassport(migratePassport({}))', context);
+  assert.equal(vm.runInContext('calculateStats().visitedParks.length', context), 0);
+  assert.throws(() => vm.runInContext(`
+    commitLedger(()=>{AppState.pins.cache='v';calculateStats();throw new Error('Cache rollback');})
+  `, context), /Cache rollback/);
+  assert.equal(vm.runInContext('calculateStats().visitedParks.length', context), 0);
+});
+check('coordinate lookups and derived fog counties reuse geography until its dataset changes', () => {
+  const original = context.CoordinateLookups;
+  let politicalCalls = 0;
+  let biomeCalls = 0;
+  context.CoordinateLookups = {
+    ...original,
+    politicalRegion() { politicalCalls++; return { countries: ['United States of America'], states: ['Colorado'], counties: [{ id: '08031' }] }; },
+    biomeRegion() { biomeCalls++; return { biomes: ['5'] }; }
+  };
+  try {
+    vm.runInContext(`
+      applyPassport(migratePassport({}));PARKS=[];
+      coordinateIndexes={ecoregions:[]};
+      AppState.homeBase={lat:39.7,lng:-105,radiusKm:TravelLedger.homeRadiusKm,countyId:'08031'};
+      cachedPoliticalAt(39.7,-105);cachedPoliticalAt(39.7,-105);
+      cachedBiomeAt(39.7,-105);cachedBiomeAt(39.7,-105);
+      const initialCounties=loggedCountyStatuses(false);
+    `, context);
+    assert.equal(politicalCalls, 1);
+    assert.equal(biomeCalls, 1);
+    assert.equal(vm.runInContext('loggedCountyStatuses(false)===initialCounties', context), true);
+    vm.runInContext("AppState.counties['08031']='v'", context);
+    assert.equal(vm.runInContext('loggedCountyStatuses(false)===initialCounties', context), true);
+    vm.runInContext("AppState.routes=[[[39,-105],[40,-105]]]", context);
+    assert.equal(vm.runInContext('loggedCountyStatuses(false)["08031"]', context), 'l');
+    vm.runInContext(`
+      coordinateIndexes={ecoregions:[]};
+      cachedPoliticalAt(39.7,-105);cachedBiomeAt(39.7,-105);
+      loggedCountyStatuses(false);
+    `, context);
+    assert.equal(politicalCalls, 2);
+    assert.equal(biomeCalls, 2);
+    vm.runInContext('coordinateIndexes=null;AppState.routes=[]', context);
+    assert.equal(vm.runInContext('loggedCountyStatuses(false)["08031"]', context), undefined);
+  } finally {
+    context.CoordinateLookups = original;
+    vm.runInContext('coordinateIndexes=null', context);
+  }
+});
+check('hidden map work is deferred and move events coalesce to one fog redraw per frame', () => {
+  const originalRaf = context.requestAnimationFrame;
+  let frames = 0;
+  let callback;
+  context.requestAnimationFrame = frame => { frames++; callback = frame; return frames; };
+  try {
+    vm.runInContext(`
+      AppState.currentTab='bucketlist';AppState.mode='classic';fogDrawFrame=null;
+      map={getSize(){throw new Error('Hidden resize');},removeLayer(){throw new Error('Hidden markers');}};
+      countyGeoJson=[{id:'08031'}];leafletMarkers={old:{}};
+    `, context);
+    context.fogOperations.length = 0;
+    vm.runInContext('renderParkMarkers();renderCountyHitboxes();resizeFogCanvas();drawFogOfWar();scheduleFogDraw()', context);
+    assert.equal(context.fogOperations.length, 0);
+    assert.equal(frames, 0);
+    vm.runInContext("AppState.currentTab='map';AppState.mode='rpg';fogZoomAnimating=false;map=null;scheduleFogDraw();scheduleFogDraw();scheduleFogDraw()", context);
+    assert.equal(frames, 1);
+    callback();
+    assert.equal(vm.runInContext('fogDrawFrame', context), null);
+    vm.runInContext('scheduleFogDraw()', context);
+    assert.equal(frames, 2);
+    vm.runInContext("AppState.currentTab='bucketlist'", context);
+    callback();
+    assert.equal(context.fogOperations.length, 0);
+  } finally {
+    context.requestAnimationFrame = originalRaf;
+    vm.runInContext('fogDrawFrame=null;map=null;leafletMarkers={};', context);
+  }
+});
+check('projected polygon paths are reused during pans, culled offscreen and rebuilt at a new zoom', () => {
+  const originalPath = context.Path2D;
+  let paths = 0;
+  let projections = 0;
+  let fills = 0;
+  let zoom = 4;
+  let panX = 0;
+  const point = (x, y) => ({
+    x, y, round() { return this; },
+    subtract(other) { return point(this.x - other.x, this.y - other.y); }
+  });
+  context.Path2D = class {
+    constructor() { paths++; }
+    moveTo() {}
+    lineTo() {}
+    closePath() {}
+  };
+  context.projectedMap = {
+    getZoom: () => zoom,
+    project([lat, lng]) { projections++; return point(lng, lat); },
+    latLngToContainerPoint: () => point(panX, 0)
+  };
+  context.projectedCtx = { save() {}, restore() {}, translate() {}, fill(path, rule) { assert.equal(rule, 'evenodd'); fills++; } };
+  try {
+    vm.runInContext(`
+      map=projectedMap;fogCtx=projectedCtx;fogPadding={x:100,y:100};fogCanvas.width=300;fogCanvas.height=300;
+      const cachedGeometry={type:'Polygon',coordinates:[[[0,0],[10,0],[10,10],[0,0]],[[2,2],[3,2],[3,3],[2,2]]]};
+      punchFogPolygon(cachedGeometry);
+    `, context);
+    assert.equal(paths, 1);
+    assert.equal(fills, 1);
+    const firstProjections = projections;
+    panX = 10;
+    vm.runInContext('punchFogPolygon(cachedGeometry)', context);
+    assert.equal(paths, 1);
+    assert.equal(projections, firstProjections + 1);
+    assert.equal(fills, 2);
+    panX = 10000;
+    vm.runInContext('punchFogPolygon(cachedGeometry)', context);
+    assert.equal(fills, 2);
+    panX = 0;
+    zoom++;
+    vm.runInContext('punchFogPolygon(cachedGeometry)', context);
+    assert.equal(paths, 2);
+    assert.equal(fills, 3);
+  } finally {
+    context.Path2D = originalPath;
+    vm.runInContext('map=null;fogCtx=null', context);
+  }
 });
 console.log(`${checks} checks passed.`);

@@ -118,10 +118,27 @@ entering that map always enables RPG fog. Reloading or importing restores the sa
 page (Explore or Travel Ledger), body styling and HUD together. Each button has a tooltip and accessible
 label, visible keyboard focus, and an active-state indicator. Navigation wraps onto its own row
 on small screens; mode behavior and saved travel records are unchanged.
-**Classic mode shows an unfogged map**: CSS hides the canvas, and the renderer clears it without
-painting the shroud. Returning to RPG mode restores exploration fog. Destination pins default to
+**Classic mode hides the fog**: CSS hides the canvas, and hidden-map rendering is deferred.
+Returning to RPG mode restores exploration fog. Destination pins default to
 **None**, with **All**, **Visited**, **Wishlist**, **Transit**, and **Lived** selectable. Hiding pins does not hide
 the home marker, erase visits, or stop visited destinations from clearing their fog.
+
+### Travel Ledger and rendering performance
+
+The Travel Ledger renders **50 destinations per page**, with Previous/Next controls and matching
+result/range counts. Search and status/type filters still cover the **entire loaded catalog**, not just
+the visible page. Changing a filter returns to page one; status edits retain the page when possible,
+or clamp it when the result set shrinks. Search waits 150 ms after typing stops.
+Repeated destination cards use solid backgrounds without backdrop blur.
+
+Map markers, county hitboxes, canvas resizing and fog painting are skipped while another page is
+open; returning to Explore refreshes deferred layers. Stats and fog-county membership are cached
+against their relevant travel values and dataset identities, so edits, imports, persistence rollbacks
+and dataset reloads cannot reuse stale results. Coordinate containment is reused across calculations
+until the geography index changes. Map move events coalesce to one scheduled redraw per animation
+frame. Fog polygon paths are cached at the current zoom, translated during pans and culled outside
+the overscanned canvas; routes and auras are also culled without changing their reveal extents.
+These optimizations do not change saved records, achievement rules or geography snapshots.
 
 Wanderlog maps NPS and international destination **coordinates**, not park boundaries, to the
 [RESOLVE Ecoregions 2017](https://ecoregions.appspot.com/) polygons, an update of WWF's 2001
