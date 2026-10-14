@@ -181,6 +181,12 @@
       throw new Error('Conflicting custom POI and legacy custom-location ledgers.');
     }
     const pins = catalog.migratePins(validateStatuses(legacy.pins ?? {}));
+    const nationalParkScratch = parsed.nationalParkScratch ?? {};
+    if (!nationalParkScratch || typeof nationalParkScratch !== 'object' || Array.isArray(nationalParkScratch) ||
+        Object.entries(nationalParkScratch).some(([id, status]) =>
+          !['sequ', 'kica'].includes(id) || !['un', 'v', 'w'].includes(status))) {
+      throw new Error('Invalid National Parks scratch records.');
+    }
     const regions = validateStatuses(legacy.regions ?? {});
     const expeditions = validateExpeditions(legacy.expeditions ?? [], lookups).map(exp => ({
       ...exp, parkIds: [...new Set(exp.parkIds.map(id => catalog.aliases[id] || id))],
@@ -199,7 +205,7 @@
           (homeBase.countyId && !/^\d{5}$/.test(homeBase.countyId))) throw new Error('Invalid home base.');
     }
     const migrated = {
-      ...legacy, pins, regions, counties, customPois, expeditions,
+      ...legacy, pins, regions, counties, customPois, expeditions, nationalParkScratch: { ...nationalParkScratch },
       expeditionPromotions: validatePromotions(parsed.expeditionPromotions),
       homeBase: homeBase ? { ...homeBase, radiusKm: homeRadiusKm } : null
     };

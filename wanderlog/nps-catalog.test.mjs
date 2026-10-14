@@ -6,6 +6,7 @@ import ecoregions from './ecoregions.js';
 import internationalCatalog from './international-parks.js';
 import coordinateLookups from './coordinate-lookups.js';
 import travelLedger from './travel-ledger.js';
+import nationalParksScratch from './national-parks-scratch.js';
 import { collectParks } from './import-nps.mjs';
 const worldwide = JSON.parse(await readFile(new URL('./worldwide-national-parks.json', import.meta.url), 'utf8'));
 const wikidata = JSON.parse(await readFile(new URL('./wikidata-national-parks-query.json', import.meta.url), 'utf8'));
@@ -118,7 +119,7 @@ function element(id) {
   return elements.get(id);
 }
 const context = vm.createContext({
-  NpsCatalog: catalog, Ecoregions: ecoregions, InternationalParks: internationalCatalog, CoordinateLookups: coordinateLookups, TravelLedger: travelLedger,
+  NpsCatalog: catalog, NationalParksScratch: nationalParksScratch, Ecoregions: ecoregions, InternationalParks: internationalCatalog, CoordinateLookups: coordinateLookups, TravelLedger: travelLedger,
   WanderlogConfig: { rarityEndpoint: 'https://api.devonoverbey.com/rarity' },
   tailwind: {}, console, Intl, URL, URLSearchParams, setTimeout() {}, clearTimeout() {},
   document: { body: { classList: { toggle() {}, add() {}, remove() {} } }, getElementById: element, querySelectorAll: () => [], createElement: () => element(`created-${elements.size}`) },
@@ -1932,4 +1933,79 @@ context.CoordinateLookups=originalExpeditionLookups;
 context.L=originalPreviewL;
 context.setTimeout=originalPreviewTimeout;
 vm.runInContext('AppState.viewOnly=false;map=null;',context);
+const scratchParks = nationalParksScratch.parks(catalog.normalizeParks(actualSnapshot.data));
+check('dedicated scratch page includes exactly 63 parks, not monuments or other NPS units', () => {
+  assert.equal(scratchParks.length, 63);
+  assert.equal(new Set(scratchParks.map(p => p.id)).size, 63);
+  for (const id of ['npsa', 'redw', 'sequ', 'kica']) assert.ok(scratchParks.some(p => p.id === id));
+  assert.ok(!scratchParks.some(p => p.id === 'seki' || p.designation === 'National Monument'));
+  assert.ok(html.includes('data-tab="nationalparks"'));
+  const page = html.slice(html.indexOf('id="tabContent-nationalparks"'), html.indexOf('<!-- VIEW 3'));
+  assert.ok(!page.includes('Transited'));
+  assert.ok(!page.includes('>Lived<'));
+  assert.ok(page.includes('Wishlist'));
+});
+check('park regions count each park once and master only after every member is visited', () => {
+  const state = { pins: {}, expeditions: [], nationalParkScratch: {} };
+  let progress = nationalParksScratch.progress(scratchParks, state);
+  assert.equal(progress.reduce((sum, r) => sum + r.total, 0), 63);
+  assert.ok(progress.every(r => r.total > 0 && r.tier === 'unstarted'));
+  const northeast = scratchParks.filter(p => p.regionId === 'northeast');
+  state.pins[northeast[0].ledgerId] = 'v';
+  assert.equal(nationalParksScratch.progress(scratchParks, state).find(r => r.id === 'northeast').tier, 'progress');
+  northeast.forEach(p => { state.pins[p.ledgerId] = 'v'; });
+  progress = nationalParksScratch.progress(scratchParks, state);
+  assert.equal(progress.find(r => r.id === 'northeast').tier, 'mastered');
+  assert.equal(scratchParks.find(p => p.id === 'yell').regionId, 'intermountain');
+  assert.equal(scratchParks.find(p => p.id === 'cuva').regionId, 'midwest');
+});
+check('park scratch statuses display lived as visited and transit as unexplored', () => {
+  const park = scratchParks.find(p => p.id === 'yell');
+  for (const [ledger, expected] of [['l', 'v'], ['v', 'v'], ['w', 'w'], ['t', 'un']]) {
+    assert.equal(nationalParksScratch.status(park, { pins: { yell: ledger }, expeditions: [] }), expected);
+  }
+});
+context.scratchRealParks = catalog.normalizeParks(actualSnapshot.data);
+context.scratchParkEntries = scratchParks;
+vm.runInContext(`
+  PARKS=scratchRealParks;coordinateIndexes=null;AppState.currentTab='map';
+  renderNationalParksScratch=()=>{};
+  applyPassport(migratePassport({}));AppState.viewOnly=false;
+`, context);
+check('park clicks cycle only unexplored, visited and wishlist and persist to the main ledger', () => {
+  for (const expected of ['v', 'w', undefined]) {
+    vm.runInContext('cycleNationalPark(scratchParkEntries.find(p=>p.id==="yell"))', context);
+    assert.equal(vm.runInContext('AppState.pins.yell', context), expected);
+    assert.equal(JSON.parse(savedJson).pins.yell, expected);
+  }
+});
+check('Sequoia and Kings Canyon inherit legacy visits but can be tracked independently', () => {
+  vm.runInContext('applyPassport(migratePassport({pins:{seki:"v"}}));cycleNationalPark(scratchParkEntries.find(p=>p.id==="sequ"))', context);
+  assert.equal(vm.runInContext('AppState.nationalParkScratch.sequ', context), 'w');
+  assert.equal(vm.runInContext('AppState.nationalParkScratch.kica', context), 'v');
+  assert.equal(vm.runInContext('AppState.pins.seki', context), 'v');
+  const saved = JSON.parse(savedJson);
+  assert.deepEqual(travelLedger.migrateState(saved, coordinateLookups, catalog).nationalParkScratch, { sequ: 'w', kica: 'v' });
+});
+check('read-only, lived and expedition-backed parks cannot lose earned visits', () => {
+  vm.runInContext('AppState.viewOnly=true;cycleNationalPark(scratchParkEntries.find(p=>p.id==="sequ"))', context);
+  assert.equal(vm.runInContext('AppState.nationalParkScratch.sequ', context), 'w');
+  vm.runInContext('AppState.viewOnly=false;applyPassport(migratePassport({pins:{yell:"l"}}));cycleNationalPark(scratchParkEntries.find(p=>p.id==="yell"))', context);
+  assert.equal(vm.runInContext('AppState.pins.yell', context), 'l');
+  vm.runInContext('applyPassport(migratePassport({}));AppState.expeditions=[{...testExpedition,parkIds:["yell"]}];syncDerivedState();cycleNationalPark(scratchParkEntries.find(p=>p.id==="yell"))', context);
+  assert.equal(vm.runInContext('AppState.pins.yell', context), 'v');
+});
+check('failed park scratch persistence rolls back split records and all promoted statuses', () => {
+  vm.runInContext('applyPassport(migratePassport({pins:{seki:"v"}}))', context);
+  const before = vm.runInContext('JSON.stringify(passportPayload())', context);
+  context.localStorage.setItem = () => { throw new Error('Storage full'); };
+  vm.runInContext('cycleNationalPark(scratchParkEntries.find(p=>p.id==="sequ"))', context);
+  assert.equal(vm.runInContext('JSON.stringify(passportPayload())', context), before);
+  context.localStorage.setItem = (key, value) => { savedJson = value; };
+});
+check('invalid split scratch imports are rejected rather than creating extra parks or tiers', () => {
+  for (const value of [{ yell: 'v' }, { sequ: 'l' }, { kica: 't' }, []]) {
+    assert.throws(() => travelLedger.migrateState({ nationalParkScratch: value }, coordinateLookups, catalog), /scratch records/);
+  }
+});
 console.log(`${checks} checks passed.`);

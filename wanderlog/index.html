@@ -225,6 +225,7 @@
       <!-- Navigation Tabs -->
       <nav id="navTabs" aria-label="Atlas pages" class="flex gap-1 bg-slate-900/60 p-1 rounded-xl border border-slate-800">
         <button data-tab="scratch" type="button" class="header-icon" title="Scratch Map" aria-label="Scratch Map" aria-pressed="false" aria-controls="tabContent-scratch"><span aria-hidden="true">🗺️</span></button>
+        <button data-tab="nationalparks" type="button" class="header-icon" title="63 National Parks — Scratch-Off" aria-label="63 National Parks — Scratch-Off" aria-pressed="false" aria-controls="tabContent-nationalparks"><span aria-hidden="true">🏞️</span></button>
         <button data-tab="passport" type="button" class="header-icon" title="Explorer Profile — Character & Stats" aria-label="Explorer Profile — Character & Stats" aria-pressed="false" aria-controls="tabContent-passport"><span aria-hidden="true">👤</span></button>
         <button data-tab="achievements" type="button" class="header-icon" title="Achievements" aria-label="Achievements" aria-pressed="false" aria-controls="tabContent-achievements"><span aria-hidden="true">🏆</span></button>
       </nav>
@@ -396,6 +397,30 @@
         <div class="rpg-panel p-4 rounded-2xl flex items-center justify-center min-h-[500px]">
           <svg id="svgScratchMap" class="w-full max-h-[640px] drop-shadow-2xl"></svg>
         </div>
+      </div>
+    </div>
+
+    <div id="tabContent-nationalparks" class="w-full h-full p-4 md:p-6 overflow-y-auto hidden">
+      <div class="max-w-6xl mx-auto space-y-4">
+        <div class="rpg-panel p-4 rounded-2xl space-y-3">
+          <h2 class="cinzel text-lg font-bold text-amber-200">63 National Parks</h2>
+          <p class="text-xs text-slate-400">Click a park: Unexplored → Visited → Wishlist → Unexplored. Scroll to zoom; drag to pan. Lived ledger entries count as Visited; transit alone does not count. Home and logged travel retain their earned visits.</p>
+          <div class="flex flex-wrap gap-3 items-center text-xs">
+            <span id="nationalParksStats" role="status" class="text-emerald-300">Loading National Parks…</span>
+            <span class="text-emerald-400">● Visited</span><span class="text-pink-500">● Wishlist</span>
+            <span class="text-slate-400">○ Unexplored</span>
+            <button id="btnResetNationalParksZoom" type="button" class="rounded-lg bg-slate-800 px-3 py-2">Reset zoom</button>
+          </div>
+          <p class="text-[11px] text-slate-400">Regional collection progress lights the backdrop: unstarted, in progress, mastered. Pacific Islands are shown separately from Pacific West; these are geographic collection groups, not current administrative boundaries.</p>
+          <div id="nationalParksRegions" class="flex flex-wrap gap-2"></div>
+        </div>
+        <div class="rpg-panel rounded-2xl overflow-hidden">
+          <svg id="svgNationalParks" class="w-full" viewBox="0 0 960 640" role="group" aria-label="National Parks scratch-off map"></svg>
+        </div>
+        <details class="rpg-panel p-4 rounded-2xl">
+          <summary class="text-sm text-amber-200 cursor-pointer">All 63 parks — accessible checklist</summary>
+          <div id="nationalParksChecklist" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mt-3"></div>
+        </details>
       </div>
     </div>
 
@@ -721,6 +746,7 @@
   </div>
 
   <script src="./nps-catalog.js"></script>
+  <script src="./national-parks-scratch.js"></script>
   <script src="./international-parks.js"></script>
   <script src="./ecoregions.js"></script>
   <script src="./coordinate-lookups.js"></script>
@@ -1037,6 +1063,7 @@
       customPois: [],
       expeditions: [],
       expeditionPromotions: {},
+      nationalParkScratch: {},
       currentTab: 'map',
       mode: 'rpg',    // 'rpg' or 'classic'
       pinFilter: 'none',
@@ -1055,7 +1082,7 @@
     }
 
     function applyPassport(parsed) {
-      for (const field of ['homeBase', 'pins', 'regions', 'counties', 'customPois', 'expeditions', 'expeditionPromotions']) AppState[field] = parsed[field] ?? (field === 'homeBase' ? null : field === 'customPois' || field === 'expeditions' ? [] : {});
+      for (const field of ['homeBase', 'pins', 'regions', 'counties', 'customPois', 'expeditions', 'expeditionPromotions', 'nationalParkScratch']) AppState[field] = parsed[field] ?? (field === 'homeBase' ? null : field === 'customPois' || field === 'expeditions' ? [] : {});
       AppState.clearedPolygons = Array.isArray(parsed.clearedPolygons) ? parsed.clearedPolygons : [];
       AppState.routes = Array.isArray(parsed.routes) ? parsed.routes : [];
       AppState.mode = parsed.mode || 'rpg';
@@ -1066,6 +1093,7 @@
         version: 2, homeBase: AppState.homeBase, pins: AppState.pins, regions: AppState.regions,
         counties: AppState.counties, customPois: AppState.customPois, expeditions: AppState.expeditions,
         expeditionPromotions: AppState.expeditionPromotions,
+        nationalParkScratch: AppState.nationalParkScratch,
         clearedPolygons: AppState.clearedPolygons, routes: AppState.routes, mode: AppState.mode
       };
     }
@@ -1931,6 +1959,7 @@
       }
       const prev = AppState.pins[parkId];
       commitLedger(() => {
+        if (parkId === 'seki') AppState.nationalParkScratch = {};
         if (status === 'un') delete AppState.pins[parkId];
         else AppState.pins[parkId] = status;
       });
@@ -2277,6 +2306,156 @@
         customLookupPending = false;
         controls.forEach(control => { control.disabled = false; });
       }
+    });
+
+    let nationalParksZoom = null;
+    let nationalParksZoomBehavior = null;
+
+    function cycleNationalPark(park) {
+      if (AppState.viewOnly) return;
+      const status = NationalParksScratch.status(park, AppState);
+      if (AppState.pins[park.ledgerId] === 'l' ||
+          AppState.expeditions.some(trip => trip.parkIds.includes(park.ledgerId))) {
+        showNotification('Visit retained', 'Home or logged travel retains this park visit. Edit its travel record instead.', '🏞️');
+        return;
+      }
+      const next = { un: 'v', v: 'w', w: 'un' }[status];
+      const fromChecklist = document.activeElement?.dataset.nationalPark === park.id;
+      const fromMap = document.activeElement?.getAttribute('data-park') === park.id;
+      try {
+        commitLedger(() => {
+          if (park.ledgerId === 'seki') {
+            const siblings = NationalParksScratch.parks(PARKS).filter(p => p.ledgerId === 'seki');
+            const previous = Object.fromEntries(siblings.map(p => [p.id, NationalParksScratch.status(p, AppState)]));
+            AppState.nationalParkScratch = { ...previous, [park.id]: next };
+            const values = Object.values(AppState.nationalParkScratch);
+            if (values.includes('v')) AppState.pins.seki = 'v';
+            else if (values.includes('w')) AppState.pins.seki = 'w';
+            else delete AppState.pins.seki;
+          } else if (next === 'un') delete AppState.pins[park.id];
+          else AppState.pins[park.id] = next;
+        });
+      } catch (error) {
+        console.error('National Park scratch status not saved', error);
+        return;
+      }
+      renderParkMarkers();
+      drawFogOfWar();
+      updateAllUI();
+      if (fromChecklist) document.querySelector(`[data-national-park="${park.id}"]`)?.focus();
+      else if (fromMap) document.querySelector(`[data-park="${park.id}"]`)?.focus();
+    }
+
+    function renderNationalParksScratch() {
+      const svg = d3.select('#svgNationalParks').html('');
+      const stats = document.getElementById('nationalParksStats');
+      const checklist = document.getElementById('nationalParksChecklist');
+      const regionList = document.getElementById('nationalParksRegions');
+      checklist.replaceChildren();
+      regionList.replaceChildren();
+      let parks;
+      try {
+        parks = NationalParksScratch.parks(PARKS);
+        if (!npsCatalogLoaded || parks.length !== 63 || !usaRegionGeoJson?.length) {
+          throw new Error('National Parks catalog or map unavailable. Retry datasets in Settings.');
+        }
+      } catch (error) {
+        console.error('National Parks scratch map unavailable', error);
+        stats.textContent = error.message;
+        return;
+      }
+      const progress = NationalParksScratch.progress(parks, AppState);
+      const visited = progress.reduce((sum, region) => sum + region.visited, 0);
+      stats.textContent = `${visited} / 63 Visited · ${parks.filter(p => NationalParksScratch.status(p, AppState) === 'w').length} Wishlist`;
+      if (!Object.keys(npsBoundariesByCode).length) stats.textContent += ' · Boundaries unavailable; showing location badges. Retry datasets in Settings.';
+      const backdrop = region => region?.tier === 'mastered' ? '#065f46' :
+        region?.tier === 'progress' ? '#102d28' : '#090d1a';
+      progress.forEach(region => {
+        const chip = document.createElement('span');
+        chip.className = 'rounded-lg border px-3 py-2 text-xs';
+        chip.style.backgroundColor = backdrop(region);
+        chip.style.borderColor = region.tier === 'unstarted' ? '#334155' : '#10b981';
+        chip.textContent = `${region.name}: ${region.visited}/${region.total}${region.tier === 'mastered' ? ' · Mastered' : ''}`;
+        regionList.appendChild(chip);
+      });
+      const gradient = svg.append('defs').append('linearGradient').attr('id', 'nationalParkMasteredGradient')
+        .attr('x1', '0%').attr('y1', '0%').attr('x2', '100%').attr('y2', '100%');
+      gradient.append('stop').attr('offset', '0%').attr('stop-color', '#065f46');
+      gradient.append('stop').attr('offset', '100%').attr('stop-color', '#80702c');
+      const mapBackdrop = region => region?.tier === 'mastered' ? 'url(#nationalParkMasteredGradient)' : backdrop(region);
+      const layer = svg.append('g');
+      const projection = d3.geoAlbersUsa().fitExtent([[20, 20], [940, 495]], {
+        type: 'FeatureCollection', features: usaGeoJson
+      });
+      const mainPath = d3.geoPath(projection);
+      layer.append('g').selectAll('path').data(usaGeoJson).join('path')
+        .attr('d', mainPath)
+        .attr('fill', feature => mapBackdrop(progress.find(region => region.states.includes(feature.properties.name))))
+        .attr('stroke', feature => progress.find(region => region.states.includes(feature.properties.name))?.visited ? '#10b981' : '#1e293b')
+        .attr('stroke-width', 0.7).attr('pointer-events', 'none');
+      const insets = {
+        npsa: { x: 600, name: 'American Samoa', center: [-170.7, -14.25], region: 'pacific-islands', scale: 2800 },
+        viis: { x: 780, name: 'US Virgin Islands', center: [-64.75, 18.3], region: 'southeast', scale: 2200 }
+      };
+      for (const inset of Object.values(insets)) {
+        layer.append('rect').attr('x', inset.x).attr('y', 520).attr('width', 160).attr('height', 100)
+          .attr('rx', 8).attr('fill', mapBackdrop(progress.find(r => r.id === inset.region)))
+          .attr('stroke', '#334155').attr('pointer-events', 'none');
+        layer.append('text').attr('x', inset.x + 8).attr('y', 537).attr('fill', '#94a3b8')
+          .attr('font-size', 10).text(inset.name);
+      }
+      parks.forEach(park => {
+        const status = NationalParksScratch.status(park, AppState);
+        const mastered = progress.find(region => region.id === park.regionId).tier === 'mastered';
+        const color = status === 'v' ? (mastered ? '#a7f3d0' : '#10b981') :
+          status === 'w' ? TravelLedger.colors.w : '#334155';
+        const geometries = npsBoundariesByCode[park.id] || [];
+        const geometry = { type: 'GeometryCollection', geometries };
+        const inset = insets[park.id];
+        const parkProjection = inset ? d3.geoMercator().center(inset.center).scale(inset.scale)
+          .translate([inset.x + 80, 578]) : projection;
+        const path = d3.geoPath(parkProjection);
+        const centroid = geometries.length ? d3.geoCentroid(geometry) : [park.lng, park.lat];
+        const point = parkProjection(centroid) || parkProjection([park.lng, park.lat]);
+        const bounds = geometries.length ? path.bounds(geometry) : null;
+        const tiny = !bounds || !Number.isFinite(bounds[0][0]) ||
+          bounds[1][0] - bounds[0][0] < 8 || bounds[1][1] - bounds[0][1] < 8;
+        const group = layer.append('g').attr('data-park', park.id).attr('role', 'button')
+          .attr('tabindex', AppState.viewOnly ? -1 : 0)
+          .attr('aria-label', `${park.name}: ${status === 'un' ? 'Unexplored' : TravelLedger.labels[status]}`)
+          .attr('aria-disabled', String(AppState.viewOnly)).attr('cursor', AppState.viewOnly ? 'default' : 'pointer')
+          .on('click', event => { event.stopPropagation(); cycleNationalPark(park); })
+          .on('keydown', event => {
+            if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); cycleNationalPark(park); }
+          });
+        group.append('title').text(`${park.name} · ${status === 'un' ? 'Unexplored' : TravelLedger.labels[status]}`);
+        if (tiny && point) group.append('circle').attr('class', 'park-hit-halo')
+          .attr('cx', point[0]).attr('cy', point[1]).attr('r', 7)
+          .attr('fill', color).attr('fill-opacity', status === 'un' ? 0.35 : 0.7)
+          .attr('stroke', status === 'un' ? '#94a3b8' : color).attr('stroke-width', 1);
+        if (geometries.length) group.append('path').attr('d', path(geometry))
+          .attr('fill', status === 'un' ? '#0f172a' : color).attr('stroke', color)
+          .attr('stroke-width', 1).attr('vector-effect', 'non-scaling-stroke');
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.dataset.nationalPark = park.id;
+        button.className = 'rounded-lg border border-slate-700 bg-slate-900 p-2 text-left text-xs';
+        button.style.color = status === 'un' ? '#94a3b8' : color;
+        button.textContent = `${park.name} — ${status === 'un' ? 'Unexplored' : TravelLedger.labels[status]}`;
+        button.disabled = AppState.viewOnly;
+        button.addEventListener('click', () => cycleNationalPark(park));
+        checklist.appendChild(button);
+      });
+      nationalParksZoomBehavior = d3.zoom().extent([[0, 0], [960, 640]]).scaleExtent([1, 12])
+        .translateExtent([[0, 0], [960, 640]]).on('zoom', event => {
+          nationalParksZoom = event.transform;
+          layer.attr('transform', event.transform);
+        });
+      svg.call(nationalParksZoomBehavior).call(nationalParksZoomBehavior.transform, nationalParksZoom || d3.zoomIdentity);
+    }
+
+    document.getElementById('btnResetNationalParksZoom').addEventListener('click', () => {
+      if (nationalParksZoomBehavior) d3.select('#svgNationalParks').call(nationalParksZoomBehavior.transform, d3.zoomIdentity);
     });
 
     function scratchStatusKey(feature) {
@@ -2729,6 +2908,7 @@
       updateHud();
       if (AppState.currentTab === 'passport') renderPassportView();
       if (AppState.currentTab === 'scratch') renderScratchMap();
+      if (AppState.currentTab === 'nationalparks') renderNationalParksScratch();
       if (AppState.currentTab === 'bucketlist') renderBucketListView();
       if (AppState.currentTab === 'achievements') renderAchievementsView();
     }
@@ -2758,6 +2938,7 @@
       // Hide all tabs
       document.getElementById('tabContent-map').classList.add('hidden');
       document.getElementById('tabContent-scratch').classList.add('hidden');
+      document.getElementById('tabContent-nationalparks').classList.add('hidden');
       document.getElementById('tabContent-passport').classList.add('hidden');
       document.getElementById('tabContent-bucketlist').classList.add('hidden');
       document.getElementById('tabContent-achievements').classList.add('hidden');
@@ -2776,6 +2957,9 @@
       } else if (tabId === 'scratch') {
         document.getElementById('tabContent-scratch').classList.remove('hidden');
         renderScratchMap();
+      } else if (tabId === 'nationalparks') {
+        document.getElementById('tabContent-nationalparks').classList.remove('hidden');
+        renderNationalParksScratch();
       } else if (tabId === 'passport') {
         document.getElementById('tabContent-passport').classList.remove('hidden');
         renderPassportView();
@@ -2936,6 +3120,7 @@
       AppState.counties = {};
       AppState.expeditions = [];
       AppState.expeditionPromotions = {};
+      AppState.nationalParkScratch = {};
       AppState.clearedPolygons = [];
       AppState.routes = [];
       AppState.customLocations = [];

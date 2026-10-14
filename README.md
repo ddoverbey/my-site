@@ -477,6 +477,36 @@ Edits persist transactionally and refresh Passport stats without revealing count
 records still restore their derived tiers; a retained tier is explained in the notification.
 Shared passports are read-only. No TopoJSON generation is needed for this view.
 
+### 63 National Parks scratch-off
+
+The **🏞️ National Parks** page is separate from the political Scratch Map and includes only
+the 63 National Parks, not monuments, historic sites, or other NPS units. It reuses the official
+catalog and existing boundary snapshot; no geography import or regeneration is needed.
+Redwood and American Samoa are included despite their unusual API designations.
+
+Park clicks cycle **Unexplored → Visited → Wishlist → Unexplored**. Wishlist is pink and
+Visited is emerald. Existing Lived entries display as Visited; Transited entries display as
+Unexplored. Lived and expedition-backed visits remain protected. Ordinary park marks share
+the main travel ledger and therefore reveal the corresponding park on the RPG map.
+
+Sequoia and Kings Canyon have separate shapes and scratch records, although the NPS API/main
+ledger combines them as `seki`. Existing combined visits initially count for both. The two
+scratch statuses persist in `nationalParkScratch`; the combined ledger remains Visited if
+either is visited, or Wishlist if either is wishlisted. Editing the combined ledger entry
+resets the split override. Its existing combined RPG boundary behavior remains unchanged.
+
+Regional backdrops and counters show **unstarted**, **in progress**, and **mastered** (every
+park in that region visited). These geographic collection groups use traditional NPS regional
+groupings, with Pacific Islands separated from Pacific West; they are not current administrative
+boundaries. National Capital has none of the 63 parks and has no completion counter.
+Yellowstone belongs to Intermountain and Cuyahoga Valley to Midwest.
+
+The SVG supports scroll-wheel zoom, drag pan, and Reset zoom. Tiny or point-only parks have
+clickable halos; American Samoa and the US Virgin Islands have labeled insets. An accessible
+63-park checklist provides keyboard-friendly controls even where shapes overlap.
+Missing boundaries are explicitly reported and use location badges; missing catalog/map
+data shows retry guidance instead of a misleading completion count.
+
 ### Logging and editing expeditions
 
 **🗺️ Log Expedition** on the map opens the wizard implemented in
