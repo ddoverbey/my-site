@@ -214,6 +214,16 @@
       background-clip: text;
       color: transparent;
     }
+    .achievement-redacted {
+      color: #94a3b8;
+      letter-spacing: .08em;
+      filter: blur(.2px);
+    }
+    .achievement-complete {
+      background: linear-gradient(135deg, rgba(120, 53, 15, .55), rgba(69, 26, 3, .72));
+      border-color: rgba(251, 191, 36, .8);
+      box-shadow: 0 0 24px rgba(251, 191, 36, .2), inset 0 0 18px rgba(253, 230, 138, .06);
+    }
   </style>
 </head>
 <body class="h-screen w-screen flex flex-col bg-[#060913] text-slate-100 select-none">
@@ -907,20 +917,20 @@
           { goal: 1, title: 'First Steps', desc: 'Visit your 1st park or heritage destination' },
           { goal: 5, title: 'Trailblazer', desc: 'Visit 5 park or heritage destinations' },
           { goal: 15, title: 'Master Ranger', desc: 'Visit 15 park or heritage destinations' },
-          { goal: 30, title: 'Grand Voyager', desc: 'Visit 30 park or heritage destinations' }
+          { goal: 30, title: 'Grand Voyager', desc: 'Your footprints span dozens of protected lands and hallowed grounds. A grand milestone of extensive roaming awaits.' }
         ]
       },
       {
         id: 'nps', title: 'NPS Explorer',
         progress: s => npsCatalogLoaded && s.npsTotal > 0 ? s.usParksCount : 0,
-        tiers: [{ goal: s => s.npsTotal, title: 'Completionist Legend', desc: 'Visit every NPS listing in the current catalog' }]
+        tiers: [{ goal: s => s.npsTotal, title: 'Completionist Legend', desc: 'An unimaginable dedication to preservation. No monument, historic site, or park in the grand registry can remain unseen.' }]
       },
       {
         id: 'biomes', title: 'Biome Collector', progress: s => s.biomesSet.size,
         tiers: [
           { goal: 3, title: 'Junior Ecologist', desc: 'Log locations in 3 different terrestrial biomes' },
-          { goal: () => Object.keys(BIOMES).length - 1, title: 'Almost There!', desc: 'Log all but one of the terrestrial biomes' },
-          { goal: () => Object.keys(BIOMES).length, title: 'Adventuring Time', desc: 'Log every terrestrial biome' }
+          { goal: () => Object.keys(BIOMES).length - 1, title: 'Almost There!', desc: 'The earth’s diverse environments are nearly all accounted for. Only a single missing ecosystem stands between you and planetary mastery.' },
+          { goal: () => Object.keys(BIOMES).length, title: 'Gaia Wanderer', desc: 'You must breathe the air of every living ecosystem on Earth. The complete spectrum of the natural world demands your witness.' }
         ]
       },
       {
@@ -931,7 +941,7 @@
         id: 'states', title: 'Continental Explorer', progress: s => s.statesCount,
         tiers: [
           { goal: 10, title: 'Continental Traveler', desc: 'Claim 10 US States' },
-          { goal: 50, title: 'Fifty-Nifty', desc: 'Visit all 50 US states' }
+          { goal: 50, title: 'Fifty-Nifty', desc: 'A complete union of stars. Every corner of the republic must bear the mark of your passage.' }
         ]
       },
       {
@@ -959,10 +969,10 @@
       ['beyondHorizon', 'Beyond the Horizon', 'Log a location more than 1,000 miles from home', 1],
       ['international', 'A Whole New World', 'Log your first coordinate outside your home country', 1],
       ['touchGrass', 'Touch Grass', 'Visit a catalog destination designated as a National, State or Provincial Park', 1],
-      ['fastTravel', 'Fast Travel', 'Log two stops more than 500 miles apart on the same day in single-day expeditions', 2],
-      ['earthSandwich', 'Earth Sandwich', 'Log two points within 100 miles of exact antipodes', 2],
-      ['longDark', 'The Long Dark', 'Log a location north of 66.5° N or south of 66.5° S', 1],
-      ['latitudeSpan', 'Pole to Pole', 'Log coordinates spanning at least 60 degrees of latitude', 60]
+      ['fastTravel', 'Fast Travel', 'Defy the boundaries of time and physical distance. Appear in two vastly distant realms before a single day reaches its end.', 2],
+      ['earthSandwich', 'Earth Sandwich', 'A feat of extraordinary geographic alignment. Stand on the exact opposite side of the world from a place you have already been.', 2],
+      ['longDark', 'The Long Dark', 'Cross the invisible threshold into the realm of the midnight sun and polar night. You must venture to the icy extremes of the earth.', 1],
+      ['latitudeSpan', 'Pole to Pole', 'Traverse a vast vertical slice of the globe. The map must stretch across hemispheres to prove your total reach.', 60]
     ].forEach(([id, title, desc, goal]) => ACHIEVEMENTS.push({
       id, title, tiers: [{ goal, title, desc }], progress: s => s.metadataProgress[id]
     }));
@@ -980,11 +990,11 @@
     ACHIEVEMENTS.push(
       {
         id: 'counties', title: 'Manifest Destiny', progress: s => s.countiesCount,
-        tiers: [{ goal: s => s.countyTotal, title: 'Manifest Destiny', desc: 'Visit every county in the loaded US county atlas' }]
+        tiers: [{ goal: s => s.countyTotal, title: 'Manifest Destiny', desc: 'A relentless, granular conquest. Thousands of invisible borders must be crossed until the entire atlas is painted with your travels.' }]
       },
       {
         id: 'worldAtlas', title: 'How???? (Citizen of the World)', progress: s => s.atlasCountriesCount,
-        tiers: [{ goal: s => s.atlasCountriesTotal, title: 'Citizen of the World', desc: 'Visit every country/territory represented in the World Nations atlas (not a sovereign-country census)' }]
+        tiers: [{ goal: s => s.atlasCountriesTotal, title: 'Citizen of the World', desc: 'The Earth is no longer just a map—it is your neighborhood. No sovereign border can remain uncrossed.' }]
       }
     );
     const ACHIEVEMENT_RARITIES = {
@@ -2975,6 +2985,39 @@
       };
     }
 
+    const SECRET_ACHIEVEMENT_RARITIES = new Set(['epic', 'legendary', 'mythic']);
+    let achievementProgressSnapshot = null;
+
+    function isSecretAchievementTier(tier) {
+      return SECRET_ACHIEVEMENT_RARITIES.has(tier.rarity);
+    }
+
+    function redactedAchievementDescription(tier) {
+      return 'A feat of extraordinary geographic alignment. The details will reveal themselves upon discovery.';
+    }
+
+    function announceSecretAchievementCompletions(stats) {
+      const current = new Map(ACHIEVEMENTS.map(achievement => [
+        achievement.id,
+        achievement.progress(stats)
+      ]));
+      if (achievementProgressSnapshot) {
+        ACHIEVEMENTS.forEach(achievement => {
+          const previous = achievementProgressSnapshot.get(achievement.id) || 0;
+          const completed = achievement.tiers.map(tier => ({
+            ...tier,
+            goal: typeof tier.goal === 'function' ? tier.goal(stats) : tier.goal
+          })).find(tier => isSecretAchievementTier(tier) &&
+            previous < tier.goal && current.get(achievement.id) >= tier.goal);
+          if (completed) {
+            AudioEngine.playChime('levelup');
+            showNotification('🏆 Secret Trophy Revealed', `${completed.title} — class title unlocked.`, '✨');
+          }
+        });
+      }
+      achievementProgressSnapshot = current;
+    }
+
     function achievementBadgeStyle(achievement, tier) {
       return `--badge-background: ${achievement.background}; --rarity-color: ${ACHIEVEMENT_RARITIES[tier.rarity].color}`;
     }
@@ -3009,6 +3052,7 @@
     function renderAchievementsView(stats = calculateStats()) {
       const achContainer = document.getElementById('achievementsContainer');
       achContainer.innerHTML = '';
+      announceSecretAchievementCompletions(stats);
 
       ACHIEVEMENTS.forEach(ach => {
         const { progress, completed, next } = achievementDisclosure(ach, stats);
@@ -3018,9 +3062,11 @@
         const iconTier = completed || next;
         const card = document.createElement('div');
         card.className = `p-3.5 rounded-2xl border ${
-          completed
-            ? 'bg-amber-950/20 border-amber-500/40 shadow-md shadow-amber-500/5' 
-            : 'bg-slate-950/50 border-slate-700'
+          completed && isSecretAchievementTier(completed)
+            ? 'achievement-complete'
+            : completed
+              ? 'bg-amber-950/20 border-amber-500/40 shadow-md shadow-amber-500/5'
+              : 'bg-slate-950/50 border-slate-700'
         }`;
         card.innerHTML = `
           <div class="flex items-center gap-3">
@@ -3032,9 +3078,13 @@
               ${visibleTiers.map(tier => `
                 <p class="text-xs text-slate-200 mt-2">${escapeHtml(tier.title)}</p>
                 <p class="achievement-rarity text-[10px] uppercase font-bold mt-1" data-rarity="${tier.rarity}" style="${achievementBadgeStyle(ach, tier)}">${ACHIEVEMENT_RARITIES[tier.rarity].label}</p>
-                <p class="text-[10px] text-slate-400 leading-tight mt-0.5">${escapeHtml(tier.desc)}</p>
-                <p class="text-[10px] text-amber-300 mt-1">${(Math.floor(Math.min(progress, tier.goal) * 10) / 10).toLocaleString('en')} / ${tier.goal}${progress >= tier.goal ? ' • Complete' : ''}</p>
-                <progress aria-label="${escapeHtml(tier.title)} progress" value="${Math.min(progress, tier.goal)}" max="${tier.goal}" class="w-full h-2 mt-1"></progress>
+                ${progress < tier.goal && isSecretAchievementTier(tier)
+                  ? `<p class="text-[10px] achievement-redacted leading-tight mt-0.5">${escapeHtml(redactedAchievementDescription(tier))}</p>`
+                  : `<p class="text-[10px] text-slate-400 leading-tight mt-0.5">${escapeHtml(tier.desc)}</p>`}
+                <p class="text-[10px] text-amber-300 mt-1">${(Math.floor(Math.min(progress, tier.goal) * 10) / 10).toLocaleString('en')} / ${tier.goal}${progress >= tier.goal ? ' • Complete' : ''}${!completed || completed !== tier ? '' : ' • Class title unlocked'}</p>
+                ${isSecretAchievementTier(tier) && progress < tier.goal
+                  ? `<p class="text-[10px] text-amber-300 mt-1">Progress: ${(Math.floor(Math.min(progress, tier.goal) * 10) / 10).toLocaleString('en')} / ${tier.goal} (${Math.floor(Math.min(progress / tier.goal, 1) * 100)}%)</p>`
+                  : `<progress aria-label="${escapeHtml(tier.title)} progress" value="${Math.min(progress, tier.goal)}" max="${tier.goal}" class="w-full h-2 mt-1"></progress>`}
               `).join('')}
             </div>
           </div>

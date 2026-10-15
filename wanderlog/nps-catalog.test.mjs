@@ -1380,11 +1380,11 @@ check('dedicated achievement page hides untouched badges and does not duplicate 
 });
 check('biome achievement tiers use 3, total minus one and total with progressive disclosure', () => {
   for (const [count, visible, hidden] of [
-    [0, [], ['Junior Ecologist', 'Almost There!', 'Adventuring Time']],
-    [1, ['Junior Ecologist'], ['Almost There!', 'Adventuring Time']],
-    [3, ['Junior Ecologist', 'Almost There!'], ['Adventuring Time']],
-    [13, ['Almost There!', 'Adventuring Time'], ['Junior Ecologist']],
-    [14, ['Adventuring Time'], ['Junior Ecologist', 'Almost There!']]
+    [0, [], ['Junior Ecologist', 'Almost There!', 'Gaia Wanderer']],
+    [1, ['Junior Ecologist'], ['Almost There!', 'Gaia Wanderer']],
+    [3, ['Junior Ecologist', 'Almost There!'], ['Gaia Wanderer']],
+    [13, ['Almost There!', 'Gaia Wanderer'], ['Junior Ecologist']],
+    [14, ['Gaia Wanderer'], ['Junior Ecologist', 'Almost There!']]
   ]) {
     context.biomeCount = count;
     vm.runInContext(`
@@ -1414,7 +1414,7 @@ check('atlas completion goals use actual datasets and exclude unknown countries 
   assert.equal(vm.runInContext('calculateStats().atlasCountriesCount', context), 1);
   assert.equal(vm.runInContext('calculateStats().countiesCount', context), 1);
   assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='worldAtlas').tiers[0].goal(calculateStats())", context), 2);
-  assert.ok(element('achievementsContainer').innerHTML.includes('value="1" max="2"'));
+  assert.ok(element('achievementsContainer').innerHTML.includes('Progress: 1 / 2 (50%)'));
   vm.runInContext('worldGeoJson=null;countyGeoJson=null;renderAchievementsView()', context);
   assert.ok(!element('achievementsContainer').innerHTML.includes('Citizen of the World'));
   assert.ok(!element('achievementsContainer').innerHTML.includes('Manifest Destiny'));
