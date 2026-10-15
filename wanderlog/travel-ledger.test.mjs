@@ -63,6 +63,24 @@ check('flat schema POIs retain fields while gaining political metadata; migratio
   assert.deepEqual(migrate(state), state);
   assert.deepEqual(JSON.parse(JSON.stringify(state)).expeditions, [exp]);
 });
+check('Photon city POIs persist without fabricated elevation or rarity metadata', () => {
+  const city = {
+    id: 'poi_photon_node_1234', photonId: 'node:1234', source: 'Photon',
+    name: 'Sitka', lat: 57.053, lng: -135.33, status: 'w', category: 'City',
+    political: {
+      countries: ['United States of America'], states: ['Alaska'],
+      counties: [{ id: '02220', name: 'Sitka City and Borough' }]
+    },
+    ecoregions: [{ id: 1, name: 'Pacific Coastal Mountains', realm: 'Nearctic', biomeId: 5 }],
+    biomes: ['5'], biomeStatus: 'matched', lookedUpAt: '2026-10-15T00:00:00Z'
+  };
+  const state = migrate({ version: 2, customPois: [city] });
+  assert.equal(state.customPois[0].elevationFt, null);
+  assert.equal(state.customPois[0].rarity, null);
+  assert.equal(state.customPois[0].category, 'City');
+  assert.deepEqual(migrate(state), state);
+  assert.throws(() => migrate({ version: 2, customPois: [{ ...city, photonId: 'invalid' }] }), /Photon city reference/);
+});
 check('legacy enriched custom locations retain exact provider metadata in customPois', () => {
   const legacy = {
     ...poi, id: 'custom-old', elevation: { meters: 100, feet: 328.084 },

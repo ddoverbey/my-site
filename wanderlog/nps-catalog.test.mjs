@@ -117,7 +117,7 @@ check('mobile RPG HUD starts collapsed with an accessible stats toggle', () => {
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261014-direct-transit')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261015-city-ledger')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('National Parks is a Scratch Map dataset, not a separate navigation page, with an expanded checklist', () => {
@@ -151,7 +151,7 @@ function element(id) {
 const context = vm.createContext({
   NpsCatalog: catalog, NationalParksScratch: nationalParksScratch, Ecoregions: ecoregions, InternationalParks: internationalCatalog, CoordinateLookups: coordinateLookups, TravelLedger: travelLedger,
   WanderlogConfig: { rarityEndpoint: 'https://api.devonoverbey.com/rarity' },
-  tailwind: {}, console, Intl, URL, URLSearchParams, setTimeout() {}, clearTimeout() {},
+  tailwind: {}, console, Intl, URL, URLSearchParams, AbortController, setTimeout() {}, clearTimeout() {},
   document: { body: { classList: { toggle() {}, add() {}, remove() {} } }, getElementById: element, querySelectorAll: () => [], createElement: () => element(`created-${elements.size}`) },
   window: { addEventListener() {}, matchMedia: () => ({ matches: true }) },
   fetch: async url => ({ ok: true, json: async () => url.includes('wikidata') ? wikidata : url.includes('worldwide') ? worldwide : snapshot })
@@ -1356,8 +1356,89 @@ check('destination type groups use official designations, preserving combined ca
   }
   assert.deepEqual(Array.from(vm.runInContext('bucketDestinationTypes({intl:true})', context)), ['parks','international']);
   assert.deepEqual(Array.from(vm.runInContext('bucketDestinationTypes({custom:true,intl:true})', context)), ['custom']);
+  assert.deepEqual(Array.from(vm.runInContext('bucketDestinationTypes({custom:true,category:"City"})', context)), ['custom','cities']);
+  assert.equal(vm.runInContext('matchesBucketType({custom:true,category:"City"},"cities")', context), true);
   assert.deepEqual(Array.from(vm.runInContext('bucketDestinationTypes({name:"National Monument",designation:"Park"})', context)), ['other']);
 });
+const originalPhotonFetch = context.fetch;
+context.fetch = async url => {
+  assert.ok(url.includes('osm_tag=place%3Acity'));
+  assert.ok(url.includes('osm_tag=place%3Aisland'));
+  return {
+    ok: true,
+    json: async () => ({ features: [
+      { type: 'Feature', geometry: { type: 'Point', coordinates: [-135.33, 57.05] },
+        properties: { osm_key: 'place', osm_value: 'city', osm_type: 'N', osm_id: 12345,
+          name: 'Sitka', state: 'Alaska', country: 'United States', countrycode: 'us' } },
+      { type: 'Feature', geometry: { type: 'Point', coordinates: [-135.4, 57.1] },
+        properties: { osm_key: 'place', osm_value: 'hamlet', osm_type: 'N', osm_id: 12346,
+          name: 'Jamestown Bay', state: 'Alaska', country: 'United States' } },
+      { type: 'Feature', geometry: { type: 'Point', coordinates: [-135.33, 57.05] },
+        properties: { osm_key: 'tourism', osm_value: 'attraction', osm_type: 'N', osm_id: 12347,
+          name: 'Ignored attraction' } }
+    ] })
+  };
+};
+vm.runInContext("AppState.currentTab='bucketlist';", context);
+element('bucketSearch').value = 'Sitka';
+await vm.runInContext('searchBucketPhotonCities("Sitka", ++bucketPhotonSearchVersion)', context);
+check('ledger Photon search filters populated places and renders one-click status options', () => {
+  assert.equal(vm.runInContext('bucketPhotonResults.length', context), 2);
+  const matches = element('bucketCityMatchesList').innerHTML;
+  assert.ok(matches.includes('Sitka'));
+  assert.ok(matches.includes('Jamestown Bay'));
+  assert.ok(!matches.includes('Ignored attraction'));
+  for (const status of ['v', 'w', 't', 'l']) assert.ok(matches.includes(`data-photon-status="${status}"`));
+});
+const originalCityHelpers = vm.runInContext('({ addCustomPoi, renderParkMarkers, drawFogOfWar, updateAllUI, showNotification, cachedPoliticalAt, cachedBiomeAt, cachedBiomeRegionAt, coordinateIndexes })', context);
+try {
+  vm.runInContext(`
+    coordinateIndexes={countries:[{}],states:[{}],counties:[{}],ecoregions:[{}]};
+    cityLookupCalls=[];
+    cachedPoliticalAt=(lat,lng)=>{cityLookupCalls.push(['political',lat,lng]);return {
+      countries:[],states:[],counties:[{id:'02220',name:'Sitka City and Borough'}]
+    };};
+    cachedBiomeRegionAt=(lat,lng)=>{cityLookupCalls.push(['biome-region',lat,lng]);return {
+      ecoregions:[{id:1,name:'Pacific Coastal Mountains',realm:'Nearctic',biomeId:5}],biomeStatus:'matched'
+    };};
+    cachedBiomeAt=(lat,lng)=>{cityLookupCalls.push(['biome',lat,lng]);return ['5'];};
+    addCustomPoi=poi=>{capturedPhotonCity=poi;};
+    renderParkMarkers=()=>{};drawFogOfWar=()=>{};updateAllUI=()=>{};showNotification=()=>{};
+    savePhotonCity(bucketPhotonResults[0],'w');
+  `, context);
+  const city = context.capturedPhotonCity;
+  const normalizedCity = travelLedger.normalizePoi(city, coordinateLookups);
+  check('Photon city saves resolved political and biome metadata without an Overpass lookup', () => {
+    assert.equal(normalizedCity.name, 'Sitka');
+    assert.equal(normalizedCity.category, 'City');
+    assert.equal(normalizedCity.status, 'w');
+    assert.equal(normalizedCity.elevationFt, null);
+    assert.equal(normalizedCity.rarity, null);
+    assert.deepEqual(Array.from(normalizedCity.political.countries), ['United States']);
+    assert.deepEqual(Array.from(normalizedCity.political.states), ['Alaska']);
+    assert.deepEqual(JSON.parse(JSON.stringify(normalizedCity.political.counties)),
+      [{ id: '02220', name: 'Sitka City and Borough' }]);
+    assert.deepEqual(Array.from(normalizedCity.biomes), ['5']);
+    assert.deepEqual(Array.from(vm.runInContext('cityLookupCalls.map(call=>call[0])', context)),
+      ['political', 'biome-region', 'biome']);
+  });
+} finally {
+  context.originalCityHelpers = originalCityHelpers;
+  vm.runInContext(`
+    addCustomPoi=originalCityHelpers.addCustomPoi;
+    renderParkMarkers=originalCityHelpers.renderParkMarkers;
+    drawFogOfWar=originalCityHelpers.drawFogOfWar;
+    updateAllUI=originalCityHelpers.updateAllUI;
+    showNotification=originalCityHelpers.showNotification;
+    cachedPoliticalAt=originalCityHelpers.cachedPoliticalAt;
+    cachedBiomeAt=originalCityHelpers.cachedBiomeAt;
+    cachedBiomeRegionAt=originalCityHelpers.cachedBiomeRegionAt;
+    coordinateIndexes=originalCityHelpers.coordinateIndexes;
+    AppState.currentTab='map';
+  `, context);
+  context.fetch = originalPhotonFetch;
+  element('bucketSearch').value = '';
+}
 vm.runInContext(`
   applyPassport(migratePassport({}));AppState.currentTab='map';
   PARKS=[

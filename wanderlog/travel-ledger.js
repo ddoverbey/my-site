@@ -179,8 +179,14 @@
         poi.name.length > 150 || !Object.hasOwn(ranks, poi.status)) throw new Error('Invalid custom POI.');
     lookups.validateCoordinates(poi.lat, poi.lng);
     if (poi.elevation) lookups.validateCustomLocations([poi]);
+    const photonCity = poi.source === 'Photon' && poi.category === 'City';
+    if (photonCity && !/^(?:node|way|relation):\d+$/.test(poi.photonId || '')) {
+      throw new Error('Invalid Photon city reference.');
+    }
     const elevationFt = poi.elevation?.feet ?? poi.elevationFt;
-    if (!Number.isFinite(elevationFt) || !Array.isArray(poi.biomes) ||
+    if ((!photonCity && !Number.isFinite(elevationFt)) ||
+        (photonCity && elevationFt !== undefined && elevationFt !== null && !Number.isFinite(elevationFt)) ||
+        !Array.isArray(poi.biomes) ||
         poi.biomes.some(biome => !/^(?:[1-9]|1[0-4])$/.test(biome))) throw new Error('Invalid POI elevation or biomes.');
     const political = poi.political || {
       countries: poi.country ? [poi.country] : [],
@@ -202,7 +208,7 @@
       throw new Error('POI review count does not match its rarity tier.');
     }
     return {
-      ...poi, political, elevationFt, country: political.countries[0] || '',
+      ...poi, political, elevationFt: elevationFt ?? null, country: political.countries[0] || '',
       state: political.states[0] || '', countyId: political.counties[0]?.id || null,
       rarity, rarityTier, reviewCount,
       category: typeof poi.category === 'string' ? poi.category : '',
