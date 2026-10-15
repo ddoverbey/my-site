@@ -57,7 +57,9 @@
   }
 
   function politicalRegion(lat, lng, indexes, geoContains) {
-    const countries = findContaining(indexes.countries, lat, lng, geoContains);
+    // Detailed micro-state polygons override the coarse 110m neighbour (e.g. France swallowing Monaco).
+    const microStates = indexes.microStates?.length ? findContaining(indexes.microStates, lat, lng, geoContains) : [];
+    const countries = microStates.length ? microStates : findContaining(indexes.countries, lat, lng, geoContains);
     const states = findContaining(indexes.states, lat, lng, geoContains);
     const counties = findContaining(indexes.counties, lat, lng, geoContains);
     return {

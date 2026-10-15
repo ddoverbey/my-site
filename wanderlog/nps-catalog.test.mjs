@@ -104,8 +104,8 @@ const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)]
 check('every inline script parses', () => scripts.forEach(script => new vm.Script(script)));
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
-  assert.equal(sources.length, 8);
-  assert.ok(sources.every(source => source.endsWith('?v=20261015-ui2')));
+  assert.equal(sources.length, 9);
+  assert.ok(sources.every(source => source.endsWith('?v=20261016-micro')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('National Parks is a Scratch Map dataset, not a separate navigation page, with an expanded checklist', () => {

@@ -95,6 +95,16 @@ function addExpeditionStop(kind, id) {
   }
 }
 
+function addMicroStateStop(entry) {
+  if (AppState.viewOnly || expeditionPending) return;
+  // A place stop at the interior label point resolves to the micro-state via polygon lookup when the trip is saved.
+  expeditionDraft.push({ kind: 'place', id: `place_${crypto.randomUUID()}`, name: entry.name,
+    coords: [entry.lat, entry.lng], travelMode: 'road' });
+  invalidateExpeditionRoutes();
+  renderExpeditionStops();
+  dismissPlaceSuggestions(false, true);
+}
+
 function invalidateExpeditionRoutes() {
   expeditionPreparedLegs = null;
   expeditionPreparedKey = null;
@@ -180,6 +190,19 @@ function renderExpeditionSearch() {
     ...AppState.customPois.map(p => ({ kind: 'poi', id: p.id, name: p.name }))
   ];
   let count = 0;
+  const rawQuery = document.getElementById('expeditionSearch').value.trim();
+  for (const entry of (typeof microStateCatalog !== 'undefined' ? microStateCatalog : [])) {
+    if (!MicroStates.matches(entry.name, rawQuery)) continue;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.micro = '';
+    button.className = 'block text-left w-full rounded bg-slate-800 p-2 text-xs';
+    button.textContent = `${entry.name} (micro-state)`;
+    button.addEventListener('click', () => addMicroStateStop(entry));
+    results.appendChild(button);
+    if (++count === 10) break;
+  }
+  count = 0;
   for (const candidate of candidates) {
     const stop = candidate;
     if (!`${stop.name} ${stop.id}`.toLowerCase().includes(query)) continue;
@@ -297,7 +320,9 @@ async function searchExpeditionPlaces() {
       status.textContent = 'No cities or airports found. Try a more specific name.';
       return;
     }
-    [...places].reverse().forEach(place => {
+    const microButtons = results.querySelectorAll(':scope > [data-micro]');
+    let anchor = microButtons[microButtons.length - 1] || null;
+    places.forEach(place => {
       const button = suggestionButton(place, () => {
         if (AppState.viewOnly || expeditionPending) return;
         expeditionDraft.push({ kind: 'place', name: place.name, coords: [...place.coords],
@@ -306,7 +331,9 @@ async function searchExpeditionPlaces() {
         renderExpeditionStops();
         dismissPlaceSuggestions(false, true);
       });
-      results.prepend(button);
+      if (anchor) anchor.after(button);
+      else results.prepend(button);
+      anchor = button;
     });
     status.textContent = 'Choose a place to add it.';
   } catch (error) {

@@ -147,6 +147,28 @@
       animation: pulseAura 3s infinite ease-in-out;
     }
 
+    /* Scratch Map locator for micro-states hovered/focused in the tray */
+    @keyframes microArrowDraw {
+      from { stroke-dashoffset: 120; }
+      to { stroke-dashoffset: 0; }
+    }
+    @keyframes microPing {
+      0% { transform: scale(1); opacity: 1; }
+      100% { transform: scale(4); opacity: 0; }
+    }
+    .micro-locator-arrow {
+      stroke-dasharray: 120;
+      animation: microArrowDraw 0.45s ease-out forwards;
+    }
+    .micro-locator-ping {
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: microPing 1.2s ease-out infinite;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .micro-locator-arrow, .micro-locator-ping { animation: none; stroke-dasharray: none; }
+    }
+
     /* Shimmer effect for XP bar */
     @keyframes xpShimmer {
       0% { background-position: -200% 0; }
@@ -397,6 +419,18 @@
         <div id="scratchPoliticalMap" class="rpg-panel p-4 rounded-2xl flex items-center justify-center min-h-[500px]">
           <svg id="svgScratchMap" class="w-full max-h-[640px] drop-shadow-2xl"></svg>
         </div>
+        <section id="scratchMicroStates" class="rpg-panel p-4 rounded-2xl space-y-3 hidden" aria-labelledby="scratchMicroStatesTitle">
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 id="scratchMicroStatesTitle" class="cinzel text-sm font-bold text-amber-200">Micro-States &amp; Island Nations</h3>
+              <p class="text-[11px] text-slate-400">Too small for the world map. Click a pill to cycle status (same order as countries); hover or focus to locate it on the map. Search finds any nation.</p>
+            </div>
+            <input id="scratchNationSearch" type="search" autocomplete="off" placeholder="Find a nation, e.g. Monaco" aria-label="Find a nation to mark" aria-controls="scratchMicroStatesList"
+              class="w-full sm:w-64 rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-xs text-slate-200 placeholder-slate-500">
+          </div>
+          <ul id="scratchMicroStatesList" class="flex flex-wrap gap-2" aria-label="Micro-states and island nations"></ul>
+          <p id="scratchMicroStatesStatus" class="text-[11px] text-slate-500" role="status"></p>
+        </section>
         <div id="scratchNationalParks" class="space-y-4 hidden">
         <div class="rpg-panel p-4 rounded-2xl space-y-3">
           <h2 class="cinzel text-lg font-bold text-amber-200">63 National Parks</h2>
@@ -738,13 +772,14 @@
     </form>
   </div>
 
-  <script src="./nps-catalog.js?v=20261015-ui2"></script>
-  <script src="./national-parks-scratch.js?v=20261015-ui2"></script>
-  <script src="./international-parks.js?v=20261015-ui2"></script>
-  <script src="./ecoregions.js?v=20261015-ui2"></script>
-  <script src="./coordinate-lookups.js?v=20261015-ui2"></script>
-  <script src="./travel-ledger.js?v=20261015-ui2"></script>
-  <script src="./rarity-config.js?v=20261015-ui2"></script>
+  <script src="./nps-catalog.js?v=20261016-micro"></script>
+  <script src="./national-parks-scratch.js?v=20261016-micro"></script>
+  <script src="./international-parks.js?v=20261016-micro"></script>
+  <script src="./ecoregions.js?v=20261016-micro"></script>
+  <script src="./coordinate-lookups.js?v=20261016-micro"></script>
+  <script src="./micro-states.js?v=20261016-micro"></script>
+  <script src="./travel-ledger.js?v=20261016-micro"></script>
+  <script src="./rarity-config.js?v=20261016-micro"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -1114,7 +1149,8 @@
       const previous = JSON.stringify(passportPayload());
       const visitedBefore = new Set([
         ...Object.entries(AppState.pins).filter(([, status]) => TravelLedger.isVisited(status)).map(([id]) => `park:${id}`),
-        ...AppState.customPois.filter(p => TravelLedger.isVisited(p.status)).map(p => `poi:${p.id}`)
+        ...AppState.customPois.filter(p => TravelLedger.isVisited(p.status)).map(p => `poi:${p.id}`),
+        ...microStateCatalog.filter(entry => TravelLedger.isVisited(AppState.regions[entry.key])).map(entry => `micro:${entry.name}`)
       ]);
       try {
         TravelLedger.restoreExpeditionPromotions(AppState);
@@ -1130,7 +1166,9 @@
         ...PARKS.filter(p => TravelLedger.isVisited(AppState.pins[p.id]) && !visitedBefore.has(`park:${p.id}`))
           .map(p => `park:${p.id}`),
         ...AppState.customPois.filter(p => TravelLedger.isVisited(p.status) && !visitedBefore.has(`poi:${p.id}`))
-          .map(p => `poi:${p.id}`)
+          .map(p => `poi:${p.id}`),
+        ...microStateCatalog.filter(entry => TravelLedger.isVisited(AppState.regions[entry.key]) &&
+          !visitedBefore.has(`micro:${entry.name}`)).map(entry => `micro:${entry.name}`)
       ];
       if (discovered.length) pulseDiscoveries(discovered);
     }
@@ -1217,7 +1255,7 @@
   <script>
     function calculateStats() {
       const key = travelStateKey();
-      const datasets = [PARKS, BIOMES, coordinateIndexes, worldGeoJson, countyGeoJson];
+      const datasets = [PARKS, BIOMES, coordinateIndexes, worldGeoJson, countyGeoJson, microStateCatalog];
       if (statsCache && statsCache.key === key &&
           datasets.every((dataset, index) => dataset === statsCache.datasets[index])) return statsCache.value;
       const value = computeStats();
@@ -1385,8 +1423,9 @@
         rareBiomesCount: unlockedRare.length,
         statesCount: visitedStates.size,
         countriesCount: visitedCountries.size,
-        atlasCountriesCount: (worldGeoJson || []).filter(feature => visitedCountries.has(feature.properties.name)).length,
-        atlasCountriesTotal: worldGeoJson?.length || 0,
+        atlasCountriesCount: (worldGeoJson || []).filter(feature => visitedCountries.has(feature.properties.name)).length +
+          microStateCatalog.filter(entry => visitedCountries.has(entry.name)).length,
+        atlasCountriesTotal: (worldGeoJson?.length || 0) + microStateCatalog.length,
         countiesCount,
         countyTotal: countyGeoJson?.length || 0,
         completedQuestsCount,
@@ -1586,6 +1625,16 @@
         const pulse = TravelLedger.isVisited(p.status) ? discoveryPulseScale(`poi:${p.id}`) : 1;
         fogCtx.globalAlpha = pulse;
         punchFogAura(point.x, point.y, calculatePixelRadius(p.lat, p.status === 't' ? 85 * 0.6 : 85) * pulse, 0.95);
+        fogCtx.globalAlpha = 1;
+      });
+      microStateCatalog.forEach(entry => {
+        const status = AppState.regions[entry.key];
+        if (!TravelLedger.clearsFog(status)) return;
+        const point = map.latLngToContainerPoint([entry.lat, entry.lng]);
+        const pulse = TravelLedger.isVisited(status) ? discoveryPulseScale(`micro:${entry.name}`) : 1;
+        const radiusKm = MicroStates.FOG_RADIUS_KM * (status === 't' ? 0.6 : 1);
+        fogCtx.globalAlpha = pulse;
+        punchFogAura(point.x, point.y, calculatePixelRadius(entry.lat, radiusKm) * pulse, 0.95);
         fogCtx.globalAlpha = 1;
       });
 
@@ -1879,6 +1928,90 @@
 
         leafletMarkers[p.id] = marker;
       });
+      renderMicroStateMarkers();
+    }
+
+    // Micro-states are too small for polygons at world zoom, so each gets a fixed-pixel halo that never shrinks.
+    function renderMicroStateMarkers() {
+      microStateCatalog.forEach((entry, index) => {
+        const status = AppState.regions[entry.key];
+        if (!expeditionPicking && !['all', 'none'].includes(AppState.pinFilter) &&
+            (AppState.pinFilter === 'v' ? !TravelLedger.isVisited(status) : status !== AppState.pinFilter)) return;
+        const color = TravelLedger.colors[status] || '#94a3b8';
+        const marker = L.circleMarker([entry.lat, entry.lng], {
+          pane: 'destinationMarkerPane',
+          radius: 6,
+          color,
+          weight: 2,
+          opacity: 0.95,
+          fillColor: color,
+          fillOpacity: status ? 0.35 : 0.08,
+          dashArray: status ? null : '2 3'
+        }).addTo(map);
+        marker.bindTooltip(`<b>${escapeHtml(entry.name)}</b> · ${TravelLedger.labels[status] || 'Unexplored'}`, {
+          direction: 'top',
+          offset: [0, -8],
+          className: 'rpg-tooltip'
+        });
+        marker.bindPopup(() => createMicroStatePopup(index), { maxWidth: 260 });
+        marker.on('click', () => {
+          if (expeditionPicking) {
+            addMicroStateStop(entry);
+            marker.closePopup();
+          }
+        });
+        leafletMarkers[`micro:${entry.name}`] = marker;
+      });
+    }
+
+    function createMicroStatePopup(index) {
+      const entry = microStateCatalog[index];
+      const cur = AppState.regions[entry.key];
+      const button = (status, label, classes) =>
+        `<button onclick="setMicroStateStatus(${index}, '${status}')" class="py-1 px-2 rounded ${classes} text-white text-center ${cur === status ? 'ring-2 ring-amber-200' : ''}">${label}</button>`;
+      return `
+        <div class="p-1 space-y-2">
+          <div class="flex items-start justify-between gap-2 border-b border-slate-700 pb-1.5">
+            <div>
+              <h4 class="font-bold text-sm text-amber-200">${escapeHtml(entry.name)}</h4>
+              <span class="text-[11px] text-slate-400">Micro-state / island nation</span>
+            </div>
+            <span class="text-xs px-2 py-0.5 rounded font-bold uppercase bg-slate-800 text-slate-300">${TravelLedger.labels[cur] || 'Unexplored'}</span>
+          </div>
+          <p class="text-[11px] text-slate-400">Marking it clears a ${MicroStates.FOG_RADIUS_KM} km aura and counts toward World Nations. Boundary: Natural Earth 1:10m.</p>
+          <div class="grid grid-cols-3 gap-1.5 pt-2 border-t border-slate-800 text-xs font-semibold">
+            ${button('v', 'Visited', 'bg-emerald-600 hover:bg-emerald-500')}
+            ${button('w', 'Wishlist', 'bg-pink-600 hover:bg-pink-500')}
+            ${button('t', 'Transited', 'bg-slate-600')}
+            ${button('l', 'Lived 🏰', 'bg-blue-500')}
+            <button onclick="setMicroStateStatus(${index}, 'un')" class="py-1 px-2 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 text-center">Clear</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function setMicroStateStatus(index, status) {
+      if (AppState.viewOnly) return;
+      const entry = microStateCatalog[index];
+      if (!entry || (status !== 'un' && !Object.hasOwn(TravelLedger.ranks, status))) {
+        showNotification('Invalid status', 'Choose a supported travel status.', '⚠️');
+        return;
+      }
+      try {
+        commitLedger(() => {
+          if (status === 'un') delete AppState.regions[entry.key];
+          else AppState.regions[entry.key] = status;
+        });
+      } catch (error) {
+        console.error('Micro-state status not saved', error);
+        return;
+      }
+      const actual = AppState.regions[entry.key];
+      showNotification('Cartography Updated', `${entry.name}: ${TravelLedger.labels[actual] || 'Unexplored'}.${
+        actual !== (status === 'un' ? undefined : status) ? ' Home or logged travel retains this tier.' : ''
+      }`, '🗺️');
+      map?.closePopup();
+      refreshTravelUI();
     }
 
     function createPopupContent(p) {
@@ -2007,6 +2140,8 @@
 
   <script>
     let worldGeoJson = null;
+    let microStateGeoJson = null;
+    let microStateCatalog = [];
     let usaGeoJson = null;
     let countyGeoJson = null;
     const countyFeaturesById = {};
@@ -2060,6 +2195,7 @@
           countries: CoordinateLookups.indexFeatures(worldGeoJson, d3),
           states: CoordinateLookups.indexFeatures(usaRegionGeoJson, d3),
           counties: CoordinateLookups.indexFeatures(countyGeoJson, d3),
+          microStates: CoordinateLookups.indexFeatures(microStateGeoJson || [], d3),
           ecoregions: CoordinateLookups.indexFeatures(features, d3)
         };
         status.textContent = 'Custom-coordinate geography ready. Region and biome matches use simplified polygons.';
@@ -2107,6 +2243,16 @@
         });
       } catch (e) {
         console.error("Failed to load US county boundaries", e);
+      }
+      try {
+        const response = await fetch('./micro-states.topojson', { cache: 'no-cache' });
+        if (!response.ok) throw new Error(`Micro-state request failed (HTTP ${response.status}).`);
+        microStateGeoJson = MicroStates.validateTopology(await response.json(), topojson.feature);
+        microStateCatalog = MicroStates.catalog(microStateGeoJson);
+      } catch (e) {
+        microStateGeoJson = null;
+        microStateCatalog = [];
+        console.error("Failed to load micro-state boundaries", e);
       }
     }
 
@@ -2491,6 +2637,8 @@
         document.getElementById(id).classList.toggle('hidden', isParks);
       }
       document.getElementById('scratchNationalParks').classList.toggle('hidden', !isParks);
+      document.getElementById('scratchMicroStates').classList.toggle('hidden', AppState.scratchDataset !== 'world');
+      scratchProjection = null;
       for (const [id, dataset] of [['btnScratchWorld', 'world'], ['btnScratchUsa', 'usa'],
         ['btnScratchCounties', 'counties'], ['btnScratchNationalParks', 'nationalparks']]) {
         const button = document.getElementById(id);
@@ -2516,6 +2664,7 @@
           .attr('text-anchor', 'middle')
           .attr('fill', '#94a3b8')
           .text('Map dataset unavailable. Retry datasets in Settings.');
+        if (isWorld) renderMicroStateTray();
         return;
       }
 
@@ -2549,11 +2698,146 @@
           .attr('pointer-events', 'none');
       }
       // Update scratch counter
-      const claimedCount = features.filter(feature => TravelLedger.isVisited(status(feature))).length;
-      const transitedCount = features.filter(feature => status(feature) === 't').length;
+      let claimedCount = features.filter(feature => TravelLedger.isVisited(status(feature))).length;
+      let transitedCount = features.filter(feature => status(feature) === 't').length;
+      let total = features.length;
+      if (isWorld) {
+        scratchProjection = projection;
+        scratchMapHeight = H;
+        renderMicroStateMapLayers(svg);
+        const microStatuses = microStateCatalog.map(entry => AppState.regions[entry.key]);
+        claimedCount += microStatuses.filter(TravelLedger.isVisited).length;
+        transitedCount += microStatuses.filter(value => value === 't').length;
+        total += microStateCatalog.length;
+        renderMicroStateTray();
+      }
       document.getElementById('scratchStatsLabel').textContent =
-        `${claimedCount} / ${features.length} Visited/Lived · ${transitedCount} Transited`;
+        `${claimedCount} / ${total} Visited/Lived · ${transitedCount} Transited`;
     }
+
+    let scratchProjection = null;
+    let scratchMapHeight = 500;
+
+    // Statused micro-states get a tiny clickable dot; the locator layer stays empty until a tray pill is hovered/focused.
+    function renderMicroStateMapLayers(svg) {
+      svg.append('defs').append('marker').attr('id', 'microArrowHead').attr('viewBox', '0 0 10 10')
+        .attr('refX', 8).attr('refY', 5).attr('markerWidth', 6).attr('markerHeight', 6).attr('orient', 'auto-start-reverse')
+        .append('path').attr('d', 'M0,0 L10,5 L0,10 z').attr('fill', '#fde68a');
+      const marked = microStateCatalog.filter(entry => AppState.regions[entry.key]);
+      if (marked.length) svg.append('g').attr('class', 'micro-dots').selectAll('circle')
+        .data(marked)
+        .join('circle')
+        .attr('cx', entry => scratchProjection([entry.lng, entry.lat])[0])
+        .attr('cy', entry => scratchProjection([entry.lng, entry.lat])[1])
+        .attr('r', 2.5)
+        .attr('fill', entry => TravelLedger.colors[AppState.regions[entry.key]])
+        .attr('stroke', entry => TravelLedger.isVisited(AppState.regions[entry.key]) ? '#fde68a' : '#0f172a')
+        .attr('stroke-width', 0.6)
+        .attr('cursor', AppState.viewOnly ? 'default' : 'pointer')
+        .on('click', (event, entry) => cycleScratchStatus({ properties: { name: entry.name } }))
+        .append('title')
+        .text(entry => `${entry.name} • ${TravelLedger.labels[AppState.regions[entry.key]]}${AppState.viewOnly ? ' • Read-only' : ' • Click to cycle status'}`);
+      svg.append('g').attr('class', 'micro-locator').attr('pointer-events', 'none');
+    }
+
+    function showMicroLocator(entry) {
+      const layer = d3.select('#svgScratchMap .micro-locator');
+      if (!scratchProjection || layer.empty()) return;
+      const point = scratchProjection([entry.lng, entry.lat]);
+      if (!point) return;
+      const [x, y] = point;
+      const fromBelow = y + 110 <= scratchMapHeight - 4;
+      const startY = fromBelow ? y + 110 : Math.max(4, y - 110);
+      layer.selectAll('*').remove();
+      layer.append('line').attr('class', 'micro-locator-arrow')
+        .attr('x1', x).attr('y1', startY).attr('x2', x).attr('y2', fromBelow ? y + 7 : y - 7)
+        .attr('stroke', '#fde68a').attr('stroke-width', 2).attr('marker-end', 'url(#microArrowHead)');
+      layer.append('circle').attr('class', 'micro-locator-ping').attr('cx', x).attr('cy', y).attr('r', 4)
+        .attr('fill', 'none').attr('stroke', '#fde68a').attr('stroke-width', 1.5);
+      layer.append('circle').attr('cx', x).attr('cy', y).attr('r', 3)
+        .attr('fill', TravelLedger.colors[AppState.regions[entry.key]] || '#fde68a').attr('stroke', '#0f172a');
+      layer.append('text').attr('x', x > 800 ? x - 6 : x + 6).attr('y', fromBelow ? startY - 2 : startY + 10)
+        .attr('text-anchor', x > 800 ? 'end' : 'start').attr('fill', '#fde68a').attr('font-size', 13).attr('font-weight', 600)
+        .attr('stroke', '#020617').attr('stroke-width', 3).attr('paint-order', 'stroke').text(entry.name);
+    }
+
+    function hideMicroLocator() {
+      d3.select('#svgScratchMap .micro-locator').selectAll('*').remove();
+    }
+
+    function scratchNationEntries(query) {
+      if (!query) return microStateCatalog;
+      const mapped = (worldGeoJson || []).map(feature => {
+        const [lng, lat] = d3.geoCentroid(feature);
+        return { name: feature.properties.name, key: `c:${feature.properties.name}`, lat, lng, mapped: true };
+      });
+      return [...microStateCatalog, ...mapped].filter(entry => MicroStates.matches(entry.name, query))
+        .sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    function renderMicroStateTray() {
+      const list = document.getElementById('scratchMicroStatesList');
+      const statusLine = document.getElementById('scratchMicroStatesStatus');
+      const query = document.getElementById('scratchNationSearch').value.trim();
+      list.replaceChildren();
+      if (!microStateCatalog.length && !query) {
+        statusLine.textContent = 'Micro-state boundaries unavailable. Retry datasets in Settings.';
+        return;
+      }
+      const entries = scratchNationEntries(query);
+      entries.slice(0, 80).forEach(entry => {
+        const current = AppState.regions[entry.key];
+        const color = TravelLedger.colors[current];
+        const label = TravelLedger.labels[current] || 'Unexplored';
+        const item = document.createElement('li');
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.dataset.key = entry.key;
+        button.className = `inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors ${
+          color ? 'text-white' : 'text-slate-300 border-slate-700 bg-slate-900 hover:border-slate-500'}`;
+        if (color) {
+          button.style.borderColor = color;
+          button.style.backgroundColor = `${color}33`;
+        }
+        const dot = document.createElement('span');
+        dot.setAttribute('aria-hidden', 'true');
+        dot.className = 'inline-block w-2 h-2 rounded-full';
+        dot.style.backgroundColor = color || '#334155';
+        button.append(dot, `${entry.name}${entry.mapped ? ' · on map' : ''}`);
+        const description = `${entry.name}: ${label}${AppState.viewOnly ? ' (read-only)' : '. Activate to cycle status.'}`;
+        button.title = description;
+        button.setAttribute('aria-label', description);
+        if (AppState.viewOnly) button.setAttribute('aria-disabled', 'true');
+        button.addEventListener('mouseenter', () => showMicroLocator(entry));
+        button.addEventListener('focus', () => showMicroLocator(entry));
+        button.addEventListener('mouseleave', () =>
+          document.activeElement === button ? showMicroLocator(entry) : hideMicroLocator());
+        button.addEventListener('blur', hideMicroLocator);
+        button.addEventListener('click', () => {
+          if (AppState.viewOnly) return;
+          cycleScratchStatus({ properties: { name: entry.name } });
+          document.querySelector(`#scratchMicroStatesList button[data-key="${CSS.escape(entry.key)}"]`)?.focus();
+        });
+        item.appendChild(button);
+        list.appendChild(item);
+      });
+      if (query) {
+        statusLine.textContent = entries.length
+          ? `${entries.length} nation${entries.length === 1 ? '' : 's'} match “${query}”${entries.length > 80 ? ' (showing 80)' : ''}.`
+          : `No nation matches “${query}”.`;
+      } else {
+        const statuses = microStateCatalog.map(entry => AppState.regions[entry.key]);
+        statusLine.textContent = `${statuses.filter(TravelLedger.isVisited).length} / ${microStateCatalog.length} Visited/Lived · ` +
+          `${statuses.filter(value => value === 't').length} Transited. Boundaries: Natural Earth 1:10m.`;
+      }
+    }
+
+    document.getElementById('scratchNationSearch').addEventListener('input', renderMicroStateTray);
+    document.getElementById('scratchNationSearch').addEventListener('keydown', event => {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      document.querySelector('#scratchMicroStatesList button')?.focus();
+    });
   </script>
 
   <script>
@@ -3128,7 +3412,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261015-ui2"></script>
+  <script src="./expedition-ui.js?v=20261016-micro"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);
