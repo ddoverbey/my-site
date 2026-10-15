@@ -674,6 +674,31 @@ check('visited county polygons credit their cached predominant biome without cre
     statsCache=null;
   `, context);
 });
+check('Citadel onboarding starts hidden, offers passport import, and county biomes resolve lazily', () => {
+  assert.match(html, /<div id="homeBaseModal" class="hidden /);
+  assert.ok(html.includes('id="btnHomeImport"'));
+  assert.ok(!html.includes('buildCountyBiomeCache'));
+  const startup = html.slice(html.indexOf("window.addEventListener('DOMContentLoaded'"));
+  assert.ok(startup.indexOf('openHomeModal()') < startup.indexOf('startApp()'),
+    'onboarding must be decided from saved state before datasets load');
+  vm.runInContext(`
+    statsCache=null;
+    AppState.counties={'06073':'v'};
+    var lazyBiomeIndexes = coordinateIndexes;
+    coordinateIndexes = null;
+  `, context);
+  assert.equal(vm.runInContext("countyBiome('06073')", context), null);
+  assert.equal(vm.runInContext("Object.hasOwn(countyBiomeCache,'06073')", context), false,
+    'missing geography must not memoize a null biome');
+  vm.runInContext("countyBiomeCache['06073']='7'", context);
+  assert.equal(vm.runInContext("countyBiome('06073')", context), '7');
+  vm.runInContext(`
+    delete countyBiomeCache['06073'];
+    coordinateIndexes = lazyBiomeIndexes;
+    AppState.counties={'06073':'l'};
+    statsCache=null;
+  `, context);
+});
 context.testExpedition = {
   id: 'exp_test', name: '<script>Trip</script>', startDate: '2026-09-01', endDate: '2026-09-01',
   transitTags: ['awd', 'ferry'], purposeTags: ['photography'],

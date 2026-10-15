@@ -448,6 +448,12 @@ it adds no separate reveal layer. The Citadel grants a single derived +50 XP bon
 bonus each time home changes. New explorers unlock **Scout**; established explorer classes are
 still determined by their accumulated travel. Storage failures roll back home and region changes
 before any camera flight, pulse, or success notification.
+The Citadel onboarding dialog opens only when the saved browser passport has no home, decided
+from local storage before the geography datasets finish loading. Returning explorers can choose
+**Import Passport (.json)** there instead; the import waits for startup datasets, then closes the
+dialog when the imported passport includes a home. A home chosen while datasets are still
+loading is saved as soon as they finish. County biomes are resolved lazily for logged counties
+only, rather than for the entire county atlas at startup.
 New Visited/Lived park and custom-POI discoveries run a 1.2-second reveal pulse on the same canvas.
 Point auras animate radius/opacity; NPS boundary reveals animate opacity and feathering without
 distorting their geometry. Pulses begin only after successful persistence, including new POIs and

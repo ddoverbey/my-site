@@ -662,7 +662,7 @@
 
   </main>
 
-  <div id="homeBaseModal" class="fixed inset-0 z-[1000] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 transition-all duration-300">
+  <div id="homeBaseModal" class="hidden fixed inset-0 z-[1000] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 transition-all duration-300">
     <div class="rpg-panel rpg-panel-gold max-w-lg w-full rounded-3xl p-6 sm:p-8 text-center space-y-6">
       <div class="w-20 h-20 mx-auto rounded-3xl bg-gradient-to-tr from-amber-600 to-amber-300 flex items-center justify-center text-4xl shadow-xl shadow-amber-500/20">
         🏰
@@ -700,6 +700,15 @@
           <button class="quick-city-chip text-[11px] px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700" data-name="San Francisco, CA" data-lat="37.7749" data-lng="-122.4194">San Francisco</button>
           <button class="quick-city-chip text-[11px] px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700" data-name="London, UK" data-lat="51.5074" data-lng="-0.1278">London</button>
         </div>
+
+        <div class="flex items-center gap-3 text-xs text-slate-500 pt-2">
+          <div class="flex-1 h-px bg-slate-800"></div>
+          <span>RETURNING EXPLORER?</span>
+          <div class="flex-1 h-px bg-slate-800"></div>
+        </div>
+        <button id="btnHomeImport" type="button" class="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 font-semibold text-slate-200 text-sm flex items-center justify-center gap-2 transition-all">
+          <span aria-hidden="true">📂</span> Import Passport (.json)
+        </button>
       </div>
 
       <div class="text-[11px] text-slate-500">
@@ -1298,9 +1307,9 @@
       
       const biomesSet = metadataProgress.collectedBiomes;
       Object.entries(AppState.counties).forEach(([fips, status]) => {
-        if (TravelLedger.isVisited(status) && countyBiomeCache[fips]) {
-          biomesSet.add(countyBiomeCache[fips]);
-        }
+        if (!TravelLedger.isVisited(status)) return;
+        const biome = countyBiome(fips);
+        if (biome) biomesSet.add(biome);
       });
 
       const rareBiomesList = Object.keys(BIOMES).filter(b => BIOMES[b].rarity === 'rare');
@@ -2196,21 +2205,21 @@
         CoordinateLookups.biomeRegion(lat, lng, coordinateIndexes.ecoregions, d3.geoContains).biomes);
     }
 
-    function buildCountyBiomeCache() {
-      Object.keys(countyBiomeCache).forEach(key => delete countyBiomeCache[key]);
-      if (!countyGeoJson?.length || !coordinateIndexes?.ecoregions?.length) return;
-      countyGeoJson.forEach(feature => {
-        const fips = String(feature.id).padStart(5, '0');
-        const normalized = CoordinateLookups.normalizeFeature(feature, d3.geoArea);
-        const [lng, lat] = d3.geoCentroid(normalized);
-        let biomes = cachedBiomeAt(lat, lng);
-        if (!biomes.length) {
-          const intersecting = CoordinateLookups.firstBoundaryIntersection(
-            normalized, coordinateIndexes.ecoregions, d3);
-          if (intersecting) biomes = [String(intersecting.properties.BIOME_NUM)];
-        }
-        if (biomes.length) countyBiomeCache[fips] = String(biomes[0]);
-      });
+    // Computed on demand: resolving all ~3,200 counties up front blocked startup for many seconds.
+    function countyBiome(fips) {
+      if (Object.hasOwn(countyBiomeCache, fips)) return countyBiomeCache[fips];
+      const feature = countyFeaturesById[fips];
+      if (!feature || !coordinateIndexes?.ecoregions?.length) return null;
+      const normalized = CoordinateLookups.normalizeFeature(feature, d3.geoArea);
+      const [lng, lat] = d3.geoCentroid(normalized);
+      let biomes = cachedBiomeAt(lat, lng);
+      if (!biomes.length) {
+        const intersecting = CoordinateLookups.firstBoundaryIntersection(
+          normalized, coordinateIndexes.ecoregions, d3);
+        if (intersecting) biomes = [String(intersecting.properties.BIOME_NUM)];
+      }
+      countyBiomeCache[fips] = biomes.length ? String(biomes[0]) : null;
+      return countyBiomeCache[fips];
     }
 
     async function loadCoordinateGeography() {
@@ -2236,7 +2245,6 @@
           microStates: CoordinateLookups.indexFeatures(microStateGeoJson || [], d3),
           ecoregions: CoordinateLookups.indexFeatures(features, d3)
         };
-        buildCountyBiomeCache();
         status.textContent = 'Custom-coordinate geography ready. Region and biome matches use simplified polygons.';
       } catch (error) {
         console.error('Failed to load coordinate geography', error);
@@ -3455,13 +3463,16 @@
 
     document.getElementById('fileInput').addEventListener('change', (e) => {
       const file = e.target.files[0];
+      e.target.value = '';
       if (!file) return;
       const reader = new FileReader();
-      reader.onload = (event) => {
+      reader.onload = async (event) => {
         try {
           if (AppState.viewOnly) throw new Error('Read-only passport: import is disabled.');
           const parsed = migratePassport(JSON.parse(event.target.result));
+          await appReady;
           commitLedger(() => applyPassport(parsed));
+          if (AppState.homeBase) closeHomeModal();
           initMap();
           restoreModeView();
           updateHomeBaseMarker();
@@ -3508,11 +3519,23 @@
     }
 
     document.getElementById('btnHomeConfig').addEventListener('click', openHomeModal);
+    document.getElementById('btnHomeImport').addEventListener('click', () => {
+      document.getElementById('fileInput').click();
+    });
 
     function setHometownCoordinates(name, lat, lng) {
       if (AppState.viewOnly) return;
       CoordinateLookups.validateCoordinates(Number(lat), Number(lng));
       if (typeof name !== 'string' || !name.trim()) throw new Error('Enter a home name.');
+      if (appLoading) {
+        document.getElementById('homeLookupStatus').textContent = 'Preparing atlas geography…';
+        appReady.then(() => {
+          document.getElementById('homeLookupStatus').textContent = '';
+          try { setHometownCoordinates(name, lat, lng); }
+          catch (error) { console.error('Home save failed', error); showNotification('Home not saved', error.message, '⚠️'); }
+        });
+        return;
+      }
       if (!coordinateIndexes) {
         showNotification('Geography unavailable', 'Retry datasets before establishing your home county.', '⚠️');
         return;
@@ -3583,24 +3606,31 @@
       updateAllUI();
     });
 
-    window.addEventListener('DOMContentLoaded', async () => {
+    window.addEventListener('DOMContentLoaded', () => {
       loadPersistedState();
-      await Promise.all([loadGeoDatasets(), loadNpsCatalog(), loadWorldwideCatalog()]);
-      await loadBiomeCatalog();
-      await Promise.all([loadNpsBoundaries(), loadCoordinateGeography()]);
-      syncDerivedState();
-      saveState();
-      initMap();
-      restoreModeView();
-      updateAllUI();
-
-      // If user has never set a home base and is not viewing a shared link, open onboarding modal
-      if (!AppState.homeBase && !AppState.viewOnly) {
-        setTimeout(openHomeModal, 600);
-      } else {
-        closeHomeModal();
-      }
+      // Decide on onboarding from saved state immediately, not after every dataset loads.
+      if (!AppState.homeBase && !AppState.viewOnly) openHomeModal();
+      appReady = startApp();
     });
+
+    let appLoading = false;
+    let appReady = Promise.resolve();
+
+    async function startApp() {
+      appLoading = true;
+      try {
+        await Promise.all([loadGeoDatasets(), loadNpsCatalog(), loadWorldwideCatalog()]);
+        await loadBiomeCatalog();
+        await Promise.all([loadNpsBoundaries(), loadCoordinateGeography()]);
+        syncDerivedState();
+        saveState();
+        initMap();
+        restoreModeView();
+        updateAllUI();
+      } finally {
+        appLoading = false;
+      }
+    }
   </script>
 </body>
 </html>
