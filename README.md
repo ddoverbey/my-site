@@ -611,10 +611,10 @@ partially progressed badges appear only on the Achievements page. Badge tooltips
 include the earned title, rarity and requirement; clicking one opens Achievements. Badges are derived
 from saved progress rather than separately persisted, so edits/imports update them without duplicates.
 NPS completion uses the loaded catalog size and is unavailable when its source fails.
-Incomplete **Legendary** and **Mythic** tiers show their titles, blurred redaction bars and a
-single unitless milestone count/percentage instead of criteria or a progress bar. The actual
-criteria are omitted from the rendered card, not exposed beneath the blur. **Epic** and lower tiers
-retain their explicit criteria and progress bars. Completing a secret tier reveals its exact
+Incomplete **Legendary** and **Mythic** tiers show their titles, achievement-specific cryptic hints
+blurred with CSS, and a single unitless milestone count/percentage instead of exact criteria or a
+progress bar. The exact completion criteria are omitted from the rendered card until earned. **Epic**
+and lower tiers retain their explicit criteria and progress bars. Completing a secret tier reveals its exact
 criteria, illuminates the card gold and unlocks its class-title badge; newly completed secret tiers
 also trigger the level-up chime (when sound is enabled) and a notification. Reloading does not
 replay completion effects. These display rules do not change saved progress or unlock requirements.
@@ -650,7 +650,7 @@ Lived grants the same completion credit as Visited. Metadata badges:
 - **Pole to Pole:** at least 60 degrees between the northernmost and southernmost logged points.
 - **Manifest Destiny:** visited/lived completion across the loaded US county atlas.
 - **Fifty-Nifty:** visited/lived completion of all 50 US states.
-- **How???? (Citizen of the World):** complete all countries/territories represented in the loaded
+- **Citizen of the World:** complete all countries/territories represented in the loaded
   World Nations atlas. This is atlas coverage, not a complete sovereign-country census.
 - **Country Roads, Take Me Home (Rare, 🛣️🏡):** visit/live in West Virginia and Shenandoah
   National Park, **or** West Virginia plus Blue Ridge Mountains (Blue Ridge Parkway qualifies)

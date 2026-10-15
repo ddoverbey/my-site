@@ -1529,12 +1529,13 @@ check('atlas completion goals use actual datasets and exclude unknown countries 
   assert.equal(vm.runInContext('calculateStats().countiesCount', context), 1);
   assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='worldAtlas').tiers[0].goal(calculateStats())", context), 2);
   assert.ok(element('achievementsContainer').innerHTML.includes('Progress: 1 / 2 (50%)'));
-  assert.ok(element('achievementsContainer').innerHTML.includes('achievement-redaction-bar'));
   assert.ok(element('achievementsContainer').innerHTML.includes(
-    'aria-label="Secret criteria hidden until completion"'
+    'The Earth is no longer just a map—it is your neighborhood. No sovereign border can remain uncrossed.'
   ));
-  assert.ok(html.includes('.achievement-redaction-bar {\n      display: block;'));
-  assert.ok(html.includes('filter: blur(2px);'));
+  assert.ok(element('achievementsContainer').innerHTML.includes(
+    'aria-label="Cryptic hint, blurred until completion"'
+  ));
+  assert.ok(html.includes('.achievement-redacted {\n      filter: blur(3px);'));
   assert.ok(!element('achievementsContainer').innerHTML.includes(
     'Visit every country/territory represented in the World Nations atlas'
   ));
@@ -1558,7 +1559,7 @@ check('every real tier hides at zero, redacts only Legendary/Mythic, and reveals
     addEventListener() {}
   });
   const cases = vm.runInContext(`ACHIEVEMENTS.flatMap(achievement => achievement.tiers.map(tier => ({
-    id: achievement.id, title: tier.title, desc: tier.desc, rarity: tier.rarity,
+    id: achievement.id, title: tier.title, desc: tier.desc, secretDesc: tier.secretDesc, rarity: tier.rarity,
     goal: typeof tier.goal === 'function'
       ? tier.goal({npsTotal:474,countyTotal:3231,atlasCountriesTotal:200}) : tier.goal
   })))`, context);
@@ -1596,8 +1597,9 @@ check('every real tier hides at zero, redacts only Legendary/Mythic, and reveals
         const locked = secret && progress < testCase.goal;
         assert.equal(card.innerHTML.includes(testCase.desc), !locked, testCase.title);
         assert.equal(card.innerHTML.includes('achievement-redacted'), locked, testCase.title);
-        assert.equal(card.innerHTML.includes('achievement-redaction-bar'), locked, testCase.title);
-        assert.equal(card.innerHTML.includes('Secret criteria hidden until completion'), locked, testCase.title);
+        assert.equal(secret ? typeof testCase.secretDesc === 'string' : true, true, testCase.title);
+        assert.equal(testCase.secretDesc ? card.innerHTML.includes(testCase.secretDesc) : false, locked, testCase.title);
+        assert.equal(card.innerHTML.includes('Cryptic hint, blurred until completion'), locked, testCase.title);
         assert.equal(card.innerHTML.includes('<progress '), !locked, testCase.title);
         assert.equal(card.className.includes('achievement-complete'), secret && !locked, testCase.title);
         if (locked) {
@@ -1606,6 +1608,7 @@ check('every real tier hides at zero, redacts only Legendary/Mythic, and reveals
           assert.equal(badges.length, 0, testCase.title);
         } else if (progress >= testCase.goal) {
           assert.ok(card.innerHTML.includes('Class title unlocked'), testCase.title);
+          if (testCase.secretDesc) assert.ok(!card.innerHTML.includes(testCase.secretDesc), testCase.title);
           assert.equal(badges.length, 1, testCase.title);
           assert.ok(badges[0].attributes.title.includes(testCase.desc), testCase.title);
         } else {
