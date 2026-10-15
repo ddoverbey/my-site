@@ -539,17 +539,21 @@ data shows retry guidance instead of a misleading completion count.
    service, with cached responses and requests spaced at least 1.1 seconds apart. Add intermediate
    stops if the suggested road route differs from your actual drive. US county credit uses segment
    intersections with the existing simplified county polygons, including narrow crossed counties.
-   Flights have **no connecting path or flyover county credit**; only their stops count.
-   Boat/walking legs currently connect stops directly and do not infer intermediate county visits.
-   Those paths are approximations, not ferry timetables or walking directions.
+   Ferry legs also try that router, which can follow mapped car-ferry routes when available; it is
+   not a maritime router or ferry timetable. If no route is available, the preview shows a dashed
+   direct approximation and says so. Walking legs are also shown as dashed direct approximations.
+   Flights use a dashed connector for orientation only. None of these ferry, walking, or flight
+   lines awards intermediate counties or clears fog; only their stops count.
 
 The preview does not save visits or clear fog. No map picker is displayed.
 For SAN → DEN → Aspen → DEN, select Flight, Drive, Drive: credit the airport/destination
 counties and the counties on the approved drives, not those between San Diego and Denver.
-The existing 40 km fog corridor follows each non-flight leg; flight legs never carve a corridor.
+The existing 40 km fog corridor follows routed driving/AWD legs only. Ferry, flight, and walking
+lines never carve a corridor, including older ferry records whose geometry was only a straight line.
 The modal's collapsed **Map services & privacy** section explains which services receive searches
 or coordinates and includes attribution. Routing failure is explicit, never replaced with a fake
-straight-line road route.
+straight-line road route; unavailable ferry routing is explicitly represented as an approximate,
+dashed line instead.
 
 Saving samples terrestrial stop elevations through Open-Meteo in batches of four, reusing existing
 stop/POI elevations. These are stop samples, not terrain extremes along the drive; ocean-only
@@ -708,8 +712,8 @@ Each axis is capped at 1. Multiple matching tags within one axis count an expedi
 the same expedition can contribute to different axes. Wishlist/transit locations do not earn
 full-visit radar credit, and unknown/unloaded county IDs do not count. Radar contributions affect
 the displayed archetype, not base visit XP or the one-time Citadel bonus. New road legs follow
-OSRM road geometry; legacy non-flight routes retain their stored paths. Legacy mixed-mode trips
-with a Flight tag conservatively draw no corridor until edited into explicit legs.
+OSRM road geometry; legacy road-only routes retain their stored paths. Legacy mixed-mode trips
+with a Flight, Ferry, or Walk tag conservatively draw no corridor until edited into explicit legs.
 GPX/KML import is not included.
 
 ## Homepage analytics

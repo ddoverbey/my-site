@@ -105,7 +105,7 @@ check('every inline script parses', () => scripts.forEach(script => new vm.Scrip
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261017-travellog')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261014-ferry-routes')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('National Parks is a Scratch Map dataset, not a separate navigation page, with an expanded checklist', () => {
@@ -747,7 +747,7 @@ check('mini-maps plot every route stop and frame multi-stop trips that have no p
       setView: (center, zoom) => drawn.setView.push([center, zoom])
     }),
     tileLayer: () => ({ addTo() { return this; } }),
-    polyline: coords => { drawn.polylines.push(coords); return { addTo() { return this; } }; },
+    polyline: (coords, options) => { drawn.polylines.push({ coords, options }); return { addTo() { return this; } }; },
     circleMarker: coords => { drawn.markers.push(coords); return { addTo() { return this; } }; },
     latLngBounds: coords => coords
   };
@@ -781,13 +781,53 @@ check('mini-maps plot every route stop and frame multi-stop trips that have no p
     context.L = previousL;
     vm.runInContext(`AppState.expeditions = ${savedExpeditions}; delete globalThis.travelLogBase; renderExpeditionHistory();`, context);
   }
+  context.L = {
+    ...context.L,
+    map: () => ({
+      remove: () => { drawn.removed += 1; },
+      fitBounds: (bounds, options) => drawn.fitBounds.push([bounds, options]),
+      setView: (center, zoom) => drawn.setView.push([center, zoom])
+    }),
+    tileLayer: () => ({ addTo() { return this; } }),
+    polyline: (coords, options) => { drawn.polylines.push({ coords, options }); return { addTo() { return this; } }; },
+    circleMarker: coords => { drawn.markers.push(coords); return { addTo() { return this; } }; },
+    latLngBounds: coords => coords
+  };
+  const ferryStops = [
+    { kind: 'place', id: 'bellingham', name: 'Bellingham', coords: [48.75, -122.48] },
+    { kind: 'place', id: 'sitka', name: 'Sitka', coords: [57.05, -135.33] }
+  ];
+  context.testFerryExpedition = {
+    ...JSON.parse(savedExpeditions)[0], id: 'exp_ferry', transitTags: ['ferry'],
+    routeStops: ferryStops, routeCoords: ferryStops.map(stop => stop.coords),
+    routeLegs: [{ mode: 'ferry', routeSource: 'routed',
+      routeCoords: [[48.75, -122.48], [54, -130], [57.05, -135.33]], countyIds: [] }]
+  };
+  vm.runInContext(`
+    AppState.expeditions = [testFerryExpedition];
+    renderExpeditionHistory();
+  `, context);
+  check('Travel Log mini-map draws ferry geometry from the routed leg instead of joining stops directly',()=>{
+    const line=drawn.polylines.at(-1);
+    assert.deepEqual(plain(line.coords),[[48.75,-122.48],[54,-130],[57.05,-135.33]]);
+    assert.equal(line.options.color,'#38bdf8');
+    assert.equal(line.options.dashArray,null);
+    assert.deepEqual(plain(drawn.fitBounds.at(-1)[0]),[[48.75,-122.48],[54,-130],[57.05,-135.33],
+      [48.75,-122.48],[57.05,-135.33]]);
+  });
+  vm.runInContext(`destroyTravelLogMaps();AppState.expeditions=${savedExpeditions};delete globalThis.testFerryExpedition`, context);
+  context.L = null;
+  vm.runInContext('renderExpeditionHistory()', context);
+  context.L = previousL;
   assert.equal(vm.runInContext('Object.keys(travelLogMaps).length', context), 0);
 });
 check('logged expedition routes join legacy route corridors in the same canvas', () => {
+  const savedExpeditions = vm.runInContext('JSON.stringify(AppState.expeditions)', context);
   context.fogOperations.length = 0;
-  vm.runInContext('drawFogOfWar()', context);
+  vm.runInContext("AppState.expeditions=AppState.expeditions.map(exp=>({...exp,transitTags:['road']}));drawFogOfWar()", context);
   assert.equal(context.fogOperations.filter(op => op[0] === 'stroke').length, 1);
   assert.equal(context.fogOperations.filter(op => op[0] === 'polygonFill' && op[1] === 'evenodd').length, 1);
+  vm.runInContext(`AppState.expeditions=${savedExpeditions}`, context);
 });
 check('all ledger fields survive local and shared payload migration', () => {
   vm.runInContext('saveState();applyPassport(migratePassport(JSON.parse(localStorage.getItem("terra_incognita_state"))))', context);
@@ -2100,10 +2140,13 @@ const originalPreviewL=context.L;
 const originalPreviewTimeout=context.setTimeout;
 let roadRequests=0;
 const previewTooltipTexts=[];
+const previewLines=[];
 const previewLayer={addTo(){return this;},getBounds(){return {};},bindTooltip(text){previewTooltipTexts.push(text);return this;}};
 context.L={
   ...context.L,map:()=>({removeLayer(){},invalidateSize(){},fitBounds(){},setView(){},remove(){}}),
-  tileLayer:()=>previewLayer,featureGroup:()=>previewLayer,polyline:()=>previewLayer,circleMarker:()=>previewLayer
+  tileLayer:()=>previewLayer,featureGroup:()=>previewLayer,
+  polyline:(coords,options)=>{previewLines.push({coords,options});return previewLayer;},
+  circleMarker:()=>previewLayer
 };
 context.setTimeout=callback=>{callback();return 0;};
 context.CoordinateLookups={
@@ -2123,6 +2166,7 @@ context.uiMixedStops=[
 ];
 vm.runInContext(`
   applyPassport(migratePassport({counties:{'08001':'v'}}));map=null;PARKS=[];
+  expeditionRoadCache.clear();
   coordinateIndexes={countries:[],states:[],counties:[],ecoregions:[]};
   countyGeoJson=[{id:'08001'},{id:'08059'},{id:'06073'},{id:'08031'},{id:'08097'}];
   openExpedition();expeditionDraft=uiMixedStops.map(stop=>({...stop,coords:[...stop.coords]}));invalidateExpeditionRoutes();
@@ -2134,16 +2178,22 @@ element('expeditionStart').value='';
 element('expeditionEnd').value='';
 const beforePreview=vm.runInContext('JSON.stringify(passportPayload())',context);
 await element('btnPreviewExpedition').handlers.click();
-check('mixed-mode route preview fetches only driving directions and never saves or clears fog',()=>{
+check('mixed-mode route preview routes ferry legs when possible without granting ferry counties or fog',()=>{
   assert.equal(vm.runInContext('JSON.stringify(passportPayload())',context),beforePreview);
-  assert.equal(roadRequests,1);
+  assert.equal(roadRequests,2);
   assert.equal(vm.runInContext('expeditionPreparedLegs[0].routeCoords.length',context),0);
   assert.equal(vm.runInContext('expeditionPreparedLegs[0].countyIds.length',context),0);
+  assert.equal(vm.runInContext('expeditionPreparedLegs[0].routeSource',context),'none');
   assert.equal(vm.runInContext('expeditionPreparedLegs[1].countyIds[0]',context),'08059');
-  assert.equal(vm.runInContext('expeditionPreparedLegs[2].routeCoords.length',context),2);
+  assert.equal(vm.runInContext('expeditionPreparedLegs[2].routeCoords.length',context),3);
+  assert.equal(vm.runInContext('expeditionPreparedLegs[2].routeSource',context),'routed');
+  assert.deepEqual(Array.from(vm.runInContext('expeditionPreparedLegs[2].countyIds',context)),[]);
   assert.equal(element('btnSaveExpedition').disabled,false);
   assert.ok(previewTooltipTexts.includes('Aspen'));
   assert.ok(previewTooltipTexts.includes('SAN &lt;airport&gt;'));
+  assert.ok(previewLines.some(line=>line.options.color==='#38bdf8' && line.options.dashArray===null));
+  assert.ok(previewLines.some(line=>line.options.color==='#94a3b8' && line.options.dashArray==='8 8'));
+  assert.ok(element('expeditionRouteSummary').textContent.includes('do not clear fog'));
 });
 context.crypto.randomUUID=()=> 'mixed-ui';
 await element('expeditionForm').handlers.submit({preventDefault(){}});
@@ -2156,7 +2206,7 @@ check('mixed-mode trips save with blank dates, endpoint and road county credit, 
   assert.deepEqual(saved.transitTags,['flight','road','ferry']);
   assert.deepEqual(saved.purposeTags,[]);
   assert.deepEqual(Array.from(vm.runInContext('Object.keys(AppState.counties).sort()',context)),['06073','08001','08031','08059','08097']);
-  assert.equal(vm.runInContext('TravelLedger.fogRoutes(AppState.expeditions[0]).length',context),2);
+  assert.equal(vm.runInContext('TravelLedger.fogRoutes(AppState.expeditions[0]).length',context),1);
   vm.runInContext('renderExpeditionHistory()',context);
   assert.ok(element('travelLogFeed').innerHTML.includes('data-edit-expedition="exp_mixed-ui"'));
   assert.ok(element('travelLogFeed').innerHTML.includes('&lt;friends&gt; &amp; photography'));
@@ -2170,7 +2220,7 @@ check('editing a saved trip restores leg modes, reason and route preview without
   assert.equal(vm.runInContext('expeditionDraft[0].travelMode',context),'flight');
   assert.equal(vm.runInContext('expeditionDraft[1].travelMode',context),'road');
   assert.equal(element('btnSaveExpedition').disabled,false);
-  assert.equal(roadRequests,1);
+  assert.equal(roadRequests,2);
 });
 vm.runInContext('expeditionDraft[1].travelMode="flight";invalidateExpeditionRoutes()',context);
 await element('expeditionForm').handlers.submit({preventDefault(){}});
@@ -2196,7 +2246,7 @@ check('editing driving to flight removes driven-only county credit while preserv
   assert.equal(vm.runInContext('AppState.counties["08059"]',context),undefined);
   assert.equal(vm.runInContext('AppState.counties["08001"]',context),'v');
   assert.equal(vm.runInContext('AppState.counties["06073"]',context),'v');
-  assert.equal(vm.runInContext('TravelLedger.fogRoutes(AppState.expeditions[0]).length',context),1);
+  assert.equal(vm.runInContext('TravelLedger.fogRoutes(AppState.expeditions[0]).length',context),0);
 });
 vm.runInContext('AppState.viewOnly=true;renderExpeditionHistory()',context);
 check('shared passports show expedition history but cannot open an editor or update records',()=>{
@@ -2217,6 +2267,21 @@ check('road service failures keep the draft and never substitute a straight-line
   assert.ok(element('expeditionStatus').textContent.includes('Road routing HTTP 503'));
   assert.equal(vm.runInContext('expeditionDraft.length',context),4);
   assert.equal(vm.runInContext('AppState.expeditions.length',context),1);
+});
+context.CoordinateLookups.lookupRoadRoute=async(from,to)=>{
+  if (from[0]===39.1911) throw new Error('Ferry route unavailable');
+  return [[...from],[...to]];
+};
+await element('btnPreviewExpedition').handlers.click();
+check('unroutable ferries use an explicit dashed direct approximation without route county or fog credit',()=>{
+  assert.notEqual(vm.runInContext('expeditionPreparedLegs',context),null,element('expeditionStatus').textContent);
+  const ferryLeg=vm.runInContext('expeditionPreparedLegs[2]',context);
+  assert.equal(ferryLeg.routeSource,'direct');
+  assert.equal(ferryLeg.routeCoords.length,2);
+  assert.deepEqual(Array.from(ferryLeg.countyIds),[]);
+  assert.ok(element('expeditionStatus').textContent.includes('direct approximation'));
+  assert.ok(previewLines.some(line=>line.options.color==='#38bdf8' && line.options.dashArray==='8 8'));
+  assert.equal(vm.runInContext('TravelLedger.fogRoutes(draftExpedition(expeditionPreparedLegs)).length',context),1);
 });
 context.CoordinateLookups=originalExpeditionLookups;
 context.L=originalPreviewL;

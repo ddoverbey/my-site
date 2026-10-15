@@ -493,9 +493,9 @@ const mixedExpedition = {
   transitTags:['flight','road'], purposeTags:[], countyIds:[], parkIds:[], customPoiIds:[],
   routeStops:mixedStops, routeCoords:mixedStops.map(stop=>stop.coords),
   routeLegs:[
-    {mode:'flight',routeCoords:[],countyIds:[]},
-    {mode:'road',routeCoords:[mixedStops[1].coords,[39.7,-105.5],mixedStops[2].coords],countyIds:['08059','08097']},
-    {mode:'road',routeCoords:[mixedStops[2].coords,[39.7,-105.5],mixedStops[3].coords],countyIds:['08059','08097']}
+    {mode:'flight',routeSource:'none',routeCoords:[],countyIds:[]},
+    {mode:'road',routeSource:'routed',routeCoords:[mixedStops[1].coords,[39.7,-105.5],mixedStops[2].coords],countyIds:['08059','08097']},
+    {mode:'road',routeSource:'routed',routeCoords:[mixedStops[2].coords,[39.7,-105.5],mixedStops[3].coords],countyIds:['08059','08097']}
   ],
   minElevationFt:null,maxElevationFt:null
 };
@@ -511,13 +511,15 @@ check('mixed city and airport itineraries support optional dates, reason text an
   assert.equal(ledger.metadataProgress(migrate({expeditions:[mixedExpedition]})).fastTravel,0);
   assert.equal(ledger.metadataProgress(migrate({expeditions:[{...mixedExpedition,startDate:null,endDate:null}]})).southernCross,0);
 });
-check('flight legs cannot carry path geometry or intermediate counties and legacy flights never clear corridors', () => {
+check('only routed road legs clear fog; flights, ferries, walking, and direct approximations never do', () => {
   assert.equal(ledger.fogRoutes(mixedExpedition).length,2);
   assert.deepEqual(ledger.fogRoutes({...exp,transitTags:['flight']}),[]);
   assert.deepEqual(ledger.fogRoutes({...exp,transitTags:['road']}),[exp.routeCoords]);
+  assert.deepEqual(ledger.fogRoutes({...exp,transitTags:['ferry']}),[]);
+  assert.deepEqual(ledger.fogRoutes({...exp,transitTags:['foot']}),[]);
   for (const flight of [
-    {mode:'flight',routeCoords:[mixedStops[0].coords,mixedStops[1].coords],countyIds:[]},
-    {mode:'flight',routeCoords:[],countyIds:['04001']},
+    {mode:'flight',routeSource:'none',routeCoords:[mixedStops[0].coords,mixedStops[1].coords],countyIds:[]},
+    {mode:'flight',routeSource:'none',routeCoords:[],countyIds:['04001']},
     {mode:'teleport',routeCoords:[],countyIds:[]}
   ]) assert.throws(()=>ledger.validateExpeditions([{...mixedExpedition,routeLegs:[flight,...mixedExpedition.routeLegs.slice(1)]}],lookups));
 });
@@ -529,8 +531,19 @@ check('leg validation rejects missing legs, mismatched tags, malformed coordinat
   ]) assert.throws(()=>ledger.validateExpeditions([{...mixedExpedition,...change}],lookups));
   const ferry = {...mixedExpedition,transitTags:['ferry'],routeStops:mixedStops.slice(0,2),
     routeCoords:mixedStops.slice(0,2).map(stop=>stop.coords),
-    routeLegs:[{mode:'ferry',routeCoords:mixedStops.slice(0,2).map(stop=>stop.coords),countyIds:[]}]};
-  assert.equal(ledger.fogRoutes(ledger.validateExpeditions([ferry],lookups)[0]).length,1);
+    routeLegs:[{mode:'ferry',routeSource:'routed',routeCoords:mixedStops.slice(0,2).map(stop=>stop.coords),countyIds:[]}]};
+  const validatedFerry = ledger.validateExpeditions([ferry],lookups)[0];
+  assert.deepEqual(ledger.fogRoutes(validatedFerry),[]);
+  assert.equal(validatedFerry.routeLegs[0].routeSource,'routed');
+  assert.throws(()=>ledger.validateExpeditions([{...ferry,
+    routeLegs:[{...ferry.routeLegs[0],countyIds:['04001']}]}],lookups),/travel leg/);
+  const directFerry = {...ferry,routeLegs:[{mode:'ferry',routeSource:'direct',
+    routeCoords:mixedStops.slice(0,2).map(stop=>stop.coords),countyIds:[]}]};
+  assert.deepEqual(ledger.fogRoutes(ledger.validateExpeditions([directFerry],lookups)[0]),[]);
+  const legacyFerry = ledger.validateExpeditions([{...ferry,
+    routeLegs:[{mode:'ferry',routeCoords:mixedStops.slice(0,2).map(stop=>stop.coords),countyIds:[]}]}],lookups)[0];
+  assert.equal(legacyFerry.routeLegs[0].routeSource,'direct');
+  assert.deepEqual(ledger.fogRoutes(legacyFerry),[]);
 });
 const mixedPoliticalAt = (lat,lng) => ({
   countries:['United States of America'],states:[lng < -110 ? 'California' : 'Colorado'],

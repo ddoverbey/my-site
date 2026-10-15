@@ -119,10 +119,20 @@
         if (!exp.routeStops?.length || exp.routeStops.length > 100 || !Array.isArray(exp.routeLegs) ||
             exp.routeLegs.length !== exp.routeStops.length - 1) throw new Error('Invalid expedition travel legs.');
         exp.routeLegs.forEach((leg, index) => {
-          if (!leg || !Object.hasOwn(transitTags, leg.mode) || !Array.isArray(leg.routeCoords) ||
+          const routeSource = leg?.routeSource ?? (leg?.mode === 'flight' ? 'none' :
+            ['road', 'awd'].includes(leg?.mode) ? 'routed' : 'direct');
+          if (!leg || !Object.hasOwn(transitTags, leg.mode) ||
+              !['routed', 'direct', 'none'].includes(routeSource) || !Array.isArray(leg.routeCoords) ||
               !Array.isArray(leg.countyIds) || new Set(leg.countyIds).size !== leg.countyIds.length ||
               leg.countyIds.some(id => !/^\d{5}$/.test(id)) ||
-              (leg.mode === 'flight' ? leg.routeCoords.length || leg.countyIds.length : leg.routeCoords.length < 2)) {
+              (leg.mode === 'flight' ? routeSource !== 'none' || leg.routeCoords.length || leg.countyIds.length :
+                routeSource === 'none' || leg.routeCoords.length < 2 ||
+                (routeSource === 'direct' && leg.routeCoords.length !== 2)) ||
+              ((['road', 'awd'].includes(leg.mode) && routeSource !== 'routed') ||
+                (!['road', 'awd'].includes(leg.mode) && leg.countyIds.length) ||
+                (routeSource === 'routed' && !['road', 'awd', 'ferry'].includes(leg.mode)) ||
+                (leg.mode === 'foot' && routeSource !== 'direct') ||
+                (leg.mode === 'ferry' && !['routed', 'direct'].includes(routeSource)))) {
             throw new Error('Invalid expedition travel leg.');
           }
           leg.routeCoords.forEach(point => {
@@ -147,7 +157,14 @@
       return {
         ...exp, transitTags: validateTags(exp.transitTags, transitTags),
         purposeTags: validateTags(exp.purposeTags, purposeTags),
-        routeCoords: exp.routeCoords.map(point => [...point])
+        routeCoords: exp.routeCoords.map(point => [...point]),
+        ...(exp.routeLegs ? { routeLegs: exp.routeLegs.map(leg => ({
+          ...leg,
+          routeSource: leg.routeSource ?? (leg.mode === 'flight' ? 'none' :
+            ['road', 'awd'].includes(leg.mode) ? 'routed' : 'direct'),
+          routeCoords: leg.routeCoords.map(point => [...point]),
+          countyIds: [...leg.countyIds]
+        })) } : {})
       };
     });
   }
@@ -348,8 +365,10 @@
   }
 
   function fogRoutes(expedition) {
-    if (expedition.routeLegs) return expedition.routeLegs.filter(leg => leg.mode !== 'flight').map(leg => leg.routeCoords);
-    return expedition.transitTags.includes('flight') ? [] : [expedition.routeCoords];
+    if (expedition.routeLegs) return expedition.routeLegs
+      .filter(leg => ['road', 'awd'].includes(leg.mode) && (leg.routeSource ?? 'routed') === 'routed')
+      .map(leg => leg.routeCoords);
+    return expedition.transitTags.some(mode => !['road', 'awd'].includes(mode)) ? [] : [expedition.routeCoords];
   }
 
   function hasLoggedTravel(state) {
