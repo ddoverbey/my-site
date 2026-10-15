@@ -593,6 +593,28 @@ check('new manual promotions survive expedition edits and legacy ambiguous marks
   ledger.syncDerivedState(legacy,mixedOptions);
   assert.equal(legacy.counties['08097'],'v');
 });
+check('explicit map statuses override travel-derived pins, regions and counties without changing trips', () => {
+  const state = migrate({ expeditions: [mixedExpedition] });
+  ledger.syncDerivedState(state, mixedOptions);
+  assert.equal(state.counties['06073'], 'v');
+  state.statusOverrides.counties['06073'] = 'w';
+  state.statusOverrides.regions['s:California'] = 't';
+  state.statusOverrides.pins.romo = 'l';
+  ledger.syncDerivedState(state, mixedOptions);
+  assert.equal(state.counties['06073'], 'w');
+  assert.equal(state.regions['s:California'], 't');
+  assert.equal(state.pins.romo, 'l');
+  assert.equal(state.expeditions[0].id, mixedExpedition.id);
+  assert.deepEqual(state.expeditions[0].countyIds, mixedExpedition.countyIds);
+  state.expeditions = [];
+  ledger.syncDerivedState(state, mixedOptions);
+  assert.equal(state.counties['06073'], 'w');
+  assert.equal(state.regions['s:California'], 't');
+  assert.equal(state.pins.romo, 'l');
+  state.statusOverrides.counties['06073'] = 'un';
+  ledger.syncDerivedState(state, mixedOptions);
+  assert.equal(state.counties['06073'], undefined);
+});
 check('tracked park and custom POI promotions revert to their prior tiers without deleting independent visits', () => {
   const state=migrate({pins:{romo:'w'},customPois:[{...poi,status:'t'}],
     expeditions:[{...exp,customPoiIds:[poi.id]}]});
@@ -612,6 +634,13 @@ check('bad promotion provenance is rejected rather than downgrading lived tiers 
     [],{bad:{}},{pins:{romo:{before:'w',after:'l'}}},{counties:{'8065':{before:null,after:'v'}}},
     {pins:{romo:{before:'v',after:'v'}}},{poiStatuses:{poi_test:{before:null,after:'v'}}}
   ]) assert.throws(()=>migrate({expeditionPromotions}));
+});
+check('malformed map status overrides are rejected', () => {
+  for (const statusOverrides of [
+    [], { invalid: {} }, { counties: { '06073': 'unknown' } },
+    { counties: { '6073': 'v' } }, { pins: { romo: '__proto__' } },
+    { nationalParks: { yell: 'v' } }
+  ]) assert.throws(() => migrate({statusOverrides}), /map status overrides/i);
 });
 check('AWD achievement counts only the endpoints of AWD legs and photography reason preserves existing badge logic', () => {
   const trip={...mixedExpedition,reason:'Landscape photography',transitTags:['flight','awd','road'],

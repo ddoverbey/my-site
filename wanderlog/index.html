@@ -405,7 +405,7 @@
         <div class="flex flex-wrap items-center justify-between gap-4 rpg-panel p-4 rounded-2xl">
           <div>
             <h2 class="cinzel text-lg font-bold text-amber-200">The Royal Cartography Records</h2>
-            <p id="scratchPoliticalHint" class="text-xs text-slate-400">Counties: Unexplored → Visited → Wishlist → Lived → Unexplored. Use Lived to mark previous homes. Countries and US states: Unexplored → Visited → Wishlist → Transited → Lived → Unexplored. Manual county marks track completion without clearing RPG fog. Home and logged visits retain their ledger-backed tiers.</p>
+            <p id="scratchPoliticalHint" class="text-xs text-slate-400">Countries, US states and counties: Unexplored → Visited → Wishlist → Transited → Lived → Unexplored. Your map choice overrides the displayed travel-derived tier without changing trip records. Manual county marks do not clear RPG fog.</p>
           </div>
           <div class="flex flex-wrap items-center gap-3">
             <div class="flex flex-wrap bg-slate-900 p-1 rounded-xl border border-slate-700 text-xs" role="group" aria-label="Scratch Map dataset">
@@ -445,10 +445,11 @@
         <div id="scratchNationalParks" class="space-y-4 hidden">
         <div class="rpg-panel p-4 rounded-2xl space-y-3">
           <h2 class="cinzel text-lg font-bold text-amber-200">63 National Parks</h2>
-          <p class="text-xs text-slate-400">Click a park: Unexplored → Visited → Wishlist → Unexplored. Scroll to zoom; drag to pan. Lived ledger entries count as Visited; transit alone does not count. Home and logged travel retain their earned visits.</p>
+          <p class="text-xs text-slate-400">Click a park: Unexplored → Visited → Wishlist → Transited → Lived → Unexplored. Your map choice overrides the displayed travel-derived tier without changing trip records. Scroll to zoom; drag to pan.</p>
           <div class="flex flex-wrap gap-3 items-center text-xs">
             <span id="nationalParksStats" role="status" class="text-emerald-300">Loading National Parks…</span>
-            <span class="text-emerald-400">● Visited</span><span class="text-pink-500">● Wishlist</span>
+            <span class="text-emerald-400">● Visited</span><span class="text-blue-400">● Lived</span>
+            <span class="text-pink-500">● Wishlist</span><span class="text-slate-400">● Transited</span>
             <span class="text-slate-400">○ Unexplored</span>
             <button id="btnResetNationalParksZoom" type="button" class="rounded-lg bg-slate-800 px-3 py-2">Reset zoom</button>
           </div>
@@ -1141,6 +1142,7 @@
       expeditions: [],
       expeditionPromotions: {},
       nationalParkScratch: {},
+      statusOverrides: { pins: {}, regions: {}, counties: {}, nationalParks: {} },
       currentTab: 'map',
       mode: 'rpg',    // 'rpg' or 'classic'
       pinFilter: 'none',
@@ -1160,6 +1162,7 @@
 
     function applyPassport(parsed) {
       for (const field of ['homeBase', 'pins', 'regions', 'counties', 'customPois', 'expeditions', 'expeditionPromotions', 'nationalParkScratch']) AppState[field] = parsed[field] ?? (field === 'homeBase' ? null : field === 'customPois' || field === 'expeditions' ? [] : {});
+      AppState.statusOverrides = parsed.statusOverrides ?? { pins: {}, regions: {}, counties: {}, nationalParks: {} };
       AppState.clearedPolygons = Array.isArray(parsed.clearedPolygons) ? parsed.clearedPolygons : [];
       AppState.routes = Array.isArray(parsed.routes) ? parsed.routes : [];
       AppState.mode = parsed.mode || 'rpg';
@@ -1171,6 +1174,7 @@
         counties: AppState.counties, customPois: AppState.customPois, expeditions: AppState.expeditions,
         expeditionPromotions: AppState.expeditionPromotions,
         nationalParkScratch: AppState.nationalParkScratch,
+        statusOverrides: AppState.statusOverrides,
         clearedPolygons: AppState.clearedPolygons, routes: AppState.routes, mode: AppState.mode
       };
     }
@@ -2052,18 +2056,13 @@
         return;
       }
       try {
-        commitLedger(() => {
-          if (status === 'un') delete AppState.regions[entry.key];
-          else AppState.regions[entry.key] = status;
-        });
+        commitLedger(() => { AppState.statusOverrides.regions[entry.key] = status; });
       } catch (error) {
         console.error('Micro-state status not saved', error);
         return;
       }
       const actual = AppState.regions[entry.key];
-      showNotification('Cartography Updated', `${entry.name}: ${TravelLedger.labels[actual] || 'Unexplored'}.${
-        actual !== (status === 'un' ? undefined : status) ? ' Home or logged travel retains this tier.' : ''
-      }`, '🗺️');
+      showNotification('Cartography Updated', `${entry.name}: ${TravelLedger.labels[actual] || 'Unexplored'}.`, '🗺️');
       map?.closePopup();
       refreshTravelUI();
     }
@@ -2139,9 +2138,12 @@
       }
       const prev = AppState.pins[parkId];
       commitLedger(() => {
-        if (parkId === 'seki') AppState.nationalParkScratch = {};
-        if (status === 'un') delete AppState.pins[parkId];
-        else AppState.pins[parkId] = status;
+        AppState.statusOverrides.pins[parkId] = status;
+        if (parkId === 'seki') {
+          AppState.nationalParkScratch = {};
+          delete AppState.statusOverrides.nationalParks.sequ;
+          delete AppState.statusOverrides.nationalParks.kica;
+        }
       });
         if (TravelLedger.isVisited(status) && !TravelLedger.isVisited(prev)) {
           AudioEngine.playChime('discover');
@@ -2526,26 +2528,26 @@
     function cycleNationalPark(park) {
       if (AppState.viewOnly) return;
       const status = NationalParksScratch.status(park, AppState);
-      if (AppState.pins[park.ledgerId] === 'l' ||
-          AppState.expeditions.some(trip => trip.parkIds.includes(park.ledgerId))) {
-        showNotification('Visit retained', 'Home or logged travel retains this park visit. Edit its travel record instead.', '🏞️');
-        return;
-      }
-      const next = { un: 'v', v: 'w', w: 'un' }[status];
+      const cycle = ['un', 'v', 'w', 't', 'l'];
+      const next = cycle[(cycle.indexOf(status) + 1) % cycle.length];
       const fromChecklist = document.activeElement?.dataset.nationalPark === park.id;
       const fromMap = document.activeElement?.getAttribute('data-park') === park.id;
       try {
         commitLedger(() => {
           if (park.ledgerId === 'seki') {
             const siblings = NationalParksScratch.parks(PARKS).filter(p => p.ledgerId === 'seki');
-            const previous = Object.fromEntries(siblings.map(p => [p.id, NationalParksScratch.status(p, AppState)]));
-            AppState.nationalParkScratch = { ...previous, [park.id]: next };
-            const values = Object.values(AppState.nationalParkScratch);
-            if (values.includes('v')) AppState.pins.seki = 'v';
-            else if (values.includes('w')) AppState.pins.seki = 'w';
-            else delete AppState.pins.seki;
-          } else if (next === 'un') delete AppState.pins[park.id];
-          else AppState.pins[park.id] = next;
+            const statuses = Object.fromEntries(siblings.map(p =>
+              [p.id, NationalParksScratch.status(p, AppState)]));
+            statuses[park.id] = next;
+            AppState.statusOverrides.nationalParks = { ...statuses };
+            AppState.nationalParkScratch = Object.fromEntries(Object.entries(statuses)
+              .filter(([, value]) => ['v', 'w', 'un'].includes(value)));
+            const values = Object.values(statuses);
+            const aggregate = values.some(value => value === 'v' || value === 'l')
+              ? values.every(value => value === 'l') ? 'l' : 'v'
+              : values.includes('t') ? 't' : values.includes('w') ? 'w' : 'un';
+            AppState.statusOverrides.pins.seki = aggregate;
+          } else AppState.statusOverrides.pins[park.ledgerId] = next;
         });
       } catch (error) {
         console.error('National Park scratch status not saved', error);
@@ -2682,27 +2684,19 @@
     function cycleScratchStatus(feature) {
       if (AppState.viewOnly) return;
       const key = scratchStatusKey(feature);
-      const loggedCounty = AppState.scratchDataset === 'counties'
-        ? loggedCountyStatuses(false)[key] : null;
-      const next = AppState.scratchDataset === 'counties'
-        ? (scratchStatuses()[key] === 'v' && loggedCounty === 'v' ? 'l'
-          : ({ v: 'w', w: 'l' }[scratchStatuses()[key]] || (scratchStatuses()[key] === 'l' ? null : 'v')))
-        : { v: 'w', w: 't', t: 'l' }[scratchStatuses()[key]] ||
-        (scratchStatuses()[key] === 'l' ? null : 'v');
+      const field = AppState.scratchDataset === 'counties' ? 'counties' : 'regions';
+      const cycle = ['un', 'v', 'w', 't', 'l'];
+      const current = scratchStatuses()[key] || 'un';
+      const next = cycle[(cycle.indexOf(current) + 1) % cycle.length];
       try {
-        commitLedger(() => {
-          if (next) scratchStatuses()[key] = next;
-          else delete scratchStatuses()[key];
-        });
+        commitLedger(() => { AppState.statusOverrides[field][key] = next; });
       } catch (error) {
         console.error('Scratch Map status not saved', error);
         return;
       }
       const actual = scratchStatuses()[key];
       const name = AppState.scratchDataset === 'counties' ? countyLabel(key) : feature.properties.name;
-      showNotification('Cartography Updated', `${name}: ${TravelLedger.labels[actual] || 'Unexplored'}.${
-        actual !== (next || undefined) ? ' Home or logged travel retains this tier.' : ''
-      }`, '🗺️');
+      showNotification('Cartography Updated', `${name}: ${TravelLedger.labels[actual] || 'Unexplored'}.`, '🗺️');
       renderScratchMap();
       refreshTravelUI();
     }

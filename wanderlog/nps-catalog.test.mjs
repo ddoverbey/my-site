@@ -1053,22 +1053,24 @@ check('National Parks dataset stays in Scratch Map and other dataset buttons sti
     vm.runInContext("AppState.currentTab='map'", context);
   }
 });
-check('counties can mark previous homes Lived while nations and states keep all four tiers', () => {
+check('countries, states and counties cycle through every manual status independently of travel', () => {
   for (const dataset of ['world', 'usa', 'counties']) {
     vm.runInContext(`applyPassport(migratePassport({}));AppState.scratchDataset='${dataset}';renderScratchMap()`, context);
-    for (const next of dataset === 'counties' ? ['v', 'w', 'l', undefined] : ['v', 'w', 't', 'l', undefined]) {
+    for (const next of ['v', 'w', 't', 'l', 'un']) {
       const regions = scratchNodes.find(n => n.attrs.class === 'scratch-regions');
       regions.click({}, regions.data[0]);
       const actual = vm.runInContext('scratchStatuses()[scratchStatusKey(' +
         (dataset === 'world' ? 'worldGeoJson' : dataset === 'usa' ? 'usaGeoJson' : 'countyGeoJson') + '[0])]', context);
-      assert.equal(actual, next, dataset);
+      assert.equal(actual || 'un', next, dataset);
       if (dataset === 'counties' && next === 'l') {
         assert.equal(JSON.parse(savedJson).counties['06001'], 'l');
+        assert.equal(JSON.parse(savedJson).statusOverrides.counties['06001'], 'l');
         assert.equal(vm.runInContext('AppState.homeBase', context), null);
       }
     }
   }
   assert.ok(!Object.hasOwn(JSON.parse(savedJson).counties, '06001'));
+  assert.equal(JSON.parse(savedJson).statusOverrides.counties['06001'], 'un');
 });
 check('Scratch Map clicks are read-only for shared passports and roll back failed saves', () => {
   vm.runInContext('AppState.viewOnly=true', context);
@@ -1081,13 +1083,17 @@ check('Scratch Map clicks are read-only for shared passports and roll back faile
   assert.equal(element('toastTitle').textContent, 'Travel record not saved');
   context.localStorage.setItem = (key, value) => { savedJson = value; };
 });
-check('county scratch cycling promotes a ledger-visited county to lived and can return it to visited', () => {
-  vm.runInContext("AppState.expeditions=[{...testExpedition,id:'scratch-trip',countyIds:['06001']}];syncDerivedState();cycleScratchStatus(countyGeoJson[0])", context);
-  assert.equal(vm.runInContext('AppState.counties["06001"]', context), 'l');
-  assert.ok(element('toastMsg').textContent.includes('Lived / Home Base'));
-  vm.runInContext('cycleScratchStatus(countyGeoJson[0])', context);
-  assert.equal(vm.runInContext('AppState.counties["06001"]', context), 'v');
-  assert.ok(element('toastMsg').textContent.includes('retains this tier'));
+check('manual county status overrides travel-derived status without changing the expedition', () => {
+  vm.runInContext("applyPassport(migratePassport({}));AppState.scratchDataset='counties';AppState.expeditions=[{...testExpedition,id:'scratch-trip',countyIds:['06001']}];syncDerivedState();cycleScratchStatus(countyGeoJson[0])", context);
+  assert.equal(vm.runInContext('AppState.counties["06001"]', context), 'w');
+  assert.equal(vm.runInContext('AppState.expeditions[0].countyIds[0]', context), '06001');
+  assert.equal(JSON.parse(savedJson).expeditions[0].countyIds[0], '06001');
+  assert.equal(JSON.parse(savedJson).statusOverrides.counties['06001'], 'w');
+  for (const [status, expected] of [['w', 't'], ['t', 'l'], ['l', 'un'], ['un', 'v']]) {
+    vm.runInContext('cycleScratchStatus(countyGeoJson[0])', context);
+    assert.equal(vm.runInContext('AppState.counties["06001"] || "un"', context), expected);
+    assert.equal(vm.runInContext('AppState.expeditions[0].countyIds[0]', context), '06001');
+  }
 });
 check('missing county data clears prior statistics and displays explicit retry guidance', () => {
   vm.runInContext('countyGeoJson=null;renderScratchMap()', context);
@@ -2216,8 +2222,9 @@ check('dedicated scratch page includes exactly 63 parks, not monuments or other 
   assert.ok(!scratchParks.some(p => p.id === 'seki' || p.designation === 'National Monument'));
   assert.ok(html.includes('id="btnScratchNationalParks"'));
   const page = html.slice(html.indexOf('id="scratchNationalParks"'), html.indexOf('<!-- VIEW 3'));
-  assert.ok(!page.includes('Transited'));
-  assert.ok(!page.includes('>Lived<'));
+  assert.ok(page.includes('Unexplored → Visited → Wishlist → Transited → Lived → Unexplored'));
+  assert.ok(page.includes('● Transited'));
+  assert.ok(page.includes('● Lived'));
   assert.ok(page.includes('Wishlist'));
 });
 check('park regions count each park once and master only after every member is visited', () => {
@@ -2226,17 +2233,19 @@ check('park regions count each park once and master only after every member is v
   assert.equal(progress.reduce((sum, r) => sum + r.total, 0), 63);
   assert.ok(progress.every(r => r.total > 0 && r.tier === 'unstarted'));
   const northeast = scratchParks.filter(p => p.regionId === 'northeast');
-  state.pins[northeast[0].ledgerId] = 'v';
-  assert.equal(nationalParksScratch.progress(scratchParks, state).find(r => r.id === 'northeast').tier, 'progress');
+  state.pins[northeast[0].ledgerId] = 'l';
+  progress = nationalParksScratch.progress(scratchParks, state);
+  assert.equal(progress.find(r => r.id === 'northeast').tier, 'progress');
+  assert.equal(progress.find(r => r.id === 'northeast').visited, 1);
   northeast.forEach(p => { state.pins[p.ledgerId] = 'v'; });
   progress = nationalParksScratch.progress(scratchParks, state);
   assert.equal(progress.find(r => r.id === 'northeast').tier, 'mastered');
   assert.equal(scratchParks.find(p => p.id === 'yell').regionId, 'intermountain');
   assert.equal(scratchParks.find(p => p.id === 'cuva').regionId, 'midwest');
 });
-check('park scratch statuses display lived as visited and transit as unexplored', () => {
+check('park scratch statuses preserve all four tiers', () => {
   const park = scratchParks.find(p => p.id === 'yell');
-  for (const [ledger, expected] of [['l', 'v'], ['v', 'v'], ['w', 'w'], ['t', 'un']]) {
+  for (const [ledger, expected] of [['l', 'l'], ['v', 'v'], ['w', 'w'], ['t', 't']]) {
     assert.equal(nationalParksScratch.status(park, { pins: { yell: ledger }, expeditions: [] }), expected);
   }
 });
@@ -2247,12 +2256,15 @@ vm.runInContext(`
   renderNationalParksScratch=()=>{};
   applyPassport(migratePassport({}));AppState.viewOnly=false;
 `, context);
-check('park clicks cycle only unexplored, visited and wishlist and persist to the main ledger', () => {
-  for (const expected of ['v', 'w', undefined]) {
+check('park clicks cycle through every status and override a logged visit without editing its expedition', () => {
+  vm.runInContext("applyPassport(migratePassport({}));AppState.expeditions=[{...testExpedition,id:'park-status-trip',parkIds:['yell']}];syncDerivedState()", context);
+  for (const expected of ['w', 't', 'l', 'un', 'v']) {
     vm.runInContext('cycleNationalPark(scratchParkEntries.find(p=>p.id==="yell"))', context);
-    assert.equal(vm.runInContext('AppState.pins.yell', context), expected);
-    assert.equal(JSON.parse(savedJson).pins.yell, expected);
+    assert.equal(vm.runInContext('NationalParksScratch.status(scratchParkEntries.find(p=>p.id==="yell"),AppState)', context), expected);
+    assert.equal(JSON.parse(savedJson).statusOverrides.pins.yell, expected);
+    assert.equal(JSON.parse(savedJson).expeditions[0].parkIds[0], 'yell');
   }
+  vm.runInContext('AppState.expeditions=[]', context);
 });
 check('Sequoia and Kings Canyon inherit legacy visits but can be tracked independently', () => {
   vm.runInContext('applyPassport(migratePassport({pins:{seki:"v"}}));cycleNationalPark(scratchParkEntries.find(p=>p.id==="sequ"))', context);
@@ -2262,13 +2274,14 @@ check('Sequoia and Kings Canyon inherit legacy visits but can be tracked indepen
   const saved = JSON.parse(savedJson);
   assert.deepEqual(travelLedger.migrateState(saved, coordinateLookups, catalog).nationalParkScratch, { sequ: 'w', kica: 'v' });
 });
-check('read-only, lived and expedition-backed parks cannot lose earned visits', () => {
+check('read-only parks stay unchanged while map choices can override lived and expedition-derived status', () => {
   vm.runInContext('AppState.viewOnly=true;cycleNationalPark(scratchParkEntries.find(p=>p.id==="sequ"))', context);
   assert.equal(vm.runInContext('AppState.nationalParkScratch.sequ', context), 'w');
   vm.runInContext('AppState.viewOnly=false;applyPassport(migratePassport({pins:{yell:"l"}}));cycleNationalPark(scratchParkEntries.find(p=>p.id==="yell"))', context);
-  assert.equal(vm.runInContext('AppState.pins.yell', context), 'l');
+  assert.equal(vm.runInContext('AppState.pins.yell || "un"', context), 'un');
   vm.runInContext('applyPassport(migratePassport({}));AppState.expeditions=[{...testExpedition,parkIds:["yell"]}];syncDerivedState();cycleNationalPark(scratchParkEntries.find(p=>p.id==="yell"))', context);
-  assert.equal(vm.runInContext('AppState.pins.yell', context), 'v');
+  assert.equal(vm.runInContext('AppState.pins.yell', context), 'w');
+  assert.equal(vm.runInContext('AppState.expeditions[0].parkIds[0]', context), 'yell');
 });
 check('failed park scratch persistence rolls back split records and all promoted statuses', () => {
   vm.runInContext('applyPassport(migratePassport({pins:{seki:"v"}}))', context);

@@ -26,20 +26,29 @@
   }
 
   function status(park, state) {
+    const overrides = state.statusOverrides || {};
+    if (park.ledgerId === 'seki' && Object.hasOwn(overrides.nationalParks || {}, park.id)) {
+      return overrides.nationalParks[park.id];
+    }
+    if (Object.hasOwn(overrides.pins || {}, park.ledgerId)) {
+      return overrides.pins[park.ledgerId];
+    }
     const ledger = state.pins[park.ledgerId];
-    if (ledger === 'l' || state.expeditions.some(trip => trip.parkIds.includes(park.ledgerId))) return 'v';
+    if (state.expeditions.some(trip => trip.parkIds.includes(park.ledgerId))) return 'v';
     const value = park.ledgerId === 'seki' ? state.nationalParkScratch?.[park.id] ?? ledger : ledger;
-    return value === 'v' || value === 'l' ? 'v' : value === 'w' ? 'w' : 'un';
+    return value || 'un';
   }
 
   function progress(parks, state) {
     return regions.map(region => {
       const members = parks.filter(park => park.regionId === region.id);
-      const visited = members.filter(park => status(park, state) === 'v').length;
+      const visited = members.filter(park => isVisited(status(park, state))).length;
       return { ...region, total: members.length, visited,
         tier: members.length && visited === members.length ? 'mastered' : visited ? 'progress' : 'unstarted' };
     });
   }
+
+  const isVisited = status => status === 'v' || status === 'l';
 
   const api = { regions, parks, status, progress };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

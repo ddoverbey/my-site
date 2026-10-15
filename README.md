@@ -424,12 +424,14 @@ custom POIs, county FIPS codes and state/country keys:
 | `v` Visited | Emerald | Full point/boundary clearing and visit XP/stats |
 | `l` Lived / Home Base | Blue | Full clearing and credit for pins/POIs; manual county marks do not clear fog |
 
-Expedition promotion respects `w < t < v < l`. Manually marking a Lived destination as another
-tier cannot downgrade it. The map's Visited filter includes both Visited and Lived.
-Leaflet county hitboxes cycle Unexplored → Wishlist → Transited → Visited → Lived; Lived remains
-fixed there. Pins/custom POIs have explicit tier buttons. Ledger-backed trip visits are restored by
-`syncDerivedState()` if their derived tier is changed. Clearing a custom POI that belongs to a trip
-is disallowed to prevent dangling history references.
+Expedition promotion respects `w < t < v < l` unless the explorer explicitly chooses a map status.
+Map choices for parks, countries, states and counties are stored separately as status overrides,
+including an explicit Unexplored choice, and take precedence over travel-derived display statuses.
+They cycle Unexplored → Visited → Wishlist → Transited → Lived → Unexplored; park popups also have
+direct status buttons. Changing a map status never edits or removes the original trip/location
+records, and later ledger synchronization preserves the explorer's choice. The map's Visited filter
+includes both Visited and Lived. Clearing a custom POI that belongs to a trip is disallowed to
+prevent dangling history references.
 
 Geolocation, quick picks, and **Photon by Komoot autocomplete with explicit result selection**
 establish home. City and expedition searches send typed search text to `https://photon.komoot.io`
@@ -478,14 +480,12 @@ Existing NPS/RESOLVE snapshots are reused without regeneration.
 The Scratch Map offers **World Nations**, **United States**, and **US Counties**, reusing the
 already-loaded atlas features. County mode uses Albers USA with a faint, noninteractive state-border
 mesh for context. Colors are blue for Lived, emerald for Visited, slate for Transited, and pink
-for Wishlist; Lived polygons have a lighter blue border. Counties use
-**Unexplored → Visited → Wishlist → Lived → Unexplored**. The third click marks a previous home
-without moving your current home base. Nation/state editing retains
-**Unexplored → Visited → Wishlist → Transited → Lived → Unexplored**.
+for Wishlist; Lived polygons have a lighter blue border. Countries, states, and counties all use
+**Unexplored → Visited → Wishlist → Transited → Lived → Unexplored**. Map choices override
+travel-derived statuses, including an explicit Unexplored choice, without modifying trips.
 County edits use zero-padded FIPS IDs in `counties`; nation/state edits use `regions`.
 The counter reports Visited/Lived and Transited totals for the current dataset only.
-Edits persist transactionally and refresh Passport stats without revealing county fog. Home, park, POI and expedition
-records still restore their derived tiers; a retained tier is explained in the notification.
+Edits persist transactionally and refresh Passport stats without revealing county fog.
 Shared passports are read-only. No TopoJSON generation is needed for this view.
 
 ### 63 National Parks scratch-off
@@ -495,13 +495,12 @@ the 63 National Parks, not monuments, historic sites, or other NPS units. It reu
 catalog and existing boundary snapshot; no geography import or regeneration is needed.
 Redwood and American Samoa are included despite their unusual API designations.
 It sits alongside World Nations, United States, and US Counties, without a separate navigation
-page or header icon. Its 63-park checklist starts expanded. The park view hides the political
-map's Lived/Transited legend and instructions.
+page or header icon. Its 63-park checklist starts expanded.
 
-Park clicks cycle **Unexplored → Visited → Wishlist → Unexplored**. Wishlist is pink and
-Visited is emerald. Existing Lived entries display as Visited; Transited entries display as
-Unexplored. Lived and expedition-backed visits remain protected. Ordinary park marks share
-the main travel ledger and therefore reveal the corresponding park on the RPG map.
+Park clicks cycle **Unexplored → Visited → Wishlist → Transited → Lived → Unexplored**. Wishlist
+is pink, Visited is emerald, Transited is slate, and Lived is blue. Map choices override
+travel-derived statuses without changing expedition records. Ordinary park marks share the main
+travel ledger and therefore reveal the corresponding park on the RPG map.
 
 Sequoia and Kings Canyon have separate shapes and scratch records, although the NPS API/main
 ledger combines them as `seki`. Existing combined visits initially count for both. The two

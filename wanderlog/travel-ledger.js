@@ -32,6 +32,32 @@
     return { ...values };
   }
 
+  function validateStatusOverrides(value = {}) {
+    if (!value || typeof value !== 'object' || Array.isArray(value) ||
+        Object.keys(value).some(field => !['pins', 'regions', 'counties', 'nationalParks'].includes(field))) {
+      throw new Error('Invalid map status overrides.');
+    }
+    const overrides = { pins: {}, regions: {}, counties: {}, nationalParks: {} };
+    for (const field of ['pins', 'regions', 'counties']) {
+      const records = value[field] ?? {};
+      if (!records || typeof records !== 'object' || Array.isArray(records) ||
+          Object.entries(records).some(([id, status]) => !Object.hasOwn(ranks, status) && status !== 'un' ||
+            (field === 'counties' ? !/^\d{5}$/.test(id) :
+              !id || ['__proto__', 'constructor', 'prototype'].includes(id)))) {
+        throw new Error('Invalid map status overrides.');
+      }
+      overrides[field] = { ...records };
+    }
+    const nationalParks = value.nationalParks ?? {};
+    if (!nationalParks || typeof nationalParks !== 'object' || Array.isArray(nationalParks) ||
+        Object.entries(nationalParks).some(([id, status]) =>
+          !['sequ', 'kica'].includes(id) || (!Object.hasOwn(ranks, status) && status !== 'un'))) {
+      throw new Error('Invalid map status overrides.');
+    }
+    overrides.nationalParks = { ...nationalParks };
+    return overrides;
+  }
+
   function validateTags(tags, allowed) {
     if (!Array.isArray(tags) || new Set(tags).size !== tags.length || tags.some(tag => !Object.hasOwn(allowed, tag))) {
       throw new Error('Invalid expedition or location tags.');
@@ -206,6 +232,7 @@
     }
     const migrated = {
       ...legacy, pins, regions, counties, customPois, expeditions, nationalParkScratch: { ...nationalParkScratch },
+      statusOverrides: validateStatusOverrides(parsed.statusOverrides),
       expeditionPromotions: validatePromotions(parsed.expeditionPromotions),
       homeBase: homeBase ? { ...homeBase, radiusKm: homeRadiusKm } : null
     };
@@ -272,6 +299,12 @@
       }
       if (Object.keys(changes).length) state.expeditionPromotions[field] = changes;
     }
+    for (const field of ['pins', 'regions', 'counties']) {
+      for (const [id, status] of Object.entries(state.statusOverrides?.[field] || {})) {
+        if (status === 'un') delete state[field][id];
+        else state[field][id] = status;
+      }
+    }
     return state;
   }
 
@@ -305,7 +338,7 @@
         if (field === 'poiStatuses') {
           const poi = state.customPois.find(poi => poi.id === id);
           if (poi?.status === change.after) poi.status = change.before;
-        } else if (state[field][id] === change.after) {
+        } else if (state.statusOverrides?.[field]?.[id] !== undefined || state[field][id] === change.after) {
           if (change.before === null) delete state[field][id];
           else state[field][id] = change.before;
         }
