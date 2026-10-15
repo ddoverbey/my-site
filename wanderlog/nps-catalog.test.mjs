@@ -1523,9 +1523,12 @@ check('atlas completion goals use actual datasets and exclude unknown countries 
   assert.equal(vm.runInContext('calculateStats().countiesCount', context), 1);
   assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='worldAtlas').tiers[0].goal(calculateStats())", context), 2);
   assert.ok(element('achievementsContainer').innerHTML.includes('Progress: 1 / 2 (50%)'));
+  assert.ok(element('achievementsContainer').innerHTML.includes('achievement-redaction-bar'));
   assert.ok(element('achievementsContainer').innerHTML.includes(
-    'An extraordinary feat awaits. The details will reveal themselves upon discovery.'
+    'aria-label="Secret criteria hidden until completion"'
   ));
+  assert.ok(html.includes('.achievement-redaction-bar {\n      display: block;'));
+  assert.ok(html.includes('filter: blur(2px);'));
   assert.ok(!element('achievementsContainer').innerHTML.includes(
     'Visit every country/territory represented in the World Nations atlas'
   ));
@@ -1587,6 +1590,8 @@ check('every real tier hides at zero, redacts only Legendary/Mythic, and reveals
         const locked = secret && progress < testCase.goal;
         assert.equal(card.innerHTML.includes(testCase.desc), !locked, testCase.title);
         assert.equal(card.innerHTML.includes('achievement-redacted'), locked, testCase.title);
+        assert.equal(card.innerHTML.includes('achievement-redaction-bar'), locked, testCase.title);
+        assert.equal(card.innerHTML.includes('Secret criteria hidden until completion'), locked, testCase.title);
         assert.equal(card.innerHTML.includes('<progress '), !locked, testCase.title);
         assert.equal(card.className.includes('achievement-complete'), secret && !locked, testCase.title);
         if (locked) {

@@ -611,9 +611,9 @@ partially progressed badges appear only on the Achievements page. Badge tooltips
 include the earned title, rarity and requirement; clicking one opens Achievements. Badges are derived
 from saved progress rather than separately persisted, so edits/imports update them without duplicates.
 NPS completion uses the loaded catalog size and is unavailable when its source fails.
-Incomplete **Legendary** and **Mythic** tiers show their titles, a non-spoiling placeholder and a
+Incomplete **Legendary** and **Mythic** tiers show their titles, blurred redaction bars and a
 single unitless milestone count/percentage instead of criteria or a progress bar. The actual
-criteria are omitted from the rendered card, not merely blurred with CSS. **Epic** and lower tiers
+criteria are omitted from the rendered card, not exposed beneath the blur. **Epic** and lower tiers
 retain their explicit criteria and progress bars. Completing a secret tier reveals its exact
 criteria, illuminates the card gold and unlocks its class-title badge; newly completed secret tiers
 also trigger the level-up chime (when sound is enabled) and a notification. Reloading does not

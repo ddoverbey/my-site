@@ -215,9 +215,22 @@
       color: transparent;
     }
     .achievement-redacted {
-      color: #94a3b8;
-      letter-spacing: .08em;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      width: min(100%, 15rem);
+      margin-top: .375rem;
     }
+    .achievement-redaction-bar {
+      display: block;
+      height: .4rem;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #94a3b8, #64748b);
+      filter: blur(2px);
+      opacity: .8;
+    }
+    .achievement-redaction-bar:nth-child(2) { width: 82%; }
+    .achievement-redaction-bar:nth-child(3) { width: 61%; }
     .achievement-complete {
       background: linear-gradient(135deg, rgba(120, 53, 15, .55), rgba(69, 26, 3, .72));
       border-color: rgba(251, 191, 36, .8);
@@ -3028,10 +3041,6 @@
       return SECRET_ACHIEVEMENT_RARITIES.has(tier.rarity);
     }
 
-    function redactedAchievementDescription() {
-      return 'An extraordinary feat awaits. The details will reveal themselves upon discovery.';
-    }
-
     function announceSecretAchievementCompletions(stats) {
       const current = new Map(ACHIEVEMENTS.map(achievement => [
         achievement.id,
@@ -3115,7 +3124,7 @@
                 ${tier.title === ach.title ? '' : `<p class="text-xs text-slate-200 mt-2">${escapeHtml(tier.title)}</p>`}
                 <p class="achievement-rarity text-[10px] uppercase font-bold mt-1" data-rarity="${tier.rarity}" style="${achievementBadgeStyle(ach, tier)}">${ACHIEVEMENT_RARITIES[tier.rarity].label}</p>
                 ${progress < tier.goal && isSecretAchievementTier(tier)
-                  ? `<p class="text-[10px] achievement-redacted leading-tight mt-0.5">${escapeHtml(redactedAchievementDescription())}</p>`
+                  ? `<p class="achievement-redacted" role="img" aria-label="Secret criteria hidden until completion"><span class="achievement-redaction-bar" aria-hidden="true"></span><span class="achievement-redaction-bar" aria-hidden="true"></span><span class="achievement-redaction-bar" aria-hidden="true"></span></p>`
                   : `<p class="text-[10px] text-slate-400 leading-tight mt-0.5">${escapeHtml(tier.desc)}</p>`}
                 ${isSecretAchievementTier(tier) && progress < tier.goal
                   ? `<p class="text-[10px] text-amber-300 mt-1">Progress: ${(Math.floor(Math.min(progress, tier.goal) * 10) / 10).toLocaleString('en')} / ${tier.goal} (${Math.floor(Math.min(progress / tier.goal, 1) * 100)}%)</p>`
