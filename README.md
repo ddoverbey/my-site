@@ -605,6 +605,13 @@ partially progressed badges appear only on the Achievements page. Badge tooltips
 include the earned title, rarity and requirement; clicking one opens Achievements. Badges are derived
 from saved progress rather than separately persisted, so edits/imports update them without duplicates.
 NPS completion uses the loaded catalog size and is unavailable when its source fails.
+Incomplete **Legendary** and **Mythic** tiers show their titles, a non-spoiling placeholder and a
+single unitless milestone count/percentage instead of criteria or a progress bar. The actual
+criteria are omitted from the rendered card, not merely blurred with CSS. **Epic** and lower tiers
+retain their explicit criteria and progress bars. Completing a secret tier reveals its exact
+criteria, illuminates the card gold and unlocks its class-title badge; newly completed secret tiers
+also trigger the level-up chime (when sound is enabled) and a notification. Reloading does not
+replay completion effects. These display rules do not change saved progress or unlock requirements.
 Lived grants the same completion credit as Visited. Metadata badges:
 
 - **Under Pressure:** a visited/lived terrestrial POI or expedition stop below 0 ft.
@@ -621,7 +628,7 @@ Lived grants the same completion credit as Visited. Metadata badges:
   inference, not verified overnight GPS data. Undated or single-day southern trips do not qualify.
 - **Local Lore:** 5 distinct visited/lived Hidden Gem POIs in the current home county.
 - **Zero Meridian:** establish a home base.
-- **Junior Ecologist / Almost There! / Adventuring Time:** collect 3, all-but-one, and all
+- **Junior Ecologist / Almost There! / Gaia Wanderer:** collect 3, all-but-one, and all
   terrestrial biomes, including existing expedition coordinate samples.
 - **Beyond the Horizon:** a visited/lived coordinate more than 1,000 miles from the current home.
 - **A Whole New World:** a visited/lived coordinate in a known country other than the home country;

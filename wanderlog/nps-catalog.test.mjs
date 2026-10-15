@@ -1499,14 +1499,124 @@ check('atlas completion goals use actual datasets and exclude unknown countries 
   assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='worldAtlas').tiers[0].goal(calculateStats())", context), 2);
   assert.ok(element('achievementsContainer').innerHTML.includes('Progress: 1 / 2 (50%)'));
   assert.ok(element('achievementsContainer').innerHTML.includes(
-    'The Earth is no longer just a map—it is your neighborhood. No sovereign border can remain uncrossed.'
+    'An extraordinary feat awaits. The details will reveal themselves upon discovery.'
   ));
   assert.ok(!element('achievementsContainer').innerHTML.includes(
-    'A feat of extraordinary geographic alignment. The details will reveal themselves upon discovery.'
+    'Visit every country/territory represented in the World Nations atlas'
   ));
   vm.runInContext('worldGeoJson=null;countyGeoJson=null;renderAchievementsView()', context);
   assert.ok(!element('achievementsContainer').innerHTML.includes('Citizen of the World'));
   assert.ok(!element('achievementsContainer').innerHTML.includes('Manifest Destiny'));
+});
+check('every real tier hides at zero, redacts only Legendary/Mythic, and reveals exact criteria on completion', () => {
+  const cards = [];
+  const badges = [];
+  const cardContainer = element('achievementsContainer');
+  const badgeContainer = element('earnedAchievementBadges');
+  const originalCardAppend = cardContainer.appendChild;
+  const originalBadgeAppend = badgeContainer.appendChild;
+  const originalCreate = context.document.createElement;
+  cardContainer.appendChild = card => cards.push(card);
+  badgeContainer.appendChild = badge => badges.push(badge);
+  context.document.createElement = () => ({
+    attributes: {},
+    setAttribute(name, value) { this.attributes[name] = value; },
+    addEventListener() {}
+  });
+  const cases = vm.runInContext(`ACHIEVEMENTS.flatMap(achievement => achievement.tiers.map(tier => ({
+    id: achievement.id, title: tier.title, desc: tier.desc, rarity: tier.rarity,
+    goal: typeof tier.goal === 'function'
+      ? tier.goal({npsTotal:474,countyTotal:3231,atlasCountriesTotal:200}) : tier.goal
+  })))`, context);
+  vm.runInContext(`
+    var disclosureTestAchievements = ACHIEVEMENTS.slice();
+    var disclosureTestSnapshot = achievementProgressSnapshot;
+  `, context);
+  try {
+    for (const testCase of cases) {
+      context.disclosureTestCase = testCase;
+      const secret = ['legendary', 'mythic'].includes(testCase.rarity);
+      vm.runInContext(`
+        ACHIEVEMENTS.splice(0, ACHIEVEMENTS.length, {
+          ...disclosureTestAchievements.find(a => a.id === disclosureTestCase.id),
+          progress: s => s.testProgress, tiers: [disclosureTestCase]
+        });
+      `, context);
+      for (const progress of [0, testCase.goal / 2, testCase.goal]) {
+        cards.length = 0;
+        badges.length = 0;
+        context.disclosureTestProgress = progress;
+        vm.runInContext(`
+          achievementProgressSnapshot = null;
+          renderAchievementsView({testProgress:disclosureTestProgress});
+          renderEarnedAchievementBadges({testProgress:disclosureTestProgress});
+        `, context);
+        if (progress === 0) {
+          assert.equal(cards.length, 0, testCase.title);
+          assert.equal(badges.length, 0, testCase.title);
+          continue;
+        }
+        assert.equal(cards.length, 1, testCase.title);
+        const card = cards[0];
+        assert.ok(card.innerHTML.includes(testCase.title), testCase.title);
+        const locked = secret && progress < testCase.goal;
+        assert.equal(card.innerHTML.includes(testCase.desc), !locked, testCase.title);
+        assert.equal(card.innerHTML.includes('achievement-redacted'), locked, testCase.title);
+        assert.equal(card.innerHTML.includes('<progress '), !locked, testCase.title);
+        assert.equal(card.className.includes('achievement-complete'), secret && !locked, testCase.title);
+        if (locked) {
+          assert.ok(card.innerHTML.includes(` / ${testCase.goal} (50%)`), testCase.title);
+          assert.equal((card.innerHTML.match(new RegExp(` / ${testCase.goal}`, 'g')) || []).length, 1);
+          assert.equal(badges.length, 0, testCase.title);
+        } else if (progress >= testCase.goal) {
+          assert.ok(card.innerHTML.includes('Class title unlocked'), testCase.title);
+          assert.equal(badges.length, 1, testCase.title);
+          assert.ok(badges[0].attributes.title.includes(testCase.desc), testCase.title);
+        } else {
+          assert.equal(badges.length, 0, testCase.title);
+        }
+      }
+    }
+  } finally {
+    vm.runInContext(`
+      ACHIEVEMENTS.splice(0, ACHIEVEMENTS.length, ...disclosureTestAchievements);
+      achievementProgressSnapshot = disclosureTestSnapshot;
+    `, context);
+    cardContainer.appendChild = originalCardAppend;
+    badgeContainer.appendChild = originalBadgeAppend;
+    context.document.createElement = originalCreate;
+  }
+});
+check('secret completion effects fire once on crossing the goal, not initial load or repeated renders', () => {
+  const result = vm.runInContext(`(() => {
+    const achievements = ACHIEVEMENTS.slice();
+    const snapshot = achievementProgressSnapshot;
+    const playChime = AudioEngine.playChime;
+    const notify = showNotification;
+    const chimes = [], notices = [];
+    AudioEngine.playChime = sound => chimes.push(sound);
+    showNotification = (...args) => notices.push(args);
+    try {
+      const earthSandwich = achievements.find(a => a.id === 'earthSandwich');
+      ACHIEVEMENTS.splice(0, ACHIEVEMENTS.length, earthSandwich);
+      achievementProgressSnapshot = null;
+      announceSecretAchievementCompletions({metadataProgress:{earthSandwich:2}});
+      const initial = chimes.length;
+      announceSecretAchievementCompletions({metadataProgress:{earthSandwich:1}});
+      announceSecretAchievementCompletions({metadataProgress:{earthSandwich:2}});
+      announceSecretAchievementCompletions({metadataProgress:{earthSandwich:2}});
+      return {initial, chimes, notices};
+    } finally {
+      ACHIEVEMENTS.splice(0, ACHIEVEMENTS.length, ...achievements);
+      achievementProgressSnapshot = snapshot;
+      AudioEngine.playChime = playChime;
+      showNotification = notify;
+    }
+  })()`, context);
+  assert.equal(result.initial, 0);
+  assert.deepEqual(Array.from(result.chimes), ['levelup']);
+  assert.equal(result.notices.length, 1);
+  assert.ok(result.notices[0][1].includes('Earth Sandwich'));
 });
 check('every achievement tier has valid difficulty rarity and distinct emoji artwork', () => {
   assert.equal(vm.runInContext('ACHIEVEMENTS.every(a=>a.icon && /^#[0-9a-f]{6}$/i.test(a.background) && a.tiers.every(t=>ACHIEVEMENT_RARITIES[t.rarity]))', context), true);
