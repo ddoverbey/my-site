@@ -55,6 +55,16 @@ await check('region and biome lookups return polygon membership without nearest-
   assert.equal(lookups.biomeRegion(-40, -100, indexes.ecoregions, geo.geoContains).biomeStatus, 'no-terrestrial-match');
   assert.deepEqual(lookups.politicalRegion(-40, -100, indexes, geo.geoContains).countries, []);
 });
+await check('county biome fallback detects complete border intersections without sampled-point guesses', () => {
+  const county = polygon([ring(0, 0, 10, 10)]);
+  const narrowCrossing = polygon([ring(2.4, -1, 2.6, 1)], { ...region, BIOME_NUM: 5 });
+  const enclosedWithoutBorderContact = polygon([ring(4, 4, 6, 6)], { ...region, BIOME_NUM: 7 });
+  const fallback = lookups.firstBoundaryIntersection(
+    county, lookups.indexFeatures([enclosedWithoutBorderContact, narrowCrossing], geo), geo);
+  assert.equal(fallback.properties.BIOME_NUM, 5);
+  assert.equal(lookups.firstBoundaryIntersection(
+    county, lookups.indexFeatures([enclosedWithoutBorderContact], geo), geo), null);
+});
 
 const npsText = await readFile(new URL('./nps-boundaries.topojson', import.meta.url), 'utf8');
 const ecoText = await readFile(new URL('./ecoregions.topojson', import.meta.url), 'utf8');

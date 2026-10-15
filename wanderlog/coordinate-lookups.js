@@ -82,6 +82,77 @@
     };
   }
 
+  function longitudeRanges([west, east]) {
+    return west <= east ? [[west, east]] : [[west, 180], [-180, east]];
+  }
+
+  function boundsOverlap(a, b) {
+    if (a[1][1] < b[0][1] || a[0][1] > b[1][1]) return false;
+    return longitudeRanges([a[0][0], a[1][0]]).some(([aWest, aEast]) =>
+      longitudeRanges([b[0][0], b[1][0]]).some(([bWest, bEast]) =>
+        aEast >= bWest && aWest <= bEast));
+  }
+
+  function geometrySegments(feature) {
+    const geometry = feature?.geometry;
+    if (!['Polygon', 'MultiPolygon'].includes(geometry?.type)) throw new Error('Expected polygon geography.');
+    const polygons = geometry.type === 'Polygon' ? [geometry.coordinates] : geometry.coordinates;
+    const segments = [];
+    polygons.forEach(rings => rings.forEach(ring => {
+      for (let index = 1; index < ring.length; index++) segments.push([ring[index - 1], ring[index]]);
+      if (ring.length > 2) {
+        const first = ring[0], last = ring[ring.length - 1];
+        if (first[0] !== last[0] || first[1] !== last[1]) segments.push([last, first]);
+      }
+    }));
+    return segments;
+  }
+
+  function planarSegmentsIntersect(a, b, c, d) {
+    const epsilon = 1e-10;
+    const cross = (p, q, r) => (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]);
+    const onSegment = (p, q, r) =>
+      Math.abs(cross(p, q, r)) <= epsilon &&
+      r[0] >= Math.min(p[0], q[0]) - epsilon && r[0] <= Math.max(p[0], q[0]) + epsilon &&
+      r[1] >= Math.min(p[1], q[1]) - epsilon && r[1] <= Math.max(p[1], q[1]) + epsilon;
+    const abC = cross(a, b, c), abD = cross(a, b, d);
+    const cdA = cross(c, d, a), cdB = cross(c, d, b);
+    if (((abC > epsilon && abD < -epsilon) || (abC < -epsilon && abD > epsilon)) &&
+        ((cdA > epsilon && cdB < -epsilon) || (cdA < -epsilon && cdB > epsilon))) return true;
+    return onSegment(a, b, c) || onSegment(a, b, d) || onSegment(c, d, a) || onSegment(c, d, b);
+  }
+
+  function boundaryIntersectsFeature(boundary, target, geoContains) {
+    const boundarySegments = geometrySegments(boundary);
+    const targetSegments = geometrySegments(target);
+    for (const [originalA, originalB] of boundarySegments) {
+      if (geoContains(target, originalA) || geoContains(target, originalB)) return true;
+      const a = [...originalA], b = [...originalB];
+      b[0] += 360 * Math.round((a[0] - b[0]) / 360);
+      for (const [originalC, originalD] of targetSegments) {
+        const c = [...originalC], d = [...originalD];
+        c[0] += 360 * Math.round((a[0] - c[0]) / 360);
+        d[0] += 360 * Math.round((c[0] - d[0]) / 360);
+        if ([-360, 0, 360].some(shift =>
+          planarSegmentsIntersect(a, b, [c[0] + shift, c[1]], [d[0] + shift, d[1]]))) return true;
+      }
+    }
+    return false;
+  }
+
+  function firstBoundaryIntersection(feature, index, geo) {
+    if (!Array.isArray(index) || !geo?.geoArea || !geo?.geoBounds || !geo?.geoContains) {
+      throw new Error('Indexed geography and D3 geometry helpers are required.');
+    }
+    const normalized = normalizeFeature(feature, geo.geoArea);
+    const bounds = geo.geoBounds(normalized);
+    for (const item of index) {
+      if (boundsOverlap(bounds, item.bounds) &&
+          boundaryIntersectsFeature(normalized, item.feature, geo.geoContains)) return item.feature;
+    }
+    return null;
+  }
+
   async function lookupRoadRoute(from, to, fetcher = root.fetch) {
     validateCoordinates(...from);
     validateCoordinates(...to);
@@ -394,7 +465,7 @@
 
   const api = {
     validateCoordinates, normalizeFeature, indexFeatures, findContaining, politicalRegion, biomeRegion,
-    lookupRoadRoute, routeCountyIds,
+    firstBoundaryIntersection, lookupRoadRoute, routeCountyIds,
     lookupElevation, categoryForPoiCount, segmentDistanceKm, summarizeOsm, lookupRarity, lookupCoordinate,
     validateCustomLocations, migrateState, normalizeRarity, validateProviderRarity, coordinateDistanceKm,
     lookupRarityWithFallback, ELEVATION_URL, OVERPASS_URL, CACHE_TTL, NPS_SOURCE, npsBoundaryIndex

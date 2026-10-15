@@ -653,6 +653,27 @@ check('county completion counts only visited/lived loaded FIPS records, never tr
   assert.equal(vm.runInContext('calculateStats().countyTotal', context), 4);
   vm.runInContext('countyGeoJson=null;AppState.counties={"06073":"l"}', context);
 });
+check('visited county polygons credit their cached predominant biome without crediting transit or wishlist counties', () => {
+  vm.runInContext(`
+    AppState.customPois=[];AppState.expeditions=[];AppState.homeBase=null;AppState.pins={};AppState.regions={};
+    AppState.counties={'06073':'v','06065':'t','06059':'w'};
+    countyBiomeCache['06073']='5';
+    countyBiomeCache['06065']='12';
+    countyBiomeCache['06059']='9';
+    statsCache=null;
+  `, context);
+  assert.deepEqual(
+    JSON.parse(vm.runInContext('JSON.stringify([...calculateStats().biomesSet].sort())', context)),
+    ['5']
+  );
+  vm.runInContext(`
+    AppState.counties={'06073':'l'};
+    delete countyBiomeCache['06073'];
+    delete countyBiomeCache['06065'];
+    delete countyBiomeCache['06059'];
+    statsCache=null;
+  `, context);
+});
 context.testExpedition = {
   id: 'exp_test', name: '<script>Trip</script>', startDate: '2026-09-01', endDate: '2026-09-01',
   transitTags: ['awd', 'ferry'], purposeTags: ['photography'],

@@ -993,8 +993,8 @@
         tiers: [{ goal: s => s.countyTotal, title: 'Manifest Destiny', desc: 'A relentless, granular conquest. Thousands of invisible borders must be crossed until the entire atlas is painted with your travels.' }]
       },
       {
-        id: 'worldAtlas', title: 'How???? (Citizen of the World)', progress: s => s.atlasCountriesCount,
-        tiers: [{ goal: s => s.atlasCountriesTotal, title: 'Citizen of the World', desc: 'The Earth is no longer just a map—it is your neighborhood. No sovereign border can remain uncrossed.' }]
+        id: 'worldAtlas', title: 'How????', progress: s => s.atlasCountriesCount,
+        tiers: [{ goal: s => s.atlasCountriesTotal, title: 'How????', desc: 'The Earth is no longer just a map—it is your neighborhood. No sovereign border can remain uncrossed.' }]
       }
     );
     const ACHIEVEMENT_RARITIES = {
@@ -1293,6 +1293,11 @@
       });
       
       const biomesSet = metadataProgress.collectedBiomes;
+      Object.entries(AppState.counties).forEach(([fips, status]) => {
+        if (TravelLedger.isVisited(status) && countyBiomeCache[fips]) {
+          biomesSet.add(countyBiomeCache[fips]);
+        }
+      });
 
       const rareBiomesList = Object.keys(BIOMES).filter(b => BIOMES[b].rarity === 'rare');
       const unlockedRare = rareBiomesList.filter(b => biomesSet.has(b));
@@ -2160,6 +2165,7 @@
     let npsBoundariesByCode = {};
     let coordinateIndexes = null;
     let coordinateCacheIndexes = null;
+    const countyBiomeCache = {};
     const politicalCache = new Map();
     const biomeCache = new Map();
 
@@ -2186,8 +2192,26 @@
         CoordinateLookups.biomeRegion(lat, lng, coordinateIndexes.ecoregions, d3.geoContains).biomes);
     }
 
+    function buildCountyBiomeCache() {
+      Object.keys(countyBiomeCache).forEach(key => delete countyBiomeCache[key]);
+      if (!countyGeoJson?.length || !coordinateIndexes?.ecoregions?.length) return;
+      countyGeoJson.forEach(feature => {
+        const fips = String(feature.id).padStart(5, '0');
+        const normalized = CoordinateLookups.normalizeFeature(feature, d3.geoArea);
+        const [lng, lat] = d3.geoCentroid(normalized);
+        let biomes = cachedBiomeAt(lat, lng);
+        if (!biomes.length) {
+          const intersecting = CoordinateLookups.firstBoundaryIntersection(
+            normalized, coordinateIndexes.ecoregions, d3);
+          if (intersecting) biomes = [String(intersecting.properties.BIOME_NUM)];
+        }
+        if (biomes.length) countyBiomeCache[fips] = String(biomes[0]);
+      });
+    }
+
     async function loadCoordinateGeography() {
       coordinateIndexes = null;
+      Object.keys(countyBiomeCache).forEach(key => delete countyBiomeCache[key]);
       const status = document.getElementById('coordinateGeographyStatus');
       try {
         const response = await fetch('./ecoregions.topojson', { cache: 'no-cache' });
@@ -2208,6 +2232,7 @@
           microStates: CoordinateLookups.indexFeatures(microStateGeoJson || [], d3),
           ecoregions: CoordinateLookups.indexFeatures(features, d3)
         };
+        buildCountyBiomeCache();
         status.textContent = 'Custom-coordinate geography ready. Region and biome matches use simplified polygons.';
       } catch (error) {
         console.error('Failed to load coordinate geography', error);
@@ -3076,6 +3101,7 @@
             <div class="min-w-0 flex-1">
               <h5 class="text-xs font-bold text-slate-200">${escapeHtml(ach.title)}</h5>
               ${visibleTiers.map(tier => `
+                ${tier.title === ach.title ? '' : `<p class="text-xs text-slate-200 mt-2">${escapeHtml(tier.title)}</p>`}
                 <p class="achievement-rarity text-[10px] uppercase font-bold mt-1" data-rarity="${tier.rarity}" style="${achievementBadgeStyle(ach, tier)}">${ACHIEVEMENT_RARITIES[tier.rarity].label}</p>
                 ${progress < tier.goal && isSecretAchievementTier(tier)
                   ? `<p class="text-[10px] achievement-redacted leading-tight mt-0.5">${escapeHtml(redactedAchievementDescription(tier))}</p>`
