@@ -223,6 +223,23 @@
       border-color: rgba(251, 191, 36, .8);
       box-shadow: 0 0 24px rgba(251, 191, 36, .2), inset 0 0 18px rgba(253, 230, 138, .06);
     }
+    #rpgMapHud {
+      width: 18rem;
+      max-width: calc(100% - 2rem);
+    }
+    #rpgMapHud[data-collapsed="true"] #rpgMapHudBody {
+      display: none;
+    }
+    #rpgMapHud[data-collapsed="true"] #rpgMapHudHeader {
+      border-bottom: 0;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+    @media (max-width: 767px) {
+      #rpgMapHud:not([data-collapsed="false"]) #rpgMapHudBody {
+        display: none;
+      }
+    }
   </style>
 </head>
 <body class="h-screen w-screen flex flex-col bg-[#060913] text-slate-100 select-none">
@@ -315,8 +332,8 @@
       <button id="btnExpedition" type="button" class="absolute top-16 right-4 z-[460] rpg-panel rounded-xl px-3 py-2 text-xs text-amber-200">🗺️ Log Expedition</button>
 
       <!-- RPG Explorer Floating HUD (Top Left) -->
-      <div id="rpgMapHud" class="absolute top-4 left-4 z-[460] rpg-panel rounded-2xl p-4 w-72 transition-all duration-300">
-        <div class="flex items-center justify-between border-b border-slate-700/80 pb-2 mb-3">
+      <div id="rpgMapHud" class="absolute top-4 left-4 z-[460] rpg-panel rounded-2xl p-4 transition-all duration-300">
+        <div id="rpgMapHudHeader" class="flex items-center justify-between border-b border-slate-700/80 pb-2 mb-3">
           <div class="flex items-center gap-2">
             <span class="text-xl" id="hudClassIcon">⚔️</span>
             <div>
@@ -324,54 +341,62 @@
               <div class="text-[11px] text-slate-400">Level <span id="hudLevel" class="text-amber-400 font-bold">1</span> Explorer</div>
             </div>
           </div>
-          <div class="text-right">
-            <div class="text-xs font-bold font-mono text-emerald-400"><span id="hudXp">0</span> XP</div>
-            <div class="text-[10px] text-slate-400">Next: <span id="hudNextXp">100</span></div>
+          <div class="flex items-center gap-2">
+            <div class="text-right">
+              <div class="text-xs font-bold font-mono text-emerald-400"><span id="hudXp">0</span> XP</div>
+              <div class="text-[10px] text-slate-400">Next: <span id="hudNextXp">100</span></div>
+            </div>
+            <button id="rpgMapHudToggle" type="button" class="rounded-lg border border-slate-700 px-2 py-1 text-slate-300 hover:text-amber-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400" aria-controls="rpgMapHudBody" aria-expanded="false" aria-label="Show RPG stats" title="Show RPG stats">
+              <span id="rpgMapHudToggleIcon" aria-hidden="true">+</span>
+            </button>
           </div>
         </div>
 
-        <!-- Level XP Progress Bar -->
-        <div class="w-full bg-slate-900 rounded-full h-2 mb-3 overflow-hidden border border-slate-700/60">
-          <div id="hudXpBar" class="h-full xp-glow transition-all duration-500" style="width: 0%"></div>
-        </div>
+        <div id="rpgMapHudBody">
+          <!-- Level XP Progress Bar -->
+          <div class="w-full bg-slate-900 rounded-full h-2 mb-3 overflow-hidden border border-slate-700/60">
+            <div id="hudXpBar" class="h-full xp-glow transition-all duration-500" style="width: 0%"></div>
+          </div>
 
-        <!-- Fog of war coverage and statistics -->
-        <div class="grid grid-cols-2 gap-2 text-xs">
-          <div class="bg-slate-900/70 p-2 rounded-xl border border-slate-800">
-            <span class="text-[10px] text-slate-400 block uppercase">Shroud Cleared</span>
-            <span class="font-bold text-amber-300 font-mono text-sm" id="hudClearedPct">0.8%</span>
+          <!-- Fog of war coverage and statistics -->
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <div class="bg-slate-900/70 p-2 rounded-xl border border-slate-800">
+              <span class="text-[10px] text-slate-400 block uppercase">Shroud Cleared</span>
+              <span class="font-bold text-amber-300 font-mono text-sm" id="hudClearedPct">0.8%</span>
+            </div>
+            <div class="bg-slate-900/70 p-2 rounded-xl border border-slate-800">
+              <span class="text-[10px] text-slate-400 block uppercase">NPS Units Visited</span>
+              <span class="font-bold text-emerald-400 font-mono text-sm" id="hudParksCount">0 / --</span>
+            </div>
+            <div class="bg-slate-900/70 p-2 rounded-xl border border-slate-800">
+              <span class="text-[10px] text-slate-400 block uppercase">Biomes Found</span>
+              <span class="font-bold text-sky-400 font-mono text-sm" id="hudBiomesCount">-- / 14</span>
+            </div>
+            <div class="bg-slate-900/70 p-2 rounded-xl border border-slate-800">
+              <span class="text-[10px] text-slate-400 block uppercase">Quests Complete</span>
+              <span class="font-bold text-purple-400 font-mono text-sm" id="hudQuestsCount">0 / 7</span>
+            </div>
+            <div class="col-span-2 bg-slate-900/70 p-2 rounded-xl border border-slate-800">
+              <span class="text-[10px] text-slate-400 block uppercase">Counties Visited / Lived</span>
+              <span class="font-bold text-yellow-300 font-mono text-sm" id="hudCountiesCount">0 / --</span>
+            </div>
           </div>
-          <div class="bg-slate-900/70 p-2 rounded-xl border border-slate-800">
-            <span class="text-[10px] text-slate-400 block uppercase">NPS Units Visited</span>
-            <span class="font-bold text-emerald-400 font-mono text-sm" id="hudParksCount">0 / --</span>
-          </div>
-          <div class="bg-slate-900/70 p-2 rounded-xl border border-slate-800">
-            <span class="text-[10px] text-slate-400 block uppercase">Biomes Found</span>
-            <span class="font-bold text-sky-400 font-mono text-sm" id="hudBiomesCount">-- / 14</span>
-          </div>
-          <div class="bg-slate-900/70 p-2 rounded-xl border border-slate-800">
-            <span class="text-[10px] text-slate-400 block uppercase">Quests Complete</span>
-            <span class="font-bold text-purple-400 font-mono text-sm" id="hudQuestsCount">0 / 7</span>
-          </div>
-          <div class="col-span-2 bg-slate-900/70 p-2 rounded-xl border border-slate-800">
-            <span class="text-[10px] text-slate-400 block uppercase">Counties Visited / Lived</span>
-            <span class="font-bold text-yellow-300 font-mono text-sm" id="hudCountiesCount">0 / --</span>
-          </div>
-        </div>
 
-        <!-- Temporarily disabled: pin filtering is unreliable and not useful in the RPG HUD.
-        <div class="mt-3 pt-3 border-t border-slate-700/60 flex flex-wrap gap-2 items-center justify-between text-[11px]">
-          <span class="text-slate-400">Show pins:</span>
-          <div class="flex flex-wrap gap-1" id="pinFilterBtns">
-            <button data-filt="none" aria-pressed="true" class="px-2 py-0.5 rounded bg-blue-600/80 text-white font-medium">None</button>
-            <button data-filt="all" aria-pressed="false" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white">All</button>
-            <button data-filt="v" aria-pressed="false" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white">Visited</button>
-            <button data-filt="w" aria-pressed="false" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white">Wishlist</button>
-            <button data-filt="t" aria-pressed="false" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white">Transit</button>
-            <button data-filt="l" aria-pressed="false" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white">Lived</button>
+          <!-- Temporarily disabled: pin filtering is unreliable and not useful in the RPG HUD.
+          <div class="mt-3 pt-3 border-t border-slate-700/60 flex flex-wrap gap-2 items-center justify-between text-[11px]">
+            <span class="text-slate-400">Show pins:</span>
+            <div class="flex flex-wrap gap-1" id="pinFilterBtns">
+              <button data-filt="none" aria-pressed="true" class="px-2 py-0.5 rounded bg-blue-600/80 text-white font-medium">None</button>
+              <button data-filt="all" aria-pressed="false" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white">All</button>
+              <button data-filt="v" aria-pressed="false" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white">Visited</button>
+              <button data-filt="w" aria-pressed="false" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white">Wishlist</button>
+              <button data-filt="t" aria-pressed="false" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white">Transit</button>
+              <button data-filt="l" aria-pressed="false" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white">Lived</button>
+            </div>
           </div>
+          -->
         </div>
-        -->
+        </div>
       </div>
 
       <!-- Map Legend (Bottom Left) -->
@@ -3747,6 +3772,22 @@
         drawFogOfWar();
       }
       updateAllUI();
+    });
+
+    const rpgMapHud = document.getElementById('rpgMapHud');
+    const rpgMapHudToggle = document.getElementById('rpgMapHudToggle');
+    const rpgMapHudToggleIcon = document.getElementById('rpgMapHudToggleIcon');
+    const setRpgMapHudCollapsed = collapsed => {
+      rpgMapHud.dataset.collapsed = String(collapsed);
+      rpgMapHudToggle.setAttribute('aria-expanded', String(!collapsed));
+      const label = collapsed ? 'Show RPG stats' : 'Hide RPG stats';
+      rpgMapHudToggle.setAttribute('aria-label', label);
+      rpgMapHudToggle.title = label;
+      rpgMapHudToggleIcon.textContent = collapsed ? '+' : '−';
+    };
+    setRpgMapHudCollapsed(window.matchMedia('(max-width: 767px)').matches);
+    rpgMapHudToggle.addEventListener('click', () => {
+      setRpgMapHudCollapsed(rpgMapHud.dataset.collapsed !== 'true');
     });
 
     window.addEventListener('DOMContentLoaded', () => {

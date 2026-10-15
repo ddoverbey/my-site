@@ -102,6 +102,18 @@ const expeditionUi = await readFile(new URL('./expedition-ui.js', import.meta.ur
 const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)]
   .map(match => /src="\.\/expedition-ui\.js(?:\?[^"]*)?"/.test(match[0]) ? expeditionUi : match[1]);
 check('every inline script parses', () => scripts.forEach(script => new vm.Script(script)));
+check('mobile RPG HUD starts collapsed with an accessible stats toggle', () => {
+  const hudBodyStart = html.indexOf('<div id="rpgMapHudBody">');
+  const hudContentEnd = html.indexOf('<!-- Map Legend', hudBodyStart);
+  const hudBody = html.slice(hudBodyStart, hudContentEnd);
+  assert.ok(hudBodyStart >= 0 && hudContentEnd > hudBodyStart);
+  assert.match(html, /@media \(max-width: 767px\)[\s\S]*#rpgMapHud:not\(\[data-collapsed="false"\]\) #rpgMapHudBody/);
+  assert.match(html, /id="rpgMapHudToggle"[^>]*aria-controls="rpgMapHudBody"[^>]*aria-expanded="false"/);
+  assert.match(html, /setRpgMapHudCollapsed\(window\.matchMedia\('\(max-width: 767px\)'\)\.matches\)/);
+  assert.match(hudBody, /id="hudXpBar"/);
+  assert.match(hudBody, /id="hudClearedPct"/);
+  assert.match(hudBody, /id="hudCountiesCount"/);
+});
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
