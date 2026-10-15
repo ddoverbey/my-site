@@ -105,7 +105,7 @@ check('every inline script parses', () => scripts.forEach(script => new vm.Scrip
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261016-micro')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261017-travellog')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('National Parks is a Scratch Map dataset, not a separate navigation page, with an expanded checklist', () => {
@@ -680,9 +680,9 @@ context.testExpedition = {
   countyIds: ['06073'], parkIds: [], customPoiIds: [],
   routeCoords: [[37,-120],[38,-119]], minElevationFt: -100, maxElevationFt: 11000
 };
-vm.runInContext('addExpedition(testExpedition);renderPassportView()', context);
+vm.runInContext('addExpedition(testExpedition);renderPassportView();renderExpeditionHistory()', context);
 check('expedition history escapes names, shows date/elevation/tags and starts metadata badges', () => {
-  const history = element('expeditionHistory').innerHTML;
+  const history = element('travelLogFeed').innerHTML;
   assert.ok(history.includes('&lt;script&gt;Trip&lt;/script&gt;'));
   assert.ok(history.includes('2026-09-01'));
   assert.ok(history.includes('-100 to 11,000 ft'));
@@ -692,6 +692,68 @@ check('expedition history escapes names, shows date/elevation/tags and starts me
   assert.ok(achievements.includes('Under Pressure'));
   assert.ok(achievements.includes('Thin Air'));
   assert.ok(achievements.includes('value="1" max="5"'));
+});
+check('the travel log is its own tab rendering a chronological feed with per-trip mini-maps', () => {
+  assert.ok(html.includes('data-tab="travel"'));
+  assert.ok(html.includes('id="tabContent-travel"'));
+  assert.ok(html.includes('id="travelLogFeed"'));
+  // Expedition history moved out of the passport tab entirely.
+  assert.ok(!html.includes('id="expeditionHistory"'));
+  assert.ok(!html.includes('expeditionHistoryTitle'));
+  assert.ok(html.includes("document.getElementById('tabContent-travel').classList.add('hidden')"));
+  const feed = element('travelLogFeed').innerHTML;
+  assert.ok(feed.includes('SEPTEMBER 2026'));
+  assert.ok(feed.includes('id="mini-map-exp_test"'));
+  assert.ok(feed.includes('md:grid-cols-[220px_1fr]'));
+  // Leaflet is absent from this harness, so the feed renders without any map instances.
+  assert.equal(vm.runInContext('Object.keys(travelLogMaps).length', context), 0);
+});
+check('mini-maps plot every route stop and frame multi-stop trips that have no polyline', () => {
+  const previousL = context.L;
+  const savedExpeditions = vm.runInContext('JSON.stringify(AppState.expeditions)', context);
+  const drawn = { markers: [], polylines: [], fitBounds: [], setView: [], removed: 0 };
+  context.L = {
+    map: () => ({
+      remove: () => { drawn.removed += 1; },
+      fitBounds: (bounds, options) => drawn.fitBounds.push([bounds, options]),
+      setView: (center, zoom) => drawn.setView.push([center, zoom])
+    }),
+    tileLayer: () => ({ addTo() { return this; } }),
+    polyline: coords => { drawn.polylines.push(coords); return { addTo() { return this; } }; },
+    circleMarker: coords => { drawn.markers.push(coords); return { addTo() { return this; } }; },
+    latLngBounds: coords => coords
+  };
+  // Sandbox arrays cross realms, so compare plain JSON snapshots rather than prototypes.
+  const plain = value => JSON.parse(JSON.stringify(value));
+  try {
+    vm.runInContext(`
+      travelLogBase = AppState.expeditions[0];
+      AppState.expeditions = [{ ...travelLogBase, id: 'exp_stops', routeCoords: [], routeStops: [
+        { kind: 'place', id: 'a', name: 'A', coords: [37, -120] },
+        { kind: 'place', id: 'b', name: 'B', coords: [38, -119] },
+        { kind: 'place', id: 'c', name: 'C', coords: [null, null] }
+      ] }];
+      renderExpeditionHistory();
+    `, context);
+    assert.deepEqual(plain(drawn.markers), [[37, -120], [38, -119]]);
+    assert.equal(drawn.polylines.length, 0);
+    assert.deepEqual(plain(drawn.fitBounds[0][0]), [[37, -120], [38, -119]]);
+    assert.equal(drawn.setView.length, 0);
+    vm.runInContext(`
+      AppState.expeditions = [{ ...travelLogBase, id: 'exp_single', routeCoords: [], routeStops: [
+        { kind: 'place', id: 'a', name: 'A', coords: [37, -120] }
+      ] }];
+      renderExpeditionHistory();
+    `, context);
+    assert.equal(drawn.removed, 1);
+    assert.deepEqual(plain(drawn.markers), [[37, -120], [38, -119], [37, -120]]);
+    assert.deepEqual(plain(drawn.setView), [[[37, -120], 8]]);
+    assert.equal(drawn.fitBounds.length, 1);
+  } finally {
+    context.L = previousL;
+    vm.runInContext(`AppState.expeditions = ${savedExpeditions}; delete globalThis.travelLogBase; renderExpeditionHistory();`, context);
+  }
+  assert.equal(vm.runInContext('Object.keys(travelLogMaps).length', context), 0);
 });
 check('logged expedition routes join legacy route corridors in the same canvas', () => {
   context.fogOperations.length = 0;
@@ -1877,7 +1939,7 @@ let roadRequests=0;
 const previewTooltipTexts=[];
 const previewLayer={addTo(){return this;},getBounds(){return {};},bindTooltip(text){previewTooltipTexts.push(text);return this;}};
 context.L={
-  ...context.L,map:()=>({removeLayer(){},invalidateSize(){},fitBounds(){}}),
+  ...context.L,map:()=>({removeLayer(){},invalidateSize(){},fitBounds(){},setView(){},remove(){}}),
   tileLayer:()=>previewLayer,featureGroup:()=>previewLayer,polyline:()=>previewLayer,circleMarker:()=>previewLayer
 };
 context.setTimeout=callback=>{callback();return 0;};
@@ -1933,10 +1995,10 @@ check('mixed-mode trips save with blank dates, endpoint and road county credit, 
   assert.deepEqual(Array.from(vm.runInContext('Object.keys(AppState.counties).sort()',context)),['06073','08001','08031','08059','08097']);
   assert.equal(vm.runInContext('TravelLedger.fogRoutes(AppState.expeditions[0]).length',context),2);
   vm.runInContext('renderExpeditionHistory()',context);
-  assert.ok(element('expeditionHistory').innerHTML.includes('data-edit-expedition="exp_mixed-ui"'));
-  assert.ok(element('expeditionHistory').innerHTML.includes('&lt;friends&gt; &amp; photography'));
-  assert.ok(element('expeditionHistory').innerHTML.includes('Dates not specified'));
-  assert.ok(!element('expeditionHistory').innerHTML.includes('overnight stay'));
+  assert.ok(element('travelLogFeed').innerHTML.includes('data-edit-expedition="exp_mixed-ui"'));
+  assert.ok(element('travelLogFeed').innerHTML.includes('&lt;friends&gt; &amp; photography'));
+  assert.ok(element('travelLogFeed').innerHTML.includes('Dates not specified'));
+  assert.ok(!element('travelLogFeed').innerHTML.includes('overnight stay'));
 });
 vm.runInContext('openExpedition(AppState.expeditions[0].id)',context);
 check('editing a saved trip restores leg modes, reason and route preview without calling routing again',()=>{
@@ -1975,7 +2037,7 @@ check('editing driving to flight removes driven-only county credit while preserv
 });
 vm.runInContext('AppState.viewOnly=true;renderExpeditionHistory()',context);
 check('shared passports show expedition history but cannot open an editor or update records',()=>{
-  assert.ok(!element('expeditionHistory').innerHTML.includes('data-edit-expedition'));
+  assert.ok(!element('travelLogFeed').innerHTML.includes('data-edit-expedition'));
   assert.throws(()=>vm.runInContext('updateExpedition(AppState.expeditions[0])',context),/read-only/);
   vm.runInContext('openExpedition(AppState.expeditions[0].id)',context);
   assert.equal(vm.runInContext('expeditionEditingId',context),null);

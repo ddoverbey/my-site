@@ -66,7 +66,7 @@ function refreshTravelUI() {
 function countyLabel(id) {
   const feature = countyFeaturesById[id];
   const state = usaRegionGeoJson?.find(state => String(state.id).padStart(2, '0') === id.slice(0, 2));
-  return `${feature?.properties.name || `County ${id}`}, ${state?.properties.name || id}`;
+  return `${feature?.properties?.name || `County ${id}`}, ${state?.properties?.name || id}`;
 }
 
 function expeditionStop(kind, id) {
@@ -298,7 +298,7 @@ function closeExpedition() {
   invalidateExpeditionRoutes();
   document.getElementById('expeditionModal').classList.add('hidden');
   renderExpeditionStops();
-  const fallback = document.getElementById(AppState.currentTab === 'passport' ? 'btnHistoryExpedition' : 'btnExpedition');
+  const fallback = document.getElementById(AppState.currentTab === 'travel' ? 'btnHistoryExpedition' : 'btnExpedition');
   (expeditionReturnFocus?.isConnected && expeditionReturnFocus.offsetParent !== null ? expeditionReturnFocus : fallback).focus();
   expeditionReturnFocus = null;
 }
@@ -487,35 +487,147 @@ async function saveExpedition(event) {
   }
 }
 
+let travelLogMaps = {};
+
+const TRAVEL_LOG_MONTHS = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE',
+  'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'];
+
+function travelLogPeriod(exp) {
+  const date = exp.startDate || exp.endDate;
+  const match = /^(\d{4})-(\d{2})/.exec(date || '');
+  if (!match) return 'UNDATED';
+  return `${TRAVEL_LOG_MONTHS[Number(match[2]) - 1] || match[2]} ${match[1]}`;
+}
+
+function travelLogDateRange(exp) {
+  if (!exp.startDate && !exp.endDate) return 'Dates not specified';
+  return `${exp.startDate || '?'} – ${exp.endDate || '?'}`;
+}
+
+function travelLogStopNames(exp) {
+  return exp.routeStops?.map(stop => stop.name || `${stop.kind} ${stop.id}`) || [
+    ...exp.countyIds.map(id => countyFeaturesById[id]?.properties?.name || `County ${id}`),
+    ...exp.parkIds.map(id => PARKS.find(p => p.id === id)?.name || `Park ${id}`),
+    ...exp.customPoiIds.map(id => AppState.customPois.find(p => p.id === id)?.name || `POI ${id}`)
+  ];
+}
+
+function travelLogRegions(exp) {
+  const states = [];
+  const counties = [];
+  exp.countyIds.forEach(id => {
+    const label = countyLabel(id);
+    const [county, state] = label.split(', ');
+    if (state && !states.includes(state)) states.push(state);
+    if (!counties.includes(county)) counties.push(county);
+  });
+  return [states.join(' · '), counties.join(', ')].filter(Boolean).join(' — ');
+}
+
+function travelLogBadges(exp) {
+  const badges = exp.parkIds.map(id => {
+    const park = PARKS.find(p => p.id === id);
+    return { icon: '🏞️', label: park?.name || `Park ${id}`, tone: 'bg-emerald-950 text-emerald-300 border-emerald-500/40' };
+  });
+  exp.customPoiIds.forEach(id => {
+    const poi = AppState.customPois.find(p => p.id === id);
+    badges.push({ icon: '📌', label: poi?.name || `POI ${id}`, tone: 'bg-violet-950 text-violet-300 border-violet-500/40' });
+  });
+  exp.transitTags.forEach(tag => {
+    badges.push({ icon: '🚙', label: TravelLedger.transitTags[tag], tone: 'bg-sky-950 text-sky-300 border-sky-500/40' });
+  });
+  exp.purposeTags.forEach(tag => {
+    badges.push({ icon: '✨', label: TravelLedger.purposeTags[tag], tone: 'bg-amber-950 text-amber-300 border-amber-500/40' });
+  });
+  return badges.filter(badge => badge.label);
+}
+
+function destroyTravelLogMaps() {
+  Object.values(travelLogMaps).forEach(instance => {
+    try { instance.remove(); }
+    catch (error) { console.error('Mini-map teardown failed', error); }
+  });
+  travelLogMaps = {};
+}
+
+function travelLogPoint(coords) {
+  return Array.isArray(coords) && coords.length === 2 &&
+    Number.isFinite(coords[0]) && Number.isFinite(coords[1]) &&
+    Math.abs(coords[0]) <= 90 && Math.abs(coords[1]) <= 180;
+}
+
+function renderTravelLogMiniMap(exp) {
+  if (typeof L === 'undefined' || typeof L.map !== 'function') return;
+  const route = (exp.routeCoords || []).filter(travelLogPoint);
+  const stops = (exp.routeStops || []).map(stop => stop?.coords).filter(travelLogPoint);
+  const hasPolyline = route.length > 1;
+  // Without a polyline every logged stop still needs its own marker, so the frame covers the whole trip.
+  const points = hasPolyline ? route : (stops.length ? stops : route);
+  if (!points.length) return;
+  const miniMap = L.map(`mini-map-${exp.id}`, {
+    zoomControl: false, attributionControl: false, dragging: false, scrollWheelZoom: false,
+    doubleClickZoom: false, boxZoom: false, keyboard: false, touchZoom: false
+  });
+  travelLogMaps[exp.id] = miniMap;
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 19
+  }).addTo(miniMap);
+  if (hasPolyline) {
+    L.polyline(route, { color: '#f59e0b', weight: 3 }).addTo(miniMap);
+  } else {
+    points.forEach(coords => L.circleMarker(coords,
+      { radius: 6, fillColor: '#10b981', color: '#fff', weight: 2, fillOpacity: 1 }).addTo(miniMap));
+  }
+  if (points.length > 1) miniMap.fitBounds(L.latLngBounds(points), { padding: [15, 15], maxZoom: 12 });
+  else miniMap.setView(points[0], 8);
+}
+
 function renderExpeditionHistory() {
-  const container = document.getElementById('expeditionHistory');
+  const container = document.getElementById('travelLogFeed');
+  // Leaflet instances must be torn down before their containers are discarded.
+  destroyTravelLogMaps();
   if (!AppState.expeditions.length) {
     container.innerHTML = '<p class="text-sm text-slate-400">No expeditions yet. Log your first trip.</p>';
     return;
   }
-  container.innerHTML = [...AppState.expeditions].sort((a, b) => (b.startDate || '').localeCompare(a.startDate || '')).map(exp => {
-    const names = exp.routeStops?.map(stop => stop.name || `${stop.kind} ${stop.id}`) || [
-      ...exp.countyIds.map(id => countyFeaturesById[id]?.properties?.name || `County ${id}`),
-      ...exp.parkIds.map(id => PARKS.find(p => p.id === id)?.name || `Park ${id}`),
-      ...exp.customPoiIds.map(id => AppState.customPois.find(p => p.id === id)?.name || `POI ${id}`)
-    ];
-    return `<article class="rpg-panel rounded-2xl p-4 space-y-2">
-      <h4 class="font-bold text-amber-200">${escapeHtml(exp.name)}</h4>
-      <p class="text-xs text-slate-400">${exp.startDate || exp.endDate
-        ? `${escapeHtml(exp.startDate || '?')} – ${escapeHtml(exp.endDate || '?')}` : 'Dates not specified'}${exp.dayTrip ? ' · Day trip' : ''}</p>
-      ${exp.reason ? `<p class="text-xs text-slate-300">${escapeHtml(exp.reason)}</p>` : ''}
-      <p class="text-xs text-slate-300">${names.map(escapeHtml).join(' → ')}</p>
-      ${exp.minElevationFt === null ? '' : `<p class="text-xs text-slate-400">Elevation: ${Math.round(exp.minElevationFt).toLocaleString('en')} to ${Math.round(exp.maxElevationFt).toLocaleString('en')} ft</p>`}
-      <div class="flex flex-wrap gap-2">${[
-        ...exp.transitTags.map(tag => TravelLedger.transitTags[tag]), ...exp.purposeTags.map(tag => TravelLedger.purposeTags[tag])
-      ].map(label => `<span class="text-xs rounded-full px-2 py-1 bg-slate-800 text-amber-200">${escapeHtml(label)}</span>`).join('')}</div>
-      ${exp.routeLegs?.length ? `<p class="text-xs text-slate-400">${exp.routeLegs.map((leg, index) =>
-        `${escapeHtml(names[index])} → ${escapeHtml(names[index + 1])}: ${escapeHtml(TravelLedger.transitTags[leg.mode])}`).join('<br>')}</p>` : ''}
-      ${AppState.viewOnly ? '' : `<button type="button" data-edit-expedition="${escapeHtml(exp.id)}" class="rounded-lg bg-slate-800 px-3 py-2 text-xs text-amber-200">Edit expedition</button>`}
+  const sorted = [...AppState.expeditions].sort((a, b) =>
+    (b.startDate || b.endDate || '').localeCompare(a.startDate || a.endDate || ''));
+  let period = null;
+  container.innerHTML = sorted.map(exp => {
+    const names = travelLogStopNames(exp);
+    const regions = travelLogRegions(exp);
+    const badges = travelLogBadges(exp);
+    let divider = '';
+    const current = travelLogPeriod(exp);
+    if (current !== period) {
+      period = current;
+      divider = `<div class="flex items-center gap-3 pt-2"><span class="text-xs font-mono text-amber-400">${escapeHtml(current)}</span><div class="flex-1 h-px bg-slate-800"></div></div>`;
+    }
+    return `${divider}<article class="rpg-panel rounded-2xl p-4 grid grid-cols-1 md:grid-cols-[220px_1fr] gap-4">
+      <div id="mini-map-${escapeHtml(exp.id)}" class="h-44 w-full rounded-xl overflow-hidden border border-slate-700/60 bg-slate-950"></div>
+      <div class="flex flex-col gap-2">
+        <div class="flex flex-wrap items-start justify-between gap-2">
+          <h4 class="font-bold text-amber-200 text-base">${escapeHtml(exp.name)}</h4>
+          <span class="text-xs text-slate-400 font-mono">${escapeHtml(travelLogDateRange(exp))}${exp.dayTrip ? ' · Day trip' : ''}</span>
+        </div>
+        <p class="text-xs text-slate-300">${names.map(escapeHtml).join(' → ')}</p>
+        ${regions ? `<p class="text-xs text-slate-300">📍 ${escapeHtml(regions)}</p>` : ''}
+        ${badges.length ? `<div class="flex flex-wrap gap-1.5">${badges.map(badge =>
+          `<span class="px-2 py-0.5 rounded-full text-[11px] border ${badge.tone}">${badge.icon} ${escapeHtml(badge.label)}</span>`).join('')}</div>` : ''}
+        ${exp.minElevationFt === null ? '' : `<p class="text-xs text-slate-400">Elevation: ${Math.round(exp.minElevationFt).toLocaleString('en')} to ${Math.round(exp.maxElevationFt).toLocaleString('en')} ft</p>`}
+        ${exp.routeLegs?.length ? `<p class="text-xs text-slate-400">${exp.routeLegs.map((leg, index) =>
+          `${escapeHtml(names[index])} → ${escapeHtml(names[index + 1])}: ${escapeHtml(TravelLedger.transitTags[leg.mode])}`).join('<br>')}</p>` : ''}
+        ${exp.reason ? `<p class="text-xs text-slate-400 italic">${escapeHtml(exp.reason)}</p>` : ''}
+        ${AppState.viewOnly ? '' : `<button type="button" data-edit-expedition="${escapeHtml(exp.id)}" class="self-start rounded-lg bg-slate-800 px-3 py-2 text-xs text-amber-200">Edit expedition</button>`}
+      </div>
     </article>`;
   }).join('');
   container.querySelectorAll('[data-edit-expedition]').forEach(button => {
     button.addEventListener('click', () => openExpedition(button.dataset.editExpedition));
+  });
+  sorted.forEach(exp => {
+    try { renderTravelLogMiniMap(exp); }
+    catch (error) { console.error('Mini-map render failed', exp.id, error); }
   });
 }
 
@@ -556,8 +668,8 @@ document.getElementById('btnHistoryExpedition').addEventListener('click', () => 
 document.getElementById('btnExpeditionHistory').addEventListener('click', () => {
   if (expeditionPending) return;
   closeExpedition();
-  switchTab('passport');
-  document.getElementById('expeditionHistory').scrollIntoView({ block: 'start' });
+  switchTab('travel');
+  document.getElementById('travelLogFeed').scrollIntoView({ block: 'start' });
 });
 document.getElementById('btnCancelExpedition').addEventListener('click', closeExpedition);
 document.getElementById('expeditionSearch').addEventListener('input', renderExpeditionSearch);
