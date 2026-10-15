@@ -115,6 +115,10 @@ check('National Parks is a Scratch Map dataset, not a separate navigation page, 
   assert.ok(html.includes('id="scratchNationalParks"'));
   assert.match(html, /<details open[^>]*>\s*<summary[^>]*>All 63 parks/);
 });
+check('Travel Ledger destinations render in a single full-width column', () => {
+  assert.match(html, /<div class="grid grid-cols-1 gap-3" id="bucketListGrid">/);
+  assert.doesNotMatch(html, /id="bucketListGrid"[^>]*md:grid-cols-2/);
+});
 
 const elements = new Map();
 function element(id) {
