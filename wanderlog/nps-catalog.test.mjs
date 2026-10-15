@@ -167,11 +167,12 @@ check('header navigation uses compact icons with accessible labels and synchroni
   context.document.querySelectorAll = originalQuery;
   element('toggleClassicMode').setAttribute = originalSet;
 });
-check('destination pins default to None and the fog toggle is not rendered', () => {
+check('destination pins default to None, pin filters stay out of the RPG HUD, and the fog toggle is not rendered', () => {
   assert.equal(vm.runInContext('AppState.pinFilter', context), 'none');
   const activeHtml = html.replace(/<!--[\s\S]*?-->/g, '');
   assert.ok(!activeHtml.includes('id="fogToggleCheckbox"'));
-  assert.ok(activeHtml.includes('data-filt="none" aria-pressed="true"'));
+  assert.ok(!activeHtml.includes('id="pinFilterBtns"'));
+  assert.ok(!activeHtml.includes('Show pins:'));
 });
 await vm.runInContext('loadNpsCatalog()', context);
 await vm.runInContext('loadWorldwideCatalog()', context);
