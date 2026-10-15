@@ -1436,6 +1436,12 @@ check('atlas completion goals use actual datasets and exclude unknown countries 
   assert.equal(vm.runInContext('calculateStats().countiesCount', context), 1);
   assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='worldAtlas').tiers[0].goal(calculateStats())", context), 2);
   assert.ok(element('achievementsContainer').innerHTML.includes('Progress: 1 / 2 (50%)'));
+  assert.ok(element('achievementsContainer').innerHTML.includes(
+    'The Earth is no longer just a map—it is your neighborhood. No sovereign border can remain uncrossed.'
+  ));
+  assert.ok(!element('achievementsContainer').innerHTML.includes(
+    'A feat of extraordinary geographic alignment. The details will reveal themselves upon discovery.'
+  ));
   vm.runInContext('worldGeoJson=null;countyGeoJson=null;renderAchievementsView()', context);
   assert.ok(!element('achievementsContainer').innerHTML.includes('Citizen of the World'));
   assert.ok(!element('achievementsContainer').innerHTML.includes('Manifest Destiny'));
