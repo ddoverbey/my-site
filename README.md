@@ -447,8 +447,11 @@ some parent matches unavailable; no county is guessed.
 Successful registration flies to zoom 8 over 1.8 seconds, then briefly pulses the home aura on the
 existing fog canvas. The pulse respects reduced-motion preferences and settles at the saved radius;
 it adds no separate reveal layer. The Citadel grants a single derived +50 XP bonus, not another
-bonus each time home changes. New explorers unlock **Scout**; established explorer classes are
-still determined by their accumulated travel. Storage failures roll back home and region changes
+bonus each time home changes.
+Level 2 begins at 100 XP so establishing a Citadel (including its automatically credited home
+state/country) advances the first level bar without immediately skipping the first level; later
+thresholds continue quadratic growth. New explorers unlock **Scout**; established explorer classes
+are still determined by their accumulated travel. Storage failures roll back home and region changes
 before any camera flight, pulse, or success notification.
 The Citadel onboarding dialog opens only when the saved browser passport has no home, decided
 from local storage before the geography datasets finish loading. Returning explorers can choose

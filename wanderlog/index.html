@@ -1426,11 +1426,11 @@
         }
       });
 
-      // Level algorithm: Level 1 starts at 0 XP, quadratic scaling
-      // Level = floor(sqrt(xp / 35)) + 1
-      const level = Math.floor(Math.sqrt(xp / 35)) + 1;
-      const nextLevelXp = Math.pow(level, 2) * 35;
-      const currentLevelBaseXp = Math.pow(level - 1, 2) * 35;
+      // The one-time Citadel reward should make progress, not skip the first level.
+      // Level 2 starts at 100 XP; later thresholds continue quadratic growth.
+      const level = xp < 100 ? 1 : Math.floor(Math.sqrt((xp - 65) / 35)) + 1;
+      const nextLevelXp = Math.pow(level, 2) * 35 + 65;
+      const currentLevelBaseXp = level === 1 ? 0 : Math.pow(level - 1, 2) * 35 + 65;
       const levelProgressPct = Math.min(100, Math.max(0, ((xp - currentLevelBaseXp) / (nextLevelXp - currentLevelBaseXp)) * 100));
 
       // Shroud exploration percentage calculation (heuristic based on radius clearing)

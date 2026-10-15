@@ -1007,6 +1007,9 @@ check('first Citadel marks containing geography Lived, uses a 15-mile diameter, 
   assert.equal(vm.runInContext('calculateStats().cls', context), 'Scout');
   const stats = vm.runInContext('calculateStats()', context);
   assert.equal(stats.xp - stats.statesCount * 10 - stats.countriesCount * 20, 50);
+  assert.equal(stats.level, 1);
+  assert.equal(stats.nextLevelXp, 100);
+  assert.equal(stats.levelProgressPct, 80);
   assert.equal(flight[1], 8);
   assert.equal(flight[2].duration, 1.8);
   assert.ok(element('toastMsg').textContent.includes('+50'));
