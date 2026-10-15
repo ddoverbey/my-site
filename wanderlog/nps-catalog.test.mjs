@@ -97,11 +97,16 @@ await assert.rejects(collectParks(async start => ({
 checks++;
 console.log('PASS changing API totals rejected');
 
-const html = await readFile(new URL('./index.html', import.meta.url), 'utf8');
+const html = (await readFile(new URL('./index.html', import.meta.url), 'utf8')).replace(/\r\n/g, '\n');
 const expeditionUi = await readFile(new URL('./expedition-ui.js', import.meta.url), 'utf8');
 const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)]
   .map(match => /src="\.\/expedition-ui\.js(?:\?[^"]*)?"/.test(match[0]) ? expeditionUi : match[1]);
 check('every inline script parses', () => scripts.forEach(script => new vm.Script(script)));
+function parseRouteFixture(text, filename) {
+  context.routeFixture = text;
+  context.routeFilename = filename;
+  return JSON.parse(vm.runInContext('JSON.stringify(parseUploadedRouteFile(routeFixture, routeFilename))', context));
+}
 check('mobile RPG HUD starts collapsed with an accessible stats toggle', () => {
   const hudBodyStart = html.indexOf('<div id="rpgMapHudBody">');
   const hudContentEnd = html.indexOf('<!-- Map Legend', hudBodyStart);
@@ -117,7 +122,7 @@ check('mobile RPG HUD starts collapsed with an accessible stats toggle', () => {
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261015-city-ledger')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261015-expedition-route')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('National Parks is a Scratch Map dataset, not a separate navigation page, with an expanded checklist', () => {
@@ -133,6 +138,33 @@ check('Travel Ledger destinations render in a single full-width column', () => {
 });
 
 const elements = new Map();
+class TestXmlElement {
+  constructor(tagName, textContent = '', children = []) {
+    this.tagName = tagName;
+    this.localName = tagName.split(':').pop();
+    this.textContent = textContent;
+    this.children = children;
+  }
+  getElementsByTagName(name) {
+    const descendants = this.children.flatMap(child => [child, ...child.getElementsByTagName('*')]);
+    return name === '*' ? descendants : descendants.filter(child => child.tagName === name || child.localName === name);
+  }
+}
+class TestDOMParser {
+  parseFromString(text) {
+    const parseBlocks = (tag, content, childTag) => [...content.matchAll(
+      new RegExp(`<([\\w.-]*:)?${tag}\\b[^>]*>([\\s\\S]*?)<\\/\\1${tag}\\s*>`, 'gi')
+    )].map(match => {
+      const children = childTag ? [...match[2].matchAll(
+        new RegExp(`<([\\w.-]*:)?${childTag}\\b[^>]*>([\\s\\S]*?)<\\/\\1${childTag}\\s*>`, 'gi')
+      )].map(child => new TestXmlElement(`${child[1] || ''}${childTag}`, child[2])) : [];
+      return new TestXmlElement(`${match[1] || ''}${tag}`, '', children);
+    });
+    const lines = parseBlocks('LineString', text, 'coordinates');
+    const tracks = parseBlocks('Track', text, 'coord');
+    return new TestXmlElement('document', '', [...lines, ...tracks]);
+  }
+}
 function element(id) {
   if (!elements.has(id)) {
     elements.set(id, {
@@ -152,11 +184,38 @@ const context = vm.createContext({
   NpsCatalog: catalog, NationalParksScratch: nationalParksScratch, Ecoregions: ecoregions, InternationalParks: internationalCatalog, CoordinateLookups: coordinateLookups, TravelLedger: travelLedger,
   WanderlogConfig: { rarityEndpoint: 'https://api.devonoverbey.com/rarity' },
   tailwind: {}, console, Intl, URL, URLSearchParams, AbortController, setTimeout() {}, clearTimeout() {},
+  DOMParser: TestDOMParser,
   document: { body: { classList: { toggle() {}, add() {}, remove() {} } }, getElementById: element, querySelectorAll: () => [], createElement: () => element(`created-${elements.size}`) },
   window: { addEventListener() {}, matchMedia: () => ({ matches: true }) },
   fetch: async url => ({ ok: true, json: async () => url.includes('wikidata') ? wikidata : url.includes('worldwide') ? worldwide : snapshot })
 });
 scripts.forEach(script => vm.runInContext(script, context));
+const geoJsonTrack = parseRouteFixture(JSON.stringify({
+  type: 'FeatureCollection',
+  features: [{ type: 'Feature', properties: {}, geometry: {
+    type: 'LineString', coordinates: [[-122, 37, 0], [-121.999, 37, 0], [-121.9, 37, 0], [-121, 37, 0]]
+  } }]
+}), 'imported.geojson');
+const kmlTrack = parseRouteFixture(
+  '<kml><Placemark><LineString><coordinates>-122,37,0 -121,38,0</coordinates></LineString></Placemark></kml>',
+  'imported.kml');
+const gxTrack = parseRouteFixture(
+  '<kml><Placemark><gx:Track><gx:coord>-122 37 0</gx:coord><gx:coord>-121 38 0</gx:coord></gx:Track></Placemark></kml>',
+  'imported.kml');
+const denseTrack = parseRouteFixture(JSON.stringify({
+  type: 'LineString', coordinates: Array.from({ length: 1000 }, (_, index) => [index * 0.05, 0, 0])
+}), 'dense.json');
+check('GeoJSON, KML coordinates and gx:Track import as validated lat/lng tracks and downsample while preserving endpoints', () => {
+  assert.deepEqual(geoJsonTrack, [[37, -122], [37, -121.9], [37, -121]]);
+  assert.deepEqual(kmlTrack, [[37, -122], [38, -121]]);
+  assert.deepEqual(gxTrack, [[37, -122], [38, -121]]);
+  assert.equal(denseTrack.length, 350);
+  assert.deepEqual(denseTrack[0], [0, 0]);
+  assert.deepEqual(denseTrack.at(-1), [0, 49.95]);
+  assert.throws(() => parseRouteFixture(JSON.stringify({
+    type: 'LineString', coordinates: [[181, 0], [1, 0]]
+  }), 'invalid.json'), /longitude/);
+});
 check('header navigation uses compact icons with accessible labels and synchronized pressed states', () => {
   for (const label of ['Explore — RPG mode', 'Travel Ledger — Classic mode', 'Scratch Map', 'Explorer Profile — Character & Stats', 'Achievements']) {
     assert.ok(html.includes(`aria-label="${label}"`));
@@ -2014,24 +2073,23 @@ check('search debounces rapid input and does not rebuild a hidden ledger', () =>
   context.setTimeout = (callback, delay) => { assert.equal(delay, 150); timers.set(++id, callback); return id; };
   context.clearTimeout = timer => timers.delete(timer);
   try {
+    vm.runInContext('AppState.currentTab="bucketlist"', context);
     element('bucketFilterStatus').value = 'all';
     element('bucketSearch').value = '';
     vm.runInContext('renderBucketListView()', context);
     const before = element('bucketListGrid').innerHTML;
     element('bucketSearch').value = 'American';
     element('bucketSearch').handlers.input();
+    assert.notEqual(element('bucketListGrid').innerHTML, before);
     element('bucketSearch').value = 'American Samoa';
     element('bucketSearch').handlers.input();
     assert.equal(timers.size, 1);
-    assert.equal(element('bucketListGrid').innerHTML, before);
-    [...timers.values()][0]();
     assert.ok(element('bucketListGrid').innerHTML.includes('National Park of American Samoa'));
     assert.ok(!element('bucketListGrid').innerHTML.includes('Yellowstone'));
     vm.runInContext('AppState.currentTab="map"', context);
     const filtered = element('bucketListGrid').innerHTML;
     element('bucketSearch').value = 'Yellowstone';
     element('bucketSearch').handlers.input();
-    [...timers.values()][0]();
     assert.equal(element('bucketListGrid').innerHTML, filtered);
   } finally {
     context.setTimeout = originalSet;
@@ -2460,6 +2518,52 @@ check('ferry, rail and walking legs preview without road requests, county interp
   assert.equal(vm.runInContext('TravelLedger.waterFogRoutes(draftExpedition(expeditionPreparedLegs)).length',context),1);
   assert.equal(travelLedger.transitTags.rail,'Rail / Train');
   assert.equal(travelLedger.transitIcons.rail,'🚆');
+});
+let importedRoadRequests=0;
+let importedCountyRequests=0;
+context.d3={geoContains:()=>true};
+context.CoordinateLookups={
+  ...originalExpeditionLookups,
+  politicalRegion:()=>({countries:['United States'],states:['California'],counties:[{id:'06073',name:'San Diego County'}]}),
+  biomeRegion:()=>({biomes:['5']}),
+  lookupElevation:async()=>({feet:100}),
+  lookupRoadRoute:async()=>{importedRoadRequests++;throw new Error('Imported tracks must bypass OSRM');},
+  routeCountyIds:()=>{importedCountyRequests++;return ['08059'];}
+};
+context.crypto.randomUUID=()=> 'uploaded-ui';
+vm.runInContext(`
+  AppState.viewOnly=false;applyPassport(migratePassport({}));coordinateIndexes={counties:[],ecoregions:[]};
+  openExpedition();
+`,context);
+element('expeditionName').value='Imported route';
+const importedFileInput=element('expeditionFileInput');
+importedFileInput.files=[{
+  name:'uploaded.geojson',size:geoJsonTrack.length,
+  text:async()=>JSON.stringify({type:'FeatureCollection',features:[{
+    type:'Feature',properties:{},geometry:{type:'LineString',coordinates:[[-122,37,0],[-121.9,37,0],[-121,37,0]]}
+  }]})
+}];
+await importedFileInput.handlers.change({target:importedFileInput});
+check('imported track auto-creates labeled endpoint stops and previews without OSRM',()=>{
+  assert.equal(importedRoadRequests,0);
+  assert.equal(importedCountyRequests,1);
+  assert.equal(vm.runInContext('expeditionDraft.length',context),2);
+  assert.ok(vm.runInContext('expeditionDraft[0].name',context).includes('San Diego County'));
+  assert.equal(vm.runInContext('expeditionPreparedLegs[0].routeSource',context),'uploaded');
+  assert.deepEqual(JSON.parse(vm.runInContext('JSON.stringify(expeditionPreparedLegs[0].routeCoords)',context)),geoJsonTrack);
+  assert.ok(previewLines.some(line=>JSON.stringify(line.coords)===JSON.stringify(geoJsonTrack) &&
+    line.options.dashArray===null));
+  assert.equal(element('expeditionRouteFileStatus').textContent,'Loaded track: 3 points.');
+});
+await element('expeditionForm').handlers.submit({preventDefault(){}});
+check('saving an uploaded road track persists its full geometry and awards route counties without OSRM',()=>{
+  const saved=JSON.parse(vm.runInContext('JSON.stringify(AppState.expeditions[0])',context));
+  assert.equal(saved.routeLegs[0].routeSource,'uploaded');
+  assert.deepEqual(saved.routeLegs[0].routeCoords,geoJsonTrack);
+  assert.deepEqual(saved.routeLegs[0].countyIds,['08059']);
+  assert.deepEqual(JSON.parse(vm.runInContext(
+    'JSON.stringify(TravelLedger.fogRoutes(AppState.expeditions[0]))',context)),[geoJsonTrack]);
+  assert.equal(importedRoadRequests,0);
 });
 context.CoordinateLookups=originalExpeditionLookups;
 context.L=originalPreviewL;

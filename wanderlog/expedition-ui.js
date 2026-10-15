@@ -3,6 +3,7 @@ let expeditionPending = false;
 let expeditionEditingId = null;
 let expeditionPreparedLegs = null;
 let expeditionPreparedKey = null;
+let expeditionUploadedRoute = null;
 let expeditionPreviewMap = null;
 let expeditionPreviewLayers = null;
 let expeditionSearchVersion = 0;
@@ -12,6 +13,133 @@ let homeSearchTimer = null;
 let expeditionReturnFocus = null;
 const expeditionRoadCache = new Map();
 let lastRoadRequest = 0;
+
+function uploadedRoutePoint(tuple) {
+  if (!Array.isArray(tuple) || tuple.length < 2 ||
+      typeof tuple[0] !== 'number' || !Number.isFinite(tuple[0]) ||
+      typeof tuple[1] !== 'number' || !Number.isFinite(tuple[1])) {
+    throw new Error('Route coordinates must contain numeric longitude and latitude values.');
+  }
+  const point = [tuple[1], tuple[0]];
+  CoordinateLookups.validateCoordinates(...point);
+  return point;
+}
+
+function uploadedRouteDistanceKm(a, b) {
+  const radians = Math.PI / 180;
+  const lat1 = a[0] * radians, lat2 = b[0] * radians;
+  const deltaLat = (b[0] - a[0]) * radians;
+  const deltaLng = (b[1] - a[1]) * radians;
+  const haversine = Math.sin(deltaLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(deltaLng / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
+}
+
+function downsampleUploadedRoute(points) {
+  if (!Array.isArray(points) || points.length < 2) throw new Error('The uploaded route must contain at least two points.');
+  const sampled = [points[0]];
+  for (let index = 1; index < points.length - 1; index++) {
+    if (uploadedRouteDistanceKm(sampled[sampled.length - 1], points[index]) >= 0.5) sampled.push(points[index]);
+  }
+  sampled.push(points[points.length - 1]);
+  if (sampled.length <= 350) return sampled.map(point => [...point]);
+  const reduced = [sampled[0]];
+  for (let index = 1; index < 349; index++) {
+    const pointIndex = Math.round(index * (sampled.length - 1) / 349);
+    if (pointIndex > 0 && pointIndex < sampled.length - 1) reduced.push(sampled[pointIndex]);
+  }
+  reduced.push(sampled[sampled.length - 1]);
+  return reduced.map(point => [...point]);
+}
+
+function parseUploadedRouteFile(text, filename) {
+  if (typeof text !== 'string' || text.length > 20_000_000) throw new Error('The route file is empty or too large (20 MB maximum).');
+  if (typeof filename !== 'string') throw new Error('Choose a GeoJSON or KML route file.');
+  const extension = /\.([^.]+)$/.exec(filename.trim().toLowerCase())?.[1];
+  const lines = [];
+  const addLine = tuples => {
+    if (!Array.isArray(tuples)) throw new Error('Invalid route geometry.');
+    const points = tuples.map(uploadedRoutePoint);
+    if (points.length < 2) throw new Error('Each route line must contain at least two points.');
+    lines.push(points);
+  };
+  if (extension === 'geojson' || extension === 'json') {
+    let data;
+    try { data = JSON.parse(text); }
+    catch (error) { throw new Error(`Invalid GeoJSON: ${error.message}`); }
+    const visitGeometry = geometry => {
+      if (!geometry || typeof geometry !== 'object') return;
+      if (geometry.type === 'FeatureCollection') {
+        if (!Array.isArray(geometry.features)) throw new Error('Invalid GeoJSON FeatureCollection.');
+        geometry.features.forEach(feature => {
+          if (feature?.type === 'Feature') visitGeometry(feature.geometry);
+        });
+      } else if (geometry.type === 'Feature') visitGeometry(geometry.geometry);
+      else if (geometry.type === 'GeometryCollection') {
+        if (!Array.isArray(geometry.geometries)) throw new Error('Invalid GeoJSON GeometryCollection.');
+        geometry.geometries.forEach(visitGeometry);
+      } else if (geometry.type === 'LineString') addLine(geometry.coordinates);
+      else if (geometry.type === 'MultiLineString') {
+        if (!Array.isArray(geometry.coordinates)) throw new Error('Invalid GeoJSON MultiLineString.');
+        geometry.coordinates.forEach(addLine);
+      }
+    };
+    visitGeometry(data);
+  } else if (extension === 'kml') {
+    if (/<!DOCTYPE|<!ENTITY/i.test(text)) throw new Error('KML files with document type or entity declarations are not supported.');
+    const xml = new DOMParser().parseFromString(text, 'application/xml');
+    if (xml.getElementsByTagName('parsererror').length) throw new Error('Invalid KML XML.');
+    const descendants = element => Array.from(element.getElementsByTagName('*'));
+    for (const element of descendants(xml)) {
+      const name = element.localName || element.tagName?.split(':').pop();
+      if (name === 'LineString') {
+        const coordinates = descendants(element).find(child =>
+          (child.localName || child.tagName?.split(':').pop()) === 'coordinates');
+        if (!coordinates) throw new Error('KML LineString has no coordinates.');
+        const tuples = coordinates.textContent.trim().split(/\s+/).filter(Boolean).map(token => {
+          const values = token.split(',');
+          if (values.length < 2 || !values[0].trim() || !values[1].trim()) throw new Error('Invalid KML coordinate.');
+          const longitude = Number(values[0]), latitude = Number(values[1]);
+          if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) throw new Error('Invalid KML coordinate.');
+          return [longitude, latitude];
+        });
+        addLine(tuples);
+      } else if (name === 'Track') {
+        const tuples = descendants(element).filter(child =>
+          (child.localName || child.tagName?.split(':').pop()) === 'coord').map(coord => {
+          const values = coord.textContent.trim().split(/\s+/);
+          if (values.length < 2 || !values[0] || !values[1]) throw new Error('Invalid KML gx:coord.');
+          const longitude = Number(values[0]), latitude = Number(values[1]);
+          if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) throw new Error('Invalid KML gx:coord.');
+          return [longitude, latitude];
+        });
+        addLine(tuples);
+      }
+    }
+  } else throw new Error('Choose a .geojson, .json, or .kml route file.');
+  if (!lines.length) throw new Error('No LineString or gx:Track route was found in the file.');
+  return downsampleUploadedRoute(lines.flat());
+}
+
+function trackEndpointStop(name, coords, id) {
+  const political = cachedPoliticalAt(...coords);
+  const region = [...new Set([
+    ...(political?.counties || []).map(county => county.name),
+    ...(political?.states || []),
+    ...(political?.countries || [])
+  ].filter(part => typeof part === 'string' && part.trim()))];
+  return {
+    kind: 'place', id, name: region.length ? region.join(', ') : name,
+    coords: [...coords], travelMode: 'road'
+  };
+}
+
+function updateUploadedRouteStatus(message = null) {
+  const route = expeditionUploadedRoute;
+  document.getElementById('expeditionRouteFileStatus').textContent =
+    message || (route ? `Loaded track: ${route.length} points.` : 'No route imported.');
+  document.getElementById('btnClearExpeditionRoute').classList.toggle('hidden', !route);
+}
 
 function dismissPlaceSuggestions(home, clearInput = false) {
   if (home) {
@@ -115,7 +243,10 @@ function invalidateExpeditionRoutes() {
 }
 
 function expeditionRouteKey() {
-  return JSON.stringify(expeditionDraft.map(stop => [stop.kind, stop.id, stop.coords, stop.travelMode || 'road']));
+  return JSON.stringify([
+    expeditionDraft.map(stop => [stop.kind, stop.id, stop.coords, stop.travelMode || 'road']),
+    expeditionUploadedRoute
+  ]);
 }
 
 function renderExpeditionStops() {
@@ -241,8 +372,10 @@ function openExpedition(id = null) {
     return;
   }
   expeditionEditingId = id;
+  expeditionUploadedRoute = null;
   expeditionReturnFocus = document.activeElement;
   document.getElementById('expeditionForm').reset();
+  document.getElementById('expeditionFileInput').value = '';
   document.getElementById('expeditionName').value = existing?.name || '';
   document.getElementById('expeditionReason').value = existing?.reason ??
     (existing?.purposeTags || []).map(tag => TravelLedger.purposeTags[tag]).join(', ');
@@ -271,6 +404,10 @@ function openExpedition(id = null) {
       return;
     }
   }
+  const importedLeg = existing?.routeLegs?.length === 1 && existing.routeLegs[0].routeSource === 'uploaded'
+    ? existing.routeLegs[0] : null;
+  if (importedLeg) expeditionUploadedRoute = importedLeg.routeCoords.map(point => [...point]);
+  updateUploadedRouteStatus();
   document.getElementById('expeditionSearch').value = '';
   document.getElementById('expeditionStatus').textContent = '';
   invalidateExpeditionRoutes();
@@ -291,7 +428,10 @@ function closeExpedition() {
   if (expeditionPending) return;
   expeditionPicking = false;
   expeditionDraft = [];
+  expeditionUploadedRoute = null;
   expeditionEditingId = null;
+  document.getElementById('expeditionFileInput').value = '';
+  updateUploadedRouteStatus();
   dismissPlaceSuggestions(false, true);
   invalidateExpeditionRoutes();
   document.getElementById('expeditionModal').classList.add('hidden');
@@ -352,6 +492,11 @@ function setExpeditionBusy(busy) {
   renderExpeditionStops();
 }
 
+function expeditionLegIsApproximation(leg) {
+  return leg.routeSource === 'direct' || (leg.mode === 'flight' && leg.routeSource === 'none') ||
+    (leg.mode === 'ferry' && leg.routeSource === 'routed');
+}
+
 function displayExpeditionPreview(legs) {
   const container = document.getElementById('expeditionRoutePreview');
   container.classList.remove('hidden');
@@ -364,13 +509,15 @@ function displayExpeditionPreview(legs) {
   if (expeditionPreviewLayers) expeditionPreviewMap.removeLayer(expeditionPreviewLayers);
   expeditionPreviewLayers = L.featureGroup().addTo(expeditionPreviewMap);
   legs.forEach((leg, index) => {
-    const route = ['ferry', 'flight', 'rail'].includes(leg.mode)
+    const route = leg.routeSource === 'uploaded' ? leg.routeCoords :
+      ['ferry', 'flight', 'rail'].includes(leg.mode)
       ? [expeditionDraft[index].coords, expeditionDraft[index + 1].coords]
       : leg.routeCoords;
+    const approximation = expeditionLegIsApproximation(leg);
     L.polyline(route, {
       color: leg.mode === 'ferry' ? '#38bdf8' : leg.mode === 'flight' ? '#94a3b8' : '#fbbf24',
-      weight: 3, opacity: leg.routeSource === 'direct' || ['ferry', 'flight', 'rail'].includes(leg.mode) ? 0.7 : 0.95,
-      dashArray: leg.routeSource === 'direct' || ['ferry', 'flight', 'rail'].includes(leg.mode) ? '8, 8' : null
+      weight: 3, opacity: approximation ? 0.7 : 0.95,
+      dashArray: approximation ? '8, 8' : null
     }).addTo(expeditionPreviewLayers);
   });
   expeditionDraft.forEach(stop => L.circleMarker(stop.coords, { radius: 5, color: '#10b981' })
@@ -392,13 +539,26 @@ async function previewExpeditionRoutes() {
     setExpeditionBusy(true);
     status.textContent = 'Preparing route preview...';
     const legs = [];
+    if (expeditionUploadedRoute && expeditionDraft.length !== 2) {
+      throw new Error('An imported track needs exactly two expedition stops. Remove intermediate stops or clear the track.');
+    }
     for (let index = 0; index < expeditionDraft.length - 1; index++) {
       const from = expeditionDraft[index], to = expeditionDraft[index + 1];
       const mode = from.travelMode || 'road';
       let routeCoords = [];
       let countyIds = [];
       let routeSource = 'direct';
-      if (mode === 'road' || mode === 'awd') {
+      if (expeditionUploadedRoute) {
+        routeCoords = expeditionUploadedRoute.map(point => [...point]);
+        if (uploadedRouteDistanceKm(routeCoords[0], from.coords) > 1.609344 ||
+            uploadedRouteDistanceKm(routeCoords[routeCoords.length - 1], to.coords) > 1.609344) {
+          throw new Error('The imported track endpoints must match the first and last expedition stops.');
+        }
+        routeSource = 'uploaded';
+        if (mode === 'road' || mode === 'awd') {
+          countyIds = CoordinateLookups.routeCountyIds(routeCoords, coordinateIndexes.counties, d3.geoContains);
+        }
+      } else if (mode === 'road' || mode === 'awd') {
         const key = JSON.stringify([from.coords, to.coords]);
         if (!expeditionRoadCache.has(key)) {
           const wait = Math.max(0, 1100 - (Date.now() - lastRoadRequest));
@@ -493,6 +653,54 @@ async function saveExpedition(event) {
   }
 }
 
+async function importExpeditionRoute(event) {
+  if (AppState.viewOnly || expeditionPending) return;
+  const input = event.target;
+  const file = input.files?.[0];
+  if (!file) return;
+  try {
+    if (file.size > 20_000_000) throw new Error('The route file is too large (20 MB maximum).');
+    const route = parseUploadedRouteFile(await file.text(), file.name);
+    if (expeditionDraft.length > 2) {
+      throw new Error('An imported track needs exactly two expedition stops. Remove intermediate stops before importing.');
+    }
+    if (expeditionDraft.length < 2) {
+      expeditionDraft = [
+        trackEndpointStop('Track Start', route[0], `track_start_${crypto.randomUUID()}`),
+        trackEndpointStop('Track End', route[route.length - 1], `track_end_${crypto.randomUUID()}`)
+      ];
+      renderExpeditionStops();
+    } else {
+      const startMatches = uploadedRouteDistanceKm(route[0], expeditionDraft[0].coords) <= 1.609344;
+      const endMatches = uploadedRouteDistanceKm(route[route.length - 1], expeditionDraft[1].coords) <= 1.609344;
+      const reversedStartMatches = uploadedRouteDistanceKm(route[route.length - 1], expeditionDraft[0].coords) <= 1.609344;
+      const reversedEndMatches = uploadedRouteDistanceKm(route[0], expeditionDraft[1].coords) <= 1.609344;
+      if (!startMatches || !endMatches) {
+        if (reversedStartMatches && reversedEndMatches) route.reverse();
+        else throw new Error('The imported track endpoints must match the first and last expedition stops.');
+      }
+    }
+    expeditionUploadedRoute = route;
+    updateUploadedRouteStatus();
+    invalidateExpeditionRoutes();
+    renderExpeditionStops();
+    await previewExpeditionRoutes();
+  } catch (error) {
+    console.error('Expedition route import failed', error);
+    updateUploadedRouteStatus(`Route not imported: ${error.message}`);
+  } finally {
+    input.value = '';
+  }
+}
+
+function clearExpeditionRoute() {
+  if (expeditionPending) return;
+  expeditionUploadedRoute = null;
+  document.getElementById('expeditionFileInput').value = '';
+  updateUploadedRouteStatus();
+  invalidateExpeditionRoutes();
+}
+
 let travelLogMaps = {};
 
 const TRAVEL_LOG_MONTHS = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE',
@@ -570,7 +778,8 @@ function renderTravelLogMiniMap(exp) {
     mode: leg.mode,
     routeSource: leg.routeSource ?? (leg.mode === 'flight' ? 'none' :
       ['road', 'awd'].includes(leg.mode) ? 'routed' : 'direct'),
-    coords: ['ferry', 'flight', 'rail'].includes(leg.mode)
+    coords: leg.routeSource === 'uploaded' ? leg.routeCoords :
+      ['ferry', 'flight', 'rail'].includes(leg.mode)
       ? [exp.routeStops?.[index]?.coords, exp.routeStops?.[index + 1]?.coords]
       : leg.routeCoords
   })) || (route.length > 1 ? [{
@@ -593,11 +802,14 @@ function renderTravelLogMiniMap(exp) {
     maxZoom: 19
   }).addTo(miniMap);
   if (hasPolyline) {
-    displayLegs.forEach(leg => L.polyline(leg.coords, {
+    displayLegs.forEach(leg => {
+      const approximation = expeditionLegIsApproximation(leg);
+      L.polyline(leg.coords, {
       color: leg.mode === 'ferry' ? '#38bdf8' : leg.mode === 'flight' ? '#94a3b8' : '#f59e0b',
-      weight: 3, opacity: leg.routeSource === 'direct' || ['ferry', 'flight', 'rail'].includes(leg.mode) ? 0.7 : 0.95,
-      dashArray: leg.routeSource === 'direct' || ['ferry', 'flight', 'rail'].includes(leg.mode) ? '8, 8' : null
-    }).addTo(miniMap));
+      weight: 3, opacity: approximation ? 0.7 : 0.95,
+      dashArray: approximation ? '8, 8' : null
+      }).addTo(miniMap);
+    });
     stops.forEach(coords => L.circleMarker(coords,
       { radius: 4, fillColor: '#10b981', color: '#fff', weight: 1, fillOpacity: 1 }).addTo(miniMap));
   } else {
@@ -701,6 +913,10 @@ document.getElementById('btnCancelExpedition').addEventListener('click', closeEx
 document.getElementById('expeditionSearch').addEventListener('input', renderExpeditionSearch);
 document.getElementById('expeditionForm').addEventListener('submit', saveExpedition);
 document.getElementById('btnPreviewExpedition').addEventListener('click', previewExpeditionRoutes);
+document.getElementById('btnImportExpeditionRoute').addEventListener('click', () =>
+  document.getElementById('expeditionFileInput').click());
+document.getElementById('expeditionFileInput').addEventListener('change', importExpeditionRoute);
+document.getElementById('btnClearExpeditionRoute').addEventListener('click', clearExpeditionRoute);
 document.getElementById('expeditionDayTrip').addEventListener('change', syncExpeditionDayTrip);
 document.getElementById('expeditionStart').addEventListener('change', syncExpeditionDayTrip);
 document.getElementById('expeditionSearch').addEventListener('keydown', event => {

@@ -545,6 +545,30 @@ check('only routed road legs clear land fog; ferry, flight, rail, and walking le
     {mode:'teleport',routeCoords:[],countyIds:[]}
   ]) assert.throws(()=>ledger.validateExpeditions([{...mixedExpedition,routeLegs:[flight,...mixedExpedition.routeLegs.slice(1)]}],lookups));
 });
+check('uploaded expedition tracks preserve geometry while fog and county credit follow the transit mode', () => {
+  const stops = [
+    { kind: 'place', id: 'track_start', name: 'Track Start', coords: [39.24, -106.29] },
+    { kind: 'place', id: 'track_end', name: 'Track End', coords: [39.19, -106.81] }
+  ];
+  const track = [stops[0].coords, [39.2, -106.5], stops[1].coords];
+  const makeUploadedTrip = (mode, countyIds = []) => ({
+    ...exp, id: `exp_uploaded_${mode}`, transitTags: [mode],
+    routeCoords: stops.map(stop => stop.coords), routeStops: stops,
+    routeLegs: [{ mode, routeSource: 'uploaded', routeCoords: track, countyIds }]
+  });
+  const road = ledger.validateExpeditions([makeUploadedTrip('road', ['08059'])], lookups)[0];
+  assert.equal(road.routeLegs[0].routeSource, 'uploaded');
+  assert.deepEqual(road.routeLegs[0].routeCoords, track);
+  assert.deepEqual(ledger.fogRoutes(road), [track]);
+  for (const mode of ['ferry', 'flight', 'rail', 'foot']) {
+    const uploaded = ledger.validateExpeditions([makeUploadedTrip(mode)], lookups)[0];
+    assert.equal(uploaded.routeLegs[0].routeSource, 'uploaded');
+    assert.deepEqual(uploaded.routeLegs[0].routeCoords, track);
+    assert.deepEqual(ledger.fogRoutes(uploaded), []);
+    assert.deepEqual(ledger.waterFogRoutes(uploaded), mode === 'ferry' ? [track] : []);
+  }
+  assert.throws(() => ledger.validateExpeditions([makeUploadedTrip('ferry', ['08059'])], lookups), /travel leg/);
+});
 check('leg validation rejects missing legs, mismatched tags, malformed coordinates and distant snapped roads', () => {
   for (const change of [
     {routeLegs:[]}, {routeLegs:mixedExpedition.routeLegs.slice(1)}, {transitTags:['road']},

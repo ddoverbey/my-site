@@ -123,24 +123,26 @@
           const routeSource = leg?.routeSource ?? (leg?.mode === 'flight' ? 'none' :
             ['road', 'awd'].includes(leg?.mode) ? 'routed' : 'direct');
           if (!leg || !Object.hasOwn(transitTags, leg.mode) ||
-              !['routed', 'direct', 'none'].includes(routeSource) || !Array.isArray(leg.routeCoords) ||
+              !['routed', 'direct', 'uploaded', 'none'].includes(routeSource) || !Array.isArray(leg.routeCoords) ||
               !Array.isArray(leg.countyIds) || new Set(leg.countyIds).size !== leg.countyIds.length ||
               leg.countyIds.some(id => !/^\d{5}$/.test(id)) ||
-              (leg.mode === 'flight' ? routeSource !== 'none' || leg.routeCoords.length || leg.countyIds.length :
+              (leg.mode === 'flight' ? routeSource === 'none'
+                ? leg.routeCoords.length || leg.countyIds.length
+                : routeSource !== 'uploaded' || leg.routeCoords.length < 2 || leg.countyIds.length :
                 routeSource === 'none' || leg.routeCoords.length < 2 ||
                 (routeSource === 'direct' && leg.routeCoords.length !== 2)) ||
-              ((['road', 'awd'].includes(leg.mode) && routeSource !== 'routed') ||
+              ((['road', 'awd'].includes(leg.mode) && !['routed', 'uploaded'].includes(routeSource)) ||
                 (!['road', 'awd'].includes(leg.mode) && leg.countyIds.length) ||
                 (routeSource === 'routed' && !['road', 'awd', 'ferry'].includes(leg.mode)) ||
-                (['foot', 'rail'].includes(leg.mode) && routeSource !== 'direct') ||
-                (leg.mode === 'ferry' && !['routed', 'direct'].includes(routeSource)))) {
+                (['foot', 'rail'].includes(leg.mode) && !['direct', 'uploaded'].includes(routeSource)) ||
+                (leg.mode === 'ferry' && !['routed', 'direct', 'uploaded'].includes(routeSource)))) {
             throw new Error('Invalid expedition travel leg.');
           }
           leg.routeCoords.forEach(point => {
             if (!Array.isArray(point) || point.length !== 2) throw new Error('Invalid leg coordinate.');
             lookups.validateCoordinates(...point);
           });
-          if (leg.mode !== 'flight') {
+          if (routeSource !== 'none') {
             const endpoints = [leg.routeCoords[0], leg.routeCoords[leg.routeCoords.length - 1]];
             endpoints.forEach((point, offset) => {
               const stop = exp.routeStops[index + offset].coords;
@@ -159,13 +161,13 @@
         ...exp, transitTags: validateTags(exp.transitTags, transitTags),
         purposeTags: validateTags(exp.purposeTags, purposeTags),
         routeCoords: exp.routeCoords.map(point => [...point]),
-        // Accept old road-routed ferry saves, but never retain their highway geometry.
+        // Normalize legacy road-routed ferries without discarding imported tracks.
         ...(exp.routeLegs ? { routeLegs: exp.routeLegs.map((leg, index) => ({
           ...leg,
-          routeSource: leg.mode === 'ferry' ? 'direct' :
+          routeSource: leg.mode === 'ferry' && (leg.routeSource ?? 'direct') === 'routed' ? 'direct' :
             leg.routeSource ?? (leg.mode === 'flight' ? 'none' :
               ['road', 'awd'].includes(leg.mode) ? 'routed' : 'direct'),
-          routeCoords: leg.mode === 'ferry'
+          routeCoords: leg.mode === 'ferry' && (leg.routeSource ?? 'direct') === 'routed'
             ? exp.routeStops.slice(index, index + 2).map(stop => [...stop.coords])
             : leg.routeCoords.map(point => [...point]),
           countyIds: [...leg.countyIds]
@@ -377,7 +379,7 @@
 
   function fogRoutes(expedition) {
     if (expedition.routeLegs) return expedition.routeLegs
-      .filter(leg => ['road', 'awd'].includes(leg.mode) && (leg.routeSource ?? 'routed') === 'routed')
+      .filter(leg => ['road', 'awd'].includes(leg.mode) && ['routed', 'uploaded'].includes(leg.routeSource ?? 'routed'))
       .map(leg => leg.routeCoords);
     return expedition.transitTags.some(mode => !['road', 'awd'].includes(mode)) ? [] : [expedition.routeCoords];
   }
