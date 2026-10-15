@@ -2697,9 +2697,11 @@
       const actual = scratchStatuses()[key];
       const name = AppState.scratchDataset === 'counties' ? countyLabel(key) : feature.properties.name;
       showNotification('Cartography Updated', `${name}: ${TravelLedger.labels[actual] || 'Unexplored'}.`, '🗺️');
-      renderScratchMap();
       refreshTravelUI();
     }
+
+    let renderedScratchDataset = null;
+    let renderedCountyFeatures = null;
 
     function renderScratchMap() {
       const isParks = AppState.scratchDataset === 'nationalparks';
@@ -2720,14 +2722,24 @@
         renderNationalParksScratch();
         return;
       }
-      const svg = d3.select('#svgScratchMap').html('');
+      const svg = d3.select('#svgScratchMap');
       const isWorld = AppState.scratchDataset === 'world';
       const isCounties = AppState.scratchDataset === 'counties';
       const features = isWorld ? (worldGeoJson || []) : isCounties ? (countyGeoJson || []) : (usaGeoJson || []);
       const colors = TravelLedger.colors;
       const status = feature => scratchStatuses()[scratchStatusKey(feature)];
+      const reuseCountyMap = isCounties && renderedScratchDataset === 'counties' &&
+        renderedCountyFeatures === features && features.length > 0;
+
+      if (!reuseCountyMap) {
+        svg.html('');
+        renderedScratchDataset = AppState.scratchDataset;
+        renderedCountyFeatures = null;
+      }
 
       if (!features.length) {
+        renderedScratchDataset = null;
+        renderedCountyFeatures = null;
         document.getElementById('scratchStatsLabel').textContent = 'Dataset unavailable';
         svg.append('text')
           .attr('x', '50%').attr('y', '50%')
@@ -2742,26 +2754,32 @@
       const H = isWorld ? 500 : 580;
       svg.attr('viewBox', `0 0 ${W} ${H}`);
 
-      const projection = isWorld ? d3.geoNaturalEarth1() : d3.geoAlbersUsa();
-      projection.fitSize([W, H], { type: 'FeatureCollection', features });
-      const pathGenerator = d3.geoPath(projection);
+      const projection = reuseCountyMap ? null : isWorld ? d3.geoNaturalEarth1() : d3.geoAlbersUsa();
+      if (projection) projection.fitSize([W, H], { type: 'FeatureCollection', features });
+      const pathGenerator = projection ? d3.geoPath(projection) : null;
 
-      svg.append('g').attr('class', 'scratch-regions').selectAll('path')
-        .data(features)
-        .join('path')
-        .attr('d', pathGenerator)
+      const regionLayer = reuseCountyMap ? null : svg.append('g').attr('class', 'scratch-regions');
+      const regionPaths = reuseCountyMap
+        ? svg.selectAll('.scratch-regions path')
+        : regionLayer.selectAll('path').data(features).join('path');
+      if (!reuseCountyMap) regionPaths.attr('d', pathGenerator);
+      regionPaths
         .attr('stroke', d => status(d) === 'l' ? '#93c5fd' : '#1e293b')
         .attr('stroke-width', d => status(d) === 'l' ? 1 : isCounties ? 0.25 : 0.6)
         .attr('fill', d => colors[status(d)] || '#090d1a')
         .attr('cursor', AppState.viewOnly ? 'default' : 'pointer')
-        .on('click', (e, d) => cycleScratchStatus(d))
-        .append('title')
-        .text(d => {
+        .attr('title', d => {
           const name = isCounties ? countyLabel(scratchStatusKey(d)) : d.properties.name;
           return `${name} • ${TravelLedger.labels[status(d)] || 'Unexplored'}${AppState.viewOnly ? ' • Read-only' : ' • Click to cycle status'}`;
-        });
+        })
+        .attr('aria-label', d => {
+          const name = isCounties ? countyLabel(scratchStatusKey(d)) : d.properties.name;
+          return `${name}: ${TravelLedger.labels[status(d)] || 'Unexplored'}`;
+        })
+        .on('click', (e, d) => cycleScratchStatus(d));
+      if (isCounties) renderedCountyFeatures = features;
 
-      if (isCounties && scratchStateMesh) {
+      if (isCounties && scratchStateMesh && !reuseCountyMap) {
         svg.append('path').attr('class', 'scratch-state-borders')
           .attr('d', pathGenerator(scratchStateMesh)).attr('fill', 'none')
           .attr('stroke', '#cbd5e1').attr('stroke-opacity', 0.35).attr('stroke-width', 0.8)

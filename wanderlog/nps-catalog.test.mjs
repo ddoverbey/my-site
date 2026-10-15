@@ -979,6 +979,7 @@ check('invalid geocoder coordinates show an error and leave the existing home un
 const scratchNodes = [];
 let scratchFeatures = [];
 const projectionCalls = [];
+const generatedScratchPaths = [];
 function scratchSelection(tag = 'svg', data = []) {
   const node = { tag, attrs: {}, data };
   scratchNodes.push(node);
@@ -997,7 +998,10 @@ context.d3 = {
   geoContains: () => true, select: () => scratchSelection(),
   geoAlbersUsa: () => ({ fitSize() { projectionCalls.push('usa'); } }),
   geoNaturalEarth1: () => ({ fitSize() { projectionCalls.push('world'); } }),
-  geoPath: () => feature => `path-${feature.id || 'mesh'}`
+  geoPath: () => feature => {
+    generatedScratchPaths.push(feature);
+    return `path-${feature.id || 'mesh'}`;
+  }
 };
 vm.runInContext(`
   AppState.viewOnly=false;applyPassport(migratePassport({}));
@@ -1023,10 +1027,14 @@ check('all three Scratch Map buttons select their datasets with synchronized act
   assert.deepEqual(projectionCalls, ['world', 'usa', 'usa']);
 });
 check('county scratch view renders all four exact colors and noninteractive faint state mesh', () => {
-  vm.runInContext("AppState.counties={'06001':'l','06013':'v','06041':'t','06075':'w','99999':'v'};renderScratchMap()", context);
+  generatedScratchPaths.length = 0;
+  vm.runInContext("AppState.counties={'06001':'l','06013':'v','06041':'t','06075':'w','99999':'v'};renderedScratchDataset=null;renderedCountyFeatures=null;renderScratchMap()", context);
   const regions = scratchNodes.find(n => n.attrs.class === 'scratch-regions');
   assert.deepEqual(Array.from(regions.attrs.fill), ['#3b82f6', '#10b981', '#64748b', '#ec4899']);
   assert.equal(regions.attrs.stroke[0], '#93c5fd');
+  assert.equal(generatedScratchPaths.length, 5);
+  vm.runInContext('renderScratchMap()', context);
+  assert.equal(generatedScratchPaths.length, 5, 'status refresh should reuse existing county geometry paths');
   const mesh = scratchNodes.find(n => n.attrs.class === 'scratch-state-borders');
   assert.equal(mesh.attrs['pointer-events'], 'none');
   assert.equal(mesh.attrs['stroke-opacity'], 0.35);
