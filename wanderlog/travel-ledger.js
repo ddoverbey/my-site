@@ -3,7 +3,8 @@
   const ranks = Object.freeze({ w: 1, t: 2, v: 3, l: 4 });
   const labels = Object.freeze({ w: 'Wishlist', t: 'Transited', v: 'Visited', l: 'Lived / Home Base' });
   const colors = Object.freeze({ w: '#ec4899', t: '#64748b', v: '#10b981', l: '#3b82f6' });
-  const transitTags = Object.freeze({ road: 'Drive / Road Trip', awd: 'AWD/Off-Road', ferry: 'Ferry / Boat', flight: 'Flight', foot: 'Walk / Hike' });
+  const transitTags = Object.freeze({ road: 'Drive / Road Trip', awd: 'AWD/Off-Road', ferry: 'Ferry / Boat', flight: 'Flight', rail: 'Rail / Train', foot: 'Walk / Hike' });
+  const transitIcons = Object.freeze({ road: '🚙', awd: '🚙', ferry: '⛴️', flight: '✈️', rail: '🚆', foot: '🥾' });
   const purposeTags = Object.freeze({
     photography: 'Photography', anniversary: 'Anniversary', family: 'Friends/Family', solo: 'Solo', work: 'Work'
   });
@@ -131,7 +132,7 @@
               ((['road', 'awd'].includes(leg.mode) && routeSource !== 'routed') ||
                 (!['road', 'awd'].includes(leg.mode) && leg.countyIds.length) ||
                 (routeSource === 'routed' && !['road', 'awd', 'ferry'].includes(leg.mode)) ||
-                (leg.mode === 'foot' && routeSource !== 'direct') ||
+                (['foot', 'rail'].includes(leg.mode) && routeSource !== 'direct') ||
                 (leg.mode === 'ferry' && !['routed', 'direct'].includes(routeSource)))) {
             throw new Error('Invalid expedition travel leg.');
           }
@@ -158,11 +159,15 @@
         ...exp, transitTags: validateTags(exp.transitTags, transitTags),
         purposeTags: validateTags(exp.purposeTags, purposeTags),
         routeCoords: exp.routeCoords.map(point => [...point]),
-        ...(exp.routeLegs ? { routeLegs: exp.routeLegs.map(leg => ({
+        // Accept old road-routed ferry saves, but never retain their highway geometry.
+        ...(exp.routeLegs ? { routeLegs: exp.routeLegs.map((leg, index) => ({
           ...leg,
-          routeSource: leg.routeSource ?? (leg.mode === 'flight' ? 'none' :
-            ['road', 'awd'].includes(leg.mode) ? 'routed' : 'direct'),
-          routeCoords: leg.routeCoords.map(point => [...point]),
+          routeSource: leg.mode === 'ferry' ? 'direct' :
+            leg.routeSource ?? (leg.mode === 'flight' ? 'none' :
+              ['road', 'awd'].includes(leg.mode) ? 'routed' : 'direct'),
+          routeCoords: leg.mode === 'ferry'
+            ? exp.routeStops.slice(index, index + 2).map(stop => [...stop.coords])
+            : leg.routeCoords.map(point => [...point]),
           countyIds: [...leg.countyIds]
         })) } : {})
       };
@@ -530,7 +535,7 @@
   }
 
   const api = {
-    ranks, labels, colors, transitTags, purposeTags, isVisited, clearsFog, promote,
+    ranks, labels, colors, transitTags, transitIcons, purposeTags, isVisited, clearsFog, promote,
     homeRadiusKm, hasLoggedTravel, overnightNights, distanceMiles, fogRoutes, waterFogRoutes, restoreExpeditionPromotions,
     validateStatuses, validateTags, validateExpeditions, normalizePoi, migrateState, syncDerivedState, loggedCountyStatuses, metadataProgress
   };

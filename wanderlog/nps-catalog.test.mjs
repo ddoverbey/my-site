@@ -117,7 +117,7 @@ check('mobile RPG HUD starts collapsed with an accessible stats toggle', () => {
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261014-water-fog')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261014-direct-transit')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('National Parks is a Scratch Map dataset, not a separate navigation page, with an expanded checklist', () => {
@@ -827,12 +827,12 @@ check('mini-maps plot every route stop and frame multi-stop trips that have no p
     AppState.expeditions = [testFerryExpedition];
     renderExpeditionHistory();
   `, context);
-  check('Travel Log mini-map draws ferry geometry from the routed leg instead of joining stops directly',()=>{
+  check('Travel Log mini-map replaces saved highway ferry geometry with a dashed direct connector',()=>{
     const line=drawn.polylines.at(-1);
-    assert.deepEqual(plain(line.coords),[[48.75,-122.48],[54,-130],[57.05,-135.33]]);
+    assert.deepEqual(plain(line.coords),[[48.75,-122.48],[57.05,-135.33]]);
     assert.equal(line.options.color,'#38bdf8');
-    assert.equal(line.options.dashArray,null);
-    assert.deepEqual(plain(drawn.fitBounds.at(-1)[0]),[[48.75,-122.48],[54,-130],[57.05,-135.33],
+    assert.equal(line.options.dashArray,'8, 8');
+    assert.deepEqual(plain(drawn.fitBounds.at(-1)[0]),[[48.75,-122.48],[57.05,-135.33],
       [48.75,-122.48],[57.05,-135.33]]);
   });
   vm.runInContext(`destroyTravelLogMaps();AppState.expeditions=${savedExpeditions};delete globalThis.testFerryExpedition`, context);
@@ -1258,7 +1258,7 @@ check('radar includes full custom visits and their biomes, loaded counties and e
   assert.equal(after.Worldly, 2 / 15);
   assert.equal(after.Roadtrip, 2 / 100 + 1 / 30);
   for (const [tag, axis] of [['awd','Adventure'],['awd','Roadtrip'],['foot','Adventure'],
-    ['foot','Remoteness'],['ferry','Worldly'],['flight','Worldly']]) {
+    ['foot','Remoteness'],['ferry','Worldly'],['flight','Worldly'],['rail','Worldly']]) {
     vm.runInContext(`AppState.expeditions=[{...testExpedition,transitTags:['${tag}'],purposeTags:[]}];`, context);
     assert.ok(vm.runInContext(`calculateStats().archetypes.${axis}`, context) > before[axis], tag);
   }
@@ -1717,7 +1717,7 @@ check('every real tier hides at zero, redacts only Legendary/Mythic, and reveals
         const locked = secret && progress < testCase.goal;
         assert.equal(card.innerHTML.includes(testCase.desc), !locked, testCase.title);
         assert.equal(card.innerHTML.includes('achievement-redacted'), locked, testCase.title);
-        assert.equal(card.innerHTML.includes('achievement-icon-hidden'), secret && !completed, testCase.title);
+        assert.equal(card.innerHTML.includes('achievement-icon-hidden'), locked, testCase.title);
         assert.equal(secret ? typeof testCase.secretDesc === 'string' : true, true, testCase.title);
         assert.equal(testCase.secretDesc ? card.innerHTML.includes(testCase.secretDesc) : false, locked, testCase.title);
         assert.equal(card.innerHTML.includes('Cryptic hint, blurred until completion'), locked, testCase.title);
@@ -2245,21 +2245,22 @@ element('expeditionStart').value='';
 element('expeditionEnd').value='';
 const beforePreview=vm.runInContext('JSON.stringify(passportPayload())',context);
 await element('btnPreviewExpedition').handlers.click();
-check('mixed-mode route preview routes ferry legs when possible without granting ferry counties or fog',()=>{
+check('mixed-mode preview only routes driving legs; ferries are direct without intermediate counties or land fog',()=>{
   assert.equal(vm.runInContext('JSON.stringify(passportPayload())',context),beforePreview);
-  assert.equal(roadRequests,2);
+  assert.equal(roadRequests,1);
   assert.equal(vm.runInContext('expeditionPreparedLegs[0].routeCoords.length',context),0);
   assert.equal(vm.runInContext('expeditionPreparedLegs[0].countyIds.length',context),0);
   assert.equal(vm.runInContext('expeditionPreparedLegs[0].routeSource',context),'none');
   assert.equal(vm.runInContext('expeditionPreparedLegs[1].countyIds[0]',context),'08059');
-  assert.equal(vm.runInContext('expeditionPreparedLegs[2].routeCoords.length',context),3);
-  assert.equal(vm.runInContext('expeditionPreparedLegs[2].routeSource',context),'routed');
+  assert.deepEqual(JSON.parse(vm.runInContext('JSON.stringify(expeditionPreparedLegs[2].routeCoords)',context)),
+    context.uiMixedStops.slice(2,4).map(stop=>stop.coords));
+  assert.equal(vm.runInContext('expeditionPreparedLegs[2].routeSource',context),'direct');
   assert.deepEqual(Array.from(vm.runInContext('expeditionPreparedLegs[2].countyIds',context)),[]);
   assert.equal(element('btnSaveExpedition').disabled,false);
   assert.ok(previewTooltipTexts.includes('Aspen'));
   assert.ok(previewTooltipTexts.includes('SAN &lt;airport&gt;'));
-  assert.ok(previewLines.some(line=>line.options.color==='#38bdf8' && line.options.dashArray===null));
-  assert.ok(previewLines.some(line=>line.options.color==='#94a3b8' && line.options.dashArray==='8 8'));
+  assert.ok(previewLines.some(line=>line.options.color==='#38bdf8' && line.options.dashArray==='8, 8'));
+  assert.ok(previewLines.some(line=>line.options.color==='#94a3b8' && line.options.dashArray==='8, 8'));
   assert.ok(element('expeditionRouteSummary').textContent.includes('do not award route counties'));
 });
 context.crypto.randomUUID=()=> 'mixed-ui';
@@ -2287,7 +2288,9 @@ check('editing a saved trip restores leg modes, reason and route preview without
   assert.equal(vm.runInContext('expeditionDraft[0].travelMode',context),'flight');
   assert.equal(vm.runInContext('expeditionDraft[1].travelMode',context),'road');
   assert.equal(element('btnSaveExpedition').disabled,false);
-  assert.equal(roadRequests,2);
+  assert.equal(roadRequests,1);
+  assert.equal(vm.runInContext('expeditionPreparedLegs[2].routeSource',context),'direct');
+  assert.equal(vm.runInContext('expeditionPreparedLegs[1].routeSource',context),'routed');
 });
 vm.runInContext('expeditionDraft[1].travelMode="flight";invalidateExpeditionRoutes()',context);
 await element('expeditionForm').handlers.submit({preventDefault(){}});
@@ -2335,20 +2338,47 @@ check('road service failures keep the draft and never substitute a straight-line
   assert.equal(vm.runInContext('expeditionDraft.length',context),4);
   assert.equal(vm.runInContext('AppState.expeditions.length',context),1);
 });
+let unexpectedFerryRequests=0;
 context.CoordinateLookups.lookupRoadRoute=async(from,to)=>{
-  if (from[0]===39.1911) throw new Error('Ferry route unavailable');
+  if (from[0]===39.1911) { unexpectedFerryRequests++; throw new Error('Ferry must not call the road router'); }
   return [[...from],[...to]];
 };
 await element('btnPreviewExpedition').handlers.click();
-check('unroutable ferries use an explicit dashed direct approximation without route county or fog credit',()=>{
+check('ferries bypass routing entirely even when the road service is available',()=>{
+  assert.equal(unexpectedFerryRequests,0);
   assert.notEqual(vm.runInContext('expeditionPreparedLegs',context),null,element('expeditionStatus').textContent);
   const ferryLeg=vm.runInContext('expeditionPreparedLegs[2]',context);
   assert.equal(ferryLeg.routeSource,'direct');
   assert.equal(ferryLeg.routeCoords.length,2);
   assert.deepEqual(Array.from(ferryLeg.countyIds),[]);
   assert.ok(element('expeditionStatus').textContent.includes('direct approximation'));
-  assert.ok(previewLines.some(line=>line.options.color==='#38bdf8' && line.options.dashArray==='8 8'));
+  assert.ok(previewLines.some(line=>line.options.color==='#38bdf8' && line.options.dashArray==='8, 8'));
   assert.equal(vm.runInContext('TravelLedger.fogRoutes(draftExpedition(expeditionPreparedLegs)).length',context),1);
+});
+vm.runInContext(`
+  expeditionDraft=uiMixedStops.map((stop,index)=>({...stop,coords:[...stop.coords],
+    travelMode:['ferry','rail','foot'][index] || 'road'}));invalidateExpeditionRoutes();
+`,context);
+let directModeRoadRequests=0;
+let directModeCountyRequests=0;
+context.CoordinateLookups.lookupRoadRoute=async()=>{directModeRoadRequests++;throw new Error('Direct modes must not route');};
+context.CoordinateLookups.routeCountyIds=()=>{directModeCountyRequests++;throw new Error('Direct modes must not interpolate counties');};
+await element('btnPreviewExpedition').handlers.click();
+check('ferry, rail and walking legs preview without road requests, county interpolation, or land fog',()=>{
+  assert.equal(directModeRoadRequests,0);
+  assert.equal(directModeCountyRequests,0);
+  const legs=JSON.parse(vm.runInContext('JSON.stringify(expeditionPreparedLegs)',context));
+  assert.notEqual(legs,null,element('expeditionStatus').textContent);
+  assert.deepEqual(legs.map(leg=>leg.mode),['ferry','rail','foot']);
+  legs.forEach((leg,index)=>{
+    assert.equal(leg.routeSource,'direct');
+    assert.deepEqual(leg.routeCoords,context.uiMixedStops.slice(index,index+2).map(stop=>stop.coords));
+    assert.deepEqual(leg.countyIds,[]);
+  });
+  assert.equal(vm.runInContext('TravelLedger.fogRoutes(draftExpedition(expeditionPreparedLegs)).length',context),0);
+  assert.equal(vm.runInContext('TravelLedger.waterFogRoutes(draftExpedition(expeditionPreparedLegs)).length',context),1);
+  assert.equal(travelLedger.transitTags.rail,'Rail / Train');
+  assert.equal(travelLedger.transitIcons.rail,'🚆');
 });
 context.CoordinateLookups=originalExpeditionLookups;
 context.L=originalPreviewL;

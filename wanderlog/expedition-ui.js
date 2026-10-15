@@ -279,9 +279,7 @@ function openExpedition(id = null) {
   renderExpeditionSearch();
   document.getElementById('expeditionModal').classList.remove('hidden');
   if (existing?.routeLegs) {
-    expeditionPreparedLegs = existing.routeLegs.map(leg => ({
-      mode: leg.mode, routeCoords: leg.routeCoords.map(point => [...point]), countyIds: [...leg.countyIds]
-    }));
+    expeditionPreparedLegs = TravelLedger.validateExpeditions([existing], CoordinateLookups)[0].routeLegs;
     expeditionPreparedKey = expeditionRouteKey();
     displayExpeditionPreview(expeditionPreparedLegs);
     document.getElementById('btnSaveExpedition').disabled = false;
@@ -366,13 +364,13 @@ function displayExpeditionPreview(legs) {
   if (expeditionPreviewLayers) expeditionPreviewMap.removeLayer(expeditionPreviewLayers);
   expeditionPreviewLayers = L.featureGroup().addTo(expeditionPreviewMap);
   legs.forEach((leg, index) => {
-    const route = leg.mode === 'flight'
+    const route = ['ferry', 'flight', 'rail'].includes(leg.mode)
       ? [expeditionDraft[index].coords, expeditionDraft[index + 1].coords]
       : leg.routeCoords;
     L.polyline(route, {
       color: leg.mode === 'ferry' ? '#38bdf8' : leg.mode === 'flight' ? '#94a3b8' : '#fbbf24',
-      weight: 3, opacity: leg.routeSource === 'direct' || leg.mode === 'flight' ? 0.7 : 0.95,
-      dashArray: leg.routeSource === 'direct' || leg.mode === 'flight' ? '8 8' : null
+      weight: 3, opacity: leg.routeSource === 'direct' || ['ferry', 'flight', 'rail'].includes(leg.mode) ? 0.7 : 0.95,
+      dashArray: leg.routeSource === 'direct' || ['ferry', 'flight', 'rail'].includes(leg.mode) ? '8, 8' : null
     }).addTo(expeditionPreviewLayers);
   });
   expeditionDraft.forEach(stop => L.circleMarker(stop.coords, { radius: 5, color: '#10b981' })
@@ -381,7 +379,7 @@ function displayExpeditionPreview(legs) {
   expeditionPreviewMap.fitBounds(expeditionPreviewLayers.getBounds(), { padding: [20, 20], maxZoom: 12, animate: false });
   const counties = new Set(legs.flatMap(leg => leg.countyIds));
   document.getElementById('expeditionRouteSummary').textContent =
-    `${legs.length} travel leg${legs.length === 1 ? '' : 's'} · ${counties.size} counties along driving routes. Ferry routes clear fog only well offshore; ferry and flight routes do not award route counties. Dashed lines are direct approximations.`;
+    `${legs.length} travel leg${legs.length === 1 ? '' : 's'} · ${counties.size} counties along driving routes. Ferry routes clear fog only well offshore; ferry, rail, walking, and flight routes do not award route counties. Dashed lines are direct approximations.`;
 }
 
 async function previewExpeditionRoutes() {
@@ -394,7 +392,6 @@ async function previewExpeditionRoutes() {
     setExpeditionBusy(true);
     status.textContent = 'Preparing route preview...';
     const legs = [];
-    let ferryFallbacks = 0;
     for (let index = 0; index < expeditionDraft.length - 1; index++) {
       const from = expeditionDraft[index], to = expeditionDraft[index + 1];
       const mode = from.travelMode || 'road';
@@ -412,23 +409,7 @@ async function previewExpeditionRoutes() {
         routeCoords = expeditionRoadCache.get(key).map(point => [...point]);
         countyIds = CoordinateLookups.routeCountyIds(routeCoords, coordinateIndexes.counties, d3.geoContains);
         routeSource = 'routed';
-      } else if (mode === 'ferry') {
-        const key = JSON.stringify([from.coords, to.coords]);
-        try {
-          if (!expeditionRoadCache.has(key)) {
-            const wait = Math.max(0, 1100 - (Date.now() - lastRoadRequest));
-            if (wait) await new Promise(resolve => setTimeout(resolve, wait));
-            lastRoadRequest = Date.now();
-            expeditionRoadCache.set(key, await CoordinateLookups.lookupRoadRoute(from.coords, to.coords));
-          }
-          routeCoords = expeditionRoadCache.get(key).map(point => [...point]);
-          routeSource = 'routed';
-        } catch (error) {
-          console.error('Ferry route unavailable; using a direct visual approximation', error);
-          routeCoords = [[...from.coords], [...to.coords]];
-          ferryFallbacks++;
-        }
-      } else if (mode === 'foot') routeCoords = [[...from.coords], [...to.coords]];
+      } else if (['ferry', 'foot', 'rail'].includes(mode)) routeCoords = [[...from.coords], [...to.coords]];
       else routeSource = 'none';
       legs.push({ mode, routeSource, routeCoords, countyIds });
     }
@@ -437,9 +418,7 @@ async function previewExpeditionRoutes() {
     displayExpeditionPreview(legs);
     expeditionPreparedLegs = legs;
     expeditionPreparedKey = expeditionRouteKey();
-    status.textContent = ferryFallbacks
-      ? `${ferryFallbacks} ferry route${ferryFallbacks === 1 ? '' : 's'} could not be routed; dashed line${ferryFallbacks === 1 ? ' is' : 's are'} a direct approximation. Review before saving.`
-      : 'Review the routes, then save.';
+    status.textContent = 'Review the routes, then save. Dashed lines are direct approximations, not routed paths.';
   } catch (error) {
     console.error('Expedition route preview failed', error);
     invalidateExpeditionRoutes();
@@ -561,7 +540,7 @@ function travelLogBadges(exp) {
     badges.push({ icon: '📌', label: poi?.name || `POI ${id}`, tone: 'bg-violet-950 text-violet-300 border-violet-500/40' });
   });
   exp.transitTags.forEach(tag => {
-    badges.push({ icon: '🚙', label: TravelLedger.transitTags[tag], tone: 'bg-sky-950 text-sky-300 border-sky-500/40' });
+    badges.push({ icon: TravelLedger.transitIcons[tag], label: TravelLedger.transitTags[tag], tone: 'bg-sky-950 text-sky-300 border-sky-500/40' });
   });
   exp.purposeTags.forEach(tag => {
     badges.push({ icon: '✨', label: TravelLedger.purposeTags[tag], tone: 'bg-amber-950 text-amber-300 border-amber-500/40' });
@@ -591,7 +570,7 @@ function renderTravelLogMiniMap(exp) {
     mode: leg.mode,
     routeSource: leg.routeSource ?? (leg.mode === 'flight' ? 'none' :
       ['road', 'awd'].includes(leg.mode) ? 'routed' : 'direct'),
-    coords: leg.mode === 'flight'
+    coords: ['ferry', 'flight', 'rail'].includes(leg.mode)
       ? [exp.routeStops?.[index]?.coords, exp.routeStops?.[index + 1]?.coords]
       : leg.routeCoords
   })) || (route.length > 1 ? [{
@@ -616,8 +595,8 @@ function renderTravelLogMiniMap(exp) {
   if (hasPolyline) {
     displayLegs.forEach(leg => L.polyline(leg.coords, {
       color: leg.mode === 'ferry' ? '#38bdf8' : leg.mode === 'flight' ? '#94a3b8' : '#f59e0b',
-      weight: 3, opacity: leg.routeSource === 'direct' || leg.mode === 'flight' ? 0.7 : 0.95,
-      dashArray: leg.routeSource === 'direct' || leg.mode === 'flight' ? '8 8' : null
+      weight: 3, opacity: leg.routeSource === 'direct' || ['ferry', 'flight', 'rail'].includes(leg.mode) ? 0.7 : 0.95,
+      dashArray: leg.routeSource === 'direct' || ['ferry', 'flight', 'rail'].includes(leg.mode) ? '8, 8' : null
     }).addTo(miniMap));
     stops.forEach(coords => L.circleMarker(coords,
       { radius: 4, fillColor: '#10b981', color: '#fff', weight: 1, fillOpacity: 1 }).addTo(miniMap));

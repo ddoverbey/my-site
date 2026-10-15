@@ -511,7 +511,7 @@ check('mixed city and airport itineraries support optional dates, reason text an
   assert.equal(ledger.metadataProgress(migrate({expeditions:[mixedExpedition]})).fastTravel,0);
   assert.equal(ledger.metadataProgress(migrate({expeditions:[{...mixedExpedition,startDate:null,endDate:null}]})).southernCross,0);
 });
-check('only routed road legs clear fog; flights, ferries, walking, and direct approximations never do', () => {
+check('only routed road legs clear land fog; ferry, flight, rail, and walking legs never do', () => {
   assert.equal(ledger.fogRoutes(mixedExpedition).length,2);
   assert.deepEqual(ledger.waterFogRoutes(mixedExpedition),[]);
   assert.deepEqual(ledger.fogRoutes({...exp,transitTags:['flight']}),[]);
@@ -519,6 +519,8 @@ check('only routed road legs clear fog; flights, ferries, walking, and direct ap
   assert.deepEqual(ledger.fogRoutes({...exp,transitTags:['ferry']}),[]);
   assert.deepEqual(ledger.waterFogRoutes({...exp,transitTags:['ferry']}),[exp.routeCoords]);
   assert.deepEqual(ledger.fogRoutes({...exp,transitTags:['foot']}),[]);
+  assert.deepEqual(ledger.fogRoutes({...exp,transitTags:['rail']}),[]);
+  assert.deepEqual(ledger.waterFogRoutes({...exp,transitTags:['rail']}),[]);
   for (const flight of [
     {mode:'flight',routeSource:'none',routeCoords:[mixedStops[0].coords,mixedStops[1].coords],countyIds:[]},
     {mode:'flight',routeSource:'none',routeCoords:[],countyIds:['04001']},
@@ -537,7 +539,7 @@ check('leg validation rejects missing legs, mismatched tags, malformed coordinat
   const validatedFerry = ledger.validateExpeditions([ferry],lookups)[0];
   assert.deepEqual(ledger.fogRoutes(validatedFerry),[]);
   assert.deepEqual(ledger.waterFogRoutes(validatedFerry),[validatedFerry.routeLegs[0].routeCoords]);
-  assert.equal(validatedFerry.routeLegs[0].routeSource,'routed');
+  assert.equal(validatedFerry.routeLegs[0].routeSource,'direct');
   assert.throws(()=>ledger.validateExpeditions([{...ferry,
     routeLegs:[{...ferry.routeLegs[0],countyIds:['04001']}]}],lookups),/travel leg/);
   const directFerry = {...ferry,routeLegs:[{mode:'ferry',routeSource:'direct',
@@ -549,6 +551,27 @@ check('leg validation rejects missing legs, mismatched tags, malformed coordinat
   assert.equal(legacyFerry.routeLegs[0].routeSource,'direct');
   assert.deepEqual(ledger.fogRoutes(legacyFerry),[]);
   assert.equal(ledger.waterFogRoutes(legacyFerry).length,1);
+});
+check('saved routed ferries migrate to direct stop-to-stop geometry and rail remains direct-only', () => {
+  const stops=mixedStops.slice(0,2);
+  const saved={...mixedExpedition,transitTags:['ferry'],routeStops:stops,
+    routeCoords:stops.map(stop=>stop.coords),
+    routeLegs:[{mode:'ferry',routeSource:'routed',
+      routeCoords:[stops[0].coords,[40,-110],stops[1].coords],countyIds:[]}]};
+  const normalized=ledger.validateExpeditions([saved],lookups)[0];
+  assert.equal(normalized.routeLegs[0].routeSource,'direct');
+  assert.deepEqual(normalized.routeLegs[0].routeCoords,stops.map(stop=>stop.coords));
+  assert.equal(saved.routeLegs[0].routeCoords.length,3);
+  assert.deepEqual(ledger.waterFogRoutes(normalized),[normalized.routeLegs[0].routeCoords]);
+  const rail={...normalized,transitTags:['rail'],
+    routeLegs:[{...normalized.routeLegs[0],mode:'rail'}]};
+  assert.deepEqual(ledger.validateExpeditions([rail],lookups)[0],rail);
+  assert.deepEqual(ledger.fogRoutes(rail),[]);
+  assert.deepEqual(ledger.waterFogRoutes(rail),[]);
+  assert.throws(()=>ledger.validateExpeditions([{...rail,
+    routeLegs:[{...rail.routeLegs[0],routeSource:'routed'}]}],lookups),/travel leg/);
+  assert.throws(()=>ledger.validateExpeditions([{...rail,
+    routeLegs:[{...rail.routeLegs[0],countyIds:['04001']}]}],lookups),/travel leg/);
 });
 const mixedPoliticalAt = (lat,lng) => ({
   countries:['United States of America'],states:[lng < -110 ? 'California' : 'Colorado'],

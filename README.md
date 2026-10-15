@@ -536,31 +536,31 @@ data shows retry guidance instead of a misleading completion count.
    No separate search button is needed. `SAN` and `DEN` expand to
    their full airport names; other airports can be searched by full name or code.
 3. Add stops in travel order, with a separate mode between each pair:
-   **Drive / Road Trip**, **AWD/Off-Road**, **Flight**, **Ferry / Boat**, or **Walk / Hike**.
+   **Drive / Road Trip**, **AWD/Off-Road**, **Flight**, **Ferry / Boat**, **Rail / Train**, or **Walk / Hike**.
    Reorder/remove stops as needed. Changing the itinerary invalidates its old preview.
 4. **Preview routes**, then save. Driving/AWD legs use the FOSSGIS public OSRM road-routing
    service, with cached responses and requests spaced at least 1.1 seconds apart. Add intermediate
    stops if the suggested road route differs from your actual drive. US county credit uses segment
    intersections with the existing simplified county polygons, including narrow crossed counties.
-   Ferry legs also try that router, which can follow mapped car-ferry routes when available; it is
-   not a maritime router or ferry timetable. If no route is available, the preview shows a dashed
-   direct approximation and says so. Walking legs are also shown as dashed direct approximations.
-   Flights use a dashed connector for orientation only. Ferry routes clear only offshore water:
+   Ferry, rail, walking, and flight legs never call the road router. Ferry, rail, and walking
+   legs use two-point direct approximations; flights use a dashed connector for orientation only.
+   All these modes are dashed in previews and Travel Log mini-maps. Previously saved road-routed
+   ferry legs are normalized to direct stop-to-stop geometry on load/import and when reopened.
+   Ferry routes clear only offshore water:
    sampled path points are buffered by 25 km, and any brush whose shoreline checks touch land is
    skipped. The shoreline check uses simplified country boundaries, so it is conservative rather
-   than a nautical chart. Ferry, walking, and flight lines award no intermediate counties; only
+   than a nautical chart. Ferry, rail, walking, and flight lines award no intermediate counties; only
    their stops count.
 
 The preview does not save visits or clear fog. No map picker is displayed.
 For SAN → DEN → Aspen → DEN, select Flight, Drive, Drive: credit the airport/destination
 counties and the counties on the approved drives, not those between San Diego and Denver.
 The existing 40 km fog corridor follows routed driving/AWD legs only. Ferry legs use a separate
-water-only clearing brush; flight and walking lines do not clear fog. Older ferry records can also
+water-only clearing brush; flight, rail, and walking lines do not clear fog. Older ferry records can also
 clear sampled offshore sections, but never land.
 The modal's collapsed **Map services & privacy** section explains which services receive searches
-or coordinates and includes attribution. Routing failure is explicit, never replaced with a fake
-straight-line road route; unavailable ferry routing is explicitly represented as an approximate,
-dashed line instead.
+or coordinates and includes attribution. Road routing failure is explicit, never replaced with a fake
+straight-line road route; ferry and rail lines are always approximate, dashed connectors, not routed paths.
 
 Saving samples terrestrial stop elevations through Open-Meteo in batches of four, reusing existing
 stop/POI elevations. These are stop samples, not terrain extremes along the drive; ocean-only
@@ -712,7 +712,7 @@ The radar preserves existing scales and adds custom visits and expedition metada
 - **Nature:** (visited catalog/custom locations + Photography expeditions) / 25.
 - **Adventure:** (visited locations in biomes 5/10/13 + AWD or Foot expeditions) / 10.
 - **Remoteness:** (visited locations in biomes 6/11 + Foot expeditions) / 6.
-- **Worldly:** (visited nations + Ferry or Flight expeditions) / 15.
+- **Worldly:** (visited nations + Ferry, Rail or Flight expeditions) / 15.
 - **Roadtrip:** visited states / 30 + visited/lived loaded counties / 100 + Road/AWD expeditions / 30.
 
 Each axis is capped at 1. Multiple matching tags within one axis count an expedition only once;
@@ -720,7 +720,7 @@ the same expedition can contribute to different axes. Wishlist/transit locations
 full-visit radar credit, and unknown/unloaded county IDs do not count. Radar contributions affect
 the displayed archetype, not base visit XP or the one-time Citadel bonus. New road legs follow
 OSRM road geometry; legacy road-only routes retain their stored paths. Legacy mixed-mode trips
-with a Flight, Ferry, or Walk tag conservatively draw no land corridor until edited into explicit
+with a Flight, Ferry, Rail, or Walk tag conservatively draw no land corridor until edited into explicit
 legs; legacy ferry-only routes may still clear sampled offshore water through the water mask.
 GPX/KML import is not included.
 
