@@ -125,6 +125,11 @@ the home marker, erase visits, or stop visited destinations from clearing their 
 
 ### Travel Ledger and rendering performance
 
+Local JavaScript URLs share a release query (`?v=20261015-ui2`) to prevent GitHub Pages'
+10-minute asset cache from combining newly deployed HTML with older scripts. Bump this release
+query on all local scripts when changing their code or dependent markup. No cache or saved
+passport reset is required.
+
 The Travel Ledger renders **50 destinations per page**, with Previous/Next controls and matching
 result/range counts. Search and status/type filters still cover the **entire loaded catalog**, not just
 the visible page. Changing a filter returns to page one; status edits retain the page when possible,
@@ -479,10 +484,13 @@ Shared passports are read-only. No TopoJSON generation is needed for this view.
 
 ### 63 National Parks scratch-off
 
-The **🏞️ National Parks** page is separate from the political Scratch Map and includes only
+The **US National Parks (63)** toggle inside the existing Scratch Map includes only
 the 63 National Parks, not monuments, historic sites, or other NPS units. It reuses the official
 catalog and existing boundary snapshot; no geography import or regeneration is needed.
 Redwood and American Samoa are included despite their unusual API designations.
+It sits alongside World Nations, United States, and US Counties, without a separate navigation
+page or header icon. Its 63-park checklist starts expanded. The park view hides the political
+map's Lived/Transited legend and instructions.
 
 Park clicks cycle **Unexplored → Visited → Wishlist → Unexplored**. Wishlist is pink and
 Visited is emerald. Existing Lived entries display as Visited; Transited entries display as

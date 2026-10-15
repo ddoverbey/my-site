@@ -225,7 +225,6 @@
       <!-- Navigation Tabs -->
       <nav id="navTabs" aria-label="Atlas pages" class="flex gap-1 bg-slate-900/60 p-1 rounded-xl border border-slate-800">
         <button data-tab="scratch" type="button" class="header-icon" title="Scratch Map" aria-label="Scratch Map" aria-pressed="false" aria-controls="tabContent-scratch"><span aria-hidden="true">🗺️</span></button>
-        <button data-tab="nationalparks" type="button" class="header-icon" title="63 National Parks — Scratch-Off" aria-label="63 National Parks — Scratch-Off" aria-pressed="false" aria-controls="tabContent-nationalparks"><span aria-hidden="true">🏞️</span></button>
         <button data-tab="passport" type="button" class="header-icon" title="Explorer Profile — Character & Stats" aria-label="Explorer Profile — Character & Stats" aria-pressed="false" aria-controls="tabContent-passport"><span aria-hidden="true">👤</span></button>
         <button data-tab="achievements" type="button" class="header-icon" title="Achievements" aria-label="Achievements" aria-pressed="false" aria-controls="tabContent-achievements"><span aria-hidden="true">🏆</span></button>
       </nav>
@@ -373,18 +372,19 @@
         <div class="flex flex-wrap items-center justify-between gap-4 rpg-panel p-4 rounded-2xl">
           <div>
             <h2 class="cinzel text-lg font-bold text-amber-200">The Royal Cartography Records</h2>
-            <p class="text-xs text-slate-400">Counties: Unexplored → Visited → Wishlist → Lived → Unexplored. Use Lived to mark previous homes. Countries and US states: Unexplored → Visited → Wishlist → Transited → Lived → Unexplored. Manual county marks track completion without clearing RPG fog. Home and logged visits retain their ledger-backed tiers.</p>
+            <p id="scratchPoliticalHint" class="text-xs text-slate-400">Counties: Unexplored → Visited → Wishlist → Lived → Unexplored. Use Lived to mark previous homes. Countries and US states: Unexplored → Visited → Wishlist → Transited → Lived → Unexplored. Manual county marks track completion without clearing RPG fog. Home and logged visits retain their ledger-backed tiers.</p>
           </div>
           <div class="flex flex-wrap items-center gap-3">
             <div class="flex flex-wrap bg-slate-900 p-1 rounded-xl border border-slate-700 text-xs" role="group" aria-label="Scratch Map dataset">
               <button id="btnScratchWorld" aria-pressed="true" class="px-3 py-1.5 rounded-lg bg-blue-600 text-white font-medium">World Nations</button>
               <button id="btnScratchUsa" aria-pressed="false" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white">United States</button>
               <button id="btnScratchCounties" aria-pressed="false" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white">US Counties</button>
+              <button id="btnScratchNationalParks" type="button" aria-pressed="false" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white">US National Parks (63)</button>
             </div>
             <div class="text-xs font-mono text-amber-300 bg-amber-950/40 border border-amber-500/30 px-3 py-1.5 rounded-xl" id="scratchStatsLabel">
               0 Visited/Lived · 0 Transited
             </div>
-            <div class="flex flex-wrap gap-3 text-[11px] text-slate-400" aria-label="Scratch Map status legend">
+            <div id="scratchPoliticalLegend" class="flex flex-wrap gap-3 text-[11px] text-slate-400" aria-label="Scratch Map status legend">
               <span><span class="text-[#3b82f6]">●</span> Lived</span>
               <span><span class="text-[#10b981]">●</span> Visited</span>
               <span><span class="text-[#64748b]">●</span> Transited</span>
@@ -394,14 +394,10 @@
         </div>
 
         <!-- SVG Map Render Card -->
-        <div class="rpg-panel p-4 rounded-2xl flex items-center justify-center min-h-[500px]">
+        <div id="scratchPoliticalMap" class="rpg-panel p-4 rounded-2xl flex items-center justify-center min-h-[500px]">
           <svg id="svgScratchMap" class="w-full max-h-[640px] drop-shadow-2xl"></svg>
         </div>
-      </div>
-    </div>
-
-    <div id="tabContent-nationalparks" class="w-full h-full p-4 md:p-6 overflow-y-auto hidden">
-      <div class="max-w-6xl mx-auto space-y-4">
+        <div id="scratchNationalParks" class="space-y-4 hidden">
         <div class="rpg-panel p-4 rounded-2xl space-y-3">
           <h2 class="cinzel text-lg font-bold text-amber-200">63 National Parks</h2>
           <p class="text-xs text-slate-400">Click a park: Unexplored → Visited → Wishlist → Unexplored. Scroll to zoom; drag to pan. Lived ledger entries count as Visited; transit alone does not count. Home and logged travel retain their earned visits.</p>
@@ -417,10 +413,11 @@
         <div class="rpg-panel rounded-2xl overflow-hidden">
           <svg id="svgNationalParks" class="w-full" viewBox="0 0 960 640" role="group" aria-label="National Parks scratch-off map"></svg>
         </div>
-        <details class="rpg-panel p-4 rounded-2xl">
+        <details open class="rpg-panel p-4 rounded-2xl">
           <summary class="text-sm text-amber-200 cursor-pointer">All 63 parks — accessible checklist</summary>
           <div id="nationalParksChecklist" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mt-3"></div>
         </details>
+        </div>
       </div>
     </div>
 
@@ -741,13 +738,13 @@
     </form>
   </div>
 
-  <script src="./nps-catalog.js"></script>
-  <script src="./national-parks-scratch.js"></script>
-  <script src="./international-parks.js"></script>
-  <script src="./ecoregions.js"></script>
-  <script src="./coordinate-lookups.js"></script>
-  <script src="./travel-ledger.js"></script>
-  <script src="./rarity-config.js"></script>
+  <script src="./nps-catalog.js?v=20261015-ui2"></script>
+  <script src="./national-parks-scratch.js?v=20261015-ui2"></script>
+  <script src="./international-parks.js?v=20261015-ui2"></script>
+  <script src="./ecoregions.js?v=20261015-ui2"></script>
+  <script src="./coordinate-lookups.js?v=20261015-ui2"></script>
+  <script src="./travel-ledger.js?v=20261015-ui2"></script>
+  <script src="./rarity-config.js?v=20261015-ui2"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -2489,18 +2486,28 @@
     }
 
     function renderScratchMap() {
+      const isParks = AppState.scratchDataset === 'nationalparks';
+      for (const id of ['scratchPoliticalMap', 'scratchPoliticalHint', 'scratchPoliticalLegend', 'scratchStatsLabel']) {
+        document.getElementById(id).classList.toggle('hidden', isParks);
+      }
+      document.getElementById('scratchNationalParks').classList.toggle('hidden', !isParks);
+      for (const [id, dataset] of [['btnScratchWorld', 'world'], ['btnScratchUsa', 'usa'],
+        ['btnScratchCounties', 'counties'], ['btnScratchNationalParks', 'nationalparks']]) {
+        const button = document.getElementById(id);
+        const active = AppState.scratchDataset === dataset;
+        button.className = `px-3 py-1.5 rounded-lg ${active ? 'bg-blue-600 text-white font-medium' : 'text-slate-400 hover:text-white'}`;
+        button.setAttribute('aria-pressed', String(active));
+      }
+      if (isParks) {
+        renderNationalParksScratch();
+        return;
+      }
       const svg = d3.select('#svgScratchMap').html('');
       const isWorld = AppState.scratchDataset === 'world';
       const isCounties = AppState.scratchDataset === 'counties';
       const features = isWorld ? (worldGeoJson || []) : isCounties ? (countyGeoJson || []) : (usaGeoJson || []);
       const colors = TravelLedger.colors;
       const status = feature => scratchStatuses()[scratchStatusKey(feature)];
-      for (const [id, dataset] of [['btnScratchWorld', 'world'], ['btnScratchUsa', 'usa'], ['btnScratchCounties', 'counties']]) {
-        const button = document.getElementById(id);
-        const active = AppState.scratchDataset === dataset;
-        button.className = `px-3 py-1.5 rounded-lg ${active ? 'bg-blue-600 text-white font-medium' : 'text-slate-400 hover:text-white'}`;
-        button.setAttribute('aria-pressed', String(active));
-      }
 
       if (!features.length) {
         document.getElementById('scratchStatsLabel').textContent = 'Dataset unavailable';
@@ -2904,7 +2911,6 @@
       updateHud();
       if (AppState.currentTab === 'passport') renderPassportView();
       if (AppState.currentTab === 'scratch') renderScratchMap();
-      if (AppState.currentTab === 'nationalparks') renderNationalParksScratch();
       if (AppState.currentTab === 'bucketlist') renderBucketListView();
       if (AppState.currentTab === 'achievements') renderAchievementsView();
     }
@@ -2934,7 +2940,6 @@
       // Hide all tabs
       document.getElementById('tabContent-map').classList.add('hidden');
       document.getElementById('tabContent-scratch').classList.add('hidden');
-      document.getElementById('tabContent-nationalparks').classList.add('hidden');
       document.getElementById('tabContent-passport').classList.add('hidden');
       document.getElementById('tabContent-bucketlist').classList.add('hidden');
       document.getElementById('tabContent-achievements').classList.add('hidden');
@@ -2953,9 +2958,6 @@
       } else if (tabId === 'scratch') {
         document.getElementById('tabContent-scratch').classList.remove('hidden');
         renderScratchMap();
-      } else if (tabId === 'nationalparks') {
-        document.getElementById('tabContent-nationalparks').classList.remove('hidden');
-        renderNationalParksScratch();
       } else if (tabId === 'passport') {
         document.getElementById('tabContent-passport').classList.remove('hidden');
         renderPassportView();
@@ -3001,7 +3003,8 @@
     });
 
     // Scratch Map Dataset Switch
-    for (const [id, dataset] of [['btnScratchWorld', 'world'], ['btnScratchUsa', 'usa'], ['btnScratchCounties', 'counties']]) {
+    for (const [id, dataset] of [['btnScratchWorld', 'world'], ['btnScratchUsa', 'usa'],
+      ['btnScratchCounties', 'counties'], ['btnScratchNationalParks', 'nationalparks']]) {
       document.getElementById(id).addEventListener('click', () => {
         AppState.scratchDataset = dataset;
         renderScratchMap();
@@ -3125,7 +3128,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js"></script>
+  <script src="./expedition-ui.js?v=20261015-ui2"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);

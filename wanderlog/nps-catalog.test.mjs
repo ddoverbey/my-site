@@ -100,8 +100,21 @@ console.log('PASS changing API totals rejected');
 const html = await readFile(new URL('./index.html', import.meta.url), 'utf8');
 const expeditionUi = await readFile(new URL('./expedition-ui.js', import.meta.url), 'utf8');
 const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)]
-  .map(match => match[0].includes('src="./expedition-ui.js"') ? expeditionUi : match[1]);
+  .map(match => /src="\.\/expedition-ui\.js(?:\?[^"]*)?"/.test(match[0]) ? expeditionUi : match[1]);
 check('every inline script parses', () => scripts.forEach(script => new vm.Script(script)));
+check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
+  const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
+  assert.equal(sources.length, 8);
+  assert.ok(sources.every(source => source.endsWith('?v=20261015-ui2')));
+  assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
+});
+check('National Parks is a Scratch Map dataset, not a separate navigation page, with an expanded checklist', () => {
+  assert.ok(html.includes('id="btnScratchNationalParks"'));
+  assert.ok(!html.includes('data-tab="nationalparks"'));
+  assert.ok(!html.includes('id="tabContent-nationalparks"'));
+  assert.ok(html.includes('id="scratchNationalParks"'));
+  assert.match(html, /<details open[^>]*>\s*<summary[^>]*>All 63 parks/);
+});
 
 const elements = new Map();
 function element(id) {
@@ -907,6 +920,27 @@ check('county scratch view renders all four exact colors and noninteractive fain
   assert.equal(mesh.attrs['pointer-events'], 'none');
   assert.equal(mesh.attrs['stroke-opacity'], 0.35);
   assert.equal(element('scratchStatsLabel').textContent, '2 / 4 Visited/Lived · 1 Transited');
+});
+check('National Parks dataset stays in Scratch Map and other dataset buttons still return to political maps', () => {
+  const renderParks = vm.runInContext('renderNationalParksScratch', context);
+  let renders = 0;
+  context.parkDatasetRender = () => { renders++; };
+  vm.runInContext("renderNationalParksScratch=parkDatasetRender;AppState.currentTab='scratch'", context);
+  try {
+    element('btnScratchNationalParks').handlers.click();
+    assert.equal(vm.runInContext('AppState.scratchDataset', context), 'nationalparks');
+    assert.equal(vm.runInContext('AppState.currentTab', context), 'scratch');
+    assert.equal(renders, 1);
+    assert.ok(element('btnScratchNationalParks').className.includes('bg-blue-600'));
+    for (const [button, dataset] of [['btnScratchWorld', 'world'], ['btnScratchUsa', 'usa'], ['btnScratchCounties', 'counties']]) {
+      element(button).handlers.click();
+      assert.equal(vm.runInContext('AppState.scratchDataset', context), dataset);
+      assert.ok(!element('btnScratchNationalParks').className.includes('bg-blue-600'));
+    }
+  } finally {
+    context.renderNationalParksScratch = renderParks;
+    vm.runInContext("AppState.currentTab='map'", context);
+  }
 });
 check('counties can mark previous homes Lived while nations and states keep all four tiers', () => {
   for (const dataset of ['world', 'usa', 'counties']) {
@@ -1942,8 +1976,8 @@ check('dedicated scratch page includes exactly 63 parks, not monuments or other 
   assert.equal(new Set(scratchParks.map(p => p.id)).size, 63);
   for (const id of ['npsa', 'redw', 'sequ', 'kica']) assert.ok(scratchParks.some(p => p.id === id));
   assert.ok(!scratchParks.some(p => p.id === 'seki' || p.designation === 'National Monument'));
-  assert.ok(html.includes('data-tab="nationalparks"'));
-  const page = html.slice(html.indexOf('id="tabContent-nationalparks"'), html.indexOf('<!-- VIEW 3'));
+  assert.ok(html.includes('id="btnScratchNationalParks"'));
+  const page = html.slice(html.indexOf('id="scratchNationalParks"'), html.indexOf('<!-- VIEW 3'));
   assert.ok(!page.includes('Transited'));
   assert.ok(!page.includes('>Lived<'));
   assert.ok(page.includes('Wishlist'));
