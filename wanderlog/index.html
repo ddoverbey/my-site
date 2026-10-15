@@ -3076,7 +3076,6 @@
             <div class="min-w-0 flex-1">
               <h5 class="text-xs font-bold text-slate-200">${escapeHtml(ach.title)}</h5>
               ${visibleTiers.map(tier => `
-                <p class="text-xs text-slate-200 mt-2">${escapeHtml(tier.title)}</p>
                 <p class="achievement-rarity text-[10px] uppercase font-bold mt-1" data-rarity="${tier.rarity}" style="${achievementBadgeStyle(ach, tier)}">${ACHIEVEMENT_RARITIES[tier.rarity].label}</p>
                 ${progress < tier.goal && isSecretAchievementTier(tier)
                   ? `<p class="text-[10px] achievement-redacted leading-tight mt-0.5">${escapeHtml(redactedAchievementDescription(tier))}</p>`
