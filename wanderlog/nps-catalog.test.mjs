@@ -1079,8 +1079,11 @@ check('Scratch Map clicks are read-only for shared passports and roll back faile
   assert.equal(element('toastTitle').textContent, 'Travel record not saved');
   context.localStorage.setItem = (key, value) => { savedJson = value; };
 });
-check('county scratch cycling preserves ledger-backed expedition visits and explains retained status', () => {
+check('county scratch cycling promotes a ledger-visited county to lived and can return it to visited', () => {
   vm.runInContext("AppState.expeditions=[{...testExpedition,id:'scratch-trip',countyIds:['06001']}];syncDerivedState();cycleScratchStatus(countyGeoJson[0])", context);
+  assert.equal(vm.runInContext('AppState.counties["06001"]', context), 'l');
+  assert.ok(element('toastMsg').textContent.includes('Lived / Home Base'));
+  vm.runInContext('cycleScratchStatus(countyGeoJson[0])', context);
   assert.equal(vm.runInContext('AppState.counties["06001"]', context), 'v');
   assert.ok(element('toastMsg').textContent.includes('retains this tier'));
 });

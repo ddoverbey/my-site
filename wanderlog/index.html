@@ -2670,8 +2670,11 @@
     function cycleScratchStatus(feature) {
       if (AppState.viewOnly) return;
       const key = scratchStatusKey(feature);
+      const loggedCounty = AppState.scratchDataset === 'counties'
+        ? loggedCountyStatuses(false)[key] : null;
       const next = AppState.scratchDataset === 'counties'
-        ? ({ v: 'w', w: 'l' }[scratchStatuses()[key]] || (scratchStatuses()[key] === 'l' ? null : 'v'))
+        ? (scratchStatuses()[key] === 'v' && loggedCounty === 'v' ? 'l'
+          : ({ v: 'w', w: 'l' }[scratchStatuses()[key]] || (scratchStatuses()[key] === 'l' ? null : 'v')))
         : { v: 'w', w: 't', t: 'l' }[scratchStatuses()[key]] ||
         (scratchStatuses()[key] === 'l' ? null : 'v');
       try {
