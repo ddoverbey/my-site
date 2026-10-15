@@ -542,14 +542,18 @@ data shows retry guidance instead of a misleading completion count.
    Ferry legs also try that router, which can follow mapped car-ferry routes when available; it is
    not a maritime router or ferry timetable. If no route is available, the preview shows a dashed
    direct approximation and says so. Walking legs are also shown as dashed direct approximations.
-   Flights use a dashed connector for orientation only. None of these ferry, walking, or flight
-   lines awards intermediate counties or clears fog; only their stops count.
+   Flights use a dashed connector for orientation only. Ferry routes clear only offshore water:
+   sampled path points are buffered by 25 km, and any brush whose shoreline checks touch land is
+   skipped. The shoreline check uses simplified country boundaries, so it is conservative rather
+   than a nautical chart. Ferry, walking, and flight lines award no intermediate counties; only
+   their stops count.
 
 The preview does not save visits or clear fog. No map picker is displayed.
 For SAN → DEN → Aspen → DEN, select Flight, Drive, Drive: credit the airport/destination
 counties and the counties on the approved drives, not those between San Diego and Denver.
-The existing 40 km fog corridor follows routed driving/AWD legs only. Ferry, flight, and walking
-lines never carve a corridor, including older ferry records whose geometry was only a straight line.
+The existing 40 km fog corridor follows routed driving/AWD legs only. Ferry legs use a separate
+water-only clearing brush; flight and walking lines do not clear fog. Older ferry records can also
+clear sampled offshore sections, but never land.
 The modal's collapsed **Map services & privacy** section explains which services receive searches
 or coordinates and includes attribution. Routing failure is explicit, never replaced with a fake
 straight-line road route; unavailable ferry routing is explicitly represented as an approximate,
@@ -713,7 +717,8 @@ the same expedition can contribute to different axes. Wishlist/transit locations
 full-visit radar credit, and unknown/unloaded county IDs do not count. Radar contributions affect
 the displayed archetype, not base visit XP or the one-time Citadel bonus. New road legs follow
 OSRM road geometry; legacy road-only routes retain their stored paths. Legacy mixed-mode trips
-with a Flight, Ferry, or Walk tag conservatively draw no corridor until edited into explicit legs.
+with a Flight, Ferry, or Walk tag conservatively draw no land corridor until edited into explicit
+legs; legacy ferry-only routes may still clear sampled offshore water through the water mask.
 GPX/KML import is not included.
 
 ## Homepage analytics

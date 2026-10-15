@@ -381,7 +381,7 @@ function displayExpeditionPreview(legs) {
   expeditionPreviewMap.fitBounds(expeditionPreviewLayers.getBounds(), { padding: [20, 20], maxZoom: 12, animate: false });
   const counties = new Set(legs.flatMap(leg => leg.countyIds));
   document.getElementById('expeditionRouteSummary').textContent =
-    `${legs.length} travel leg${legs.length === 1 ? '' : 's'} · ${counties.size} counties along driving routes. Dashed lines are direct approximations; ferry and flight routes do not clear fog or award route counties.`;
+    `${legs.length} travel leg${legs.length === 1 ? '' : 's'} · ${counties.size} counties along driving routes. Ferry routes clear fog only well offshore; ferry and flight routes do not award route counties. Dashed lines are direct approximations.`;
 }
 
 async function previewExpeditionRoutes() {

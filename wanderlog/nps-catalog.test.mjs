@@ -105,7 +105,7 @@ check('every inline script parses', () => scripts.forEach(script => new vm.Scrip
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261014-ferry-routes')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261014-water-fog')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('National Parks is a Scratch Map dataset, not a separate navigation page, with an expanded checklist', () => {
@@ -334,6 +334,10 @@ check('dataset status lives inside Settings rather than over the map legend', ()
   assert.ok(settings.includes('id="btnRetryNps"'));
   assert.ok(settings.includes('aria-label="Settings"'));
   assert.ok(html.includes('isolate z-0 overflow-hidden'));
+});
+check('ferry fog uses the separate water-only shoreline-filtered renderer', () => {
+  assert.ok(html.includes('TravelLedger.waterFogRoutes(exp).forEach(route => punchWaterFogRoute(route))'));
+  assert.ok(html.includes('function oceanHasClearance(lat, lng)'));
 });
 vm.runInContext(`
   map = {
@@ -930,6 +934,45 @@ context.cancelAnimationFrame = () => { animationCallback = null; };
 context.window.matchMedia = () => ({ matches: false });
 context.CoordinateLookups = coordinateLookups;
 context.d3.geoContains = () => true;
+const originalGeoDistance = context.d3.geoDistance;
+const originalGeoInterpolate = context.d3.geoInterpolate;
+let waterLookups = 0;
+context.d3.geoDistance = (from, to) => Math.abs(to[0] - from[0]) * Math.PI / 180;
+context.d3.geoInterpolate = (from, to) => t => [
+  from[0] + (to[0] - from[0]) * t,
+  from[1] + (to[1] - from[1]) * t
+];
+context.CoordinateLookups = {
+  ...coordinateLookups,
+  politicalRegion: (lat, lng) => {
+    waterLookups++;
+    const land = Math.abs(lat) < 0.3 && lng >= 0.45 && lng <= 0.55;
+    return { countries: land ? ['Test Island'] : [], states: [], counties: [] };
+  }
+};
+vm.runInContext(`
+  waterOriginalMap=map;waterOriginalIndexes=coordinateIndexes;
+  map={options:{crs:{scale:zoom=>256*2**zoom}},getZoom:()=>4,
+    latLngToContainerPoint:([lat,lng])=>({x:lng*100,y:lat*100})};
+  coordinateIndexes={countries:[],states:[],counties:[],microStates:[]};
+  fogOperations.length=0;
+`, context);
+const testFerryRoute = [[0, 0], [0, 1]];
+context.testFerryRoute = testFerryRoute;
+vm.runInContext('punchWaterFogRoute(testFerryRoute)', context);
+check('ferry fog clears open water only and caches shoreline sampling', () => {
+  const arcs = context.fogOperations.filter(operation => operation[0] === 'arc');
+  assert.ok(arcs.length > 0);
+  assert.ok(arcs.every(([, x]) => x < 22.5 || x > 77.5), 'water clearing must stop outside the buffered island');
+  const lookupsAfterFirstRender = waterLookups;
+  vm.runInContext('punchWaterFogRoute(testFerryRoute)', context);
+  assert.equal(waterLookups, lookupsAfterFirstRender);
+  assert.equal(context.fogOperations.filter(operation => operation[0] === 'arc').length, arcs.length * 2);
+});
+vm.runInContext('map=waterOriginalMap;coordinateIndexes=waterOriginalIndexes;delete globalThis.waterOriginalMap;delete globalThis.waterOriginalIndexes;delete globalThis.testFerryRoute', context);
+context.d3.geoDistance = originalGeoDistance;
+context.d3.geoInterpolate = originalGeoInterpolate;
+context.CoordinateLookups = coordinateLookups;
 context.mapFly = (...args) => { flight = args; };
 context.mapOnce = (event, callback) => { assert.equal(event, 'moveend'); movementCallback = callback; };
 context.L.marker = () => ({ addTo() { return this; }, bindTooltip() {} });
@@ -2197,7 +2240,7 @@ check('mixed-mode route preview routes ferry legs when possible without granting
   assert.ok(previewTooltipTexts.includes('SAN &lt;airport&gt;'));
   assert.ok(previewLines.some(line=>line.options.color==='#38bdf8' && line.options.dashArray===null));
   assert.ok(previewLines.some(line=>line.options.color==='#94a3b8' && line.options.dashArray==='8 8'));
-  assert.ok(element('expeditionRouteSummary').textContent.includes('do not clear fog'));
+  assert.ok(element('expeditionRouteSummary').textContent.includes('do not award route counties'));
 });
 context.crypto.randomUUID=()=> 'mixed-ui';
 await element('expeditionForm').handlers.submit({preventDefault(){}});

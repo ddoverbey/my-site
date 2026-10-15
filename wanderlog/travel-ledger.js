@@ -371,6 +371,14 @@
     return expedition.transitTags.some(mode => !['road', 'awd'].includes(mode)) ? [] : [expedition.routeCoords];
   }
 
+  function waterFogRoutes(expedition) {
+    if (expedition.routeLegs) return expedition.routeLegs
+      .filter(leg => leg.mode === 'ferry')
+      .map(leg => leg.routeCoords);
+    return expedition.transitTags.length === 1 && expedition.transitTags[0] === 'ferry'
+      ? [expedition.routeCoords] : [];
+  }
+
   function hasLoggedTravel(state) {
     return state.expeditions.length > 0 ||
       Object.values(state.pins).some(clearsFog) ||
@@ -523,7 +531,7 @@
 
   const api = {
     ranks, labels, colors, transitTags, purposeTags, isVisited, clearsFog, promote,
-    homeRadiusKm, hasLoggedTravel, overnightNights, distanceMiles, fogRoutes, restoreExpeditionPromotions,
+    homeRadiusKm, hasLoggedTravel, overnightNights, distanceMiles, fogRoutes, waterFogRoutes, restoreExpeditionPromotions,
     validateStatuses, validateTags, validateExpeditions, normalizePoi, migrateState, syncDerivedState, loggedCountyStatuses, metadataProgress
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
