@@ -369,7 +369,7 @@ vm.runInContext(`
   fogCtx = {
     setTransform(...args) { fogOperations.push(['transform', ...args]); },
     clearRect(...args) { fogOperations.push(['clear', ...args]); },
-    fillRect(...args) { fogOperations.push(['fill', ...args]); },
+    fillRect(...args) { fogOperations.push(['fill', fogCtx.fillStyle, ...args]); },
     createRadialGradient() { return { addColorStop() {} }; },
     beginPath() {}, arc(...args) { fogOperations.push(['arc', ...args]); }, fill() {}
   };
@@ -433,6 +433,8 @@ check('classic mode clears the canvas and skips shroud painting while RPG still 
   context.fogOperations.length = 0;
   vm.runInContext("AppState.mode='rpg';drawFogOfWar()", context);
   assert.ok(context.fogOperations.some(operation => operation[0] === 'fill'));
+  assert.ok(context.fogOperations.some(operation =>
+    operation[0] === 'fill' && operation[1] === 'rgba(235, 239, 245, 0.99)'));
 });
 
 const customLocation = {

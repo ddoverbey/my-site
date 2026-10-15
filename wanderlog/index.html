@@ -1615,8 +1615,8 @@
       // const isFogActive = document.getElementById('fogToggleCheckbox').checked;
       // if (!isFogActive) return;
 
-      // Step 1: Draw Dense Shroud of War (Midnight Indigo with slight texture)
-      fogCtx.fillStyle = 'rgba(5, 8, 16, 0.94)';
+      // Keep unexplored terrain nearly opaque while retaining the faintest map silhouette.
+      fogCtx.fillStyle = 'rgba(235, 239, 245, 0.99)';
       fogCtx.fillRect(0, 0, width, height);
       fogCtx.setTransform(1, 0, 0, 1, fogPadding.x, fogPadding.y);
 
