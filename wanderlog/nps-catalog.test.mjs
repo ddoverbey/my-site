@@ -1651,11 +1651,15 @@ check('atlas completion goals use actual datasets and exclude unknown countries 
   assert.ok(element('achievementsContainer').innerHTML.includes(
     'aria-label="Cryptic hint, blurred until completion"'
   ));
-  assert.ok(html.includes('.achievement-redacted {\n      filter: blur(3px);'));
+  assert.ok(html.includes('.achievement-redacted {\n      filter: blur(0.7px);'));
+  assert.match(element('achievementsContainer').innerHTML, /achievement-icon achievement-icon-hidden/);
+  assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='worldAtlas').title", context), 'How????');
+  assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='worldAtlas').tiers[0].title", context), 'How????');
   assert.ok(!element('achievementsContainer').innerHTML.includes(
     'Visit every country/territory represented in the World Nations atlas'
   ));
   vm.runInContext('worldGeoJson=null;countyGeoJson=null;renderAchievementsView()', context);
+  assert.ok(!element('achievementsContainer').innerHTML.includes('How????'));
   assert.ok(!element('achievementsContainer').innerHTML.includes('Citizen of the World'));
   assert.ok(!element('achievementsContainer').innerHTML.includes('Manifest Destiny'));
 });
@@ -1713,6 +1717,7 @@ check('every real tier hides at zero, redacts only Legendary/Mythic, and reveals
         const locked = secret && progress < testCase.goal;
         assert.equal(card.innerHTML.includes(testCase.desc), !locked, testCase.title);
         assert.equal(card.innerHTML.includes('achievement-redacted'), locked, testCase.title);
+        assert.equal(card.innerHTML.includes('achievement-icon-hidden'), secret && !completed, testCase.title);
         assert.equal(secret ? typeof testCase.secretDesc === 'string' : true, true, testCase.title);
         assert.equal(testCase.secretDesc ? card.innerHTML.includes(testCase.secretDesc) : false, locked, testCase.title);
         assert.equal(card.innerHTML.includes('Cryptic hint, blurred until completion'), locked, testCase.title);

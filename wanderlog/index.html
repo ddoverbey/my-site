@@ -215,9 +215,10 @@
       color: transparent;
     }
     .achievement-redacted {
-      filter: blur(3px);
+      filter: blur(0.7px);
       user-select: none;
     }
+    .achievement-icon-hidden { visibility: hidden; }
     .achievement-complete {
       background: linear-gradient(135deg, rgba(120, 53, 15, .55), rgba(69, 26, 3, .72));
       border-color: rgba(251, 191, 36, .8);
@@ -1054,9 +1055,9 @@
         }]
       },
       {
-        id: 'worldAtlas', title: 'Citizen of the World', progress: s => s.atlasCountriesCount,
+        id: 'worldAtlas', title: 'How????', progress: s => s.atlasCountriesCount,
         tiers: [{
-          goal: s => s.atlasCountriesTotal, title: 'Citizen of the World',
+          goal: s => s.atlasCountriesTotal, title: 'How????',
           secretDesc: 'The Earth is no longer just a map—it is your neighborhood. No sovereign border can remain uncrossed.',
           desc: 'Visit every country/territory represented in the World Nations atlas'
         }]
@@ -3264,6 +3265,7 @@
         if (!completed && !next) return;
         const visibleTiers = [completed, next].filter(Boolean);
         const iconTier = completed || next;
+        const hideIcon = !completed && isSecretAchievementTier(next);
         const card = document.createElement('div');
         card.className = `p-3.5 rounded-2xl border ${
           completed && isSecretAchievementTier(completed)
@@ -3274,7 +3276,7 @@
         }`;
         card.innerHTML = `
           <div class="flex items-center gap-3">
-            <div class="achievement-icon" data-rarity="${iconTier.rarity}" style="${achievementBadgeStyle(ach, iconTier)}" aria-hidden="true">
+            <div class="achievement-icon${hideIcon ? ' achievement-icon-hidden' : ''}" data-rarity="${iconTier.rarity}" style="${achievementBadgeStyle(ach, iconTier)}" aria-hidden="true">
               ${ach.icon}
             </div>
             <div class="min-w-0 flex-1">
