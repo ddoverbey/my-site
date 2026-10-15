@@ -426,12 +426,12 @@ fixed there. Pins/custom POIs have explicit tier buttons. Ledger-backed trip vis
 `syncDerivedState()` if their derived tier is changed. Clearing a custom POI that belongs to a trip
 is disallowed to prevent dangling history references.
 
-Geolocation, quick picks, and **Nominatim search with explicit result selection** establish home.
-Typed names matching a quick-pick city are resolved locally before making any geocoder request.
-Unknown city searches never silently fall back to San Francisco. Searches send text to Nominatim,
-are submit-only (not autocomplete), and are throttled to at most one request per 1.1 seconds in
-this tab. See the [Nominatim usage policy](https://operations.osmfoundation.org/policies/nominatim/);
-larger deployments must provide their own service rather than treating the public endpoint as unlimited.
+Geolocation, quick picks, and **Photon by Komoot autocomplete with explicit result selection**
+establish home. City and expedition searches send typed search text to `https://photon.komoot.io`
+after a 300 ms input debounce. Click a suggestion to select its coordinates; typing or pressing
+Enter never establishes home automatically. Enter/Escape dismiss suggestions and blur the search.
+Selection clears the input and suggestions. Stale responses after typing, dismissal or selection
+are ignored. Quick-pick buttons remain local. Unknown searches never invent a home location.
 Local containment automatically sets the home county, state, and country to `l`; previous home
 territories remain Lived. All homes use a 15-mile-diameter circular aura (7.5-mile / 12.07 km radius);
 existing saved homes are normalized on load/import without losing their coordinates or Lived tiers. Missing geography
@@ -515,8 +515,9 @@ data shows retry guidance instead of a misleading completion count.
 1. Enter a trip name and an optional free-text **Reason for travel**. Start/end dates are optional;
    undated trips still earn location credit. **Day Trip?** sets both dates to the selected start date
    (or today if blank), keeps them synchronized, and records a single calendar day.
-2. Search parks, saved POIs or counties locally. **Search cities & airports** explicitly queries
-   OpenStreetMap Nominatim; choose the result to add its coordinates. `SAN` and `DEN` expand to
+2. Search parks, saved POIs or counties locally. City/airport suggestions appear automatically
+   through Photon after a 300 ms debounce; click a result to add it and clear the search.
+   No separate search button is needed. `SAN` and `DEN` expand to
    their full airport names; other airports can be searched by full name or code.
 3. Add stops in travel order, with a separate mode between each pair:
    **Drive / Road Trip**, **AWD/Off-Road**, **Flight**, **Ferry / Boat**, or **Walk / Hike**.

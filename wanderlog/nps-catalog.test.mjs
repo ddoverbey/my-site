@@ -113,7 +113,8 @@ function element(id) {
       handlers: {}, addEventListener(name, handler) { this.handlers[name] = handler; },
       querySelectorAll: () => [], focus() {}, scrollTo() {},
       replaceChildren() { this.innerHTML = ''; }, reset() {}, setAttribute() {},
-      appendChild(child) { this.innerHTML += child.innerHTML; }
+      appendChild(child) { this.innerHTML += child.innerHTML; },
+      prepend(child) { this.innerHTML = child.innerHTML + this.innerHTML; }
     });
   }
   return elements.get(id);
@@ -827,30 +828,29 @@ context.AbortSignal = { timeout: () => undefined };
 let geocoderCalls = 0;
 context.fetch = async () => {
   geocoderCalls++;
-  return { ok: true, json: async () => [{ lat: '40', lon: '-110', display_name: 'New City' }] };
+  return { ok: true, json: async () => ({features:[{geometry:{type:'Point',coordinates:[-110,40]},properties:{name:'New City'}}]}) };
 };
 context.document.querySelectorAll = selector => selector === '.quick-city-chip' ? [{
   textContent: 'Seattle', dataset: { name: 'Seattle, WA', lat: '47.6062', lng: '-122.3321' }
 }] : [];
 element('cityInput').value = 'seattle';
 await vm.runInContext('searchHometown()', context);
-check('known quick-pick cities establish home locally without a geocoder request', () => {
-  assert.equal(geocoderCalls, 0);
-  assert.equal(vm.runInContext('AppState.homeBase.name', context), 'Seattle, WA');
+check('typing even a quick-pick city requires explicit selection instead of assigning home', () => {
+  assert.equal(geocoderCalls, 1);
+  assert.equal(vm.runInContext('AppState.homeBase.name', context), 'Changed Citadel');
 });
 element('cityInput').value = 'New City';
 await vm.runInContext('searchHometown()', context);
 check('unknown city search offers explicit selection and never auto-assigns San Francisco', () => {
-  assert.equal(geocoderCalls, 1);
-  assert.equal(vm.runInContext('AppState.homeBase.name', context), 'Seattle, WA');
+  assert.equal(geocoderCalls, 2);
+  assert.equal(vm.runInContext('AppState.homeBase.name', context), 'Changed Citadel');
   assert.ok(element('homeLookupStatus').textContent.includes('Choose your city'));
 });
-vm.runInContext('lastCitySearch=0', context);
-context.fetch = async () => ({ ok: true, json: async () => [{ lat: '', lon: '0', display_name: 'Invalid City' }] });
+context.fetch = async () => ({ ok: true, json: async () => ({features:[{geometry:{type:'Point',coordinates:[0,'']},properties:{name:'Invalid City'}}]}) });
 await vm.runInContext('searchHometown()', context);
 check('invalid geocoder coordinates show an error and leave the existing home unchanged', () => {
-  assert.ok(element('homeLookupStatus').textContent.includes('Invalid city search coordinates'));
-  assert.equal(vm.runInContext('AppState.homeBase.name', context), 'Seattle, WA');
+  assert.ok(element('homeLookupStatus').textContent.includes('latitude'));
+  assert.equal(vm.runInContext('AppState.homeBase.name', context), 'Changed Citadel');
 });
 const scratchNodes = [];
 let scratchFeatures = [];
@@ -1239,6 +1239,7 @@ check('RPG county hitboxes exclude unexplored and manually marked counties; norm
     assert.equal(layer.styles.length, 0);
   }
   context.pickedCounties = [];
+  const originalAddStop = vm.runInContext('addExpeditionStop', context);
   vm.runInContext("addExpeditionStop=(kind,id)=>pickedCounties.push([kind,id])", context);
   const beforePicking = vm.runInContext('JSON.stringify(passportPayload())', context);
   layers[0].handlers.click();
@@ -1247,6 +1248,7 @@ check('RPG county hitboxes exclude unexplored and manually marked counties; norm
   vm.runInContext('AppState.viewOnly=true', context);
   layers[0].handlers.click();
   assert.equal(context.pickedCounties.length, 1);
+  context.addExpeditionStop = originalAddStop;
   vm.runInContext('AppState.viewOnly=false;expeditionPicking=false;renderCountyHitboxes()', context);
   assert.equal(layers.length, 0);
   vm.runInContext("AppState.mode='classic';renderCountyHitboxes()", context);
@@ -1767,39 +1769,40 @@ check('expedition form uses reason text, optional dates and a day-trip shortcut 
 });
 const originalPlaceFetch=context.fetch;
 context.fetch=async url=>{
-  assert.ok(url.startsWith('https://nominatim.openstreetmap.org/search?'));
+  assert.ok(url.startsWith('https://photon.komoot.io/api/?'));
   assert.equal(new URL(url).searchParams.get('q'),'San Diego International Airport');
-  return {ok:true,json:async()=>[{lat:'32.7338',lon:'-117.1933',display_name:'San Diego International Airport'}]};
+  return {ok:true,json:async()=>({features:[{geometry:{type:'Point',coordinates:[-117.1933,32.7338]},properties:{name:'San Diego International Airport'}}]})};
 };
-vm.runInContext('openExpedition();lastCitySearch=0',context);
+vm.runInContext('openExpedition()',context);
 element('expeditionSearch').value='SAN';
 const elementCountBeforePlace=elements.size;
-await element('btnSearchExpeditionPlaces').handlers.click();
+await vm.runInContext('searchExpeditionPlaces()',context);
 check('city and airport searches show selectable validated coordinates without creating visits', () => {
   assert.equal(element('expeditionStatus').textContent,'Choose a place to add it.');
   const result=[...elements.values()].slice(elementCountBeforePlace).find(item=>item.textContent==='San Diego International Airport');
   assert.ok(result);
   assert.equal(vm.runInContext('expeditionDraft.length',context),0);
   result.handlers.click();
+  assert.equal(element('expeditionSearch').value,'');
+  assert.equal(element('expeditionSearchResults').innerHTML,'');
   assert.equal(vm.runInContext('expeditionDraft[0].kind',context),'place');
   assert.deepEqual(Array.from(vm.runInContext('expeditionDraft[0].coords',context)),[32.7338,-117.1933]);
   assert.equal(vm.runInContext('AppState.expeditions.length',context),0);
 });
-context.fetch=async()=>({ok:true,json:async()=>[{lat:'bad',lon:'0',display_name:'Invalid'}]});
-vm.runInContext('lastCitySearch=0',context);
-await element('btnSearchExpeditionPlaces').handlers.click();
+context.fetch=async()=>({ok:true,json:async()=>({features:[{geometry:{type:'Point',coordinates:[0,'bad']},properties:{name:'Invalid'}}]})});
+element('expeditionSearch').value='Invalid';
+await vm.runInContext('searchExpeditionPlaces()',context);
 check('invalid online places are reported and never appended to the itinerary',()=>{
   assert.ok(element('expeditionStatus').textContent.includes('latitude'));
   assert.equal(vm.runInContext('expeditionDraft.length',context),1);
 });
 let completeSearch;
 context.fetch=async()=>({ok:true,json:()=>new Promise(resolve=>{completeSearch=resolve;})});
-vm.runInContext('lastCitySearch=0',context);
-const pendingSearch=element('btnSearchExpeditionPlaces').handlers.click();
+const pendingSearch=vm.runInContext('searchExpeditionPlaces()',context);
 await new Promise(resolve=>setImmediate(resolve));
 element('expeditionSearch').value='';
 element('expeditionSearch').handlers.input();
-completeSearch([{lat:'39',lon:'-105',display_name:'Stale city'}]);
+completeSearch({features:[{geometry:{type:'Point',coordinates:[-105,39]},properties:{name:'Stale city'}}]});
 await pendingSearch;
 check('changing a search discards stale online results rather than appending the wrong city',()=>{
   assert.equal(element('expeditionSearchResults').innerHTML,'');
@@ -2008,4 +2011,87 @@ check('invalid split scratch imports are rejected rather than creating extra par
     assert.throws(() => travelLedger.migrateState({ nationalParkScratch: value }, coordinateLookups, catalog), /scratch records/);
   }
 });
+const autocompleteTimeout = context.setTimeout;
+const autocompleteClearTimeout = context.clearTimeout;
+const autocompleteFetch = context.fetch;
+const autocompleteTimers = new Map();
+let timerId = 0;
+context.setTimeout = (callback, delay) => {
+  const id = ++timerId;
+  autocompleteTimers.set(id, { callback, delay });
+  return id;
+};
+context.clearTimeout = id => autocompleteTimers.delete(id);
+check('both place inputs debounce Photon by 300ms and cancel earlier keystrokes', () => {
+  vm.runInContext('Object.keys(countyFeaturesById).forEach(id=>delete countyFeaturesById[id]);', context);
+  element('cityInput').value = 'Den';
+  element('cityInput').handlers.input();
+  element('cityInput').value = 'Denver';
+  element('cityInput').handlers.input();
+  element('expeditionSearch').value = 'Asp';
+  element('expeditionSearch').handlers.input();
+  element('expeditionSearch').value = 'Aspen';
+  element('expeditionSearch').handlers.input();
+  assert.equal(autocompleteTimers.size, 2);
+  assert.ok([...autocompleteTimers.values()].every(timer => timer.delay === 300));
+});
+check('Enter and Escape dismiss and invalidate suggestions without searching or submitting', () => {
+  for (const id of ['cityInput', 'expeditionSearch']) {
+    let blurred = false;
+    element(id).blur = () => { blurred = true; };
+    for (const key of ['Enter', 'Escape']) {
+      let prevented = false, stopped = false;
+      element(id).handlers.keydown({ key, preventDefault() { prevented = true; }, stopPropagation() { stopped = true; } });
+      assert.ok(prevented && stopped && blurred);
+    }
+  }
+  assert.equal(autocompleteTimers.size, 0);
+  assert.ok(!html.includes('id="btnSearchExpeditionPlaces"'));
+  assert.ok(!html.includes('id="btnSubmitCity"'));
+});
+check('local park selection also clears suggestions, input and the pending Photon timer', () => {
+  vm.runInContext('AppState.viewOnly=false;expeditionPending=false;PARKS=scratchRealParks;', context);
+  element('expeditionSearch').value = 'Yellowstone';
+  element('expeditionSearch').handlers.input();
+  const before = vm.runInContext('expeditionDraft.length', context);
+  vm.runInContext('addExpeditionStop("park","yell")', context);
+  assert.equal(vm.runInContext('expeditionDraft.length', context), before + 1, element('toastMsg').textContent);
+  assert.equal(element('expeditionSearch').value, '');
+  assert.equal(element('expeditionSearchResults').innerHTML, '');
+  assert.equal(autocompleteTimers.size, 0);
+});
+context.fetch = async () => ({ ok: true, json: async () => ({
+  features: [{ geometry: { type: 'Point', coordinates: [-104.99, 39.74] },
+    properties: { name: 'Denver', state: 'Colorado', country: 'United States' } }]
+}) });
+element('cityInput').value = 'Denver';
+const beforeHomeSuggestions = elements.size;
+await vm.runInContext('searchHometown()', context);
+check('Citadel suggestion clicks select coordinates and immediately clear text and dropdown', () => {
+  const result = [...elements.values()].slice(beforeHomeSuggestions).find(item =>
+    item.textContent === 'Denver, Colorado, United States');
+  assert.ok(result);
+  context.homeSelection = null;
+  vm.runInContext('setHometownCoordinates=(name,lat,lng)=>{homeSelection={name,lat,lng};}', context);
+  result.handlers.click();
+  assert.equal(context.homeSelection.name, 'Denver, Colorado, United States');
+  assert.equal(context.homeSelection.lat, 39.74);
+  assert.equal(element('cityInput').value, '');
+  assert.equal(element('citySearchResults').innerHTML, '');
+});
+let resolveHomeSearch;
+context.fetch = async () => ({ ok: true, json: () => new Promise(resolve => { resolveHomeSearch = resolve; }) });
+element('cityInput').value = 'Old city';
+const staleHome = vm.runInContext('searchHometown()', context);
+await new Promise(resolve => setImmediate(resolve));
+element('cityInput').handlers.keydown({ key: 'Escape', preventDefault() {}, stopPropagation() {} });
+resolveHomeSearch({ features: [{ geometry: { type: 'Point', coordinates: [1, 2] }, properties: { name: 'Old city' } }] });
+await staleHome;
+check('dismissed Citadel searches cannot reopen the dropdown from a late response', () => {
+  assert.equal(element('citySearchResults').innerHTML, '');
+  assert.equal(element('homeLookupStatus').textContent, '');
+});
+context.setTimeout = autocompleteTimeout;
+context.clearTimeout = autocompleteClearTimeout;
+context.fetch = autocompleteFetch;
 console.log(`${checks} checks passed.`);

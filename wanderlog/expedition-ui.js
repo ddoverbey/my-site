@@ -5,13 +5,55 @@ let expeditionPreparedLegs = null;
 let expeditionPreparedKey = null;
 let expeditionPreviewMap = null;
 let expeditionPreviewLayers = null;
-let expeditionPlaceSearchPending = false;
 let expeditionSearchVersion = 0;
+let expeditionSearchTimer = null;
+let homeSearchVersion = 0;
+let homeSearchTimer = null;
 let expeditionReturnFocus = null;
 const expeditionRoadCache = new Map();
 let lastRoadRequest = 0;
-let citySearchPending = false;
-let lastCitySearch = 0;
+
+function dismissPlaceSuggestions(home, clearInput = false) {
+  if (home) {
+    clearTimeout(homeSearchTimer);
+    homeSearchVersion++;
+  } else {
+    clearTimeout(expeditionSearchTimer);
+    expeditionSearchVersion++;
+  }
+  const input = document.getElementById(home ? 'cityInput' : 'expeditionSearch');
+  document.getElementById(home ? 'citySearchResults' : 'expeditionSearchResults').replaceChildren();
+  document.getElementById(home ? 'homeLookupStatus' : 'expeditionStatus').textContent = '';
+  if (clearInput) input.value = '';
+}
+
+async function lookupPhotonPlaces(query) {
+  const response = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=5`,
+    { signal: AbortSignal.timeout(15000) });
+  if (!response.ok) throw new Error(`Place search failed (HTTP ${response.status}).`);
+  const data = await response.json();
+  if (!data || !Array.isArray(data.features)) throw new Error('Invalid place search response.');
+  return data.features.map(feature => {
+    const props = feature?.properties;
+    const coords = feature?.geometry?.coordinates;
+    if (feature?.geometry?.type !== 'Point' || !Array.isArray(coords) || coords.length !== 2 ||
+        typeof props?.name !== 'string' || !props.name.trim()) throw new Error('Invalid place search result.');
+    const [lng, lat] = coords;
+    CoordinateLookups.validateCoordinates(lat, lng);
+    const parts = [...new Set([props.name, props.city, props.state, props.country]
+      .filter(part => typeof part === 'string' && part.trim()).map(part => part.trim()))];
+    return { name: parts.join(', ').slice(0, 250), coords: [lat, lng] };
+  });
+}
+
+function suggestionButton(place, select) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'block text-left w-full rounded-lg bg-slate-800 hover:bg-slate-700 focus:bg-slate-700 p-3 text-xs';
+  button.textContent = place.name;
+  button.addEventListener('click', select);
+  return button;
+}
 
 function refreshTravelUI() {
   if (map) {
@@ -46,6 +88,7 @@ function addExpeditionStop(kind, id) {
     expeditionDraft.push({ ...expeditionStop(kind, id), travelMode: 'road' });
     invalidateExpeditionRoutes();
     renderExpeditionStops();
+    dismissPlaceSuggestions(false, true);
   } catch (error) {
     console.error('Expedition selection failed', error);
     showNotification('Route selection failed', error.message, '⚠️');
@@ -124,12 +167,13 @@ function renderExpeditionStops() {
 }
 
 function renderExpeditionSearch() {
+  clearTimeout(expeditionSearchTimer);
   const results = document.getElementById('expeditionSearchResults');
   results.replaceChildren();
   const query = document.getElementById('expeditionSearch').value.trim().toLowerCase();
   expeditionSearchVersion++;
   if (!expeditionPending) document.getElementById('expeditionStatus').textContent = '';
-  if (!query) return;
+  if (!query || AppState.viewOnly || expeditionPending) return;
   const candidates = [
     ...Object.keys(countyFeaturesById).map(id => ({ kind: 'county', id, name: countyLabel(id) })),
     ...PARKS.filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lng)).map(p => ({ kind: 'park', id: p.id, name: p.name })),
@@ -147,7 +191,7 @@ function renderExpeditionSearch() {
     results.appendChild(button);
     if (++count === 30) break;
   }
-  if (!count) results.textContent = 'Use Search cities & airports to find a place.';
+  expeditionSearchTimer = setTimeout(searchExpeditionPlaces, 300);
 }
 
 function localDate() {
@@ -227,7 +271,7 @@ function closeExpedition() {
   expeditionPicking = false;
   expeditionDraft = [];
   expeditionEditingId = null;
-  expeditionSearchVersion++;
+  dismissPlaceSuggestions(false, true);
   invalidateExpeditionRoutes();
   document.getElementById('expeditionModal').classList.add('hidden');
   renderExpeditionStops();
@@ -237,61 +281,37 @@ function closeExpedition() {
 }
 
 async function searchExpeditionPlaces() {
-  if (AppState.viewOnly || expeditionPending || expeditionPlaceSearchPending) return;
+  if (AppState.viewOnly || expeditionPending) return;
   const query = document.getElementById('expeditionSearch').value.trim();
   const version = ++expeditionSearchVersion;
   const status = document.getElementById('expeditionStatus');
   const results = document.getElementById('expeditionSearchResults');
   try {
-    if (!query) throw new Error('Enter a city or airport name.');
-    if (Date.now() - lastCitySearch < 1100) throw new Error('Wait a moment before searching again.');
-    expeditionPlaceSearchPending = true;
-    document.getElementById('btnSearchExpeditionPlaces').disabled = true;
-    lastCitySearch = Date.now();
+    if (!query) return;
     status.textContent = 'Searching places...';
     const airports = { SAN: 'San Diego International Airport', DEN: 'Denver International Airport' };
-    const response = await fetch(`https://nominatim.openstreetmap.org/search?${new URLSearchParams({
-      q: airports[query.toUpperCase()] || (/^[A-Z]{3}$/.test(query) ? `${query} airport` : query),
-      format: 'jsonv2', limit: '5', addressdetails: '1'
-    })}`, { signal: AbortSignal.timeout(15000) });
-    if (!response.ok) throw new Error(`Place search failed (HTTP ${response.status}).`);
-    const matches = await response.json();
-    if (!Array.isArray(matches) || !matches.length) throw new Error('No places found. Try the full city or airport name.');
-    const places = matches.map(match => {
-      if (!match || typeof match.lat !== 'string' || !match.lat.trim() || typeof match.lon !== 'string' || !match.lon.trim() ||
-          typeof match.display_name !== 'string' || !match.display_name.trim()) throw new Error('Invalid place search result.');
-      const coords = [Number(match.lat), Number(match.lon)];
-      CoordinateLookups.validateCoordinates(...coords);
-      const name = typeof match.name === 'string' && match.name.trim() ? match.name.trim() : match.display_name.split(',')[0].trim();
-      const region = typeof match.address?.state === 'string' ? match.address.state :
-        typeof match.address?.country === 'string' ? match.address.country : '';
-      if (!name) throw new Error('Invalid place name.');
-      return { kind: 'place', name: [name, region].filter(Boolean).join(', ').slice(0, 250),
-        searchLabel: match.display_name.slice(0, 250), coords, travelMode: 'road' };
-    });
-    if (version !== expeditionSearchVersion) return;
-    results.replaceChildren();
-    places.forEach(place => {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'block text-left w-full rounded bg-slate-800 p-2 text-xs';
-      button.textContent = place.searchLabel;
-      button.addEventListener('click', () => {
+    const places = await lookupPhotonPlaces(airports[query.toUpperCase()] ||
+      (/^[A-Z]{3}$/.test(query) ? `${query} airport` : query));
+    if (version !== expeditionSearchVersion || expeditionPending || AppState.viewOnly) return;
+    if (!places.length) {
+      status.textContent = 'No cities or airports found. Try a more specific name.';
+      return;
+    }
+    [...places].reverse().forEach(place => {
+      const button = suggestionButton(place, () => {
         if (AppState.viewOnly || expeditionPending) return;
         expeditionDraft.push({ kind: 'place', name: place.name, coords: [...place.coords],
           travelMode: 'road', id: `place_${crypto.randomUUID()}` });
         invalidateExpeditionRoutes();
         renderExpeditionStops();
+        dismissPlaceSuggestions(false, true);
       });
-      results.appendChild(button);
+      results.prepend(button);
     });
     status.textContent = 'Choose a place to add it.';
   } catch (error) {
     console.error('Expedition place search failed', error);
     if (version === expeditionSearchVersion) status.textContent = error.message;
-  } finally {
-    expeditionPlaceSearchPending = false;
-    document.getElementById('btnSearchExpeditionPlaces').disabled = expeditionPending;
   }
 }
 
@@ -303,7 +323,6 @@ function setExpeditionBusy(busy) {
     document.getElementById('btnSaveExpedition').disabled = !expeditionDraft.length ||
       (expeditionDraft.length > 1 && (!expeditionPreparedLegs || expeditionPreparedKey !== expeditionRouteKey()));
     document.getElementById('btnPreviewExpedition').disabled = !expeditionDraft.length;
-    document.getElementById('btnSearchExpeditionPlaces').disabled = expeditionPlaceSearchPending;
   }
   renderExpeditionStops();
 }
@@ -474,43 +493,26 @@ function renderExpeditionHistory() {
 }
 
 async function searchHometown() {
-  if (AppState.viewOnly || citySearchPending) return;
+  if (AppState.viewOnly) return;
+  const version = ++homeSearchVersion;
   const status = document.getElementById('homeLookupStatus');
   const results = document.getElementById('citySearchResults');
   const query = document.getElementById('cityInput').value.trim();
   results.replaceChildren();
   try {
-    if (!query) throw new Error('Enter a city name.');
-    const knownCity = [...document.querySelectorAll('.quick-city-chip')].find(chip =>
-      [chip.dataset.name, chip.textContent.trim()].some(name => name.toLowerCase() === query.toLowerCase()));
-    if (knownCity) {
-      setHometownCoordinates(knownCity.dataset.name, Number(knownCity.dataset.lat), Number(knownCity.dataset.lng));
+    if (!query) return;
+    status.textContent = 'Searching cities...';
+    const places = await lookupPhotonPlaces(query);
+    if (version !== homeSearchVersion || AppState.viewOnly) return;
+    if (!places.length) {
+      status.textContent = 'No city found. Try including the state or country.';
       return;
     }
-    if (Date.now() - lastCitySearch < 1100) throw new Error('Wait a moment before searching again (Nominatim rate limit).');
-    citySearchPending = true;
-    document.getElementById('btnSubmitCity').disabled = true;
-    lastCitySearch = Date.now();
-    status.textContent = 'Searching OpenStreetMap Nominatim...';
-    const response = await fetch(`https://nominatim.openstreetmap.org/search?${new URLSearchParams({
-      q: query, format: 'jsonv2', limit: '5'
-    })}`, { signal: AbortSignal.timeout(15000) });
-    if (!response.ok) throw new Error(`City search failed (HTTP ${response.status}).`);
-    const matches = await response.json();
-    if (!Array.isArray(matches) || !matches.length) throw new Error('No city found. Try including the state or country.');
-    matches.forEach(match => {
-      if (!match || typeof match.lat !== 'string' || !match.lat.trim() ||
-          typeof match.lon !== 'string' || !match.lon.trim()) throw new Error('Invalid city search coordinates.');
-      CoordinateLookups.validateCoordinates(Number(match.lat), Number(match.lon));
-      if (typeof match.display_name !== 'string') throw new Error('Invalid city search result.');
-    });
-    matches.forEach(match => {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'block w-full rounded-lg bg-slate-800 p-2 text-xs text-left';
-      button.textContent = match.display_name;
-      button.addEventListener('click', () => {
-        try { setHometownCoordinates(match.display_name, Number(match.lat), Number(match.lon)); }
+    places.forEach(place => {
+      const button = suggestionButton(place, () => {
+        if (AppState.viewOnly) return;
+        dismissPlaceSuggestions(true, true);
+        try { setHometownCoordinates(place.name, ...place.coords); }
         catch (error) { console.error('Home save failed', error); status.textContent = `Home not saved: ${error.message}`; }
       });
       results.appendChild(button);
@@ -518,10 +520,7 @@ async function searchHometown() {
     status.textContent = 'Choose your city. © OpenStreetMap contributors (ODbL).';
   } catch (error) {
     console.error('Home search failed', error);
-    status.textContent = error.message;
-  } finally {
-    citySearchPending = false;
-    document.getElementById('btnSubmitCity').disabled = false;
+    if (version === homeSearchVersion) status.textContent = error.message;
   }
 }
 
@@ -536,12 +535,30 @@ document.getElementById('btnExpeditionHistory').addEventListener('click', () => 
 document.getElementById('btnCancelExpedition').addEventListener('click', closeExpedition);
 document.getElementById('expeditionSearch').addEventListener('input', renderExpeditionSearch);
 document.getElementById('expeditionForm').addEventListener('submit', saveExpedition);
-document.getElementById('btnSearchExpeditionPlaces').addEventListener('click', searchExpeditionPlaces);
 document.getElementById('btnPreviewExpedition').addEventListener('click', previewExpeditionRoutes);
 document.getElementById('expeditionDayTrip').addEventListener('change', syncExpeditionDayTrip);
 document.getElementById('expeditionStart').addEventListener('change', syncExpeditionDayTrip);
 document.getElementById('expeditionSearch').addEventListener('keydown', event => {
-  if (event.key === 'Enter') { event.preventDefault(); searchExpeditionPlaces(); }
+  if (event.key === 'Enter' || event.key === 'Escape') {
+    event.preventDefault();
+    event.stopPropagation();
+    dismissPlaceSuggestions(false);
+    document.getElementById('expeditionSearch').blur();
+  }
+});
+document.getElementById('cityInput').addEventListener('input', () => {
+  dismissPlaceSuggestions(true);
+  if (document.getElementById('cityInput').value.trim() && !AppState.viewOnly) {
+    homeSearchTimer = setTimeout(searchHometown, 300);
+  }
+});
+document.getElementById('cityInput').addEventListener('keydown', event => {
+  if (event.key === 'Enter' || event.key === 'Escape') {
+    event.preventDefault();
+    event.stopPropagation();
+    dismissPlaceSuggestions(true);
+    document.getElementById('cityInput').blur();
+  }
 });
 document.getElementById('expeditionModal').addEventListener('keydown', event => {
   if (event.key === 'Escape') closeExpedition();

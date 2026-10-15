@@ -641,13 +641,10 @@
         </div>
 
         <div class="flex gap-2">
-          <input type="text" id="cityInput" placeholder="e.g. Seattle, WA or London, UK" class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-400">
-          <button id="btnSubmitCity" class="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 font-bold text-slate-950 text-sm transition-all">
-            Confirm
-          </button>
+          <input type="text" id="cityInput" aria-label="Search for your home city" autocomplete="off" aria-controls="citySearchResults" placeholder="e.g. Seattle, WA or London, UK" class="w-full min-w-0 bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-400">
         </div>
-        <p class="text-[11px] text-slate-400">City searches use OpenStreetMap Nominatim and send your search text to that service. Choose the correct result before confirming.</p>
-        <div id="citySearchResults" class="space-y-2 text-left"></div>
+        <p class="text-[11px] text-slate-400">Suggestions use Photon by Komoot and send your search text as you type. Click your city to establish your Citadel. © OpenStreetMap contributors.</p>
+        <div id="citySearchResults" aria-label="Matching home cities" class="space-y-1 max-h-48 overflow-y-auto rounded-xl text-left"></div>
         <p id="homeLookupStatus" role="status" aria-live="polite" class="text-xs text-amber-200"></p>
 
         <div class="flex flex-wrap gap-1.5 justify-center pt-2">
@@ -682,16 +679,15 @@
       <div class="space-y-2">
         <h3 class="text-sm text-amber-200">Where did you go?</h3>
         <label class="block text-xs">Add stops in travel order
-          <input id="expeditionSearch" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2" placeholder="City, airport, park, or saved POI">
+          <input id="expeditionSearch" autocomplete="off" aria-controls="expeditionSearchResults" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2" placeholder="City, airport, park, or saved POI">
         </label>
-        <button id="btnSearchExpeditionPlaces" type="button" class="rounded-lg bg-slate-700 px-3 py-2 text-xs">Search cities &amp; airports</button>
         <div id="expeditionSearchResults" class="space-y-1 max-h-40 overflow-y-auto"></div>
         <ol id="expeditionStops" class="space-y-2 text-xs"></ol>
         <button id="btnPreviewExpedition" type="button" class="rounded-lg bg-sky-700 px-3 py-2 text-xs">Preview routes</button>
         <div id="expeditionRoutePreview" class="hidden h-52 w-full rounded-lg overflow-hidden" aria-label="Expedition route preview"></div>
         <p id="expeditionRouteSummary" class="text-xs text-slate-400"></p>
       </div>
-      <details class="text-[11px] text-slate-400"><summary>Map services &amp; privacy</summary>City searches use OpenStreetMap Nominatim. Road endpoints are sent to the FOSSGIS routing service (OSRM). Boat and walking paths connect stops directly. Elevations use Open-Meteo. © OpenStreetMap contributors.</details>
+      <details class="text-[11px] text-slate-400"><summary>Map services &amp; privacy</summary>City and airport suggestions use Photon by Komoot; search text is sent as you type. Road endpoints are sent to the FOSSGIS routing service (OSRM). Boat and walking paths connect stops directly. Elevations use Open-Meteo. © OpenStreetMap contributors.</details>
       <p id="expeditionStatus" role="status" aria-live="polite" class="text-xs text-amber-200"></p>
       <div class="flex justify-end gap-2">
         <button id="btnCancelExpedition" type="button" class="rounded-lg bg-slate-800 px-4 py-2 text-sm">Cancel</button>
@@ -3132,10 +3128,12 @@
   <script src="./expedition-ui.js"></script>
   <script>
     function openHomeModal() {
+      dismissPlaceSuggestions(true, true);
       document.getElementById('homeBaseModal').classList.remove('hidden');
     }
 
     function closeHomeModal() {
+      dismissPlaceSuggestions(true, true);
       document.getElementById('homeBaseModal').classList.add('hidden');
     }
 
@@ -3189,15 +3187,10 @@
       );
     });
 
-    // City text input submission
-    document.getElementById('btnSubmitCity').addEventListener('click', searchHometown);
-    document.getElementById('cityInput').addEventListener('keydown', event => {
-      if (event.key === 'Enter') { event.preventDefault(); searchHometown(); }
-    });
-
     // Quick city chips
     document.querySelectorAll('.quick-city-chip').forEach(chip => {
       chip.addEventListener('click', () => {
+        dismissPlaceSuggestions(true, true);
         try { setHometownCoordinates(chip.dataset.name, chip.dataset.lat, chip.dataset.lng); }
         catch (error) { console.error('Home save failed', error); showNotification('Home not saved', error.message, '⚠️'); }
       });
