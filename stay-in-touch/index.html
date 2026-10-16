@@ -85,6 +85,16 @@
     
     <!-- Header -->
     <header class="border-b border-[#23352e]/80 pb-4 space-y-4">
+      <button
+        type="button"
+        onclick="openAppModal()"
+        class="w-full min-h-11 px-4 py-2.5 flex items-center justify-center gap-2 rounded-lg border border-teal-300/40 bg-teal-900/60 hover:bg-teal-800/70 text-teal-100 transition-colors shadow-sm"
+        aria-label="Get the Cultivate mobile app"
+      >
+        <i class="pixelart-icons-font-device-phone pixel-icon" aria-hidden="true"></i>
+        <span class="text-xs sm:text-sm font-semibold">Get the App</span>
+        <span class="hidden min-[380px]:inline text-[10px] sm:text-xs text-teal-200/80">iOS &amp; Android builds in testing</span>
+      </button>
       <div class="flex items-start justify-between gap-3">
         <div class="min-w-0">
           <h1 class="text-base min-[360px]:text-lg sm:text-2xl font-bold tracking-tight text-[#f4ede4] flex items-center gap-2">
@@ -605,6 +615,39 @@
         <button id="waitlist-submit" type="submit" class="w-full bg-[#115e59] hover:bg-[#0f766e] font-semibold py-2 rounded-lg text-sm text-white transition-colors border border-teal-500/30 disabled:opacity-60">Join the waitlist</button>
         <p id="waitlist-message" class="text-xs min-h-4" aria-live="polite"></p>
         <p class="text-[10px] text-[#6f877b]">Only used to tell you when this launches. No spam.</p>
+      </form>
+    </div>
+  </div>
+
+  <!-- MOBILE APP INTEREST MODAL -->
+  <div id="app-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[70] flex items-start sm:items-center justify-center p-3 sm:p-4 overflow-y-auto hidden" onclick="if (event.target === this) closeAppModal()">
+    <div class="bg-[#14201b] border border-[#283e35] rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="app-modal-title">
+      <div class="flex justify-between items-start gap-3 border-b border-[#283e35] pb-3">
+        <div>
+          <h3 id="app-modal-title" class="font-bold text-sm text-[#f4ede4]">Cultivate for Mobile</h3>
+          <p class="text-xs text-[#a3b8ad] mt-1">We're currently testing iOS &amp; Android builds.</p>
+        </div>
+        <button type="button" onclick="closeAppModal()" class="shrink-0 text-[#8da498] hover:text-[#f4ede4] text-sm" aria-label="Close"><i class="pixelart-icons-font-close pixel-icon" aria-hidden="true"></i></button>
+      </div>
+      <fieldset class="space-y-2">
+        <legend class="text-xs font-semibold text-[#a3b8ad] mb-2">How would you use Cultivate?</legend>
+        <button type="button" data-app-preference="app_store" aria-pressed="false" onclick="selectAppPreference('app_store')" class="w-full text-left px-3 py-2.5 rounded-lg border border-[#283e35] bg-[#0b1210] hover:border-teal-500/70 text-xs text-[#d6e4dc] transition-colors">
+          I'd use it daily as an App Store app
+        </button>
+        <button type="button" data-app-preference="browser" aria-pressed="false" onclick="selectAppPreference('browser')" class="w-full text-left px-3 py-2.5 rounded-lg border border-[#283e35] bg-[#0b1210] hover:border-teal-500/70 text-xs text-[#d6e4dc] transition-colors">
+          I prefer using it right here in the browser
+        </button>
+        <button type="button" data-app-preference="curious" aria-pressed="false" onclick="selectAppPreference('curious')" class="w-full text-left px-3 py-2.5 rounded-lg border border-[#283e35] bg-[#0b1210] hover:border-teal-500/70 text-xs text-[#d6e4dc] transition-colors">
+          Just exploring / curious
+        </button>
+      </fieldset>
+      <form id="app-interest-form" class="space-y-2 hidden">
+        <p id="app-follow-up" class="text-xs text-[#a3b8ad] leading-relaxed"></p>
+        <label for="app-email" class="sr-only">Email address</label>
+        <input id="app-email" type="email" required autocomplete="email" placeholder="you@example.com" class="w-full bg-[#0b1210] border border-[#283e35] rounded-lg px-3 py-2 text-sm text-emerald-100 focus:outline-none focus:border-teal-500" />
+        <button id="app-submit" type="submit" class="w-full bg-[#115e59] hover:bg-[#0f766e] font-semibold py-2 rounded-lg text-sm text-white transition-colors border border-teal-500/30 disabled:opacity-60"></button>
+        <p id="app-message" class="text-xs min-h-4" aria-live="polite"></p>
+        <p class="text-[10px] text-[#6f877b]">Only used for app updates. No spam.</p>
       </form>
     </div>
   </div>
@@ -1795,6 +1838,9 @@
 
     new ResizeObserver(drawGardenBackdrop).observe(document.getElementById('visual-garden'));
     document.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && !document.getElementById('app-modal').classList.contains('hidden')) {
+        closeAppModal();
+      }
       if (event.key === 'Escape' && selectedGardenId) {
         selectedGardenId = null;
         renderVisualGarden(gardenAverageHealth);
@@ -2216,6 +2262,70 @@
       }
     };
     let waitlistSource = 'pro';
+    let appPreference = null;
+
+    function openAppModal() {
+      appPreference = null;
+      document.querySelectorAll('[data-app-preference]').forEach(button => {
+        button.setAttribute('aria-pressed', 'false');
+        button.classList.remove('border-teal-400', 'bg-teal-900/30', 'text-teal-100');
+      });
+      document.getElementById('app-interest-form').classList.add('hidden');
+      document.getElementById('app-email').value = '';
+      document.getElementById('app-message').textContent = '';
+      document.getElementById('app-modal').classList.remove('hidden');
+      trackEvent('app_click');
+    }
+
+    function closeAppModal() {
+      document.getElementById('app-modal').classList.add('hidden');
+    }
+
+    function selectAppPreference(preference) {
+      appPreference = preference;
+      document.querySelectorAll('[data-app-preference]').forEach(button => {
+        const selected = button.dataset.appPreference === preference;
+        button.setAttribute('aria-pressed', String(selected));
+        button.classList.toggle('border-teal-400', selected);
+        button.classList.toggle('bg-teal-900/30', selected);
+        button.classList.toggle('text-teal-100', selected);
+      });
+      const isAppStore = preference === 'app_store';
+      document.getElementById('app-follow-up').textContent = isAppStore
+        ? 'Want an invite to our private iOS TestFlight beta?'
+        : "Drop your email if you'd like launch updates, or tap outside to keep exploring your garden.";
+      document.getElementById('app-submit').textContent = isAppStore ? 'Request Beta Invite' : 'Get Launch Updates';
+      document.getElementById('app-message').textContent = '';
+      document.getElementById('app-interest-form').classList.remove('hidden');
+      trackEvent('app_preference_selected', { preference });
+    }
+
+    document.getElementById('app-interest-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const emailInput = document.getElementById('app-email');
+      const message = document.getElementById('app-message');
+      const submit = document.getElementById('app-submit');
+      const email = emailInput.value.trim().toLowerCase();
+      if (!appPreference || !emailInput.checkValidity() || !email) return;
+
+      const source = appPreference === 'app_store' ? 'app_testflight' : 'app_updates';
+      submit.disabled = true;
+      message.className = 'text-xs min-h-4 text-[#a3b8ad]';
+      message.textContent = 'Saving...';
+      try {
+        const res = await supabaseInsert('cultivate_waitlist', { email, source, anon_id: getAnonId() });
+        if (!res.ok && res.status !== 409) throw new Error(`HTTP ${res.status}`);
+        message.className = 'text-xs min-h-4 text-teal-300';
+        message.textContent = "You're on the list. Thank you!";
+        emailInput.value = '';
+        trackEvent('app_waitlist_submitted', { preference: appPreference });
+        setTimeout(closeAppModal, 1800);
+      } catch (err) {
+        message.className = 'text-xs min-h-4 text-rose-300';
+        message.textContent = 'Could not save right now. Please try again.';
+        submit.disabled = false;
+      }
+    });
 
     function openWaitlistModal(source) {
       waitlistSource = source;

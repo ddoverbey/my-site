@@ -415,6 +415,8 @@
         kpis: [
           { label: 'Unique visitors', color: 'text-teal-300' },
           { label: 'Pro clicks', event: 'pro_click', of: null, color: 'text-amber-300' },
+          { label: 'App clicks', event: 'app_click', of: null, color: 'text-cyan-300' },
+          { label: 'App email signups', event: 'app_waitlist_submitted', of: 'app_click', color: 'text-sky-300' },
           { label: 'Waitlist signups', event: 'waitlist_submitted', of: 'pro_click', color: 'text-emerald-300', useExtraCount: true },
           { label: 'First seed planted', event: 'first_seed_planted', of: null, color: 'text-lime-300' },
           { label: 'First plant watered', event: 'first_plant_watered', of: 'first_seed_planted', color: 'text-sky-300' }
