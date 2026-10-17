@@ -85,7 +85,7 @@
     <div id="status-banner" class="hidden rounded-xl border p-4 text-xs font-medium"></div>
 
     <!-- KPI Metric Cards -->
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
       <div class="bg-[#14201b]/90 border border-[#23352e] rounded-xl p-4">
         <div class="text-[11px] text-[#8da498] uppercase tracking-wider">Total Unique Visitors</div>
         <div id="kpi-visitors" class="text-2xl font-mono-pixel text-teal-300 mt-1">—</div>
@@ -106,7 +106,39 @@
         <div id="kpi-watered" class="text-2xl font-mono-pixel text-sky-400 mt-1">—</div>
         <div id="kpi-watered-rate" class="text-[10px] text-[#6b8276] mt-0.5">—% activation</div>
       </div>
+      <div class="bg-[#14201b]/90 border border-[#23352e] rounded-xl p-4">
+        <div class="text-[11px] text-[#8da498] uppercase tracking-wider">Get the App Clicks</div>
+        <div id="kpi-app-clicks" class="text-2xl font-mono-pixel text-cyan-300 mt-1">—</div>
+        <div class="text-[10px] text-[#6b8276] mt-0.5">Total app button taps</div>
+      </div>
+      <div class="bg-[#14201b]/90 border border-[#23352e] rounded-xl p-4">
+        <div class="text-[11px] text-[#8da498] uppercase tracking-wider">App Survey Responses</div>
+        <div id="kpi-app-survey" class="text-2xl font-mono-pixel text-indigo-300 mt-1">—</div>
+        <div class="text-[10px] text-[#6b8276] mt-0.5">Total preference answers</div>
+      </div>
     </div>
+
+    <section class="bg-[#14201b]/90 border border-cyan-900/60 rounded-xl p-5 space-y-3">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <h2 class="text-sm font-semibold text-cyan-300 uppercase tracking-wider">Get the App Survey Responses</h2>
+        <span id="app-survey-count" class="px-2 py-0.5 rounded-full bg-cyan-950/50 text-cyan-300 border border-cyan-800/50 text-[10px] font-mono">0 responses</span>
+      </div>
+      <div id="app-survey-summary" class="grid grid-cols-1 sm:grid-cols-3 gap-2"></div>
+      <div class="overflow-x-auto max-h-72 overflow-y-auto pr-1">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead class="sticky top-0 bg-[#14201b]">
+            <tr class="border-b border-[#23352e] text-[#8da498] text-[10px] uppercase">
+              <th class="py-2 pr-3">Answer</th>
+              <th class="py-2 pr-3">User / Anon ID</th>
+              <th class="py-2">Time</th>
+            </tr>
+          </thead>
+          <tbody id="app-survey-rows" class="divide-y divide-[#1e2f27] font-mono">
+            <tr><td colspan="3" class="py-4 text-center text-[#6b8276]">Loading survey responses…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
 
     <!-- Funnel Visualization & Chart -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -410,6 +442,18 @@
       const proVisitors = visitorsByEvent['pro_click']?.size || 0;
       const waitlistVisitors = visitorsByEvent['waitlist_submitted']?.size || waitlist.length || 0;
       const wateredVisitors = visitorsByEvent['first_plant_watered']?.size || 0;
+      const appClicks = eventCounts['app_click'] || 0;
+      const appSurveyEvents = events.filter(item => item.event === 'app_preference_selected');
+      const appSurveyCounts = {
+        app_store: 0,
+        browser: 0,
+        curious: 0
+      };
+      appSurveyEvents.forEach(item => {
+        if (Object.prototype.hasOwnProperty.call(appSurveyCounts, item.props?.preference)) {
+          appSurveyCounts[item.props.preference]++;
+        }
+      });
 
       // Rates
       const proRate = totalVisitors ? ((proVisitors / totalVisitors) * 100).toFixed(1) : '0.0';
@@ -425,6 +469,30 @@
       document.getElementById('kpi-waitlist-rate').textContent = `${waitlistRate}% of Pro clicks`;
       document.getElementById('kpi-watered').textContent = wateredVisitors;
       document.getElementById('kpi-watered-rate').textContent = `${wateredRate}% of visitors`;
+      document.getElementById('kpi-app-clicks').textContent = appClicks;
+      document.getElementById('kpi-app-survey').textContent = appSurveyEvents.length;
+
+      const appSurveyLabels = {
+        app_store: "I'd use it daily as an App Store app",
+        browser: 'I prefer using it right here in the browser',
+        curious: 'Just exploring / curious'
+      };
+      document.getElementById('app-survey-count').textContent = `${appSurveyEvents.length} responses`;
+      document.getElementById('app-survey-summary').innerHTML = Object.entries(appSurveyLabels).map(([preference, label]) => `
+        <div class="rounded-lg border border-[#23352e] bg-[#0b1210]/70 p-3">
+          <div class="text-[11px] text-[#8da498]">${escapeHtml(label)}</div>
+          <div class="mt-1 text-lg font-mono-pixel text-cyan-300">${appSurveyCounts[preference]}</div>
+        </div>
+      `).join('');
+      document.getElementById('app-survey-rows').innerHTML = appSurveyEvents.length
+        ? appSurveyEvents.map(item => `
+          <tr class="hover:bg-[#182721]">
+            <td class="py-2 pr-3 text-[#f4ede4]">${escapeHtml(appSurveyLabels[item.props?.preference] || 'Unknown response')}</td>
+            <td class="py-2 pr-3 text-[#8da498] text-[11px]">${escapeHtml((item.anon_id || '').slice(0, 8))}…</td>
+            <td class="py-2 text-[#6b8276] text-[11px]">${new Date(item.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
+          </tr>
+        `).join('')
+        : '<tr><td colspan="3" class="py-4 text-center text-[#6b8276]">No survey responses recorded yet.</td></tr>';
 
       // 3. Update Funnel Bars
       document.getElementById('funnel-visits-val').textContent = `${totalVisitors} (100%)`;

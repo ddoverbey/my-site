@@ -80,7 +80,7 @@
 
       <div class="space-y-4 border-t border-slate-800 pt-6">
         <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-500">App analytics</h2>
-        <details id="app-cultivate" data-app="cultivate" class="group rounded-xl border border-slate-800 bg-slate-900/50">
+        <details id="app-cultivate" data-app="cultivate" open class="group rounded-xl border border-slate-800 bg-slate-900/50">
           <summary class="flex cursor-pointer list-none items-center justify-between gap-3 p-5 [&::-webkit-details-marker]:hidden">
             <span class="flex items-center gap-2 text-sm font-semibold text-slate-200"><span class="text-slate-500 transition-transform group-open:rotate-90">▶</span>Cultivate</span>
             <span id="cultivate-summary" class="text-[11px] text-slate-500">Loading…</span>
@@ -415,8 +415,9 @@
         kpis: [
           { label: 'Unique visitors', color: 'text-teal-300' },
           { label: 'Pro clicks', event: 'pro_click', of: null, color: 'text-amber-300' },
-          { label: 'App clicks', event: 'app_click', of: null, color: 'text-cyan-300' },
-          { label: 'App email signups', event: 'app_waitlist_submitted', of: 'app_click', color: 'text-sky-300' },
+          { label: 'Get the App clicks', event: 'app_click', countEvent: true, of: null, color: 'text-cyan-300' },
+          { label: 'Survey responses', event: 'app_preference_selected', countEvent: true, of: 'app_click', color: 'text-sky-300' },
+          { label: 'App email signups', event: 'app_waitlist_submitted', countEvent: true, of: 'app_click', color: 'text-indigo-300' },
           { label: 'Waitlist signups', event: 'waitlist_submitted', of: 'pro_click', color: 'text-emerald-300', useExtraCount: true },
           { label: 'First seed planted', event: 'first_seed_planted', of: null, color: 'text-lime-300' },
           { label: 'First plant watered', event: 'first_plant_watered', of: 'first_seed_planted', color: 'text-sky-300' }
@@ -472,11 +473,15 @@
       });
       const uniq = event => event ? (usersBy[event]?.size || 0) : visitors.size;
 
-      summary.textContent = `${visitors.size} visitors · ${events.length} events`;
+      const appClicks = counts.app_click || 0;
+      const surveyEvents = key === 'cultivate' ? events.filter(e => e.event === 'app_preference_selected') : [];
+      summary.textContent = key === 'cultivate'
+        ? `${visitors.size} visitors · ${appClicks} Get the App clicks · ${surveyEvents.length} survey responses`
+        : `${visitors.size} visitors · ${events.length} events`;
       if (!document.getElementById(`app-${key}`).open) return;
 
       const kpiHtml = app.kpis.map(k => {
-        const value = k.useExtraCount ? Math.max(extra.length, uniq(k.event)) : uniq(k.event);
+        const value = k.useExtraCount ? Math.max(extra.length, uniq(k.event)) : k.countEvent ? (counts[k.event] || 0) : uniq(k.event);
         const sub = k.event
           ? `${percent(uniq(k.event), uniq(k.of))} of ${k.of ? k.of.replace(/_/g, ' ') : 'visitors'}`
           : 'Anonymous browser IDs';
@@ -521,8 +526,45 @@
         </tr>`;
       }).join('') || '<tr><td colspan="4" class="py-3 text-slate-500">No events in this range.</td></tr>';
 
+      const surveyLabels = {
+        app_store: "I'd use it daily as an App Store app",
+        browser: 'I prefer using it right here in the browser',
+        curious: 'Just exploring / curious'
+      };
+      const surveyCounts = surveyEvents.reduce((result, event) => {
+        const preference = event.props?.preference;
+        result[preference] = (result[preference] || 0) + 1;
+        return result;
+      }, {});
+      const surveyHtml = key === 'cultivate' ? `
+        <div class="rounded-xl border border-cyan-900/60 bg-slate-950/40 p-5">
+          <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h3 class="text-sm font-semibold text-slate-200">Get the App survey responses</h3>
+            <span class="rounded bg-slate-800 px-2 py-0.5 text-[10px] text-cyan-300">${surveyEvents.length} responses</span>
+          </div>
+          <div class="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
+            ${Object.entries(surveyLabels).map(([preference, label]) => `
+              <div class="rounded-lg border border-slate-800 bg-slate-900/70 p-3">
+                <p class="text-[11px] text-slate-400">${escapeHtml(label)}</p>
+                <p class="mt-1 text-lg font-semibold text-cyan-300">${surveyCounts[preference] || 0}</p>
+              </div>`).join('')}
+          </div>
+          <div class="max-h-72 overflow-y-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="sticky top-0 bg-slate-900 text-slate-500"><tr><th class="py-2 pr-3">Answer</th><th class="py-2 pr-3">When</th><th class="py-2">Visitor</th></tr></thead>
+              <tbody class="divide-y divide-slate-800">${surveyEvents.slice(0, 200).map(event => `
+                <tr>
+                  <td class="py-2 pr-3 text-slate-200">${escapeHtml(surveyLabels[event.props?.preference] || 'Unknown response')}</td>
+                  <td class="whitespace-nowrap py-2 pr-3 text-slate-400">${escapeHtml(formatTime(event.created_at))}</td>
+                  <td class="py-2 font-mono text-[10px] text-slate-500">${escapeHtml((event.anon_id || '').slice(0, 8))}</td>
+                </tr>`).join('') || '<tr><td colspan="3" class="py-3 text-slate-500">No survey responses in this range.</td></tr>'}</tbody>
+            </table>
+          </div>
+        </div>` : '';
+
       body.innerHTML = `
         <div class="grid grid-cols-2 gap-4 md:grid-cols-5">${kpiHtml}</div>
+        ${surveyHtml}
         <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <div class="rounded-xl border border-slate-800 bg-slate-950/40 p-5">
             <h3 class="mb-4 text-sm font-semibold text-slate-200">${escapeHtml(app.funnelTitle)}</h3>
