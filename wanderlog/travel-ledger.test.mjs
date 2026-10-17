@@ -615,6 +615,24 @@ check('saved routed ferries migrate to direct stop-to-stop geometry and rail rem
   assert.throws(()=>ledger.validateExpeditions([{...rail,
     routeLegs:[{...rail.routeLegs[0],countyIds:['04001']}]}],lookups),/travel leg/);
 });
+check('disconnected route errors identify the leg, mode, stops and failing endpoint distance', () => {
+  const badRoute = {
+    ...mixedExpedition,
+    routeLegs: [
+      mixedExpedition.routeLegs[0],
+      { mode: 'road', routeSource: 'routed', routeCoords: [[38, -104], [39.7, -105.5], mixedStops[2].coords], countyIds: ['08059'] },
+      mixedExpedition.routeLegs[2]
+    ]
+  };
+  assert.throws(() => ledger.validateExpeditions([badRoute], lookups), error => {
+    assert.match(error.message, /Leg 2 \(Drive \/ Road Trip\)/);
+    assert.match(error.message, /Denver airport/);
+    assert.match(error.message, /Aspen/);
+    assert.match(error.message, /route start/);
+    assert.match(error.message, /miles from "Denver airport" \(maximum allowed: 1 mile\)/);
+    return true;
+  });
+});
 const mixedPoliticalAt = (lat,lng) => ({
   countries:['United States of America'],states:[lng < -110 ? 'California' : 'Colorado'],
   counties:[{id:lng < -110 ? '06073' : lng < -106 ? '08097' : '08031'}]

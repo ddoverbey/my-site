@@ -145,9 +145,20 @@
           if (routeSource !== 'none') {
             const endpoints = [leg.routeCoords[0], leg.routeCoords[leg.routeCoords.length - 1]];
             endpoints.forEach((point, offset) => {
-              const stop = exp.routeStops[index + offset].coords;
-              if (distanceMiles({lat:point[0],lng:point[1]}, {lat:stop[0],lng:stop[1]}) > 1) {
-                throw new Error('Travel leg does not connect its selected stops.');
+              const stop = exp.routeStops[index + offset];
+              const distance = distanceMiles(
+                {lat:point[0],lng:point[1]},
+                {lat:stop.coords[0],lng:stop.coords[1]}
+              );
+              if (distance > 1) {
+                const from = exp.routeStops[index].name;
+                const to = exp.routeStops[index + 1].name;
+                const endpoint = offset === 0 ? 'start' : 'end';
+                throw new Error(
+                  `Leg ${index + 1} (${transitTags[leg.mode]}) from "${from}" to "${to}" ` +
+                  `has a route ${endpoint} ${distance.toFixed(1)} miles from "${stop.name}" ` +
+                  '(maximum allowed: 1 mile).'
+                );
               }
             });
           }
