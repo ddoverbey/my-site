@@ -529,7 +529,7 @@ check('mixed city and airport itineraries support optional dates, reason text an
   assert.equal(ledger.metadataProgress(migrate({expeditions:[mixedExpedition]})).fastTravel,0);
   assert.equal(ledger.metadataProgress(migrate({expeditions:[{...mixedExpedition,startDate:null,endDate:null}]})).southernCross,0);
 });
-check('only routed road legs clear land fog; only ferries clear water fog', () => {
+check('only road/AWD legs use standard fog routes; only ferries use wide corridors', () => {
   assert.equal(ledger.fogRoutes(mixedExpedition).length,2);
   assert.deepEqual(ledger.waterFogRoutes(mixedExpedition),[]);
   for (const mode of ['flight', 'rail', 'foot']) {

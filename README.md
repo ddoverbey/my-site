@@ -558,16 +558,16 @@ data shows retry guidance instead of a misleading completion count.
    legs use two-point direct approximations; flights use a dashed connector for orientation only.
    All these modes are dashed in previews and Travel Log mini-maps. Previously saved road-routed
    ferry legs are normalized to direct stop-to-stop geometry on load/import and when reopened.
-   Ferry / Boat routes clear only offshore water using the original 25 km brush and cached
-   10 km route samples. Shoreline checks skip brushes near land using simplified geographic
-   boundaries, not a nautical chart. Ferry, rail, walking, and flight routes award no intermediate
-   counties; only their stops count.
+   Ferry / Boat routes clear a continuous feathered 80 km-wide corridor along the logged route,
+   including any land crossed. Rendering uses cached route strokes without shoreline sampling or
+   land stenciling. Ferry, rail, walking, and flight routes award no intermediate counties;
+   only their stops count.
 
 The preview does not save visits or clear fog. No map picker is displayed.
 For SAN → DEN → Aspen → DEN, select Flight, Drive, Drive: credit the airport/destination
 counties and the counties on the approved drives, not those between San Diego and Denver.
-The existing 40 km fog corridor follows routed driving/AWD legs only. Ferry / Boat legs use a
-separate water-only clearing brush. Flight, rail, and walking lines do not clear route fog.
+The existing 40 km fog corridor follows routed driving/AWD legs. Ferry / Boat legs use the same
+renderer at 80 km wide. Flight, rail, and walking lines do not clear route fog.
 The modal's collapsed **Map services & privacy** section explains which services receive searches
 or coordinates and includes attribution. Road routing failure is explicit, never replaced with a fake
 straight-line road route; ferry and rail lines are always approximate, dashed connectors, not routed paths.
