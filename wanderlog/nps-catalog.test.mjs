@@ -133,7 +133,7 @@ check('mobile RPG HUD starts collapsed with an accessible stats toggle', () => {
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261018-progressive-oceans')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261019-fast-pan')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('storage-risk banner and unfinished-trip recovery controls are present', () => {
@@ -2516,6 +2516,60 @@ check('hidden map work is deferred and move events coalesce to one fog redraw pe
   } finally {
     context.requestAnimationFrame = originalRaf;
     vm.runInContext('fogDrawFrame=null;map=null;leafletMarkers={};', context);
+  }
+});
+check('pans slide the cached fog bitmap and only redraw near the overscan edge', () => {
+  const source = html.match(/function panFogCanvas\(\) \{[\s\S]*?\n    \}/)[0];
+  assert.ok(html.includes("map.on('move', panFogCanvas)") && html.includes("map.on('moveend', scheduleFogDraw)"));
+  assert.ok(!html.includes("window.addEventListener('resize'"));
+  const originalRaf = context.requestAnimationFrame;
+  let frames = 0;
+  let offset = { x: 0, y: 0 };
+  context.requestAnimationFrame = () => ++frames;
+  context.panMap = { latLngToContainerPoint: () => offset };
+  try {
+    vm.runInContext(`AppState.currentTab='map';AppState.mode='rpg';fogZoomAnimating=false;fogDrawFrame=null;
+      map=panMap;fogPadding={x:400,y:300};fogDrawAnchor={lat:1,lng:2};fogCanvas.style.transform=''`, context);
+    offset = { x: 120, y: -80 };
+    vm.runInContext('panFogCanvas()', context);
+    assert.equal(frames, 0, source);
+    assert.equal(vm.runInContext('fogCanvas.style.transform', context), 'translate3d(120px, -80px, 0)');
+    offset = { x: 301, y: 0 };
+    vm.runInContext('panFogCanvas()', context);
+    assert.equal(frames, 1);
+  } finally {
+    context.requestAnimationFrame = originalRaf;
+    vm.runInContext("fogDrawFrame=null;fogDrawAnchor=null;map=null;fogCanvas.style.transform=''", context);
+  }
+});
+check('cleared counties are batched into one cached blurred fill per zoom', () => {
+  const originalPath = context.Path2D;
+  let paths = 0, fills = 0, projections = 0, zoom = 5;
+  const point = (x, y) => ({ x, y, round() { return this; }, subtract(o) { return point(x - o.x, y - o.y); } });
+  context.Path2D = class { constructor() { paths++; } moveTo() {} lineTo() {} closePath() {} };
+  context.batchMap = { getZoom: () => zoom, project: ([lat, lng]) => { projections++; return point(lng, lat); },
+    latLngToContainerPoint: () => point(0, 0) };
+  context.batchCtx = { save() {}, restore() {}, translate() {},
+    fill(path, rule) { fills++; assert.equal(rule, 'nonzero'); assert.equal(this.shadowBlur, 25); } };
+  try {
+    vm.runInContext(`map=batchMap;fogCtx=batchCtx;countyFogBatchCache=null;
+      ['91001','91002','91003'].forEach((id,i)=>countyFeaturesById[id]={geometry:{type:'Polygon',
+        coordinates:[[[i,0],[i+1,0],[i+1,1],[i,0]]]}});
+      punchCountyFog(['91001','91002','91003']);`, context);
+    assert.equal(fills, 1);
+    assert.equal(paths, 1);
+    const first = projections;
+    vm.runInContext("punchCountyFog(['91001','91002','91003'])", context);
+    assert.equal(fills, 2);
+    assert.equal(paths, 1);
+    assert.equal(projections, first + 1, 'only the origin is projected on a cached frame');
+    zoom++;
+    vm.runInContext("punchCountyFog(['91001','91002','91003'])", context);
+    assert.equal(paths, 2);
+  } finally {
+    context.Path2D = originalPath;
+    vm.runInContext(`map=null;fogCtx=null;countyFogBatchCache=null;
+      ['91001','91002','91003'].forEach(id=>delete countyFeaturesById[id])`, context);
   }
 });
 check('projected polygon paths are reused during pans, culled offscreen and rebuilt at a new zoom', () => {

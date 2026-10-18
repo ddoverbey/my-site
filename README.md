@@ -140,8 +140,10 @@ Map markers, county hitboxes, canvas resizing and fog painting are skipped while
 open; returning to Explore refreshes deferred layers. Stats and fog-county membership are cached
 against their relevant travel values and dataset identities, so edits, imports, persistence rollbacks
 and dataset reloads cannot reuse stale results. Coordinate containment is reused across calculations
-until the geography index changes. Map move events coalesce to one scheduled redraw per animation
-frame. Fog polygon paths are cached at the current zoom, translated during pans and culled outside
+until the geography index changes. While panning, the already-drawn overscanned fog bitmap slides with
+a GPU transform; a full redraw runs only after the pan ends or when it nears the overscan edge, coalesced
+to one per animation frame. All cleared counties share one cached path and a single blurred fill per
+zoom instead of hundreds of separately shadowed fills. Fog polygon paths are cached at the current zoom, translated during pans and culled outside
 the overscanned canvas; routes and auras are also culled without changing their reveal extents.
 These optimizations do not change saved records, achievement rules or geography snapshots.
 

@@ -110,6 +110,7 @@
       pointer-events: none;
       z-index: 450;
       transition: opacity 0.5s ease;
+      will-change: transform;
     }
     #fogCanvasOverlay.fog-zoom-animating {
       transition: transform 0.25s cubic-bezier(0, 0, 0.25, 1), opacity 0.5s ease;
@@ -866,14 +867,14 @@
     </form>
   </div>
 
-  <script src="./nps-catalog.js?v=20261018-progressive-oceans"></script>
-  <script src="./national-parks-scratch.js?v=20261018-progressive-oceans"></script>
-  <script src="./international-parks.js?v=20261018-progressive-oceans"></script>
-  <script src="./ecoregions.js?v=20261018-progressive-oceans"></script>
-  <script src="./coordinate-lookups.js?v=20261018-progressive-oceans"></script>
-  <script src="./micro-states.js?v=20261018-progressive-oceans"></script>
-  <script src="./travel-ledger.js?v=20261018-progressive-oceans"></script>
-  <script src="./rarity-config.js?v=20261018-progressive-oceans"></script>
+  <script src="./nps-catalog.js?v=20261019-fast-pan"></script>
+  <script src="./national-parks-scratch.js?v=20261019-fast-pan"></script>
+  <script src="./international-parks.js?v=20261019-fast-pan"></script>
+  <script src="./ecoregions.js?v=20261019-fast-pan"></script>
+  <script src="./coordinate-lookups.js?v=20261019-fast-pan"></script>
+  <script src="./micro-states.js?v=20261019-fast-pan"></script>
+  <script src="./travel-ledger.js?v=20261019-fast-pan"></script>
+  <script src="./rarity-config.js?v=20261019-fast-pan"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -1804,7 +1805,8 @@
       renderCountyHitboxes();
 
       // Setup map event listeners to re-render the fog canvas on pan/zoom
-      map.on('move', scheduleFogDraw);
+      map.on('move', panFogCanvas);
+      map.on('moveend', scheduleFogDraw);
       map.on('contextmenu', event => openCustomLocation(event.latlng.lat, event.latlng.lng));
       map.on('zoomanim', animateFogZoom);
       map.on('zoomend', () => {
@@ -1813,11 +1815,8 @@
         fogCanvas.style.transform = '';
         drawFogOfWar();
       });
+      // Leaflet already tracks window resizes, so a second window listener only doubled the redraw.
       map.on('resize', () => {
-        resizeFogCanvas();
-        drawFogOfWar();
-      });
-      window.addEventListener('resize', () => {
         resizeFogCanvas();
         drawFogOfWar();
       });
@@ -1847,9 +1846,11 @@
       if (AppState.currentTab !== 'map') return;
       const scale = map.getZoomScale(event.zoom);
       const offset = map.project(map.getCenter(), event.zoom).subtract(map.project(event.center, event.zoom));
+      // Carry any pending pan slide into the zoom transform so the bitmap does not jump.
+      const pan = fogDrawAnchor ? map.latLngToContainerPoint(fogDrawAnchor) : { x: 0, y: 0 };
       fogZoomAnimating = true;
       fogCanvas.classList.add('fog-zoom-animating');
-      fogCanvas.style.transform = `translate(${offset.x}px, ${offset.y}px) scale(${scale})`;
+      fogCanvas.style.transform = `translate(${offset.x + pan.x * scale}px, ${offset.y + pan.y * scale}px) scale(${scale})`;
     }
 
     /* Fog of War Rendering Routine */
@@ -1860,6 +1861,16 @@
         fogDrawFrame = null;
         drawFogOfWar();
       });
+    }
+
+    // Pans slide the overscanned bitmap on the compositor; a full redraw happens only near its edge or at moveend.
+    let fogDrawAnchor = null;
+    function panFogCanvas() {
+      if (fogZoomAnimating || AppState.currentTab !== 'map' || AppState.mode === 'classic') return;
+      if (!fogDrawAnchor || !map) return scheduleFogDraw();
+      const offset = map.latLngToContainerPoint(fogDrawAnchor);
+      if (Math.abs(offset.x) > fogPadding.x * 0.75 || Math.abs(offset.y) > fogPadding.y * 0.75) return scheduleFogDraw();
+      fogCanvas.style.transform = `translate3d(${offset.x}px, ${offset.y}px, 0)`;
     }
 
     function oceanFogOpacity() {
@@ -1877,6 +1888,8 @@
       // Clear previous canvas frame
       fogCtx.setTransform(1, 0, 0, 1, 0, 0);
       fogCtx.clearRect(0, 0, width, height);
+      fogCanvas.style.transform = '';
+      fogDrawAnchor = null;
       if (AppState.mode === 'classic') return;
 
       // Optional fog toggle:
@@ -1968,11 +1981,9 @@
         fogCtx.globalAlpha = 1;
       });
 
-      Object.entries(countyFogStatuses(false, false)).forEach(([id, status]) => {
-        if (!TravelLedger.clearsFog(status)) return;
-        const feature = countyFeaturesById[id];
-        if (feature) punchFogPolygon(feature.geometry);
-      });
+      punchCountyFog(Object.entries(countyFogStatuses(false, false))
+        .filter(([id, status]) => TravelLedger.clearsFog(status) && countyFeaturesById[id])
+        .map(([id]) => id));
 
       AppState.clearedPolygons.forEach(geometry => punchFogPolygon(geometry));
       AppState.routes.forEach(route => punchFogRoute(route));
@@ -1984,6 +1995,7 @@
       fogCtx.globalCompositeOperation = 'source-over';
       fogCtx.shadowBlur = 0;
       fogCtx.shadowColor = 'transparent';
+      fogDrawAnchor = map.containerPointToLatLng ? map.containerPointToLatLng([0, 0]) : null;
     }
 
     const fogPolygonCache = new WeakMap();
@@ -2074,6 +2086,48 @@
         }
         fogCtx.restore();
       }
+    }
+
+    // One blurred fill for every cleared county is far cheaper than hundreds of individually shadowed fills.
+    let countyFogBatchCache = null;
+    function punchCountyFog(ids) {
+      if (!ids.length) return;
+      if (typeof Path2D === 'undefined' || !map?.project) {
+        ids.forEach(id => punchFogPolygon(countyFeaturesById[id].geometry));
+        return;
+      }
+      const zoom = map.getZoom();
+      const key = ids.join(',');
+      if (!countyFogBatchCache || countyFogBatchCache.zoom !== zoom || countyFogBatchCache.key !== key ||
+          countyFogBatchCache.features !== countyFeaturesById) {
+        const path = new Path2D();
+        ids.forEach(id => {
+          const geometry = countyFeaturesById[id].geometry;
+          const polygons = geometry?.type === 'Polygon' ? [geometry.coordinates] :
+            geometry?.type === 'MultiPolygon' ? geometry.coordinates : [];
+          polygons.forEach(rings => (Array.isArray(rings) ? rings : []).forEach(ring => {
+            if (!Array.isArray(ring) || ring.length < 3) return;
+            let hasPoint = false;
+            ring.forEach(coordinate => {
+              if (!Array.isArray(coordinate) || !Number.isFinite(coordinate[0]) || !Number.isFinite(coordinate[1])) return;
+              const point = map.project([coordinate[1], coordinate[0]], zoom).round();
+              if (!hasPoint) path.moveTo(point.x, point.y);
+              else path.lineTo(point.x, point.y);
+              hasPoint = true;
+            });
+            if (hasPoint) path.closePath();
+          }));
+        });
+        countyFogBatchCache = { zoom, key, features: countyFeaturesById, path };
+      }
+      const origin = map.latLngToContainerPoint([0, 0]).subtract(map.project([0, 0], zoom).round());
+      fogCtx.save();
+      fogCtx.translate(origin.x, origin.y);
+      fogCtx.fillStyle = 'rgba(0, 0, 0, 1)';
+      fogCtx.shadowColor = 'rgba(0, 0, 0, 0.95)';
+      fogCtx.shadowBlur = 25;
+      fogCtx.fill(countyFogBatchCache.path, 'nonzero');
+      fogCtx.restore();
     }
 
     function punchFogPolygon(geometry, featherPixels = 25) {
@@ -4289,7 +4343,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261018-progressive-oceans"></script>
+  <script src="./expedition-ui.js?v=20261019-fast-pan"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);
