@@ -422,7 +422,7 @@ custom POIs, county FIPS codes and state/country keys:
 | `w` Wishlist | Pink | No fog clearing, XP or visited completion |
 | `t` Transited | Slate | Point aura is 60% of the normal 85 km radius; no visited XP/stats |
 | `v` Visited | Emerald | Full point/boundary clearing and visit XP/stats |
-| `l` Lived / Home Base | Blue | Full clearing and credit for pins/POIs; manual county marks do not clear fog |
+| `l` Lived / Home Base | Blue | Full clearing and credit for pins/POIs and marked counties |
 
 Expedition promotion respects `w < t < v < l` unless the explorer explicitly chooses a map status.
 Map choices for parks, countries, states and counties are stored separately as status overrides,
@@ -488,7 +488,10 @@ for Wishlist; Lived polygons have a lighter blue border. Countries, states, and 
 travel-derived statuses, including an explicit Unexplored choice, without modifying trips.
 County edits use zero-padded FIPS IDs in `counties`; nation/state edits use `regions`.
 The counter reports Visited/Lived and Transited totals for the current dataset only.
-Edits persist transactionally and refresh Passport stats without revealing county fog.
+Edits persist transactionally and refresh Passport stats. Marking a county Visited, Transited,
+or Lived reveals its entire polygon in RPG fog. Wishlist and Unexplored marks do not reveal it.
+Changing a manual county mark back to Wishlist or Unexplored restores its fog unless logged
+travel independently reveals that county. State and country marks do not reveal entire regions.
 Shared passports are read-only. No TopoJSON generation is needed for this view.
 
 ### 63 National Parks scratch-off

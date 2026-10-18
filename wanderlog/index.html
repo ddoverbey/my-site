@@ -431,7 +431,7 @@
         <div class="flex flex-wrap items-center justify-between gap-4 rpg-panel p-4 rounded-2xl">
           <div>
             <h2 class="cinzel text-lg font-bold text-amber-200">The Royal Cartography Records</h2>
-            <p id="scratchPoliticalHint" class="text-xs text-slate-400">Countries, US states and counties: Unexplored → Visited → Wishlist → Transited → Lived → Unexplored. Your map choice overrides the displayed travel-derived tier without changing trip records. Manual county marks do not clear RPG fog.</p>
+            <p id="scratchPoliticalHint" class="text-xs text-slate-400">Countries, US states and counties: Unexplored → Visited → Wishlist → Transited → Lived → Unexplored. Your map choice overrides the displayed travel-derived tier without changing trip records. Visited, Transited and Lived county marks reveal the entire county in RPG fog.</p>
           </div>
           <div class="flex flex-wrap items-center gap-3">
             <div class="flex flex-wrap bg-slate-900 p-1 rounded-xl border border-slate-700 text-xs" role="group" aria-label="Scratch Map dataset">
@@ -1936,7 +1936,7 @@
         fogCtx.globalAlpha = 1;
       });
 
-      Object.entries(loggedCountyStatuses(false)).forEach(([id, status]) => {
+      Object.entries(countyFogStatuses(false)).forEach(([id, status]) => {
         if (!TravelLedger.clearsFog(status)) return;
         const feature = countyFeaturesById[id];
         if (feature) punchFogPolygon(feature.geometry);
@@ -2745,9 +2745,19 @@
       return value;
     }
 
+    function countyFogStatuses(includeHome = true) {
+      const manual = { ...AppState.counties };
+      const homeCounty = AppState.homeBase?.countyId;
+      // Setting a Citadel alone retains its small starting aura, not a whole county.
+      if (!includeHome && homeCounty && !Object.hasOwn(AppState.statusOverrides.counties, homeCounty)) {
+        delete manual[homeCounty];
+      }
+      return { ...manual, ...loggedCountyStatuses(includeHome) };
+    }
+
     function renderCountyHitboxes() {
       if (!map || !countyGeoJson || AppState.currentTab !== 'map') return;
-      const logged = loggedCountyStatuses();
+      const logged = countyFogStatuses();
       const key = JSON.stringify([AppState.mode, expeditionPicking, logged]);
       if (countyLayer && countyHitboxKey === key && countyHitboxDataset === countyGeoJson) return;
       if (countyLayer) map.removeLayer(countyLayer);

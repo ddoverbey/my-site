@@ -837,16 +837,18 @@ check('lived pin cannot be manually cleared or downgraded', () => {
   vm.runInContext("setPinStatus('test','v');setPinStatus('test','un')", context);
   assert.equal(vm.runInContext('AppState.pins.test', context), 'l');
 });
-check('manual county tiers never clear fog, including existing saved visited and lived marks', () => {
+check('manual county marks reveal the entire county only for explored tiers', () => {
   vm.runInContext(`
     PARKS=[]; AppState.pins={}; AppState.counties={};
     countyFeaturesById['06073']={geometry:{type:'Polygon',coordinates:[[[-120,37],[-119,37],[-119,38],[-120,37]]]}};
   `, context);
-  for (const tier of ['w', 't', 'v', 'l']) {
+  for (const tier of ['un', 'w', 't', 'v', 'l']) {
     context.fogOperations.length = 0;
     vm.runInContext(`AppState.counties={'06073':'${tier}'};drawFogOfWar()`, context);
-    assert.equal(context.fogOperations.filter(op => op[0] === 'polygonFill' && op[1] === 'evenodd').length, 0);
+    assert.equal(context.fogOperations.filter(op => op[0] === 'polygonFill' && op[1] === 'evenodd').length,
+      ['t','v','l'].includes(tier) ? 1 : 0);
   }
+  vm.runInContext("AppState.counties={}",context);
 });
 check('county completion counts only visited/lived loaded FIPS records, never transits or unknown IDs', () => {
   vm.runInContext(`
@@ -1401,6 +1403,10 @@ check('countries, states and counties cycle through every manual status independ
       const actual = vm.runInContext('scratchStatuses()[scratchStatusKey(' +
         (dataset === 'world' ? 'worldGeoJson' : dataset === 'usa' ? 'usaGeoJson' : 'countyGeoJson') + '[0])]', context);
       assert.equal(actual || 'un', next, dataset);
+      if (dataset === 'counties') {
+        assert.equal(vm.runInContext('TravelLedger.clearsFog(countyFogStatuses(false)["06001"])',context),
+          ['v','t','l'].includes(next));
+      }
       if (dataset === 'counties' && next === 'l') {
         assert.equal(JSON.parse(savedJson).counties['06001'], 'l');
         assert.equal(JSON.parse(savedJson).statusOverrides.counties['06001'], 'l');
@@ -1755,7 +1761,7 @@ check('real NPS filters return the official catalog exclusively and preserve com
   assert.ok(!element('bucketListGrid').innerHTML.includes('Banff'));
 });
 
-check('RPG county hitboxes exclude unexplored and manually marked counties; normal clicks never edit', () => {
+check('RPG county hitboxes include manually explored counties; normal clicks never edit', () => {
   const layers = [];
   const panes = {};
   let removed = 0;
@@ -1792,7 +1798,7 @@ check('RPG county hitboxes exclude unexplored and manually marked counties; norm
     AppState.expeditions=[{...testExpedition,countyIds:['06001']}];
     map=countyMapMock;renderCountyHitboxes();
   `, context);
-  assert.deepEqual(layers.map(layer => layer.feature.id), ['06001']);
+  assert.deepEqual(layers.map(layer => layer.feature.id), ['06001','06013','06041']);
   assert.ok(layers[0].tooltip().includes('Visited'));
   layers[0].handlers.mouseover();
   assert.equal(layers[0].styles[0].opacity, 0.65);
@@ -1802,15 +1808,16 @@ check('RPG county hitboxes exclude unexplored and manually marked counties; norm
   vm.runInContext('renderCountyHitboxes()', context);
   assert.equal(removed, 0);
   vm.runInContext('AppState.expeditions=[];renderCountyHitboxes()', context);
-  assert.equal(layers.length, 0);
+  assert.equal(layers.length, 2);
   assert.equal(removed, 1);
 
   vm.runInContext('expeditionPicking=true;renderCountyHitboxes()', context);
   assert.equal(layers.length, 3);
   for (const layer of layers) {
-    assert.equal(layer.tooltip, null);
+    const explored = layer.feature.id !== '06001';
+    assert.equal(typeof layer.tooltip, explored ? 'function' : 'object');
     layer.handlers.mouseover();
-    assert.equal(layer.styles.length, 0);
+    assert.equal(layer.styles.length, explored ? 1 : 0);
   }
   context.pickedCounties = [];
   const originalAddStop = vm.runInContext('addExpeditionStop', context);
@@ -1824,7 +1831,7 @@ check('RPG county hitboxes exclude unexplored and manually marked counties; norm
   assert.equal(context.pickedCounties.length, 1);
   context.addExpeditionStop = originalAddStop;
   vm.runInContext('AppState.viewOnly=false;expeditionPicking=false;renderCountyHitboxes()', context);
-  assert.equal(layers.length, 0);
+  assert.equal(layers.length, 2);
   vm.runInContext("AppState.mode='classic';renderCountyHitboxes()", context);
   assert.equal(layers.length, 3);
   assert.ok(layers.every(layer => layer.tooltip));
