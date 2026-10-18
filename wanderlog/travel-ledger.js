@@ -395,19 +395,6 @@
     return expedition.transitTags.some(mode => !['road', 'awd'].includes(mode)) ? [] : [expedition.routeCoords];
   }
 
-  function waterFogRoutes(expedition) {
-    if (expedition.routeLegs) return expedition.routeLegs.flatMap((leg, index) => {
-      if (!['ferry', 'flight'].includes(leg.mode)) return [];
-      const route = leg.mode === 'flight' && (leg.routeSource ?? 'none') === 'none'
-        ? [expedition.routeStops[index].coords, expedition.routeStops[index + 1].coords]
-        : leg.routeCoords;
-      return Array.isArray(route) && route.length >= 2 ? [route] : [];
-    });
-    return expedition.transitTags.length === 1 && ['ferry', 'flight'].includes(expedition.transitTags[0])
-      && Array.isArray(expedition.routeCoords) && expedition.routeCoords.length >= 2
-      ? [expedition.routeCoords] : [];
-  }
-
   function hasLoggedTravel(state) {
     return state.expeditions.length > 0 ||
       Object.values(state.pins).some(clearsFog) ||
@@ -560,7 +547,7 @@
 
   const api = {
     ranks, labels, colors, transitTags, transitIcons, purposeTags, isVisited, clearsFog, promote,
-    homeRadiusKm, hasLoggedTravel, overnightNights, distanceMiles, fogRoutes, waterFogRoutes, restoreExpeditionPromotions,
+    homeRadiusKm, hasLoggedTravel, overnightNights, distanceMiles, fogRoutes, restoreExpeditionPromotions,
     validateStatuses, validateTags, validateExpeditions, normalizePoi, migrateState, syncDerivedState, loggedCountyStatuses, metadataProgress
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
