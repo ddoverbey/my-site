@@ -397,6 +397,8 @@ are ignored through `.dev.vars*` and `.wrangler/`.
 ### Passport versioning
 
 AppState and new local saves, exports, and shared passports use `version: 2`.
+Passport backup filenames include the user's local date and time to the second:
+`terra_incognita_passport_YYYY-MM-DD_HH-mm-ss.json`.
 Legacy/unversioned and version-1 passports migrate their existing OSM metadata to the canonical
 rarity fields, preserving their coordinates, visits, biomes, counties, routes, and other records.
 Old OSM counts remain density scores and **never become review counts**. Migration is idempotent

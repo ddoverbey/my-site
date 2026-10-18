@@ -3042,4 +3042,34 @@ check('county search finds small counties by name, state and padded FIPS, with b
     delete context.countySearchQuery;
   }
 });
+check('passport export filenames include local date and time, not UTC', () => {
+  context.localExportDate = {
+    getFullYear:()=>2026,getMonth:()=>0,getDate:()=>1,
+    getHours:()=>0,getMinutes:()=>4,getSeconds:()=>9,
+    toISOString(){throw new Error('export filenames must not use UTC');}
+  };
+  const captured=[];
+  context.capturePassportExport=(payload,filename)=>captured.push(filename);
+  try {
+    assert.equal(vm.runInContext('localExportTimestamp(localExportDate)',context),'2026-01-01_00-04-09');
+    vm.runInContext(`
+      globalThis.savedExportFunctions={downloadJsonFile,localExportTimestamp};
+      downloadJsonFile=capturePassportExport;
+      localExportTimestamp=()=>savedExportFunctions.localExportTimestamp(localExportDate);
+    `,context);
+    element('btnExport').handlers.click();
+    element('btnStorageExport').handlers.click();
+    assert.deepEqual(captured,[
+      'terra_incognita_passport_2026-01-01_00-04-09.json',
+      'terra_incognita_passport_2026-01-01_00-04-09.json'
+    ]);
+  } finally {
+    vm.runInContext(`
+      ({downloadJsonFile,localExportTimestamp}=savedExportFunctions);
+      delete globalThis.savedExportFunctions;
+    `,context);
+    delete context.localExportDate;
+    delete context.capturePassportExport;
+  }
+});
 console.log(`${checks} checks passed.`);
