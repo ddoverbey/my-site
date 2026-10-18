@@ -122,8 +122,16 @@ check('mobile RPG HUD starts collapsed with an accessible stats toggle', () => {
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261017-compact-recovery')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261017-storage-safety')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
+});
+check('storage-risk banner and unfinished-trip recovery controls are present', () => {
+  assert.match(html, /id="storageWarning"[^>]*role="status"/);
+  assert.match(html, /id="btnStorageExport"/);
+  assert.match(html, /id="unfinishedDraftNotice"/);
+  assert.match(expeditionUi, /indexedDB\.open\(EXPEDITION_DRAFT_DB, 1\)/);
+  assert.match(expeditionUi, /btnRestoreDraftFromTravel/);
+  assert.match(expeditionUi, /downloadExpeditionRecovery/);
 });
 check('National Parks is a Scratch Map dataset, not a separate navigation page, with an expanded checklist', () => {
   assert.ok(html.includes('id="btnScratchNationalParks"'));
@@ -190,6 +198,54 @@ const context = vm.createContext({
   fetch: async url => ({ ok: true, json: async () => url.includes('wikidata') ? wikidata : url.includes('worldwide') ? worldwide : snapshot })
 });
 scripts.forEach(script => vm.runInContext(script, context));
+const recoveredDraftStore = new Map();
+const recoveredDraftDatabase = {
+  createObjectStore() {},
+  transaction() {
+    const transaction = {
+      objectStore() {
+        return {
+          put(record) {
+            recoveredDraftStore.set(record.id, record);
+            queueMicrotask(() => transaction.oncomplete?.());
+          },
+          get(key) {
+            const request = {};
+            queueMicrotask(() => {
+              request.result = recoveredDraftStore.get(key);
+              request.onsuccess?.();
+            });
+            return request;
+          },
+          delete(key) {
+            recoveredDraftStore.delete(key);
+            queueMicrotask(() => transaction.oncomplete?.());
+          }
+        };
+      }
+    };
+    return transaction;
+  }
+};
+context.indexedDB = {
+  open() {
+    const request = {};
+    queueMicrotask(() => {
+      request.result = recoveredDraftDatabase;
+      request.onupgradeneeded?.();
+      request.onsuccess?.();
+    });
+    return request;
+  }
+};
+await vm.runInContext('writeExpeditionDraftRecovery({name:"Still going",stops:[{name:"Start"}]})', context);
+const persistedDraftRoundTrip = await vm.runInContext('readExpeditionDraftRecovery()', context);
+await vm.runInContext('deleteExpeditionDraftRecovery()', context);
+check('IndexedDB draft recovery persists, restores, and clears an unfinished trip', () => {
+  assert.equal(persistedDraftRoundTrip.name, 'Still going');
+  assert.equal(persistedDraftRoundTrip.stops[0].name, 'Start');
+  assert.equal(recoveredDraftStore.has('current'), false);
+});
 const geoJsonTrack = parseRouteFixture(JSON.stringify({
   type: 'FeatureCollection',
   features: [{ type: 'Feature', properties: {}, geometry: {
@@ -564,6 +620,11 @@ context.localStorage = {
 context.window.location = { search: '' };
 context.atob = value => Buffer.from(value, 'base64').toString('binary');
 vm.runInContext('saveState(); AppState.customLocations = []; loadPersistedState();', context);
+check('local-storage capacity preflight rejects a payload above the conservative budget', () => {
+  assert.throws(() => vm.runInContext(
+    `assertPassportStorageCapacity({version:2,expeditions:[],test:'x'.repeat(2400000)})`, context
+  ), /conservative 4\.5 MiB browser-storage budget/);
+});
 check('custom metadata survives local save/load and read-only shared passports; legacy files default to empty custom locations', () => {
   assert.equal(vm.runInContext('AppState.customLocations[0].name', context), customLocation.name);
   assert.equal(JSON.parse(savedJson).version, 2);
@@ -2725,8 +2786,8 @@ check('both place inputs debounce Photon by 300ms and cancel earlier keystrokes'
   element('expeditionSearch').handlers.input();
   element('expeditionSearch').value = 'Aspen';
   element('expeditionSearch').handlers.input();
-  assert.equal(autocompleteTimers.size, 2);
-  assert.ok([...autocompleteTimers.values()].every(timer => timer.delay === 300));
+  const searchTimers = [...autocompleteTimers.values()].filter(timer => timer.delay === 300);
+  assert.equal(searchTimers.length, 2);
 });
 check('Enter and Escape dismiss and invalidate suggestions without searching or submitting', () => {
   for (const id of ['cityInput', 'expeditionSearch']) {
@@ -2738,7 +2799,7 @@ check('Enter and Escape dismiss and invalidate suggestions without searching or 
       assert.ok(prevented && stopped && blurred);
     }
   }
-  assert.equal(autocompleteTimers.size, 0);
+  assert.equal([...autocompleteTimers.values()].filter(timer => timer.delay === 300).length, 0);
   assert.ok(!html.includes('id="btnSearchExpeditionPlaces"'));
   assert.ok(!html.includes('id="btnSubmitCity"'));
 });
@@ -2751,7 +2812,7 @@ check('local park selection also clears suggestions, input and the pending Photo
   assert.equal(vm.runInContext('expeditionDraft.length', context), before + 1, element('toastMsg').textContent);
   assert.equal(element('expeditionSearch').value, '');
   assert.equal(element('expeditionSearchResults').innerHTML, '');
-  assert.equal(autocompleteTimers.size, 0);
+  assert.equal([...autocompleteTimers.values()].filter(timer => timer.delay === 300).length, 0);
 });
 context.fetch = async () => ({ ok: true, json: async () => ({
   features: [{ geometry: { type: 'Point', coordinates: [-104.99, 39.74] },

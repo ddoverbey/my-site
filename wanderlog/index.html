@@ -610,6 +610,19 @@
           </div>
           <button id="btnHistoryExpedition" type="button" class="shrink-0 rounded-lg bg-emerald-600 px-3 py-2 text-xs">Log Expedition</button>
         </div>
+        <aside id="storageWarning" role="status" aria-live="polite" class="hidden rounded-xl border border-amber-500/50 bg-amber-950/50 p-4 text-xs text-amber-100">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <p id="storageWarningText"></p>
+            <button id="btnStorageExport" type="button" class="shrink-0 rounded-lg bg-amber-700 px-3 py-2 font-semibold text-white">Download passport backup</button>
+          </div>
+        </aside>
+        <aside id="unfinishedDraftNotice" class="hidden rounded-xl border border-sky-700/60 bg-sky-950/50 p-4 text-xs text-sky-100">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <p>An unfinished expedition was saved on this device. Restore it to continue.</p>
+            <button id="btnRestoreDraftFromTravel" type="button" class="shrink-0 rounded-lg bg-sky-700 px-3 py-2 font-semibold">Restore unfinished trip</button>
+          </div>
+        </aside>
+        <p class="text-[11px] text-slate-500">Your passport is saved in this browser on this device. Export a backup regularly; browser storage limits vary.</p>
         <div id="travelLogFeed" class="space-y-6" aria-live="polite"></div>
       </div>
     </div>
@@ -761,6 +774,14 @@
         <h2 id="expeditionTitle" class="cinzel text-xl text-amber-200">New Expedition</h2>
         <button id="btnExpeditionHistory" type="button" class="rounded-lg bg-slate-800 px-3 py-2 text-xs">View logged expeditions</button>
       </div>
+      <div id="expeditionRecoveryPanel" class="hidden rounded-lg border border-sky-700/60 bg-sky-950/50 p-3 text-xs text-sky-100">
+        <p id="expeditionRecoveryStatus" role="status" aria-live="polite">A saved unfinished trip is available on this device.</p>
+        <div class="mt-2 flex flex-wrap gap-2">
+          <button id="btnRestoreExpeditionDraft" type="button" class="rounded bg-sky-700 px-3 py-2 font-semibold">Restore saved draft</button>
+          <button id="btnDownloadExpeditionRecovery" type="button" class="rounded bg-slate-700 px-3 py-2">Download trip recovery file</button>
+        </div>
+      </div>
+      <p id="expeditionStorageStatus" class="text-[11px] text-slate-400">This passport is saved only in this browser. Large route histories may reach browser storage limits; export backups regularly.</p>
       <label class="block text-xs">Trip Name<input id="expeditionName" required maxlength="150" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2"></label>
       <div class="grid grid-cols-2 gap-3">
         <label class="block text-xs">Start Date (optional)<input id="expeditionStart" type="date" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2"></label>
@@ -839,14 +860,14 @@
     </form>
   </div>
 
-  <script src="./nps-catalog.js?v=20261017-compact-recovery"></script>
-  <script src="./national-parks-scratch.js?v=20261017-compact-recovery"></script>
-  <script src="./international-parks.js?v=20261017-compact-recovery"></script>
-  <script src="./ecoregions.js?v=20261017-compact-recovery"></script>
-  <script src="./coordinate-lookups.js?v=20261017-compact-recovery"></script>
-  <script src="./micro-states.js?v=20261017-compact-recovery"></script>
-  <script src="./travel-ledger.js?v=20261017-compact-recovery"></script>
-  <script src="./rarity-config.js?v=20261017-compact-recovery"></script>
+  <script src="./nps-catalog.js?v=20261017-storage-safety"></script>
+  <script src="./national-parks-scratch.js?v=20261017-storage-safety"></script>
+  <script src="./international-parks.js?v=20261017-storage-safety"></script>
+  <script src="./ecoregions.js?v=20261017-storage-safety"></script>
+  <script src="./coordinate-lookups.js?v=20261017-storage-safety"></script>
+  <script src="./micro-states.js?v=20261017-storage-safety"></script>
+  <script src="./travel-ledger.js?v=20261017-storage-safety"></script>
+  <script src="./rarity-config.js?v=20261017-storage-safety"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -1199,6 +1220,8 @@
     });
 
     const PASSPORT_STORAGE_FORMAT = 'encoded-route-polyline-v1';
+    const LOCAL_STORAGE_WARNING_BYTES = 3.5 * 1024 * 1024;
+    const LOCAL_STORAGE_SAFE_LIMIT_BYTES = 4.5 * 1024 * 1024;
 
     function encodeRoutePolyline(route) {
       let previousLat = 0;
@@ -1263,6 +1286,48 @@
           } : {})
         }))
       };
+    }
+
+    function localStorageBytesWith(value, replacingKey = 'terra_incognita_state') {
+      let bytes = 0;
+      for (let index = 0; index < localStorage.length; index++) {
+        const key = localStorage.key(index);
+        if (key !== replacingKey) {
+          const stored = localStorage.getItem(key);
+          bytes += (key.length + (stored?.length || 0)) * 2;
+        }
+      }
+      return bytes + (replacingKey.length + value.length) * 2;
+    }
+
+    function updateStorageWarning(projectedBytes = null) {
+      const warning = document.getElementById('storageWarning');
+      if (!warning) return;
+      const stored = localStorage.getItem('terra_incognita_state') || '';
+      const currentBytes = localStorageBytesWith(stored);
+      const bytes = projectedBytes === null ? currentBytes : projectedBytes;
+      const status = document.getElementById('expeditionStorageStatus');
+      const format = value => `${(value / (1024 * 1024)).toFixed(1)} MiB`;
+      warning.classList.toggle('hidden', AppState.viewOnly || bytes < LOCAL_STORAGE_WARNING_BYTES);
+      if (bytes >= LOCAL_STORAGE_WARNING_BYTES) {
+        document.getElementById('storageWarningText').textContent =
+          `This browser is storing about ${format(bytes)} of passport data. Browser storage limits vary, and a large trip may not save. Download a backup before continuing.`;
+      }
+      if (status) {
+        status.textContent = bytes >= LOCAL_STORAGE_WARNING_BYTES
+          ? `Passport storage use is about ${format(bytes)}. A save may fail as the browser's limit approaches; download a backup first.`
+          : `Passport storage use is about ${format(bytes)}. This passport is saved only in this browser; export backups regularly.`;
+      }
+    }
+
+    function assertPassportStorageCapacity(payload) {
+      const serialized = JSON.stringify(compactPassportForStorage(payload));
+      const bytes = localStorageBytesWith(serialized);
+      updateStorageWarning(bytes);
+      if (bytes > LOCAL_STORAGE_SAFE_LIMIT_BYTES) {
+        throw new Error(`This save would use about ${(bytes / (1024 * 1024)).toFixed(1)} MiB, above the app's conservative 4.5 MiB browser-storage budget. Your expedition draft is retained; export a passport backup and remove large route histories before retrying.`);
+      }
+      return serialized;
     }
 
     function expandStoredPassport(parsed) {
@@ -1452,7 +1517,16 @@
 
     function saveState() {
       if (AppState.viewOnly) return;
-      localStorage.setItem('terra_incognita_state', JSON.stringify(compactPassportForStorage(passportPayload())));
+      const serialized = assertPassportStorageCapacity(passportPayload());
+      try {
+        localStorage.setItem('terra_incognita_state', serialized);
+        updateStorageWarning();
+      } catch (error) {
+        if (error?.name === 'QuotaExceededError' || error?.code === 22 || error?.code === 1014) {
+          throw new Error('The browser rejected this save because its storage is full. Your expedition draft is still available; download a passport backup, then free browser storage or remove large route histories before retrying.');
+        }
+        throw error;
+      }
     }
 
     function showNotification(title, message, icon = '🏆') {
@@ -3958,16 +4032,27 @@
       showNotification('🔗 Link Copied!', 'Shareable passport link copied to clipboard.', '📜');
     });
 
-    // Export JSON
-    document.getElementById('btnExport').addEventListener('click', () => {
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(AppState, null, 2));
+    function downloadJsonFile(payload, filename) {
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const objectUrl = URL.createObjectURL(blob);
       const downloadAnchor = document.createElement('a');
-      downloadAnchor.setAttribute("href", dataStr);
-      downloadAnchor.setAttribute("download", `terra_incognita_passport_${new Date().toISOString().slice(0,10)}.json`);
+      downloadAnchor.href = objectUrl;
+      downloadAnchor.download = filename;
       document.body.appendChild(downloadAnchor);
       downloadAnchor.click();
       downloadAnchor.remove();
-    });
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    }
+
+    function downloadPassportBackup() {
+      downloadJsonFile(
+        passportPayload(),
+        `terra_incognita_passport_${new Date().toISOString().slice(0,10)}.json`
+      );
+    }
+
+    document.getElementById('btnExport').addEventListener('click', downloadPassportBackup);
+    document.getElementById('btnStorageExport').addEventListener('click', downloadPassportBackup);
 
     // Import JSON
     document.getElementById('btnImportTrigger').addEventListener('click', () => {
@@ -3987,6 +4072,16 @@
           const parsed = migratePassport(source);
           await appReady;
           commitLedger(() => applyPassport(parsed));
+          let recoveryCleanupWarning = '';
+          if (includesRecoveryDraft) {
+            try {
+              await deleteExpeditionDraftRecovery();
+              setExpeditionRecoveryAvailable(null);
+            } catch (error) {
+              console.error('Imported recovery draft could not clear its local recovery copy', error);
+              recoveryCleanupWarning = ` The separate local draft copy could not be cleared: ${error.message}`;
+            }
+          }
           if (AppState.homeBase) closeHomeModal();
           initMap();
           restoreModeView();
@@ -3995,7 +4090,7 @@
           drawFogOfWar();
           updateAllUI();
           showNotification('📂 Passport Loaded', includesRecoveryDraft
-            ? 'Passport and recovered expedition saved successfully.'
+            ? `Passport and recovered expedition saved successfully.${recoveryCleanupWarning}`
             : 'Successfully imported your travel records!', '✨');
         } catch(err) {
           console.error('Failed to import passport', err);
@@ -4023,7 +4118,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261017-compact-recovery"></script>
+  <script src="./expedition-ui.js?v=20261017-storage-safety"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);
@@ -4141,6 +4236,7 @@
 
     window.addEventListener('DOMContentLoaded', () => {
       loadPersistedState();
+      updateStorageWarning();
       // Decide on onboarding from saved state immediately, not after every dataset loads.
       if (!AppState.homeBase && !AppState.viewOnly) openHomeModal();
       appReady = startApp();

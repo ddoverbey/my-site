@@ -13,6 +13,153 @@ let homeSearchTimer = null;
 let expeditionReturnFocus = null;
 const expeditionRoadCache = new Map();
 let lastRoadRequest = 0;
+const EXPEDITION_DRAFT_DB = 'wanderlog-local-recovery';
+let expeditionDraftDbPromise = null;
+let savedExpeditionDraft = null;
+let expeditionDraftSaveTimer = null;
+
+function expeditionDraftDatabase() {
+  if (typeof indexedDB === 'undefined') return Promise.reject(new Error('This browser does not support IndexedDB.'));
+  if (!expeditionDraftDbPromise) {
+    expeditionDraftDbPromise = new Promise((resolve, reject) => {
+      const request = indexedDB.open(EXPEDITION_DRAFT_DB, 1);
+      request.onupgradeneeded = () => request.result.createObjectStore('drafts', { keyPath: 'id' });
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error || new Error('Could not open local draft storage.'));
+      request.onblocked = () => reject(new Error('Local draft storage is blocked by another open Wanderlog tab.'));
+    });
+  }
+  return expeditionDraftDbPromise;
+}
+
+async function readExpeditionDraftRecovery() {
+  const database = await expeditionDraftDatabase();
+  return new Promise((resolve, reject) => {
+    const request = database.transaction('drafts', 'readonly').objectStore('drafts').get('current');
+    request.onsuccess = () => resolve(request.result?.draft || null);
+    request.onerror = () => reject(request.error || new Error('Could not read the saved expedition draft.'));
+  });
+}
+
+async function writeExpeditionDraftRecovery(draft) {
+  const database = await expeditionDraftDatabase();
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction('drafts', 'readwrite');
+    transaction.objectStore('drafts').put({ id: 'current', draft });
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error || new Error('Could not save the expedition draft.'));
+    transaction.onabort = () => reject(transaction.error || new Error('Saving the expedition draft was aborted.'));
+  });
+}
+
+async function deleteExpeditionDraftRecovery() {
+  const database = await expeditionDraftDatabase();
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction('drafts', 'readwrite');
+    transaction.objectStore('drafts').delete('current');
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error || new Error('Could not clear the saved expedition draft.'));
+    transaction.onabort = () => reject(transaction.error || new Error('Clearing the expedition draft was aborted.'));
+  });
+}
+
+function setExpeditionRecoveryAvailable(draft) {
+  savedExpeditionDraft = draft;
+  const visible = !!draft && !AppState.viewOnly;
+  document.getElementById('expeditionRecoveryPanel').classList.toggle('hidden', !visible);
+  document.getElementById('unfinishedDraftNotice').classList.toggle('hidden', !visible);
+  document.getElementById('btnDownloadExpeditionRecovery').disabled =
+    !visible || draft.stops.length < 2 || !Array.isArray(draft.preparedLegs) ||
+    draft.preparedLegs.length !== draft.stops.length - 1;
+}
+
+function expeditionRecoverySnapshot() {
+  return {
+    name: document.getElementById('expeditionName').value,
+    reason: document.getElementById('expeditionReason').value,
+    startDate: document.getElementById('expeditionStart').value || null,
+    endDate: document.getElementById('expeditionEnd').value || null,
+    dayTrip: document.getElementById('expeditionDayTrip').checked,
+    stops: expeditionDraft.map(stop => ({ ...stop, coords: [...stop.coords] })),
+    preparedLegs: expeditionPreparedLegs?.map(leg => ({
+      ...leg, routeCoords: leg.routeCoords.map(point => [...point]), countyIds: [...leg.countyIds]
+    })) || null,
+    uploadedRoute: expeditionUploadedRoute?.map(point => [...point]) || null
+  };
+}
+
+async function persistExpeditionDraftRecovery() {
+  if (AppState.viewOnly || expeditionEditingId || !expeditionDraft.length || expeditionPending) return;
+  const draft = expeditionRecoverySnapshot();
+  try {
+    await writeExpeditionDraftRecovery(draft);
+    setExpeditionRecoveryAvailable(draft);
+    document.getElementById('expeditionRecoveryStatus').textContent =
+      'This unfinished trip is being saved separately from your passport on this device.';
+  } catch (error) {
+    console.error('Expedition draft autosave failed', error);
+    document.getElementById('expeditionRecoveryPanel').classList.remove('hidden');
+    document.getElementById('unfinishedDraftNotice').classList.add('hidden');
+    document.getElementById('expeditionRecoveryStatus').textContent =
+      `Automatic draft recovery is unavailable: ${error.message}. Download a trip recovery file after previewing the routes.`;
+    document.getElementById('btnDownloadExpeditionRecovery').disabled =
+      draft.stops.length < 2 || !Array.isArray(draft.preparedLegs) ||
+      draft.preparedLegs.length !== draft.stops.length - 1;
+  }
+}
+
+function scheduleExpeditionDraftRecovery() {
+  clearTimeout(expeditionDraftSaveTimer);
+  if (AppState.viewOnly || expeditionEditingId || !expeditionDraft.length || expeditionPending) return;
+  expeditionDraftSaveTimer = setTimeout(() => { persistExpeditionDraftRecovery(); }, 500);
+}
+
+async function discardExpeditionDraftRecovery() {
+  clearTimeout(expeditionDraftSaveTimer);
+  if (!savedExpeditionDraft && !expeditionDraft.length) return;
+  try {
+    await deleteExpeditionDraftRecovery();
+    setExpeditionRecoveryAvailable(null);
+  } catch (error) {
+    console.error('Expedition draft cleanup failed', error);
+    document.getElementById('expeditionRecoveryStatus').textContent =
+      `The trip was closed, but its recovery copy could not be removed: ${error.message}`;
+  }
+}
+
+function restoreSavedExpeditionDraft() {
+  const draft = savedExpeditionDraft;
+  if (!draft) return;
+  expeditionEditingId = null;
+  expeditionUploadedRoute = draft.uploadedRoute?.map(point => [...point]) || null;
+  expeditionDraft = draft.stops.map(stop => ({ ...stop, coords: [...stop.coords] }));
+  document.getElementById('expeditionName').value = draft.name || '';
+  document.getElementById('expeditionReason').value = draft.reason || '';
+  document.getElementById('expeditionStart').value = draft.startDate || '';
+  document.getElementById('expeditionEnd').value = draft.endDate || '';
+  document.getElementById('expeditionDayTrip').checked = !!draft.dayTrip;
+  syncExpeditionDayTrip();
+  if (Array.isArray(draft.preparedLegs) && draft.preparedLegs.length === draft.stops.length - 1) {
+    expeditionPreparedLegs = draft.preparedLegs.map(leg => ({
+      ...leg, routeCoords: leg.routeCoords.map(point => [...point]), countyIds: [...leg.countyIds]
+    }));
+    expeditionPreparedKey = expeditionRouteKey();
+    displayExpeditionPreview(expeditionPreparedLegs);
+  } else {
+    expeditionPreparedLegs = null;
+    expeditionPreparedKey = null;
+  }
+  document.getElementById('expeditionTitle').textContent = 'Resume Expedition';
+  document.getElementById('btnSaveExpedition').textContent = 'Save expedition';
+  document.getElementById('expeditionStatus').textContent = 'Recovered unfinished trip. Review the stops and routes before saving.';
+  document.getElementById('btnSaveExpedition').disabled = expeditionDraft.length > 1 &&
+    (!expeditionPreparedLegs || expeditionPreparedLegs.length !== expeditionDraft.length - 1);
+  document.getElementById('btnPreviewExpedition').disabled = !expeditionDraft.length;
+  updateUploadedRouteStatus();
+  renderExpeditionStops();
+  document.getElementById('expeditionModal').classList.remove('hidden');
+  document.getElementById('expeditionName').focus();
+}
 
 function uploadedRoutePoint(tuple) {
   if (!Array.isArray(tuple) || tuple.length < 2 ||
@@ -240,6 +387,7 @@ function invalidateExpeditionRoutes() {
   document.getElementById('expeditionRouteSummary').textContent = '';
   document.getElementById('btnSaveExpedition').disabled = expeditionDraft.length !== 1;
   document.getElementById('btnPreviewExpedition').disabled = !expeditionDraft.length;
+  scheduleExpeditionDraftRecovery();
 }
 
 function expeditionRouteKey() {
@@ -305,6 +453,7 @@ function renderExpeditionStops() {
     }
     list.appendChild(item);
   });
+  scheduleExpeditionDraftRecovery();
 }
 
 function renderExpeditionSearch() {
@@ -362,6 +511,7 @@ function syncExpeditionDayTrip() {
     end.value = start.value;
   }
   end.disabled = dayTrip;
+  scheduleExpeditionDraftRecovery();
 }
 
 function openExpedition(id = null) {
@@ -426,6 +576,7 @@ function openExpedition(id = null) {
 
 function closeExpedition() {
   if (expeditionPending) return;
+  const discardRecovery = !expeditionEditingId;
   expeditionPicking = false;
   expeditionDraft = [];
   expeditionUploadedRoute = null;
@@ -436,6 +587,7 @@ function closeExpedition() {
   invalidateExpeditionRoutes();
   document.getElementById('expeditionModal').classList.add('hidden');
   renderExpeditionStops();
+  if (discardRecovery) discardExpeditionDraftRecovery();
   const fallback = document.getElementById(AppState.currentTab === 'travel' ? 'btnHistoryExpedition' : 'btnExpedition');
   (expeditionReturnFocus?.isConnected && expeditionReturnFocus.offsetParent !== null ? expeditionReturnFocus : fallback).focus();
   expeditionReturnFocus = null;
@@ -618,6 +770,14 @@ async function saveExpedition(event) {
     const stops = exp.routeStops;
     TravelLedger.validateExpeditions([exp], CoordinateLookups);
     if (!coordinateIndexes) throw new Error('Geography is not ready. Retry datasets before saving.');
+    const projectedExpeditions = [...AppState.expeditions];
+    if (expeditionEditingId) {
+      const index = projectedExpeditions.findIndex(item => item.id === expeditionEditingId);
+      if (index < 0) throw new Error('This expedition no longer exists.');
+      projectedExpeditions[index] = exp;
+    } else projectedExpeditions.push(exp);
+    await persistExpeditionDraftRecovery();
+    assertPassportStorageCapacity({ ...passportPayload(), expeditions: projectedExpeditions });
     setExpeditionBusy(true);
     status.textContent = 'Sampling stop elevations. The expedition is not saved yet...';
     // Bounded batches avoid sending one hundred concurrent public API requests.
@@ -647,10 +807,32 @@ async function saveExpedition(event) {
     showNotification(editing ? 'Expedition updated' : 'Expedition logged', `${exp.name}: ${stops.length} stops.`, '🗺️');
   } catch (error) {
     console.error('Expedition save failed', error);
-    status.textContent = `Not saved: ${error.message} Your draft is retained; retry or cancel.`;
+    status.textContent = `Not saved: ${error.message} Your draft is retained in this tab${savedExpeditionDraft ? ' and separately on this device' : ''}; retry or download a recovery file.`;
   } finally {
     setExpeditionBusy(false);
   }
+}
+
+function downloadExpeditionRecovery() {
+  const draft = expeditionRecoverySnapshot();
+  if (draft.stops.length < 2 || !Array.isArray(draft.preparedLegs) ||
+      draft.preparedLegs.length !== draft.stops.length - 1) {
+    document.getElementById('expeditionRecoveryStatus').textContent =
+      'Preview the complete route before downloading an importable recovery file.';
+    return;
+  }
+  const recoveryDraft = {
+    ...draft,
+    stops: draft.stops.map(({ travelMode, ...stop }) => ({ ...stop, travelMode })),
+    legs: draft.preparedLegs,
+    uploadedRoute: draft.uploadedRoute
+  };
+  downloadJsonFile(
+    { ...passportPayload(), _unsavedExpeditionDraft: recoveryDraft },
+    `wanderlog-recovery-${new Date().toISOString().slice(0, 10)}.json`
+  );
+  document.getElementById('expeditionRecoveryStatus').textContent =
+    'Recovery file downloaded. Keep it somewhere safe; import it after deploying the updated app.';
 }
 
 async function importExpeditionRoute(event) {
@@ -910,6 +1092,9 @@ document.getElementById('btnExpeditionHistory').addEventListener('click', () => 
   document.getElementById('travelLogFeed').scrollIntoView({ block: 'start' });
 });
 document.getElementById('btnCancelExpedition').addEventListener('click', closeExpedition);
+document.getElementById('btnRestoreExpeditionDraft').addEventListener('click', restoreSavedExpeditionDraft);
+document.getElementById('btnRestoreDraftFromTravel').addEventListener('click', restoreSavedExpeditionDraft);
+document.getElementById('btnDownloadExpeditionRecovery').addEventListener('click', downloadExpeditionRecovery);
 document.getElementById('expeditionSearch').addEventListener('input', renderExpeditionSearch);
 document.getElementById('expeditionForm').addEventListener('submit', saveExpedition);
 document.getElementById('btnPreviewExpedition').addEventListener('click', previewExpeditionRoutes);
@@ -919,6 +1104,13 @@ document.getElementById('expeditionFileInput').addEventListener('change', import
 document.getElementById('btnClearExpeditionRoute').addEventListener('click', clearExpeditionRoute);
 document.getElementById('expeditionDayTrip').addEventListener('change', syncExpeditionDayTrip);
 document.getElementById('expeditionStart').addEventListener('change', syncExpeditionDayTrip);
+for (const id of ['expeditionName', 'expeditionReason', 'expeditionEnd']) {
+  document.getElementById(id).addEventListener('input', scheduleExpeditionDraftRecovery);
+  document.getElementById(id).addEventListener('change', scheduleExpeditionDraftRecovery);
+}
+for (const id of ['expeditionStart', 'expeditionDayTrip']) {
+  document.getElementById(id).addEventListener('input', scheduleExpeditionDraftRecovery);
+}
 document.getElementById('expeditionSearch').addEventListener('keydown', event => {
   if (event.key === 'Enter' || event.key === 'Escape') {
     event.preventDefault();
@@ -952,6 +1144,13 @@ document.getElementById('expeditionModal').addEventListener('keydown', event => 
   }
 });
 window.addEventListener('DOMContentLoaded', () => {
+  readExpeditionDraftRecovery().then(setExpeditionRecoveryAvailable).catch(error => {
+    if (typeof indexedDB !== 'undefined') {
+      console.error('Expedition draft recovery could not be loaded', error);
+      document.getElementById('expeditionRecoveryStatus').textContent =
+        `Saved-trip recovery could not be checked: ${error.message}`;
+    }
+  });
   for (const [id, tags] of [
     ['customPurposeTags', TravelLedger.purposeTags]
   ]) {

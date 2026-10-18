@@ -602,6 +602,12 @@ Browser-local saves compact long expedition paths with 1e-5-degree polyline enco
 storage use; geometry is expanded in memory on load and normal passport exports remain unchanged.
 Recovery bundles that include `_unsavedExpeditionDraft` import that draft as a regular expedition,
 so it can be restored after a failed quota-limited save.
+The Travel Log estimates the encoded passport's local-storage use and warns around 3.5 MiB; saves
+above a conservative 4.5 MiB budget are stopped before the browser's typical 5 MiB local-storage
+ceiling. Browser quotas vary, so users should still export backups regularly. New unfinished
+expeditions are autosaved separately in IndexedDB and can be restored after a refresh; the form
+also offers a downloadable recovery JSON once its routes have been previewed. If IndexedDB is
+unavailable, the form reports that and keeps the in-memory draft available for manual recovery.
 
 ### Progressive achievements
 
