@@ -143,7 +143,11 @@ and dataset reloads cannot reuse stale results. Coordinate containment is reused
 until the geography index changes. While panning, the already-drawn overscanned fog bitmap slides with
 a GPU transform; a full redraw runs only after the pan ends or when it nears the overscan edge, coalesced
 to one per animation frame. All cleared counties share one cached path and a single blurred fill per
-zoom instead of hundreds of separately shadowed fills. Fog polygon paths are cached at the current zoom, translated during pans and culled outside
+zoom instead of hundreds of separately shadowed fills. Rendered fog is cached as 512px world-anchored
+tiles per zoom (an LRU of ~384 tiles on desktop, 64 on mobile): only tiles under the viewport render
+synchronously, overscan tiles fill in during idle time, and pans or returning to a visited zoom only
+composite cached bitmaps. Any data change drops the cache, and bursts of changes coalesce into one frame.
+Home/discovery pulse frames repaint only the visible viewport. Fog polygon paths are cached at the current zoom, translated during pans and culled outside
 the overscanned canvas; routes and auras are also culled without changing their reveal extents.
 These optimizations do not change saved records, achievement rules or geography snapshots.
 

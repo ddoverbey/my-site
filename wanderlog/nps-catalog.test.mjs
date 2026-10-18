@@ -2542,6 +2542,60 @@ check('pans slide the cached fog bitmap and only redraw near the overscan edge',
     vm.runInContext("fogDrawFrame=null;fogDrawAnchor=null;map=null;fogCanvas.style.transform=''", context);
   }
 });
+check('fog tiles render the viewport first, fill overscan when idle, survive pans and drop on data changes', () => {
+  const saved = { raf: context.requestAnimationFrame, ric: context.requestIdleCallback, off: context.OffscreenCanvas };
+  let tilesMade = 0, frame = null, idle = null, panX = 0;
+  const main = [];
+  const noopCtx = () => new Proxy({}, { get: (t, k) => k in t ? t[k] : () => {} });
+  const point = (x, y) => ({ x, y, round() { return this; }, subtract(o) { return point(x - o.x, y - o.y); } });
+  context.requestAnimationFrame = callback => { frame = callback; return 1; };
+  context.requestIdleCallback = callback => { idle = callback; return 1; };
+  context.OffscreenCanvas = class { constructor(w, h) { tilesMade++; this.width = w; this.height = h; } getContext() { return noopCtx(); } };
+  context.tileMap = {
+    options: { crs: { scale: z => 256 * 2 ** z } }, getZoom: () => 6, getSize: () => point(600, 400),
+    project: ([lat, lng]) => point(lng * 10 + 5000, -lat * 10 + 5000),
+    latLngToContainerPoint: ([lat, lng]) => point(lng * 10 + 200 - panX, -lat * 10 + 200),
+    containerPointToLatLng: () => ({ lat: 0, lng: 0 })
+  };
+  const mainCtx = new Proxy({}, { get: (t, k) => k in t ? t[k] : (...args) => main.push([k, ...args]),
+    set: (t, k, v) => { t[k] = v; return true; } });
+  context.tileCtx = mainCtx;
+  try {
+    vm.runInContext(`
+      globalThis.tileSaved={map,fogCtx,fogPadding,PARKS,worldGeoJson,state:Object.fromEntries(['currentTab','mode','homeBase','expeditions','routes','clearedPolygons','counties','customLocations'].map(k=>[k,AppState[k]])),w:fogCanvas.width,h:fogCanvas.height};
+      AppState.currentTab='map';AppState.mode='rpg';AppState.homeBase=null;AppState.expeditions=[];AppState.routes=[];
+      AppState.clearedPolygons=[];AppState.counties={};AppState.customLocations=[];
+      PARKS=[];worldGeoJson=null;fogZoomAnimating=false;fogDrawFrame=null;homeAuraPulseStarted=null;discoveryPulses.clear();
+      map=tileMap;fogCtx=tileCtx;fogPadding={x:600,y:400};fogCanvas.width=1800;fogCanvas.height=1200;
+      drawFogOfWar();
+    `, context);
+    assert.equal(tilesMade, 0, 'data changes coalesce into the next frame');
+    frame();
+    assert.equal(tilesMade, 4, 'only the four tiles under the viewport render synchronously');
+    assert.equal(main.filter(op => op[0] === 'drawImage').length, 4);
+    assert.equal(main.filter(op => op[0] === 'fillRect').length, 8, 'overscan shows placeholder fog');
+    idle();
+    assert.equal(tilesMade, 12);
+    assert.equal(main.filter(op => op[0] === 'drawImage').length, 12);
+    panX = 512;
+    main.length = 0;
+    vm.runInContext('showFog()', context);
+    assert.equal(tilesMade, 12, 'panning reuses cached tiles');
+    assert.equal(main.filter(op => op[0] === 'drawImage').length, 9);
+    vm.runInContext('drawFogOfWar()', context);
+    frame();
+    assert.equal(tilesMade, 16, 'a data change re-renders the visible tiles');
+  } finally {
+    Object.assign(context, { requestAnimationFrame: saved.raf, requestIdleCallback: saved.ric, OffscreenCanvas: saved.off });
+    if (!saved.off) delete context.OffscreenCanvas;
+    if (!saved.ric) delete context.requestIdleCallback;
+    vm.runInContext(`
+      ({map,fogCtx,fogPadding,PARKS,worldGeoJson}=tileSaved);Object.assign(AppState,tileSaved.state);
+      fogCanvas.width=tileSaved.w;fogCanvas.height=tileSaved.h;fogTiles.clear();fogTileQueue=[];fogTileIdle=null;
+      fogComposite=null;fogDrawFrame=null;delete globalThis.tileSaved;
+    `, context);
+  }
+});
 check('cleared counties are batched into one cached blurred fill per zoom', () => {
   const originalPath = context.Path2D;
   let paths = 0, fills = 0, projections = 0, zoom = 5;
