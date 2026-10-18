@@ -839,14 +839,14 @@
     </form>
   </div>
 
-  <script src="./nps-catalog.js?v=20261015-expedition-route"></script>
-  <script src="./national-parks-scratch.js?v=20261015-expedition-route"></script>
-  <script src="./international-parks.js?v=20261015-expedition-route"></script>
-  <script src="./ecoregions.js?v=20261015-expedition-route"></script>
-  <script src="./coordinate-lookups.js?v=20261015-expedition-route"></script>
-  <script src="./micro-states.js?v=20261015-expedition-route"></script>
-  <script src="./travel-ledger.js?v=20261015-expedition-route"></script>
-  <script src="./rarity-config.js?v=20261015-expedition-route"></script>
+  <script src="./nps-catalog.js?v=20261017-compact-recovery"></script>
+  <script src="./national-parks-scratch.js?v=20261017-compact-recovery"></script>
+  <script src="./international-parks.js?v=20261017-compact-recovery"></script>
+  <script src="./ecoregions.js?v=20261017-compact-recovery"></script>
+  <script src="./coordinate-lookups.js?v=20261017-compact-recovery"></script>
+  <script src="./micro-states.js?v=20261017-compact-recovery"></script>
+  <script src="./travel-ledger.js?v=20261017-compact-recovery"></script>
+  <script src="./rarity-config.js?v=20261017-compact-recovery"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -1198,8 +1198,132 @@
       set(value) { this.customPois = value; }
     });
 
+    const PASSPORT_STORAGE_FORMAT = 'encoded-route-polyline-v1';
+
+    function encodeRoutePolyline(route) {
+      let previousLat = 0;
+      let previousLng = 0;
+      let encoded = '';
+      for (const [lat, lng] of route) {
+        for (const [axis, coordinate] of [lat, lng].entries()) {
+          const previous = axis === 0 ? previousLat : previousLng;
+          const rounded = Math.round(coordinate * 1e5);
+          let delta = rounded - previous;
+          delta = delta < 0 ? ~(delta << 1) : delta << 1;
+          while (delta >= 0x20) {
+            encoded += String.fromCharCode((0x20 | (delta & 0x1f)) + 63);
+            delta >>= 5;
+          }
+          encoded += String.fromCharCode(delta + 63);
+          if (axis === 0) previousLat = rounded;
+          else previousLng = rounded;
+        }
+      }
+      return encoded;
+    }
+
+    function decodeRoutePolyline(encoded) {
+      let index = 0;
+      let latitude = 0;
+      let longitude = 0;
+      const route = [];
+      const readDelta = () => {
+        let result = 0;
+        let shift = 0;
+        let chunk;
+        do {
+          if (index >= encoded.length || shift > 30) throw new Error('Invalid compact route geometry.');
+          chunk = encoded.charCodeAt(index++) - 63;
+          if (chunk < 0 || chunk > 63) throw new Error('Invalid compact route geometry.');
+          result |= (chunk & 0x1f) << shift;
+          shift += 5;
+        } while (chunk >= 0x20);
+        return result & 1 ? ~(result >> 1) : result >> 1;
+      };
+      while (index < encoded.length) {
+        latitude += readDelta();
+        longitude += readDelta();
+        route.push([latitude / 1e5, longitude / 1e5]);
+      }
+      return route;
+    }
+
+    function compactPassportForStorage(payload) {
+      return {
+        ...payload,
+        storageFormat: PASSPORT_STORAGE_FORMAT,
+        expeditions: payload.expeditions.map(expedition => ({
+          ...expedition,
+          ...(expedition.routeLegs ? {
+            routeLegs: expedition.routeLegs.map(leg => {
+              if (!Array.isArray(leg.routeCoords) || leg.routeCoords.length < 3) return leg;
+              const { routeCoords, ...rest } = leg;
+              return { ...rest, routePolyline: encodeRoutePolyline(routeCoords) };
+            })
+          } : {})
+        }))
+      };
+    }
+
+    function expandStoredPassport(parsed) {
+      if (parsed?.storageFormat !== PASSPORT_STORAGE_FORMAT) return parsed;
+      const { storageFormat, ...payload } = parsed;
+      if (!Array.isArray(payload.expeditions)) throw new Error('Invalid compact passport data.');
+      return {
+        ...payload,
+        expeditions: payload.expeditions.map(expedition => ({
+          ...expedition,
+          ...(expedition.routeLegs ? {
+            routeLegs: expedition.routeLegs.map(leg => {
+              if (leg.routeCoords) return leg;
+              if (typeof leg.routePolyline !== 'string') throw new Error('Invalid compact route geometry.');
+              const { routePolyline, ...rest } = leg;
+              return { ...rest, routeCoords: decodeRoutePolyline(routePolyline) };
+            })
+          } : {})
+        }))
+      };
+    }
+
+    function restoreRecoveryBundle(parsed) {
+      const draft = parsed?._unsavedExpeditionDraft;
+      if (!draft) return parsed;
+      if (!Array.isArray(draft.stops) || draft.stops.length < 2 ||
+          !Array.isArray(draft.legs) || draft.legs.length !== draft.stops.length - 1) {
+        throw new Error('Recovery file does not contain a complete expedition draft.');
+      }
+      const { _unsavedExpeditionDraft, ...payload } = parsed;
+      const routeStops = draft.stops.map(({ travelMode, ...stop }) => ({
+        ...stop, coords: [...stop.coords]
+      }));
+      const routeLegs = draft.legs.map(leg => ({
+        ...leg, routeCoords: leg.routeCoords.map(point => [...point]), countyIds: [...leg.countyIds]
+      }));
+      const expedition = {
+        id: `exp_${crypto.randomUUID()}`,
+        name: draft.name.trim() || 'Recovered expedition',
+        reason: (draft.reason || '').trim(),
+        startDate: draft.startDate || null,
+        endDate: draft.endDate || null,
+        dayTrip: !!draft.dayTrip,
+        transitTags: [...new Set(routeLegs.map(leg => leg.mode))],
+        purposeTags: Array.isArray(draft.purposeTags) ? draft.purposeTags : [],
+        countyIds: [...new Set(routeStops.filter(stop => stop.kind === 'county').map(stop => stop.id))],
+        parkIds: [...new Set(routeStops.filter(stop => stop.kind === 'park').map(stop => stop.id))],
+        customPoiIds: [...new Set(routeStops.filter(stop => stop.kind === 'poi').map(stop => stop.id))],
+        routeCoords: routeStops.map(stop => [...stop.coords]),
+        routeStops,
+        routeLegs,
+        minElevationFt: null,
+        maxElevationFt: null
+      };
+      return { ...payload, expeditions: [...(payload.expeditions || []), expedition] };
+    }
+
     function migratePassport(parsed) {
-      return TravelLedger.migrateState(parsed, CoordinateLookups, NpsCatalog);
+      return TravelLedger.migrateState(
+        expandStoredPassport(restoreRecoveryBundle(parsed)), CoordinateLookups, NpsCatalog
+      );
     }
 
     function applyPassport(parsed) {
@@ -1328,7 +1452,7 @@
 
     function saveState() {
       if (AppState.viewOnly) return;
-      localStorage.setItem('terra_incognita_state', JSON.stringify(passportPayload()));
+      localStorage.setItem('terra_incognita_state', JSON.stringify(compactPassportForStorage(passportPayload())));
     }
 
     function showNotification(title, message, icon = '🏆') {
@@ -3858,7 +3982,9 @@
       reader.onload = async (event) => {
         try {
           if (AppState.viewOnly) throw new Error('Read-only passport: import is disabled.');
-          const parsed = migratePassport(JSON.parse(event.target.result));
+          const source = JSON.parse(event.target.result);
+          const includesRecoveryDraft = !!source?._unsavedExpeditionDraft;
+          const parsed = migratePassport(source);
           await appReady;
           commitLedger(() => applyPassport(parsed));
           if (AppState.homeBase) closeHomeModal();
@@ -3868,7 +3994,9 @@
           renderParkMarkers();
           drawFogOfWar();
           updateAllUI();
-          showNotification('📂 Passport Loaded', 'Successfully imported your travel records!', '✨');
+          showNotification('📂 Passport Loaded', includesRecoveryDraft
+            ? 'Passport and recovered expedition saved successfully.'
+            : 'Successfully imported your travel records!', '✨');
         } catch(err) {
           console.error('Failed to import passport', err);
           showNotification('Error', `Passport import failed: ${err.message}`, '⚠️');
@@ -3895,7 +4023,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261015-expedition-route"></script>
+  <script src="./expedition-ui.js?v=20261017-compact-recovery"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);

@@ -598,6 +598,10 @@ as such rather than given invented sources. Conflicting dual POI ledgers are rej
 Migration is idempotent and performs no API lookups. Imports are validated before transactional
 application; storage failures roll back the ledger and its derived tiers. Shared passports stay
 read-only, and invalid/future saves remain protected from overwrite.
+Browser-local saves compact long expedition paths with 1e-5-degree polyline encoding to reduce
+storage use; geometry is expanded in memory on load and normal passport exports remain unchanged.
+Recovery bundles that include `_unsavedExpeditionDraft` import that draft as a regular expedition,
+so it can be restored after a failed quota-limited save.
 
 ### Progressive achievements
 

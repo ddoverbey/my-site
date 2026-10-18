@@ -122,7 +122,7 @@ check('mobile RPG HUD starts collapsed with an accessible stats toggle', () => {
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261015-expedition-route')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261017-compact-recovery')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('National Parks is a Scratch Map dataset, not a separate navigation page, with an expanded checklist', () => {
@@ -582,6 +582,57 @@ check('custom metadata survives local save/load and read-only shared passports; 
   vm.runInContext('AppState.viewOnly = false; loadPersistedState()', context);
   assert.equal(vm.runInContext('AppState.customLocations.length', context), 0);
 });
+check('local storage compacts long route geometry and expands it losslessly to five decimal places', () => {
+  context.routeCompressionFixture = Array.from({ length: 500 }, (_, index) => [
+    38.123456 + index * 0.00123,
+    -121.765432 + Math.sin(index / 20) * 0.2
+  ]);
+  const compact = vm.runInContext(`compactPassportForStorage({
+    version:2,expeditions:[{id:'route',routeLegs:[{mode:'road',routeCoords:routeCompressionFixture}]}]
+  })`, context);
+  assert.equal(compact.storageFormat, 'encoded-route-polyline-v1');
+  assert.equal(typeof compact.expeditions[0].routeLegs[0].routePolyline, 'string');
+  assert.equal(compact.expeditions[0].routeLegs[0].routeCoords, undefined);
+  assert.ok(JSON.stringify(compact).length < JSON.stringify(context.routeCompressionFixture).length);
+  context.compactRouteFixture = compact;
+  const expanded = vm.runInContext('expandStoredPassport(compactRouteFixture).expeditions[0].routeLegs[0].routeCoords', context);
+  assert.equal(expanded.length, context.routeCompressionFixture.length);
+  expanded.forEach((point, index) => point.forEach((value, axis) =>
+    assert.ok(Math.abs(value - context.routeCompressionFixture[index][axis]) <= 0.0000051)));
+  assert.throws(() => vm.runInContext(
+    "expandStoredPassport({storageFormat:'encoded-route-polyline-v1',expeditions:[{routeLegs:[{mode:'road'}]}]})",
+    context
+  ), /compact route geometry/);
+  delete context.routeCompressionFixture;
+  delete context.compactRouteFixture;
+});
+check('recovery bundle import merges the unsaved expedition into a normal passport payload', () => {
+  context.crypto = { randomUUID: () => 'recovered-trip' };
+  context.recoveryFixture = {
+    version: 2,
+    expeditions: [],
+    _unsavedExpeditionDraft: {
+      name: 'Recovered road trip', reason: 'Family visit', startDate: '2026-10-01',
+      endDate: '2026-10-02', dayTrip: false,
+      stops: [
+        { kind: 'place', id: 'recovery-start', name: 'Start', coords: [37, -120], travelMode: 'road' },
+        { kind: 'place', id: 'recovery-end', name: 'End', coords: [38, -119], travelMode: 'road' }
+      ],
+      legs: [{
+        mode: 'road', routeSource: 'routed', routeCoords: [[37, -120], [37.5, -119.5], [38, -119]],
+        countyIds: []
+      }],
+      uploadedRoute: null
+    }
+  };
+  const recovered = vm.runInContext('migratePassport(recoveryFixture)', context);
+  assert.equal(recovered.expeditions.length, 1);
+  assert.equal(recovered.expeditions[0].name, 'Recovered road trip');
+  assert.deepEqual(Array.from(recovered.expeditions[0].routeStops, stop => stop.name), ['Start', 'End']);
+  assert.equal(recovered.expeditions[0].routeLegs[0].routeCoords.length, 3);
+  assert.equal(recovered._unsavedExpeditionDraft, undefined);
+  delete context.recoveryFixture;
+});
 context.fogOperations.length = 0;
 vm.runInContext(`
   map.project = null;
@@ -911,12 +962,14 @@ check('logged expedition routes join legacy route corridors in the same canvas',
 check('all ledger fields survive local and shared payload migration', () => {
   vm.runInContext('saveState();applyPassport(migratePassport(JSON.parse(localStorage.getItem("terra_incognita_state"))))', context);
   const saved = JSON.parse(savedJson);
+  assert.equal(saved.storageFormat, 'encoded-route-polyline-v1');
   assert.equal(saved.expeditions.length, 1);
   assert.equal(saved.counties['06073'], 'l');
   assert.ok(Array.isArray(saved.customPois));
   assert.equal(saved.customLocations, undefined);
   assert.equal(saved.clearedCounties, undefined);
-  assert.deepEqual(JSON.parse(vm.runInContext('JSON.stringify(passportPayload())', context)), saved);
+  assert.deepEqual(JSON.parse(vm.runInContext('JSON.stringify(passportPayload())', context)),
+    JSON.parse(vm.runInContext(`JSON.stringify(expandStoredPassport(${JSON.stringify(saved)}))`, context)));
 });
 check('failed expedition persistence rolls back every promoted region, county, pin and ledger', () => {
   const before = vm.runInContext('JSON.stringify(passportPayload())', context);
