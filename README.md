@@ -150,7 +150,9 @@ ecoregion and county atlas versions), and coordinate indexes are built one atlas
 startups avoid hundreds of milliseconds of point-in-polygon work and never block input in one long task. Rendered fog is cached as 512px world-anchored
 tiles per zoom (an LRU of ~384 tiles on desktop, 64 on mobile): only tiles under the viewport render
 synchronously, overscan tiles fill in during idle time, and pans or returning to a visited zoom only
-composite cached bitmaps. Any data change drops the cache, and bursts of changes coalesce into one frame.
+composite cached bitmaps. Until an overscan tile renders, it shows the previous fog bitmap shifted or
+scaled into place (like Leaflet's own tile zoom) rather than a solid fog block, so edges never flash, and
+an unchanged view (such as the `moveend` that follows `zoomend`) is not recomposited. Any data change drops the cache, and bursts of changes coalesce into one frame.
 Home/discovery pulse frames repaint only the visible viewport. Fog polygon paths are cached at the current zoom, translated during pans and culled outside
 the overscanned canvas; routes and auras are also culled without changing their reveal extents.
 These optimizations do not change saved records, achievement rules or geography snapshots.

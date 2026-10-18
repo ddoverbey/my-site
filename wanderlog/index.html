@@ -1986,8 +1986,13 @@
       const j0 = Math.floor(worldY / T), j1 = Math.floor((worldY + fogCanvas.height - 1) / T);
       const limit = fogTileLimit((i1 - i0 + 1) * (j1 - j0 + 1));
       const center = { x: -origin.x + size.x / 2, y: -origin.y + size.y / 2 };
+      const prev = fogComposite;
+      if (prev && prev.version === fogTileVersion && prev.zoom === zoom && prev.ox === origin.x &&
+          prev.oy === origin.y && prev.padX === fogPadding.x && prev.padY === fogPadding.y) return;
       resetFogContext();
-      fogCtx.clearRect(0, 0, fogCanvas.width, fogCanvas.height);
+      // Unrendered tiles show the previous bitmap (shifted/scaled) instead of a solid fog block that pops later.
+      const seeded = seedFogFromPrevious(prev, zoom, origin);
+      if (!seeded) fogCtx.clearRect(0, 0, fogCanvas.width, fogCanvas.height);
       fogComposite = { zoom, ox: origin.x, oy: origin.y, padX: fogPadding.x, padY: fogPadding.y, version: fogTileVersion };
       fogTileQueue = [];
       for (let j = j0; j <= j1; j++) {
@@ -2002,10 +2007,13 @@
           if (!tile && visible) tile = renderFogTile(zoom, i, j);
           if (tile) {
             storeFogTile(key, tile, limit);
+            if (seeded) fogCtx.clearRect(x, y, T, T);
             fogCtx.drawImage(tile, x, y);
           } else {
-            fogCtx.fillStyle = 'rgba(235, 239, 245, 0.99)';
-            fogCtx.fillRect(x, y, T, T);
+            if (!seeded) {
+              fogCtx.fillStyle = 'rgba(235, 239, 245, 0.99)';
+              fogCtx.fillRect(x, y, T, T);
+            }
             const distance = Math.hypot((i + 0.5) * T - center.x, (j + 0.5) * T - center.y);
             fogTileQueue.push({ key, zoom, i, j, version: fogTileVersion, limit, distance });
           }
@@ -2013,6 +2021,29 @@
       }
       fogTileQueue.sort((a, b) => a.distance - b.distance);
       scheduleFogTileWork();
+    }
+
+    let fogBackup = null;
+    function seedFogFromPrevious(prev, zoom, origin) {
+      if (!prev || !Number.isFinite(prev.zoom) || prev.padX !== fogPadding.x || prev.padY !== fogPadding.y ||
+          Math.abs(zoom - prev.zoom) > 4 || typeof OffscreenCanvas === 'undefined' || !fogCanvas.getContext) return false;
+      if (!fogBackup || fogBackup.width !== fogCanvas.width || fogBackup.height !== fogCanvas.height) {
+        fogBackup = new OffscreenCanvas(fogCanvas.width, fogCanvas.height);
+      }
+      const backup = fogBackup.getContext('2d');
+      backup.globalCompositeOperation = 'copy';
+      backup.drawImage(fogCanvas, 0, 0);
+      backup.globalCompositeOperation = 'source-over';
+      const scale = Math.pow(2, zoom - prev.zoom);
+      fogCtx.fillStyle = 'rgba(235, 239, 245, 0.99)';
+      fogCtx.fillRect(0, 0, fogCanvas.width, fogCanvas.height);
+      fogCtx.setTransform(scale, 0, 0, scale, origin.x + fogPadding.x - scale * (prev.ox + prev.padX),
+        origin.y + fogPadding.y - scale * (prev.oy + prev.padY));
+      fogCtx.clearRect(0, 0, fogBackup.width, fogBackup.height);
+      fogCtx.imageSmoothingEnabled = true;
+      fogCtx.drawImage(fogBackup, 0, 0);
+      resetFogContext();
+      return true;
     }
 
     function scheduleFogTileWork() {
