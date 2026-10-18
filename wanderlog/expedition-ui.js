@@ -397,6 +397,81 @@ function expeditionRouteKey() {
   ]);
 }
 
+function moveExpeditionStop(from, to) {
+  if (AppState.viewOnly || expeditionPending || from === to ||
+      from < 0 || to < 0 || from >= expeditionDraft.length || to >= expeditionDraft.length) return false;
+  const [stop] = expeditionDraft.splice(from, 1);
+  expeditionDraft.splice(to, 0, stop);
+  invalidateExpeditionRoutes();
+  renderExpeditionStops();
+  document.getElementById('expeditionStatus').textContent =
+    `${stop.name} moved to stop ${to + 1}. Preview routes again before saving.`;
+  return true;
+}
+
+function wireExpeditionStopDrag(handle, item, list, index) {
+  let drag = null;
+  const clear = () => {
+    item.style.transform = '';
+    item.style.position = '';
+    item.style.zIndex = '';
+    item.style.opacity = '';
+    for (const row of list.children) row.style.boxShadow = '';
+    handle.setAttribute('aria-pressed', 'false');
+  };
+  handle.addEventListener('pointerdown', event => {
+    if (event.button !== 0 || event.isPrimary === false || expeditionPending || AppState.viewOnly) return;
+    event.preventDefault();
+    drag = { pointerId: event.pointerId, startY: event.clientY, target: index };
+    handle.setPointerCapture(event.pointerId);
+    handle.setAttribute('aria-pressed', 'true');
+    item.style.position = 'relative';
+    item.style.zIndex = '1';
+    item.style.opacity = '0.8';
+  });
+  handle.addEventListener('pointermove', event => {
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    event.preventDefault();
+    item.style.transform = `translateY(${event.clientY - drag.startY}px)`;
+    const rows = Array.from(list.children);
+    let target = 0;
+    rows.forEach((row, rowIndex) => {
+      if (rowIndex === index) return;
+      const bounds = row.getBoundingClientRect();
+      if (event.clientY > bounds.top + bounds.height / 2) target++;
+    });
+    drag.target = target;
+    for (const row of rows) row.style.boxShadow = '';
+    if (target !== index) {
+      rows[target].style.boxShadow = target < index
+        ? '0 -3px 0 #fbbf24' : '0 3px 0 #fbbf24';
+    }
+    const form = document.getElementById('expeditionForm');
+    const bounds = form.getBoundingClientRect();
+    if (event.clientY < bounds.top + 48) form.scrollBy(0, -20);
+    else if (event.clientY > bounds.bottom - 48) form.scrollBy(0, 20);
+  });
+  const finish = (event, cancelled) => {
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    const { target, pointerId } = drag;
+    drag = null;
+    clear();
+    if (handle.hasPointerCapture(pointerId)) handle.releasePointerCapture(pointerId);
+    if (!cancelled && moveExpeditionStop(index, target)) {
+      list.children[target].querySelector('[data-stop-drag]').focus();
+    }
+  };
+  handle.addEventListener('pointerup', event => finish(event, false));
+  handle.addEventListener('pointercancel', event => finish(event, true));
+  handle.addEventListener('lostpointercapture', event => finish(event, true));
+  handle.addEventListener('keydown', event => {
+    if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+    event.preventDefault();
+    const target = index + (event.key === 'ArrowUp' ? -1 : 1);
+    if (moveExpeditionStop(index, target)) list.children[target].querySelector('[data-stop-drag]').focus();
+  });
+}
+
 function renderExpeditionStops() {
   const list = document.getElementById('expeditionStops');
   list.replaceChildren();
@@ -405,17 +480,24 @@ function renderExpeditionStops() {
     item.className = 'rounded-lg bg-slate-900 p-3 space-y-2';
     const row = document.createElement('div');
     row.className = 'flex items-center justify-between gap-2';
+    const handle = document.createElement('button');
+    handle.type = 'button';
+    handle.textContent = '⠿';
+    handle.className = 'shrink-0 cursor-grab rounded px-3 py-2 text-lg text-amber-200 active:cursor-grabbing disabled:opacity-30';
+    handle.style.touchAction = 'none';
+    handle.style.userSelect = 'none';
+    handle.setAttribute('data-stop-drag', '');
+    handle.setAttribute('aria-label', `Reorder ${stop.name}. Drag or use the up and down arrow keys.`);
+    handle.setAttribute('aria-pressed', 'false');
+    handle.disabled = expeditionPending || AppState.viewOnly;
+    wireExpeditionStopDrag(handle, item, list, index);
+    row.appendChild(handle);
     const name = document.createElement('span');
+    name.className = 'flex-1';
     name.textContent = `${index + 1}. ${stop.name}`;
     row.appendChild(name);
     const controls = document.createElement('span');
     for (const [text, label, action, disabled] of [
-      ['↑', `Move ${stop.name} earlier`, () => {
-        [expeditionDraft[index - 1], expeditionDraft[index]] = [expeditionDraft[index], expeditionDraft[index - 1]];
-      }, index === 0],
-      ['↓', `Move ${stop.name} later`, () => {
-        [expeditionDraft[index + 1], expeditionDraft[index]] = [expeditionDraft[index], expeditionDraft[index + 1]];
-      }, index === expeditionDraft.length - 1],
       ['Remove', `Remove ${stop.name}`, () => { expeditionDraft.splice(index, 1); }, false]
     ]) {
       const button = document.createElement('button');

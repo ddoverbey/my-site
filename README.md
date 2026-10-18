@@ -540,7 +540,8 @@ data shows retry guidance instead of a misleading completion count.
    their full airport names; other airports can be searched by full name or code.
 3. Add stops in travel order, with a separate mode between each pair:
    **Drive / Road Trip**, **AWD/Off-Road**, **Flight**, **Ferry / Boat**, **Rail / Train**, or **Walk / Hike**.
-   Reorder/remove stops as needed. Changing the itinerary invalidates its old preview.
+   Drag a stop by its grip to reorder it with a mouse or touch; keyboard users can focus the
+   grip and use Up/Down. Remove stops as needed. Changing the itinerary invalidates its old preview.
 4. **Preview routes**, then save. Driving/AWD legs use the FOSSGIS public OSRM road-routing
    service, with cached responses and requests spaced at least 1.1 seconds apart. Add intermediate
    stops if the suggested road route differs from your actual drive. US county credit uses segment

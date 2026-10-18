@@ -2915,4 +2915,66 @@ check('dismissed Citadel searches cannot reopen the dropdown from a late respons
 context.setTimeout = autocompleteTimeout;
 context.clearTimeout = autocompleteClearTimeout;
 context.fetch = autocompleteFetch;
+check('stop grips support pointer dragging, cancellation and keyboard moves without stale routes or lost modes', () => {
+  let captured = null, focused = 0;
+  const handlers = {};
+  const rows = Array.from({length:3},(_,index)=>({
+    style:{},getBoundingClientRect:()=>({top:index*100,height:80}),
+    querySelector:()=>({focus(){focused++;}})
+  }));
+  const handle = {
+    setAttribute(){},addEventListener(name,handler){handlers[name]=handler;},
+    setPointerCapture(id){captured=id;},hasPointerCapture(id){return captured===id;},
+    releasePointerCapture(){captured=null;}
+  };
+  const form=element('expeditionForm');
+  const oldBounds=form.getBoundingClientRect,oldScroll=form.scrollBy;
+  form.getBoundingClientRect=()=>({top:0,bottom:600});
+  form.scrollBy=()=>{};
+  context.dragHandle=handle;context.dragRows=rows;context.dragList={children:rows};
+  try {
+    vm.runInContext(`
+      globalThis.dragSaved={draft:expeditionDraft,pending:expeditionPending,readOnly:AppState.viewOnly,
+        render:renderExpeditionStops,legs:expeditionPreparedLegs,key:expeditionPreparedKey};
+      expeditionDraft=[
+        {name:'A',travelMode:'flight',coords:[0,0]},
+        {name:'B',travelMode:'road',coords:[1,1]},
+        {name:'C',travelMode:'ferry',coords:[2,2]}];
+      expeditionPending=false;AppState.viewOnly=false;
+      renderExpeditionStops=()=>{};
+      expeditionPreparedLegs=[{}];expeditionPreparedKey='prepared';
+      wireExpeditionStopDrag(dragHandle,dragRows[0],dragList,0);
+    `,context);
+    const event=(y)=>({button:0,isPrimary:true,pointerId:7,clientY:y,preventDefault(){}});
+    handlers.pointerdown(event(20));
+    handlers.pointermove(event(260));
+    assert.equal(rows[2].style.boxShadow,'0 3px 0 #fbbf24');
+    handlers.pointerup(event(260));
+    assert.equal(vm.runInContext('expeditionDraft.map(s=>s.name).join(",")',context),'B,C,A');
+    assert.equal(vm.runInContext('expeditionDraft[2].travelMode',context),'flight');
+    assert.equal(vm.runInContext('expeditionPreparedLegs',context),null);
+    assert.equal(element('btnSaveExpedition').disabled,true);
+    assert.equal(captured,null);
+    assert.equal(focused,1);
+    handlers.pointerdown(event(20));handlers.pointermove(event(260));handlers.pointercancel(event(260));
+    assert.equal(vm.runInContext('expeditionDraft.map(s=>s.name).join(",")',context),'B,C,A');
+    assert.equal(rows[0].style.transform,'');
+    handlers.keydown({key:'ArrowDown',preventDefault(){}});
+    assert.equal(vm.runInContext('expeditionDraft.map(s=>s.name).join(",")',context),'C,B,A');
+    vm.runInContext('expeditionPending=true',context);
+    handlers.pointerdown(event(20));
+    assert.equal(captured,null);
+    assert.equal(vm.runInContext('moveExpeditionStop(0,2)',context),false);
+    vm.runInContext('expeditionPending=false;AppState.viewOnly=true',context);
+    assert.equal(vm.runInContext('moveExpeditionStop(0,2)',context),false);
+  } finally {
+    vm.runInContext(`
+      expeditionDraft=dragSaved.draft;expeditionPending=dragSaved.pending;AppState.viewOnly=dragSaved.readOnly;
+      renderExpeditionStops=dragSaved.render;expeditionPreparedLegs=dragSaved.legs;expeditionPreparedKey=dragSaved.key;
+      delete globalThis.dragSaved;
+    `,context);
+    form.getBoundingClientRect=oldBounds;form.scrollBy=oldScroll;
+    delete context.dragHandle;delete context.dragRows;delete context.dragList;
+  }
+});
 console.log(`${checks} checks passed.`);
