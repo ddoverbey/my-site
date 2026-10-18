@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
+import * as d3Geo from 'd3-geo';
 import catalog from './nps-catalog.js';
 import ecoregions from './ecoregions.js';
 import internationalCatalog from './international-parks.js';
@@ -769,7 +770,7 @@ check('existing route corridors remain round-capped and 40 km wide', () => {
 });
 context.CoordinateLookups = { ...coordinateLookups, lookupCoordinate: async () => customLocation };
 context.crypto = { randomUUID: () => 'saved-reference' };
-context.d3 = { geoContains() {} };
+context.d3 = { ...d3Geo, geoContains() {} };
 vm.runInContext('coordinateIndexes = null; AppState.customLocations = [];', context);
 element('customLocationName').value = 'Colosseum';
 element('customLocationLat').value = '41.8902';
@@ -1400,13 +1401,14 @@ function scratchSelection(tag = 'svg', data = []) {
   };
 }
 context.d3 = {
+  ...d3Geo,
   geoContains: () => true, select: () => scratchSelection(),
   geoAlbersUsa: () => ({ fitSize() { projectionCalls.push('usa'); } }),
   geoNaturalEarth1: () => ({ fitSize() { projectionCalls.push('world'); } }),
-  geoPath: () => feature => {
+  geoPath: (...args) => args.length ? feature => {
     generatedScratchPaths.push(feature);
     return `path-${feature.id || 'mesh'}`;
-  }
+  } : d3Geo.geoPath()
 };
 vm.runInContext(`
   AppState.viewOnly=false;applyPassport(migratePassport({}));
@@ -1622,7 +1624,17 @@ check('reduced motion and classic mode do not schedule discovery pulses', () => 
   vm.runInContext('drawFogOfWar()', context);
   assert.ok(!context.fogOperations.some(op => op[0] === 'fill'));
   vm.runInContext("AppState.mode='rpg';drawFogOfWar()", context);
-  assert.ok(context.fogOperations.some(op => op[0] === 'fill'));
+  if (vm.runInContext('hasUnlockedOcean() && !!worldGeoJson?.length', context)) {
+    assert.ok(!context.fogOperations.some(op => op[0] === 'fill'));
+    vm.runInContext(`
+      globalThis.pulseWorldSaved=worldGeoJson;
+      worldGeoJson=[{geometry:{type:'Polygon',coordinates:[[[0,0],[0,1],[1,1],[1,0],[0,0]]]}}];
+      drawFogOfWar();worldGeoJson=pulseWorldSaved;delete globalThis.pulseWorldSaved;
+    `,context);
+    assert.ok(context.fogOperations.some(op => op[0] === 'polygonFill'));
+  } else {
+    assert.ok(context.fogOperations.some(op => op[0] === 'fill'));
+  }
 });
 check('NPS discovery pulses preserve boundary geometry while animating opacity and perimeter feather', () => {
   animationTime = 4000;
@@ -3132,6 +3144,47 @@ check('passport export filenames include local date and time, not UTC', () => {
     `,context);
     delete context.localExportDate;
     delete context.capturePassportExport;
+  }
+});
+check('land fog clips dateline-crossing rings before projection, including holes and polar caps', () => {
+  const originalD3=context.d3;
+  context.d3={...d3Geo};
+  const lines=[];
+  let previous=null;
+  context.tearPath={
+    moveTo(x,y){previous=[x,y];},
+    lineTo(x,y){lines.push([previous,[x,y]]);previous=[x,y];},
+    closePath(){}
+  };
+  context.tearMap={
+    project:([lat,lng])=>({x:lng,y:lat}),
+    getZoom:()=>4
+  };
+  try {
+    vm.runInContext(`
+      globalThis.tearSavedMap=map;map=tearMap;
+      traceLandFogPolygon({type:'Polygon',coordinates:[
+        [[170,10],[170,30],[-170,30],[-170,10],[170,10]],
+        [[175,15],[-175,15],[-175,25],[175,25],[175,15]]
+      ]},tearPath,4);
+    `,context);
+    assert.ok(lines.length>0);
+    assert.ok(lines.every(([a,b])=>Math.abs(a[0]-b[0])<=180 ||
+      (Math.abs(a[1])>85 && Math.abs(b[1])>85)),
+      'a clipped polygon must never connect across the ocean at nonpolar latitudes');
+    lines.length=0;
+    vm.runInContext(`
+      traceLandFogPolygon({type:'Polygon',coordinates:[
+        [[-180,-80],[-60,-75],[60,-75],[180,-80],[-180,-80]]
+      ]},tearPath,4);
+    `,context);
+    assert.ok(lines.length>0);
+    assert.ok(lines.flat(2).every(Number.isFinite),'polar projection must remain finite');
+    assert.ok(lines.every(([a,b])=>Math.abs(a[0]-b[0])<=180 ||
+      (Math.abs(a[1])>85 && Math.abs(b[1])>85)));
+  } finally {
+    vm.runInContext('map=tearSavedMap;delete globalThis.tearSavedMap',context);
+    context.d3=originalD3;delete context.tearPath;delete context.tearMap;
   }
 });
 console.log(`${checks} checks passed.`);

@@ -562,6 +562,8 @@ data shows retry guidance instead of a misleading completion count.
    remain shrouded with softly feathered fog drawn from the loaded world, US state, and micro-state
    atlas polygons. Visited land and port stops are revealed afterward. If the world atlas is
    unavailable, full fog remains. Removing the last ferry expedition locks the oceans again.
+   Land fog rings are clipped at the antimeridian before projection, preventing dateline and
+   polar closing edges from creating streaks across the ocean; projected paths are cached per zoom.
    Ferry, rail, walking, and flight routes clear no route corridors and award no intermediate
    counties; only their stops count.
 

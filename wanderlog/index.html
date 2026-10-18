@@ -1979,6 +1979,36 @@
     }
 
     const fogPolygonCache = new WeakMap();
+    function traceLandFogPolygon(geometry, target, zoom) {
+      const bounds = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+      const radians = Math.PI / 180;
+      const projection = {
+        stream(output) {
+          const projected = d3.geoTransform({
+            point(x, y) {
+              const latitude = Math.max(-85.05112878, Math.min(85.05112878, y / radians));
+              const point = map.project
+                ? map.project([latitude, x / radians], zoom)
+                : map.latLngToContainerPoint([latitude, x / radians]);
+              bounds.minX = Math.min(bounds.minX, point.x);
+              bounds.maxX = Math.max(bounds.maxX, point.x);
+              bounds.minY = Math.min(bounds.minY, point.y);
+              bounds.maxY = Math.max(bounds.maxY, point.y);
+              this.stream.point(point.x, point.y);
+            }
+          }).stream(output);
+          // D3's spherical clipper splits and rejoins polygon rings at the dateline,
+          // including closing edges and polar caps, before any pixel projection.
+          const clipped = d3.geoClipAntimeridian(projected);
+          return d3.geoTransform({
+            point(x, y) { this.stream.point(x * radians, y * radians); }
+          }).stream(clipped);
+        }
+      };
+      d3.geoPath().projection(projection).context(target)(geometry);
+      return bounds;
+    }
+
     function paintLandFogPolygon(geometry, featherPixels = 16) {
       fogCtx.globalCompositeOperation = 'source-over';
       punchFogPolygon(geometry, featherPixels, 'rgba(235, 239, 245, 0.99)', true);
@@ -1990,11 +2020,15 @@
         const zoom = map.getZoom();
         const worldWidth = repeatWorld ? map.options.crs.scale(zoom) : null;
         let cached = fogPolygonCache.get(geometry);
-        if (!cached || cached.zoom !== zoom) {
+        if (!cached || cached.zoom !== zoom || cached.landFog !== repeatWorld) {
           const polygons = geometry.type === 'Polygon' ? [geometry.coordinates] :
             geometry.type === 'MultiPolygon' ? geometry.coordinates : [];
           const paths = polygons.filter(Array.isArray).map(rings => {
             const path = new Path2D();
+            if (repeatWorld) {
+              const bounds = traceLandFogPolygon({ type: 'Polygon', coordinates: rings }, path, zoom);
+              return { path, bounds };
+            }
             const bounds = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
             rings.forEach(ring => {
               if (!Array.isArray(ring) || ring.length < 3) return;
@@ -2014,7 +2048,7 @@
             });
             return { path, bounds };
           });
-          cached = { zoom, paths };
+          cached = { zoom, paths, landFog: repeatWorld };
           fogPolygonCache.set(geometry, cached);
         }
         // World-pixel paths stay fixed during a pan; only their canvas translation changes.
@@ -2049,6 +2083,18 @@
         : geometry.type === 'MultiPolygon'
           ? geometry.coordinates
           : [];
+
+      if (repeatWorld) {
+        fogCtx.beginPath();
+        traceLandFogPolygon(geometry, fogCtx, map.getZoom());
+        fogCtx.fillStyle = fogColor;
+        fogCtx.shadowColor = fogColor;
+        fogCtx.shadowBlur = featherPixels;
+        fogCtx.fill('evenodd');
+        fogCtx.shadowBlur = 0;
+        fogCtx.shadowColor = 'transparent';
+        return;
+      }
 
       polygons.forEach(rings => {
         if (!Array.isArray(rings)) return;
