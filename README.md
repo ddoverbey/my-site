@@ -487,6 +487,9 @@ for Wishlist; Lived polygons have a lighter blue border. Countries, states, and 
 **Unexplored → Visited → Wishlist → Transited → Lived → Unexplored**. Map choices override
 travel-derived statuses, including an explicit Unexplored choice, without modifying trips.
 County edits use zero-padded FIPS IDs in `counties`; nation/state edits use `regions`.
+The county view includes a searchable list for small counties: search by county name, full state
+name, or FIPS code, then activate a result to cycle its status. Results show both county and state,
+are capped at 50 per search, and remain read-only in shared passports.
 The counter reports Visited/Lived and Transited totals for the current dataset only.
 Edits persist transactionally and refresh Passport stats. Marking a county Visited, Transited,
 or Lived reveals its entire polygon in RPG fog. Wishlist and Unexplored marks do not reveal it.

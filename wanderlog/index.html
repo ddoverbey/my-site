@@ -452,6 +452,14 @@
           </div>
         </div>
 
+        <section id="scratchCountySearchPanel" class="rpg-panel p-4 rounded-2xl space-y-3 hidden" aria-labelledby="scratchCountySearchTitle">
+          <h3 id="scratchCountySearchTitle" class="cinzel text-sm font-bold text-amber-200">Find a US County</h3>
+          <p class="text-[11px] text-slate-400">Find small counties by name, state name, or FIPS code. Activate a result to cycle its status, just like clicking the map.</p>
+          <input id="scratchCountySearch" type="search" autocomplete="off" placeholder="County, state name, or FIPS code" aria-label="Find a US county to mark" aria-controls="scratchCountyResults"
+            class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-xs text-slate-200">
+          <ul id="scratchCountyResults" class="flex flex-wrap gap-2 max-h-60 overflow-y-auto" aria-label="Matching US counties"></ul>
+          <p id="scratchCountySearchStatus" class="text-[11px] text-slate-400" role="status" aria-live="polite"></p>
+        </section>
         <!-- SVG Map Render Card -->
         <div id="scratchPoliticalMap" class="rpg-panel p-4 rounded-2xl flex items-center justify-center min-h-[500px]">
           <svg id="svgScratchMap" class="w-full max-h-[640px] drop-shadow-2xl"></svg>
@@ -3128,6 +3136,8 @@
       }
       document.getElementById('scratchNationalParks').classList.toggle('hidden', !isParks);
       document.getElementById('scratchMicroStates').classList.toggle('hidden', AppState.scratchDataset !== 'world');
+      document.getElementById('scratchCountySearchPanel').classList.toggle('hidden', AppState.scratchDataset !== 'counties');
+      if (AppState.scratchDataset === 'counties') renderCountySearch();
       scratchProjection = null;
       for (const [id, dataset] of [['btnScratchWorld', 'world'], ['btnScratchUsa', 'usa'],
         ['btnScratchCounties', 'counties'], ['btnScratchNationalParks', 'nationalparks']]) {
@@ -3337,6 +3347,65 @@
           `${statuses.filter(value => value === 't').length} Transited. Boundaries: Natural Earth 1:10m.`;
       }
     }
+
+    function scratchCountyMatches(query) {
+      const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+      if (!terms.length) return [];
+      return (countyGeoJson || []).filter(feature => {
+        const id = String(feature.id).padStart(5, '0');
+        const text = `${countyLabel(id)} ${id}`.toLowerCase();
+        return terms.every(term => text.includes(term));
+      }).sort((a, b) => countyLabel(String(a.id).padStart(5, '0'))
+        .localeCompare(countyLabel(String(b.id).padStart(5, '0'))));
+    }
+
+    function renderCountySearch() {
+      const list = document.getElementById('scratchCountyResults');
+      const statusLine = document.getElementById('scratchCountySearchStatus');
+      list.replaceChildren();
+      if (!countyGeoJson?.length) {
+        statusLine.textContent = 'County boundaries unavailable. Retry datasets in Settings.';
+        return;
+      }
+      const query = document.getElementById('scratchCountySearch').value.trim();
+      if (!query) {
+        statusLine.textContent = 'Type a county, state name, or FIPS code to find a county.';
+        return;
+      }
+      const matches = scratchCountyMatches(query);
+      matches.slice(0, 50).forEach(feature => {
+        const id = String(feature.id).padStart(5, '0');
+        const name = countyLabel(id);
+        const current = AppState.counties[id];
+        const label = TravelLedger.labels[current] || 'Unexplored';
+        const item = document.createElement('li');
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.dataset.county = id;
+        button.className = 'rounded-full border border-slate-600 bg-slate-900 px-3 py-2 text-xs text-slate-200';
+        button.textContent = `${name} (${id}) · ${label}`;
+        if (TravelLedger.colors[current]) button.style.borderColor = TravelLedger.colors[current];
+        button.setAttribute('aria-label', `${name}: ${label}. Activate to cycle status.`);
+        button.disabled = AppState.viewOnly;
+        button.addEventListener('click', () => {
+          if (AppState.viewOnly || AppState.scratchDataset !== 'counties') return;
+          cycleScratchStatus(feature);
+          document.querySelector(`#scratchCountyResults button[data-county="${id}"]`)?.focus();
+        });
+        item.appendChild(button);
+        list.appendChild(item);
+      });
+      statusLine.textContent = matches.length
+        ? `${matches.length} matching counties${matches.length > 50 ? '; showing 50. Refine your search.' : '.'}`
+        : 'No matching counties. Try a county name, full state name, or five-digit FIPS code.';
+    }
+
+    document.getElementById('scratchCountySearch').addEventListener('input', renderCountySearch);
+    document.getElementById('scratchCountySearch').addEventListener('keydown', event => {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      document.querySelector('#scratchCountyResults button')?.focus();
+    });
 
     document.getElementById('scratchNationSearch').addEventListener('input', renderMicroStateTray);
     document.getElementById('scratchNationSearch').addEventListener('keydown', event => {

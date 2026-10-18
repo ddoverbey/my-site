@@ -2977,4 +2977,59 @@ check('stop grips support pointer dragging, cancellation and keyboard moves with
     delete context.dragHandle;delete context.dragRows;delete context.dragList;
   }
 });
+check('county search finds small counties by name, state and padded FIPS, with bounded accessible results', () => {
+  const create=context.document.createElement;
+  const buttons=[];
+  context.document.createElement=tag=>{
+    const node=create(tag);
+    if(tag==='button') buttons.push(node);
+    return node;
+  };
+  try {
+    vm.runInContext(`
+      globalThis.countySearchSaved={countyGeoJson,usaRegionGeoJson,state:{...AppState},
+        feature:countyFeaturesById['51013']};
+      AppState.scratchDataset='counties';AppState.viewOnly=false;AppState.counties={};
+      countyGeoJson=[
+        {id:51013,properties:{name:'Arlington'}},
+        {id:1001,properties:{name:'Autauga'}}];
+      usaRegionGeoJson=[{id:51,properties:{name:'Virginia'}},{id:1,properties:{name:'Alabama'}}];
+      countyFeaturesById['51013']=countyGeoJson[0];
+    `,context);
+    for(const query of ['arlington','ARLINGTON Virginia','51013']) {
+      context.countySearchQuery=query;
+      assert.equal(vm.runInContext('scratchCountyMatches(countySearchQuery)[0].id',context),51013);
+    }
+    assert.equal(vm.runInContext('scratchCountyMatches("01001")[0].id',context),1001);
+    assert.equal(vm.runInContext('scratchCountyMatches("Arlington Alabama").length',context),0);
+    element('scratchCountySearch').value='Arlington';
+    element('scratchCountySearch').handlers.input();
+    assert.ok(buttons.at(-1).textContent.includes('Arlington, Virginia'));
+    assert.equal(buttons.at(-1).disabled,false);
+    vm.runInContext("AppState.counties={'51013':'v'};AppState.viewOnly=true;renderCountySearch()",context);
+    assert.equal(buttons.at(-1).disabled,true);
+    assert.ok(buttons.at(-1).textContent.includes('Visited'));
+    vm.runInContext("countyGeoJson=Array.from({length:70},(_,i)=>({id:51000+i,properties:{name:'Small'}}))",context);
+    element('scratchCountySearch').value='Virginia';
+    const before=buttons.length;
+    element('scratchCountySearch').handlers.input();
+    assert.equal(buttons.length-before,50);
+    assert.ok(element('scratchCountySearchStatus').textContent.includes('70 matching counties'));
+    element('scratchCountySearch').value='no match';
+    element('scratchCountySearch').handlers.input();
+    assert.ok(element('scratchCountySearchStatus').textContent.startsWith('No matching counties'));
+    vm.runInContext('countyGeoJson=null;renderCountySearch()',context);
+    assert.ok(element('scratchCountySearchStatus').textContent.includes('unavailable'));
+  } finally {
+    context.document.createElement=create;
+    vm.runInContext(`
+      ({countyGeoJson,usaRegionGeoJson}=countySearchSaved);
+      Object.assign(AppState,countySearchSaved.state);
+      if(countySearchSaved.feature) countyFeaturesById['51013']=countySearchSaved.feature;
+      else delete countyFeaturesById['51013'];
+      delete globalThis.countySearchSaved;
+    `,context);
+    delete context.countySearchQuery;
+  }
+});
 console.log(`${checks} checks passed.`);
