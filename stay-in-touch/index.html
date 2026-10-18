@@ -41,6 +41,15 @@
       animation: pulse-ring 1.5s infinite;
       border-color: #ea580c !important;
     }
+    @keyframes onboarding-nudge {
+      0%, 78%, 100% { transform: translateY(0); }
+      84% { transform: translateY(-3px); }
+      90% { transform: translateY(0); }
+      96% { transform: translateY(-1px); }
+    }
+    .onboarding-nudge {
+      animation: onboarding-nudge 2.4s ease-in-out infinite;
+    }
     .no-scrollbar::-webkit-scrollbar {
       display: none;
     }
@@ -76,6 +85,7 @@
     }
     @media (prefers-reduced-motion: reduce) {
       .plant-sway, .plant-bounce { animation: none; }
+      .onboarding-nudge { animation: none; }
     }
   </style>
 </head>
@@ -867,6 +877,7 @@
 
     function clearAllExamples() {
       if (!confirm('Clear all example connections from your garden?')) return;
+      markGardenOnboardingSeen();
       friends = friends.filter(f => !f.name || !f.name.includes('(Example)'));
       saveData();
       render();
@@ -1485,8 +1496,10 @@
        ========================================================================= */
     const GARDEN_PAGE_SIZE = 10;
     const GARDEN_BADGES_KEY = 'cultivate_garden_badges_v1';
+    const GARDEN_ONBOARDING_KEY = 'cultivate_onboarding_seen_v1';
     const TIER_PRIORITY = { inner: 5, close: 4, wider: 3, extended: 2, annual: 1 };
     let gardenBadgesVisible = localStorage.getItem(GARDEN_BADGES_KEY) !== 'hidden';
+    let gardenOnboardingSeen = localStorage.getItem(GARDEN_ONBOARDING_KEY) === 'true';
     let reminderBannerHidden = localStorage.getItem(REMINDER_BANNER_KEY) === 'hidden';
     let selectedGardenId = null;
     let recentlyWateredId = null;
@@ -1522,16 +1535,70 @@
       updateGardenWaterReminder();
     }
 
+    function markGardenOnboardingSeen() {
+      gardenOnboardingSeen = true;
+      localStorage.setItem(GARDEN_ONBOARDING_KEY, 'true');
+      updateClearExamplesButton();
+    }
+
+    function dismissGardenOnboarding() {
+      markGardenOnboardingSeen();
+      updateGardenWaterReminder();
+    }
+
+    function tryFirstWater() {
+      markGardenOnboardingSeen();
+      updateGardenWaterReminder();
+      const friend = getGardenWaterReminder()?.friend || friends[0];
+      if (friend) openTouchModal(friend.id);
+    }
+
     function updateGardenWaterReminder() {
       const alert = document.getElementById('garden-water-alert');
-      const text = document.getElementById('garden-water-alert-text');
-      if (!alert || !text) return;
-      const reminder = getGardenWaterReminder();
-      alert.classList.toggle('hidden', !reminder || waterAlertKey(reminder) === dismissedWaterAlertKey);
-      if (reminder) {
-        const prefix = reminder.count > 1 ? `${reminder.count} plants could use water. ` : 'Ready to water. ';
-        text.textContent = `${prefix}${reminder.friend.name} is at ${reminder.health}% ${getPlantStage(reminder.health, reminder.friend.tier, reminder.friend).label}.`;
+      if (!alert) return;
+      const showOnboarding = !gardenOnboardingSeen && hasAnyExamples();
+      const clearExamplesButton = document.getElementById('btn-clear-examples');
+      if (clearExamplesButton) {
+        clearExamplesButton.classList.toggle('onboarding-nudge', showOnboarding);
       }
+
+      if (showOnboarding) {
+        alert.className = 'relative z-10 mb-2 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-teal-500/40 bg-[#14201b]/95 p-3 text-xs text-[#e4ece7] shadow-xl backdrop-blur-sm';
+        alert.innerHTML = `
+          <div class="flex min-w-0 flex-1 items-start gap-2">
+            <i class="pixelart-icons-font-info-box pixel-icon mt-0.5 text-teal-300" aria-hidden="true"></i>
+            <div><strong class="text-teal-200">Welcome to your demo garden!</strong> Tap a wilting plant, then Water to log a check-in. Clear the examples and tap + Add to start with your own circle.</div>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button type="button" onclick="tryFirstWater()" class="inline-flex items-center gap-1 rounded-md bg-[#115e59] px-2.5 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#0f766e]">
+              <i class="pixelart-icons-font-drop pixel-icon" aria-hidden="true"></i> Try watering
+            </button>
+            <button type="button" onclick="clearAllExamples()" class="inline-flex items-center gap-1 rounded-md border border-[#ea580c]/50 bg-[#241710] px-2.5 py-1.5 text-xs text-[#fed7aa] transition-colors hover:bg-[#342217]">
+              <i class="pixelart-icons-font-trash pixel-icon" aria-hidden="true"></i> Clear examples
+            </button>
+            <button type="button" onclick="dismissGardenOnboarding()" aria-label="Dismiss garden introduction" class="flex h-7 w-7 items-center justify-center rounded-md text-[#8da498] transition-colors hover:bg-white/10 hover:text-white">
+              <i class="pixelart-icons-font-close pixel-icon" aria-hidden="true"></i>
+            </button>
+          </div>
+        `;
+        alert.classList.remove('hidden');
+        return;
+      }
+
+      const reminder = getGardenWaterReminder();
+      const text = reminder ? `${reminder.count > 1 ? `${reminder.count} plants could use water. ` : 'Ready to water. '}${reminder.friend.name} is at ${reminder.health}% ${getPlantStage(reminder.health, reminder.friend.tier, reminder.friend).label}.` : '';
+      alert.className = 'relative z-10 mb-2 flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-lg border-2 border-[#ffd09a] bg-[#ff7a00] py-2 pl-3 pr-10 text-xs font-semibold text-[#1f0d00] shadow-lg shadow-black/40';
+      alert.innerHTML = `
+        <i class="pixelart-icons-font-warning-box pixel-icon shrink-0" aria-hidden="true"></i>
+        <span id="garden-water-alert-text" class="min-w-0 flex-1 basis-36 font-sans font-semibold">${escapeHtml(text)}</span>
+        <button type="button" onclick="waterGardenReminder()" class="inline-flex items-center gap-1 rounded-md bg-[#1f0d00] px-2 py-1 text-[#ffb067] hover:bg-black">
+          <i class="pixelart-icons-font-drop pixel-icon" aria-hidden="true"></i> Water
+        </button>
+        <button type="button" onclick="dismissGardenWaterAlert()" aria-label="Close watering alert" class="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-md hover:bg-black/20">
+          <i class="pixelart-icons-font-close pixel-icon" aria-hidden="true"></i>
+        </button>
+      `;
+      alert.classList.toggle('hidden', !reminder || waterAlertKey(reminder) === dismissedWaterAlertKey);
     }
 
     function waterGardenReminder() {
