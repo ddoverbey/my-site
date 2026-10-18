@@ -529,19 +529,15 @@ check('mixed city and airport itineraries support optional dates, reason text an
   assert.equal(ledger.metadataProgress(migrate({expeditions:[mixedExpedition]})).fastTravel,0);
   assert.equal(ledger.metadataProgress(migrate({expeditions:[{...mixedExpedition,startDate:null,endDate:null}]})).southernCross,0);
 });
-check('only road legs clear land fog; ferries and flights clear water fog', () => {
+check('only routed road legs clear land fog; only ferries clear water fog', () => {
   assert.equal(ledger.fogRoutes(mixedExpedition).length,2);
-  const flightEndpoints = [mixedStops[0].coords,mixedStops[1].coords];
-  assert.deepEqual(ledger.waterFogRoutes(mixedExpedition),[flightEndpoints]);
-  assert.equal(ledger.waterFogRoutes(mixedExpedition)[0],ledger.waterFogRoutes(mixedExpedition)[0],
-    'flight endpoints must reuse a stable route array for pixel caching');
-  for (const mode of ['rail', 'foot']) {
+  assert.deepEqual(ledger.waterFogRoutes(mixedExpedition),[]);
+  for (const mode of ['flight', 'rail', 'foot']) {
     assert.deepEqual(ledger.waterFogRoutes({...exp,transitTags:[mode]}),[]);
     const legs = mixedExpedition.routeLegs.map(leg => ({...leg,mode}));
     assert.deepEqual(ledger.waterFogRoutes({...mixedExpedition,routeLegs:legs}),[]);
   }
   assert.deepEqual(ledger.waterFogRoutes({...exp,transitTags:['ferry']}),[exp.routeCoords]);
-  assert.deepEqual(ledger.waterFogRoutes({...exp,transitTags:['flight']}),[exp.routeCoords]);
   assert.deepEqual(ledger.waterFogRoutes({...exp,transitTags:['ferry','flight']}),[]);
   assert.deepEqual(ledger.fogRoutes({...exp,transitTags:['flight']}),[]);
   assert.deepEqual(ledger.fogRoutes({...exp,transitTags:['road']}),[exp.routeCoords]);
@@ -574,7 +570,7 @@ check('uploaded expedition tracks preserve geometry while fog and county credit 
     assert.equal(uploaded.routeLegs[0].routeSource,'uploaded');
     assert.deepEqual(uploaded.routeLegs[0].routeCoords, track);
     assert.deepEqual(ledger.fogRoutes(uploaded), []);
-    assert.deepEqual(ledger.waterFogRoutes(uploaded), ['ferry','flight'].includes(mode) ? [track] : []);
+    assert.deepEqual(ledger.waterFogRoutes(uploaded), mode === 'ferry' ? [track] : []);
   }
   assert.throws(() => ledger.validateExpeditions([makeUploadedTrip('ferry', ['08059'])], lookups), /travel leg/);
 });

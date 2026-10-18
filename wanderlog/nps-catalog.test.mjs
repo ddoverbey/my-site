@@ -122,7 +122,7 @@ check('mobile RPG HUD starts collapsed with an accessible stats toggle', () => {
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261018-water-stencil')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261018-ferry-water-fog')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('storage-risk banner and unfinished-trip recovery controls are present', () => {
@@ -462,14 +462,12 @@ check('dataset status lives inside Settings rather than over the map legend', ()
   assert.ok(settings.includes('aria-label="Settings"'));
   assert.ok(html.includes('isolate z-0 overflow-hidden'));
 });
-check('water fog uses a land stencil rather than political shoreline sampling', () => {
-  for (const name of ['destinationCoordinate', 'isOceanCoordinate', 'oceanHasClearance', 'waterRoutePoints', 'waterFogRouteCache']) {
-    assert.ok(!html.includes(`function ${name}`));
-    assert.ok(!html.includes(`const ${name}`));
-  }
-  assert.ok(html.includes('calculatePixelRadius(cached.averageLat, 90)'));
-  assert.ok(html.includes('fogCtx.shadowBlur = 18;'));
-  assert.ok(html.includes('Ferry / Boat and flight routes clear ocean fog'));
+check('ferry routes use the original small water-only brush while flights clear no route fog', () => {
+  assert.ok(html.includes('TravelLedger.waterFogRoutes(exp).forEach(route => punchWaterFogRoute(route))'));
+  assert.ok(html.includes('const WATER_FOG_RADIUS_KM = 25;'));
+  assert.ok(html.includes('const WATER_ROUTE_SAMPLE_KM = 10;'));
+  assert.ok(!html.includes('strokeWaterFogSegments'));
+  assert.ok(html.includes('Flight, rail, and walking routes do not clear route fog.'));
 });
 vm.runInContext(`
   map = {
@@ -1131,110 +1129,44 @@ context.cancelAnimationFrame = () => { animationCallback = null; };
 context.window.matchMedia = () => ({ matches: false });
 context.CoordinateLookups = coordinateLookups;
 context.d3.geoContains = () => true;
-check('great-circle water paths cache by zoom, wrap the dateline, and stencil land before visited clearings without political lookups', () => {
-  const originalInterpolate = context.d3.geoInterpolate;
-  const originalContains = context.d3.geoContains;
-  const originalPath = context.Path2D;
-  let interpolationCalls = 0, projections = 0, zoom = 4, pan = 0, paths = 0;
-  const operations = [];
-  const point = (x, y) => ({x,y,round(){return this;},subtract(other){return point(x-other.x,y-other.y);}});
-  context.d3.geoInterpolate = (from, to) => {
-    interpolationCalls++;
-    assert.deepEqual(Array.from(from), [170, 20]);
-    assert.deepEqual(Array.from(to), [-170, 20]);
-    return t => [((170 + 20 * t + 180) % 360) - 180, 20 + Math.sin(Math.PI * t) * 5];
-  };
-  context.d3.geoContains = () => { throw new Error('fog rendering must not call geoContains'); };
-  context.CoordinateLookups = {...coordinateLookups,
-    politicalRegion() { throw new Error('fog rendering must not resolve political coordinates'); }};
-  context.Path2D = class {
-    constructor(){paths++;}
-    moveTo(){}
-    lineTo(){}
-    closePath(){}
-  };
-  context.waterTestMap = {
-    options:{crs:{scale:()=>360}},getZoom:()=>zoom,
-    project([lat,lng]){projections++;return point(lng,lat);},
-    latLngToContainerPoint:([lat,lng])=>point(lng+pan,lat)
-  };
-  const ctx = context.waterTestCtx = {
-    setTransform(){},clearRect(){},save(){},restore(){},translate(){},
-    fillRect(){operations.push(['base',this.globalCompositeOperation,this.fillStyle]);},
-    beginPath(){operations.push(['begin']);},
-    moveTo(x,y){operations.push(['move',x,y]);},lineTo(x,y){operations.push(['line',x,y]);},
-    stroke(){operations.push(['water',this.globalCompositeOperation,this.lineWidth,this.shadowBlur,this.lineCap,this.lineJoin]);},
-    fill(path,rule){operations.push(['land',this.globalCompositeOperation,this.fillStyle,this.shadowBlur,rule]);},
-    createRadialGradient(){return {addColorStop(){}};},
-    arc(){operations.push(['visited',this.globalCompositeOperation]);}
-  };
-  try {
-    vm.runInContext(`
-      globalThis.waterTestSaved={map,fogCtx,worldGeoJson,PARKS,coordinateIndexes,fogPadding,state:{...AppState}};
-      applyPassport(migratePassport({}));
-      AppState.mode='rpg';AppState.currentTab='map';
-      map=waterTestMap;fogCtx=waterTestCtx;
-      PARKS=[{id:'stencil_park',lat:20,lng:170}];AppState.pins={stencil_park:'v'};
-      coordinateIndexes={countries:[],states:[],counties:[],microStates:[]};
-      fogPadding={x:100,y:100};
-      worldGeoJson=[{geometry:{type:'Polygon',coordinates:[[[175,15],[-175,15],[-175,25],[175,15]]]}}];
-      globalThis.waterTestRoute=[[20,170],[20,-170]];
-      AppState.expeditions=[{transitTags:['ferry'],routeCoords:waterTestRoute,
-        parkIds:[],customPoiIds:[],countyIds:[],
-        routeLegs:[{mode:'ferry',routeCoords:waterTestRoute,countyIds:[]}]}];
-      AppState.homeBase={lat:20,lng:170,radiusKm:10,countyId:null};
-      drawFogOfWar();
-    `, context);
-    assert.equal(interpolationCalls,1);
-    assert.equal(operations[0][0],'base');
-    const waterIndex = operations.findIndex(op=>op[0]==='water');
-    const landIndex = operations.findIndex(op=>op[0]==='land');
-    const visitedIndex = operations.findIndex(op=>op[0]==='visited');
-    assert.ok(waterIndex>0 && landIndex>waterIndex && visitedIndex>landIndex);
-    assert.deepEqual(operations[waterIndex].slice(1,2),['destination-out']);
-    assert.deepEqual(operations[waterIndex].slice(3),[18,'round','round']);
-    const expectedWidth=vm.runInContext('calculatePixelRadius(20 + Array.from({length:33},(_,i)=>Math.sin(Math.PI*i/32)*5).reduce((a,b)=>a+b,0)/33,90)*2',context);
-    assert.ok(Math.abs(operations[waterIndex][2]-expectedWidth)<1e-8);
-    assert.equal(operations.filter(op=>op[0]==='water').length,1);
-    assert.deepEqual(operations[landIndex].slice(1),['source-over','rgba(235, 239, 245, 0.99)',0,'evenodd']);
-    assert.equal(operations[visitedIndex][1],'destination-out');
-    let previous;
-    for (const op of operations) {
-      if(op[0]==='move') previous=op;
-      if(op[0]==='line') {
-        assert.ok(Math.abs(op[1]-previous[1])<180,'no line may streak across the dateline');
-        previous=op;
-      }
-    }
-    assert.equal(operations.filter(op=>op[0]==='line').length % 32,0);
-    assert.ok(operations.some(op=>op[0]==='line' && op[2]>20),'interpolated arc should curve');
-    const firstProjections = projections, firstPaths = paths;
-    pan=10;operations.length=0;
-    vm.runInContext('drawFogOfWar()',context);
-    assert.equal(interpolationCalls,1);
-    assert.equal(paths,firstPaths);
-    assert.equal(projections,firstProjections+2,'panning should project only the two canvas origins');
-    zoom++;
-    vm.runInContext('drawFogOfWar()',context);
-    assert.equal(interpolationCalls,2);
-    operations.length=0;
-    vm.runInContext('worldGeoJson=null;drawFogOfWar()',context);
-    assert.ok(!operations.some(op=>op[0]==='water'),'missing atlas must not expose land');
-    assert.equal(ctx.shadowBlur,0);
-  } finally {
-    vm.runInContext(`
-      ({map,fogCtx,worldGeoJson,PARKS,coordinateIndexes,fogPadding}=waterTestSaved);
-      Object.assign(AppState,waterTestSaved.state);
-      delete globalThis.waterTestSaved;delete globalThis.waterTestRoute;
-    `,context);
-    context.d3.geoInterpolate=originalInterpolate;
-    context.d3.geoContains=originalContains;
-    context.Path2D=originalPath;
-    context.CoordinateLookups=coordinateLookups;
-    delete context.waterTestMap;
-    delete context.waterTestCtx;
+const originalGeoDistance = context.d3.geoDistance;
+const originalGeoInterpolate = context.d3.geoInterpolate;
+let waterLookups = 0;
+context.d3.geoDistance = (from, to) => Math.abs(to[0] - from[0]) * Math.PI / 180;
+context.d3.geoInterpolate = (from, to) => t => [
+  from[0] + (to[0] - from[0]) * t,
+  from[1] + (to[1] - from[1]) * t
+];
+context.CoordinateLookups = {
+  ...coordinateLookups,
+  politicalRegion: (lat, lng) => {
+    waterLookups++;
+    const land = Math.abs(lat) < 0.3 && lng >= 0.45 && lng <= 0.55;
+    return { countries: land ? ['Test Island'] : [], states: [], counties: [] };
   }
+};
+vm.runInContext(`
+  waterOriginalMap=map;waterOriginalIndexes=coordinateIndexes;
+  map={options:{crs:{scale:zoom=>256*2**zoom}},getZoom:()=>4,
+    latLngToContainerPoint:([lat,lng])=>({x:lng*100,y:lat*100})};
+  coordinateIndexes={countries:[],states:[],counties:[],microStates:[]};
+  fogOperations.length=0;
+`, context);
+const testFerryRoute = [[0, 0], [0, 1]];
+context.testFerryRoute = testFerryRoute;
+vm.runInContext('punchWaterFogRoute(testFerryRoute)', context);
+check('ferry fog clears open water only and caches shoreline sampling', () => {
+  const arcs = context.fogOperations.filter(operation => operation[0] === 'arc');
+  assert.ok(arcs.length > 0);
+  assert.ok(arcs.every(([, x]) => x < 22.5 || x > 77.5), 'water clearing must stop outside the buffered island');
+  const lookupsAfterFirstRender = waterLookups;
+  vm.runInContext('punchWaterFogRoute(testFerryRoute)', context);
+  assert.equal(waterLookups, lookupsAfterFirstRender);
+  assert.equal(context.fogOperations.filter(operation => operation[0] === 'arc').length, arcs.length * 2);
 });
+vm.runInContext('map=waterOriginalMap;coordinateIndexes=waterOriginalIndexes;delete globalThis.waterOriginalMap;delete globalThis.waterOriginalIndexes;delete globalThis.testFerryRoute', context);
+context.d3.geoDistance = originalGeoDistance;
+context.d3.geoInterpolate = originalGeoInterpolate;
 context.CoordinateLookups = coordinateLookups;
 context.mapFly = (...args) => { flight = args; };
 context.mapOnce = (event, callback) => { assert.equal(event, 'moveend'); movementCallback = callback; };
@@ -2595,7 +2527,7 @@ check('mixed-mode preview only routes driving legs; ferries are direct without i
   assert.ok(previewTooltipTexts.includes('SAN &lt;airport&gt;'));
   assert.ok(previewLines.some(line=>line.options.color==='#38bdf8' && line.options.dashArray==='8, 8'));
   assert.ok(previewLines.some(line=>line.options.color==='#94a3b8' && line.options.dashArray==='8, 8'));
-  assert.ok(element('expeditionRouteSummary').textContent.includes('Ferry / Boat and flight routes clear ocean fog using a land stencil'));
+  assert.ok(element('expeditionRouteSummary').textContent.includes('Ferry / Boat routes clear fog only well offshore'));
   assert.ok(element('expeditionRouteSummary').textContent.includes('None of these modes award intermediate route counties'));
 });
 context.crypto.randomUUID=()=> 'mixed-ui';

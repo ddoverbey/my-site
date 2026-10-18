@@ -395,23 +395,11 @@
     return expedition.transitTags.some(mode => !['road', 'awd'].includes(mode)) ? [] : [expedition.routeCoords];
   }
 
-  const flightFogRoutes = new WeakMap();
   function waterFogRoutes(expedition) {
-    if (expedition.routeLegs) return expedition.routeLegs.flatMap((leg, index) => {
-      if (!['ferry', 'flight'].includes(leg.mode)) return [];
-      let route = leg.routeCoords;
-      if (leg.mode === 'flight' && !route?.length) {
-        const start = expedition.routeStops[index].coords;
-        const end = expedition.routeStops[index + 1].coords;
-        route = flightFogRoutes.get(leg);
-        if (!route || route[0] !== start || route[1] !== end) {
-          route = [start, end];
-          flightFogRoutes.set(leg, route);
-        }
-      }
-      return Array.isArray(route) && route.length >= 2 ? [route] : [];
-    });
-    return expedition.transitTags.length === 1 && ['ferry', 'flight'].includes(expedition.transitTags[0])
+    if (expedition.routeLegs) return expedition.routeLegs
+      .filter(leg => leg.mode === 'ferry')
+      .map(leg => leg.routeCoords);
+    return expedition.transitTags.length === 1 && expedition.transitTags[0] === 'ferry'
       ? [expedition.routeCoords] : [];
   }
 
