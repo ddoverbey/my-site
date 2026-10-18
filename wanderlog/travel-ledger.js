@@ -396,10 +396,15 @@
   }
 
   function waterFogRoutes(expedition) {
-    if (expedition.routeLegs) return expedition.routeLegs
-      .filter(leg => leg.mode === 'ferry')
-      .map(leg => leg.routeCoords);
-    return expedition.transitTags.length === 1 && expedition.transitTags[0] === 'ferry'
+    if (expedition.routeLegs) return expedition.routeLegs.flatMap((leg, index) => {
+      if (!['ferry', 'flight'].includes(leg.mode)) return [];
+      const route = leg.mode === 'flight' && (leg.routeSource ?? 'none') === 'none'
+        ? [expedition.routeStops[index].coords, expedition.routeStops[index + 1].coords]
+        : leg.routeCoords;
+      return Array.isArray(route) && route.length >= 2 ? [route] : [];
+    });
+    return expedition.transitTags.length === 1 && ['ferry', 'flight'].includes(expedition.transitTags[0])
+      && Array.isArray(expedition.routeCoords) && expedition.routeCoords.length >= 2
       ? [expedition.routeCoords] : [];
   }
 

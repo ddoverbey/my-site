@@ -806,7 +806,7 @@
         <div id="expeditionRoutePreview" class="hidden h-52 w-full rounded-lg overflow-hidden" aria-label="Expedition route preview"></div>
         <p id="expeditionRouteSummary" class="text-xs text-slate-400"></p>
       </div>
-      <details class="text-[11px] text-slate-400"><summary>Map services &amp; privacy</summary>City and airport suggestions use Photon by Komoot; search text is sent as you type. Only driving and AWD endpoints are sent to the FOSSGIS routing service (OSRM). Imported GeoJSON/KML tracks are processed locally and are not sent to OSRM. Imported driving/AWD tracks clear land fog and award route counties; ferry tracks clear fog only over water with a conservative shoreline buffer; rail, walking, and flight tracks clear no route fog or intermediate counties. Without an imported track, ferry, rail, walking, and flight routes are dashed direct approximations. Elevations use Open-Meteo. © OpenStreetMap contributors.</details>
+      <details class="text-[11px] text-slate-400"><summary>Map services &amp; privacy</summary>City and airport suggestions use Photon by Komoot; search text is sent as you type. Only driving and AWD endpoints are sent to the FOSSGIS routing service (OSRM). Imported GeoJSON/KML tracks are processed locally and are not sent to OSRM. Imported driving/AWD tracks clear land fog and award route counties; ferry and flight routes clear fog only over open water using a large coastal buffer; neither award route counties. Rail and walking routes clear no route fog or intermediate counties. Without an imported track, ferry, rail, walking, and flight routes are dashed direct approximations. Elevations use Open-Meteo. © OpenStreetMap contributors.</details>
       <p id="expeditionStatus" role="status" aria-live="polite" class="text-xs text-amber-200"></p>
       <div class="flex justify-end gap-2">
         <button id="btnCancelExpedition" type="button" class="rounded-lg bg-slate-800 px-4 py-2 text-sm">Cancel</button>
@@ -860,14 +860,14 @@
     </form>
   </div>
 
-  <script src="./nps-catalog.js?v=20261017-storage-safety"></script>
-  <script src="./national-parks-scratch.js?v=20261017-storage-safety"></script>
-  <script src="./international-parks.js?v=20261017-storage-safety"></script>
-  <script src="./ecoregions.js?v=20261017-storage-safety"></script>
-  <script src="./coordinate-lookups.js?v=20261017-storage-safety"></script>
-  <script src="./micro-states.js?v=20261017-storage-safety"></script>
-  <script src="./travel-ledger.js?v=20261017-storage-safety"></script>
-  <script src="./rarity-config.js?v=20261017-storage-safety"></script>
+  <script src="./nps-catalog.js?v=20261017-water-flight-fog"></script>
+  <script src="./national-parks-scratch.js?v=20261017-water-flight-fog"></script>
+  <script src="./international-parks.js?v=20261017-water-flight-fog"></script>
+  <script src="./ecoregions.js?v=20261017-water-flight-fog"></script>
+  <script src="./coordinate-lookups.js?v=20261017-water-flight-fog"></script>
+  <script src="./micro-states.js?v=20261017-water-flight-fog"></script>
+  <script src="./travel-ledger.js?v=20261017-water-flight-fog"></script>
+  <script src="./rarity-config.js?v=20261017-water-flight-fog"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -2110,8 +2110,8 @@
       fogCtx.shadowColor = 'transparent';
     }
 
-    const WATER_FOG_RADIUS_KM = 25;
-    const WATER_ROUTE_SAMPLE_KM = 10;
+    const WATER_FOG_RADIUS_KM = 120;
+    const WATER_ROUTE_SAMPLE_KM = 40;
     const waterFogRouteCache = new WeakMap();
 
     function destinationCoordinate(lat, lng, distanceKm, bearing) {
@@ -4118,7 +4118,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261017-storage-safety"></script>
+  <script src="./expedition-ui.js?v=20261017-water-flight-fog"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);

@@ -122,7 +122,7 @@ check('mobile RPG HUD starts collapsed with an accessible stats toggle', () => {
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261017-storage-safety')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261017-water-flight-fog')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('storage-risk banner and unfinished-trip recovery controls are present', () => {
@@ -465,6 +465,9 @@ check('dataset status lives inside Settings rather than over the map legend', ()
 check('ferry fog uses the separate water-only shoreline-filtered renderer', () => {
   assert.ok(html.includes('TravelLedger.waterFogRoutes(exp).forEach(route => punchWaterFogRoute(route))'));
   assert.ok(html.includes('function oceanHasClearance(lat, lng)'));
+  assert.ok(html.includes('const WATER_FOG_RADIUS_KM = 120;'));
+  assert.ok(html.includes('const WATER_ROUTE_SAMPLE_KM = 40;'));
+  assert.ok(html.includes('ferry and flight routes clear fog only over open water using a large coastal buffer; neither award route counties.'));
 });
 vm.runInContext(`
   map = {
