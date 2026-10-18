@@ -1030,6 +1030,52 @@ check('logged expedition routes join legacy route corridors in the same canvas',
   assert.equal(context.fogOperations.filter(op => op[0] === 'polygonFill' && op[1] === 'evenodd').length, 1);
   vm.runInContext(`AppState.expeditions=${savedExpeditions}`, context);
 });
+check('saved and imported road/AWD legs reveal entire crossed counties, including land far from the route', () => {
+  vm.runInContext(`
+    globalThis.roadCountySaved={state:{...AppState},map,PARKS,coordinateIndexes,
+      county:countyFeaturesById['08059']};
+    applyPassport(migratePassport({}));
+    AppState.currentTab='map';AppState.mode='rpg';
+    PARKS=[];coordinateIndexes=null;
+    map={getZoom:()=>4,options:{crs:{scale:zoom=>256*2**zoom}},
+      latLngToContainerPoint:([lat,lng])=>({x:lng*100,y:lat*100})};
+    countyFeaturesById['08059']={geometry:{type:'Polygon',
+      coordinates:[[[0,0],[5,0],[5,5],[0,5],[0,0]]]}};
+  `, context);
+  try {
+    for (const mode of ['road', 'awd']) {
+      for (const routeSource of ['routed', 'uploaded']) {
+        context.roadCountyMode=mode;
+        context.roadCountySource=routeSource;
+        vm.runInContext(`
+          AppState.expeditions=[{...testExpedition,parkIds:[],customPoiIds:[],countyIds:[],
+            transitTags:[roadCountyMode],routeCoords:[[0,0],[0,1]],
+            routeLegs:[{mode:roadCountyMode,routeSource:roadCountySource,
+              routeCoords:[[0,0],[0,1]],countyIds:['08059']}]}];
+          fogOperations.length=0;
+          drawFogOfWar();
+        `, context);
+        assert.equal(context.fogOperations.filter(op=>op[0]==='polygonFill').length,1);
+        assert.ok(context.fogOperations.some(op=>op[0]==='lineTo' && op[1]===500 && op[2]===500),
+          `${mode}/${routeSource}: the distant county corner must be included, not just the road corridor`);
+        assert.equal(vm.runInContext('loggedCountyStatuses(false)["08059"]',context),'v');
+      }
+    }
+    vm.runInContext('AppState.expeditions=[];fogOperations.length=0;drawFogOfWar()',context);
+    assert.equal(context.fogOperations.filter(op=>op[0]==='polygonFill').length,0,
+      'removing the only trip must restore fog over its counties');
+  } finally {
+    vm.runInContext(`
+      Object.assign(AppState,roadCountySaved.state);
+      ({map,PARKS,coordinateIndexes}=roadCountySaved);
+      if(roadCountySaved.county) countyFeaturesById['08059']=roadCountySaved.county;
+      else delete countyFeaturesById['08059'];
+      delete globalThis.roadCountySaved;
+    `,context);
+    delete context.roadCountyMode;
+    delete context.roadCountySource;
+  }
+});
 check('all ledger fields survive local and shared payload migration', () => {
   vm.runInContext('saveState();applyPassport(migratePassport(JSON.parse(localStorage.getItem("terra_incognita_state"))))', context);
   const saved = JSON.parse(savedJson);

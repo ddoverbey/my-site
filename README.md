@@ -542,6 +542,9 @@ data shows retry guidance instead of a misleading completion count.
    service, with cached responses and requests spaced at least 1.1 seconds apart. Add intermediate
    stops if the suggested road route differs from your actual drive. US county credit uses segment
    intersections with the existing simplified county polygons, including narrow crossed counties.
+   Saving a driving/AWD leg reveals the entire area of every crossed US county in RPG fog,
+   including areas away from the road, in addition to the route corridor. This also applies to
+   imported driving/AWD tracks and previously saved trips with route county credit.
    Ferry, rail, walking, and flight legs never call the road router. Ferry, rail, and walking
    legs use two-point direct approximations; flights use a dashed connector for orientation only.
    All these modes are dashed in previews and Travel Log mini-maps. Previously saved road-routed
