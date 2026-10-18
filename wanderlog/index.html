@@ -658,14 +658,11 @@
     <!-- VIEW 4: BUCKET LIST MODE (OVERLAY DRAWER / FULL VIEW) -->
     <div id="tabContent-bucketlist" class="w-full h-full p-4 md:p-8 overflow-y-auto hidden">
       <div class="max-w-5xl mx-auto space-y-6 pb-20">
-        <div class="rpg-panel p-6 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h2 class="cinzel text-xl font-bold text-amber-200">Traditional Travel Wishlist & Ledger</h2>
-            <p class="text-xs text-slate-400">Explore NPS parks, monuments, seashores, historic sites, and international destinations</p>
-          </div>
-          <div class="flex flex-wrap items-center gap-3">
-            <input type="text" id="bucketSearch" placeholder="Search parks, cities, country, biome..." class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-400 w-56">
-            <select id="bucketFilterStatus" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none">
+        <div class="rpg-panel p-4 md:p-6 rounded-2xl space-y-3">
+          <h2 class="cinzel text-xl font-bold text-amber-200">Travel Ledger</h2>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <input type="text" id="bucketSearch" aria-label="Search destinations" placeholder="Search destinations..." class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-amber-400 w-full min-w-0">
+            <select id="bucketFilterStatus" aria-label="Visit status" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none w-full min-w-0">
               <option value="all">All Items</option>
               <option value="v">Visited Only</option>
               <option value="w">Wishlist Only</option>
@@ -673,7 +670,7 @@
               <option value="l">Lived / Home Base Only</option>
               <option value="un">Unexplored Only</option>
             </select>
-            <select id="bucketFilterType" aria-label="Destination type" aria-describedby="bucketTypeHint" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none">
+            <select id="bucketFilterType" aria-label="Destination type" aria-describedby="bucketTypeHint" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none w-full min-w-0">
               <option value="all">All Destination Types</option>
               <option value="parks">National Parks — Worldwide</option>
               <option value="cities">Cities &amp; Towns</option>
@@ -693,9 +690,9 @@
               <option value="international">International Catalog</option>
               <option value="custom">Custom Locations</option>
             </select>
-            <p id="bucketTypeHint" class="w-full text-[11px] text-slate-400">US National Parks and NPS filters use only the official NPS catalog, including U.S. territories. Worldwide includes international entries with unverified curated/Wikidata classifications. Combined designations can match multiple types; combined NPS listings count once.</p>
-            <p id="bucketResultsCount" role="status" aria-live="polite" class="w-full text-xs text-amber-300"></p>
           </div>
+          <p id="bucketTypeHint" class="text-[11px] text-slate-400">NPS filters use the official US catalog. International classifications may be unverified.</p>
+          <p id="bucketResultsCount" role="status" aria-live="polite" class="text-xs text-amber-300"></p>
         </div>
 
         <section id="bucketCityMatches" class="hidden rpg-panel rounded-xl p-4 space-y-3" aria-label="City and town search results">

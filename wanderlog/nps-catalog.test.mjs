@@ -102,6 +102,16 @@ const expeditionUi = await readFile(new URL('./expedition-ui.js', import.meta.ur
 const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)]
   .map(match => /src="\.\/expedition-ui\.js(?:\?[^"]*)?"/.test(match[0]) ? expeditionUi : match[1]);
 check('every inline script parses', () => scripts.forEach(script => new vm.Script(script)));
+check('Travel Ledger header is compact with no description beneath its title', () => {
+  const header=html.slice(html.indexOf('<div id="tabContent-bucketlist"'),html.indexOf('<section id="bucketCityMatches"'));
+  assert.ok(header.includes('>Travel Ledger</h2>'));
+  assert.ok(!header.includes('Traditional Travel Wishlist'));
+  assert.ok(!header.includes('Explore NPS parks'));
+  assert.ok(header.includes('grid-cols-1 sm:grid-cols-3'));
+  assert.ok(header.includes('aria-label="Search destinations"'));
+  assert.ok(header.includes('aria-label="Visit status"'));
+  assert.ok(header.includes('id="bucketResultsCount"'));
+});
 function parseRouteFixture(text, filename) {
   context.routeFixture = text;
   context.routeFilename = filename;
