@@ -860,14 +860,14 @@
     </form>
   </div>
 
-  <script src="./nps-catalog.js?v=20261017-water-fog-strokes"></script>
-  <script src="./national-parks-scratch.js?v=20261017-water-fog-strokes"></script>
-  <script src="./international-parks.js?v=20261017-water-fog-strokes"></script>
-  <script src="./ecoregions.js?v=20261017-water-fog-strokes"></script>
-  <script src="./coordinate-lookups.js?v=20261017-water-fog-strokes"></script>
-  <script src="./micro-states.js?v=20261017-water-fog-strokes"></script>
-  <script src="./travel-ledger.js?v=20261017-water-fog-strokes"></script>
-  <script src="./rarity-config.js?v=20261017-water-fog-strokes"></script>
+  <script src="./nps-catalog.js?v=20261017-route-render-perf"></script>
+  <script src="./national-parks-scratch.js?v=20261017-route-render-perf"></script>
+  <script src="./international-parks.js?v=20261017-route-render-perf"></script>
+  <script src="./ecoregions.js?v=20261017-route-render-perf"></script>
+  <script src="./coordinate-lookups.js?v=20261017-route-render-perf"></script>
+  <script src="./micro-states.js?v=20261017-route-render-perf"></script>
+  <script src="./travel-ledger.js?v=20261017-route-render-perf"></script>
+  <script src="./rarity-config.js?v=20261017-route-render-perf"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -2039,24 +2039,67 @@
     }
 
     const fogRouteCache = new WeakMap();
+    function projectRouteForFog(route, zoom, worldWidth) {
+      const toleranceSquared = 2.25;
+      const candidates = [];
+      const pixelsPerDegree = worldWidth / 360;
+      let lastKeptLng = null;
+      let lastKeptLat = null;
+      let lastValidPoint = null;
+      let latitudeTotal = 0;
+      let validCount = 0;
+
+      route.forEach(point => {
+        if (!Array.isArray(point) || !Number.isFinite(point[0]) || !Number.isFinite(point[1])) return;
+        lastValidPoint = point;
+        latitudeTotal += point[0];
+        validCount++;
+        const isEndpoint = candidates.length === 0;
+        let deltaLng = lastKeptLng === null ? 0 : point[1] - lastKeptLng;
+        if (deltaLng > 180) deltaLng -= 360;
+        else if (deltaLng < -180) deltaLng += 360;
+        const deltaLat = lastKeptLat === null ? 0 : point[0] - lastKeptLat;
+        const cosLatitude = Math.max(0.087, Math.cos((point[0] + (lastKeptLat ?? point[0])) *
+          Math.PI / 360));
+        if (isEndpoint || lastKeptLng === null ||
+            (deltaLng * pixelsPerDegree) ** 2 +
+            (deltaLat / cosLatitude * pixelsPerDegree) ** 2 >= toleranceSquared) {
+          candidates.push(point);
+          lastKeptLng = point[1];
+          lastKeptLat = point[0];
+        }
+      });
+      if (validCount < 2) return null;
+      if (candidates[candidates.length - 1] !== lastValidPoint) candidates.push(lastValidPoint);
+
+      const points = [];
+      const bounds = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+      previousX = null;
+      candidates.forEach(([lat, lng]) => {
+        const point = map.project([lat, lng], zoom).round();
+        if (previousX !== null) {
+          while (point.x - previousX > worldWidth / 2) point.x -= worldWidth;
+          while (previousX - point.x > worldWidth / 2) point.x += worldWidth;
+        }
+        previousX = point.x;
+        bounds.minX = Math.min(bounds.minX, point.x);
+        bounds.maxX = Math.max(bounds.maxX, point.x);
+        bounds.minY = Math.min(bounds.minY, point.y);
+        bounds.maxY = Math.max(bounds.maxY, point.y);
+        points.push(point);
+      });
+      return { points, bounds, averageLat: latitudeTotal / validCount };
+    }
+
     function punchFogRoute(route) {
       if (!Array.isArray(route) || route.length < 2) return;
       if (map.project) {
         const zoom = map.getZoom();
         let cached = fogRouteCache.get(route);
         if (!cached || cached.zoom !== zoom) {
-          const valid = route.filter(point => Array.isArray(point) && Number.isFinite(point[0]) && Number.isFinite(point[1]));
-          if (valid.length < 2) return;
-          const bounds = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
-          const points = valid.map(([lat, lng]) => {
-            const point = map.project([lat, lng], zoom).round();
-            bounds.minX = Math.min(bounds.minX, point.x);
-            bounds.maxX = Math.max(bounds.maxX, point.x);
-            bounds.minY = Math.min(bounds.minY, point.y);
-            bounds.maxY = Math.max(bounds.maxY, point.y);
-            return point;
-          });
-          cached = { zoom, points, bounds, averageLat: valid.reduce((sum, point) => sum + point[0], 0) / valid.length };
+          const geometry = projectRouteForFog(route, zoom, map.options.crs.scale(zoom));
+          if (!geometry) return;
+          cached = { zoom, ...geometry };
           fogRouteCache.set(route, cached);
         }
         const lineWidth = calculatePixelRadius(cached.averageLat, 40);
@@ -4169,7 +4212,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261017-water-fog-strokes"></script>
+  <script src="./expedition-ui.js?v=20261017-route-render-perf"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);

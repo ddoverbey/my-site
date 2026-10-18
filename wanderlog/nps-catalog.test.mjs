@@ -122,7 +122,7 @@ check('mobile RPG HUD starts collapsed with an accessible stats toggle', () => {
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261017-water-fog-strokes')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261017-route-render-perf')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('storage-risk banner and unfinished-trip recovery controls are present', () => {
@@ -2349,6 +2349,8 @@ check('projected polygon paths are reused during pans, culled offscreen and rebu
       `,context);
       assert.equal(strokes,1);
       assert.deepEqual(pathPoints[0], [0, 0]);
+      assert.ok(pathPoints[pathPoints.length - 1].every(value => Math.abs(value - 9.99) < 1e-8));
+      assert.ok(pathPoints.length < 150, 'dense geometry should be reduced to visible path detail');
       assert.ok(pathPoints.every(([x,y]) => Math.abs(x) < 10 && Math.abs(y) < 10));
       const first=projections;
       pan=10;
@@ -2361,7 +2363,8 @@ check('projected polygon paths are reused during pans, culled offscreen and rebu
       assert.equal(strokes,2);
       pan=0;zoom++;
       vm.runInContext('punchFogRoute(detailedRoad)',context);
-      assert.equal(projections, first + 1003);
+      assert.ok(projections > first && projections < first + 1003,
+        'zoom rebuild should project only simplified route vertices');
       assert.equal(strokes,3);
     } finally {
       vm.runInContext('map=null;fogCtx=null',context);
