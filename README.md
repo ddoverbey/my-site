@@ -558,20 +558,26 @@ data shows retry guidance instead of a misleading completion count.
    legs use two-point direct approximations; flights use a dashed connector for orientation only.
    All these modes are dashed in previews and Travel Log mini-maps. Previously saved road-routed
    ferry legs are normalized to direct stop-to-stop geometry on load/import and when reopened.
-   Logging the first Ferry / Boat expedition reveals the world's oceans. Unvisited landmasses
-   remain shrouded with softly feathered fog drawn from the loaded world, US state, and micro-state
-   atlas polygons. Visited land and port stops are revealed afterward. If the world atlas is
-   unavailable, full fog remains. Removing the last ferry expedition locks the oceans again.
-   Land fog rings are clipped at the antimeridian before projection, preventing dateline and
-   polar closing edges from creating streaks across the ocean; projected paths are cached per zoom.
-   Ferry, rail, walking, and flight routes clear no route corridors and award no intermediate
-   counties; only their stops count.
+   Ocean fog starts at 99% opacity. Each saved Ferry / Boat expedition reduces it by 10 percentage
+   points: 90%, 80%, 70%, 60%, then a 50% minimum. Mixed itineraries count once per expedition,
+   regardless of how many boat legs they contain; editing or removing trips recalculates opacity.
+   Ferry and flight routes fully clear water within a 100-mile (160.934 km) radius on either side
+   of the logged route. Flights without a recorded track use their stop-to-stop connector.
+   Water corridors require the loaded world atlas; without it, only the base opacity is applied.
+   Unvisited land remains shrouded using one cached, unblurred land stencil (three world copies),
+   rather than per-country fills. Longitudes are unwrapped across the dateline; Antarctic closing
+   edges follow the Mercator floor to prevent horizontal ocean streaks. Paths rebuild only when
+   zoom or atlas references change. Visited land and port stops are revealed afterward.
+   Shell and hole winding is normalized and the stencil uses a nonzero fill, so overlapping
+   country/state/micro-state outlines do not cancel one another and expose unvisited land.
+   Ferry, rail, walking, and flight routes award no intermediate counties; only their stops count.
+   Rail and walking routes clear no route fog.
 
 The preview does not save visits or clear fog. No map picker is displayed.
 For SAN → DEN → Aspen → DEN, select Flight, Drive, Drive: credit the airport/destination
 counties and the counties on the approved drives, not those between San Diego and Denver.
-The existing 40 km fog corridor follows routed driving/AWD legs only. Ferry, flight, rail, and
-walking lines never carve route trails across land.
+The existing 40 km land fog corridor follows routed driving/AWD legs only. Ferry, flight, rail,
+and walking lines never carve route trails across unvisited land.
 The modal's collapsed **Map services & privacy** section explains which services receive searches
 or coordinates and includes attribution. Road routing failure is explicit, never replaced with a fake
 straight-line road route; ferry and rail lines are always approximate, dashed connectors, not routed paths.

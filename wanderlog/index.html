@@ -812,7 +812,7 @@
         <div id="expeditionRoutePreview" class="hidden h-52 w-full rounded-lg overflow-hidden" aria-label="Expedition route preview"></div>
         <p id="expeditionRouteSummary" class="text-xs text-slate-400"></p>
       </div>
-      <details class="text-[11px] text-slate-400"><summary>Map services &amp; privacy</summary>City and airport suggestions use Photon by Komoot; search text is sent as you type. Only driving and AWD endpoints are sent to the FOSSGIS routing service (OSRM). Imported GeoJSON/KML tracks are processed locally and are not sent to OSRM. Imported driving/AWD tracks clear land fog and award route counties. Logging your first Ferry / Boat expedition reveals the world's oceans while keeping unvisited landmasses shrouded using the loaded atlas. Ferry, flight, rail, and walking routes do not clear route corridors or award intermediate counties. Without an imported track, these routes are dashed direct approximations. Elevations use Open-Meteo. © OpenStreetMap contributors.</details>
+      <details class="text-[11px] text-slate-400"><summary>Map services &amp; privacy</summary>City and airport suggestions use Photon by Komoot; search text is sent as you type. Only driving and AWD endpoints are sent to the FOSSGIS routing service (OSRM). Imported GeoJSON/KML tracks are processed locally and are not sent to OSRM. Imported driving/AWD tracks clear land fog and award route counties. Each Ferry / Boat expedition reduces ocean fog by 10 percentage points, down to 50% opacity (99% before the first trip). Ferry and flight routes fully clear water within 100 miles (160.934 km) on either side of the logged route when the world atlas is loaded; unvisited land stays shrouded. Ferry, flight, rail, and walking routes award no intermediate counties; rail and walking clear no route fog. Without an imported track, these routes are dashed direct approximations. Elevations use Open-Meteo. © OpenStreetMap contributors.</details>
       <p id="expeditionStatus" role="status" aria-live="polite" class="text-xs text-amber-200"></p>
       <div class="flex justify-end gap-2">
         <button id="btnCancelExpedition" type="button" class="rounded-lg bg-slate-800 px-4 py-2 text-sm">Cancel</button>
@@ -866,14 +866,14 @@
     </form>
   </div>
 
-  <script src="./nps-catalog.js?v=20261018-ocean-unlock"></script>
-  <script src="./national-parks-scratch.js?v=20261018-ocean-unlock"></script>
-  <script src="./international-parks.js?v=20261018-ocean-unlock"></script>
-  <script src="./ecoregions.js?v=20261018-ocean-unlock"></script>
-  <script src="./coordinate-lookups.js?v=20261018-ocean-unlock"></script>
-  <script src="./micro-states.js?v=20261018-ocean-unlock"></script>
-  <script src="./travel-ledger.js?v=20261018-ocean-unlock"></script>
-  <script src="./rarity-config.js?v=20261018-ocean-unlock"></script>
+  <script src="./nps-catalog.js?v=20261018-progressive-oceans"></script>
+  <script src="./national-parks-scratch.js?v=20261018-progressive-oceans"></script>
+  <script src="./international-parks.js?v=20261018-progressive-oceans"></script>
+  <script src="./ecoregions.js?v=20261018-progressive-oceans"></script>
+  <script src="./coordinate-lookups.js?v=20261018-progressive-oceans"></script>
+  <script src="./micro-states.js?v=20261018-progressive-oceans"></script>
+  <script src="./travel-ledger.js?v=20261018-progressive-oceans"></script>
+  <script src="./rarity-config.js?v=20261018-progressive-oceans"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -1862,9 +1862,10 @@
       });
     }
 
-    function hasUnlockedOcean() {
-      return AppState.expeditions.some(exp => exp.transitTags.includes('ferry') ||
-        exp.routeLegs?.some(leg => leg.mode === 'ferry'));
+    function oceanFogOpacity() {
+      const count = AppState.expeditions.filter(exp => exp.transitTags.includes('ferry') ||
+        exp.routeLegs?.some(leg => leg.mode === 'ferry')).length;
+      return count === 0 ? 0.99 : Math.max(0.5, Number((1 - count * 0.1).toFixed(2)));
     }
 
     function drawFogOfWar() {
@@ -1887,15 +1888,20 @@
       fogCtx.globalAlpha = 1;
       fogCtx.shadowBlur = 0;
       fogCtx.shadowColor = 'transparent';
-      fogCtx.fillStyle = 'rgba(235, 239, 245, 0.99)';
-      if (!hasUnlockedOcean() || !worldGeoJson?.length) {
-        fogCtx.fillRect(0, 0, width, height);
-        fogCtx.setTransform(1, 0, 0, 1, fogPadding.x, fogPadding.y);
-      } else {
-        fogCtx.setTransform(1, 0, 0, 1, fogPadding.x, fogPadding.y);
-        for (const features of [worldGeoJson, usaRegionGeoJson, microStateGeoJson]) {
-          (features || []).forEach(feature => paintLandFogPolygon(feature.geometry, 16));
-        }
+      const oceanOpacity = oceanFogOpacity();
+      fogCtx.fillStyle = `rgba(235, 239, 245, ${oceanOpacity})`;
+      fogCtx.fillRect(0, 0, width, height);
+      fogCtx.setTransform(1, 0, 0, 1, fogPadding.x, fogPadding.y);
+      if (worldGeoJson?.length) {
+        fogCtx.globalCompositeOperation = 'destination-out';
+        let waterRoutesDrawn = false;
+        AppState.expeditions.forEach(exp => {
+          TravelLedger.waterFogRoutes(exp).forEach(route => {
+            punchFogRoute(route, 160.934);
+            waterRoutesDrawn = true;
+          });
+        });
+        if (oceanOpacity < 0.99 || waterRoutesDrawn) paintLandFogStencil();
       }
       fogCtx.shadowBlur = 0;
       fogCtx.shadowColor = 'transparent';
@@ -1979,56 +1985,105 @@
     }
 
     const fogPolygonCache = new WeakMap();
+    let landStencilCache = null;
     function traceLandFogPolygon(geometry, target, zoom) {
-      const bounds = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
-      const radians = Math.PI / 180;
-      const projection = {
-        stream(output) {
-          const projected = d3.geoTransform({
-            point(x, y) {
-              const latitude = Math.max(-85.05112878, Math.min(85.05112878, y / radians));
-              const point = map.project
-                ? map.project([latitude, x / radians], zoom)
-                : map.latLngToContainerPoint([latitude, x / radians]);
-              bounds.minX = Math.min(bounds.minX, point.x);
-              bounds.maxX = Math.max(bounds.maxX, point.x);
-              bounds.minY = Math.min(bounds.minY, point.y);
-              bounds.maxY = Math.max(bounds.maxY, point.y);
-              this.stream.point(point.x, point.y);
+      const polygons = geometry?.type === 'Polygon' ? [geometry.coordinates] :
+        geometry?.type === 'MultiPolygon' ? geometry.coordinates : [];
+      polygons.forEach(rings => {
+        let shellLongitude = null;
+        rings.forEach((ring, ringIndex) => {
+          if (!Array.isArray(ring) || ring.length < 3) return;
+          const antarctic = ring.every(point => point[1] < -60) &&
+            ring.some((point, index) => Math.abs(point[0] - ring[(index + 1) % ring.length][0]) > 180);
+          let previousLongitude = null, previousRawLongitude = null;
+          const points = [];
+          const project = (latitude, longitude) => {
+            const coordinate = [Math.max(-85.05112878, Math.min(85.05112878, latitude)), longitude];
+            const point = map.project ? map.project(coordinate, zoom) : map.latLngToContainerPoint(coordinate);
+            points.push(point);
+          };
+          // Include the implicit closing edge so polar rings close at the Mercator floor.
+          for (let index = 0; index <= ring.length; index++) {
+            const [rawLongitude, latitude] = ring[index % ring.length];
+            let longitude = rawLongitude;
+            if (antarctic && previousRawLongitude !== null &&
+                Math.abs(rawLongitude - previousRawLongitude) > 180) {
+              project(-85.05112878, previousRawLongitude);
+              project(-85.05112878, rawLongitude);
+            } else if (!antarctic) {
+              const reference = previousLongitude ?? shellLongitude ?? longitude;
+              while (longitude - reference > 180) longitude -= 360;
+              while (reference - longitude > 180) longitude += 360;
             }
-          }).stream(output);
-          // D3's spherical clipper splits and rejoins polygon rings at the dateline,
-          // including closing edges and polar caps, before any pixel projection.
-          const clipped = d3.geoClipAntimeridian(projected);
-          return d3.geoTransform({
-            point(x, y) { this.stream.point(x * radians, y * radians); }
-          }).stream(clipped);
+            project(latitude, longitude);
+            if (index === 0 && shellLongitude === null) shellLongitude = longitude;
+            previousLongitude = longitude;
+            previousRawLongitude = rawLongitude;
+          }
+          // Consistent shell/hole winding makes overlapping atlas layers a union, not XOR.
+          const area = points.reduce((sum, point, index) => {
+            const next = points[(index + 1) % points.length];
+            return sum + point.x * next.y - next.x * point.y;
+          }, 0);
+          if ((ringIndex === 0 && area < 0) || (ringIndex > 0 && area > 0)) points.reverse();
+          points.forEach((point, index) => {
+            if (index === 0) target.moveTo(point.x, point.y);
+            else target.lineTo(point.x, point.y);
+          });
+          target.closePath();
+        });
+      });
+    }
+
+    function paintLandFogStencil() {
+      const zoom = map.getZoom();
+      if (!landStencilCache || landStencilCache.zoom !== zoom ||
+          landStencilCache.worldGeoJson !== worldGeoJson ||
+          landStencilCache.usaRegionGeoJson !== usaRegionGeoJson ||
+          landStencilCache.microStateGeoJson !== microStateGeoJson) {
+        const commands = [];
+        const path = typeof Path2D !== 'undefined' ? new Path2D() : null;
+        const target = path || {
+          moveTo: (x, y) => commands.push(['moveTo', x, y]),
+          lineTo: (x, y) => commands.push(['lineTo', x, y]),
+          closePath: () => commands.push(['closePath'])
+        };
+        for (const features of [worldGeoJson, usaRegionGeoJson, microStateGeoJson]) {
+          (features || []).forEach(feature => traceLandFogPolygon(feature.geometry, target, zoom));
         }
-      };
-      d3.geoPath().projection(projection).context(target)(geometry);
-      return bounds;
-    }
-
-    function paintLandFogPolygon(geometry, featherPixels = 16) {
+        landStencilCache = { zoom, worldGeoJson, usaRegionGeoJson, microStateGeoJson, path, commands };
+      }
+      const worldWidth = map.options.crs.scale(zoom);
+      const origin = map.project
+        ? map.latLngToContainerPoint([0, 0]).subtract(map.project([0, 0], zoom).round())
+        : { x: 0, y: 0 };
       fogCtx.globalCompositeOperation = 'source-over';
-      punchFogPolygon(geometry, featherPixels, 'rgba(235, 239, 245, 0.99)', true);
+      fogCtx.fillStyle = 'rgba(235, 239, 245, 0.99)';
+      fogCtx.shadowBlur = 0;
+      fogCtx.shadowColor = 'transparent';
+      for (const copy of [-1, 0, 1]) {
+        fogCtx.save();
+        fogCtx.translate(origin.x + copy * worldWidth, origin.y);
+        if (landStencilCache.path) fogCtx.fill(landStencilCache.path, 'nonzero');
+        else {
+          fogCtx.beginPath();
+          landStencilCache.commands.forEach(([method, ...args]) => fogCtx[method](...args));
+          fogCtx.fill('nonzero');
+        }
+        fogCtx.restore();
+      }
     }
 
-    function punchFogPolygon(geometry, featherPixels = 25, fogColor = null, repeatWorld = false) {
+    function punchFogPolygon(geometry, featherPixels = 25) {
       if (!geometry || !map || !Array.isArray(geometry.coordinates)) return;
       if (typeof Path2D !== 'undefined' && map.project) {
         const zoom = map.getZoom();
-        const worldWidth = repeatWorld ? map.options.crs.scale(zoom) : null;
         let cached = fogPolygonCache.get(geometry);
-        if (!cached || cached.zoom !== zoom || cached.landFog !== repeatWorld) {
+        if (!cached || cached.zoom !== zoom) {
           const polygons = geometry.type === 'Polygon' ? [geometry.coordinates] :
             geometry.type === 'MultiPolygon' ? geometry.coordinates : [];
           const paths = polygons.filter(Array.isArray).map(rings => {
             const path = new Path2D();
-            if (repeatWorld) {
-              const bounds = traceLandFogPolygon({ type: 'Polygon', coordinates: rings }, path, zoom);
-              return { path, bounds };
-            }
             const bounds = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
             rings.forEach(ring => {
               if (!Array.isArray(ring) || ring.length < 3) return;
@@ -2048,7 +2103,7 @@
             });
             return { path, bounds };
           });
-          cached = { zoom, paths, landFog: repeatWorld };
+          cached = { zoom, paths };
           fogPolygonCache.set(geometry, cached);
         }
         // World-pixel paths stay fixed during a pan; only their canvas translation changes.
@@ -2059,21 +2114,12 @@
         cached.paths.forEach(({ path, bounds }) => {
           if (bounds.maxY + origin.y + margin < -fogPadding.y ||
               bounds.minY + origin.y - margin > fogCanvas.height - fogPadding.y) return;
-          if (!repeatWorld && (bounds.maxX + origin.x + margin < -fogPadding.x ||
-              bounds.minX + origin.x - margin > fogCanvas.width - fogPadding.x)) return;
-          const firstCopy = repeatWorld
-            ? Math.ceil((-fogPadding.x - margin - origin.x - bounds.maxX) / worldWidth) : 0;
-          const lastCopy = repeatWorld
-            ? Math.floor((fogCanvas.width - fogPadding.x + margin - origin.x - bounds.minX) / worldWidth) : 0;
-          fogCtx.fillStyle = fogColor || 'rgba(0, 0, 0, 1)';
-          fogCtx.shadowColor = fogColor || 'rgba(0, 0, 0, 0.95)';
+          if (bounds.maxX + origin.x + margin < -fogPadding.x ||
+              bounds.minX + origin.x - margin > fogCanvas.width - fogPadding.x) return;
+          fogCtx.fillStyle = 'rgba(0, 0, 0, 1)';
+          fogCtx.shadowColor = 'rgba(0, 0, 0, 0.95)';
           fogCtx.shadowBlur = featherPixels;
-          for (let copy = firstCopy; copy <= lastCopy; copy++) {
-            fogCtx.save();
-            fogCtx.translate(copy * (worldWidth || 0), 0);
-            fogCtx.fill(path, 'evenodd');
-            fogCtx.restore();
-          }
+          fogCtx.fill(path, 'evenodd');
         });
         fogCtx.restore();
         return;
@@ -2083,18 +2129,6 @@
         : geometry.type === 'MultiPolygon'
           ? geometry.coordinates
           : [];
-
-      if (repeatWorld) {
-        fogCtx.beginPath();
-        traceLandFogPolygon(geometry, fogCtx, map.getZoom());
-        fogCtx.fillStyle = fogColor;
-        fogCtx.shadowColor = fogColor;
-        fogCtx.shadowBlur = featherPixels;
-        fogCtx.fill('evenodd');
-        fogCtx.shadowBlur = 0;
-        fogCtx.shadowColor = 'transparent';
-        return;
-      }
 
       polygons.forEach(rings => {
         if (!Array.isArray(rings)) return;
@@ -2113,8 +2147,8 @@
           });
           if (hasPoint) fogCtx.closePath();
         });
-        fogCtx.fillStyle = fogColor || 'rgba(0, 0, 0, 1)';
-        fogCtx.shadowColor = fogColor || 'rgba(0, 0, 0, 0.95)';
+        fogCtx.fillStyle = 'rgba(0, 0, 0, 1)';
+        fogCtx.shadowColor = 'rgba(0, 0, 0, 0.95)';
         fogCtx.shadowBlur = featherPixels;
         fogCtx.fill('evenodd');
         fogCtx.shadowBlur = 0;
@@ -2158,7 +2192,7 @@
 
       const points = [];
       const bounds = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
-      previousX = null;
+      let previousX = null;
       candidates.forEach(([lat, lng]) => {
         const point = map.project([lat, lng], zoom).round();
         if (previousX !== null) {
@@ -2175,8 +2209,9 @@
       return { points, bounds, averageLat: latitudeTotal / validCount };
     }
 
-    function punchFogRoute(route) {
+    function punchFogRoute(route, radiusKm = 20) {
       if (!Array.isArray(route) || route.length < 2) return;
+      const routeOpacity = radiusKm === 20 ? 0.95 : 1;
       if (map.project) {
         const zoom = map.getZoom();
         let cached = fogRouteCache.get(route);
@@ -2186,27 +2221,35 @@
           cached = { zoom, ...geometry };
           fogRouteCache.set(route, cached);
         }
-        const lineWidth = calculatePixelRadius(cached.averageLat, 40);
+        const lineWidth = calculatePixelRadius(cached.averageLat, radiusKm) * 2;
         const margin = lineWidth / 2 + 50;
         const origin = map.latLngToContainerPoint([0, 0]).subtract(map.project([0, 0], zoom).round());
         const { bounds } = cached;
-        if (bounds.maxX + origin.x + margin < -fogPadding.x ||
-            bounds.minX + origin.x - margin > fogCanvas.width - fogPadding.x ||
-            bounds.maxY + origin.y + margin < -fogPadding.y ||
+        if (bounds.maxY + origin.y + margin < -fogPadding.y ||
             bounds.minY + origin.y - margin > fogCanvas.height - fogPadding.y) return;
+        const worldWidth = map.options.crs.scale(zoom);
+        const firstCopy = radiusKm === 20 ? 0 :
+          Math.ceil((-fogPadding.x - margin - origin.x - bounds.maxX) / worldWidth);
+        const lastCopy = radiusKm === 20 ? 0 :
+          Math.floor((fogCanvas.width - fogPadding.x + margin - origin.x - bounds.minX) / worldWidth);
         fogCtx.save();
-        fogCtx.beginPath();
-        cached.points.forEach((point, index) => {
-          if (index === 0) fogCtx.moveTo(point.x + origin.x, point.y + origin.y);
-          else fogCtx.lineTo(point.x + origin.x, point.y + origin.y);
-        });
-        fogCtx.strokeStyle = 'rgba(0, 0, 0, 0.95)';
+        fogCtx.strokeStyle = `rgba(0, 0, 0, ${routeOpacity})`;
         fogCtx.lineWidth = lineWidth;
         fogCtx.lineCap = 'round';
         fogCtx.lineJoin = 'round';
         fogCtx.shadowColor = 'rgba(0, 0, 0, 0.95)';
         fogCtx.shadowBlur = 25;
-        fogCtx.stroke();
+        for (let copy = firstCopy; copy <= lastCopy; copy++) {
+          const offset = origin.x + copy * worldWidth;
+          if (bounds.maxX + offset + margin < -fogPadding.x ||
+              bounds.minX + offset - margin > fogCanvas.width - fogPadding.x) continue;
+          fogCtx.beginPath();
+          cached.points.forEach((point, index) => {
+            if (index === 0) fogCtx.moveTo(point.x + offset, point.y + origin.y);
+            else fogCtx.lineTo(point.x + offset, point.y + origin.y);
+          });
+          fogCtx.stroke();
+        }
         fogCtx.restore();
         return;
       }
@@ -2217,7 +2260,7 @@
       if (points.length < 2) return;
 
       const averageLat = validRoute.reduce((sum, point) => sum + point[0], 0) / validRoute.length;
-      const lineWidth = calculatePixelRadius(averageLat, 40);
+      const lineWidth = calculatePixelRadius(averageLat, radiusKm) * 2;
       const margin = lineWidth / 2 + 50;
       if (points.every(point => point.x + margin < -fogPadding.x) ||
           points.every(point => point.x - margin > fogCanvas.width - fogPadding.x) ||
@@ -2226,7 +2269,7 @@
       fogCtx.beginPath();
       fogCtx.moveTo(points[0].x, points[0].y);
       points.slice(1).forEach(point => fogCtx.lineTo(point.x, point.y));
-      fogCtx.strokeStyle = 'rgba(0, 0, 0, 0.95)';
+      fogCtx.strokeStyle = `rgba(0, 0, 0, ${routeOpacity})`;
       fogCtx.lineWidth = lineWidth;
       fogCtx.lineCap = 'round';
       fogCtx.lineJoin = 'round';
@@ -4224,7 +4267,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261018-ocean-unlock"></script>
+  <script src="./expedition-ui.js?v=20261018-progressive-oceans"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);

@@ -133,7 +133,7 @@ check('mobile RPG HUD starts collapsed with an accessible stats toggle', () => {
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261018-ocean-unlock')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261018-progressive-oceans')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('storage-risk banner and unfinished-trip recovery controls are present', () => {
@@ -473,15 +473,18 @@ check('dataset status lives inside Settings rather than over the map legend', ()
   assert.ok(settings.includes('aria-label="Settings"'));
   assert.ok(html.includes('isolate z-0 overflow-hidden'));
 });
-check('ferry expeditions unlock oceans without carving ferry or flight route corridors', () => {
-  assert.ok(!html.includes('TravelLedger.waterFogRoutes'));
-  assert.ok(html.includes('function hasUnlockedOcean()'));
-  assert.ok(html.includes('function paintLandFogPolygon(geometry, featherPixels = 16)'));
+check('progressive oceans and water-only corridors use a cached combined land stencil', () => {
+  assert.ok(html.includes('TravelLedger.waterFogRoutes(exp)'));
+  assert.ok(html.includes('punchFogRoute(route, 160.934)'));
+  assert.ok(html.includes('function oceanFogOpacity()'));
+  assert.ok(html.includes('function paintLandFogStencil()'));
+  assert.ok(!html.includes('function hasUnlockedOcean'));
+  assert.ok(!html.includes('function paintLandFogPolygon'));
   for (const name of ['WATER_FOG_RADIUS_KM','WATER_ROUTE_SAMPLE_KM','waterFogRouteCache',
     'destinationCoordinate','isOceanCoordinate','oceanHasClearance','waterRoutePoints','punchWaterFogRoute']) {
     assert.ok(!html.includes(name));
   }
-  assert.ok(html.includes('Ferry, flight, rail, and walking routes do not clear route corridors'));
+  assert.ok(html.includes('rail and walking clear no route fog'));
 });
 vm.runInContext(`
   map = {
@@ -525,6 +528,7 @@ vm.runInContext(`
     createRadialGradient() { return { addColorStop() {} }; },
     save() { fogOperations.push(['save']); },
     restore() { fogOperations.push(['restore']); },
+    translate(...args) { fogOperations.push(['translate', ...args]); },
     beginPath() { fogOperations.push(['beginPath']); },
     moveTo(...args) { fogOperations.push(['moveTo', ...args]); },
     lineTo(...args) { fogOperations.push(['lineTo', ...args]); },
@@ -1191,25 +1195,50 @@ context.cancelAnimationFrame = () => { animationCallback = null; };
 context.window.matchMedia = () => ({ matches: false });
 context.CoordinateLookups = coordinateLookups;
 context.d3.geoContains = () => true;
-check('first ferry unlocks oceans with feathered land polygons, visited punch-outs and no political queries', () => {
+check('boat trips progressively thin ocean fog once per expedition, with a 50% minimum', () => {
+  const saved=vm.runInContext('AppState.expeditions',context);
+  try {
+    for (let count=0;count<=7;count++) {
+      context.oceanTripCount=count;
+      vm.runInContext(`AppState.expeditions=Array.from({length:oceanTripCount},()=>({
+        transitTags:['ferry','flight'],routeLegs:[{mode:'ferry'},{mode:'ferry'}]
+      }))`,context);
+      assert.equal(vm.runInContext('oceanFogOpacity()',context),
+        count===0?0.99:Math.max(0.5,Number((1-count*0.1).toFixed(2))));
+    }
+    vm.runInContext("AppState.expeditions=[{transitTags:[],routeLegs:[{mode:'ferry'}]}]",context);
+    assert.equal(vm.runInContext('oceanFogOpacity()',context),0.9);
+    vm.runInContext("AppState.expeditions[0].routeLegs[0].mode='flight'",context);
+    assert.equal(vm.runInContext('oceanFogOpacity()',context),0.99);
+  } finally {
+    context.savedOceanTrips=saved;
+    vm.runInContext('AppState.expeditions=savedOceanTrips',context);
+    delete context.savedOceanTrips;delete context.oceanTripCount;
+  }
+});
+check('water corridors precede one unblurred cached land stencil and visited punch-outs without political queries', () => {
   const originalContains=context.d3.geoContains;
   const originalPath=context.Path2D;
-  let paths=0,projections=0;
+  let paths=0,projections=0,zoom=4,pan=0;
   context.Path2D=class {
-    constructor(){paths++;}
-    moveTo(){} lineTo(){} closePath(){}
+    constructor(){paths++;this.rings=0;}
+    moveTo(){this.rings++;} lineTo(){} closePath(){}
   };
-  const operations=[];
+  const operations=[],landPaths=[];
   const point=(x,y)=>({x,y,round(){return this;},subtract(other){return point(x-other.x,y-other.y);}});
-  context.oceanMap={options:{crs:{scale:()=>4096}},getZoom:()=>4,
+  context.oceanMap={options:{crs:{scale:()=>4096}},getZoom:()=>zoom,
     project([lat,lng]){projections++;return point(lng,lat);},
-    latLngToContainerPoint:([lat,lng])=>point(lng,lat)};
+    latLngToContainerPoint:([lat,lng])=>point(lng+pan,lat)};
   context.oceanCtx={
-    setTransform(){},clearRect(){},save(){},restore(){},translate(){},beginPath(){},
+    setTransform(){},clearRect(){},save(){},restore(){},
+    translate(x,y){operations.push(['translation',x,y]);},beginPath(){},
     moveTo(){},lineTo(){},closePath(){},
     fillRect(){operations.push(['base',this.globalCompositeOperation,this.fillStyle]);},
-    fill(path,rule){operations.push(['land',this.globalCompositeOperation,this.fillStyle,this.shadowColor,this.shadowBlur,rule]);},
-    stroke(){operations.push(['stroke']);},
+    fill(path,rule){
+      operations.push(['land',this.globalCompositeOperation,this.fillStyle,this.shadowColor,this.shadowBlur,rule]);
+      if(this.globalCompositeOperation==='source-over') landPaths.push(path);
+    },
+    stroke(){operations.push(['stroke',this.globalCompositeOperation,this.lineWidth,this.strokeStyle]);},
     createRadialGradient(){return {addColorStop(){}};},
     arc(){operations.push(['visited',this.globalCompositeOperation]);}
   };
@@ -1231,8 +1260,9 @@ check('first ferry unlocks oceans with feathered land polygons, visited punch-ou
       AppState.homeBase={lat:0,lng:0,radiusKm:10};
       drawFogOfWar();
     `,context);
-    assert.equal(vm.runInContext('hasUnlockedOcean()',context),false);
+    assert.equal(vm.runInContext('oceanFogOpacity()',context),0.99);
     assert.equal(operations.filter(op=>op[0]==='base').length,1);
+    assert.equal(operations.filter(op=>op[0]==='land' && op[1]==='source-over').length,0);
     operations.length=0;
     vm.runInContext(`
       AppState.expeditions=[{...testExpedition,parkIds:[],customPoiIds:[],countyIds:[],
@@ -1240,20 +1270,43 @@ check('first ferry unlocks oceans with feathered land polygons, visited punch-ou
         routeLegs:[{mode:'ferry',routeSource:'direct',routeCoords:[[0,0],[0,1]],countyIds:[]}]}];
       drawFogOfWar();
     `,context);
-    assert.equal(vm.runInContext('hasUnlockedOcean()',context),true);
-    assert.equal(operations.filter(op=>op[0]==='base').length,0);
-    assert.equal(operations.filter(op=>op[0]==='stroke').length,0);
+    assert.equal(vm.runInContext('oceanFogOpacity()',context),0.9);
+    assert.deepEqual(operations.find(op=>op[0]==='base'),['base','source-over','rgba(235, 239, 245, 0.9)']);
+    const strokes=operations.filter(op=>op[0]==='stroke');
+    assert.equal(strokes.length,1);
+    assert.equal(strokes[0][1],'destination-out');
+    assert.equal(strokes[0][2],vm.runInContext('calculatePixelRadius(0,160.934)*2',context));
+    assert.equal(strokes[0][3],'rgba(0, 0, 0, 1)');
     const land=operations.filter(op=>op[0]==='land' && op[1]==='source-over');
-    assert.equal(land.length,3,'world, US states and micro-states must all be fogged');
+    assert.equal(land.length,3,'one combined stencil is filled once for each world copy');
+    assert.equal(new Set(landPaths).size,1);
+    assert.equal(landPaths[0].rings,3,'all three atlas sources must contribute to the same path');
+    assert.deepEqual(operations.filter(op=>op[0]==='translation').map(op=>op.slice(1)),[
+      [-4096,0],[0,0],[4096,0]
+    ]);
     assert.deepEqual(JSON.parse(JSON.stringify(land[0].slice(1))),
-      ['source-over','rgba(235, 239, 245, 0.99)','rgba(235, 239, 245, 0.99)',16,'evenodd']);
+      ['source-over','rgba(235, 239, 245, 0.99)','transparent',0,'nonzero']);
+    assert.ok(operations.findIndex(op=>op[0]==='stroke')<operations.findIndex(op=>op[0]==='land'));
     const firstVisit=operations.findIndex(op=>op[0]==='visited');
     assert.ok(firstVisit>operations.findLastIndex(op=>op[0]==='land' && op[1]==='source-over'));
     const firstProjections=projections;
-    assert.equal(paths,3);
+    assert.equal(paths,1);
     vm.runInContext('drawFogOfWar()',context);
-    assert.equal(paths,3,'land paths must reuse their projection cache');
-    assert.equal(projections,firstProjections+3);
+    assert.equal(paths,1,'all atlas land must reuse one projection cache');
+    assert.equal(projections,firstProjections+2,'cached route and stencil only project their origins');
+    pan=20;
+    vm.runInContext('drawFogOfWar()',context);
+    assert.equal(paths,1,'panning must not rebuild the stencil');
+    assert.equal(projections,firstProjections+4);
+    pan=0;
+    zoom=5;
+    vm.runInContext('drawFogOfWar()',context);
+    assert.equal(paths,2,'zoom changes rebuild the single stencil');
+    for (const dataset of ['worldGeoJson','usaRegionGeoJson','microStateGeoJson']) {
+      const before=paths;
+      vm.runInContext(`${dataset}=[...${dataset}];drawFogOfWar()`,context);
+      assert.equal(paths,before+1,`${dataset} replacement invalidates the stencil`);
+    }
     for(const mode of ['flight','rail','foot']) {
       context.fogTestMode=mode;
       operations.length=0;
@@ -1262,18 +1315,21 @@ check('first ferry unlocks oceans with feathered land polygons, visited punch-ou
         AppState.expeditions[0].routeLegs[0].mode=fogTestMode;
         drawFogOfWar();
       `,context);
-      assert.equal(vm.runInContext('hasUnlockedOcean()',context),false);
+      assert.equal(vm.runInContext('oceanFogOpacity()',context),0.99);
       assert.equal(operations.filter(op=>op[0]==='base').length,1);
-      assert.equal(operations.filter(op=>op[0]==='stroke').length,0);
+      assert.equal(operations.filter(op=>op[0]==='stroke').length,mode==='flight'?1:0);
+      assert.equal(operations.filter(op=>op[0]==='land'&&op[1]==='source-over').length,mode==='flight'?3:0);
     }
     vm.runInContext("AppState.expeditions[0].routeLegs[0].mode='ferry'",context);
-    assert.equal(vm.runInContext('hasUnlockedOcean()',context),true,'mixed itinerary ferry leg unlocks oceans');
+    assert.equal(vm.runInContext('oceanFogOpacity()',context),0.9,'mixed itinerary ferry leg thins oceans');
     operations.length=0;
     vm.runInContext('worldGeoJson=null;drawFogOfWar()',context);
-    assert.equal(operations.filter(op=>op[0]==='base').length,1,'missing atlas retains full fog');
+    assert.equal(operations.filter(op=>op[0]==='base').length,1,'missing atlas retains the base opacity');
+    assert.equal(operations.filter(op=>op[0]==='stroke').length,0,'missing atlas must not clear water across land');
+    assert.equal(operations.filter(op=>op[0]==='land'&&op[1]==='source-over').length,0);
     operations.length=0;
     vm.runInContext('AppState.expeditions=[];drawFogOfWar()',context);
-    assert.equal(vm.runInContext('hasUnlockedOcean()',context),false);
+    assert.equal(vm.runInContext('oceanFogOpacity()',context),0.99);
     assert.equal(operations.filter(op=>op[0]==='base').length,1);
   } finally {
     vm.runInContext(`
@@ -1624,16 +1680,9 @@ check('reduced motion and classic mode do not schedule discovery pulses', () => 
   vm.runInContext('drawFogOfWar()', context);
   assert.ok(!context.fogOperations.some(op => op[0] === 'fill'));
   vm.runInContext("AppState.mode='rpg';drawFogOfWar()", context);
-  if (vm.runInContext('hasUnlockedOcean() && !!worldGeoJson?.length', context)) {
-    assert.ok(!context.fogOperations.some(op => op[0] === 'fill'));
-    vm.runInContext(`
-      globalThis.pulseWorldSaved=worldGeoJson;
-      worldGeoJson=[{geometry:{type:'Polygon',coordinates:[[[0,0],[0,1],[1,1],[1,0],[0,0]]]}}];
-      drawFogOfWar();worldGeoJson=pulseWorldSaved;delete globalThis.pulseWorldSaved;
-    `,context);
-    assert.ok(context.fogOperations.some(op => op[0] === 'polygonFill'));
-  } else {
-    assert.ok(context.fogOperations.some(op => op[0] === 'fill'));
+  assert.ok(context.fogOperations.some(op => op[0] === 'fill'));
+  if (vm.runInContext('oceanFogOpacity()<0.99 && !!worldGeoJson?.length',context)) {
+    assert.ok(context.fogOperations.some(op=>op[0]==='polygonFill' && op[1]==='nonzero' && op[2]===0));
   }
 });
 check('NPS discovery pulses preserve boundary geometry while animating opacity and perimeter feather', () => {
@@ -2494,6 +2543,17 @@ check('projected polygon paths are reused during pans, culled offscreen and rebu
       assert.ok(projections > first && projections < first + 1003,
         'zoom rebuild should project only simplified route vertices');
       assert.equal(strokes,3);
+      const beforeWidthChange=projections;
+      vm.runInContext('punchFogRoute(detailedRoad,160.934)',context);
+      assert.equal(projections,beforeWidthChange+1,'changing width must reuse projected vertices');
+      assert.ok(Math.abs(context.roadCtx.lineWidth-
+        vm.runInContext('calculatePixelRadius(4.995,160.934)*2',context))<1e-10);
+      assert.equal(context.roadCtx.strokeStyle,'rgba(0, 0, 0, 1)');
+      vm.runInContext('punchFogRoute(detailedRoad)',context);
+      assert.equal(projections,beforeWidthChange+2);
+      assert.ok(Math.abs(context.roadCtx.lineWidth-
+        vm.runInContext('calculatePixelRadius(4.995,20)*2',context))<1e-10);
+      assert.equal(context.roadCtx.strokeStyle,'rgba(0, 0, 0, 0.95)');
     } finally {
       vm.runInContext('map=null;fogCtx=null',context);
     }
@@ -2664,8 +2724,9 @@ check('mixed-mode preview only routes driving legs; ferries are direct without i
   assert.ok(previewTooltipTexts.includes('SAN &lt;airport&gt;'));
   assert.ok(previewLines.some(line=>line.options.color==='#38bdf8' && line.options.dashArray==='8, 8'));
   assert.ok(previewLines.some(line=>line.options.color==='#94a3b8' && line.options.dashArray==='8, 8'));
-  assert.ok(element('expeditionRouteSummary').textContent.includes("reveals the world's oceans"));
-  assert.ok(element('expeditionRouteSummary').textContent.includes('do not clear route corridors or award intermediate counties'));
+  assert.ok(element('expeditionRouteSummary').textContent.includes('10 percentage points'));
+  assert.ok(element('expeditionRouteSummary').textContent.includes('100 miles'));
+  assert.ok(element('expeditionRouteSummary').textContent.includes('rail/walking clear no route fog'));
 });
 context.crypto.randomUUID=()=> 'mixed-ui';
 await element('expeditionForm').handlers.submit({preventDefault(){}});
@@ -3146,9 +3207,7 @@ check('passport export filenames include local date and time, not UTC', () => {
     delete context.capturePassportExport;
   }
 });
-check('land fog clips dateline-crossing rings before projection, including holes and polar caps', () => {
-  const originalD3=context.d3;
-  context.d3={...d3Geo};
+check('land fog unwraps dateline rings and closes Antarctica along the Mercator floor', () => {
   const lines=[];
   let previous=null;
   context.tearPath={
@@ -3171,7 +3230,16 @@ check('land fog clips dateline-crossing rings before projection, including holes
     assert.ok(lines.length>0);
     assert.ok(lines.every(([a,b])=>Math.abs(a[0]-b[0])<=180 ||
       (Math.abs(a[1])>85 && Math.abs(b[1])>85)),
-      'a clipped polygon must never connect across the ocean at nonpolar latitudes');
+      'an unwrapped polygon must never connect across the ocean at nonpolar latitudes');
+    assert.ok(lines.some(([a,b])=>a[0]>180 || b[0]>180),'dateline points must unwrap beyond 180');
+    lines.length=0;
+    vm.runInContext(`
+      traceLandFogPolygon({type:'MultiPolygon',coordinates:[
+        [[[ -170,10],[-170,30],[170,30],[170,10],[-170,10]]]
+      ]},tearPath,4);
+    `,context);
+    assert.ok(lines.every(([a,b])=>Math.abs(a[0]-b[0])<=180));
+    assert.ok(lines.some(([a,b])=>a[0]<-180 || b[0]<-180),'western dateline polygons must unwrap below -180');
     lines.length=0;
     vm.runInContext(`
       traceLandFogPolygon({type:'Polygon',coordinates:[
@@ -3180,11 +3248,49 @@ check('land fog clips dateline-crossing rings before projection, including holes
     `,context);
     assert.ok(lines.length>0);
     assert.ok(lines.flat(2).every(Number.isFinite),'polar projection must remain finite');
+    assert.ok(lines.some(([a,b])=>Math.abs(a[0]-b[0])===360 &&
+      a[1]===-85.05112878 && b[1]===-85.05112878),'Antarctic seam must follow the Mercator floor');
     assert.ok(lines.every(([a,b])=>Math.abs(a[0]-b[0])<=180 ||
       (Math.abs(a[1])>85 && Math.abs(b[1])>85)));
   } finally {
     vm.runInContext('map=tearSavedMap;delete globalThis.tearSavedMap',context);
-    context.d3=originalD3;delete context.tearPath;delete context.tearMap;
+    delete context.tearPath;delete context.tearMap;
+  }
+});
+check('land stencil normalizes shells and holes so overlapping atlases do not cancel coverage', () => {
+  const rings=[];
+  context.windingTarget={
+    moveTo(x,y){rings.push([[x,y]]);},
+    lineTo(x,y){rings.at(-1).push([x,y]);},
+    closePath(){}
+  };
+  context.windingMap={project:([lat,lng])=>({x:lng,y:lat})};
+  const windingAt=(x,y)=>rings.reduce((sum,ring)=>{
+    for(let i=0;i<ring.length;i++) {
+      const a=ring[i],b=ring[(i+1)%ring.length];
+      const side=(b[0]-a[0])*(y-a[1])-(x-a[0])*(b[1]-a[1]);
+      if(a[1]<=y && b[1]>y && side>0) sum++;
+      if(a[1]>y && b[1]<=y && side<0) sum--;
+    }
+    return sum;
+  },0);
+  try {
+    vm.runInContext(`
+      globalThis.windingSavedMap=map;map=windingMap;
+      const windingShell=[[0,0],[0,10],[10,10],[10,0],[0,0]];
+      const windingHole=[[2,2],[2,4],[4,4],[4,2],[2,2]];
+      traceLandFogPolygon({type:'Polygon',coordinates:[windingShell,windingHole]},windingTarget,4);
+      traceLandFogPolygon({type:'Polygon',coordinates:[
+        [...windingShell].reverse(),[...windingHole].reverse()
+      ]},windingTarget,4);
+    `,context);
+    assert.equal(rings.length,4);
+    assert.equal(windingAt(1,1),2,'overlapping land must reinforce, not cancel');
+    assert.equal(windingAt(3,3),0,'holes must retain opposite winding');
+    assert.equal(windingAt(20,20),0,'ocean outside the land must remain empty');
+  } finally {
+    vm.runInContext('map=windingSavedMap;delete globalThis.windingSavedMap',context);
+    delete context.windingTarget;delete context.windingMap;
   }
 });
 console.log(`${checks} checks passed.`);
