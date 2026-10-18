@@ -475,7 +475,7 @@ check('dataset status lives inside Settings rather than over the map legend', ()
 });
 check('progressive oceans and water-only corridors use a cached combined land stencil', () => {
   assert.ok(html.includes('TravelLedger.waterFogRoutes(exp)'));
-  assert.ok(html.includes('punchFogRoute(route, 160.934)'));
+  assert.ok(html.includes('punchFogRoute(isFlight ? flightFogRoute(route) : route, 160.934)'));
   assert.ok(html.includes('function oceanFogOpacity()'));
   assert.ok(html.includes('function paintLandFogStencil()'));
   assert.ok(!html.includes('function hasUnlockedOcean'));
@@ -1195,6 +1195,27 @@ context.cancelAnimationFrame = () => { animationCallback = null; };
 context.window.matchMedia = () => ({ matches: false });
 context.CoordinateLookups = coordinateLookups;
 context.d3.geoContains = () => true;
+check('two-point flight fog follows cached great-circle arcs while recorded tracks remain unchanged', () => {
+  context.flightArcInput=[[40.64,-73.78],[49.01,2.55]];
+  context.flightArcTrack=[[40.64,-73.78],[48,-40],[49.01,2.55]];
+  try {
+    const arc=vm.runInContext('flightFogRoute(flightArcInput)',context);
+    const points=JSON.parse(JSON.stringify(arc));
+    assert.equal(points.length,17);
+    assert.deepEqual(points[0],context.flightArcInput[0]);
+    assert.deepEqual(points[16],context.flightArcInput[1]);
+    assert.ok(points[8][0]>50,'Atlantic midpoint should curve north rather than follow a Mercator cylinder');
+    assert.equal(vm.runInContext('flightFogRoute(flightArcInput)',context),arc);
+    assert.equal(vm.runInContext('flightFogRoute(flightArcTrack)',context),context.flightArcTrack);
+    context.flightArcInput=[[35,170],[35,-170]];
+    const crossing=JSON.parse(JSON.stringify(vm.runInContext('flightFogRoute(flightArcInput)',context)));
+    assert.equal(crossing.length,17);
+    assert.ok(crossing.every(([lat,lng])=>Number.isFinite(lat)&&Math.abs(lng)>=170),
+      'a dateline flight must take the short arc, not cross Greenwich');
+  } finally {
+    delete context.flightArcInput;delete context.flightArcTrack;
+  }
+});
 check('boat trips progressively thin ocean fog once per expedition, with a 50% minimum', () => {
   const saved=vm.runInContext('AppState.expeditions',context);
   try {
@@ -1238,7 +1259,7 @@ check('water corridors precede one unblurred cached land stencil and visited pun
       operations.push(['land',this.globalCompositeOperation,this.fillStyle,this.shadowColor,this.shadowBlur,rule]);
       if(this.globalCompositeOperation==='source-over') landPaths.push(path);
     },
-    stroke(){operations.push(['stroke',this.globalCompositeOperation,this.lineWidth,this.strokeStyle]);},
+    stroke(){operations.push(['stroke',this.globalCompositeOperation,this.lineWidth,this.strokeStyle,this.shadowBlur]);},
     createRadialGradient(){return {addColorStop(){}};},
     arc(){operations.push(['visited',this.globalCompositeOperation]);}
   };
@@ -1277,6 +1298,7 @@ check('water corridors precede one unblurred cached land stencil and visited pun
     assert.equal(strokes[0][1],'destination-out');
     assert.equal(strokes[0][2],vm.runInContext('calculatePixelRadius(0,160.934)*2',context));
     assert.equal(strokes[0][3],'rgba(0, 0, 0, 1)');
+    assert.equal(strokes[0][4],12);
     const land=operations.filter(op=>op[0]==='land' && op[1]==='source-over');
     assert.equal(land.length,3,'one combined stencil is filled once for each world copy');
     assert.equal(new Set(landPaths).size,1);

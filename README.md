@@ -562,7 +562,9 @@ data shows retry guidance instead of a misleading completion count.
    points: 90%, 80%, 70%, 60%, then a 50% minimum. Mixed itineraries count once per expedition,
    regardless of how many boat legs they contain; editing or removing trips recalculates opacity.
    Ferry and flight routes fully clear water within a 100-mile (160.934 km) radius on either side
-   of the logged route. Flights without a recorded track use their stop-to-stop connector.
+   of the logged route. Two-point flight connectors use a cached 16-step great-circle arc;
+   recorded multi-point flight tracks and ferry geometry are preserved. Water corridor edges
+   use a modest 12px feather beneath the land stencil.
    Water corridors require the loaded world atlas; without it, only the base opacity is applied.
    Unvisited land remains shrouded using one cached, unblurred land stencil (three world copies),
    rather than per-country fills. Longitudes are unwrapped across the dateline; Antarctic closing

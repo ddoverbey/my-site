@@ -1896,8 +1896,10 @@
         fogCtx.globalCompositeOperation = 'destination-out';
         let waterRoutesDrawn = false;
         AppState.expeditions.forEach(exp => {
-          TravelLedger.waterFogRoutes(exp).forEach(route => {
-            punchFogRoute(route, 160.934);
+          const waterLegs = exp.routeLegs?.filter(leg => ['ferry', 'flight'].includes(leg.mode));
+          TravelLedger.waterFogRoutes(exp).forEach((route, index) => {
+            const isFlight = waterLegs ? waterLegs[index].mode === 'flight' : exp.transitTags.includes('flight');
+            punchFogRoute(isFlight ? flightFogRoute(route) : route, 160.934);
             waterRoutesDrawn = true;
           });
         });
@@ -2157,6 +2159,24 @@
     }
 
     const fogRouteCache = new WeakMap();
+    const flightFogRouteCache = new WeakMap();
+    function flightFogRoute(route) {
+      if (!Array.isArray(route) || route.length !== 2) return route;
+      let cached = flightFogRouteCache.get(route);
+      if (!cached) {
+        const [[startLat, startLng], [endLat, endLng]] = route;
+        const interpolate = d3.geoInterpolate([startLng, startLat], [endLng, endLat]);
+        cached = Array.from({ length: 17 }, (_, index) => {
+          const [lng, lat] = interpolate(index / 16);
+          return [lat, lng];
+        });
+        cached[0] = route[0];
+        cached[16] = route[1];
+        flightFogRouteCache.set(route, cached);
+      }
+      return cached;
+    }
+
     function projectRouteForFog(route, zoom, worldWidth) {
       const toleranceSquared = 2.25;
       const candidates = [];
@@ -2238,7 +2258,7 @@
         fogCtx.lineCap = 'round';
         fogCtx.lineJoin = 'round';
         fogCtx.shadowColor = 'rgba(0, 0, 0, 0.95)';
-        fogCtx.shadowBlur = 25;
+        fogCtx.shadowBlur = radiusKm === 20 ? 25 : 12;
         for (let copy = firstCopy; copy <= lastCopy; copy++) {
           const offset = origin.x + copy * worldWidth;
           if (bounds.maxX + offset + margin < -fogPadding.x ||
@@ -2251,6 +2271,8 @@
           fogCtx.stroke();
         }
         fogCtx.restore();
+        fogCtx.shadowBlur = 0;
+        fogCtx.shadowColor = 'transparent';
         return;
       }
       const validRoute = route
@@ -2274,7 +2296,7 @@
       fogCtx.lineCap = 'round';
       fogCtx.lineJoin = 'round';
       fogCtx.shadowColor = 'rgba(0, 0, 0, 0.95)';
-      fogCtx.shadowBlur = 25;
+      fogCtx.shadowBlur = radiusKm === 20 ? 25 : 12;
       fogCtx.stroke();
       fogCtx.shadowBlur = 0;
       fogCtx.shadowColor = 'transparent';
