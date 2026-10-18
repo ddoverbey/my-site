@@ -132,7 +132,7 @@ check('mobile RPG HUD starts collapsed with an accessible stats toggle', () => {
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261018-ferry-corridor')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261018-ocean-unlock')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('storage-risk banner and unfinished-trip recovery controls are present', () => {
@@ -472,14 +472,15 @@ check('dataset status lives inside Settings rather than over the map legend', ()
   assert.ok(settings.includes('aria-label="Settings"'));
   assert.ok(html.includes('isolate z-0 overflow-hidden'));
 });
-check('ferry routes use continuous 80 km corridors without shoreline sampling or stenciling', () => {
-  assert.ok(html.includes('TravelLedger.waterFogRoutes(exp).forEach(route => punchFogRoute(route, 80))'));
+check('ferry expeditions unlock oceans without carving ferry or flight route corridors', () => {
+  assert.ok(!html.includes('TravelLedger.waterFogRoutes'));
+  assert.ok(html.includes('function hasUnlockedOcean()'));
+  assert.ok(html.includes('function paintLandFogPolygon(geometry, featherPixels = 16)'));
   for (const name of ['WATER_FOG_RADIUS_KM','WATER_ROUTE_SAMPLE_KM','waterFogRouteCache',
     'destinationCoordinate','isOceanCoordinate','oceanHasClearance','waterRoutePoints','punchWaterFogRoute']) {
     assert.ok(!html.includes(name));
   }
-  assert.ok(!html.includes('worldGeoJson.forEach(feature => punchFogPolygon'));
-  assert.ok(html.includes('Flight, rail, and walking routes do not clear route fog'));
+  assert.ok(html.includes('Ferry, flight, rail, and walking routes do not clear route corridors'));
 });
 vm.runInContext(`
   map = {
@@ -1189,50 +1190,101 @@ context.cancelAnimationFrame = () => { animationCallback = null; };
 context.window.matchMedia = () => ({ matches: false });
 context.CoordinateLookups = coordinateLookups;
 context.d3.geoContains = () => true;
-check('ferry strokes are continuous and feathered, with no political queries during fog redraw', () => {
+check('first ferry unlocks oceans with feathered land polygons, visited punch-outs and no political queries', () => {
   const originalContains=context.d3.geoContains;
+  const originalPath=context.Path2D;
+  let paths=0,projections=0;
+  context.Path2D=class {
+    constructor(){paths++;}
+    moveTo(){} lineTo(){} closePath(){}
+  };
+  const operations=[];
+  const point=(x,y)=>({x,y,round(){return this;},subtract(other){return point(x-other.x,y-other.y);}});
+  context.oceanMap={options:{crs:{scale:()=>4096}},getZoom:()=>4,
+    project([lat,lng]){projections++;return point(lng,lat);},
+    latLngToContainerPoint:([lat,lng])=>point(lng,lat)};
+  context.oceanCtx={
+    setTransform(){},clearRect(){},save(){},restore(){},translate(){},beginPath(){},
+    moveTo(){},lineTo(){},closePath(){},
+    fillRect(){operations.push(['base',this.globalCompositeOperation,this.fillStyle]);},
+    fill(path,rule){operations.push(['land',this.globalCompositeOperation,this.fillStyle,this.shadowColor,this.shadowBlur,rule]);},
+    stroke(){operations.push(['stroke']);},
+    createRadialGradient(){return {addColorStop(){}};},
+    arc(){operations.push(['visited',this.globalCompositeOperation]);}
+  };
   context.CoordinateLookups={...coordinateLookups,politicalRegion(){
     throw new Error('Fog rendering must not query political polygons');
   }};
   context.d3.geoContains=()=>{throw new Error('Fog rendering must not test polygon containment');};
   try {
     vm.runInContext(`
-      globalThis.ferryFogSaved={map,coordinateIndexes,PARKS,state:{...AppState}};
+      globalThis.ferryFogSaved={map,fogCtx,coordinateIndexes,PARKS,worldGeoJson,usaRegionGeoJson,
+        microStateGeoJson,microStateCatalog,state:{...AppState}};
       applyPassport(migratePassport({}));
       AppState.mode='rpg';AppState.currentTab='map';
-      map={options:{crs:{scale:zoom=>256*2**zoom}},getZoom:()=>4,
-        latLngToContainerPoint:([lat,lng])=>({x:lng*100,y:lat*100})};
+      map=oceanMap;fogCtx=oceanCtx;microStateCatalog=[];
       coordinateIndexes={countries:[],states:[],counties:[],microStates:[]};
+      const landFixture=()=>({geometry:{type:'Polygon',coordinates:[[[0,0],[1,0],[1,1],[0,0]]]}});
+      worldGeoJson=[landFixture()];usaRegionGeoJson=[landFixture()];microStateGeoJson=[landFixture()];
       PARKS=[{id:'ferryfog_park',lat:0,lng:0}];AppState.pins={ferryfog_park:'v'};
       AppState.homeBase={lat:0,lng:0,radiusKm:10};
+      drawFogOfWar();
+    `,context);
+    assert.equal(vm.runInContext('hasUnlockedOcean()',context),false);
+    assert.equal(operations.filter(op=>op[0]==='base').length,1);
+    operations.length=0;
+    vm.runInContext(`
       AppState.expeditions=[{...testExpedition,parkIds:[],customPoiIds:[],countyIds:[],
         transitTags:['ferry'],routeCoords:[[0,0],[0,1]],
         routeLegs:[{mode:'ferry',routeSource:'direct',routeCoords:[[0,0],[0,1]],countyIds:[]}]}];
-      fogOperations.length=0;drawFogOfWar();
+      drawFogOfWar();
     `,context);
-    const strokes=context.fogOperations.filter(op=>op[0]==='stroke');
-    assert.equal(strokes.length,1);
-    assert.equal(strokes[0][1],vm.runInContext('calculatePixelRadius(0,80)',context));
-    assert.deepEqual(strokes[0].slice(2),['round','round',25]);
-    assert.ok(context.fogOperations.some(op=>op[0]==='moveTo' && op[1]===0));
-    assert.ok(context.fogOperations.some(op=>op[0]==='lineTo' && op[1]===100));
+    assert.equal(vm.runInContext('hasUnlockedOcean()',context),true);
+    assert.equal(operations.filter(op=>op[0]==='base').length,0);
+    assert.equal(operations.filter(op=>op[0]==='stroke').length,0);
+    const land=operations.filter(op=>op[0]==='land' && op[1]==='source-over');
+    assert.equal(land.length,3,'world, US states and micro-states must all be fogged');
+    assert.deepEqual(JSON.parse(JSON.stringify(land[0].slice(1))),
+      ['source-over','rgba(235, 239, 245, 0.99)','rgba(235, 239, 245, 0.99)',16,'evenodd']);
+    const firstVisit=operations.findIndex(op=>op[0]==='visited');
+    assert.ok(firstVisit>operations.findLastIndex(op=>op[0]==='land' && op[1]==='source-over'));
+    const firstProjections=projections;
+    assert.equal(paths,3);
+    vm.runInContext('drawFogOfWar()',context);
+    assert.equal(paths,3,'land paths must reuse their projection cache');
+    assert.equal(projections,firstProjections+3);
     for(const mode of ['flight','rail','foot']) {
       context.fogTestMode=mode;
+      operations.length=0;
       vm.runInContext(`
         AppState.expeditions[0].transitTags=[fogTestMode];
         AppState.expeditions[0].routeLegs[0].mode=fogTestMode;
-        fogOperations.length=0;drawFogOfWar();
+        drawFogOfWar();
       `,context);
-      assert.equal(context.fogOperations.filter(op=>op[0]==='stroke').length,0);
+      assert.equal(vm.runInContext('hasUnlockedOcean()',context),false);
+      assert.equal(operations.filter(op=>op[0]==='base').length,1);
+      assert.equal(operations.filter(op=>op[0]==='stroke').length,0);
     }
+    vm.runInContext("AppState.expeditions[0].routeLegs[0].mode='ferry'",context);
+    assert.equal(vm.runInContext('hasUnlockedOcean()',context),true,'mixed itinerary ferry leg unlocks oceans');
+    operations.length=0;
+    vm.runInContext('worldGeoJson=null;drawFogOfWar()',context);
+    assert.equal(operations.filter(op=>op[0]==='base').length,1,'missing atlas retains full fog');
+    operations.length=0;
+    vm.runInContext('AppState.expeditions=[];drawFogOfWar()',context);
+    assert.equal(vm.runInContext('hasUnlockedOcean()',context),false);
+    assert.equal(operations.filter(op=>op[0]==='base').length,1);
   } finally {
     vm.runInContext(`
-      ({map,coordinateIndexes,PARKS}=ferryFogSaved);
+      ({map,fogCtx,coordinateIndexes,PARKS,worldGeoJson,usaRegionGeoJson,
+        microStateGeoJson,microStateCatalog}=ferryFogSaved);
       Object.assign(AppState,ferryFogSaved.state);delete globalThis.ferryFogSaved;
     `,context);
     context.d3.geoContains=originalContains;
+    context.Path2D=originalPath;
     context.CoordinateLookups=coordinateLookups;
     delete context.fogTestMode;
+    delete context.oceanMap;delete context.oceanCtx;
   }
 });
 context.CoordinateLookups = coordinateLookups;
@@ -2430,14 +2482,6 @@ check('projected polygon paths are reused during pans, culled offscreen and rebu
       assert.ok(projections > first && projections < first + 1003,
         'zoom rebuild should project only simplified route vertices');
       assert.equal(strokes,3);
-      vm.runInContext('punchFogRoute(detailedRoad,80)',context);
-      const ferryWidth=vm.runInContext('fogCtx.lineWidth',context);
-      const ferryProjections=projections;
-      vm.runInContext('punchFogRoute(detailedRoad,80)',context);
-      assert.equal(projections,ferryProjections+1,'same-width pans must reuse cached route geometry');
-      vm.runInContext('punchFogRoute(detailedRoad)',context);
-      assert.equal(ferryWidth,vm.runInContext('fogCtx.lineWidth*2',context),
-        'reusing a route for a ferry must not change the default road width');
     } finally {
       vm.runInContext('map=null;fogCtx=null',context);
     }
@@ -2608,8 +2652,8 @@ check('mixed-mode preview only routes driving legs; ferries are direct without i
   assert.ok(previewTooltipTexts.includes('SAN &lt;airport&gt;'));
   assert.ok(previewLines.some(line=>line.options.color==='#38bdf8' && line.options.dashArray==='8, 8'));
   assert.ok(previewLines.some(line=>line.options.color==='#94a3b8' && line.options.dashArray==='8, 8'));
-  assert.ok(element('expeditionRouteSummary').textContent.includes('Ferry / Boat routes clear a wide feathered 80 km corridor'));
-  assert.ok(element('expeditionRouteSummary').textContent.includes('None of these modes award intermediate route counties'));
+  assert.ok(element('expeditionRouteSummary').textContent.includes("reveals the world's oceans"));
+  assert.ok(element('expeditionRouteSummary').textContent.includes('do not clear route corridors or award intermediate counties'));
 });
 context.crypto.randomUUID=()=> 'mixed-ui';
 await element('expeditionForm').handlers.submit({preventDefault(){}});
@@ -2724,7 +2768,7 @@ check('ferry, rail and walking legs preview without road requests, county interp
     assert.deepEqual(leg.countyIds,[]);
   });
   assert.equal(vm.runInContext('TravelLedger.fogRoutes(draftExpedition(expeditionPreparedLegs)).length',context),0);
-  assert.equal(vm.runInContext('TravelLedger.waterFogRoutes(draftExpedition(expeditionPreparedLegs)).length',context),1);
+  assert.equal(vm.runInContext('TravelLedger.fogRoutes(draftExpedition(expeditionPreparedLegs)).length',context),0);
   assert.equal(travelLedger.transitTags.rail,'Rail / Train');
   assert.equal(travelLedger.transitIcons.rail,'🚆');
 });
