@@ -806,7 +806,7 @@
         <div id="expeditionRoutePreview" class="hidden h-52 w-full rounded-lg overflow-hidden" aria-label="Expedition route preview"></div>
         <p id="expeditionRouteSummary" class="text-xs text-slate-400"></p>
       </div>
-      <details class="text-[11px] text-slate-400"><summary>Map services &amp; privacy</summary>City and airport suggestions use Photon by Komoot; search text is sent as you type. Only driving and AWD endpoints are sent to the FOSSGIS routing service (OSRM). Imported GeoJSON/KML tracks are processed locally and are not sent to OSRM. Imported driving/AWD tracks clear land fog and award route counties. Ferry, flight, rail, and walking routes do not clear route fog or award intermediate route counties. Without an imported track, ferry, rail, walking, and flight routes are dashed direct approximations. Elevations use Open-Meteo. © OpenStreetMap contributors.</details>
+      <details class="text-[11px] text-slate-400"><summary>Map services &amp; privacy</summary>City and airport suggestions use Photon by Komoot; search text is sent as you type. Only driving and AWD endpoints are sent to the FOSSGIS routing service (OSRM). Imported GeoJSON/KML tracks are processed locally and are not sent to OSRM. Imported driving/AWD tracks clear land fog and award route counties. Ferry / Boat routes clear fog only offshore using a 25 km shoreline-buffered brush. Flight, rail, and walking routes do not clear route fog. None of these modes award intermediate route counties. Without an imported track, ferry, rail, walking, and flight routes are dashed direct approximations. Elevations use Open-Meteo. © OpenStreetMap contributors.</details>
       <p id="expeditionStatus" role="status" aria-live="polite" class="text-xs text-amber-200"></p>
       <div class="flex justify-end gap-2">
         <button id="btnCancelExpedition" type="button" class="rounded-lg bg-slate-800 px-4 py-2 text-sm">Cancel</button>
@@ -860,14 +860,14 @@
     </form>
   </div>
 
-  <script src="./nps-catalog.js?v=20261017-no-water-fog"></script>
-  <script src="./national-parks-scratch.js?v=20261017-no-water-fog"></script>
-  <script src="./international-parks.js?v=20261017-no-water-fog"></script>
-  <script src="./ecoregions.js?v=20261017-no-water-fog"></script>
-  <script src="./coordinate-lookups.js?v=20261017-no-water-fog"></script>
-  <script src="./micro-states.js?v=20261017-no-water-fog"></script>
-  <script src="./travel-ledger.js?v=20261017-no-water-fog"></script>
-  <script src="./rarity-config.js?v=20261017-no-water-fog"></script>
+  <script src="./nps-catalog.js?v=20261018-ferry-water-fog"></script>
+  <script src="./national-parks-scratch.js?v=20261018-ferry-water-fog"></script>
+  <script src="./international-parks.js?v=20261018-ferry-water-fog"></script>
+  <script src="./ecoregions.js?v=20261018-ferry-water-fog"></script>
+  <script src="./coordinate-lookups.js?v=20261018-ferry-water-fog"></script>
+  <script src="./micro-states.js?v=20261018-ferry-water-fog"></script>
+  <script src="./travel-ledger.js?v=20261018-ferry-water-fog"></script>
+  <script src="./rarity-config.js?v=20261018-ferry-water-fog"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -1946,6 +1946,7 @@
       AppState.routes.forEach(route => punchFogRoute(route));
       AppState.expeditions.forEach(exp => {
         TravelLedger.fogRoutes(exp).forEach(route => punchFogRoute(route));
+        TravelLedger.waterFogRoutes(exp).forEach(route => punchWaterFogRoute(route));
       });
 
       // Reset composite operation to normal
@@ -2150,6 +2151,109 @@
       fogCtx.stroke();
       fogCtx.shadowBlur = 0;
       fogCtx.shadowColor = 'transparent';
+    }
+
+    const WATER_FOG_RADIUS_KM = 25;
+    const WATER_ROUTE_SAMPLE_KM = 10;
+    const waterFogRouteCache = new WeakMap();
+
+    function destinationCoordinate(lat, lng, distanceKm, bearing) {
+      const radians = Math.PI / 180;
+      const angularDistance = distanceKm / 6371.0088;
+      const latitude = lat * radians;
+      const longitude = lng * radians;
+      const targetLatitude = Math.asin(
+        Math.sin(latitude) * Math.cos(angularDistance) +
+        Math.cos(latitude) * Math.sin(angularDistance) * Math.cos(bearing)
+      );
+      const targetLongitude = longitude + Math.atan2(
+        Math.sin(bearing) * Math.sin(angularDistance) * Math.cos(latitude),
+        Math.cos(angularDistance) - Math.sin(latitude) * Math.sin(targetLatitude)
+      );
+      return [
+        targetLatitude / radians,
+        ((targetLongitude / radians + 540) % 360) - 180
+      ];
+    }
+
+    function isOceanCoordinate(lat, lng) {
+      const region = cachedPoliticalAt(lat, lng);
+      return !!region && !region.countries.length && !region.states.length && !region.counties.length;
+    }
+
+    function oceanHasClearance(lat, lng) {
+      if (!isOceanCoordinate(lat, lng)) return false;
+      for (const distanceKm of [5, 10, 15, 20, WATER_FOG_RADIUS_KM]) {
+        for (let bearing = 0; bearing < 16; bearing++) {
+          const [sampleLat, sampleLng] = destinationCoordinate(
+            lat, lng, distanceKm, bearing * Math.PI / 8
+          );
+          if (!isOceanCoordinate(sampleLat, sampleLng)) return false;
+        }
+      }
+      return true;
+    }
+
+    function waterRoutePoints(route) {
+      const points = [];
+      route.forEach((point, index) => {
+        if (!Array.isArray(point) || point.length !== 2 ||
+            !Number.isFinite(point[0]) || !Number.isFinite(point[1])) return;
+        if (index === 0 || !Array.isArray(route[index - 1]) ||
+            !Number.isFinite(route[index - 1][0]) || !Number.isFinite(route[index - 1][1])) {
+          if (oceanHasClearance(point[0], point[1])) points.push(point);
+          return;
+        }
+        const [fromLat, fromLng] = route[index - 1];
+        const from = [fromLng, fromLat];
+        const to = [point[1], point[0]];
+        const distanceKm = d3.geoDistance(from, to) * 6371.0088;
+        const steps = Math.max(1, Math.ceil(distanceKm / WATER_ROUTE_SAMPLE_KM));
+        const interpolate = d3.geoInterpolate(from, to);
+        for (let step = 1; step <= steps; step++) {
+          const [lng, lat] = interpolate(step / steps);
+          if (oceanHasClearance(lat, lng)) points.push([lat, lng]);
+        }
+      });
+      return points;
+    }
+
+    function punchWaterFogRoute(route) {
+      if (!Array.isArray(route) || route.length < 2 || !coordinateIndexes ||
+          typeof d3.geoDistance !== 'function' || typeof d3.geoInterpolate !== 'function') return;
+      let cached = waterFogRouteCache.get(route);
+      if (!cached || cached.indexes !== coordinateIndexes) {
+        cached = { indexes: coordinateIndexes, points: waterRoutePoints(route), zoom: null, projected: null };
+        waterFogRouteCache.set(route, cached);
+      }
+      if (!cached.points.length) return;
+
+      if (map.project) {
+        const zoom = map.getZoom();
+        if (cached.zoom !== zoom) {
+          const worldWidth = map.options.crs.scale(zoom);
+          let previousX = null;
+          cached.projected = cached.points.map(([lat, lng]) => {
+            const point = map.project([lat, lng], zoom).round();
+            if (previousX !== null) {
+              while (point.x - previousX > worldWidth / 2) point.x -= worldWidth;
+              while (previousX - point.x > worldWidth / 2) point.x += worldWidth;
+            }
+            previousX = point.x;
+            return { x: point.x, y: point.y, lat };
+          });
+          cached.zoom = zoom;
+        }
+        const origin = map.latLngToContainerPoint([0, 0]).subtract(map.project([0, 0], zoom).round());
+        cached.projected.forEach(point => punchFogAura(
+          point.x + origin.x, point.y + origin.y, calculatePixelRadius(point.lat, WATER_FOG_RADIUS_KM), 0.95
+        ));
+        return;
+      }
+      cached.points.forEach(([lat, lng]) => {
+        const point = map.latLngToContainerPoint([lat, lng]);
+        punchFogAura(point.x, point.y, calculatePixelRadius(lat, WATER_FOG_RADIUS_KM), 0.95);
+      });
     }
 
     // Punch a radial gradient with soft glowing feather edges
@@ -4057,7 +4161,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261017-no-water-fog"></script>
+  <script src="./expedition-ui.js?v=20261018-ferry-water-fog"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);
