@@ -122,7 +122,7 @@ check('mobile RPG HUD starts collapsed with an accessible stats toggle', () => {
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261017-water-flight-fog')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261017-water-fog-strokes')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('storage-risk banner and unfinished-trip recovery controls are present', () => {
@@ -466,7 +466,7 @@ check('ferry fog uses the separate water-only shoreline-filtered renderer', () =
   assert.ok(html.includes('TravelLedger.waterFogRoutes(exp).forEach(route => punchWaterFogRoute(route))'));
   assert.ok(html.includes('function oceanHasClearance(lat, lng)'));
   assert.ok(html.includes('const WATER_FOG_RADIUS_KM = 120;'));
-  assert.ok(html.includes('const WATER_ROUTE_SAMPLE_KM = 40;'));
+  assert.ok(html.includes('const WATER_ROUTE_SAMPLE_KM = 10;'));
   assert.ok(html.includes('ferry and flight routes clear fog only over open water using a large coastal buffer; neither award route counties.'));
 });
 vm.runInContext(`
@@ -509,7 +509,14 @@ vm.runInContext(`
     clearRect(...args) { fogOperations.push(['clear', ...args]); },
     fillRect(...args) { fogOperations.push(['fill', fogCtx.fillStyle, ...args]); },
     createRadialGradient() { return { addColorStop() {} }; },
-    beginPath() {}, arc(...args) { fogOperations.push(['arc', ...args]); }, fill() {}
+    save() { fogOperations.push(['save']); },
+    restore() { fogOperations.push(['restore']); },
+    beginPath() { fogOperations.push(['beginPath']); },
+    moveTo(...args) { fogOperations.push(['moveTo', ...args]); },
+    lineTo(...args) { fogOperations.push(['lineTo', ...args]); },
+    arc(...args) { fogOperations.push(['arc', ...args]); },
+    stroke() { fogOperations.push(['stroke', fogCtx.lineWidth, fogCtx.lineCap, fogCtx.lineJoin, fogCtx.shadowBlur]); },
+    fill() {}
   };
   document.getElementById('fogToggleCheckbox').checked = true;
   AppState.mode = 'rpg';
@@ -704,7 +711,7 @@ vm.runInContext(`
   fogCtx.lineTo = (...args) => fogOperations.push(['lineTo', ...args]);
   fogCtx.closePath = () => fogOperations.push(['closePath']);
   fogCtx.fill = rule => fogOperations.push(['polygonFill', rule, fogCtx.shadowBlur]);
-  fogCtx.stroke = () => fogOperations.push(['stroke', fogCtx.lineWidth, fogCtx.lineCap]);
+  fogCtx.stroke = () => fogOperations.push(['stroke', fogCtx.lineWidth, fogCtx.lineCap, fogCtx.lineJoin, fogCtx.shadowBlur]);
   npsBoundariesByCode = { yose: [{ type: 'Polygon', coordinates: [[[-120,37],[-119,37],[-119,38],[-120,37]]] }] };
   PARKS = [{ id: 'yose', lat: null, lng: null }];
   AppState.pins = { yose: 'v' };
@@ -1145,17 +1152,26 @@ vm.runInContext(`
   coordinateIndexes={countries:[],states:[],counties:[],microStates:[]};
   fogOperations.length=0;
 `, context);
-const testFerryRoute = [[0, 0], [0, 1]];
+const testFerryRoute = [[0, -3], [0, 3]];
 context.testFerryRoute = testFerryRoute;
 vm.runInContext('punchWaterFogRoute(testFerryRoute)', context);
-check('ferry fog clears open water only and caches shoreline sampling', () => {
-  const arcs = context.fogOperations.filter(operation => operation[0] === 'arc');
-  assert.ok(arcs.length > 0);
-  assert.ok(arcs.every(([, x]) => x < 22.5 || x > 77.5), 'water clearing must stop outside the buffered island');
+check('water fog uses continuous round-capped, feathered strokes and caches shoreline sampling', () => {
+  const strokes = context.fogOperations.filter(operation => operation[0] === 'stroke');
+  const moveTos = context.fogOperations.filter(operation => operation[0] === 'moveTo');
+  const lineTos = context.fogOperations.filter(operation => operation[0] === 'lineTo');
+  assert.ok(strokes.length > 0);
+  assert.ok(moveTos.length > 0 && lineTos.length > moveTos.length,
+    'valid water coordinates must form connected canvas paths');
+  assert.ok(context.fogOperations.some(operation => operation[0] === 'lineTo' &&
+    (operation[1] / 100 < -0.63 || operation[1] / 100 > 1.63)),
+  'the buffered path must stop before reaching the island');
+  assert.ok(strokes.every(([, width, cap, join, blur]) => width > 0 && cap === 'round' && join === 'round' && blur === 30));
+  assert.equal(context.fogOperations.filter(operation => operation[0] === 'arc').length, 0,
+    'route clearing must not use stamp-shaped arcs');
   const lookupsAfterFirstRender = waterLookups;
   vm.runInContext('punchWaterFogRoute(testFerryRoute)', context);
   assert.equal(waterLookups, lookupsAfterFirstRender);
-  assert.equal(context.fogOperations.filter(operation => operation[0] === 'arc').length, arcs.length * 2);
+  assert.equal(context.fogOperations.filter(operation => operation[0] === 'stroke').length, strokes.length * 2);
 });
 vm.runInContext('map=waterOriginalMap;coordinateIndexes=waterOriginalIndexes;delete globalThis.waterOriginalMap;delete globalThis.waterOriginalIndexes;delete globalThis.testFerryRoute', context);
 context.d3.geoDistance = originalGeoDistance;

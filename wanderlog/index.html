@@ -860,14 +860,14 @@
     </form>
   </div>
 
-  <script src="./nps-catalog.js?v=20261017-water-flight-fog"></script>
-  <script src="./national-parks-scratch.js?v=20261017-water-flight-fog"></script>
-  <script src="./international-parks.js?v=20261017-water-flight-fog"></script>
-  <script src="./ecoregions.js?v=20261017-water-flight-fog"></script>
-  <script src="./coordinate-lookups.js?v=20261017-water-flight-fog"></script>
-  <script src="./micro-states.js?v=20261017-water-flight-fog"></script>
-  <script src="./travel-ledger.js?v=20261017-water-flight-fog"></script>
-  <script src="./rarity-config.js?v=20261017-water-flight-fog"></script>
+  <script src="./nps-catalog.js?v=20261017-water-fog-strokes"></script>
+  <script src="./national-parks-scratch.js?v=20261017-water-fog-strokes"></script>
+  <script src="./international-parks.js?v=20261017-water-fog-strokes"></script>
+  <script src="./ecoregions.js?v=20261017-water-fog-strokes"></script>
+  <script src="./coordinate-lookups.js?v=20261017-water-fog-strokes"></script>
+  <script src="./micro-states.js?v=20261017-water-fog-strokes"></script>
+  <script src="./travel-ledger.js?v=20261017-water-fog-strokes"></script>
+  <script src="./rarity-config.js?v=20261017-water-fog-strokes"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -2111,7 +2111,7 @@
     }
 
     const WATER_FOG_RADIUS_KM = 120;
-    const WATER_ROUTE_SAMPLE_KM = 40;
+    const WATER_ROUTE_SAMPLE_KM = 10;
     const waterFogRouteCache = new WeakMap();
 
     function destinationCoordinate(lat, lng, distanceKm, bearing) {
@@ -2151,15 +2151,31 @@
       return true;
     }
 
-    function waterRoutePoints(route) {
-      const points = [];
-      route.forEach((point, index) => {
+    function waterRouteSegments(route) {
+      const segments = [];
+      let segment = [];
+      const flush = () => {
+        if (segment.length > 1) segments.push(segment);
+        segment = [];
+      };
+      const addSample = (lat, lng) => {
+        if (oceanHasClearance(lat, lng)) {
+          const previous = segment[segment.length - 1];
+          if (!previous || previous[0] !== lat || previous[1] !== lng) segment.push([lat, lng]);
+        } else flush();
+      };
+
+      for (let index = 0; index < route.length; index++) {
+        const point = route[index];
         if (!Array.isArray(point) || point.length !== 2 ||
-            !Number.isFinite(point[0]) || !Number.isFinite(point[1])) return;
+            !Number.isFinite(point[0]) || !Number.isFinite(point[1])) {
+          flush();
+          continue;
+        }
         if (index === 0 || !Array.isArray(route[index - 1]) ||
             !Number.isFinite(route[index - 1][0]) || !Number.isFinite(route[index - 1][1])) {
-          if (oceanHasClearance(point[0], point[1])) points.push(point);
-          return;
+          addSample(point[0], point[1]);
+          continue;
         }
         const [fromLat, fromLng] = route[index - 1];
         const from = [fromLng, fromLat];
@@ -2167,12 +2183,45 @@
         const distanceKm = d3.geoDistance(from, to) * 6371.0088;
         const steps = Math.max(1, Math.ceil(distanceKm / WATER_ROUTE_SAMPLE_KM));
         const interpolate = d3.geoInterpolate(from, to);
-        for (let step = 1; step <= steps; step++) {
+        for (let step = 0; step <= steps; step++) {
           const [lng, lat] = interpolate(step / steps);
-          if (oceanHasClearance(lat, lng)) points.push([lat, lng]);
+          addSample(lat, lng);
         }
+      }
+      flush();
+      return segments;
+    }
+
+    function strokeWaterFogSegments(segments) {
+      segments.forEach(points => {
+        if (points.length < 2) return;
+        const averageLat = points.reduce((sum, point) => sum + point.lat, 0) / points.length;
+        const radius = calculatePixelRadius(averageLat, WATER_FOG_RADIUS_KM);
+        const margin = radius + 30;
+        const bounds = points.reduce((result, point) => ({
+          minX: Math.min(result.minX, point.x), maxX: Math.max(result.maxX, point.x),
+          minY: Math.min(result.minY, point.y), maxY: Math.max(result.maxY, point.y)
+        }), { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity });
+        if (bounds.maxX + margin < -fogPadding.x ||
+            bounds.minX - margin > fogCanvas.width - fogPadding.x ||
+            bounds.maxY + margin < -fogPadding.y ||
+            bounds.minY - margin > fogCanvas.height - fogPadding.y) return;
+
+        fogCtx.save();
+        fogCtx.beginPath();
+        fogCtx.moveTo(points[0].x, points[0].y);
+        for (let index = 1; index < points.length; index++) {
+          fogCtx.lineTo(points[index].x, points[index].y);
+        }
+        fogCtx.strokeStyle = 'rgba(0, 0, 0, 0.95)';
+        fogCtx.lineWidth = radius * 2;
+        fogCtx.lineCap = 'round';
+        fogCtx.lineJoin = 'round';
+        fogCtx.shadowColor = 'rgba(0, 0, 0, 0.95)';
+        fogCtx.shadowBlur = 30;
+        fogCtx.stroke();
+        fogCtx.restore();
       });
-      return points;
     }
 
     function punchWaterFogRoute(route) {
@@ -2180,37 +2229,39 @@
           typeof d3.geoDistance !== 'function' || typeof d3.geoInterpolate !== 'function') return;
       let cached = waterFogRouteCache.get(route);
       if (!cached || cached.indexes !== coordinateIndexes) {
-        cached = { indexes: coordinateIndexes, points: waterRoutePoints(route), zoom: null, projected: null };
+        cached = { indexes: coordinateIndexes, segments: waterRouteSegments(route), zoom: null, projected: null };
         waterFogRouteCache.set(route, cached);
       }
-      if (!cached.points.length) return;
+      if (!cached.segments.length) return;
 
       if (map.project) {
         const zoom = map.getZoom();
         if (cached.zoom !== zoom) {
           const worldWidth = map.options.crs.scale(zoom);
-          let previousX = null;
-          cached.projected = cached.points.map(([lat, lng]) => {
-            const point = map.project([lat, lng], zoom).round();
-            if (previousX !== null) {
-              while (point.x - previousX > worldWidth / 2) point.x -= worldWidth;
-              while (previousX - point.x > worldWidth / 2) point.x += worldWidth;
-            }
-            previousX = point.x;
-            return { x: point.x, y: point.y, lat };
+          cached.projected = cached.segments.map(segment => {
+            let previousX = null;
+            return segment.map(([lat, lng]) => {
+              const point = map.project([lat, lng], zoom).round();
+              if (previousX !== null) {
+                while (point.x - previousX > worldWidth / 2) point.x -= worldWidth;
+                while (previousX - point.x > worldWidth / 2) point.x += worldWidth;
+              }
+              previousX = point.x;
+              return { x: point.x, y: point.y, lat };
+            });
           });
           cached.zoom = zoom;
         }
         const origin = map.latLngToContainerPoint([0, 0]).subtract(map.project([0, 0], zoom).round());
-        cached.projected.forEach(point => punchFogAura(
-          point.x + origin.x, point.y + origin.y, calculatePixelRadius(point.lat, WATER_FOG_RADIUS_KM), 0.95
-        ));
+        strokeWaterFogSegments(cached.projected.map(segment => segment.map(point => ({
+          x: point.x + origin.x, y: point.y + origin.y, lat: point.lat
+        }))));
         return;
       }
-      cached.points.forEach(([lat, lng]) => {
+      strokeWaterFogSegments(cached.segments.map(segment => segment.map(([lat, lng]) => {
         const point = map.latLngToContainerPoint([lat, lng]);
-        punchFogAura(point.x, point.y, calculatePixelRadius(lat, WATER_FOG_RADIUS_KM), 0.95);
-      });
+        return { x: point.x, y: point.y, lat };
+      })));
     }
 
     // Punch a radial gradient with soft glowing feather edges
@@ -4118,7 +4169,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261017-water-flight-fog"></script>
+  <script src="./expedition-ui.js?v=20261017-water-fog-strokes"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);
