@@ -2211,32 +2211,88 @@
       });
     }
 
+    /* Zoom-independent fog geometry: paths are projected once at zoom 0, scaled to the current zoom,
+       and split into bounded pieces so each 512px fog tile only rasterizes the shapes it overlaps. */
+    const FOG_REFERENCE_ZOOM = 0;
+    function fogPieceTarget(pieces) {
+      let piece = null;
+      const grow = (x, y) => {
+        piece.bounds.minX = Math.min(piece.bounds.minX, x); piece.bounds.maxX = Math.max(piece.bounds.maxX, x);
+        piece.bounds.minY = Math.min(piece.bounds.minY, y); piece.bounds.maxY = Math.max(piece.bounds.maxY, y);
+      };
+      return {
+        start() {
+          piece = { path: new Path2D(), bounds: { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity } };
+          pieces.push(piece);
+        },
+        moveTo(x, y) { piece.path.moveTo(x, y); grow(x, y); },
+        lineTo(x, y) { piece.path.lineTo(x, y); grow(x, y); },
+        closePath() { piece.path.closePath(); }
+      };
+    }
+
+    function fillFogPieces(pieces, fallbackPath, zoom, copies, rule, marginPixels) {
+      const scale = map.options.crs.scale(zoom) / map.options.crs.scale(FOG_REFERENCE_ZOOM);
+      const worldWidth = map.options.crs.scale(zoom);
+      const origin = map.latLngToContainerPoint([0, 0]).subtract(map.project([0, 0], zoom).round());
+      const canAdd = pieces && typeof Path2D.prototype.addPath === 'function';
+      for (const copy of copies) {
+        const tx = origin.x + copy * worldWidth;
+        let path = fallbackPath;
+        if (canAdd) {
+          const minX = (-fogPadding.x - tx - marginPixels) / scale;
+          const maxX = (fogCanvas.width - fogPadding.x - tx + marginPixels) / scale;
+          const minY = (-fogPadding.y - origin.y - marginPixels) / scale;
+          const maxY = (fogCanvas.height - fogPadding.y - origin.y + marginPixels) / scale;
+          const visible = pieces.filter(({ bounds }) => bounds.maxX >= minX && bounds.minX <= maxX &&
+            bounds.maxY >= minY && bounds.minY <= maxY);
+          if (!visible.length) continue;
+          path = new Path2D();
+          visible.forEach(piece => path.addPath(piece.path));
+        }
+        fogCtx.save();
+        fogCtx.translate(tx, origin.y);
+        if (scale !== 1) fogCtx.scale(scale, scale);
+        fogCtx.fill(path, rule);
+        fogCtx.restore();
+      }
+    }
+
     function paintLandFogStencil() {
       const zoom = map.getZoom();
-      if (!landStencilCache || landStencilCache.zoom !== zoom ||
+      const scalable = !!map.project && typeof Path2D !== 'undefined';
+      const traceZoom = scalable ? FOG_REFERENCE_ZOOM : zoom;
+      if (!landStencilCache || landStencilCache.zoom !== traceZoom ||
           landStencilCache.worldGeoJson !== worldGeoJson ||
           landStencilCache.usaRegionGeoJson !== usaRegionGeoJson ||
           landStencilCache.microStateGeoJson !== microStateGeoJson) {
         const commands = [];
         const path = typeof Path2D !== 'undefined' ? new Path2D() : null;
-        const target = path || {
+        const pieces = scalable && typeof Path2D.prototype.addPath === 'function' ? [] : null;
+        const pieceTarget = pieces && fogPieceTarget(pieces);
+        const target = pieces ? pieceTarget : path || {
           moveTo: (x, y) => commands.push(['moveTo', x, y]),
           lineTo: (x, y) => commands.push(['lineTo', x, y]),
           closePath: () => commands.push(['closePath'])
         };
         for (const features of [worldGeoJson, usaRegionGeoJson, microStateGeoJson]) {
-          (features || []).forEach(feature => traceLandFogPolygon(feature.geometry, target, zoom));
+          (features || []).forEach(feature => {
+            pieceTarget?.start();
+            traceLandFogPolygon(feature.geometry, target, traceZoom);
+          });
         }
-        landStencilCache = { zoom, worldGeoJson, usaRegionGeoJson, microStateGeoJson, path, commands };
+        landStencilCache = { zoom: traceZoom, worldGeoJson, usaRegionGeoJson, microStateGeoJson, path, commands, pieces };
       }
-      const worldWidth = map.options.crs.scale(zoom);
-      const origin = map.project
-        ? map.latLngToContainerPoint([0, 0]).subtract(map.project([0, 0], zoom).round())
-        : { x: 0, y: 0 };
       fogCtx.globalCompositeOperation = 'source-over';
       fogCtx.fillStyle = 'rgba(235, 239, 245, 0.99)';
       fogCtx.shadowBlur = 0;
       fogCtx.shadowColor = 'transparent';
+      if (scalable) {
+        fillFogPieces(landStencilCache.pieces, landStencilCache.path, zoom, [-1, 0, 1], 'nonzero', 0);
+        return;
+      }
+      const worldWidth = map.options.crs.scale(zoom);
+      const origin = { x: 0, y: 0 };
       for (const copy of [-1, 0, 1]) {
         fogCtx.save();
         fogCtx.translate(origin.x + copy * worldWidth, origin.y);
@@ -2258,12 +2314,15 @@
         ids.forEach(id => punchFogPolygon(countyFeaturesById[id].geometry));
         return;
       }
-      const zoom = map.getZoom();
       const key = ids.join(',');
-      if (!countyFogBatchCache || countyFogBatchCache.zoom !== zoom || countyFogBatchCache.key !== key ||
+      if (!countyFogBatchCache || countyFogBatchCache.key !== key ||
           countyFogBatchCache.features !== countyFeaturesById) {
         const path = new Path2D();
+        const pieces = typeof Path2D.prototype.addPath === 'function' ? [] : null;
+        const pieceTarget = pieces && fogPieceTarget(pieces);
+        const target = pieceTarget || path;
         ids.forEach(id => {
+          pieceTarget?.start();
           const geometry = countyFeaturesById[id].geometry;
           const polygons = geometry?.type === 'Polygon' ? [geometry.coordinates] :
             geometry?.type === 'MultiPolygon' ? geometry.coordinates : [];
@@ -2272,24 +2331,20 @@
             let hasPoint = false;
             ring.forEach(coordinate => {
               if (!Array.isArray(coordinate) || !Number.isFinite(coordinate[0]) || !Number.isFinite(coordinate[1])) return;
-              const point = map.project([coordinate[1], coordinate[0]], zoom).round();
-              if (!hasPoint) path.moveTo(point.x, point.y);
-              else path.lineTo(point.x, point.y);
+              const point = map.project([coordinate[1], coordinate[0]], FOG_REFERENCE_ZOOM);
+              if (!hasPoint) target.moveTo(point.x, point.y);
+              else target.lineTo(point.x, point.y);
               hasPoint = true;
             });
-            if (hasPoint) path.closePath();
+            if (hasPoint) target.closePath();
           }));
         });
-        countyFogBatchCache = { zoom, key, features: countyFeaturesById, path };
+        countyFogBatchCache = { key, features: countyFeaturesById, path, pieces };
       }
-      const origin = map.latLngToContainerPoint([0, 0]).subtract(map.project([0, 0], zoom).round());
-      fogCtx.save();
-      fogCtx.translate(origin.x, origin.y);
       fogCtx.fillStyle = 'rgba(0, 0, 0, 1)';
       fogCtx.shadowColor = 'rgba(0, 0, 0, 0.95)';
       fogCtx.shadowBlur = 25;
-      fogCtx.fill(countyFogBatchCache.path, 'nonzero');
-      fogCtx.restore();
+      fillFogPieces(countyFogBatchCache.pieces, countyFogBatchCache.path, map.getZoom(), [0], 'nonzero', 50);
     }
 
     function punchFogPolygon(geometry, featherPixels = 25) {
@@ -2858,6 +2913,31 @@
     let coordinateIndexes = null;
     let coordinateCacheIndexes = null;
     const countyBiomeCache = {};
+    // County biomes are deterministic for a given atlas snapshot, so they persist across reloads.
+    const COUNTY_BIOME_STORE = 'wanderlog_county_biomes_v1';
+    let countyBiomeSignature = null;
+    let countyBiomeSaveTimer = null;
+
+    function restoreCountyBiomes(signature) {
+      countyBiomeSignature = signature;
+      try {
+        const stored = JSON.parse(localStorage.getItem(COUNTY_BIOME_STORE) || 'null');
+        if (stored?.signature !== signature || !stored.biomes || typeof stored.biomes !== 'object') return;
+        Object.entries(stored.biomes).forEach(([fips, biome]) => {
+          if (/^\d{5}$/.test(fips) && (biome === null || /^\d{1,2}$/.test(biome))) countyBiomeCache[fips] = biome;
+        });
+      } catch {}
+    }
+
+    function saveCountyBiomesSoon() {
+      if (!countyBiomeSignature || countyBiomeSaveTimer !== null) return;
+      countyBiomeSaveTimer = setTimeout(() => {
+        countyBiomeSaveTimer = null;
+        try {
+          localStorage.setItem(COUNTY_BIOME_STORE, JSON.stringify({ signature: countyBiomeSignature, biomes: countyBiomeCache }));
+        } catch {}
+      }, 1000);
+    }
     const politicalCache = new Map();
     const biomeCache = new Map();
 
@@ -2903,12 +2983,16 @@
         if (intersecting) biomes = [String(intersecting.properties.BIOME_NUM)];
       }
       countyBiomeCache[fips] = biomes.length ? String(biomes[0]) : null;
+      saveCountyBiomesSoon();
       return countyBiomeCache[fips];
     }
 
+    let coordinateLoadId = 0;
     async function loadCoordinateGeography() {
+      const loadId = ++coordinateLoadId;
       coordinateIndexes = null;
       Object.keys(countyBiomeCache).forEach(key => delete countyBiomeCache[key]);
+      countyBiomeSignature = null;
       const status = document.getElementById('coordinateGeographyStatus');
       try {
         const response = await fetch('./ecoregions.topojson', { cache: 'no-cache' });
@@ -2922,19 +3006,28 @@
           !Number.isInteger(feature.properties.BIOME_NUM) || feature.properties.BIOME_NUM < 1 || feature.properties.BIOME_NUM > 14)) {
           throw new Error('Incomplete terrestrial ecoregion geography.');
         }
-        coordinateIndexes = {
-          countries: CoordinateLookups.indexFeatures(worldGeoJson, d3),
-          states: CoordinateLookups.indexFeatures(usaRegionGeoJson, d3),
-          counties: CoordinateLookups.indexFeatures(countyGeoJson, d3),
-          microStates: CoordinateLookups.indexFeatures(microStateGeoJson || [], d3),
-          ecoregions: CoordinateLookups.indexFeatures(features, d3)
-        };
+        // Index one atlas per task so startup input is never blocked by a single ~250ms indexing pass.
+        const indexes = {};
+        for (const [key, source] of [['countries', worldGeoJson], ['states', usaRegionGeoJson],
+          ['counties', countyGeoJson], ['microStates', microStateGeoJson || []], ['ecoregions', features]]) {
+          indexes[key] = CoordinateLookups.indexFeatures(source, d3);
+          await yieldToMain();
+          if (loadId !== coordinateLoadId) return;
+        }
+        coordinateIndexes = indexes;
+        restoreCountyBiomes(JSON.stringify([topology.metadata.source, topology.metadata.version,
+          features.length, countyGeoJson.length]));
         status.textContent = 'Custom-coordinate geography ready. Region and biome matches use simplified polygons.';
       } catch (error) {
         console.error('Failed to load coordinate geography', error);
         status.textContent = 'Custom-coordinate geography unavailable. Retry datasets; existing visits remain available.';
         document.getElementById('btnRetryNps').classList.remove('hidden');
       }
+    }
+
+    function yieldToMain() {
+      if (typeof globalThis.scheduler?.yield === 'function') return globalThis.scheduler.yield();
+      return new Promise(resolve => setTimeout(resolve, 0));
     }
 
     async function loadNpsBoundaries() {

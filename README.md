@@ -142,8 +142,12 @@ against their relevant travel values and dataset identities, so edits, imports, 
 and dataset reloads cannot reuse stale results. Coordinate containment is reused across calculations
 until the geography index changes. While panning, the already-drawn overscanned fog bitmap slides with
 a GPU transform; a full redraw runs only after the pan ends or when it nears the overscan edge, coalesced
-to one per animation frame. All cleared counties share one cached path and a single blurred fill per
-zoom instead of hundreds of separately shadowed fills. Rendered fog is cached as 512px world-anchored
+to one per animation frame. All cleared counties share one cached path and a single blurred fill
+instead of hundreds of separately shadowed fills. The county path and the land stencil are projected
+once at zoom 0 and scaled to the current zoom, with per-feature pieces culled to each tile, so zooming
+never re-projects atlas geometry. Each county's biome match is saved in localStorage (keyed to the
+ecoregion and county atlas versions), and coordinate indexes are built one atlas per task, so warm
+startups avoid hundreds of milliseconds of point-in-polygon work and never block input in one long task. Rendered fog is cached as 512px world-anchored
 tiles per zoom (an LRU of ~384 tiles on desktop, 64 on mobile): only tiles under the viewport render
 synchronously, overscan tiles fill in during idle time, and pans or returning to a visited zoom only
 composite cached bitmaps. Any data change drops the cache, and bursts of changes coalesce into one frame.

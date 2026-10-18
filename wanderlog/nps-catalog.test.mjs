@@ -1323,7 +1323,7 @@ check('water corridors precede one unblurred cached land stencil and visited pun
     pan=0;
     zoom=5;
     vm.runInContext('drawFogOfWar()',context);
-    assert.equal(paths,2,'zoom changes rebuild the single stencil');
+    assert.equal(paths,1,'zoom changes rescale the zoom-0 stencil instead of re-projecting it');
     for (const dataset of ['worldGeoJson','usaRegionGeoJson','microStateGeoJson']) {
       const before=paths;
       vm.runInContext(`${dataset}=[...${dataset}];drawFogOfWar()`,context);
@@ -2596,14 +2596,16 @@ check('fog tiles render the viewport first, fill overscan when idle, survive pan
     `, context);
   }
 });
-check('cleared counties are batched into one cached blurred fill per zoom', () => {
+check('cleared counties are batched into one cached blurred fill reused across zooms', () => {
   const originalPath = context.Path2D;
   let paths = 0, fills = 0, projections = 0, zoom = 5;
   const point = (x, y) => ({ x, y, round() { return this; }, subtract(o) { return point(x - o.x, y - o.y); } });
   context.Path2D = class { constructor() { paths++; } moveTo() {} lineTo() {} closePath() {} };
-  context.batchMap = { getZoom: () => zoom, project: ([lat, lng]) => { projections++; return point(lng, lat); },
+  const scales = [];
+  context.batchMap = { options: { crs: { scale: z => 256 * 2 ** z } }, getZoom: () => zoom,
+    project: ([lat, lng]) => { projections++; return point(lng, lat); },
     latLngToContainerPoint: () => point(0, 0) };
-  context.batchCtx = { save() {}, restore() {}, translate() {},
+  context.batchCtx = { save() {}, restore() {}, translate() {}, scale(x) { scales.push(x); },
     fill(path, rule) { fills++; assert.equal(rule, 'nonzero'); assert.equal(this.shadowBlur, 25); } };
   try {
     vm.runInContext(`map=batchMap;fogCtx=batchCtx;countyFogBatchCache=null;
@@ -2619,7 +2621,11 @@ check('cleared counties are batched into one cached blurred fill per zoom', () =
     assert.equal(projections, first + 1, 'only the origin is projected on a cached frame');
     zoom++;
     vm.runInContext("punchCountyFog(['91001','91002','91003'])", context);
-    assert.equal(paths, 2);
+    assert.equal(paths, 1, 'zoom changes rescale the zoom-0 path instead of re-projecting it');
+    assert.equal(projections, first + 2);
+    assert.deepEqual(scales.slice(-2), [32, 64]);
+    vm.runInContext("punchCountyFog(['91001','91002'])", context);
+    assert.equal(paths, 2, 'a different county set rebuilds the batch');
   } finally {
     context.Path2D = originalPath;
     vm.runInContext(`map=null;fogCtx=null;countyFogBatchCache=null;
