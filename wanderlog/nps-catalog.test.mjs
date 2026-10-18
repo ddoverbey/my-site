@@ -122,7 +122,7 @@ check('mobile RPG HUD starts collapsed with an accessible stats toggle', () => {
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261017-route-render-perf')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261017-water-stroke-path')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('storage-risk banner and unfinished-trip recovery controls are present', () => {
@@ -1165,13 +1165,17 @@ check('water fog uses continuous round-capped, feathered strokes and caches shor
   assert.ok(context.fogOperations.some(operation => operation[0] === 'lineTo' &&
     (operation[1] / 100 < -0.63 || operation[1] / 100 > 1.63)),
   'the buffered path must stop before reaching the island');
-  assert.ok(strokes.every(([, width, cap, join, blur]) => width > 0 && cap === 'round' && join === 'round' && blur === 30));
+  assert.equal(strokes.length, 1, 'all water-safe spans should draw in one canvas stroke');
+  assert.ok(moveTos.length > 1, 'the path must lift and restart at shoreline-buffer breaks');
+  assert.ok(strokes.every(([, width, cap, join, blur]) => width > 0 && cap === 'round' && join === 'round' && blur === 35));
+  assert.equal(vm.runInContext('fogCtx.shadowBlur', context), 0);
+  assert.equal(vm.runInContext('fogCtx.shadowColor', context), 'transparent');
   assert.equal(context.fogOperations.filter(operation => operation[0] === 'arc').length, 0,
     'route clearing must not use stamp-shaped arcs');
   const lookupsAfterFirstRender = waterLookups;
   vm.runInContext('punchWaterFogRoute(testFerryRoute)', context);
   assert.equal(waterLookups, lookupsAfterFirstRender);
-  assert.equal(context.fogOperations.filter(operation => operation[0] === 'stroke').length, strokes.length * 2);
+  assert.equal(context.fogOperations.filter(operation => operation[0] === 'stroke').length, 2);
 });
 vm.runInContext('map=waterOriginalMap;coordinateIndexes=waterOriginalIndexes;delete globalThis.waterOriginalMap;delete globalThis.waterOriginalIndexes;delete globalThis.testFerryRoute', context);
 context.d3.geoDistance = originalGeoDistance;
