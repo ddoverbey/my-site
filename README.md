@@ -650,7 +650,10 @@ unavailable, the form reports that and keeps the in-memory draft available for m
 Travel Log entries are compact, keyboard-accessible expandable cards. The closed card shows its map,
 trip name, dates, total mileage, elevation range/changes, up to four badges, and an optional highlight
 photo on desktop. Opening it reveals the journal editor and photo gallery; the full itinerary, remaining
-badges, reason for travel, and route-edit control stay inside the expanded entry. Mini-maps wait for
+badges, reason for travel, and route-edit control stay inside the expanded entry.
+Use the header or the bottom **Collapse journal** button
+to close a trip; collapsing retains any unsaved journal draft in the current tab.
+Mini-maps wait for
 a visible container and refit after resizing. Bright cyan driving routes, distinct transit colors, and
 dark route outlines stand out against satellite imagery in both the journal and route preview.
 

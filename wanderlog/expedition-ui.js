@@ -1172,6 +1172,7 @@ function renderExpeditionHistory() {
           ${metrics.changes ? `<p class="text-xs text-slate-400">${metrics.changes}</p>` : ''}
           <div class="flex flex-wrap gap-1.5">${badgeMarkup.slice(0, 4).join('')}${badges.length > 4 ? `<span class="text-xs text-slate-400">+${badges.length - 4}</span>` : ''}</div>
           <span class="travel-journal-toggle text-xs text-sky-300">Open journal <span aria-hidden="true">⌄</span></span>
+          <span class="travel-journal-collapse-hint text-xs text-sky-300">Collapse journal <span aria-hidden="true">⌃</span></span>
         </div>
         ${exp.photos?.length ? `<img class="travel-journal-highlight" src="${exp.photos[0]}" alt="Highlight from ${escapeHtml(exp.name)}" loading="lazy">` : ''}
       </summary>
@@ -1184,6 +1185,7 @@ function renderExpeditionHistory() {
           ${exp.reason ? `<p class="text-xs text-slate-400">${escapeHtml(exp.reason)}</p>` : ''}
         </details>
         ${AppState.viewOnly ? '' : `<button type="button" data-edit-expedition="${escapeHtml(exp.id)}" class="rounded-lg bg-slate-800 px-3 py-2 text-xs text-amber-200">Edit trip &amp; route</button>`}
+        <button type="button" data-collapse-journal class="rounded-lg bg-slate-800 px-3 py-2 text-xs text-sky-300">Collapse journal ↑</button>
       </div>
     </details>`;
   }).join('');
@@ -1199,6 +1201,7 @@ function renderExpeditionHistory() {
       } else openTravelLogs.delete(exp.id);
     };
     card.addEventListener('toggle', reveal);
+    card.querySelector('[data-collapse-journal]').addEventListener('click', () => collapseTravelJournal(card));
     if (card.open) reveal();
   });
   if (typeof ResizeObserver !== 'undefined') {
@@ -1217,6 +1220,13 @@ function renderExpeditionHistory() {
     try { renderTravelLogMiniMap(exp); }
     catch (error) { showTravelLogMapError(exp, error); }
   });
+}
+
+function collapseTravelJournal(card) {
+  card.open = false;
+  openTravelLogs.delete(card.dataset.trip);
+  card.querySelector('summary').focus({ preventScroll: true });
+  card.scrollIntoView({ block: 'nearest' });
 }
 
 function showTravelLogMapError(exp, error) {

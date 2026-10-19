@@ -1084,6 +1084,30 @@ check('journal cards keep the itinerary collapsed, show one highlight, and prese
     vm.runInContext(`AppState.expeditions=${saved};renderExpeditionHistory()`, context);
   }
 });
+check('collapse journal closes the trip, restores header focus, and retains unsaved journal text', () => {
+  let focused = false, scrolled = false;
+  const card = { open: true, dataset: { trip: 'collapse_test' },
+    querySelector: () => ({ focus(options) { focused = options.preventScroll; } }),
+    scrollIntoView(options) { scrolled = options.block === 'nearest'; } };
+  context.collapseTestCard = card;
+  try {
+    vm.runInContext(`
+      openTravelLogs.add('collapse_test');
+      travelJournalDrafts.set('collapse_test',{journal:'Still writing'});
+      collapseTravelJournal(collapseTestCard);
+    `, context);
+    assert.equal(card.open, false);
+    assert.equal(focused, true);
+    assert.equal(scrolled, true);
+    assert.equal(vm.runInContext("openTravelLogs.has('collapse_test')", context), false);
+    assert.equal(vm.runInContext("travelJournalDrafts.get('collapse_test').journal", context), 'Still writing');
+    assert.ok(expeditionUi.includes('data-collapse-journal'));
+    assert.ok(html.includes('.travel-journal-card[open] > summary .travel-journal-collapse-hint'));
+  } finally {
+    vm.runInContext("travelJournalDrafts.delete('collapse_test');openTravelLogs.delete('collapse_test')", context);
+    delete context.collapseTestCard;
+  }
+});
 check('trip mileage follows actual leg geometry and uses endpoints for flights with no track', () => {
   const result = vm.runInContext(`travelLogMetrics({
     routeCoords:[[0,0],[0,1],[1,1]],transitTags:['road','flight'],
