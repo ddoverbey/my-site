@@ -663,7 +663,11 @@ invented. Elevation changes are differences between recorded stop elevations, **
 trail ascent/descent. Flight connectors remain visual guides only and do not clear land fog.
 
 Each trip can save a plain-text `journal` (20,000 characters) and up to four `photos` (JPEG data URLs)
-inside the Passport JSON. JPEG/PNG/WebP uploads (up to 15 MB each) are resized locally to at most
+inside the Passport JSON. Heading and Bullet list buttons format the current/selected lines; clicking
+again removes that format. `#`, `##`, and `###` headings and `-`/`*` bullet lines display in the
+formatted preview and read-only journals. Other text remains literal (HTML is escaped); the saved
+text retains these simple formatting markers for portable exports.
+JPEG/PNG/WebP uploads (up to 15 MB each) are resized locally to at most
 960 pixels on their longest edge and recompressed to under 180,000 characters each; images that
 cannot fit are rejected explicitly. Re-encoding also avoids retaining original photo metadata.
 The first photo becomes the highlight; removing it promotes the next. Expanded photos open in a

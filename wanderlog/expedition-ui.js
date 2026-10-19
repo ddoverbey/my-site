@@ -1253,17 +1253,63 @@ function travelJournalPhotos(photos, editable) {
   </figure>`).join('');
 }
 
+function journalMarkup(text) {
+  const blocks = [];
+  let bullets = [];
+  const flush = () => {
+    if (bullets.length) blocks.push(`<ul>${bullets.join('')}</ul>`);
+    bullets = [];
+  };
+  for (const line of text.split(/\r?\n/)) {
+    const bullet = /^\s*[-*] (.*)$/.exec(line);
+    if (bullet) {
+      bullets.push(`<li>${escapeHtml(bullet[1])}</li>`);
+      continue;
+    }
+    flush();
+    const heading = /^(#{1,3}) (.*)$/.exec(line);
+    if (heading) {
+      const level = heading[1].length + 2;
+      blocks.push(`<h${level}>${escapeHtml(heading[2])}</h${level}>`);
+    } else if (line.trim()) blocks.push(`<p>${escapeHtml(line)}</p>`);
+    else blocks.push('<br>');
+  }
+  flush();
+  return blocks.join('');
+}
+
+function journalFormatLines(text, start, end, format) {
+  const from = start === 0 ? 0 : text.lastIndexOf('\n', start - 1) + 1;
+  const last = end > start && text[end - 1] === '\n' ? end - 1 : end;
+  const next = text.indexOf('\n', last);
+  const to = next < 0 ? text.length : next;
+  const prefix = format === 'heading' ? '# ' : '- ';
+  const lines = text.slice(from, to).split('\n');
+  const remove = lines.every(line => line.startsWith(prefix));
+  const replacement = lines.map(line => remove ? line.slice(prefix.length) :
+    prefix + line.replace(/^(?:#{1,3}|[-*]) /, '')).join('\n');
+  return { value: text.slice(0, from) + replacement + text.slice(to), start: from, end: from + replacement.length };
+}
+
 function renderTravelJournal(exp) {
   const body = document.querySelector(`[data-journal-body="${exp.id}"]`);
   if (!body || body.dataset.rendered === 'true') return;
   body.dataset.rendered = 'true';
   const draft = travelJournalDraft(exp);
   body.innerHTML = `<h5 class="cinzel text-amber-200">Journal</h5>
-    ${AppState.viewOnly ? `<p class="travel-journal-prose">${escapeHtml(exp.journal || 'No journal entry yet.')}</p>
+    ${AppState.viewOnly ? `<div class="travel-journal-prose">${journalMarkup(exp.journal || 'No journal entry yet.')}</div>
       <div class="travel-journal-photos">${travelJournalPhotos(exp.photos || [], false)}</div>` :
       `<form class="travel-journal-form">
         <label class="block text-xs" for="journal-${exp.id}">The story of your trip</label>
+        <div class="travel-journal-toolbar" role="group" aria-label="Journal formatting">
+          <button type="button" data-journal-format="heading">Heading</button>
+          <button type="button" data-journal-format="bullets">Bullet list</button>
+        </div>
         <textarea id="journal-${exp.id}" name="journal" maxlength="${TravelLedger.journalLimits.text}" rows="6" placeholder="Favorite moments, unexpected detours, places to return to…">${escapeHtml(draft.journal)}</textarea>
+        <p class="text-xs text-slate-400">Select lines or place your cursor, then choose a format. You can also type # Heading or - Bullet.</p>
+        <details><summary class="text-xs text-sky-300">Formatted preview</summary>
+          <div class="travel-journal-prose" data-journal-preview>${journalMarkup(draft.journal)}</div>
+        </details>
         <div class="travel-journal-photos">${travelJournalPhotos(draft.photos, true)}</div>
         <label class="travel-journal-upload">Add photos
           <input type="file" name="photos" accept="image/jpeg,image/png,image/webp" multiple>
@@ -1300,7 +1346,24 @@ function renderTravelJournal(exp) {
   const updateGallery = () => { gallery.innerHTML = travelJournalPhotos(draft.photos, true); };
   form.elements.journal.addEventListener('input', () => {
     draft.journal = form.elements.journal.value;
+    form.querySelector('[data-journal-preview]').innerHTML = journalMarkup(draft.journal);
     status.textContent = 'Unsaved changes';
+  });
+  form.querySelectorAll('[data-journal-format]').forEach(button => {
+    button.addEventListener('click', () => {
+      const input = form.elements.journal;
+      const result = journalFormatLines(input.value, input.selectionStart, input.selectionEnd, button.dataset.journalFormat);
+      if (result.value.length > TravelLedger.journalLimits.text) {
+        status.textContent = 'This formatting would exceed the journal character limit.';
+        return;
+      }
+      input.value = result.value;
+      input.focus();
+      input.setSelectionRange(result.start, result.end);
+      draft.journal = result.value;
+      form.querySelector('[data-journal-preview]').innerHTML = journalMarkup(draft.journal);
+      status.textContent = 'Unsaved changes';
+    });
   });
   gallery.addEventListener('click', event => {
     const button = event.target.closest('[data-remove-photo]');

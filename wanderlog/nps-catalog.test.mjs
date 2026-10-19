@@ -133,7 +133,7 @@ check('mobile RPG HUD starts collapsed with an accessible stats toggle', () => {
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261019-trip-journal')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261019-journal-formatting')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('storage-risk banner and unfinished-trip recovery controls are present', () => {
@@ -1108,6 +1108,31 @@ check('collapse journal closes the trip, restores header focus, and retains unsa
     delete context.collapseTestCard;
   }
 });
+check('journal headings and bullet lists render safely without interpreting HTML or inline scripts', () => {
+  context.journalFormattingFixture = '# Day one\n## Highlights\n- Sunrise\n* Waterfall\n### Next time\n<script>alert(1)</script>\n[link](javascript:bad)';
+  const rendered = vm.runInContext('journalMarkup(journalFormattingFixture)', context);
+  assert.ok(rendered.includes('<h3>Day one</h3>'));
+  assert.ok(rendered.includes('<h4>Highlights</h4>'));
+  assert.ok(rendered.includes('<ul><li>Sunrise</li><li>Waterfall</li></ul>'));
+  assert.ok(rendered.includes('<h5>Next time</h5>'));
+  assert.ok(rendered.includes('&lt;script&gt;alert(1)&lt;/script&gt;'));
+  assert.ok(!rendered.includes('<script>'));
+  assert.ok(!rendered.includes('<a '));
+  delete context.journalFormattingFixture;
+});
+check('journal formatting buttons operate on complete selected lines and toggle formatting', () => {
+  const plain = expression => JSON.parse(JSON.stringify(vm.runInContext(expression, context)));
+  assert.deepEqual(plain("journalFormatLines('Sunrise\\nWaterfall',0,17,'bullets')"),
+    { value: '- Sunrise\n- Waterfall', start: 0, end: 21 });
+  assert.deepEqual(plain("journalFormatLines('- Sunrise\\n- Waterfall',0,21,'bullets')"),
+    { value: 'Sunrise\nWaterfall', start: 0, end: 17 });
+  assert.deepEqual(plain("journalFormatLines('Intro\\nDay one\\nEnd',8,8,'heading')"),
+    { value: 'Intro\n# Day one\nEnd', start: 6, end: 15 });
+  assert.equal(plain("journalFormatLines('- Day one',2,2,'heading')").value, '# Day one');
+  assert.equal(plain("journalFormatLines('',0,0,'bullets')").value, '- ');
+  assert.equal(plain("journalFormatLines('One\\nTwo',0,4,'heading')").value, '# One\nTwo');
+  assert.equal(plain("journalFormatLines('\\nTwo',0,0,'heading')").value, '# \nTwo');
+});
 check('trip mileage follows actual leg geometry and uses endpoints for flights with no track', () => {
   const result = vm.runInContext(`travelLogMetrics({
     routeCoords:[[0,0],[0,1],[1,1]],transitTags:['road','flight'],
@@ -1148,14 +1173,29 @@ check('journal saves are transactional, retain unsaved text on quota failure, an
   const gallery = element('journalTestGallery');
   const status = element('journalTestStatus');
   const save = element('journalTestSave');
+  const preview = element('journalTestPreview');
+  const heading = element('journalTestHeading');
+  heading.dataset.journalFormat = 'heading';
+  const originalQueryAll = form.querySelectorAll;
+  const originalSelection = textarea.setSelectionRange;
+  form.querySelectorAll = () => [heading];
+  textarea.setSelectionRange = (start, end) => { textarea.selectionStart = start; textarea.selectionEnd = end; };
   form.elements = { journal: textarea, photos: files };
   form.querySelector = selector => selector === '[role="status"]' ? status :
-    selector === '.travel-journal-photos' ? gallery : save;
+    selector === '.travel-journal-photos' ? gallery : selector === '[data-journal-preview]' ? preview : save;
   const body = { dataset: {}, innerHTML: '', querySelector: selector => selector === 'form' ? form : gallery };
   context.document.querySelector = () => body;
   try {
     vm.runInContext(`AppState.viewOnly=false;renderTravelJournal(AppState.expeditions[0])`, context);
     assert.ok(body.innerHTML.includes('The story of your trip'));
+    textarea.value = 'Day one';
+    textarea.selectionStart = textarea.selectionEnd = 3;
+    heading.handlers.click();
+    assert.equal(textarea.value, '# Day one');
+    assert.equal(preview.innerHTML, '<h3>Day one</h3>');
+    assert.equal(status.textContent, 'Unsaved changes');
+    heading.handlers.click();
+    assert.equal(textarea.value, 'Day one');
     textarea.value = 'The view was worth the detour.\n<script>Just a memory</script>';
     textarea.handlers.input();
     vm.runInContext(`travelJournalDraft(AppState.expeditions[0]).photos.push(
@@ -1184,6 +1224,8 @@ check('journal saves are transactional, retain unsaved text on quota failure, an
   } finally {
     context.document.querySelector = query;
     context.localStorage.setItem = write;
+    form.querySelectorAll = originalQueryAll;
+    textarea.setSelectionRange = originalSelection;
     vm.runInContext(`applyPassport(${snapshot});AppState.viewOnly=${viewOnly};travelJournalDrafts.clear();renderExpeditionHistory()`, context);
   }
 });
