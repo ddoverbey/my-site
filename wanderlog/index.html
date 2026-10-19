@@ -193,7 +193,11 @@
     .header-icon:focus-visible { outline: 2px solid #fbbf24; outline-offset: 2px; }
     .header-icon[aria-pressed="true"] { background: #1e3a5f; color: #fff; }
     .passport-flags { display: flex; flex-wrap: wrap; gap: 12px; list-style: none; padding: 0; }
-    .passport-flags li { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px; background: #0f172a; border: 1px solid #334155; font-size: 12px; color: #cbd5e1; }
+    .passport-flags li { position: relative; display: flex; }
+    .country-flag { position: relative; display: inline-flex; align-items: center; justify-content: center; min-height: 44px; cursor: pointer; }
+    .country-flag:focus-visible { outline: 2px solid #38bdf8; outline-offset: 3px; border-radius: 3px; }
+    .country-flag-name { display: none; position: absolute; top: 100%; left: 0; z-index: 20; width: max-content; max-width: 180px; padding: 5px 8px; border-radius: 5px; background: #020617; color: #e2e8f0; font-size: 12px; pointer-events: none; }
+    .country-flag:hover .country-flag-name, .country-flag:focus .country-flag-name { display: block; }
     .passport-flags img { width: 48px; height: 32px; object-fit: contain; image-rendering: pixelated; }
     #toggleRpgMode[aria-pressed="true"] { background: #78350f; color: #fde68a; }
     .mode-classic #fogCanvasOverlay {
@@ -3916,10 +3920,26 @@
     }
 
     function countryFlagMarkup(flags) {
-      return flags.map(flag => `<li><img src="${flag.src}" alt="${escapeHtml(flag.name)} flag" width="48" height="32" loading="lazy"><span>${escapeHtml(flag.name)}</span></li>`).join('');
+      return flags.map(flag => `<li><span class="country-flag" role="button" tabindex="0" aria-label="${escapeHtml(flag.name)} flag">
+        <img src="${flag.src}" alt="" width="48" height="32" loading="lazy">
+        <span class="country-flag-name" aria-hidden="true">${escapeHtml(flag.name)}</span>
+      </span></li>`).join('');
     }
 
     function wireCountryFlagFallbacks(list) {
+      list.querySelectorAll('.country-flag').forEach(flag => {
+        flag.addEventListener('click', event => {
+          event.preventDefault();
+          event.stopPropagation();
+          flag.focus();
+        });
+        flag.addEventListener('keydown', event => {
+          if (event.key !== 'Enter' && event.key !== ' ') return;
+          event.preventDefault();
+          event.stopPropagation();
+          flag.focus();
+        });
+      });
       list.querySelectorAll('img').forEach(image => image.addEventListener('error', () => {
         image.src = './assets/flags/unknown.png';
       }, { once: true }));

@@ -698,7 +698,9 @@ remains hidden until completion.
 
 The character profile collects pixel flags for Visited and Lived countries (not Wishlist or
 Transited). Flags are alphabetized by English country name, deduplicated by ISO country code,
-and rendered pixel-sharp from `wanderlog/assets/flags/`. Unknown countries or missing flag
+and shown without frames or permanent name labels in both the profile and Travel Log.
+Hover, keyboard-focus, or tap/click a flag to reveal its name; flag activation does not toggle trip cards.
+Flags are rendered pixel-sharp from `wanderlog/assets/flags/`. Unknown countries or missing flag
 files use `unknown.png`. This collection follows existing travel-derived country statuses and
 manual overrides; it does not introduce a second saved country ledger. Pixel artwork is by
 DaFluffyPotato; country-code reference: https://flaglog.com/country-codes.

@@ -1167,7 +1167,7 @@ check('profile flag images retry the unknown asset once when a country has no fl
   const image = { src: './assets/flags/um.png', addEventListener(event, handler, settings) {
     assert.equal(event, 'error'); fail = handler; options = settings;
   } };
-  list.querySelectorAll = () => [image];
+  list.querySelectorAll = selector => selector === 'img' ? [image] : [];
   try {
     vm.runInContext("renderProfileFlags(['United States Minor Outlying Islands'])", context);
     assert.equal(options.once, true);
@@ -1176,6 +1176,29 @@ check('profile flag images retry the unknown asset once when a country has no fl
   } finally {
     list.querySelectorAll = original;
   }
+});
+check('flag names reveal on interaction without toggling their surrounding trip card', () => {
+  const list = element('passportFlags'), original = list.querySelectorAll;
+  const handlers = {};
+  let focused = 0, prevented = 0, stopped = 0;
+  const flag = { addEventListener(name, handler) { handlers[name] = handler; }, focus() { focused++; } };
+  list.querySelectorAll = selector => selector === '.country-flag' ? [flag] : [];
+  try {
+    vm.runInContext("renderProfileFlags(['France'])", context);
+    assert.ok(list.innerHTML.includes('role="button" tabindex="0" aria-label="France flag"'));
+    assert.ok(list.innerHTML.includes('class="country-flag-name" aria-hidden="true">France'));
+    const event = { preventDefault() { prevented++; }, stopPropagation() { stopped++; } };
+    handlers.click(event);
+    handlers.keydown({ ...event, key: 'Enter' });
+    handlers.keydown({ ...event, key: ' ' });
+    handlers.keydown({ ...event, key: 'Tab' });
+    assert.equal(focused, 3);
+    assert.equal(prevented, 3);
+    assert.equal(stopped, 3);
+    assert.ok(html.includes('.country-flag:hover .country-flag-name'));
+    assert.ok(html.includes('.country-flag:focus .country-flag-name'));
+    assert.ok(html.includes('.country-flag-name { display: none;'));
+  } finally { list.querySelectorAll = original; }
 });
 check('trip flags exclude home-country aliases and flyovers, include destinations, and sort alphabetically', () => {
   const result = vm.runInContext(`(()=>{
