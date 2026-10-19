@@ -2266,6 +2266,9 @@ check('every achievement tier has valid difficulty rarity and distinct emoji art
   assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='earthSandwich').icon", context), '🌍🥪');
   assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='earthSandwich').background", context), '#172554');
   assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='earthSandwich').tiers[0].rarity", context), 'mythic');
+  assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='nps').tiers[0].rarity", context), 'legendary');
+  assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='nps').tiers[0].desc", context),
+    'Visit every non-international NPS catalog listing');
   assert.ok(html.includes('.achievement-icon[data-rarity="mythic"]'));
   assert.ok(html.includes('linear-gradient(135deg, #fb7185'));
 });
