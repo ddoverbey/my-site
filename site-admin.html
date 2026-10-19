@@ -416,6 +416,7 @@
           { label: 'Unique visitors', color: 'text-teal-300' },
           { label: 'Pro clicks', event: 'pro_click', of: null, color: 'text-amber-300' },
           { label: 'Get the App clicks', event: 'app_click', countEvent: true, of: null, color: 'text-cyan-300' },
+          { label: 'Open in Browser clicks', event: 'open_browser_click', countEvent: true, of: null, color: 'text-teal-300' },
           { label: 'Survey responses', event: 'app_preference_selected', countEvent: true, of: 'app_click', color: 'text-sky-300' },
           { label: 'App email signups', event: 'app_waitlist_submitted', countEvent: true, of: 'app_click', color: 'text-indigo-300' },
           { label: 'Waitlist signups', event: 'waitlist_submitted', of: 'pro_click', color: 'text-emerald-300', useExtraCount: true },
@@ -474,9 +475,10 @@
       const uniq = event => event ? (usersBy[event]?.size || 0) : visitors.size;
 
       const appClicks = counts.app_click || 0;
+      const browserClicks = counts.open_browser_click || 0;
       const surveyEvents = key === 'cultivate' ? events.filter(e => e.event === 'app_preference_selected') : [];
       summary.textContent = key === 'cultivate'
-        ? `${visitors.size} visitors · ${appClicks} Get the App clicks · ${surveyEvents.length} survey responses`
+        ? `${visitors.size} visitors · ${appClicks} Get the App clicks · ${browserClicks} Open in Browser clicks · ${surveyEvents.length} survey responses`
         : `${visitors.size} visitors · ${events.length} events`;
       if (!document.getElementById(`app-${key}`).open) return;
 

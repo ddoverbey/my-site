@@ -42,9 +42,9 @@ The page can request browser notification permission for check-in reminders. Ava
 
 ## Interest tracking and waitlists
 
-The **Get the App** bar opens a mobile-app interest form with a one-tap preference question and an optional email follow-up. The **Pro** button and the **Auto-Sync** button in the Add dialog open their own waitlist forms. The share icon beside the vitality score opens the native share sheet or copies a snippet with a link to devonoverbey.com/tools.
+The sticky **Vote for Mobile** banner opens a mobile-app interest form with a one-tap preference question and an optional email follow-up. The **Open in Safari/Chrome** link opens the garden in a new browser tab. The **Pro** button and the **Auto-Sync** button in the Add dialog open their own waitlist forms. The share icon beside the vitality score opens the native share sheet or copies a snippet with a link to devonoverbey.com/tools.
 
-Waitlist emails and anonymous events (`page_visit`, `first_seed_planted`, `first_plant_watered`, `pro_click`, `autosync_click`, `app_click`, `app_preference_selected`, `app_waitlist_submitted`, `share_click`, `waitlist_submitted`) are written to Supabase. Events carry a random per-browser id and never include contact names or notes. Nothing is sent when the page is opened from `file:` or `localhost`, or when signed in to an excluded owner account. Run this once in the Supabase SQL editor to create the tables. The anon key can insert but not read:
+Waitlist emails and anonymous events (`page_visit`, `first_seed_planted`, `first_plant_watered`, `pro_click`, `autosync_click`, `app_click`, `app_preference_selected`, `app_waitlist_submitted`, `open_browser_click`, `share_click`, `waitlist_submitted`) are written to Supabase. Events carry a random per-browser id and never include contact names or notes. Nothing is sent when the page is opened from `file:` or `localhost`, or when signed in to an excluded owner account. Run this once in the Supabase SQL editor to create the tables. The anon key can insert but not read:
 
 ```sql
 create table public.cultivate_waitlist (

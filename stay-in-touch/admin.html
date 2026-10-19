@@ -85,7 +85,7 @@
     <div id="status-banner" class="hidden rounded-xl border p-4 text-xs font-medium"></div>
 
     <!-- KPI Metric Cards -->
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+    <div class="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-7 gap-4">
       <div class="bg-[#14201b]/90 border border-[#23352e] rounded-xl p-4">
         <div class="text-[11px] text-[#8da498] uppercase tracking-wider">Total Unique Visitors</div>
         <div id="kpi-visitors" class="text-2xl font-mono-pixel text-teal-300 mt-1">—</div>
@@ -110,6 +110,11 @@
         <div class="text-[11px] text-[#8da498] uppercase tracking-wider">Get the App Clicks</div>
         <div id="kpi-app-clicks" class="text-2xl font-mono-pixel text-cyan-300 mt-1">—</div>
         <div class="text-[10px] text-[#6b8276] mt-0.5">Total app button taps</div>
+      </div>
+      <div class="bg-[#14201b]/90 border border-[#23352e] rounded-xl p-4">
+        <div class="text-[11px] text-[#8da498] uppercase tracking-wider">Open in Browser Clicks</div>
+        <div id="kpi-open-browser" class="text-2xl font-mono-pixel text-teal-300 mt-1">—</div>
+        <div class="text-[10px] text-[#6b8276] mt-0.5">Safari/Chrome link taps</div>
       </div>
       <div class="bg-[#14201b]/90 border border-[#23352e] rounded-xl p-4">
         <div class="text-[11px] text-[#8da498] uppercase tracking-wider">App Survey Responses</div>
@@ -443,6 +448,7 @@
       const waitlistVisitors = visitorsByEvent['waitlist_submitted']?.size || waitlist.length || 0;
       const wateredVisitors = visitorsByEvent['first_plant_watered']?.size || 0;
       const appClicks = eventCounts['app_click'] || 0;
+      const openBrowserClicks = eventCounts['open_browser_click'] || 0;
       const appSurveyEvents = events.filter(item => item.event === 'app_preference_selected');
       const appSurveyCounts = {
         app_store: 0,
@@ -470,6 +476,7 @@
       document.getElementById('kpi-watered').textContent = wateredVisitors;
       document.getElementById('kpi-watered-rate').textContent = `${wateredRate}% of visitors`;
       document.getElementById('kpi-app-clicks').textContent = appClicks;
+      document.getElementById('kpi-open-browser').textContent = openBrowserClicks;
       document.getElementById('kpi-app-survey').textContent = appSurveyEvents.length;
 
       const appSurveyLabels = {
