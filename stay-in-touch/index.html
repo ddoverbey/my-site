@@ -661,10 +661,10 @@
       <fieldset class="space-y-2">
         <legend class="text-xs font-semibold text-[#a3b8ad] mb-2">How would you use Cultivate?</legend>
         <button type="button" data-app-preference="app_store" aria-pressed="false" onclick="selectAppPreference('app_store')" class="w-full text-left px-3 py-2.5 rounded-lg border border-[#283e35] bg-[#0b1210] hover:border-teal-500/70 text-xs text-[#d6e4dc] transition-colors">
-          I'd use it daily as an App Store app
+          I'd only use this if it was a native App Store app.
         </button>
         <button type="button" data-app-preference="browser" aria-pressed="false" onclick="selectAppPreference('browser')" class="w-full text-left px-3 py-2.5 rounded-lg border border-[#283e35] bg-[#0b1210] hover:border-teal-500/70 text-xs text-[#d6e4dc] transition-colors">
-          I prefer using it right here in the browser
+          I'm happy using it right here in the browser.
         </button>
         <button type="button" data-app-preference="curious" aria-pressed="false" onclick="selectAppPreference('curious')" class="w-full text-left px-3 py-2.5 rounded-lg border border-[#283e35] bg-[#0b1210] hover:border-teal-500/70 text-xs text-[#d6e4dc] transition-colors">
           Just exploring / curious
@@ -2491,6 +2491,7 @@
       document.getElementById('waitlist-form').classList.remove('hidden');
       document.getElementById('waitlist-modal').classList.remove('hidden');
       trackEvent(source === 'pro' ? 'pro_click' : 'autosync_click');
+      if (source === 'pro') trackMetaEvent('trackCustom', 'ProBadgeClick');
     }
 
     function closeWaitlistModal() {
@@ -2504,18 +2505,22 @@
       const submit = document.getElementById('waitlist-submit');
       const email = emailInput.value.trim().toLowerCase();
       if (!emailInput.checkValidity() || !email) return;
+      const source = waitlistSource;
 
       submit.disabled = true;
       message.className = 'text-xs min-h-4 text-[#a3b8ad]';
       message.textContent = 'Saving...';
       try {
-        const res = await supabaseInsert('cultivate_waitlist', { email, source: waitlistSource, anon_id: getAnonId() });
+        const res = await supabaseInsert('cultivate_waitlist', { email, source, anon_id: getAnonId() });
         // 409 means this email is already on the list for this source.
         if (!res.ok && res.status !== 409) throw new Error(`HTTP ${res.status}`);
         message.className = 'text-xs min-h-4 text-teal-300';
         message.textContent = "You're on the list. Thank you!";
         emailInput.value = '';
-        trackEvent('waitlist_submitted', { source: waitlistSource });
+        trackEvent('waitlist_submitted', { source });
+        if (res.status !== 409 && source === 'pro') {
+          trackMetaEvent('track', 'Lead', { content_name: 'ProWaitlistSubmitted' });
+        }
         setTimeout(closeWaitlistModal, 1800);
       } catch (err) {
         message.className = 'text-xs min-h-4 text-rose-300';
