@@ -133,7 +133,7 @@ check('mobile RPG HUD starts collapsed with an accessible stats toggle', () => {
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261019-flight-stops')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261019-trip-journal')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('storage-risk banner and unfinished-trip recovery controls are present', () => {
@@ -953,7 +953,13 @@ check('the travel log is its own tab rendering a chronological feed with per-tri
   const feed = element('travelLogFeed').innerHTML;
   assert.ok(feed.includes('SEPTEMBER 2026'));
   assert.ok(feed.includes('id="mini-map-exp_test"'));
-  assert.ok(feed.includes('md:grid-cols-[220px_1fr]'));
+  assert.ok(feed.includes('travel-journal-summary'));
+  assert.match(feed, /<details class="travel-journal-card[^>]+data-trip="exp_test">/);
+  const summary = feed.slice(feed.indexOf('<summary class="travel-journal-summary'), feed.indexOf('</summary>'));
+  assert.ok(summary.includes('Total mileage'));
+  assert.ok(summary.includes('Elevation range'));
+  assert.ok(!summary.includes('Riverside'));
+  assert.ok(!summary.includes('Edit trip'));
   // Leaflet is absent from this harness, so the feed renders without any map instances.
   assert.equal(vm.runInContext('Object.keys(travelLogMaps).length', context), 0);
 });
@@ -1049,6 +1055,191 @@ check('logged expedition routes join legacy route corridors in the same canvas',
   assert.equal(context.fogOperations.filter(op => op[0] === 'stroke').length, 1);
   assert.equal(context.fogOperations.filter(op => op[0] === 'polygonFill' && op[1] === 'evenodd').length, 1);
   vm.runInContext(`AppState.expeditions=${savedExpeditions}`, context);
+});
+check('journal cards keep the itinerary collapsed, show one highlight, and preserve prose and photos during route edits', () => {
+  const saved = vm.runInContext('JSON.stringify(AppState.expeditions)', context);
+  try {
+    vm.runInContext(`
+      AppState.expeditions[0]={...AppState.expeditions[0],
+        journal:'A <script>memory</script>\\nA second line.',
+        photos:['data:image/jpeg;base64,YWJjZA==','data:image/jpeg;base64,ZWZnaA==']};
+      renderExpeditionHistory();
+    `, context);
+    const feed = element('travelLogFeed').innerHTML;
+    assert.equal((feed.match(/<img /g) || []).length, 1, 'only the highlight image is built before opening');
+    assert.ok(feed.includes('travel-journal-highlight'));
+    assert.ok(!feed.includes('A &lt;script&gt;memory'));
+    assert.ok(!feed.includes('ZWZnaA=='), 'remaining images are not inserted until the journal opens');
+    assert.ok(feed.indexOf('Itinerary &amp; trip details') > feed.indexOf('</summary>'));
+    const result = vm.runInContext(`(()=>{
+      const editing=expeditionEditingId, draft=expeditionDraft;
+      try {
+        expeditionEditingId=AppState.expeditions[0].id;expeditionDraft=[];
+        return draftExpedition([]);
+      } finally { expeditionEditingId=editing;expeditionDraft=draft; }
+    })()`, context);
+    assert.equal(result.journal, 'A <script>memory</script>\nA second line.');
+    assert.equal(result.photos.length, 2);
+  } finally {
+    vm.runInContext(`AppState.expeditions=${saved};renderExpeditionHistory()`, context);
+  }
+});
+check('trip mileage follows actual leg geometry and uses endpoints for flights with no track', () => {
+  const result = vm.runInContext(`travelLogMetrics({
+    routeCoords:[[0,0],[0,1],[1,1]],transitTags:['road','flight'],
+    routeStops:[{coords:[0,0],elevationFt:100},{coords:[0,1],elevationFt:400},{coords:[1,1],elevationFt:200}],
+    routeLegs:[{mode:'road',routeSource:'routed',routeCoords:[[0,0],[0,0.5],[0,1]]},
+      {mode:'flight',routeSource:'none',routeCoords:[]}],
+    minElevationFt:100,maxElevationFt:400
+  })`, context);
+  assert.equal(result.mileage, '≈ 138 mi');
+  assert.equal(result.elevation, '100 to 400 ft');
+  assert.equal(result.changes, '+300 / −200 ft between logged stops');
+  const empty = vm.runInContext("travelLogMetrics({routeCoords:[],transitTags:[]})", context);
+  assert.equal(empty.mileage, 'Not recorded');
+  assert.equal(empty.elevation, 'Not recorded');
+  assert.equal(empty.changes, '');
+});
+check('journal text and photos are excluded from the per-frame travel stats cache key', () => {
+  const result = vm.runInContext(`(()=>{
+    const trip=AppState.expeditions[0],before=travelStateKey();
+    try {
+      AppState.expeditions[0]={...trip,journal:'A long story',photos:['data:image/jpeg;base64,YWJjZA==']};
+      const after=travelStateKey();
+      AppState.expeditions[0]={...AppState.expeditions[0],name:'A different trip'};
+      return {unchanged:before===after,travelChanged:after!==travelStateKey()};
+    } finally { AppState.expeditions[0]=trip; }
+  })()`, context);
+  assert.equal(result.unchanged, true);
+  assert.equal(result.travelChanged, true);
+});
+check('journal saves are transactional, retain unsaved text on quota failure, and survive Passport reloads', () => {
+  const snapshot = vm.runInContext('JSON.stringify(passportPayload())', context);
+  const viewOnly = vm.runInContext('AppState.viewOnly', context);
+  const query = context.document.querySelector;
+  const write = context.localStorage.setItem;
+  const form = element('journalTestForm');
+  const textarea = element('journalTestText');
+  const files = element('journalTestFiles');
+  const gallery = element('journalTestGallery');
+  const status = element('journalTestStatus');
+  const save = element('journalTestSave');
+  form.elements = { journal: textarea, photos: files };
+  form.querySelector = selector => selector === '[role="status"]' ? status :
+    selector === '.travel-journal-photos' ? gallery : save;
+  const body = { dataset: {}, innerHTML: '', querySelector: selector => selector === 'form' ? form : gallery };
+  context.document.querySelector = () => body;
+  try {
+    vm.runInContext(`AppState.viewOnly=false;renderTravelJournal(AppState.expeditions[0])`, context);
+    assert.ok(body.innerHTML.includes('The story of your trip'));
+    textarea.value = 'The view was worth the detour.\n<script>Just a memory</script>';
+    textarea.handlers.input();
+    vm.runInContext(`travelJournalDraft(AppState.expeditions[0]).photos.push(
+      'data:image/jpeg;base64,YWJjZA==','data:image/jpeg;base64,ZWZnaA==')`, context);
+    gallery.handlers.click({ target: { closest: () => ({ dataset: { removePhoto: '0' } }) } });
+    assert.ok(gallery.innerHTML.includes('ZWZnaA=='));
+    assert.ok(!gallery.innerHTML.includes('YWJjZA=='));
+    context.localStorage.setItem = () => { throw new Error('Journal test storage full'); };
+    form.handlers.submit({ preventDefault() {} });
+    assert.match(status.textContent, /Not saved:/);
+    assert.equal(textarea.value, 'The view was worth the detour.\n<script>Just a memory</script>');
+    assert.equal(vm.runInContext("AppState.expeditions[0].journal || ''", context), '');
+    context.localStorage.setItem = write;
+    form.handlers.submit({ preventDefault() {} });
+    const passport = JSON.parse(savedJson);
+    assert.equal(passport.expeditions[0].journal, textarea.value);
+    assert.deepEqual(passport.expeditions[0].photos, ['data:image/jpeg;base64,ZWZnaA==']);
+    vm.runInContext('loadPersistedState()', context);
+    assert.equal(vm.runInContext('AppState.expeditions[0].journal', context), textarea.value);
+    body.dataset = {};
+    vm.runInContext('AppState.viewOnly=true;renderTravelJournal(AppState.expeditions[0])', context);
+    assert.ok(body.innerHTML.includes('&lt;script&gt;Just a memory&lt;/script&gt;'));
+    assert.ok(!body.innerHTML.includes('<form'));
+    assert.ok(!body.innerHTML.includes('type="file"'));
+    assert.ok(!body.innerHTML.includes('data-remove-photo'));
+  } finally {
+    context.document.querySelector = query;
+    context.localStorage.setItem = write;
+    vm.runInContext(`applyPassport(${snapshot});AppState.viewOnly=${viewOnly};travelJournalDrafts.clear();renderExpeditionHistory()`, context);
+  }
+});
+{
+  const originalImage = context.Image, originalURL = context.URL, create = context.document.createElement;
+  let revoked = 0;
+  const encodings = [];
+  const photo = 'data:image/jpeg;base64,YWJjZA==';
+  const canvas = { getContext: () => ({ fillRect() {}, drawImage() {} }),
+    toDataURL(type, quality) {
+      encodings.push([type, quality]);
+      return quality > 0.65 ? 'x'.repeat(travelLedger.journalLimits.photoCharacters + 1) : photo;
+    } };
+  context.Image = class {
+    naturalWidth = 4000; naturalHeight = 3000;
+    set src(value) { this.onload(); }
+  };
+  context.URL = { createObjectURL: () => 'blob:test-photo', revokeObjectURL() { revoked++; } };
+  context.document.createElement = tag => tag === 'canvas' ? canvas : create(tag);
+  try {
+    const result = await vm.runInContext("compressJournalPhoto({type:'image/png',size:2000000})", context);
+    check('photos are resized and recompressed locally with a bounded output and released object URLs', () => {
+      assert.equal(result, photo);
+      assert.equal(canvas.width, 960);
+      assert.equal(canvas.height, 720);
+      assert.deepEqual(encodings, [['image/jpeg', 0.8], ['image/jpeg', 0.65]]);
+      assert.equal(revoked, 1);
+    });
+    await assert.rejects(vm.runInContext("compressJournalPhoto({type:'image/svg+xml',size:100})", context), /JPEG, PNG, or WebP/);
+    await assert.rejects(vm.runInContext("compressJournalPhoto({type:'image/jpeg',size:16000000})", context), /15 MB/);
+    canvas.toDataURL = () => 'x'.repeat(travelLedger.journalLimits.photoCharacters + 1);
+    await assert.rejects(vm.runInContext("compressJournalPhoto({type:'image/jpeg',size:100})", context), /still too large/);
+    assert.equal(revoked, 2, 'failed encodes also release their object URLs');
+  } finally {
+    context.Image = originalImage;
+    context.URL = originalURL;
+    context.document.createElement = create;
+  }
+}
+check('hidden mini-maps wait for layout and refit route bounds without animation on resize', () => {
+  const previousL = context.L, previousObserver = context.ResizeObserver;
+  const snapshot = vm.runInContext('JSON.stringify(AppState.expeditions)', context);
+  let width = 0, observed, callback, created = 0, invalidated = 0, disconnected = 0;
+  const fits = [];
+  const host = element('mini-map-exp_layout');
+  host.id = 'mini-map-exp_layout';
+  host.getBoundingClientRect = () => ({ width, height: 164 });
+  context.ResizeObserver = class {
+    constructor(handler) { callback = handler; }
+    observe(target) { observed = target; }
+    disconnect() { disconnected++; }
+  };
+  context.L = {
+    map() { created++; return { remove() {}, invalidateSize() { invalidated++; },
+      fitBounds(bounds, options) { fits.push([bounds, options]); } }; },
+    tileLayer: () => ({ addTo() {} }), latLngBounds: coords => coords,
+    polyline: () => ({ addTo() {} }), circleMarker: () => ({ addTo() {} })
+  };
+  try {
+    vm.runInContext(`AppState.expeditions=[{...AppState.expeditions[0],id:'exp_layout'}];renderExpeditionHistory()`, context);
+    assert.equal(created, 0, 'no map is fitted inside a zero-size hidden tab');
+    assert.equal(observed, host);
+    width = 210;
+    callback([{ target: host, contentRect: { width, height: 164 } }]);
+    assert.equal(created, 1);
+    assert.equal(fits.length, 1);
+    assert.equal(fits[0][1].animate, false);
+    assert.equal(fits[0][1].maxZoom, 10);
+    callback([{ target: host, contentRect: { width: 350, height: 164 } }]);
+    assert.equal(invalidated, 1);
+    assert.equal(fits.length, 2);
+    assert.equal(created, 1, 'resizing reuses the map instead of leaking another instance');
+    vm.runInContext('destroyTravelLogMaps()', context);
+    assert.equal(disconnected, 1);
+  } finally {
+    context.L = previousL;
+    context.ResizeObserver = previousObserver;
+    delete host.getBoundingClientRect;
+    vm.runInContext(`AppState.expeditions=${snapshot};renderExpeditionHistory()`, context);
+  }
 });
 check('saved and imported road/AWD legs reveal entire crossed counties, including land far from the route', () => {
   vm.runInContext(`
@@ -2892,7 +3083,8 @@ check('mixed-mode preview only routes driving legs; ferries are direct without i
   assert.ok(previewTooltipTexts.includes('Aspen'));
   assert.ok(previewTooltipTexts.includes('SAN &lt;airport&gt;'));
   assert.ok(previewLines.some(line=>line.options.color==='#38bdf8' && line.options.dashArray==='8, 8'));
-  assert.ok(previewLines.some(line=>line.options.color==='#94a3b8' && line.options.dashArray==='8, 8'));
+  assert.ok(previewLines.some(line=>line.options.color==='#e879f9' && line.options.dashArray==='8, 8'));
+  assert.ok(previewLines.some(line=>line.options.color==='#020617' && line.options.weight===7));
   assert.ok(element('expeditionRouteSummary').textContent.includes('10 percentage points'));
   assert.ok(element('expeditionRouteSummary').textContent.includes('100 miles'));
   assert.ok(element('expeditionRouteSummary').textContent.includes('rail/walking clear no route fog'));

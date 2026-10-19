@@ -18,6 +18,19 @@
     ...Array.from({ length: 63 }, (_, index) => `08${String(index * 2 + 1).padStart(3, '0')}`), '08014'
   ]);
   const clearsFog = status => status === 't' || isVisited(status);
+  const journalLimits = Object.freeze({ text: 20000, photos: 4, photoCharacters: 180000 });
+
+  function validateJournal(journal = '', photos = []) {
+    if (typeof journal !== 'string' || journal.length > journalLimits.text) {
+      throw new Error(`Journal entries must be text of at most ${journalLimits.text.toLocaleString('en')} characters.`);
+    }
+    if (!Array.isArray(photos) || photos.length > journalLimits.photos || photos.some(photo =>
+      typeof photo !== 'string' || photo.length > journalLimits.photoCharacters ||
+      !/^data:image\/jpeg;base64,(?:[A-Za-z0-9+/]{4})+(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(photo))) {
+      throw new Error('Attach up to four compressed JPEG photos (135 KB each).');
+    }
+    return { journal, photos: [...photos] };
+  }
   const promote = (current, next) => {
     if (!Object.hasOwn(ranks, next)) throw new Error('Invalid status promotion.');
     return (ranks[current] || 0) > ranks[next] ? current : next;
@@ -168,8 +181,10 @@
           throw new Error('Expedition transit modes do not match its travel legs.');
         }
       }
+      const journal = validateJournal(exp.journal, exp.photos);
       return {
-        ...exp, transitTags: validateTags(exp.transitTags, transitTags),
+        ...exp, ...(exp.journal !== undefined || exp.photos !== undefined ? journal : {}),
+        transitTags: validateTags(exp.transitTags, transitTags),
         purposeTags: validateTags(exp.purposeTags, purposeTags),
         routeCoords: exp.routeCoords.map(point => [...point]),
         // Normalize legacy road-routed ferries without discarding imported tracks.
@@ -588,6 +603,7 @@
   const api = {
     ranks, labels, colors, transitTags, transitIcons, purposeTags, isVisited, clearsFog, promote,
     homeRadiusKm, hasLoggedTravel, overnightNights, distanceMiles, fogRoutes, waterFogRoutes, flightStops, restoreExpeditionPromotions,
+    journalLimits, validateJournal,
     validateStatuses, validateTags, validateExpeditions, normalizePoi, migrateState, syncDerivedState, loggedCountyStatuses, metadataProgress
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

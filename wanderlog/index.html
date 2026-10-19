@@ -101,6 +101,54 @@
     }
 
     /* Fog Canvas Layer styles */
+    .travel-journal-card { overflow: hidden; }
+    .travel-journal-summary {
+      display: grid;
+      grid-template-columns: 210px minmax(0, 1fr);
+      gap: 20px;
+      padding: 18px;
+      cursor: pointer;
+      list-style: none;
+      align-items: center;
+    }
+    .travel-journal-summary::-webkit-details-marker { display: none; }
+    .travel-journal-summary.has-highlight { grid-template-columns: 210px minmax(0, 1fr) 140px; }
+    .travel-journal-summary:focus-visible { outline: 2px solid #38bdf8; outline-offset: -3px; }
+    .travel-journal-map { height: 164px; width: 100%; border-radius: 12px; overflow: hidden; background: #020617; pointer-events: none; }
+    .travel-journal-overview { min-width: 0; display: grid; gap: 9px; }
+    .travel-journal-metrics { display: flex; gap: 24px; flex-wrap: wrap; font-size: 13px; color: #e2e8f0; }
+    .travel-journal-metrics small { display: block; font-size: 10px; color: #94a3b8; margin-bottom: 3px; }
+    .travel-journal-highlight { width: 140px; height: 154px; object-fit: cover; border: 5px solid #e2e8f0; border-bottom-width: 16px; border-radius: 3px; transform: rotate(3deg); }
+    .travel-journal-body, .travel-journal-details { padding: 20px; border-top: 1px solid #334155; }
+    .travel-journal-body { background: rgba(15, 23, 42, 0.5); }
+    .travel-journal-details { display: grid; gap: 16px; }
+    .travel-journal-details > button { justify-self: start; }
+    .travel-journal-form { display: grid; gap: 12px; margin-top: 14px; }
+    .travel-journal-form textarea { width: 100%; resize: vertical; border: 1px solid #334155; border-radius: 8px; padding: 14px; background: #020617; color: #e2e8f0; font-size: 14px; line-height: 1.7; }
+    .travel-journal-form > button { justify-self: start; }
+    .travel-journal-prose { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.8; font-size: 14px; margin: 16px 0; color: #cbd5e1; }
+    .travel-journal-photos { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 180px)); gap: 18px; }
+    .travel-journal-photo { background: #e2e8f0; border-radius: 3px; padding: 7px; color: #334155; }
+    .travel-journal-photo:nth-child(even) { transform: rotate(2deg); }
+    .travel-journal-photo img { width: 100%; aspect-ratio: 1; object-fit: cover; }
+    .travel-journal-photo figcaption { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; padding-top: 8px; }
+    .travel-journal-photo > button { width: 100%; }
+    .travel-journal-photo figcaption button { color: #9f1239; text-decoration: underline; }
+    .travel-journal-photo-dialog { max-width: min(92vw, 1000px); max-height: 90vh; padding: 14px; border: 1px solid #475569; border-radius: 12px; background: #0f172a; color: #e2e8f0; }
+    .travel-journal-photo-dialog::backdrop { background: rgba(0, 0, 0, 0.85); }
+    .travel-journal-photo-dialog > button { display: block; margin: 0 0 12px auto; font-size: 12px; }
+    .travel-journal-photo-dialog img { max-height: 75vh; max-width: 100%; object-fit: contain; }
+    .travel-journal-upload { display: grid; gap: 8px; font-size: 12px; color: #7dd3fc; }
+    .travel-journal-upload input { max-width: 100%; color: #94a3b8; }
+    .travel-journal-itinerary { font-size: 12px; color: #cbd5e1; list-style: decimal inside; margin: 12px 0; }
+    .travel-journal-itinerary li { padding: 5px 0; overflow-wrap: anywhere; }
+    .travel-journal-itinerary small { display: block; color: #7dd3fc; margin: 4px 0 0 16px; }
+    .travel-journal-card[open] > summary .travel-journal-toggle { display: none; }
+    @media (max-width: 767px) {
+      .travel-journal-summary, .travel-journal-summary.has-highlight { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+      .travel-journal-highlight { display: none; }
+      .travel-journal-map { height: 150px; }
+    }
     #fogCanvasOverlay {
       position: absolute;
       top: 0;
@@ -615,7 +663,7 @@
         <div class="rpg-panel p-6 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h2 id="travelLogTitle" class="cinzel text-xl font-bold text-amber-200">Travel Log</h2>
-            <p class="text-xs text-slate-400 mt-2">Every logged expedition in chronological order, newest first. Each entry shows its route, the regions it crossed, and your own notes.</p>
+            <p class="text-xs text-slate-400 mt-2">Your trips, one story at a time.</p>
           </div>
           <button id="btnHistoryExpedition" type="button" class="shrink-0 rounded-lg bg-emerald-600 px-3 py-2 text-xs">Log Expedition</button>
         </div>
@@ -867,14 +915,14 @@
     </form>
   </div>
 
-  <script src="./nps-catalog.js?v=20261019-flight-stops"></script>
-  <script src="./national-parks-scratch.js?v=20261019-flight-stops"></script>
-  <script src="./international-parks.js?v=20261019-flight-stops"></script>
-  <script src="./ecoregions.js?v=20261019-flight-stops"></script>
-  <script src="./coordinate-lookups.js?v=20261019-flight-stops"></script>
-  <script src="./micro-states.js?v=20261019-flight-stops"></script>
-  <script src="./travel-ledger.js?v=20261019-flight-stops"></script>
-  <script src="./rarity-config.js?v=20261019-flight-stops"></script>
+  <script src="./nps-catalog.js?v=20261019-trip-journal"></script>
+  <script src="./national-parks-scratch.js?v=20261019-trip-journal"></script>
+  <script src="./international-parks.js?v=20261019-trip-journal"></script>
+  <script src="./ecoregions.js?v=20261019-trip-journal"></script>
+  <script src="./coordinate-lookups.js?v=20261019-trip-journal"></script>
+  <script src="./micro-states.js?v=20261019-trip-journal"></script>
+  <script src="./travel-ledger.js?v=20261019-trip-journal"></script>
+  <script src="./rarity-config.js?v=20261019-trip-journal"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -1568,7 +1616,7 @@
     function travelStateKey() {
       return JSON.stringify([
         AppState.homeBase, AppState.pins, AppState.regions, AppState.counties,
-        AppState.customPois, AppState.expeditions
+        AppState.customPois, AppState.expeditions.map(({ journal, photos, ...travel }) => travel)
       ]);
     }
 
@@ -4639,7 +4687,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261019-flight-stops"></script>
+  <script src="./expedition-ui.js?v=20261019-trip-journal"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);

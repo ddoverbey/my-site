@@ -748,9 +748,10 @@ function displayExpeditionPreview(legs) {
       ? [expeditionDraft[index].coords, expeditionDraft[index + 1].coords]
       : leg.routeCoords;
     const approximation = expeditionLegIsApproximation(leg);
+    L.polyline(route, { color: '#020617', weight: 7, opacity: 0.9 }).addTo(expeditionPreviewLayers);
     L.polyline(route, {
-      color: leg.mode === 'ferry' ? '#38bdf8' : leg.mode === 'flight' ? '#94a3b8' : '#fbbf24',
-      weight: 3, opacity: approximation ? 0.7 : 0.95,
+      color: TRAVEL_ROUTE_COLORS[leg.mode] || '#22d3ee',
+      weight: 3, opacity: 1,
       dashArray: approximation ? '8, 8' : null
     }).addTo(expeditionPreviewLayers);
   });
@@ -824,6 +825,7 @@ async function previewExpeditionRoutes() {
 
 function draftExpedition(legs) {
   const stops = expeditionDraft.map(({ travelMode, ...stop }) => ({ ...stop, coords: [...stop.coords] }));
+  const existing = AppState.expeditions.find(exp => exp.id === expeditionEditingId);
   return {
     id: expeditionEditingId || `exp_${crypto.randomUUID()}`, name: document.getElementById('expeditionName').value.trim() || 'Expedition',
     reason: document.getElementById('expeditionReason').value.trim(),
@@ -835,7 +837,8 @@ function draftExpedition(legs) {
     parkIds: [...new Set(stops.filter(stop => stop.kind === 'park').map(stop => stop.id))],
     customPoiIds: [...new Set(stops.filter(stop => stop.kind === 'poi').map(stop => stop.id))],
     routeCoords: stops.map(stop => [...stop.coords]), routeStops: stops, routeLegs: legs,
-    minElevationFt: null, maxElevationFt: null
+    minElevationFt: null, maxElevationFt: null,
+    journal: existing?.journal || '', photos: [...(existing?.photos || [])]
   };
 }
 
@@ -966,6 +969,11 @@ function clearExpeditionRoute() {
 }
 
 let travelLogMaps = {};
+let travelLogResizeObserver = null;
+const openTravelLogs = new Set();
+const travelJournalDrafts = new Map();
+const TRAVEL_ROUTE_COLORS = { road: '#22d3ee', awd: '#22d3ee', ferry: '#38bdf8',
+  flight: '#e879f9', rail: '#a78bfa', foot: '#4ade80' };
 
 const TRAVEL_LOG_MONTHS = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE',
   'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'];
@@ -1021,6 +1029,8 @@ function travelLogBadges(exp) {
 }
 
 function destroyTravelLogMaps() {
+  travelLogResizeObserver?.disconnect();
+  travelLogResizeObserver = null;
   Object.values(travelLogMaps).forEach(instance => {
     try { instance.remove(); }
     catch (error) { console.error('Mini-map teardown failed', error); }
@@ -1034,29 +1044,69 @@ function travelLogPoint(coords) {
     Math.abs(coords[0]) <= 90 && Math.abs(coords[1]) <= 180;
 }
 
-function renderTravelLogMiniMap(exp) {
-  if (typeof L === 'undefined' || typeof L.map !== 'function') return;
+function travelLogLegs(exp) {
   const route = (exp.routeCoords || []).filter(travelLogPoint);
-  const stops = (exp.routeStops || []).map(stop => stop?.coords).filter(travelLogPoint);
-  const legs = exp.routeLegs?.map((leg, index) => ({
+  return exp.routeLegs?.map((leg, index) => ({
     mode: leg.mode,
     routeSource: leg.routeSource ?? (leg.mode === 'flight' ? 'none' :
       ['road', 'awd'].includes(leg.mode) ? 'routed' : 'direct'),
     coords: leg.routeSource === 'uploaded' ? leg.routeCoords :
       ['ferry', 'flight', 'rail'].includes(leg.mode)
-      ? [exp.routeStops?.[index]?.coords, exp.routeStops?.[index + 1]?.coords]
-      : leg.routeCoords
+        ? [exp.routeStops?.[index]?.coords, exp.routeStops?.[index + 1]?.coords] : leg.routeCoords
   })) || (route.length > 1 ? [{
     mode: exp.transitTags.some(mode => !['road', 'awd'].includes(mode)) ? 'flight' : 'road',
     routeSource: exp.transitTags.every(mode => ['road', 'awd'].includes(mode)) ? 'routed' : 'direct',
     coords: route
   }] : []);
+}
+
+function travelLogMetrics(exp) {
+  const legs = travelLogLegs(exp).filter(leg => leg.coords?.length > 1 && leg.coords.every(travelLogPoint));
+  const miles = legs.reduce((sum, leg) => sum + leg.coords.slice(1).reduce((length, point, index) =>
+    length + TravelLedger.distanceMiles({ lat: leg.coords[index][0], lng: leg.coords[index][1] },
+      { lat: point[0], lng: point[1] }), 0), 0);
+  const approximate = legs.some(leg => leg.routeSource !== 'uploaded' && leg.routeSource !== 'routed');
+  const elevation = Number.isFinite(exp.minElevationFt) && Number.isFinite(exp.maxElevationFt)
+    ? `${Math.round(exp.minElevationFt).toLocaleString('en')} to ${Math.round(exp.maxElevationFt).toLocaleString('en')} ft`
+    : 'Not recorded';
+  let gain = 0, loss = 0, pairs = 0;
+  const stops = exp.routeStops || [];
+  for (let index = 1; index < stops.length; index++) {
+    if (!Number.isFinite(stops[index - 1].elevationFt) || !Number.isFinite(stops[index].elevationFt)) continue;
+    const delta = stops[index].elevationFt - stops[index - 1].elevationFt;
+    gain += Math.max(0, delta);
+    loss += Math.max(0, -delta);
+    pairs++;
+  }
+  return { mileage: legs.length ? `${approximate ? '≈ ' : ''}${Math.round(miles).toLocaleString('en')} mi` : 'Not recorded',
+    elevation, changes: pairs ? `+${Math.round(gain).toLocaleString('en')} / −${Math.round(loss).toLocaleString('en')} ft between logged stops` : '' };
+}
+
+function renderTravelLogMiniMap(exp) {
+  const host = document.getElementById(`mini-map-${exp.id}`);
+  if (typeof L === 'undefined' || typeof L.map !== 'function') {
+    host.textContent = 'Map unavailable. Reopen Travel Log to retry.';
+    return;
+  }
+  if (host.getBoundingClientRect && !host.getBoundingClientRect().width) return;
+  const route = (exp.routeCoords || []).filter(travelLogPoint);
+  const stops = (exp.routeStops || []).map(stop => stop?.coords).filter(travelLogPoint);
+  const legs = travelLogLegs(exp);
   const displayLegs = legs.filter(leg => Array.isArray(leg.coords) &&
     leg.coords.length > 1 && leg.coords.every(travelLogPoint));
   const hasPolyline = displayLegs.length > 0;
   const points = [...(hasPolyline ? displayLegs.flatMap(leg => leg.coords) : route), ...stops];
   // Without route geometry every logged stop still needs a marker and must be included in the frame.
-  if (!points.length) return;
+  if (!points.length) {
+    host.textContent = 'No route coordinates recorded.';
+    return;
+  }
+  if (travelLogMaps[exp.id]) {
+    travelLogMaps[exp.id].invalidateSize({ animate: false, pan: false });
+    if (points.length > 1) travelLogMaps[exp.id].fitBounds(L.latLngBounds(points), { padding: [15, 15], maxZoom: 10, animate: false });
+    else travelLogMaps[exp.id].setView(points[0], 8, { animate: false });
+    return;
+  }
   const miniMap = L.map(`mini-map-${exp.id}`, {
     zoomControl: false, attributionControl: false, dragging: false, scrollWheelZoom: false,
     doubleClickZoom: false, boxZoom: false, keyboard: false, touchZoom: false
@@ -1068,9 +1118,10 @@ function renderTravelLogMiniMap(exp) {
   if (hasPolyline) {
     displayLegs.forEach(leg => {
       const approximation = expeditionLegIsApproximation(leg);
+      L.polyline(leg.coords, { color: '#020617', weight: 7, opacity: 0.9, interactive: false }).addTo(miniMap);
       L.polyline(leg.coords, {
-      color: leg.mode === 'ferry' ? '#38bdf8' : leg.mode === 'flight' ? '#94a3b8' : '#f59e0b',
-      weight: 3, opacity: approximation ? 0.7 : 0.95,
+      color: TRAVEL_ROUTE_COLORS[leg.mode] || '#22d3ee',
+      weight: 3, opacity: 1, interactive: false,
       dashArray: approximation ? '8, 8' : null
       }).addTo(miniMap);
     });
@@ -1080,7 +1131,7 @@ function renderTravelLogMiniMap(exp) {
     points.forEach(coords => L.circleMarker(coords,
       { radius: 6, fillColor: '#10b981', color: '#fff', weight: 2, fillOpacity: 1 }).addTo(miniMap));
   }
-  if (points.length > 1) miniMap.fitBounds(L.latLngBounds(points), { padding: [15, 15], maxZoom: 12 });
+  if (points.length > 1) miniMap.fitBounds(L.latLngBounds(points), { padding: [15, 15], maxZoom: 10, animate: false });
   else miniMap.setView(points[0], 8);
 }
 
@@ -1094,43 +1145,240 @@ function renderExpeditionHistory() {
   }
   const sorted = [...AppState.expeditions].sort((a, b) =>
     (b.startDate || b.endDate || '').localeCompare(a.startDate || a.endDate || ''));
+  for (const id of travelJournalDrafts.keys()) {
+    if (!sorted.some(exp => exp.id === id)) travelJournalDrafts.delete(id);
+  }
   let period = null;
   container.innerHTML = sorted.map(exp => {
     const names = travelLogStopNames(exp);
     const regions = travelLogRegions(exp);
     const badges = travelLogBadges(exp);
+    const metrics = travelLogMetrics(exp);
+    const badgeMarkup = badges.map(badge =>
+      `<span class="px-2 py-0.5 rounded-full text-[11px] border ${badge.tone}">${badge.icon} ${escapeHtml(badge.label)}</span>`);
     let divider = '';
     const current = travelLogPeriod(exp);
     if (current !== period) {
       period = current;
       divider = `<div class="flex items-center gap-3 pt-2"><span class="text-xs font-mono text-amber-400">${escapeHtml(current)}</span><div class="flex-1 h-px bg-slate-800"></div></div>`;
     }
-    return `${divider}<article class="rpg-panel rounded-2xl p-4 grid grid-cols-1 md:grid-cols-[220px_1fr] gap-4">
-      <div id="mini-map-${escapeHtml(exp.id)}" class="h-44 w-full rounded-xl overflow-hidden border border-slate-700/60 bg-slate-950"></div>
-      <div class="flex flex-col gap-2">
-        <div class="flex flex-wrap items-start justify-between gap-2">
+    return `${divider}<details class="travel-journal-card rpg-panel rounded-2xl" data-trip="${escapeHtml(exp.id)}"${openTravelLogs.has(exp.id) ? ' open' : ''}>
+      <summary class="travel-journal-summary${exp.photos?.length ? ' has-highlight' : ''}">
+        <div id="mini-map-${escapeHtml(exp.id)}" class="travel-journal-map" aria-label="Route for ${escapeHtml(exp.name)}"></div>
+        <div class="travel-journal-overview">
           <h4 class="font-bold text-amber-200 text-base">${escapeHtml(exp.name)}</h4>
-          <span class="text-xs text-slate-400 font-mono">${escapeHtml(travelLogDateRange(exp))}${exp.dayTrip ? ' · Day trip' : ''}</span>
+          <p class="text-xs text-slate-400 font-mono">${escapeHtml(travelLogDateRange(exp))}${exp.dayTrip ? ' · Day trip' : ''}</p>
+          <div class="travel-journal-metrics"><span><small>Total mileage</small>${metrics.mileage}</span><span><small>Elevation range</small>${metrics.elevation}</span></div>
+          ${metrics.changes ? `<p class="text-xs text-slate-400">${metrics.changes}</p>` : ''}
+          <div class="flex flex-wrap gap-1.5">${badgeMarkup.slice(0, 4).join('')}${badges.length > 4 ? `<span class="text-xs text-slate-400">+${badges.length - 4}</span>` : ''}</div>
+          <span class="travel-journal-toggle text-xs text-sky-300">Open journal <span aria-hidden="true">⌄</span></span>
         </div>
-        <p class="text-xs text-slate-300">${names.map(escapeHtml).join(' → ')}</p>
-        ${regions ? `<p class="text-xs text-slate-300">📍 ${escapeHtml(regions)}</p>` : ''}
-        ${badges.length ? `<div class="flex flex-wrap gap-1.5">${badges.map(badge =>
-          `<span class="px-2 py-0.5 rounded-full text-[11px] border ${badge.tone}">${badge.icon} ${escapeHtml(badge.label)}</span>`).join('')}</div>` : ''}
-        ${exp.minElevationFt === null ? '' : `<p class="text-xs text-slate-400">Elevation: ${Math.round(exp.minElevationFt).toLocaleString('en')} to ${Math.round(exp.maxElevationFt).toLocaleString('en')} ft</p>`}
-        ${exp.routeLegs?.length ? `<p class="text-xs text-slate-400">${exp.routeLegs.map((leg, index) =>
-          `${escapeHtml(names[index])} → ${escapeHtml(names[index + 1])}: ${escapeHtml(TravelLedger.transitTags[leg.mode])}`).join('<br>')}</p>` : ''}
-        ${exp.reason ? `<p class="text-xs text-slate-400 italic">${escapeHtml(exp.reason)}</p>` : ''}
-        ${AppState.viewOnly ? '' : `<button type="button" data-edit-expedition="${escapeHtml(exp.id)}" class="self-start rounded-lg bg-slate-800 px-3 py-2 text-xs text-amber-200">Edit expedition</button>`}
+        ${exp.photos?.length ? `<img class="travel-journal-highlight" src="${exp.photos[0]}" alt="Highlight from ${escapeHtml(exp.name)}" loading="lazy">` : ''}
+      </summary>
+      <div class="travel-journal-body" data-journal-body="${escapeHtml(exp.id)}"></div>
+      <div class="travel-journal-details">
+        <details><summary class="text-xs text-slate-400">Itinerary &amp; trip details</summary>
+          ${regions ? `<p class="text-xs text-slate-300">${escapeHtml(regions)}</p>` : ''}
+          <ol class="travel-journal-itinerary">${names.map((name, index) => `<li>${escapeHtml(name)}${exp.routeLegs?.[index] ? `<small>${escapeHtml(TravelLedger.transitTags[exp.routeLegs[index].mode])}</small>` : ''}</li>`).join('')}</ol>
+          <div class="flex flex-wrap gap-1.5">${badgeMarkup.join('')}</div>
+          ${exp.reason ? `<p class="text-xs text-slate-400">${escapeHtml(exp.reason)}</p>` : ''}
+        </details>
+        ${AppState.viewOnly ? '' : `<button type="button" data-edit-expedition="${escapeHtml(exp.id)}" class="rounded-lg bg-slate-800 px-3 py-2 text-xs text-amber-200">Edit trip &amp; route</button>`}
       </div>
-    </article>`;
+    </details>`;
   }).join('');
   container.querySelectorAll('[data-edit-expedition]').forEach(button => {
     button.addEventListener('click', () => openExpedition(button.dataset.editExpedition));
   });
+  container.querySelectorAll('[data-trip]').forEach(card => {
+    const exp = sorted.find(item => item.id === card.dataset.trip);
+    const reveal = () => {
+      if (card.open) {
+        openTravelLogs.add(exp.id);
+        renderTravelJournal(exp);
+      } else openTravelLogs.delete(exp.id);
+    };
+    card.addEventListener('toggle', reveal);
+    if (card.open) reveal();
+  });
+  if (typeof ResizeObserver !== 'undefined') {
+    travelLogResizeObserver = new ResizeObserver(entries => {
+      entries.forEach(entry => {
+        const exp = sorted.find(item => `mini-map-${item.id}` === entry.target.id);
+        if (exp && entry.contentRect.width && entry.contentRect.height) {
+          try { renderTravelLogMiniMap(exp); }
+          catch (error) { showTravelLogMapError(exp, error); }
+        }
+      });
+    });
+    sorted.forEach(exp => travelLogResizeObserver.observe(document.getElementById(`mini-map-${exp.id}`)));
+  }
   sorted.forEach(exp => {
     try { renderTravelLogMiniMap(exp); }
-    catch (error) { console.error('Mini-map render failed', exp.id, error); }
+    catch (error) { showTravelLogMapError(exp, error); }
   });
+}
+
+function showTravelLogMapError(exp, error) {
+  console.error('Mini-map render failed', exp.id, error);
+  document.getElementById(`mini-map-${exp.id}`).textContent = 'Map unavailable. Reopen Travel Log to retry.';
+}
+
+function travelJournalDraft(exp) {
+  let draft = travelJournalDrafts.get(exp.id);
+  const matches = draft && draft.source.journal === exp.journal &&
+    (draft.source.photos || []).length === (exp.photos || []).length &&
+    (draft.source.photos || []).every((photo, index) => photo === exp.photos[index]);
+  if (!matches) {
+    draft = { source: exp, journal: exp.journal || '', photos: [...(exp.photos || [])], busy: false };
+    travelJournalDrafts.set(exp.id, draft);
+  } else draft.source = exp;
+  return draft;
+}
+
+function travelJournalPhotos(photos, editable) {
+  return photos.map((photo, index) => `<figure class="travel-journal-photo">
+    <button type="button" data-view-photo="${index}" aria-label="Enlarge trip photo ${index + 1}"><img src="${photo}" alt="Trip photo ${index + 1}" loading="lazy"></button>
+    <figcaption>${index === 0 ? 'Highlight' : `Memory ${index + 1}`}${editable ? `<button type="button" data-remove-photo="${index}" aria-label="Remove trip photo ${index + 1}">Remove</button>` : ''}</figcaption>
+  </figure>`).join('');
+}
+
+function renderTravelJournal(exp) {
+  const body = document.querySelector(`[data-journal-body="${exp.id}"]`);
+  if (!body || body.dataset.rendered === 'true') return;
+  body.dataset.rendered = 'true';
+  const draft = travelJournalDraft(exp);
+  body.innerHTML = `<h5 class="cinzel text-amber-200">Journal</h5>
+    ${AppState.viewOnly ? `<p class="travel-journal-prose">${escapeHtml(exp.journal || 'No journal entry yet.')}</p>
+      <div class="travel-journal-photos">${travelJournalPhotos(exp.photos || [], false)}</div>` :
+      `<form class="travel-journal-form">
+        <label class="block text-xs" for="journal-${exp.id}">The story of your trip</label>
+        <textarea id="journal-${exp.id}" name="journal" maxlength="${TravelLedger.journalLimits.text}" rows="6" placeholder="Favorite moments, unexpected detours, places to return to…">${escapeHtml(draft.journal)}</textarea>
+        <div class="travel-journal-photos">${travelJournalPhotos(draft.photos, true)}</div>
+        <label class="travel-journal-upload">Add photos
+          <input type="file" name="photos" accept="image/jpeg,image/png,image/webp" multiple>
+        </label>
+        <p class="text-xs text-slate-400">Up to four photos, compressed on this device. First photo is the highlight. Save to include your journal and photos in Passport backups.</p>
+        <button type="submit" class="rounded-lg bg-sky-700 px-3 py-2 text-xs">Save journal</button>
+        <p class="text-xs text-slate-400" role="status" aria-live="polite"></p>
+      </form>`}`;
+  body.querySelector('.travel-journal-photos').addEventListener('click', event => {
+    const button = event.target.closest('[data-view-photo]');
+    if (!button) return;
+    const photos = AppState.viewOnly ? exp.photos || [] : draft.photos;
+    const dialog = document.createElement('dialog');
+    dialog.className = 'travel-journal-photo-dialog';
+    dialog.setAttribute('aria-label', 'Trip photo viewer');
+    dialog.innerHTML = `<button type="button" aria-label="Close photo">Close photo</button><img src="${photos[Number(button.dataset.viewPhoto)]}" alt="Trip memory">`;
+    document.body.appendChild(dialog);
+    dialog.querySelector('button').addEventListener('click', () => dialog.close());
+    dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });
+    dialog.addEventListener('close', () => dialog.remove());
+    dialog.showModal();
+  });
+  if (AppState.viewOnly) return;
+  const form = body.querySelector('form');
+  const status = form.querySelector('[role="status"]');
+  const gallery = form.querySelector('.travel-journal-photos');
+  const fileInput = form.elements.photos;
+  const save = form.querySelector('[type="submit"]');
+  fileInput.disabled = draft.busy;
+  save.disabled = draft.busy;
+  if (draft.busy) status.textContent = 'Preparing photos on this device…';
+  else if (draft.journal !== (exp.journal || '') || draft.photos.length !== (exp.photos || []).length ||
+      draft.photos.some((photo, index) => photo !== exp.photos[index])) status.textContent = 'Unsaved changes';
+  const updateGallery = () => { gallery.innerHTML = travelJournalPhotos(draft.photos, true); };
+  form.elements.journal.addEventListener('input', () => {
+    draft.journal = form.elements.journal.value;
+    status.textContent = 'Unsaved changes';
+  });
+  gallery.addEventListener('click', event => {
+    const button = event.target.closest('[data-remove-photo]');
+    if (!button || draft.busy) return;
+    draft.photos.splice(Number(button.dataset.removePhoto), 1);
+    updateGallery();
+    status.textContent = 'Photo removed from draft. Save journal to keep this change.';
+  });
+  fileInput.addEventListener('change', async () => {
+    if (AppState.viewOnly || draft.busy) return;
+    draft.busy = true;
+    fileInput.disabled = true;
+    save.disabled = true;
+    status.textContent = 'Preparing photos on this device…';
+    try {
+      const files = [...fileInput.files];
+      if (files.length + draft.photos.length > TravelLedger.journalLimits.photos) throw new Error('Choose up to four photos per trip.');
+      const additions = [];
+      for (const file of files) additions.push(await compressJournalPhoto(file));
+      draft.photos.push(...additions);
+      updateGallery();
+      status.textContent = 'Photos ready. Save journal to keep them.';
+    } catch (error) {
+      console.error('Journal photo attachment failed', error);
+      status.textContent = error.message;
+    } finally {
+      draft.busy = false;
+      fileInput.disabled = false;
+      save.disabled = false;
+      fileInput.value = '';
+      const active = document.querySelector(`[data-journal-body="${exp.id}"]`);
+      if (active && active !== body) {
+        active.dataset.rendered = '';
+        const current = AppState.expeditions.find(item => item.id === exp.id);
+        if (current) renderTravelJournal(current);
+      }
+    }
+  });
+  form.addEventListener('submit', event => {
+    event.preventDefault();
+    if (AppState.viewOnly || draft.busy) return;
+    try {
+      const current = AppState.expeditions.find(item => item.id === exp.id);
+      if (!current) throw new Error('This trip no longer exists.');
+      draft.journal = form.elements.journal.value;
+      updateExpedition({ ...current, ...TravelLedger.validateJournal(draft.journal, draft.photos) });
+      travelJournalDrafts.delete(exp.id);
+      renderExpeditionHistory();
+      showNotification('Journal saved', 'Your memories and photos are included in Passport backups.', '📖');
+    } catch (error) {
+      console.error('Journal save failed', error);
+      status.textContent = `Not saved: ${error.message} Your journal draft is still here; remove a photo or export a backup before retrying.`;
+    }
+  });
+}
+
+async function compressJournalPhoto(file) {
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 15_000_000) {
+    throw new Error('Choose a JPEG, PNG, or WebP photo smaller than 15 MB.');
+  }
+  const url = URL.createObjectURL(file);
+  const image = new Image();
+  try {
+    await new Promise((resolve, reject) => {
+      image.onload = resolve;
+      image.onerror = () => reject(new Error('This photo could not be read. Try exporting it as JPEG.'));
+      image.src = url;
+    });
+    const canvas = document.createElement('canvas');
+    const scale = Math.min(1, 960 / Math.max(image.naturalWidth, image.naturalHeight));
+    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Photo compression is unavailable in this browser.');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+    for (const quality of [0.8, 0.65, 0.5, 0.35]) {
+      const data = canvas.toDataURL('image/jpeg', quality);
+      if (data.length <= TravelLedger.journalLimits.photoCharacters) {
+        TravelLedger.validateJournal('', [data]);
+        return data;
+      }
+    }
+    throw new Error('This photo is still too large after compression. Try a smaller or cropped image.');
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
 
 async function searchHometown() {

@@ -645,6 +645,33 @@ expeditions are autosaved separately in IndexedDB and can be restored after a re
 also offers a downloadable recovery JSON once its routes have been previewed. If IndexedDB is
 unavailable, the form reports that and keeps the in-memory draft available for manual recovery.
 
+### Travel journal
+
+Travel Log entries are compact, keyboard-accessible expandable cards. The closed card shows its map,
+trip name, dates, total mileage, elevation range/changes, up to four badges, and an optional highlight
+photo on desktop. Opening it reveals the journal editor and photo gallery; the full itinerary, remaining
+badges, reason for travel, and route-edit control stay inside the expanded entry. Mini-maps wait for
+a visible container and refit after resizing. Bright cyan driving routes, distinct transit colors, and
+dark route outlines stand out against satellite imagery in both the journal and route preview.
+
+Mileage sums the saved geometry for routed/uploaded legs and endpoint distances for direct/flight
+legs; `≈` marks totals containing direct estimates. Missing distance/elevation data is labeled, not
+invented. Elevation changes are differences between recorded stop elevations, **not** cumulative
+trail ascent/descent. Flight connectors remain visual guides only and do not clear land fog.
+
+Each trip can save a plain-text `journal` (20,000 characters) and up to four `photos` (JPEG data URLs)
+inside the Passport JSON. JPEG/PNG/WebP uploads (up to 15 MB each) are resized locally to at most
+960 pixels on their longest edge and recompressed to under 180,000 characters each; images that
+cannot fit are rejected explicitly. Re-encoding also avoids retaining original photo metadata.
+The first photo becomes the highlight; removing it promotes the next. Expanded photos open in a
+larger viewer. No photo-upload service is used. Click **Save journal** to persist text/photo edits;
+unsaved journal drafts survive navigating between app tabs but not refreshing the page. Route edits
+preserve saved journals and photos. Exports/imports include them, shared passports are read-only, and
+storage failures roll back the save while retaining the open draft for retry. Photos consume browser
+storage, so export regular backups and remove photos if the existing storage warning appears. Journal
+text and photos are excluded from the live travel-statistics cache key so map updates do not stringify
+image data on every frame.
+
 ### Progressive achievements
 
 Every achievement family uses numeric `progress(stats)` and a `tiers` array, rather than a boolean

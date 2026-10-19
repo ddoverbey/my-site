@@ -24,6 +24,30 @@ const exp = {
   routeCoords: [[39.24, -106.29], [39.19, -106.81]], minElevationFt: 5280, maxElevationFt: 12095
 };
 const migrate = state => ledger.migrateState(state, lookups, catalog);
+check('journals and embedded photos survive Passport round-trips without changing legacy trips', () => {
+  const photo = 'data:image/jpeg;base64,YWJjZA==';
+  const trip = { ...exp, journal: 'A detour worth remembering.\nBack next summer!', photos: [photo] };
+  const state = migrate({ expeditions: [trip] });
+  assert.deepEqual(state.expeditions, [trip]);
+  assert.deepEqual(migrate(JSON.parse(JSON.stringify(state))), state);
+  assert.deepEqual(ledger.validateExpeditions([exp], lookups), [exp]);
+  const normalized = ledger.validateExpeditions([trip], lookups)[0];
+  normalized.photos.pop();
+  assert.equal(trip.photos.length, 1, 'normalized photos do not alias input arrays');
+});
+check('journal validation enforces bounded text and portable JPEG photos', () => {
+  const photo = 'data:image/jpeg;base64,YWJjZA==';
+  assert.equal(ledger.validateJournal('x'.repeat(ledger.journalLimits.text), [photo]).photos.length, 1);
+  for (const journal of [null, {}, 'x'.repeat(ledger.journalLimits.text + 1)]) {
+    assert.throws(() => ledger.validateExpeditions([{ ...exp, journal }], lookups), /Journal entries/);
+  }
+  for (const photos of [null, 'not an array', Array(5).fill(photo), ['https://example.com/photo.jpg'],
+    ['data:image/svg+xml;base64,YWJjZA=='], ['data:image/jpeg;base64,not base64'],
+    ['data:image/jpeg;base64,' + 'A'.repeat(ledger.journalLimits.photoCharacters)]]) {
+    assert.throws(() => ledger.validateExpeditions([{ ...exp, photos }], lookups), /compressed JPEG/);
+  }
+  assert.equal(ledger.validateJournal('', Array(4).fill(photo)).photos.length, 4);
+});
 check('promotion respects every tier pair and rejects invalid tiers', () => {
   for (const [current, rank] of Object.entries(ledger.ranks)) {
     for (const [next, nextRank] of Object.entries(ledger.ranks)) {
