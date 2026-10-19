@@ -2305,6 +2305,7 @@
        ANALYTICS + WAITLIST (Supabase tables: cultivate_events, cultivate_waitlist)
        ========================================================================= */
     const SHARE_URL = 'https://devonoverbey.com/tools';
+    const META_PIXEL_ID = '631513574011008';
     const ANON_ID_KEY = 'cultivate_anon_id_v1';
     const MILESTONES_KEY = 'cultivate_milestones_v1';
     const PWA_INSTALL_DISMISSED_KEY = 'cultivate_pwa_install_prompt_v1';
@@ -2314,6 +2315,37 @@
     function isExcludedUser() {
       const email = cloudSession?.user?.email?.trim().toLowerCase();
       return Boolean(email && EXCLUDED_EMAILS.includes(email));
+    }
+
+    let metaPixelInitialized = false;
+
+    function initializeMetaPixel() {
+      if (metaPixelInitialized || isLocalPreview || isExcludedUser()) return;
+      (function(f, b, e, v, n, t, s) {
+        if (f.fbq) return;
+        n = f.fbq = function() {
+          n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments);
+        };
+        if (!f._fbq) f._fbq = n;
+        n.push = n;
+        n.loaded = true;
+        n.version = '2.0';
+        n.queue = [];
+        t = b.createElement(e);
+        t.async = true;
+        t.src = v;
+        s = b.getElementsByTagName(e)[0];
+        s.parentNode.insertBefore(t, s);
+      })(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
+      window.fbq('init', META_PIXEL_ID);
+      window.fbq('track', 'PageView');
+      metaPixelInitialized = true;
+    }
+
+    function trackMetaEvent(action, eventName, parameters) {
+      if (!metaPixelInitialized || isLocalPreview || isExcludedUser()) return;
+      if (parameters) window.fbq(action, eventName, parameters);
+      else window.fbq(action, eventName);
     }
 
     function getAnonId() {
@@ -2352,6 +2384,7 @@
       done[event] = true;
       localStorage.setItem(MILESTONES_KEY, JSON.stringify(done));
       trackEvent(event);
+      if (event === 'first_plant_watered') trackMetaEvent('trackCustom', 'FirstPlantWatered');
     }
 
     function pixelIcon(name) {
@@ -2388,6 +2421,7 @@
       document.getElementById('app-message').textContent = '';
       document.getElementById('app-modal').classList.remove('hidden');
       trackEvent('app_click');
+      trackMetaEvent('trackCustom', 'AppBannerClick');
     }
 
     function closeAppModal() {
@@ -2411,6 +2445,7 @@
       document.getElementById('app-message').textContent = '';
       document.getElementById('app-interest-form').classList.remove('hidden');
       trackEvent('app_preference_selected', { preference });
+      trackMetaEvent('trackCustom', 'AppSurveyVote', { preference });
     }
 
     document.getElementById('app-interest-form').addEventListener('submit', async (e) => {
@@ -2432,6 +2467,9 @@
         message.textContent = "You're on the list. Thank you!";
         emailInput.value = '';
         trackEvent('app_waitlist_submitted', { preference: appPreference });
+        if (res.status !== 409) {
+          trackMetaEvent('track', 'Lead', { content_name: 'Cultivate app waitlist', content_category: source });
+        }
         setTimeout(closeAppModal, 1800);
       } catch (err) {
         message.className = 'text-xs min-h-4 text-rose-300';
@@ -3258,6 +3296,7 @@
 
     // Launch sequence
     trackEvent('page_visit');
+    initializeMetaPixel();
     setupPwaInstallPrompt();
     updateAuthUI();
     updateNotificationButton();
