@@ -751,7 +751,7 @@ Lived grants the same completion credit as Visited. Metadata badges:
 - **Junior Ecologist / Almost There! / Gaia Wanderer:** collect 3, all-but-one, and all
   terrestrial biomes, including existing expedition coordinate samples.
 - **Beyond the Horizon:** a visited/lived coordinate more than 1,000 miles from the current home.
-- **A Whole New World:** a visited/lived coordinate in a known country other than the home country;
+- **Terra Incognita:** a visited/lived coordinate in a known country other than the home country;
   requires country containment for home and never guesses from missing labels.
 - **Touch Grass:** visit a catalog entry designated as a National, State or Provincial Park.
   This uses catalog classification, not a new protected-area containment dataset; international
