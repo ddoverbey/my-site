@@ -582,6 +582,8 @@ data shows retry guidance instead of a misleading completion count.
    rather than per-country fills. Longitudes are unwrapped across the dateline; Antarctic closing
    edges follow the Mercator floor to prevent horizontal ocean streaks. Paths rebuild only when
    zoom or atlas references change. Visited land and port stops are revealed afterward.
+   Flight paths never clear land; instead each flight leg's departure and arrival points (airports)
+   clear a small 25 km aura, including stops outside the US county atlas.
    Shell and hole winding is normalized and the stencil uses a nonzero fill, so overlapping
    country/state/micro-state outlines do not cancel one another and expose unvisited land.
    Ferry, rail, walking, and flight routes award no intermediate counties; only their stops count.

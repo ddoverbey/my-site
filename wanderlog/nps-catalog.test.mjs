@@ -133,7 +133,7 @@ check('mobile RPG HUD starts collapsed with an accessible stats toggle', () => {
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261019-fast-pan')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261019-flight-stops')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('storage-risk banner and unfinished-trip recovery controls are present', () => {
@@ -1329,19 +1329,30 @@ check('water corridors precede one unblurred cached land stencil and visited pun
       vm.runInContext(`${dataset}=[...${dataset}];drawFogOfWar()`,context);
       assert.equal(paths,before+1,`${dataset} replacement invalidates the stencil`);
     }
+    const visitedByMode={};
     for(const mode of ['flight','rail','foot']) {
       context.fogTestMode=mode;
       operations.length=0;
       vm.runInContext(`
         AppState.expeditions[0].transitTags=[fogTestMode];
         AppState.expeditions[0].routeLegs[0].mode=fogTestMode;
+        AppState.expeditions[0].routeStops=[{kind:'place',id:'dep',name:'Dep',coords:[0,0]},
+          {kind:'place',id:'arr',name:'Arr',coords:[0,1]}];
         drawFogOfWar();
       `,context);
+      visitedByMode[mode]=operations.filter(op=>op[0]==='visited');
+      if(mode==='flight') {
+        const lastLand=operations.findLastIndex(op=>op[0]==='land'&&op[1]==='source-over');
+        assert.ok(operations.findLastIndex(op=>op[0]==='visited')>lastLand,'airport auras are carved after the land stencil');
+      }
       assert.equal(vm.runInContext('oceanFogOpacity()',context),0.99);
       assert.equal(operations.filter(op=>op[0]==='base').length,1);
       assert.equal(operations.filter(op=>op[0]==='stroke').length,mode==='flight'?1:0);
       assert.equal(operations.filter(op=>op[0]==='land'&&op[1]==='source-over').length,mode==='flight'?3:0);
     }
+    assert.equal(visitedByMode.flight.length,visitedByMode.rail.length+2,'each flight endpoint clears a small aura');
+    assert.ok(visitedByMode.flight.every(op=>op[1]==='destination-out'));
+    assert.equal(visitedByMode.foot.length,visitedByMode.rail.length);
     vm.runInContext("AppState.expeditions[0].routeLegs[0].mode='ferry'",context);
     assert.equal(vm.runInContext('oceanFogOpacity()',context),0.9,'mixed itinerary ferry leg thins oceans');
     operations.length=0;

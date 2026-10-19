@@ -760,7 +760,7 @@ function displayExpeditionPreview(legs) {
   expeditionPreviewMap.fitBounds(expeditionPreviewLayers.getBounds(), { padding: [20, 20], maxZoom: 12, animate: false });
   const counties = new Set(legs.flatMap(leg => leg.countyIds));
   document.getElementById('expeditionRouteSummary').textContent =
-    `${legs.length} travel leg${legs.length === 1 ? '' : 's'} · ${counties.size} driving counties. Each boat trip reduces ocean fog by 10 percentage points to a 50% minimum (99% before the first trip). Ferry/flight routes fully clear water within 100 miles on either side when the world atlas is loaded; unvisited land stays shrouded. Non-driving routes award no intermediate counties; rail/walking clear no route fog. Dashed lines are direct approximations.`;
+    `${legs.length} travel leg${legs.length === 1 ? '' : 's'} · ${counties.size} driving counties. Each boat trip reduces ocean fog by 10 percentage points to a 50% minimum (99% before the first trip). Ferry/flight routes fully clear water within 100 miles on either side when the world atlas is loaded; unvisited land stays shrouded; flights clear only a small area around each airport stop on land. Non-driving routes award no intermediate counties; rail/walking clear no route fog. Dashed lines are direct approximations.`;
 }
 
 async function previewExpeditionRoutes() {

@@ -583,6 +583,26 @@ check('water routes include only ferry/flight legs and cache missing-flight endp
     assert.deepEqual(ledger.waterFogRoutes({...exp,transitTags:[mode]}),[exp.routeCoords]);
   }
 });
+check('flight stops are the deduplicated endpoints of flight legs only', () => {
+  const stops=mixedExpedition.routeStops;
+  const trip={...mixedExpedition,routeLegs:[
+    {mode:'flight',routeSource:'none',routeCoords:[]},
+    {mode:'ferry',routeSource:'direct',routeCoords:mixedExpedition.routeLegs[1].routeCoords},
+    {...mixedExpedition.routeLegs[2],mode:'road'}
+  ]};
+  assert.deepEqual(JSON.parse(JSON.stringify(ledger.flightStops(trip))),[stops[0].coords,stops[1].coords]);
+  const twoFlights={...trip,routeLegs:trip.routeLegs.map((leg,index)=>index<2?{...leg,mode:'flight'}:leg)};
+  assert.deepEqual(JSON.parse(JSON.stringify(ledger.flightStops(twoFlights))),
+    [stops[0].coords,stops[1].coords,stops[2].coords],'shared connecting airports are listed once');
+  for(const mode of ['road','awd','ferry','rail','foot']) {
+    assert.deepEqual(ledger.flightStops({...trip,routeLegs:trip.routeLegs.map(leg=>({...leg,mode}))}),[]);
+    assert.deepEqual(ledger.flightStops({...exp,transitTags:[mode]}),[]);
+  }
+  assert.deepEqual(JSON.parse(JSON.stringify(ledger.flightStops({...exp,transitTags:['flight']}))),
+    JSON.parse(JSON.stringify(exp.routeCoords)));
+  const broken={...trip,routeStops:[{...stops[0],coords:[NaN,1]},...stops.slice(1)]};
+  assert.deepEqual(JSON.parse(JSON.stringify(ledger.flightStops(broken))),[stops[1].coords]);
+});
 check('uploaded expedition tracks preserve geometry while fog and county credit follow the transit mode', () => {
   const stops = [
     { kind: 'place', id: 'track_start', name: 'Track Start', coords: [39.24, -106.29] },

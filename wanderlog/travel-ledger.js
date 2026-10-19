@@ -417,6 +417,24 @@
     });
   }
 
+  // Airports (each flight leg's endpoints) clear a small aura; the flight path itself never clears land.
+  function flightStops(expedition) {
+    const valid = coords => Array.isArray(coords) && coords.length === 2 &&
+      Number.isFinite(coords[0]) && Number.isFinite(coords[1]);
+    const points = expedition.routeLegs
+      ? expedition.routeLegs.flatMap((leg, index) => leg.mode === 'flight'
+        ? [expedition.routeStops?.[index]?.coords, expedition.routeStops?.[index + 1]?.coords] : [])
+      : expedition.transitTags?.includes('flight') ? (expedition.routeCoords || []) : [];
+    const seen = new Set();
+    return points.filter(coords => {
+      if (!valid(coords)) return false;
+      const key = coords.join(',');
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+
   function hasLoggedTravel(state) {
     return state.expeditions.length > 0 ||
       Object.values(state.pins).some(clearsFog) ||
@@ -569,7 +587,7 @@
 
   const api = {
     ranks, labels, colors, transitTags, transitIcons, purposeTags, isVisited, clearsFog, promote,
-    homeRadiusKm, hasLoggedTravel, overnightNights, distanceMiles, fogRoutes, waterFogRoutes, restoreExpeditionPromotions,
+    homeRadiusKm, hasLoggedTravel, overnightNights, distanceMiles, fogRoutes, waterFogRoutes, flightStops, restoreExpeditionPromotions,
     validateStatuses, validateTags, validateExpeditions, normalizePoi, migrateState, syncDerivedState, loggedCountyStatuses, metadataProgress
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
