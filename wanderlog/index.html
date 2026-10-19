@@ -192,6 +192,9 @@
     .header-icon:hover { background: #1e293b; color: #f8fafc; }
     .header-icon:focus-visible { outline: 2px solid #fbbf24; outline-offset: 2px; }
     .header-icon[aria-pressed="true"] { background: #1e3a5f; color: #fff; }
+    .passport-flags { display: flex; flex-wrap: wrap; gap: 12px; list-style: none; padding: 0; }
+    .passport-flags li { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px; background: #0f172a; border: 1px solid #334155; font-size: 12px; color: #cbd5e1; }
+    .passport-flags img { width: 48px; height: 32px; object-fit: contain; image-rendering: pixelated; }
     #toggleRpgMode[aria-pressed="true"] { background: #78350f; color: #fde68a; }
     .mode-classic #fogCanvasOverlay {
       opacity: 0;
@@ -593,6 +596,12 @@
               <svg id="radarSvg" viewBox="0 0 240 240" class="w-full h-full drop-shadow-lg"></svg>
             </div>
           </div>
+          <section class="relative z-10 mt-6 border-t border-slate-700/60 pt-4" aria-labelledby="passportFlagsTitle">
+            <h3 id="passportFlagsTitle" class="text-sm font-semibold text-amber-200 mb-3">Countries explored</h3>
+            <ul id="passportFlags" class="passport-flags" aria-label="Visited and lived country flags"></ul>
+            <p id="passportFlagsEmpty" class="text-xs text-slate-400">Visit a country to collect its flag.</p>
+            <p class="text-[10px] text-slate-500 mt-3">Pixel flags by DaFluffyPotato · Country codes: <a href="https://flaglog.com/country-codes" target="_blank" rel="noopener noreferrer" class="underline">Flaglog</a></p>
+          </section>
           <section class="relative z-10 mt-5 border-t border-slate-700/60 pt-4" aria-labelledby="earnedBadgesTitle">
             <h3 id="earnedBadgesTitle" class="text-xs font-bold text-amber-200 mb-3">Earned Badges</h3>
             <div id="earnedAchievementBadges" class="flex flex-wrap gap-3"></div>
@@ -925,14 +934,14 @@
     </form>
   </div>
 
-  <script src="./nps-catalog.js?v=20261019-journal-formatting"></script>
-  <script src="./national-parks-scratch.js?v=20261019-journal-formatting"></script>
-  <script src="./international-parks.js?v=20261019-journal-formatting"></script>
-  <script src="./ecoregions.js?v=20261019-journal-formatting"></script>
-  <script src="./coordinate-lookups.js?v=20261019-journal-formatting"></script>
-  <script src="./micro-states.js?v=20261019-journal-formatting"></script>
-  <script src="./travel-ledger.js?v=20261019-journal-formatting"></script>
-  <script src="./rarity-config.js?v=20261019-journal-formatting"></script>
+  <script src="./nps-catalog.js?v=20261019-profile-flags"></script>
+  <script src="./national-parks-scratch.js?v=20261019-profile-flags"></script>
+  <script src="./international-parks.js?v=20261019-profile-flags"></script>
+  <script src="./ecoregions.js?v=20261019-profile-flags"></script>
+  <script src="./coordinate-lookups.js?v=20261019-profile-flags"></script>
+  <script src="./micro-states.js?v=20261019-profile-flags"></script>
+  <script src="./travel-ledger.js?v=20261019-profile-flags"></script>
+  <script src="./rarity-config.js?v=20261019-profile-flags"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -1786,6 +1795,7 @@
         rareBiomesCount: unlockedRare.length,
         statesCount: visitedStates.size,
         countriesCount: visitedCountries.size,
+        visitedCountries: [...visitedCountries],
         atlasCountriesCount: (worldGeoJson || []).filter(feature => visitedCountries.has(feature.properties.name)).length +
           microStateCatalog.filter(entry => visitedCountries.has(entry.name)).length,
         atlasCountriesTotal: (worldGeoJson?.length || 0) + microStateCatalog.length,
@@ -3892,8 +3902,31 @@
       `;
     }
 
+    function profileCountryFlags(countries) {
+      const names = new Intl.DisplayNames(['en'], { type: 'region', fallback: 'none' });
+      const flags = new Map();
+      countries.forEach(country => {
+        const code = InternationalParks.countryCode(country);
+        const key = code || country;
+        if (!flags.has(key)) flags.set(key, { name: code ? names.of(code) || country : country,
+          code, src: `./assets/flags/${code ? code.toLowerCase() : 'unknown'}.png` });
+      });
+      return [...flags.values()].sort((a, b) => a.name.localeCompare(b.name, 'en'));
+    }
+
+    function renderProfileFlags(countries) {
+      const flags = profileCountryFlags(countries);
+      const list = document.getElementById('passportFlags');
+      list.innerHTML = flags.map(flag => `<li><img src="${flag.src}" alt="${escapeHtml(flag.name)} flag" width="48" height="32" loading="lazy"><span>${escapeHtml(flag.name)}</span></li>`).join('');
+      list.querySelectorAll('img').forEach(image => image.addEventListener('error', () => {
+        image.src = './assets/flags/unknown.png';
+      }, { once: true }));
+      document.getElementById('passportFlagsEmpty').classList.toggle('hidden', flags.length > 0);
+    }
+
     function renderPassportView() {
       const stats = calculateStats();
+      renderProfileFlags(stats.visitedCountries);
 
       // Hero banner
       document.getElementById('passportClassName').textContent = stats.cls;
@@ -4697,7 +4730,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261019-journal-formatting"></script>
+  <script src="./expedition-ui.js?v=20261019-profile-flags"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);

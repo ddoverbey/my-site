@@ -90,8 +90,9 @@
     return 12742 * Math.asin(Math.sqrt(Math.min(1, h)));
   }
 
-  function normalizeWikidata(records) {
-    if (!Array.isArray(records) || !records.length) throw new Error('Wikidata parks must be a nonempty array.');
+  let cachedCountryCodes = null;
+  function countryCodeMap() {
+    if (cachedCountryCodes) return cachedCountryCodes;
     const names = new Intl.DisplayNames(['en'], { type: 'region', fallback: 'none' });
     const codes = new Map();
     for (let a = 65; a <= 90; a++) for (let b = 65; b <= 90; b++) {
@@ -105,8 +106,32 @@
       'United States Minor Outlying Islands': 'UM', 'Czech Republic': 'CZ',
       "People's Republic of China": 'CN', 'Ivory Coast': 'CI', 'The Bahamas': 'BS', 'The Gambia': 'GM',
       'Bosnia and Herzegovina': 'BA', 'Democratic Republic of the Congo': 'CD', 'Republic of the Congo': 'CG',
-      'Saint Kitts and Nevis': 'KN', 'Myanmar': 'MM', 'Turkey': 'TR', 'Palestine': 'PS'
+      'Saint Kitts and Nevis': 'KN', 'Myanmar': 'MM', 'Turkey': 'TR', 'Palestine': 'PS',
+      'Dem. Rep. Congo': 'CD', Congo: 'CG', 'Central African Rep.': 'CF',
+      'Eq. Guinea': 'GQ', 'S. Sudan': 'SS', 'Dominican Rep.': 'DO',
+      'Bosnia and Herz.': 'BA', 'Solomon Is.': 'SB', 'Falkland Is.': 'FK',
+      'Fr. S. Antarctic Lands': 'TF', 'W. Sahara': 'EH',
+      'Cape Verde': 'CV', 'Faeroe Is.': 'FO', 'Marshall Is.': 'MH',
+      'Cook Is.': 'CK', 'Cayman Is.': 'KY', 'Turks and Caicos Is.': 'TC',
+      'British Virgin Is.': 'VG', 'U.S. Virgin Is.': 'VI',
+      'St. Kitts and Nevis': 'KN', 'St. Vin. and Gren.': 'VC',
+      'St. Lucia': 'LC', 'St. Pierre and Miquelon': 'PM',
+      'St-Barthélemy': 'BL', 'St-Martin': 'MF', 'N. Mariana Is.': 'MP',
+      'São Tomé and Principe': 'ST', 'Sao Tome and Principe': 'ST',
+      Vatican: 'VA', 'Holy See': 'VA', 'Pitcairn Is.': 'PN'
     })) codes.set(nameKey(name), code);
+    cachedCountryCodes = codes;
+    return codes;
+  }
+
+  function countryCode(name) {
+    return countryCodeMap().get(nameKey(name)) || null;
+  }
+
+  function normalizeWikidata(records) {
+    if (!Array.isArray(records) || !records.length) throw new Error('Wikidata parks must be a nonempty array.');
+    const names = new Intl.DisplayNames(['en'], { type: 'region', fallback: 'none' });
+    const codes = countryCodeMap();
     const groups = new Map();
     let excludedCount = 0;
     for (const row of records) {
@@ -222,7 +247,7 @@
       excludedCount: curated.excludedCount + wikidata.excludedCount, duplicateRowCount: wikidata.duplicateRowCount };
   }
 
-  const api = { normalizeParks, normalizeWikidata, mergeParks, combineParks, source, wikidataSource, excludedCountries };
+  const api = { countryCode, normalizeParks, normalizeWikidata, mergeParks, combineParks, source, wikidataSource, excludedCountries };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.InternationalParks = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

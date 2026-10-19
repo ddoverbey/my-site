@@ -133,7 +133,7 @@ check('mobile RPG HUD starts collapsed with an accessible stats toggle', () => {
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261019-journal-formatting')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261019-profile-flags')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('storage-risk banner and unfinished-trip recovery controls are present', () => {
@@ -1131,6 +1131,50 @@ check('collapse journal closes the trip, restores header focus, and retains unsa
   } finally {
     vm.runInContext("travelJournalDrafts.delete('collapse_test');openTravelLogs.delete('collapse_test')", context);
     delete context.collapseTestCard;
+  }
+});
+check('profile flags use visited/lived countries only, sort alphabetically, deduplicate aliases and fall back for unknown countries', () => {
+  const saved = vm.runInContext('JSON.stringify(passportPayload())', context);
+  try {
+    const result = vm.runInContext(`(()=>{
+      applyPassport(migratePassport({regions:{
+        'c:United States of America':'l','c:France':'v','c:Japan':'w','c:Canada':'t'
+      }}));
+      return profileCountryFlags(calculateStats().visitedCountries);
+    })()`, context);
+    assert.deepEqual(JSON.parse(JSON.stringify(result)).map(flag => [flag.name, flag.src]), [
+      ['France', './assets/flags/fr.png'], ['United States', './assets/flags/us.png']
+    ]);
+    const aliases = vm.runInContext("profileCountryFlags(['United States','United States of America','Dem. Rep. Congo','Vatican','Atlantis'])", context);
+    assert.equal(aliases.length, 4);
+    assert.equal(aliases.find(flag => flag.code === 'CD').src, './assets/flags/cd.png');
+    assert.equal(aliases.find(flag => flag.code === 'VA').src, './assets/flags/va.png');
+    assert.equal(aliases.find(flag => flag.name === 'Atlantis').src, './assets/flags/unknown.png');
+    assert.deepEqual(JSON.parse(JSON.stringify(vm.runInContext('profileCountryFlags([])', context))), []);
+    vm.runInContext("renderProfileFlags(['France','United States of America'])", context);
+    assert.ok(element('passportFlags').innerHTML.includes('France flag'));
+    assert.ok(element('passportFlags').innerHTML.indexOf('France') < element('passportFlags').innerHTML.indexOf('United States'));
+    assert.ok(html.includes('image-rendering: pixelated'));
+    assert.ok(html.includes('Pixel flags by DaFluffyPotato'));
+  } finally {
+    vm.runInContext(`applyPassport(${saved})`, context);
+  }
+});
+check('profile flag images retry the unknown asset once when a country has no flag file', () => {
+  const list = element('passportFlags');
+  const original = list.querySelectorAll;
+  let fail, options;
+  const image = { src: './assets/flags/um.png', addEventListener(event, handler, settings) {
+    assert.equal(event, 'error'); fail = handler; options = settings;
+  } };
+  list.querySelectorAll = () => [image];
+  try {
+    vm.runInContext("renderProfileFlags(['United States Minor Outlying Islands'])", context);
+    assert.equal(options.once, true);
+    fail();
+    assert.equal(image.src, './assets/flags/unknown.png');
+  } finally {
+    list.querySelectorAll = original;
   }
 });
 check('journal headings and bullet lists render safely without interpreting HTML or inline scripts', () => {
