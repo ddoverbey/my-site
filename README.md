@@ -653,6 +653,11 @@ the compass is active on the RPG map, the clipboard on Travel Ledger, and other 
 their own navigation highlight without leaving a mode button selected.
 
 Travel Log entries are compact, keyboard-accessible expandable cards. The closed card shows its map,
+and alphabetized pixel flags for countries visited on that trip outside the current home country.
+Flags use logged stops, parks, POIs, and county destinations, never route interiors/flyovers.
+Home-country aliases are matched by ISO code; domestic-only trips have no flag row. With no home
+set, all identifiable trip countries appear. Country lookups reuse the loaded geography cache.
+The card also shows its
 trip name, dates, total mileage, elevation range/changes, up to four badges, and an optional highlight
 photo on desktop. Opening it reveals the journal editor and photo gallery; the full itinerary, remaining
 badges, reason for travel, and route-edit control stay inside the expanded entry.

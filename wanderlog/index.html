@@ -3914,13 +3914,21 @@
       return [...flags.values()].sort((a, b) => a.name.localeCompare(b.name, 'en'));
     }
 
-    function renderProfileFlags(countries) {
-      const flags = profileCountryFlags(countries);
-      const list = document.getElementById('passportFlags');
-      list.innerHTML = flags.map(flag => `<li><img src="${flag.src}" alt="${escapeHtml(flag.name)} flag" width="48" height="32" loading="lazy"><span>${escapeHtml(flag.name)}</span></li>`).join('');
+    function countryFlagMarkup(flags) {
+      return flags.map(flag => `<li><img src="${flag.src}" alt="${escapeHtml(flag.name)} flag" width="48" height="32" loading="lazy"><span>${escapeHtml(flag.name)}</span></li>`).join('');
+    }
+
+    function wireCountryFlagFallbacks(list) {
       list.querySelectorAll('img').forEach(image => image.addEventListener('error', () => {
         image.src = './assets/flags/unknown.png';
       }, { once: true }));
+    }
+
+    function renderProfileFlags(countries) {
+      const flags = profileCountryFlags(countries);
+      const list = document.getElementById('passportFlags');
+      list.innerHTML = countryFlagMarkup(flags);
+      wireCountryFlagFallbacks(list);
       document.getElementById('passportFlagsEmpty').classList.toggle('hidden', flags.length > 0);
     }
 

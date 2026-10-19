@@ -1091,7 +1091,7 @@ check('journal cards keep the itinerary collapsed, show one highlight, and prese
       renderExpeditionHistory();
     `, context);
     const feed = element('travelLogFeed').innerHTML;
-    assert.equal((feed.match(/<img /g) || []).length, 1, 'only the highlight image is built before opening');
+    assert.equal((feed.match(/<img class="travel-journal-highlight"/g) || []).length, 1, 'only one highlight photo is built before opening');
     assert.ok(feed.includes('travel-journal-highlight'));
     assert.ok(!feed.includes('A &lt;script&gt;memory'));
     assert.ok(!feed.includes('ZWZnaA=='), 'remaining images are not inserted until the journal opens');
@@ -1176,6 +1176,31 @@ check('profile flag images retry the unknown asset once when a country has no fl
   } finally {
     list.querySelectorAll = original;
   }
+});
+check('trip flags exclude home-country aliases and flyovers, include destinations, and sort alphabetically', () => {
+  const result = vm.runInContext(`(()=>{
+    const political=cachedPoliticalAt,home=AppState.homeBase,parks=PARKS,pois=AppState.customPois;
+    try {
+      cachedPoliticalAt=(lat,lng)=>({countries:lat===0?['United States']:lat===1?['France']:['Canada']});
+      AppState.homeBase={lat:0,lng:0};
+      PARKS=[{id:'flagpark',intl:true,countryCode:'JP',country:'Japan'}];
+      AppState.customPois=[{id:'flagpoi',political:{countries:['France']}}];
+      const trip={routeStops:[{coords:[0,0]},{coords:[1,1]}],routeCoords:[[0,0],[1,1]],
+        routeLegs:[{mode:'flight',routeCoords:[[0,0],[2,2],[1,1]]}],
+        parkIds:['flagpark'],customPoiIds:['flagpoi'],countyIds:['06073']};
+      const foreign=travelLogCountryFlags(trip);
+      AppState.homeBase=null;
+      const noHome=travelLogCountryFlags(trip);
+      AppState.homeBase={lat:0,lng:0};
+      const domestic=travelLogCountryFlags({...trip,routeStops:[{coords:[0,0]}],parkIds:[],customPoiIds:[]});
+      return {foreign,noHome,domestic};
+    } finally {cachedPoliticalAt=political;AppState.homeBase=home;PARKS=parks;AppState.customPois=pois;}
+  })()`, context);
+  const plain = JSON.parse(JSON.stringify(result));
+  assert.deepEqual(plain.foreign.map(flag => flag.code), ['FR', 'JP']);
+  assert.deepEqual(plain.noHome.map(flag => flag.code), ['FR', 'JP', 'US']);
+  assert.deepEqual(plain.domestic, []);
+  assert.ok(expeditionUi.includes('data-trip-flags'));
 });
 check('journal headings and bullet lists render safely without interpreting HTML or inline scripts', () => {
   context.journalFormattingFixture = '# Day one\n## Highlights\n- Sunrise\n* Waterfall\n### Next time\n<script>alert(1)</script>\n[link](javascript:bad)';
