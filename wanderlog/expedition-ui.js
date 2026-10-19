@@ -974,6 +974,12 @@ const openTravelLogs = new Set();
 const travelJournalDrafts = new Map();
 const TRAVEL_ROUTE_COLORS = { road: '#22d3ee', awd: '#22d3ee', ferry: '#38bdf8',
   flight: '#e879f9', rail: '#a78bfa', foot: '#4ade80' };
+const GLOBAL_ROUTE_COLORS = {
+  road: '#f59e0b', awd: '#f59e0b', flight: '#38bdf8',
+  ferry: '#10b981', rail: '#c084fc', foot: '#f472b6'
+};
+let globalRoutesOpen = false;
+let globalRoutesZoomBehavior = null;
 
 const TRAVEL_LOG_MONTHS = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE',
   'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'];
@@ -1154,12 +1160,165 @@ function renderTravelLogMiniMap(exp) {
   else miniMap.setView(points[0], 8);
 }
 
+function renderGlobalRoutesMap() {
+  const svg = document.getElementById('svgGlobalRoutesMap');
+  const features = worldGeoJson || [];
+  const collection = { type: 'FeatureCollection', features };
+  const projection = d3.geoNaturalEarth1();
+  if (features.length) projection.fitExtent([[24, 24], [1176, 560]], collection);
+  const path = d3.geoPath(projection);
+  const stats = calculateStats();
+  const visitedCountries = new Set(stats.visitedCountries);
+  const countries = features.filter(feature => feature?.geometry).map(feature => {
+    const name = feature.properties?.name || 'Unknown country';
+    const fill = visitedCountries.has(name) ? '#13233f' : '#0f172a';
+    return `<path class="global-country" fill="${fill}" stroke="#1e293b" stroke-width="0.8" d="${path(feature) || ''}"><title>${escapeHtml(name)}</title></path>`;
+  }).join('');
+  const graticule = path(d3.geoGraticule()) || '';
+  const routes = [];
+  const markers = [];
+
+  AppState.expeditions.forEach(exp => {
+    const title = `${exp.name || 'Expedition'} · ${travelLogDateRange(exp)}`;
+    travelLogLegs(exp).forEach(leg => {
+      if (!Array.isArray(leg.coords) || leg.coords.length < 2 || !leg.coords.every(travelLogPoint)) return;
+      const isDirect = leg.routeSource === 'direct' && leg.coords.length === 2;
+      const coordinates = leg.mode === 'flight' || isDirect
+        ? (() => {
+          const interpolate = d3.geoInterpolate(
+            [leg.coords[0][1], leg.coords[0][0]],
+            [leg.coords.at(-1)[1], leg.coords.at(-1)[0]]
+          );
+          return Array.from({ length: 25 }, (_, index) => interpolate(index / 24));
+        })()
+        : leg.coords.map(([lat, lng]) => [lng, lat]);
+      const routePath = path({ type: 'LineString', coordinates });
+      if (!routePath) return;
+      const color = GLOBAL_ROUTE_COLORS[leg.mode] || '#94a3b8';
+      routes.push(`<path class="global-route" data-mode="${escapeHtml(leg.mode)}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"${leg.mode === 'flight' ? ' stroke-dasharray="6 5"' : ''} d="${routePath}"><title>${escapeHtml(title)}</title></path>`);
+    });
+    (exp.routeStops || []).forEach(stop => {
+      if (!travelLogPoint(stop?.coords)) return;
+      const [cx, cy] = projection([stop.coords[1], stop.coords[0]]);
+      markers.push(`<circle class="global-route-stop" cx="${cx}" cy="${cy}" r="2.5" fill="#e2e8f0" stroke="#020617" stroke-width="1"><title>${escapeHtml(`${exp.name || 'Expedition'} · ${stop.name || 'Stop'}`)}</title></circle>`);
+    });
+  });
+
+  const home = AppState.homeBase && travelLogPoint([AppState.homeBase.lat, AppState.homeBase.lng])
+    ? projection([AppState.homeBase.lng, AppState.homeBase.lat]) : null;
+  const homeMarker = home
+    ? `<g class="global-route-home"><title>${escapeHtml(`Home Base · ${AppState.homeBase.name}`)}</title><circle cx="${home[0]}" cy="${home[1]}" r="11" fill="#f59e0b" fill-opacity="0.2" stroke="#fbbf24" stroke-width="1.5"></circle><text x="${home[0]}" y="${home[1] + 6}" text-anchor="middle" font-size="17" fill="#fbbf24">★</text></g>`
+    : '';
+
+  svg.innerHTML = `<rect class="global-routes-ocean" width="1200" height="630" fill="#040814"></rect><g class="global-routes-zoom"><path class="global-routes-graticule" fill="none" stroke="#1e293b" stroke-width="0.6" d="${graticule}"></path>${countries}${routes.join('')}${markers.join('')}${homeMarker}</g>`;
+  globalRoutesZoomBehavior = d3.zoom().scaleExtent([1, 14]).on('zoom', event => {
+    d3.select(svg).select('.global-routes-zoom').attr('transform', event.transform);
+  });
+  d3.select(svg).call(globalRoutesZoomBehavior);
+  d3.select(svg).select('.global-routes-zoom').attr('transform', d3.zoomTransform(svg));
+}
+
+function setGlobalRoutesView(open) {
+  globalRoutesOpen = open;
+  document.getElementById('travelGlobalRoutesPanel').classList.toggle('hidden', !open);
+  document.getElementById('travelLogFeed').classList.toggle('hidden', open);
+  document.getElementById('btnExportRoutesPng').classList.toggle('hidden', !open);
+  const toggle = document.getElementById('btnToggleTravelRoutes');
+  toggle.setAttribute('aria-expanded', String(open));
+  toggle.setAttribute('aria-pressed', String(open));
+  if (open) renderGlobalRoutesMap();
+}
+
+function resetGlobalRoutesZoom() {
+  if (!globalRoutesZoomBehavior) return;
+  d3.select(document.getElementById('svgGlobalRoutesMap'))
+    .call(globalRoutesZoomBehavior.transform, d3.zoomIdentity);
+}
+
+function appendSvgElement(parent, name, attributes = {}) {
+  const element = document.createElementNS('http://www.w3.org/2000/svg', name);
+  Object.entries(attributes).forEach(([key, value]) => element.setAttribute(key, value));
+  parent.appendChild(element);
+  return element;
+}
+
+function canvasPngBlob(canvas) {
+  const fallback = () => {
+    const dataUrl = canvas.toDataURL('image/png');
+    const encoded = dataUrl.split(',')[1];
+    if (!encoded) throw new Error('The route map image could not be encoded as PNG.');
+    return new Blob([Uint8Array.from(atob(encoded), character => character.charCodeAt(0))], { type: 'image/png' });
+  };
+  return new Promise((resolve, reject) => {
+    if (typeof canvas.toBlob !== 'function') {
+      try { resolve(fallback()); } catch (error) { reject(error); }
+      return;
+    }
+    canvas.toBlob(blob => {
+      if (blob) {
+        resolve(blob);
+        return;
+      }
+      try { resolve(fallback()); } catch (error) { reject(error); }
+    }, 'image/png');
+  });
+}
+
+async function exportGlobalRoutesPng() {
+  renderGlobalRoutesMap();
+  const svg = document.getElementById('svgGlobalRoutesMap').cloneNode(true);
+  svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  svg.setAttribute('width', '2400');
+  svg.setAttribute('height', '1260');
+  svg.querySelector('.global-routes-zoom')?.setAttribute('transform', 'translate(0,0) scale(1)');
+
+  const stats = calculateStats();
+  const footer = appendSvgElement(svg, 'g', { class: 'global-routes-export-footer' });
+  appendSvgElement(footer, 'rect', { x: 0, y: 570, width: 1200, height: 60, fill: '#0b1220' });
+  const banner = appendSvgElement(footer, 'text', {
+    x: 32, y: 608, fill: '#e2e8f0', 'font-family': 'Inter, Arial, sans-serif',
+    'font-size': 20, 'font-weight': 600
+  });
+  banner.textContent = `WANDERLOG • ${stats.cls} (Level ${stats.level}) • ${AppState.expeditions.length} Expeditions • ${stats.countriesCount} Countries`;
+
+  const svgBlob = new Blob([new XMLSerializer().serializeToString(svg)], { type: 'image/svg+xml;charset=utf-8' });
+  const svgUrl = URL.createObjectURL(svgBlob);
+  let png;
+  try {
+    const image = new Image();
+    await new Promise((resolve, reject) => {
+      image.onload = resolve;
+      image.onerror = () => reject(new Error('The route map could not be rendered for export.'));
+      image.src = svgUrl;
+    });
+    const canvas = document.createElement('canvas');
+    canvas.width = 2400;
+    canvas.height = 1260;
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('Canvas rendering is unavailable in this browser.');
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    png = await canvasPngBlob(canvas);
+  } finally {
+    URL.revokeObjectURL(svgUrl);
+  }
+
+  const objectUrl = URL.createObjectURL(png);
+  const download = document.createElement('a');
+  download.href = objectUrl;
+  download.download = `wanderlog_routes_${localExportTimestamp()}.png`;
+  document.body.appendChild(download);
+  download.click();
+  download.remove();
+  setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+}
+
 function renderExpeditionHistory() {
   const container = document.getElementById('travelLogFeed');
   // Leaflet instances must be torn down before their containers are discarded.
   destroyTravelLogMaps();
   if (!AppState.expeditions.length) {
     container.innerHTML = '<p class="text-sm text-slate-400">No expeditions yet. Log your first trip.</p>';
+    if (globalRoutesOpen) renderGlobalRoutesMap();
     return;
   }
   const sorted = [...AppState.expeditions].sort((a, b) =>
@@ -1242,6 +1401,7 @@ function renderExpeditionHistory() {
     try { renderTravelLogMiniMap(exp); }
     catch (error) { showTravelLogMapError(exp, error); }
   });
+  if (globalRoutesOpen) renderGlobalRoutesMap();
 }
 
 function collapseTravelJournal(card) {
@@ -1510,6 +1670,15 @@ async function searchHometown() {
 
 document.getElementById('btnExpedition').addEventListener('click', () => openExpedition());
 document.getElementById('btnHistoryExpedition').addEventListener('click', () => openExpedition());
+document.getElementById('btnToggleTravelRoutes').addEventListener('click', () =>
+  setGlobalRoutesView(!globalRoutesOpen));
+document.getElementById('btnResetGlobalRoutesZoom').addEventListener('click', resetGlobalRoutesZoom);
+document.getElementById('btnExportRoutesPng').addEventListener('click', () => {
+  exportGlobalRoutesPng().catch(error => {
+    console.error('Global route map export failed', error);
+    window.alert(`Could not export the route map: ${error.message}`);
+  });
+});
 document.getElementById('btnExpeditionHistory').addEventListener('click', () => {
   if (expeditionPending) return;
   closeExpedition();

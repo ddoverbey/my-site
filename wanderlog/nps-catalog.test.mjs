@@ -133,7 +133,7 @@ check('mobile RPG HUD starts collapsed with an accessible stats toggle', () => {
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261019-profile-flags')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261019-global-routes')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('storage-risk banner and unfinished-trip recovery controls are present', () => {
@@ -3856,6 +3856,98 @@ check('land stencil normalizes shells and holes so overlapping atlases do not ca
   } finally {
     vm.runInContext('map=windingSavedMap;delete globalThis.windingSavedMap',context);
     delete context.windingTarget;delete context.windingMap;
+  }
+});
+check('Global Route Map renders country and expedition paths and toggles independently of the travel log', () => {
+  const previousD3 = context.d3;
+  const classLists = new Map();
+  for (const id of ['travelGlobalRoutesPanel', 'travelLogFeed', 'btnExportRoutesPng']) {
+    const state = { hidden: true };
+    const classList = {
+      toggle(name, force) {
+        if (name === 'hidden') state.hidden = force === undefined ? !state.hidden : force;
+        return state.hidden;
+      },
+      contains(name) { return name === 'hidden' && state.hidden; }
+    };
+    classLists.set(id, { state, classList, original: element(id).classList });
+    element(id).classList = classList;
+  }
+  const toggleAttributes = {};
+  const toggle = element('btnToggleTravelRoutes');
+  const originalSetAttribute = toggle.setAttribute;
+  toggle.setAttribute = (name, value) => { toggleAttributes[name] = value; };
+  const zoomIdentity = { toString: () => 'translate(0,0) scale(1)' };
+  context.d3 = {
+    ...d3Geo,
+    select: () => ({
+      call(callback, ...args) { callback(this, ...args); return this; },
+      select: () => ({ attr() { return this; } })
+    }),
+    zoom: () => {
+      const behavior = () => {};
+      behavior.scaleExtent = () => behavior;
+      behavior.on = () => behavior;
+      behavior.transform = () => {};
+      return behavior;
+    },
+    zoomIdentity,
+    zoomTransform: () => zoomIdentity
+  };
+  vm.runInContext(`
+    globalThis.routeMapTestSaved = {
+      expeditions: AppState.expeditions, homeBase: AppState.homeBase, worldGeoJson,
+      open: globalRoutesOpen, zoom: globalRoutesZoomBehavior
+    };
+    worldGeoJson = [{
+      type: 'Feature', properties: { name: 'Example Nation' },
+      geometry: { type: 'Polygon', coordinates: [[[-160,-55],[-160,70],[165,70],[165,-55],[-160,-55]]] }
+    }];
+    AppState.homeBase = { name: 'Test Base', lat: 0, lng: 0 };
+    AppState.expeditions = [{
+      id: 'global-route-test', name: 'Atlantic Flight', startDate: '2026-06-01',
+      endDate: '2026-06-02', transitTags: ['flight'],
+      routeStops: [
+        { kind: 'place', name: 'New York', coords: [40.7,-74] },
+        { kind: 'place', name: 'London', coords: [51.5,-0.1] }
+      ],
+      routeLegs: [{
+        mode: 'flight', routeSource: 'direct',
+        routeCoords: [[40.7,-74],[51.5,-0.1]]
+      }]
+    }];
+    globalRoutesOpen = false;
+  `, context);
+  try {
+    toggle.handlers.click();
+    const svg = element('svgGlobalRoutesMap').innerHTML;
+    assert.match(svg, /class="global-country"/);
+    assert.match(svg, /class="global-route"/);
+    assert.match(svg, /stroke="#38bdf8"/);
+    assert.match(svg, /stroke-dasharray="6 5"/);
+    assert.equal(classLists.get('travelGlobalRoutesPanel').state.hidden, false);
+    assert.equal(classLists.get('travelLogFeed').state.hidden, true);
+    assert.equal(classLists.get('btnExportRoutesPng').state.hidden, false);
+    assert.equal(toggleAttributes['aria-expanded'], 'true');
+    assert.equal(toggleAttributes['aria-pressed'], 'true');
+    toggle.handlers.click();
+    assert.equal(classLists.get('travelGlobalRoutesPanel').state.hidden, true);
+    assert.equal(classLists.get('travelLogFeed').state.hidden, false);
+    assert.equal(classLists.get('btnExportRoutesPng').state.hidden, true);
+    assert.equal(toggleAttributes['aria-expanded'], 'false');
+    assert.equal(toggleAttributes['aria-pressed'], 'false');
+  } finally {
+    for (const [id, entry] of classLists) element(id).classList = entry.original;
+    toggle.setAttribute = originalSetAttribute;
+    context.d3 = previousD3;
+    vm.runInContext(`
+      AppState.expeditions = routeMapTestSaved.expeditions;
+      AppState.homeBase = routeMapTestSaved.homeBase;
+      worldGeoJson = routeMapTestSaved.worldGeoJson;
+      globalRoutesOpen = routeMapTestSaved.open;
+      globalRoutesZoomBehavior = routeMapTestSaved.zoom;
+      delete globalThis.routeMapTestSaved;
+    `, context);
   }
 });
 console.log(`${checks} checks passed.`);
