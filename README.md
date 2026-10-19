@@ -691,6 +691,11 @@ image data on every frame.
 
 ### Progressive achievements
 
+Achievement cards and earned profile badges use matching tier artwork from
+`wanderlog/assets/achievements/` when available, retaining emoji icons for other tiers.
+Pixel art keeps its original proportions and rarity borders. Locked secret-tier artwork
+remains hidden until completion.
+
 The character profile collects pixel flags for Visited and Lived countries (not Wishlist or
 Transited). Flags are alphabetized by English country name, deduplicated by ISO country code,
 and rendered pixel-sharp from `wanderlog/assets/flags/`. Unknown countries or missing flag

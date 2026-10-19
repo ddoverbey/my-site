@@ -2612,6 +2612,27 @@ check('secret completion effects fire once on crossing the goal, not initial loa
   assert.equal(result.notices.length, 1);
   assert.ok(result.notices[0][1].includes('Earth Sandwich'));
 });
+const achievementImages = vm.runInContext('Object.entries(ACHIEVEMENT_IMAGES)', context);
+for (const [title, filename] of achievementImages) {
+  const data = await readFile(new URL(`./assets/achievements/${filename}`, import.meta.url));
+  assert.equal(data.subarray(1, 4).toString(), 'PNG', `${title} artwork exists and is PNG`);
+}
+check('achievement artwork maps all supplied images to real tiers and preserves emoji fallbacks', () => {
+  assert.equal(achievementImages.length, 15);
+  for (const [title, filename] of achievementImages) {
+    context.artworkTitle = title;
+    const markup = vm.runInContext(`(()=>{
+      const achievement=ACHIEVEMENTS.find(a=>a.tiers.some(t=>t.title===artworkTitle));
+      return achievementIconMarkup(achievement,achievement.tiers.find(t=>t.title===artworkTitle));
+    })()`, context);
+    assert.ok(markup.includes(`./assets/achievements/${filename}`), title);
+    assert.ok(markup.includes('alt=""'), title);
+  }
+  assert.ok(vm.runInContext("achievementIconMarkup(ACHIEVEMENTS[0],ACHIEVEMENTS[0].tiers[2])", context).includes('🏕️'));
+  assert.ok(html.includes('achievementIconMarkup(achievement, completed)'));
+  assert.ok(html.includes("hideIcon ? '' : achievementIconMarkup(ach, iconTier)"));
+  delete context.artworkTitle;
+});
 check('every achievement tier has valid difficulty rarity and distinct emoji artwork', () => {
   assert.equal(vm.runInContext('ACHIEVEMENTS.every(a=>a.icon && /^#[0-9a-f]{6}$/i.test(a.background) && a.tiers.every(t=>ACHIEVEMENT_RARITIES[t.rarity]))', context), true);
   assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='earthSandwich').icon", context), '🌍🥪');
@@ -2653,7 +2674,7 @@ check('character badges include only highest earned tiers and update without dup
       assert.equal(badges[0].attributes['data-rarity'], rarity);
       assert.ok(badges[0].attributes['aria-label'].includes('Chasing Waterfalls'));
       assert.equal(badges[0].attributes.title, badges[0].attributes['aria-label']);
-      assert.ok(badges[0].innerHTML.includes('💧'));
+      assert.ok(badges[0].innerHTML.includes('assets/achievements/chasing-waterfalls.png'));
       assert.equal(captured.some(badge => badge.attributes['data-achievement'] === 'localLore'), false);
     }
     const waterfall = captured.find(badge => badge.attributes['data-achievement'] === 'waterfalls');
@@ -2676,7 +2697,7 @@ check('achievement cards show artwork and textual tier rarities without revealin
     renderAchievementsView();
   `, context);
   const cards = element('achievementsContainer').innerHTML;
-  assert.ok(cards.includes('💧'));
+  assert.ok(cards.includes('assets/achievements/chasing-waterfalls.png'));
   assert.ok(cards.includes('data-rarity="common"'));
   assert.ok(cards.includes('data-rarity="uncommon"'));
   assert.ok(cards.includes('>Common</p>'));
@@ -2703,7 +2724,7 @@ check('regional music achievements disclose partial prerequisites and award colo
   vm.runInContext("AppState.pins.shen='v';AppState.counties['08065']='l';renderPassportView()", context);
   const badges = element('earnedAchievementBadges').innerHTML;
   assert.ok(badges.includes('🛣️🏡'));
-  assert.ok(badges.includes('🏔️🎵'));
+  assert.ok(badges.includes('assets/achievements/rocky-mountain-high.png'));
   assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='countryRoads').tiers[0].rarity", context), 'rare');
   assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='rockyMountainHigh').tiers[0].rarity", context), 'uncommon');
   vm.runInContext('saveState();applyPassport(migratePassport(JSON.parse(localStorage.getItem("terra_incognita_state"))));renderPassportView()', context);

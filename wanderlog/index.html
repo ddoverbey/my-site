@@ -269,6 +269,7 @@
         linear-gradient(135deg, #fb7185, #fbbf24, #4ade80, #38bdf8, #c084fc) border-box;
       border-color: transparent;
     }
+    .achievement-icon img { width: 100%; height: 100%; object-fit: contain; border-radius: inherit; image-rendering: pixelated; }
     button.achievement-icon:hover { transform: translateY(-2px); }
     button.achievement-icon:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
     .achievement-rarity { color: var(--rarity-color); }
@@ -4073,6 +4074,30 @@
       return `--badge-background: ${achievement.background}; --rarity-color: ${ACHIEVEMENT_RARITIES[tier.rarity].color}`;
     }
 
+    const ACHIEVEMENT_IMAGES = {
+      'Chasing Waterfalls': 'chasing-waterfalls.png',
+      'Earth Sandwich': 'earth-sandwhich.png',
+      'First Steps': 'first-steps.png',
+      'Grand Voyager': 'grand-voyager.png',
+      'Junior Ecologist': 'junior-ecologist.png',
+      'Manifest Destiny': 'manifest-destiny.png',
+      'Rocky Mountain High': 'rocky-mountain-high.png',
+      'Southern Cross': 'southern-cross.png',
+      'The Mariner': 'the-mariner.png',
+      'The Overlander': 'the-overlander.png',
+      'Thin Air': 'thin-air.png',
+      'Touch Grass': 'touch-grass.png',
+      'Trailblazer': 'trailblazer.png',
+      'Whisper in the Woods': 'whisper-in-the-woods.png',
+      'Zero Meridian': 'zero-meridian.png'
+    };
+
+    function achievementIconMarkup(achievement, tier) {
+      const image = ACHIEVEMENT_IMAGES[tier.title];
+      return image ? `<img src="./assets/achievements/${image}" alt="" loading="lazy" decoding="async">`
+        : `<span aria-hidden="true">${achievement.icon}</span>`;
+    }
+
     function renderEarnedAchievementBadges(stats) {
       const container = document.getElementById('earnedAchievementBadges');
       container.innerHTML = '';
@@ -4090,7 +4115,7 @@
         badge.setAttribute('data-achievement', achievement.id);
         badge.setAttribute('title', label);
         badge.setAttribute('aria-label', label);
-        badge.innerHTML = `<span aria-hidden="true">${achievement.icon}</span>`;
+        badge.innerHTML = achievementIconMarkup(achievement, completed);
         badge.addEventListener('click', () => switchTab('achievements'));
         container.appendChild(badge);
         earnedCount++;
@@ -4123,7 +4148,7 @@
         card.innerHTML = `
           <div class="flex items-center gap-3">
             <div class="achievement-icon${hideIcon ? ' achievement-icon-hidden' : ''}" data-rarity="${iconTier.rarity}" style="${achievementBadgeStyle(ach, iconTier)}" aria-hidden="true">
-              ${ach.icon}
+              ${hideIcon ? '' : achievementIconMarkup(ach, iconTier)}
             </div>
             <div class="min-w-0 flex-1">
               <h5 class="text-xs font-bold text-slate-200">${escapeHtml(ach.title)}</h5>
