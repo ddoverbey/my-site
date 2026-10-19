@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Terra Incognita • RPG Travel Fog of War</title>
+  <title>Wanderlog • RPG Atlas &amp; Travel Journal</title>
+  <meta name="description" content="Wanderlog is a gamified fog-of-war travel atlas and journal. Log trips, collect achievements, and reveal the world as you explore.">
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Leaflet CSS & JS -->
@@ -311,10 +312,9 @@
       </div>
       <div class="hidden lg:block">
         <div class="flex items-center gap-2">
-          <h1 class="cinzel text-sm xl:text-lg font-bold tracking-wider text-amber-200">TERRA INCOGNITA</h1>
-          <span class="hidden xl:inline text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30">RPG Atlas</span>
+          <h1 class="cinzel text-sm xl:text-lg font-bold tracking-wider text-amber-200">WANDERLOG</h1>
         </div>
-        <p class="text-xs text-slate-400 font-sans hidden sm:block">A Gamified Fog-of-War Travel Odyssey</p>
+        <p class="text-xs text-slate-400 font-sans hidden sm:block">RPG Atlas</p>
       </div>
     </div>
 
@@ -4436,8 +4436,8 @@
       const showRpgMapControls = AppState.mode === 'rpg' && AppState.currentTab === 'map';
       document.getElementById('rpgMapLegend').classList.toggle('hidden', !showRpgMapControls);
       document.getElementById('btnRecenterHome').classList.toggle('hidden', !showRpgMapControls);
-      document.getElementById('toggleRpgMode').setAttribute('aria-pressed', String(AppState.mode === 'rpg'));
-      document.getElementById('toggleClassicMode').setAttribute('aria-pressed', String(AppState.mode === 'classic'));
+      document.getElementById('toggleRpgMode').setAttribute('aria-pressed', String(showRpgMapControls));
+      document.getElementById('toggleClassicMode').setAttribute('aria-pressed', String(AppState.mode === 'classic' && AppState.currentTab === 'bucketlist'));
       document.querySelectorAll('#navTabs button').forEach(button => {
         button.setAttribute('aria-pressed', String(button.dataset.tab === AppState.currentTab));
       });

@@ -647,6 +647,11 @@ unavailable, the form reports that and keeps the in-memory draft available for m
 
 ### Travel journal
 
+The header brands the app as **Wanderlog**, with a single **RPG Atlas** subtitle; the longer
+fog-of-war description lives in SEO metadata. Navigation highlights the current page only:
+the compass is active on the RPG map, the clipboard on Travel Ledger, and other pages use
+their own navigation highlight without leaving a mode button selected.
+
 Travel Log entries are compact, keyboard-accessible expandable cards. The closed card shows its map,
 trip name, dates, total mileage, elevation range/changes, up to four badges, and an optional highlight
 photo on desktop. Opening it reveals the journal editor and photo gallery; the full itinerary, remaining

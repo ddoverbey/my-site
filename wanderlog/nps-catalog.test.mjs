@@ -292,22 +292,47 @@ check('header navigation uses compact icons with accessible labels and synchroni
   assert.ok(html.includes('.header-icon:focus-visible'));
   assert.ok(!html.includes('data-tab="map"'));
   const originalQuery = context.document.querySelectorAll;
-  const buttons = ['map', 'scratch', 'passport'].map(tab => ({
+  const buttons = ['map', 'scratch', 'passport', 'travel', 'achievements'].map(tab => ({
     dataset: { tab }, attributes: {},
     setAttribute(name, value) { this.attributes[name] = value; }
   }));
   context.document.querySelectorAll = selector => selector === '#navTabs button' ? buttons : originalQuery(selector);
   const modeAttributes = {};
   const originalSet = element('toggleClassicMode').setAttribute;
+  const originalRpgSet = element('toggleRpgMode').setAttribute;
+  const rpgAttributes = {};
+  element('toggleRpgMode').setAttribute = (name, value) => { rpgAttributes[name] = value; };
   element('toggleClassicMode').setAttribute = (name, value) => { modeAttributes[name] = value; };
   vm.runInContext("AppState.mode='classic';AppState.currentTab='scratch';updateHeaderNavigation()", context);
+  assert.equal(modeAttributes['aria-pressed'], 'false');
+  assert.equal(rpgAttributes['aria-pressed'], 'false');
+  assert.deepEqual(buttons.map(button => button.attributes['aria-pressed']), ['false', 'true', 'false', 'false', 'false']);
+  vm.runInContext("AppState.currentTab='bucketlist';updateHeaderNavigation()", context);
   assert.equal(modeAttributes['aria-pressed'], 'true');
-  assert.deepEqual(buttons.map(button => button.attributes['aria-pressed']), ['false', 'true', 'false']);
+  assert.equal(rpgAttributes['aria-pressed'], 'false');
+  for (const tab of ['scratch', 'passport', 'travel', 'achievements']) {
+    vm.runInContext(`AppState.mode='rpg';AppState.currentTab='${tab}';updateHeaderNavigation()`, context);
+    assert.equal(rpgAttributes['aria-pressed'], 'false', tab);
+    assert.equal(modeAttributes['aria-pressed'], 'false', tab);
+    assert.equal(buttons.filter(button => button.attributes['aria-pressed'] === 'true').length, 1);
+  }
   vm.runInContext("AppState.mode='rpg';AppState.currentTab='map';updateHeaderNavigation()", context);
   assert.equal(modeAttributes['aria-pressed'], 'false');
-  assert.deepEqual(buttons.map(button => button.attributes['aria-pressed']), ['true', 'false', 'false']);
+  assert.equal(rpgAttributes['aria-pressed'], 'true');
+  assert.deepEqual(buttons.map(button => button.attributes['aria-pressed']), ['true', 'false', 'false', 'false', 'false']);
   context.document.querySelectorAll = originalQuery;
   element('toggleClassicMode').setAttribute = originalSet;
+  element('toggleRpgMode').setAttribute = originalRpgSet;
+});
+check('Wanderlog branding uses one subtitle, without a page-like badge, and preserves descriptive SEO metadata', () => {
+  const header = html.slice(html.indexOf('<header'), html.indexOf('</header>'));
+  assert.ok(header.includes('>WANDERLOG</h1>'));
+  assert.ok(header.includes('>RPG Atlas</p>'));
+  assert.ok(!header.includes('>RPG Atlas</span>'));
+  assert.ok(!header.includes('TERRA INCOGNITA'));
+  assert.ok(!header.includes('A Gamified Fog-of-War Travel Odyssey'));
+  assert.ok(html.includes('<title>Wanderlog • RPG Atlas &amp; Travel Journal</title>'));
+  assert.match(html, /<meta name="description" content="Wanderlog is a gamified fog-of-war travel atlas and journal/);
 });
 check('destination pins default to None, pin filters stay out of the RPG HUD, and the fog toggle is not rendered', () => {
   assert.equal(vm.runInContext('AppState.pinFilter', context), 'none');
