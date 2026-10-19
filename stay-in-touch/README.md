@@ -18,6 +18,8 @@ Open [`index.html`](index.html) in a browser. No build step or package installat
 
 The header sakura changes from summer to autumn with average garden vitality. The browser tab and home-screen icon use the static summer sakura.
 
+On the first mobile visit, Cultivate offers an **Add to Home Screen** prompt. Supported browsers can install directly; on iOS, follow the Share → **Add to Home Screen** instructions. Dismissing the prompt remembers the choice on that device. Installation requires the page to be served over HTTPS.
+
 ## Vitality and watering
 
 Vitality ranges from 0% to 100% and decays between interactions at a rate set by that connection's cadence target. Default targets are 14 days for Inner Circle, 30 days for Close Circle, 90 days for Wider Network, 180 days for Extended Network, and 365 days for Annual+ Network. Existing Long Range profiles migrate to Extended Network and keep their saved cadence. Every tier can decay to 0%; there are no vitality protection floors.
@@ -44,7 +46,7 @@ The page can request browser notification permission for check-in reminders. Ava
 
 The sticky **Vote for Mobile** banner opens a mobile-app interest form with a one-tap preference question and an optional email follow-up. The **Open in Safari/Chrome** link opens the garden in a new browser tab. The **Pro** button and the **Auto-Sync** button in the Add dialog open their own waitlist forms. The share icon beside the vitality score opens the native share sheet or copies a snippet with a link to devonoverbey.com/tools.
 
-Waitlist emails and anonymous events (`page_visit`, `first_seed_planted`, `first_plant_watered`, `pro_click`, `autosync_click`, `app_click`, `app_preference_selected`, `app_waitlist_submitted`, `open_browser_click`, `share_click`, `waitlist_submitted`) are written to Supabase. Events carry a random per-browser id and never include contact names or notes. Nothing is sent when the page is opened from `file:` or `localhost`, or when signed in to an excluded owner account. Run this once in the Supabase SQL editor to create the tables. The anon key can insert but not read:
+Waitlist emails and anonymous events (`page_visit`, `first_seed_planted`, `first_plant_watered`, `pro_click`, `autosync_click`, `app_click`, `app_preference_selected`, `app_waitlist_submitted`, `open_browser_click`, `pwa_install_prompt_shown`, `pwa_install_available`, `pwa_install_prompt_dismissed`, `pwa_install_accepted`, `pwa_install_dismissed`, `pwa_installed`, `share_click`, `waitlist_submitted`) are written to Supabase. Events carry a random per-browser id and never include contact names or notes. Nothing is sent when the page is opened from `file:` or `localhost`, or when signed in to an excluded owner account. Run this once in the Supabase SQL editor to create the tables. The anon key can insert but not read:
 
 ```sql
 create table public.cultivate_waitlist (
