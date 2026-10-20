@@ -509,6 +509,10 @@
             <option value="US">United States Counties</option>
             <option value="INTL">All Worldwide Counties / Districts</option>
           </select>
+          <div id="scratchCountyMapControls" class="hidden items-center justify-between gap-3">
+            <p class="text-[11px] text-slate-400">Scroll to zoom; drag to pan.</p>
+            <button id="btnResetScratchCountyZoom" type="button" class="rounded-lg bg-slate-800 px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-700">Reset zoom</button>
+          </div>
           <p id="scratchCountySearchHint" class="text-[11px] text-slate-400">Choose a country or region, then search by county name or ID. Activate a result to cycle its status, just like clicking the map.</p>
           <input id="scratchCountySearch" type="search" autocomplete="off" placeholder="County, district, country, or ID" aria-label="Find a county or district to mark" aria-controls="scratchCountyResults"
             class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-xs text-slate-200">
@@ -517,7 +521,7 @@
         </section>
         <!-- SVG Map Render Card -->
         <div id="scratchPoliticalMap" class="rpg-panel p-4 rounded-2xl flex items-center justify-center min-h-[500px]">
-          <svg id="svgScratchMap" class="w-full max-h-[640px] drop-shadow-2xl"></svg>
+          <svg id="svgScratchMap" class="w-full max-h-[640px] overflow-hidden touch-none drop-shadow-2xl"></svg>
         </div>
         <section id="scratchMicroStates" class="rpg-panel p-4 rounded-2xl space-y-3 hidden" aria-labelledby="scratchMicroStatesTitle">
           <div class="flex flex-wrap items-start justify-between gap-3">
@@ -962,14 +966,14 @@
     </form>
   </div>
 
-  <script src="./nps-catalog.js?v=20261020-custom-coordinate-stops"></script>
-  <script src="./national-parks-scratch.js?v=20261020-custom-coordinate-stops"></script>
-  <script src="./international-parks.js?v=20261020-custom-coordinate-stops"></script>
-  <script src="./ecoregions.js?v=20261020-custom-coordinate-stops"></script>
-  <script src="./coordinate-lookups.js?v=20261020-custom-coordinate-stops"></script>
-  <script src="./micro-states.js?v=20261020-custom-coordinate-stops"></script>
-  <script src="./travel-ledger.js?v=20261020-custom-coordinate-stops"></script>
-  <script src="./rarity-config.js?v=20261020-custom-coordinate-stops"></script>
+  <script src="./nps-catalog.js?v=20261020-global-county-zoom"></script>
+  <script src="./national-parks-scratch.js?v=20261020-global-county-zoom"></script>
+  <script src="./international-parks.js?v=20261020-global-county-zoom"></script>
+  <script src="./ecoregions.js?v=20261020-global-county-zoom"></script>
+  <script src="./coordinate-lookups.js?v=20261020-global-county-zoom"></script>
+  <script src="./micro-states.js?v=20261020-global-county-zoom"></script>
+  <script src="./travel-ledger.js?v=20261020-global-county-zoom"></script>
+  <script src="./rarity-config.js?v=20261020-global-county-zoom"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -3764,6 +3768,9 @@
 
     let renderedScratchDataset = null;
     let renderedCountyFeatures = null;
+    let countyScratchZoom = null;
+    let countyScratchZoomBehavior = null;
+    let countyScratchZoomKey = null;
     let worldSubdivisionZoom = null;
     let worldSubdivisionZoomBehavior = null;
 
@@ -3857,6 +3864,7 @@
     function renderScratchMap() {
       const isParks = AppState.scratchDataset === 'nationalparks';
       const isSubdivisions = AppState.scratchDataset === 'subdivisions';
+      const isCounties = AppState.scratchDataset === 'counties';
       const isCountySearch = isSubdivisions || AppState.scratchDataset === 'counties';
       for (const id of ['scratchPoliticalMap', 'scratchPoliticalHint', 'scratchPoliticalLegend', 'scratchStatsLabel']) {
         document.getElementById(id).classList.toggle('hidden', isParks);
@@ -3866,6 +3874,10 @@
       document.getElementById('scratchCountySearchPanel').classList.toggle('hidden', !isCountySearch);
       document.getElementById('scratchCountyCountryFilterLabel').classList.toggle('hidden', AppState.scratchDataset !== 'counties');
       document.getElementById('scratchCountyCountryFilter').classList.toggle('hidden', AppState.scratchDataset !== 'counties');
+      const countyMapControls = document.getElementById('scratchCountyMapControls');
+      const showCountyMapControls = AppState.scratchDataset === 'counties';
+      countyMapControls.classList.toggle('hidden', !showCountyMapControls);
+      countyMapControls.classList.toggle('flex', showCountyMapControls);
       document.getElementById('scratchCountySearchTitle').textContent =
         isSubdivisions ? 'Find a World State or Province' : 'Find a County or District';
       document.getElementById('scratchCountySearchHint').textContent = isSubdivisions
@@ -3891,22 +3903,26 @@
         return;
       }
       const svg = d3.select('#svgScratchMap');
+      if (!isCounties) svg.on('.zoom', null);
       if (isSubdivisions) {
         renderWorldSubdivisionsMap(svg);
         return;
       }
       const isWorld = AppState.scratchDataset === 'world';
-      const isCounties = AppState.scratchDataset === 'counties';
       const features = isWorld ? (worldGeoJson || []) : isCounties ? scratchCountyFeatures() : (usaGeoJson || []);
       const colors = TravelLedger.colors;
       const status = feature => scratchStatuses(feature)[scratchStatusKey(feature)];
+      const countyMapKey = isCounties
+        ? document.getElementById('scratchCountyCountryFilter').value || 'US' : null;
       const reuseCountyMap = isCounties && renderedScratchDataset === 'counties' &&
-        renderedCountyFeatures === features && features.length > 0;
+        renderedCountyFeatures === features && countyScratchZoomKey === countyMapKey && features.length > 0;
 
       if (!reuseCountyMap) {
         svg.html('');
         renderedScratchDataset = AppState.scratchDataset;
         renderedCountyFeatures = null;
+        if (isCounties && countyScratchZoomKey !== countyMapKey) countyScratchZoom = d3.zoomIdentity;
+        if (isCounties) countyScratchZoomKey = countyMapKey;
       }
 
       if (!features.length) {
@@ -3933,8 +3949,11 @@
       const pathGenerator = projection ? d3.geoPath(projection) : null;
 
       const worldwideCounties = isCounties && document.getElementById('scratchCountyCountryFilter').value === 'INTL';
+      const countyMapLayer = isCounties
+        ? reuseCountyMap ? svg.select('.scratch-county-zoom') : svg.append('g').attr('class', 'scratch-county-zoom')
+        : svg;
       if (worldwideCounties && !reuseCountyMap) {
-        svg.append('g').attr('class', 'scratch-us-state-underlay')
+        countyMapLayer.append('g').attr('class', 'scratch-us-state-underlay')
           .selectAll('path').data(usaGeoJson || []).join('path')
           .attr('d', pathGenerator)
           .attr('fill', feature =>
@@ -3943,9 +3962,9 @@
           .attr('stroke-width', 0.45)
           .attr('pointer-events', 'none');
       }
-      const regionLayer = reuseCountyMap ? null : svg.append('g').attr('class', 'scratch-regions');
+      const regionLayer = reuseCountyMap ? null : countyMapLayer.append('g').attr('class', 'scratch-regions');
       const regionPaths = reuseCountyMap
-        ? svg.selectAll('.scratch-regions path')
+        ? countyMapLayer.selectAll('.scratch-regions path')
         : regionLayer.selectAll('path').data(features).join('path');
       if (!reuseCountyMap) regionPaths.attr('d', pathGenerator);
       regionPaths
@@ -3967,10 +3986,22 @@
 
       if (isCounties && document.getElementById('scratchCountyCountryFilter').value === 'US' &&
           scratchStateMesh && !reuseCountyMap) {
-        svg.append('path').attr('class', 'scratch-state-borders')
+        countyMapLayer.append('path').attr('class', 'scratch-state-borders')
           .attr('d', pathGenerator(scratchStateMesh)).attr('fill', 'none')
           .attr('stroke', '#cbd5e1').attr('stroke-opacity', 0.35).attr('stroke-width', 0.8)
           .attr('pointer-events', 'none');
+      }
+      if (isCounties) {
+        if (!countyScratchZoomBehavior || !reuseCountyMap) {
+          countyScratchZoomBehavior = d3.zoom().extent([[0, 0], [W, H]])
+            .scaleExtent([1, 12]).translateExtent([[0, 0], [W, H]])
+            .on('zoom', event => {
+              countyScratchZoom = event.transform;
+              countyMapLayer.attr('transform', event.transform);
+            });
+        }
+        svg.call(countyScratchZoomBehavior)
+          .call(countyScratchZoomBehavior.transform, countyScratchZoom || d3.zoomIdentity);
       }
       // Update scratch counter
       let claimedCount = features.filter(feature => TravelLedger.isVisited(status(feature))).length;
@@ -4126,11 +4157,22 @@
       return subdivisionCountryNames.get(country) || country;
     }
 
+    let scratchCountyFeatureCache = { counties: null, international: null, featuresByFilter: new Map() };
     function scratchCountyFeatures() {
       const filter = document.getElementById('scratchCountyCountryFilter').value || 'US';
-      if (filter === 'US') return countyGeoJson || [];
-      if (filter === 'INTL') return [...(countyGeoJson || []), ...(internationalCountyGeoJson || [])];
-      return (internationalCountyGeoJson || []).filter(feature => countyCountryCode(feature) === filter);
+      const counties = countyGeoJson || [];
+      const international = internationalCountyGeoJson || [];
+      if (scratchCountyFeatureCache.counties !== counties ||
+          scratchCountyFeatureCache.international !== international) {
+        scratchCountyFeatureCache = { counties, international, featuresByFilter: new Map() };
+      }
+      if (!scratchCountyFeatureCache.featuresByFilter.has(filter)) {
+        const features = filter === 'US' ? counties :
+          filter === 'INTL' ? [...counties, ...international] :
+            international.filter(feature => countyCountryCode(feature) === filter);
+        scratchCountyFeatureCache.featuresByFilter.set(filter, features);
+      }
+      return scratchCountyFeatureCache.featuresByFilter.get(filter);
     }
 
     function scratchSubdivisionFeatures() {
@@ -4219,6 +4261,11 @@
     document.getElementById('scratchCountyCountryFilter').addEventListener('change', () => {
       document.getElementById('scratchCountySearch').value = '';
       renderScratchMap();
+    });
+    document.getElementById('btnResetScratchCountyZoom').addEventListener('click', () => {
+      if (countyScratchZoomBehavior) {
+        d3.select('#svgScratchMap').call(countyScratchZoomBehavior.transform, d3.zoomIdentity);
+      }
     });
     document.getElementById('scratchCountySearch').addEventListener('keydown', event => {
       if (event.key !== 'Enter') return;
@@ -5162,7 +5209,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261020-custom-coordinate-stops"></script>
+  <script src="./expedition-ui.js?v=20261020-global-county-zoom"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);

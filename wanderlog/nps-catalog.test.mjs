@@ -140,7 +140,7 @@ check('mobile RPG HUD starts collapsed with an accessible stats toggle', () => {
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261020-custom-coordinate-stops')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261020-global-county-zoom')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('storage-risk banner and unfinished-trip recovery controls are present', () => {
@@ -2097,12 +2097,15 @@ const scratchNodes = [];
 let scratchFeatures = [];
 const projectionCalls = [];
 const generatedScratchPaths = [];
+const scratchZoomTransforms = [];
+let scratchZoomHandler = null;
 function scratchSelection(tag = 'svg', data = []) {
   const node = { tag, attrs: {}, data };
   scratchNodes.push(node);
   return {
     html() { scratchNodes.length = 0; return this; },
     append(tag) { return scratchSelection(tag, node.data); },
+    select() { return scratchSelection(); },
     attr(name, value) { node.attrs[name] = typeof value === 'function' ? node.data.map(value) : value; return this; },
     selectAll() { return this; },
     data(values) { node.data = values; scratchFeatures = values; return this; },
@@ -2117,6 +2120,22 @@ context.d3 = {
   geoContains: () => true, select: () => scratchSelection(),
   geoAlbersUsa: () => ({ fitSize() { projectionCalls.push('usa'); } }),
   geoNaturalEarth1: () => ({ fitSize() { projectionCalls.push('world'); } }),
+  zoom: () => {
+    const behavior = () => {};
+    behavior.extent = () => behavior;
+    behavior.scaleExtent = value => { behavior.scale = value; return behavior; };
+    behavior.translateExtent = () => behavior;
+    behavior.on = (name, handler) => {
+      if (name === 'zoom') {
+        scratchZoomHandler = handler;
+        context.scratchZoomHandler = handler;
+      }
+      return behavior;
+    };
+    behavior.transform = (selection, transform) => { scratchZoomTransforms.push(transform); return selection; };
+    return behavior;
+  },
+  zoomIdentity: { toString: () => 'translate(0,0) scale(1)' },
   geoPath: (...args) => args.length ? feature => {
     generatedScratchPaths.push(feature);
     return `path-${feature.id || 'mesh'}`;
@@ -2158,6 +2177,15 @@ check('county scratch view renders all four exact colors and noninteractive fain
   assert.equal(mesh.attrs['pointer-events'], 'none');
   assert.equal(mesh.attrs['stroke-opacity'], 0.35);
   assert.equal(element('scratchStatsLabel').textContent, '2 / 4 Visited/Lived · 1 Transited');
+  assert.equal(vm.runInContext('countyScratchZoomBehavior.scale.join(",")', context), '1,12');
+  const initialPathCount = generatedScratchPaths.length;
+  vm.runInContext('scratchZoomHandler({transform:{toString:()=>"translate(12,8) scale(2)"}})', context);
+  assert.equal(vm.runInContext('countyScratchZoom.toString()', context), 'translate(12,8) scale(2)');
+  vm.runInContext('renderScratchMap()', context);
+  assert.equal(generatedScratchPaths.length, initialPathCount, 'zoom and status refresh should not regenerate county geometry paths');
+  element('btnResetScratchCountyZoom').handlers.click();
+  assert.equal(scratchZoomTransforms.at(-1), context.d3.zoomIdentity);
+  assert.ok(html.includes('id="scratchCountyMapControls"'));
 });
 check('National Parks dataset stays in Scratch Map and other dataset buttons still return to political maps', () => {
   const renderParks = vm.runInContext('renderNationalParksScratch', context);
