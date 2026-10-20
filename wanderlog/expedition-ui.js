@@ -387,6 +387,35 @@ function addMicroStateStop(entry) {
   dismissPlaceSuggestions(false, true);
 }
 
+function addCustomCoordinateStop() {
+  if (AppState.viewOnly || expeditionPending) return;
+  const nameInput = document.getElementById('expeditionCoordinateName');
+  const latInput = document.getElementById('expeditionCoordinateLat');
+  const lngInput = document.getElementById('expeditionCoordinateLng');
+  try {
+    if (!latInput.value.trim() || !lngInput.value.trim()) {
+      throw new Error('Enter both a latitude and longitude.');
+    }
+    const lat = Number(latInput.value);
+    const lng = Number(lngInput.value);
+    CoordinateLookups.validateCoordinates(lat, lng);
+    const name = nameInput.value.trim() || `Coordinates ${lat}, ${lng}`;
+    if (name.length > 100) throw new Error('Stop names must be 100 characters or fewer.');
+    expeditionDraft.push({
+      kind: 'place', id: `coord_${crypto.randomUUID()}`, name, coords: [lat, lng], travelMode: 'road'
+    });
+    nameInput.value = '';
+    latInput.value = '';
+    lngInput.value = '';
+    invalidateExpeditionRoutes();
+    renderExpeditionStops();
+    document.getElementById('expeditionStatus').textContent = `${name} added. Preview routes before saving.`;
+  } catch (error) {
+    console.error('Custom coordinate stop rejected', error);
+    document.getElementById('expeditionStatus').textContent = `Coordinate stop not added: ${error.message}`;
+  }
+}
+
 function invalidateExpeditionRoutes() {
   expeditionPreparedLegs = null;
   expeditionPreparedKey = null;
@@ -1698,6 +1727,7 @@ document.getElementById('btnRestoreExpeditionDraft').addEventListener('click', r
 document.getElementById('btnRestoreDraftFromTravel').addEventListener('click', restoreSavedExpeditionDraft);
 document.getElementById('btnDownloadExpeditionRecovery').addEventListener('click', downloadExpeditionRecovery);
 document.getElementById('expeditionSearch').addEventListener('input', renderExpeditionSearch);
+document.getElementById('btnAddExpeditionCoordinate').addEventListener('click', addCustomCoordinateStop);
 document.getElementById('expeditionForm').addEventListener('submit', saveExpedition);
 document.getElementById('btnPreviewExpedition').addEventListener('click', previewExpeditionRoutes);
 document.getElementById('btnImportExpeditionRoute').addEventListener('click', () =>

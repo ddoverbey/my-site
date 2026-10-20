@@ -140,7 +140,7 @@ check('mobile RPG HUD starts collapsed with an accessible stats toggle', () => {
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261019-world-states-only')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261020-custom-coordinate-stops')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('storage-risk banner and unfinished-trip recovery controls are present', () => {
@@ -3489,6 +3489,42 @@ check('city and airport searches show selectable validated coordinates without c
   assert.equal(vm.runInContext('expeditionDraft[0].kind',context),'place');
   assert.deepEqual(Array.from(vm.runInContext('expeditionDraft[0].coords',context)),[32.7338,-117.1933]);
   assert.equal(vm.runInContext('AppState.expeditions.length',context),0);
+});
+check('custom coordinate stops can be added with an optional name and join the route itinerary', () => {
+  assert.match(html, /<details class="rounded-lg border border-slate-700 bg-slate-950\/40 p-3">\s*<summary[^>]*>Add custom coordinates<\/summary>/);
+  assert.doesNotMatch(html, /id="expeditionCoordinate(?:Lat|Lng)"[^>]*required/);
+  context.crypto = { randomUUID: () => 'manual-stop' };
+  element('expeditionCoordinateName').value = 'Hidden waterfall';
+  element('expeditionCoordinateLat').value = '33.542056';
+  element('expeditionCoordinateLng').value = '-85.715361';
+  element('btnAddExpeditionCoordinate').handlers.click();
+  const named = vm.runInContext('expeditionDraft[1]', context);
+  assert.equal(named.kind, 'place');
+  assert.equal(named.id, 'coord_manual-stop');
+  assert.equal(named.name, 'Hidden waterfall');
+  assert.deepEqual(Array.from(named.coords), [33.542056, -85.715361]);
+  element('expeditionCoordinateName').value = '';
+  element('expeditionCoordinateLat').value = '0';
+  element('expeditionCoordinateLng').value = '0';
+  element('btnAddExpeditionCoordinate').handlers.click();
+  const unnamed = vm.runInContext('expeditionDraft[2]', context);
+  assert.equal(unnamed.name, 'Coordinates 0, 0');
+  assert.deepEqual(Array.from(unnamed.coords), [0, 0]);
+  assert.equal(vm.runInContext('expeditionPreparedLegs', context), null);
+  vm.runInContext('expeditionDraft.splice(1);invalidateExpeditionRoutes();renderExpeditionStops()', context);
+});
+check('invalid or incomplete custom coordinates report an error without changing the itinerary', () => {
+  const before = vm.runInContext('expeditionDraft.length', context);
+  element('expeditionCoordinateLat').value = '91';
+  element('expeditionCoordinateLng').value = '0';
+  element('btnAddExpeditionCoordinate').handlers.click();
+  assert.equal(vm.runInContext('expeditionDraft.length', context), before);
+  assert.match(element('expeditionStatus').textContent, /latitude/i);
+  element('expeditionCoordinateLat').value = '';
+  element('expeditionCoordinateLng').value = '0';
+  element('btnAddExpeditionCoordinate').handlers.click();
+  assert.equal(vm.runInContext('expeditionDraft.length', context), before);
+  assert.match(element('expeditionStatus').textContent, /both a latitude and longitude/i);
 });
 context.fetch=async()=>({ok:true,json:async()=>({features:[{geometry:{type:'Point',coordinates:[0,'bad']},properties:{name:'Invalid'}}]})});
 element('expeditionSearch').value='Invalid';

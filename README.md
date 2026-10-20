@@ -554,7 +554,10 @@ data shows retry guidance instead of a misleading completion count.
 2. Search parks, saved POIs or counties locally. City/airport suggestions appear automatically
    through Photon after a 300 ms debounce; click a result to add it and clear the search.
    No separate search button is needed. `SAN` and `DEN` expand to
-   their full airport names; other airports can be searched by full name or code.
+   their full airport names; other airports can be searched by full name or code. To add a
+   location that search cannot find, expand **Add custom coordinates**, enter decimal-degree
+   latitude and longitude, and optionally name the stop. Unnamed stops use their coordinates
+   as the display name.
 3. Add stops in travel order, with a separate mode between each pair:
    **Drive / Road Trip**, **AWD/Off-Road**, **Flight**, **Ferry / Boat**, **Rail / Train**, or **Walk / Hike**.
    Drag a stop by its grip to reorder it with a mouse or touch; keyboard users can focus the
