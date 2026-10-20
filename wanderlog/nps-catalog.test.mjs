@@ -2901,7 +2901,7 @@ for (const [rarity, filename] of unmetAchievementImages) {
   assert.equal(data.subarray(1, 4).toString(), 'PNG', `${rarity} locked artwork exists and is PNG`);
 }
 check('achievement artwork maps all supplied images to real tiers and preserves emoji fallbacks', () => {
-  assert.equal(achievementImages.length, 15);
+  assert.equal(achievementImages.length, 31);
   for (const [title, filename] of achievementImages) {
     context.artworkTitle = title;
     const markup = vm.runInContext(`(()=>{
@@ -2911,7 +2911,7 @@ check('achievement artwork maps all supplied images to real tiers and preserves 
     assert.ok(markup.includes(`./assets/achievements/${filename}`), title);
     assert.ok(markup.includes('alt=""'), title);
   }
-  assert.ok(vm.runInContext("achievementIconMarkup(ACHIEVEMENTS[0],ACHIEVEMENTS[0].tiers[2])", context).includes('🏕️'));
+  assert.ok(vm.runInContext("achievementIconMarkup({icon:'🏕️'},{title:'Unmapped test tier'})", context).includes('🏕️'));
   assert.ok(html.includes('achievementIconMarkup(achievement, completed)'));
   assert.ok(html.includes('achievementIconMarkup(ach, iconTier, unmet)'));
   delete context.artworkTitle;
@@ -3035,7 +3035,7 @@ check('regional music achievements disclose partial prerequisites and award colo
   assert.ok(!element('achievementsContainer').innerHTML.includes('Rocky Mountain High'));
   vm.runInContext("AppState.pins.shen='v';AppState.counties['08065']='l';renderPassportView()", context);
   const badges = element('earnedAchievementBadges').innerHTML;
-  assert.ok(badges.includes('🛣️🏡'));
+  assert.ok(badges.includes('assets/achievements/country-roads.png'));
   assert.ok(badges.includes('assets/achievements/rocky-mountain-high.png'));
   assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='countryRoads').tiers[0].rarity", context), 'rare');
   assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='rockyMountainHigh').tiers[0].rarity", context), 'uncommon');
