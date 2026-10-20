@@ -127,7 +127,7 @@ function parseRouteFixture(text, filename) {
 }
 check('mobile RPG HUD starts collapsed with an accessible stats toggle', () => {
   const hudBodyStart = html.indexOf('<div id="rpgMapHudBody">');
-  const hudContentEnd = html.indexOf('<!-- Map Legend', hudBodyStart);
+  const hudContentEnd = html.indexOf('<!-- Quick Compass / Recenter on Home', hudBodyStart);
   const hudBody = html.slice(hudBodyStart, hudContentEnd);
   assert.ok(hudBodyStart >= 0 && hudContentEnd > hudBodyStart);
   assert.match(html, /@media \(max-width: 767px\)[\s\S]*#rpgMapHud:not\(\[data-collapsed="false"\]\) #rpgMapHudBody/);
@@ -503,12 +503,14 @@ check('catalog failures are surfaced', () => {
   assert.ok(element('npsCatalogStatus').textContent.includes('unavailable'));
   assert.equal(element('toastTitle').textContent, 'NPS catalog unavailable');
 });
-check('dataset status lives inside Settings rather than over the map legend', () => {
+check('dataset status lives in Settings and the obsolete map legend is removed', () => {
   const settings = html.slice(html.indexOf('<details id="settingsMenu"'), html.indexOf('</details>'));
   assert.ok(settings.includes('id="npsCatalogStatus"'));
   assert.ok(settings.includes('id="btnRetryNps"'));
   assert.ok(settings.includes('aria-label="Settings"'));
   assert.ok(html.includes('isolate z-0 overflow-hidden'));
+  assert.ok(!html.includes('id="rpgMapLegend"'));
+  assert.ok(!html.includes('<!-- Map Legend'));
 });
 check('progressive oceans and water-only corridors use a cached combined land stencil', () => {
   assert.ok(html.includes('TravelLedger.waterFogRoutes(exp)'));

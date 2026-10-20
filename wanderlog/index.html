@@ -467,26 +467,6 @@
         </div>
       </div>
 
-      <!-- Map Legend (Bottom Left) -->
-      <div id="rpgMapLegend" class="absolute bottom-20 sm:bottom-6 left-4 max-w-[calc(100%-2rem)] z-[460] rpg-panel rounded-xl px-3 py-2 text-xs flex items-center gap-4 text-slate-300">
-        <!-- Optional fog toggle: restore this control and its commented JavaScript hooks together.
-        <label class="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" id="fogToggleCheckbox" checked class="rounded border-slate-700 text-amber-500 focus:ring-0">
-          <span class="font-medium text-amber-200">Dense Fog Shroud</span>
-        </label>
-        <span class="h-3 w-px bg-slate-700"></span>
-        -->
-        <!-- Temporarily disabled while the pin architecture is removed.
-        <div class="flex flex-wrap items-center gap-3 text-[11px] text-slate-400">
-          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Visited (Aura)</span>
-          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-pink-500"></span> Wishlist</span>
-          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-slate-500"></span> Transited</span>
-          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span> Lived 🏰</span>
-          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-slate-600"></span> Unexplored</span>
-        </div>
-        -->
-      </div>
-
       <!-- Quick Compass / Recenter on Home (Bottom Right) -->
       <button id="btnRecenterHome" class="absolute bottom-6 right-4 z-[460] rpg-panel rounded-xl px-3 py-2.5 text-xs font-semibold text-amber-300 hover:text-amber-200 flex items-center gap-2 hover:border-amber-400/50 transition-all">
         <span>🏰</span> Jump to Home Citadel
@@ -4883,7 +4863,6 @@
       document.body.classList.toggle('mode-classic', AppState.mode === 'classic');
       document.getElementById('rpgMapHud').classList.toggle('hidden', AppState.mode === 'classic');
       const showRpgMapControls = AppState.mode === 'rpg' && AppState.currentTab === 'map';
-      document.getElementById('rpgMapLegend').classList.toggle('hidden', !showRpgMapControls);
       document.getElementById('btnRecenterHome').classList.toggle('hidden', !showRpgMapControls);
       document.getElementById('toggleRpgMode').setAttribute('aria-pressed', String(showRpgMapControls));
       document.getElementById('toggleClassicMode').setAttribute('aria-pressed', String(AppState.mode === 'classic' && AppState.currentTab === 'bucketlist'));
