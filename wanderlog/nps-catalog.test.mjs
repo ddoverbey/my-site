@@ -140,7 +140,7 @@ check('mobile RPG HUD starts collapsed with an accessible stats toggle', () => {
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261019-bounded-route-lookups')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261019-world-us-scratch')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('storage-risk banner and unfinished-trip recovery controls are present', () => {
@@ -4002,18 +4002,25 @@ check('international County and District filter searches and cycles the selected
   };
   context.countryFilterDistrict = district;
   context.countryFilterProvince = province;
+  context.countryFilterUsCounty = {
+    type: 'Feature', id: '06001',
+    properties: { name: 'Alameda County', country: 'United States of America' },
+    geometry: district.geometry
+  };
   vm.runInContext(`
     globalThis.countryFilterSaved = {
       countyGeoJson, internationalCountyGeoJson, worldSubdivisionGeoJson,
-      feature: countyFeaturesById['CAN:CD-ON'], state: { ...AppState },
+      feature: countyFeaturesById['CAN:CD-ON'], usCountyFeature: countyFeaturesById['06001'],
+      state: { ...AppState },
       commitLedger, refreshTravelUI, showNotification,
       filterValue: document.getElementById('scratchCountyCountryFilter').value,
       filterHtml: document.getElementById('scratchCountyCountryFilter').innerHTML
     };
-    countyGeoJson = [];
+    countyGeoJson = [countryFilterUsCounty];
     internationalCountyGeoJson = [countryFilterDistrict];
     worldSubdivisionGeoJson = [countryFilterProvince];
     countyFeaturesById['CAN:CD-ON'] = countryFilterDistrict;
+    countyFeaturesById['06001'] = countryFilterUsCounty;
     AppState.scratchDataset = 'counties';
     AppState.counties = {};
     AppState.viewOnly = false;
@@ -4022,6 +4029,7 @@ check('international County and District filter searches and cycles the selected
     commitLedger = change => {
       change();
       AppState.counties['CAN:CD-ON'] = AppState.statusOverrides.counties['CAN:CD-ON'];
+      AppState.counties['06001'] = AppState.statusOverrides.counties['06001'];
     };
     refreshTravelUI = () => {};
     showNotification = () => {};
@@ -4029,12 +4037,20 @@ check('international County and District filter searches and cycles the selected
   `, context);
   try {
     assert.ok(element('scratchCountyCountryFilter').innerHTML.includes('value="CAN">Canada'));
+    assert.ok(element('scratchCountyCountryFilter').innerHTML.includes('All Worldwide Counties / Districts'));
+    assert.equal(vm.runInContext('scratchCountyFeatures().length', context), 1);
     element('scratchCountyCountryFilter').value = 'CAN';
     assert.equal(vm.runInContext('scratchCountyFeatures().length', context), 1);
     assert.equal(vm.runInContext('scratchCountyMatches("Ottawa Division Canada")[0].id', context), 'CAN:CD-ON');
     vm.runInContext('cycleScratchStatus(scratchCountyMatches("Ottawa")[0])', context);
     assert.equal(vm.runInContext("AppState.statusOverrides.counties['CAN:CD-ON']", context), 'v');
     assert.equal(vm.runInContext("AppState.counties['CAN:CD-ON']", context), 'v');
+    element('scratchCountyCountryFilter').value = 'INTL';
+    assert.equal(vm.runInContext('scratchCountyFeatures().length', context), 2);
+    assert.equal(vm.runInContext('scratchCountyMatches("Alameda County")[0].id', context), '06001');
+    vm.runInContext('cycleScratchStatus(scratchCountyMatches("Alameda County")[0])', context);
+    assert.equal(vm.runInContext("AppState.statusOverrides.counties['06001']", context), 'v');
+    assert.equal(vm.runInContext("AppState.counties['06001']", context), 'v');
   } finally {
     vm.runInContext(`
       countyGeoJson = countryFilterSaved.countyGeoJson;
@@ -4042,6 +4058,8 @@ check('international County and District filter searches and cycles the selected
       worldSubdivisionGeoJson = countryFilterSaved.worldSubdivisionGeoJson;
       if (countryFilterSaved.feature) countyFeaturesById['CAN:CD-ON'] = countryFilterSaved.feature;
       else delete countyFeaturesById['CAN:CD-ON'];
+      if (countryFilterSaved.usCountyFeature) countyFeaturesById['06001'] = countryFilterSaved.usCountyFeature;
+      else delete countyFeaturesById['06001'];
       Object.assign(AppState, countryFilterSaved.state);
       commitLedger = countryFilterSaved.commitLedger;
       refreshTravelUI = countryFilterSaved.refreshTravelUI;
@@ -4067,10 +4085,19 @@ check('World States and Provinces render global polygons with zoom and cycle reg
     type: 'Feature', id: '06', properties: { name: 'California' },
     geometry: { type: 'Polygon', coordinates: [[[-125,30],[-113,30],[-113,42],[-125,42],[-125,30]]] }
   };
+  const usCounty = {
+    type: 'Feature', id: 6001, properties: { name: 'Alameda County' },
+    geometry: usState.geometry
+  };
+  const usCountyFeatures = [usCounty];
   const zoomIdentity = { toString: () => 'translate(0,0) scale(1)' };
   context.d3 = {
     ...d3Geo,
     select: () => scratchSelection(),
+    geoPath: () => feature => {
+      generatedScratchPaths.push(feature);
+      return `scratch-path-${feature.id || 'mesh'}`;
+    },
     zoom: () => {
       const behavior = () => {};
       behavior.extent = () => behavior;
@@ -4084,16 +4111,20 @@ check('World States and Provinces render global polygons with zoom and cycle reg
   };
   context.worldSubdivisionFeature = subdivision;
   context.usSubdivisionState = usState;
+  context.worldSubdivisionUsCounty = usCounty;
   vm.runInContext(`
     globalThis.subdivisionScratchSaved = {
       worldSubdivisionGeoJson, usaGeoJson, countyFeature: countyFeaturesById['CAN:ON-01'],
+      countyGeoJson, usCountyFeature: countyFeaturesById['06001'],
       state: { ...AppState }, zoom: worldSubdivisionZoom, zoomBehavior: worldSubdivisionZoomBehavior,
       renderedDataset: renderedScratchDataset, renderedCountyFeatures, projection: scratchProjection,
       mapHeight: scratchMapHeight, commitLedger, refreshTravelUI, showNotification
     };
     worldSubdivisionGeoJson = [worldSubdivisionFeature];
     usaGeoJson = [usSubdivisionState];
+    countyGeoJson = [worldSubdivisionUsCounty];
     countyFeaturesById['CAN:ON-01'] = worldSubdivisionFeature;
+    countyFeaturesById['06001'] = worldSubdivisionUsCounty;
     AppState.scratchDataset = 'counties';
     AppState.currentTab = 'scratch';
     AppState.viewOnly = false;
@@ -4103,23 +4134,30 @@ check('World States and Provinces render global polygons with zoom and cycle reg
     commitLedger = change => {
       change();
       AppState.regions['s:CAN:ON-01'] = AppState.statusOverrides.regions['s:CAN:ON-01'];
+      Object.assign(AppState.counties, AppState.statusOverrides.counties);
     };
     refreshTravelUI = () => {};
     showNotification = () => {};
 `, context);
   try {
     scratchNodes.length = 0;
+    generatedScratchPaths.length = 0;
     element('btnScratchWorldSubdivisions').handlers.click();
     assert.equal(vm.runInContext('AppState.scratchDataset', context), 'subdivisions');
     assert.equal(vm.runInContext('worldSubdivisionZoomBehavior.scale.join(",")', context), '1,12');
-    const subdivisionPath = scratchNodes.find(node => node.attrs.class === 'scratch-world-subdivision');
-    assert.ok(subdivisionPath);
-    assert.equal(subdivisionPath.attrs['data-subdivision'][0], subdivisionId);
+    assert.ok(generatedScratchPaths.includes(subdivision));
+    assert.ok(usCountyFeatures.every(feature => generatedScratchPaths.includes(feature)));
+    assert.equal(vm.runInContext('scratchStatusKey(countyGeoJson[0])', context), '06001');
+    assert.equal(vm.runInContext("scratchStatusKey(worldSubdivisionGeoJson[0])", context), `s:${subdivisionId}`);
     element('scratchCountySearch').value = 'Ontario';
     assert.equal(vm.runInContext('scratchCountyMatches("Ontario")[0].id', context), subdivisionId);
-    subdivisionPath.click({ preventDefault() {} }, subdivision);
+    vm.runInContext('cycleScratchStatus(worldSubdivisionGeoJson[0])', context);
     assert.equal(vm.runInContext(`AppState.statusOverrides.regions['s:${subdivisionId}']`, context), 'v');
     assert.equal(vm.runInContext(`AppState.regions['s:${subdivisionId}']`, context), 'v');
+    assert.equal(vm.runInContext('scratchCountyMatches("Alameda")[0].id', context), usCountyFeatures[0].id);
+    vm.runInContext('cycleScratchStatus(countyGeoJson[0])', context);
+    assert.equal(vm.runInContext("AppState.statusOverrides.counties['06001']", context), 'v');
+    assert.equal(vm.runInContext("AppState.counties['06001']", context), 'v');
   } finally {
     context.d3 = previousD3;
     element('scratchCountySearch').value = searchValue;
@@ -4128,6 +4166,9 @@ check('World States and Provinces render global polygons with zoom and cycle reg
       usaGeoJson = subdivisionScratchSaved.usaGeoJson;
       if (subdivisionScratchSaved.countyFeature) countyFeaturesById['CAN:ON-01'] = subdivisionScratchSaved.countyFeature;
       else delete countyFeaturesById['CAN:ON-01'];
+      countyGeoJson = subdivisionScratchSaved.countyGeoJson;
+      if (subdivisionScratchSaved.usCountyFeature) countyFeaturesById['06001'] = subdivisionScratchSaved.usCountyFeature;
+      else delete countyFeaturesById['06001'];
       Object.assign(AppState, subdivisionScratchSaved.state);
       worldSubdivisionZoom = subdivisionScratchSaved.zoom;
       worldSubdivisionZoomBehavior = subdivisionScratchSaved.zoomBehavior;

@@ -528,7 +528,7 @@
           <select id="scratchCountyCountryFilter" aria-label="Filter counties and districts by country or region"
             class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-xs text-slate-200">
             <option value="US">United States Counties</option>
-            <option value="INTL">All International Counties / Districts</option>
+            <option value="INTL">All Worldwide Counties / Districts</option>
           </select>
           <p id="scratchCountySearchHint" class="text-[11px] text-slate-400">Choose a country or region, then search by county name or ID. Activate a result to cycle its status, just like clicking the map.</p>
           <input id="scratchCountySearch" type="search" autocomplete="off" placeholder="County, district, country, or ID" aria-label="Find a county or district to mark" aria-controls="scratchCountyResults"
@@ -965,14 +965,14 @@
     </form>
   </div>
 
-  <script src="./nps-catalog.js?v=20261019-bounded-route-lookups"></script>
-  <script src="./national-parks-scratch.js?v=20261019-bounded-route-lookups"></script>
-  <script src="./international-parks.js?v=20261019-bounded-route-lookups"></script>
-  <script src="./ecoregions.js?v=20261019-bounded-route-lookups"></script>
-  <script src="./coordinate-lookups.js?v=20261019-bounded-route-lookups"></script>
-  <script src="./micro-states.js?v=20261019-bounded-route-lookups"></script>
-  <script src="./travel-ledger.js?v=20261019-bounded-route-lookups"></script>
-  <script src="./rarity-config.js?v=20261019-bounded-route-lookups"></script>
+  <script src="./nps-catalog.js?v=20261019-world-us-scratch"></script>
+  <script src="./national-parks-scratch.js?v=20261019-world-us-scratch"></script>
+  <script src="./international-parks.js?v=20261019-world-us-scratch"></script>
+  <script src="./ecoregions.js?v=20261019-world-us-scratch"></script>
+  <script src="./coordinate-lookups.js?v=20261019-world-us-scratch"></script>
+  <script src="./micro-states.js?v=20261019-world-us-scratch"></script>
+  <script src="./travel-ledger.js?v=20261019-world-us-scratch"></script>
+  <script src="./rarity-config.js?v=20261019-world-us-scratch"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -3711,22 +3711,39 @@
     });
 
     function scratchStatusKey(feature) {
-      if (AppState.scratchDataset === 'counties') return String(feature.id).padStart(5, '0');
-      if (AppState.scratchDataset === 'subdivisions') return `s:${String(feature.id)}`;
+      const id = scratchFeatureId(feature);
+      if (scratchCountyFeature(feature)) return id;
+      if (AppState.scratchDataset === 'subdivisions') return `s:${id}`;
       return `${AppState.scratchDataset === 'world' ? 'c:' : 's:'}${feature.properties.name}`;
     }
 
-    function scratchStatuses() {
-      return AppState.scratchDataset === 'counties' ? AppState.counties : AppState.regions;
+    function scratchCountyFeature(feature) {
+      const id = String(feature.id);
+      return AppState.scratchDataset === 'counties' ||
+        (AppState.scratchDataset === 'subdivisions' && /^\d{1,5}$/.test(id));
+    }
+
+    function scratchFeatureId(feature) {
+      const id = String(feature.id);
+      return scratchCountyFeature(feature) ? id.padStart(5, '0') : id;
+    }
+
+    function scratchStatusField(feature) {
+      return scratchCountyFeature(feature) ? 'counties' : 'regions';
+    }
+
+    function scratchStatuses(feature) {
+      if (!feature) return AppState[AppState.scratchDataset === 'counties' ? 'counties' : 'regions'];
+      return AppState[scratchStatusField(feature)];
     }
 
     function cycleScratchStatus(feature) {
       if (AppState.viewOnly) return;
       const key = scratchStatusKey(feature);
-      const countyDataset = AppState.scratchDataset === 'counties';
-      const field = countyDataset ? 'counties' : 'regions';
+      const field = scratchStatusField(feature);
+      const countyDataset = field === 'counties';
       const cycle = ['un', 'v', 'w', 't', 'l'];
-      const current = scratchStatuses()[key] || 'un';
+      const current = scratchStatuses(feature)[key] || 'un';
       const next = cycle[(cycle.indexOf(current) + 1) % cycle.length];
       try {
         commitLedger(() => { AppState.statusOverrides[field][key] = next; });
@@ -3734,7 +3751,7 @@
         console.error('Scratch Map status not saved', error);
         return;
       }
-      const actual = scratchStatuses()[key];
+      const actual = scratchStatuses(feature)[key];
       const name = countyDataset ? countyLabel(key) : feature.properties.name;
       showNotification('Cartography Updated', `${name}: ${TravelLedger.labels[actual] || 'Unexplored'}.`, '🗺️');
       refreshTravelUI();
@@ -3747,7 +3764,8 @@
 
     function renderWorldSubdivisionsMap(svg) {
       const subdivisions = worldSubdivisionGeoJson || [];
-      if (!subdivisions.length) {
+      const usCounties = countyGeoJson || [];
+      if (!subdivisions.length && !usCounties.length) {
         renderedScratchDataset = null;
         renderedCountyFeatures = null;
         svg.html('');
@@ -3759,21 +3777,23 @@
 
       const W = 960;
       const H = 500;
-      const mapFeatures = [...(usaGeoJson || []), ...subdivisions];
+      const usStates = usaGeoJson || [];
+      const mapFeatures = [...usStates, ...subdivisions, ...usCounties];
       const projection = d3.geoNaturalEarth1()
         .fitSize([W, H], { type: 'FeatureCollection', features: mapFeatures });
       const path = d3.geoPath(projection);
       svg.html('').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'group')
         .attr('aria-label', 'World states and provinces scratch-off map');
       const layer = svg.append('g').attr('class', 'world-subdivisions-zoom');
-      layer.selectAll('.scratch-us-state').data(usaGeoJson || []).join('path')
+      layer.selectAll('.scratch-us-state').data(usStates).join('path')
         .attr('class', 'scratch-us-state')
         .attr('d', path)
-        .attr('fill', '#0b1526')
+        .attr('fill', feature =>
+          TravelLedger.colors[AppState.regions[`s:${feature.properties.name}`]] || '#0b1526')
         .attr('stroke', '#334155')
         .attr('stroke-width', 0.45)
         .attr('pointer-events', 'none');
-      const status = feature => AppState.regions[`s:${String(feature.id)}`];
+      const status = feature => scratchStatuses(feature)[scratchStatusKey(feature)];
       const subdivisionPaths = layer.selectAll('.scratch-world-subdivision')
         .data(subdivisions).join('path')
         .attr('class', 'scratch-world-subdivision')
@@ -3797,6 +3817,30 @@
       subdivisionPaths.append('title').text(feature =>
         `${countyLabel(String(feature.id))} • ${TravelLedger.labels[status(feature)] || 'Unexplored'}${AppState.viewOnly ? ' • Read-only' : ' • Click to cycle status'}`);
 
+      const countyStatus = feature => AppState.counties[scratchStatusKey(feature)];
+      const countyPaths = layer.selectAll('.scratch-world-us-county')
+        .data(usCounties).join('path')
+        .attr('class', 'scratch-world-us-county')
+        .attr('data-county', feature => scratchStatusKey(feature))
+        .attr('d', path)
+        .attr('stroke', feature => countyStatus(feature) === 'l' ? '#93c5fd' : '#1e293b')
+        .attr('stroke-width', feature => countyStatus(feature) === 'l' ? 0.7 : 0.18)
+        .attr('fill', feature => TravelLedger.colors[countyStatus(feature)] || 'transparent')
+        .attr('cursor', AppState.viewOnly ? 'default' : 'pointer')
+        .attr('tabindex', AppState.viewOnly ? -1 : 0)
+        .attr('aria-disabled', String(AppState.viewOnly))
+        .attr('aria-label', feature =>
+          `${countyLabel(scratchStatusKey(feature))}: ${TravelLedger.labels[countyStatus(feature)] || 'Unexplored'}`)
+        .on('click', (event, feature) => cycleScratchStatus(feature))
+        .on('keydown', (event, feature) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            cycleScratchStatus(feature);
+          }
+        });
+      countyPaths.append('title').text(feature =>
+        `${countyLabel(scratchStatusKey(feature))} • ${TravelLedger.labels[countyStatus(feature)] || 'Unexplored'}${AppState.viewOnly ? ' • Read-only' : ' • Click to cycle status'}`);
+
       worldSubdivisionZoomBehavior = d3.zoom().extent([[0, 0], [W, H]])
         .scaleExtent([1, 12]).translateExtent([[0, 0], [W, H]])
         .on('zoom', event => {
@@ -3809,10 +3853,14 @@
       renderedCountyFeatures = null;
       scratchProjection = projection;
       scratchMapHeight = H;
-      const claimed = subdivisions.filter(feature => TravelLedger.isVisited(status(feature))).length;
-      const transited = subdivisions.filter(feature => status(feature) === 't').length;
+      const stateStatuses = usStates.map(feature => AppState.regions[`s:${feature.properties.name}`]);
+      const subdivisionStatuses = subdivisions.map(status);
+      const countyStatuses = usCounties.map(countyStatus);
+      const allStatuses = [...stateStatuses, ...subdivisionStatuses, ...countyStatuses];
+      const claimed = allStatuses.filter(TravelLedger.isVisited).length;
+      const transited = allStatuses.filter(value => value === 't').length;
       document.getElementById('scratchStatsLabel').textContent =
-        `${claimed} / ${subdivisions.length} Visited/Lived · ${transited} Transited`;
+        `${claimed} / ${allStatuses.length} Visited/Lived · ${transited} Transited`;
     }
 
     function renderScratchMap() {
@@ -3830,7 +3878,7 @@
       document.getElementById('scratchCountySearchTitle').textContent =
         isSubdivisions ? 'Find a World State or Province' : 'Find a County or District';
       document.getElementById('scratchCountySearchHint').textContent = isSubdivisions
-        ? 'Find a state, province, department, prefecture, country, or subdivision ID. Activate a result to cycle its region status.'
+        ? 'Find a state, province, US county, department, prefecture, country, or subdivision ID. Activate a result to cycle its status.'
         : 'Choose a country or region, then search its counties or districts by name or ID. Activate a result to cycle its status.';
       document.getElementById('scratchCountySearch').placeholder = isSubdivisions
         ? 'State, province, country, or ID' : 'County, district, or ID';
@@ -3860,7 +3908,7 @@
       const isCounties = AppState.scratchDataset === 'counties';
       const features = isWorld ? (worldGeoJson || []) : isCounties ? scratchCountyFeatures() : (usaGeoJson || []);
       const colors = TravelLedger.colors;
-      const status = feature => scratchStatuses()[scratchStatusKey(feature)];
+      const status = feature => scratchStatuses(feature)[scratchStatusKey(feature)];
       const reuseCountyMap = isCounties && renderedScratchDataset === 'counties' &&
         renderedCountyFeatures === features && features.length > 0;
 
@@ -3893,6 +3941,17 @@
       if (projection) projection.fitSize([W, H], { type: 'FeatureCollection', features });
       const pathGenerator = projection ? d3.geoPath(projection) : null;
 
+      const worldwideCounties = isCounties && document.getElementById('scratchCountyCountryFilter').value === 'INTL';
+      if (worldwideCounties && !reuseCountyMap) {
+        svg.append('g').attr('class', 'scratch-us-state-underlay')
+          .selectAll('path').data(usaGeoJson || []).join('path')
+          .attr('d', pathGenerator)
+          .attr('fill', feature =>
+            colors[AppState.regions[`s:${feature.properties.name}`]] || '#090d1a')
+          .attr('stroke', '#334155')
+          .attr('stroke-width', 0.45)
+          .attr('pointer-events', 'none');
+      }
       const regionLayer = reuseCountyMap ? null : svg.append('g').attr('class', 'scratch-regions');
       const regionPaths = reuseCountyMap
         ? svg.selectAll('.scratch-regions path')
@@ -3901,7 +3960,8 @@
       regionPaths
         .attr('stroke', d => status(d) === 'l' ? '#93c5fd' : '#1e293b')
         .attr('stroke-width', d => status(d) === 'l' ? 1 : isCounties ? 0.25 : 0.6)
-        .attr('fill', d => colors[status(d)] || '#090d1a')
+        .attr('fill', d => colors[status(d)] ||
+          (worldwideCounties && /^\d{1,5}$/.test(String(d.id)) ? 'transparent' : '#090d1a'))
         .attr('cursor', AppState.viewOnly ? 'default' : 'pointer')
         .attr('title', d => {
           const name = isCounties ? countyLabel(scratchStatusKey(d)) : d.properties.name;
@@ -4065,7 +4125,7 @@
     let subdivisionCountryNames = new Map();
 
     function countyCountryLabel(feature) {
-      const country = feature.properties.country || '';
+      const country = feature.properties?.country || '';
       if (!/^[A-Z]{3}$/.test(country)) return country;
       if (subdivisionCountryNameSource !== worldSubdivisionGeoJson) {
         subdivisionCountryNameSource = worldSubdivisionGeoJson;
@@ -4078,8 +4138,12 @@
     function scratchCountyFeatures() {
       const filter = document.getElementById('scratchCountyCountryFilter').value || 'US';
       if (filter === 'US') return countyGeoJson || [];
-      if (filter === 'INTL') return internationalCountyGeoJson || [];
+      if (filter === 'INTL') return [...(countyGeoJson || []), ...(internationalCountyGeoJson || [])];
       return (internationalCountyGeoJson || []).filter(feature => countyCountryCode(feature) === filter);
+    }
+
+    function scratchSubdivisionFeatures() {
+      return [...(worldSubdivisionGeoJson || []), ...(countyGeoJson || [])];
     }
 
     function renderCountyCountryFilter() {
@@ -4092,7 +4156,7 @@
       });
       const options = [
         '<option value="US">United States Counties</option>',
-        '<option value="INTL">All International Counties / Districts</option>',
+        '<option value="INTL">All Worldwide Counties / Districts</option>',
         ...[...names].sort((a, b) => a[1].localeCompare(b[1])).map(([code, name]) =>
           `<option value="${escapeHtml(code)}">${escapeHtml(name)}</option>`)
       ];
@@ -4104,11 +4168,11 @@
       const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
       if (!terms.length) return [];
       const subdivisions = AppState.scratchDataset === 'subdivisions';
-      const features = subdivisions ? (worldSubdivisionGeoJson || []) : scratchCountyFeatures();
-      const idOf = feature => subdivisions ? String(feature.id) : String(feature.id).padStart(5, '0');
+      const features = subdivisions ? scratchSubdivisionFeatures() : scratchCountyFeatures();
+      const idOf = feature => scratchFeatureId(feature);
       return features.filter(feature => {
         const id = idOf(feature);
-        const text = `${countyLabel(id)} ${id} ${countyCountryLabel(feature)} ${feature.properties.region || ''}`.toLowerCase();
+        const text = `${countyLabel(id)} ${id} ${countyCountryLabel(feature)} ${feature.properties?.region || ''}`.toLowerCase();
         return terms.every(term => text.includes(term));
       }).sort((a, b) => countyLabel(idOf(a)).localeCompare(countyLabel(idOf(b))));
     }
@@ -4117,8 +4181,8 @@
       const list = document.getElementById('scratchCountyResults');
       const statusLine = document.getElementById('scratchCountySearchStatus');
       const subdivisions = AppState.scratchDataset === 'subdivisions';
-      const features = subdivisions ? worldSubdivisionGeoJson : scratchCountyFeatures();
-      const idOf = feature => subdivisions ? String(feature.id) : String(feature.id).padStart(5, '0');
+      const features = subdivisions ? scratchSubdivisionFeatures() : scratchCountyFeatures();
+      const idOf = feature => scratchFeatureId(feature);
       list.replaceChildren();
       if (!features?.length) {
         statusLine.textContent = `${subdivisions ? 'World subdivision' : 'County'} boundaries unavailable. Retry datasets in Settings.`;
@@ -4135,7 +4199,7 @@
       matches.slice(0, 50).forEach(feature => {
         const id = idOf(feature);
         const name = countyLabel(id);
-        const current = scratchStatuses()[subdivisions ? `s:${id}` : id];
+        const current = scratchStatuses(feature)[scratchStatusKey(feature)];
         const label = TravelLedger.labels[current] || 'Unexplored';
         const item = document.createElement('li');
         const button = document.createElement('button');
@@ -4155,8 +4219,8 @@
         list.appendChild(item);
       });
       statusLine.textContent = matches.length
-        ? `${matches.length} matching ${subdivisions ? 'states or provinces' : 'counties or districts'}${matches.length > 50 ? '; showing 50. Refine your search.' : '.'}`
-        : subdivisions ? 'No matching states or provinces. Try a name, country, region, or subdivision ID.'
+        ? `${matches.length} matching ${subdivisions ? 'states, provinces, or US counties' : 'counties or districts'}${matches.length > 50 ? '; showing 50. Refine your search.' : '.'}`
+        : subdivisions ? 'No matching states, provinces, or US counties. Try a name, country, region, or ID.'
           : 'No matching counties or districts. Try a name, country, or subdivision ID.';
     }
 
@@ -5083,7 +5147,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261019-bounded-route-lookups"></script>
+  <script src="./expedition-ui.js?v=20261019-world-us-scratch"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);
