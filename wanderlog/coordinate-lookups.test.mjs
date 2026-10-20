@@ -5,6 +5,7 @@ import * as geo from 'd3-geo';
 import { feature as decode } from 'topojson-client';
 import lookups from './coordinate-lookups.js';
 import { collectBoundaries } from './import-geography.mjs';
+import { selectSubdivisionFeatures } from './import-subdivisions.mjs';
 
 let checks = 0;
 async function check(name, action) {
@@ -18,6 +19,9 @@ const polygon = (coordinates, properties = { name: 'Test' }) => ({
 });
 const region = { ECO_ID: 1, ECO_NAME: 'Test region', BIOME_NUM: 12, REALM: 'Palearctic' };
 const indexed = lookups.indexFeatures([polygon([ring(0, 0, 10, 10), ring(3, 3, 7, 7).reverse()])], geo);
+const subdivision = { ...polygon([ring(0, 0, 10, 10)], {
+  name: 'Ontario', country: 'Canada', isoA3: 'CAN', region: 'Ontario'
+}), id: 'CAN:ON-01' };
 const indexes = {
   countries: lookups.indexFeatures([polygon([ring(0, 0, 10, 10)], { name: 'Test country' })], geo),
   states: lookups.indexFeatures([polygon([ring(0, 0, 10, 10)], { name: 'Test state' })], geo),
@@ -49,6 +53,40 @@ await check('D3 winding normalization respects exteriors, holes, islands, and th
   assert.equal(lookups.findContaining(crossing, 0, -179, geo.geoContains).length, 1);
   assert.equal(lookups.findContaining(crossing, 0, 0, geo.geoContains).length, 0);
 });
+await check('international subdivisions resolve to stable county-ledger IDs for locations and routes', () => {
+  const subdivisionIndex = lookups.indexFeatures([subdivision], geo);
+  const political = lookups.politicalRegion(5, 5, { ...indexes, subdivisions: subdivisionIndex }, geo.geoContains);
+  assert.deepEqual(political.counties, [{ id: 'CAN:ON-01', name: 'Ontario' }]);
+  assert.deepEqual(lookups.routeCountyIds([[5, 1], [5, 9]], subdivisionIndex, geo.geoContains), ['CAN:ON-01']);
+  assert.equal(lookups.validCountyId('01001'), true);
+  assert.equal(lookups.validCountyId('CAN:ON-01'), true);
+  assert.equal(lookups.validCountyId('can:ON-01'), false);
+  assert.equal(lookups.validCountyId('CAN:ON/01'), false);
+});
+await check('subdivision biome inheritance selects the predominant terrestrial biome', () => {
+  const regions = lookups.indexFeatures([
+    polygon([ring(0, 0, 7, 10)], { ...region, BIOME_NUM: 5 }),
+    polygon([ring(7, 0, 10, 10)], { ...region, BIOME_NUM: 12 })
+  ], geo);
+  assert.equal(lookups.predominantBiome(subdivision, regions, geo), '5');
+});
+await check('Natural Earth feature selection excludes the US and emits stable minimal properties', () => {
+  const features = selectSubdivisionFeatures([
+    { type: 'Feature', properties: {
+      adm0_a3: 'CAN', iso_a2: 'CA', adm1_code: 'CAN-ON-01', name: 'Ontario',
+      admin: 'Canada', region: 'Ontario'
+    }, geometry: { type: 'Polygon', coordinates: [ring(0, 0, 1, 1)] } },
+    { type: 'Feature', properties: {
+      adm0_a3: 'USA', iso_a2: 'US', adm1_code: 'USA-CA', name: 'California',
+      admin: 'United States of America', region: 'West'
+    }, geometry: { type: 'Polygon', coordinates: [ring(0, 0, 1, 1)] } }
+  ]);
+  assert.equal(features.length, 1);
+  assert.equal(features[0].id, 'CAN:CAN-ON-01');
+  assert.deepEqual(features[0].properties, {
+    id: 'CAN:CAN-ON-01', name: 'Ontario', country: 'Canada', isoA3: 'CAN', region: 'Ontario'
+  });
+});
 await check('region and biome lookups return polygon membership without nearest-land guesses', () => {
   assert.deepEqual(lookups.politicalRegion(1, 1, indexes, geo.geoContains).counties, [{ id: '01001', name: 'Test' }]);
   assert.deepEqual(lookups.biomeRegion(1, 1, indexes.ecoregions, geo.geoContains).biomes, ['12']);
@@ -68,15 +106,25 @@ await check('county biome fallback detects complete border intersections without
 
 const npsText = await readFile(new URL('./nps-boundaries.topojson', import.meta.url), 'utf8');
 const ecoText = await readFile(new URL('./ecoregions.topojson', import.meta.url), 'utf8');
+const subdivisionsText = await readFile(new URL('./world-subdivisions.topojson', import.meta.url), 'utf8');
 const nps = JSON.parse(npsText);
 const eco = JSON.parse(ecoText);
+const subdivisionsTopology = JSON.parse(subdivisionsText);
 const npsIndex = lookups.npsBoundaryIndex(nps, decode);
 const ecoIndex = lookups.indexFeatures(decode(eco, eco.objects.ecoregions).features, geo);
+const subdivisions = lookups.subdivisionFeatures(subdivisionsTopology, decode);
+const subdivisionsIndex = lookups.indexFeatures(subdivisions, geo);
 await check('published snapshots meet download budgets and retain source provenance', () => {
   assert.ok(Buffer.byteLength(npsText) <= 750000);
   assert.ok(Buffer.byteLength(ecoText) <= 1800000);
   assert.equal(nps.metadata.source, lookups.NPS_SOURCE);
   assert.equal(eco.metadata.license, 'CC-BY-4.0');
+  assert.ok(Buffer.byteLength(subdivisionsText) <= 1_500_000);
+  assert.equal(subdivisionsTopology.metadata.source, lookups.SUBDIVISION_SOURCE);
+  assert.ok(subdivisions.length > 1000);
+  assert.equal(subdivisionsIndex.length, subdivisions.length);
+  assert.ok(subdivisions.every(feature =>
+    /^[A-Z]{3}:[A-Za-z0-9_.-]+$/.test(feature.id) && feature.properties.isoA3 !== 'USA'));
   assert.equal(ecoIndex.length, 847);
   assert.ok(nps.objects.parks.geometries.length >= 400);
   assert.match(nps.metadata.method, /1.5%/);

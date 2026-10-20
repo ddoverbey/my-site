@@ -340,6 +340,9 @@ function refreshTravelUI() {
 
 function countyLabel(id) {
   const feature = countyFeaturesById[id];
+  if (CoordinateLookups.validSubdivisionId(id)) {
+    return `${feature?.properties?.name || id}, ${feature?.properties?.country || 'Unknown country'}`;
+  }
   const state = usaRegionGeoJson?.find(state => String(state.id).padStart(2, '0') === id.slice(0, 2));
   return `${feature?.properties?.name || `County ${id}`}, ${state?.properties?.name || id}`;
 }
@@ -774,6 +777,7 @@ async function previewExpeditionRoutes() {
     setExpeditionBusy(true);
     status.textContent = 'Preparing route preview...';
     const legs = [];
+    const countyIndex = [...coordinateIndexes.counties, ...(coordinateIndexes.subdivisions || [])];
     if (expeditionUploadedRoute && expeditionDraft.length !== 2) {
       throw new Error('An imported track needs exactly two expedition stops. Remove intermediate stops or clear the track.');
     }
@@ -791,7 +795,7 @@ async function previewExpeditionRoutes() {
         }
         routeSource = 'uploaded';
         if (mode === 'road' || mode === 'awd') {
-          countyIds = CoordinateLookups.routeCountyIds(routeCoords, coordinateIndexes.counties, d3.geoContains);
+          countyIds = CoordinateLookups.routeCountyIds(routeCoords, countyIndex, d3.geoContains);
         }
       } else if (mode === 'road' || mode === 'awd') {
         const key = JSON.stringify([from.coords, to.coords]);
@@ -802,7 +806,7 @@ async function previewExpeditionRoutes() {
           expeditionRoadCache.set(key, await CoordinateLookups.lookupRoadRoute(from.coords, to.coords));
         }
         routeCoords = expeditionRoadCache.get(key).map(point => [...point]);
-        countyIds = CoordinateLookups.routeCountyIds(routeCoords, coordinateIndexes.counties, d3.geoContains);
+        countyIds = CoordinateLookups.routeCountyIds(routeCoords, countyIndex, d3.geoContains);
         routeSource = 'routed';
       } else if (['ferry', 'foot', 'rail'].includes(mode)) routeCoords = [[...from.coords], [...to.coords]];
       else routeSource = 'none';

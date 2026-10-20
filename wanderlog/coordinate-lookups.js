@@ -5,6 +5,9 @@
   const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
   const CACHE_TTL = 30 * 24 * 60 * 60 * 1000;
   const NPS_SOURCE = 'https://services1.arcgis.com/fBc8EJBxQRMcHlei/ArcGIS/rest/services/NPS_Land_Resources_Division_Boundary_and_Tract_Data_Service/FeatureServer/2';
+  const SUBDIVISION_SOURCE = 'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_10m_admin_1_states_provinces.geojson';
+  const validSubdivisionId = id => typeof id === 'string' && /^[A-Z]{3}:[A-Za-z0-9_.-]+$/.test(id);
+  const validCountyId = id => typeof id === 'string' && (/^\d{5}$/.test(id) || validSubdivisionId(id));
 
   function npsBoundaryIndex(topology, decode) {
     if (topology?.type !== 'Topology' || topology.metadata?.source !== NPS_SOURCE ||
@@ -22,6 +25,29 @@
     // The NPS API combines two units that Land Resources publishes separately.
     if (index.sequ && index.kica) index.seki = [...index.sequ, ...index.kica];
     return index;
+  }
+
+  function subdivisionFeatures(topology, decode) {
+    if (topology?.type !== 'Topology' || topology.metadata?.source !== SUBDIVISION_SOURCE ||
+        topology.metadata.version !== 1 || !topology.objects?.subdivisions) {
+      throw new Error('Invalid world subdivision snapshot.');
+    }
+    const features = decode(topology, topology.objects.subdivisions).features;
+    if (!Array.isArray(features) || features.length < 1000) throw new Error('Incomplete world subdivision snapshot.');
+    const ids = new Set();
+    for (const feature of features) {
+      const id = feature.id;
+      const properties = feature.properties || {};
+      if (!validSubdivisionId(id) || ids.has(id) || properties.isoA3 !== id.slice(0, 3) ||
+          typeof properties.name !== 'string' || !properties.name.trim() ||
+          typeof properties.country !== 'string' || !properties.country.trim() ||
+          typeof properties.region !== 'string' ||
+          !['Polygon', 'MultiPolygon'].includes(feature.geometry?.type)) {
+        throw new Error('Invalid world subdivision geometry, ID or properties.');
+      }
+      ids.add(id);
+    }
+    return features;
   }
 
   function validateCoordinates(lat, lng) {
@@ -61,11 +87,15 @@
     const microStates = indexes.microStates?.length ? findContaining(indexes.microStates, lat, lng, geoContains) : [];
     const countries = microStates.length ? microStates : findContaining(indexes.countries, lat, lng, geoContains);
     const states = findContaining(indexes.states, lat, lng, geoContains);
-    const counties = findContaining(indexes.counties, lat, lng, geoContains);
+    const counties = [...findContaining(indexes.counties, lat, lng, geoContains),
+      ...findContaining(indexes.subdivisions || [], lat, lng, geoContains)];
     return {
       countries: countries.map(feature => feature.properties.name),
       states: states.map(feature => feature.properties.name),
-      counties: counties.map(feature => ({ id: String(feature.id).padStart(5, '0'), name: feature.properties.name })),
+      counties: [...new Map(counties.map(feature => {
+        const id = String(feature.id);
+        return [id, { id: /^\d+$/.test(id) ? id.padStart(5, '0') : id, name: feature.properties.name }];
+      })).values()],
       method: 'Simplified atlas polygon containment; approximate at borders and coasts.'
     };
   }
@@ -80,6 +110,43 @@
       biomes: [...new Set(regions.map(region => String(region.biomeId)))],
       biomeStatus: regions.length ? 'matched' : 'no-terrestrial-match'
     };
+  }
+
+  function predominantBiome(feature, index, geo) {
+    if (!Array.isArray(index) || !geo?.geoArea || !geo?.geoBounds || !geo?.geoContains || !geo?.geoCentroid) {
+      throw new Error('Indexed ecoregions and D3 geometry helpers are required.');
+    }
+    const normalized = normalizeFeature(feature, geo.geoArea);
+    const [[west, south], [east, north]] = geo.geoBounds(normalized);
+    const candidates = index.filter(item => boundsOverlap(geo.geoBounds(normalized), item.bounds));
+    const counts = new Map();
+    const sample = (lng, lat) => {
+      if (!geo.geoContains(normalized, [lng, lat])) return;
+      for (const { feature: region, bounds } of candidates) {
+        const [[regionWest, regionSouth], [regionEast, regionNorth]] = bounds;
+        const longitudeMatches = regionWest <= regionEast
+          ? lng >= regionWest && lng <= regionEast
+          : lng >= regionWest || lng <= regionEast;
+        if (lat < regionSouth || lat > regionNorth || !longitudeMatches ||
+            !geo.geoContains(region, [lng, lat])) continue;
+        const biome = String(region.properties.BIOME_NUM);
+        counts.set(biome, (counts.get(biome) || 0) + Math.max(0.01, Math.cos(lat * Math.PI / 180)));
+        break;
+      }
+    };
+    const ranges = longitudeRanges([west, east]);
+    const divisions = 9;
+    for (let row = 0; row < divisions; row++) {
+      const lat = south + (north - south) * (row + 0.5) / divisions;
+      for (const [rangeWest, rangeEast] of ranges) {
+        for (let column = 0; column < divisions; column++) {
+          sample(rangeWest + (rangeEast - rangeWest) * (column + 0.5) / divisions, lat);
+        }
+      }
+    }
+    const centroid = geo.geoCentroid(normalized);
+    sample(centroid[0], centroid[1]);
+    return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'en', { numeric: true }))[0]?.[0] || null;
   }
 
   function longitudeRanges([west, east]) {
@@ -222,7 +289,10 @@
           });
         });
       });
-      if (matched) ids.push(String(feature.id).padStart(5, '0'));
+      if (matched) {
+        const id = String(feature.id);
+        ids.push(/^\d+$/.test(id) ? id.padStart(5, '0') : id);
+      }
     }
     return [...new Set(ids)];
   }
@@ -434,7 +504,7 @@
           !Array.isArray(location.political?.countries) || !location.political.countries.every(value => typeof value === 'string') ||
           !Array.isArray(location.political?.states) || !location.political.states.every(value => typeof value === 'string') ||
           !Array.isArray(location.political?.counties) || !location.political.counties.every(county =>
-            typeof county?.id === 'string' && typeof county.name === 'string') ||
+            validCountyId(county?.id) && typeof county.name === 'string') ||
           !Array.isArray(location.ecoregions) || !location.ecoregions.every(region =>
             Number.isInteger(region.id) && typeof region.name === 'string' && typeof region.realm === 'string' &&
             Number.isInteger(region.biomeId) && region.biomeId >= 1 && region.biomeId <= 14) ||
@@ -465,10 +535,13 @@
 
   const api = {
     validateCoordinates, normalizeFeature, indexFeatures, findContaining, politicalRegion, biomeRegion,
+    predominantBiome,
+    validCountyId, validSubdivisionId, subdivisionFeatures,
     firstBoundaryIntersection, lookupRoadRoute, routeCountyIds,
     lookupElevation, categoryForPoiCount, segmentDistanceKm, summarizeOsm, lookupRarity, lookupCoordinate,
     validateCustomLocations, migrateState, normalizeRarity, validateProviderRarity, coordinateDistanceKm,
-    lookupRarityWithFallback, ELEVATION_URL, OVERPASS_URL, CACHE_TTL, NPS_SOURCE, npsBoundaryIndex
+    lookupRarityWithFallback, ELEVATION_URL, OVERPASS_URL, CACHE_TTL, NPS_SOURCE,
+    SUBDIVISION_SOURCE, npsBoundaryIndex
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CoordinateLookups = api;

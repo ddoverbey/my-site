@@ -25,6 +25,12 @@ records[1].latitude = '';
 records[1].longitude = '';
 
 let checks = 0;
+function findLastIndex(values, predicate) {
+  for (let index = values.length - 1; index >= 0; index--) {
+    if (predicate(values[index], index, values)) return index;
+  }
+  return -1;
+}
 function check(name, action) {
   action();
   checks++;
@@ -133,7 +139,7 @@ check('mobile RPG HUD starts collapsed with an accessible stats toggle', () => {
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261019-global-routes')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261019-international-subdivisions')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('storage-risk banner and unfinished-trip recovery controls are present', () => {
@@ -146,6 +152,8 @@ check('storage-risk banner and unfinished-trip recovery controls are present', (
 });
 check('National Parks is a Scratch Map dataset, not a separate navigation page, with an expanded checklist', () => {
   assert.ok(html.includes('id="btnScratchNationalParks"'));
+  assert.ok(html.includes('id="btnScratchWorldSubdivisions"'));
+  assert.ok(html.includes("'subdivisions'"));
   assert.ok(!html.includes('data-tab="nationalparks"'));
   assert.ok(!html.includes('id="tabContent-nationalparks"'));
   assert.ok(html.includes('id="scratchNationalParks"'));
@@ -893,14 +901,82 @@ check('manual county marks reveal the entire county only for explored tiers', ()
   }
   vm.runInContext("AppState.counties={}",context);
 });
+check('international subdivision status tiers reveal the matching subdivision polygon in Fog of War', () => {
+  vm.runInContext(`
+    countyFeaturesById['CAN:ON-01']={geometry:{type:'Polygon',coordinates:[
+      [[-80,43],[-79,43],[-79,44],[-80,43]]
+    ]}};
+  `, context);
+  try {
+    for (const tier of ['w', 't', 'v', 'l']) {
+      context.fogOperations.length = 0;
+      vm.runInContext(`AppState.counties={'CAN:ON-01':'${tier}'};drawFogOfWar()`, context);
+      assert.equal(context.fogOperations.filter(op => op[0] === 'polygonFill' && op[1] === 'evenodd').length,
+        ['t', 'v', 'l'].includes(tier) ? 1 : 0);
+    }
+  } finally {
+    vm.runInContext("AppState.counties={};delete countyFeaturesById['CAN:ON-01']", context);
+  }
+});
 check('county completion counts only visited/lived loaded FIPS records, never transits or unknown IDs', () => {
   vm.runInContext(`
     countyGeoJson=[{id:'06073'},{id:'06065'},{id:'06001'},{id:'06059'}];
-    AppState.counties={'06073':'l','06065':'v','06001':'t','06059':'w','99999':'v'};
+    AppState.counties={'06073':'l','06065':'v','06001':'t','06059':'w','99999':'v','CAN:ON-01':'v'};
   `, context);
   assert.equal(vm.runInContext('calculateStats().countiesCount', context), 2);
   assert.equal(vm.runInContext('calculateStats().countyTotal', context), 4);
   vm.runInContext('countyGeoJson=null;AppState.counties={"06073":"l"}', context);
+});
+check('visited international subdivisions inherit their predominant terrestrial biome', () => {
+  const subdivisionId = 'CAN:ON-01';
+  const subdivision = {
+    type: 'Feature', id: subdivisionId, properties: {
+      name: 'Ontario', country: 'Canada', isoA3: 'CAN', region: 'Ontario'
+    }, geometry: { type: 'Polygon', coordinates: [[
+      [0, 0], [10, 0], [10, 10], [0, 10], [0, 0]
+    ]] }
+  };
+  const regions = [
+    { ...subdivision, id: undefined, properties: { ECO_ID: 1, ECO_NAME: 'Western biome', BIOME_NUM: 5, REALM: 'Nearctic' },
+      geometry: { type: 'Polygon', coordinates: [[[0,0],[7,0],[7,10],[0,10],[0,0]]] } },
+    { ...subdivision, id: undefined, properties: { ECO_ID: 2, ECO_NAME: 'Eastern biome', BIOME_NUM: 12, REALM: 'Nearctic' },
+      geometry: { type: 'Polygon', coordinates: [[[7,0],[10,0],[10,10],[7,10],[7,0]]] } }
+  ];
+  context.subdivisionBiomeFeature = subdivision;
+  context.subdivisionBiomeIndexes = coordinateLookups.indexFeatures(regions, d3Geo);
+  const originalD3 = context.d3;
+  context.d3 = { ...d3Geo, geoContains: d3Geo.geoContains };
+  vm.runInContext(`
+    globalThis.subdivisionBiomeSaved = {
+      coordinateIndexes, cache: countyBiomeCache['CAN:ON-01'],
+      cacheHadEntry: Object.hasOwn(countyBiomeCache, 'CAN:ON-01'), statsCache,
+      countyFeature: countyFeaturesById['CAN:ON-01'], state: { ...AppState }
+    };
+    coordinateIndexes = { ecoregions: subdivisionBiomeIndexes };
+    countyFeaturesById['CAN:ON-01'] = subdivisionBiomeFeature;
+    delete countyBiomeCache['CAN:ON-01'];
+    AppState.customPois = []; AppState.expeditions = []; AppState.homeBase = null;
+    AppState.pins = {}; AppState.regions = {}; AppState.counties = { 'CAN:ON-01': 'v' };
+    statsCache = null;
+  `, context);
+  try {
+    assert.equal(vm.runInContext("countyBiome('CAN:ON-01')", context), '5');
+    assert.ok(vm.runInContext("calculateStats().biomesSet.has('5')", context));
+  } finally {
+    vm.runInContext(`
+      coordinateIndexes = subdivisionBiomeSaved.coordinateIndexes;
+      statsCache = subdivisionBiomeSaved.statsCache;
+      if (subdivisionBiomeSaved.cacheHadEntry) countyBiomeCache['CAN:ON-01'] = subdivisionBiomeSaved.cache;
+      else delete countyBiomeCache['CAN:ON-01'];
+      if (subdivisionBiomeSaved.countyFeature) countyFeaturesById['CAN:ON-01'] = subdivisionBiomeSaved.countyFeature;
+      else delete countyFeaturesById['CAN:ON-01'];
+      Object.assign(AppState, subdivisionBiomeSaved.state);
+      delete globalThis.subdivisionBiomeSaved;
+    `, context);
+    context.d3 = originalD3;
+    delete context.subdivisionBiomeFeature;
+    delete context.subdivisionBiomeIndexes;
+  }
 });
 check('visited county polygons credit their cached predominant biome without crediting transit or wishlist counties', () => {
   vm.runInContext(`
@@ -1684,7 +1760,7 @@ check('water corridors precede one unblurred cached land stencil and visited pun
       ['source-over','rgba(235, 239, 245, 0.99)','transparent',0,'nonzero']);
     assert.ok(operations.findIndex(op=>op[0]==='stroke')<operations.findIndex(op=>op[0]==='land'));
     const firstVisit=operations.findIndex(op=>op[0]==='visited');
-    assert.ok(firstVisit>operations.findLastIndex(op=>op[0]==='land' && op[1]==='source-over'));
+    assert.ok(firstVisit>findLastIndex(operations,op=>op[0]==='land' && op[1]==='source-over'));
     const firstProjections=projections;
     assert.equal(paths,1);
     vm.runInContext('drawFogOfWar()',context);
@@ -1716,8 +1792,8 @@ check('water corridors precede one unblurred cached land stencil and visited pun
       `,context);
       visitedByMode[mode]=operations.filter(op=>op[0]==='visited');
       if(mode==='flight') {
-        const lastLand=operations.findLastIndex(op=>op[0]==='land'&&op[1]==='source-over');
-        assert.ok(operations.findLastIndex(op=>op[0]==='visited')>lastLand,'airport auras are carved after the land stencil');
+        const lastLand=findLastIndex(operations,op=>op[0]==='land'&&op[1]==='source-over');
+        assert.ok(findLastIndex(operations,op=>op[0]==='visited')>lastLand,'airport auras are carved after the land stencil');
       }
       assert.equal(vm.runInContext('oceanFogOpacity()',context),0.99);
       assert.equal(operations.filter(op=>op[0]==='base').length,1);
@@ -1859,6 +1935,7 @@ function scratchSelection(tag = 'svg', data = []) {
     selectAll() { return this; },
     data(values) { node.data = values; scratchFeatures = values; return this; },
     join() { return this; },
+    call(callback, ...args) { callback(this, ...args); return this; },
     on(name, handler) { node[name] = handler; return this; },
     text(value) { node.text = typeof value === 'function' ? node.data.map(value) : value; return this; }
   };
@@ -3740,6 +3817,95 @@ check('county search finds small counties by name, state and padded FIPS, with b
       delete globalThis.countySearchSaved;
     `,context);
     delete context.countySearchQuery;
+  }
+});
+check('World Subdivisions renders global polygons with zoom and cycles their county-ledger status', () => {
+  const previousD3 = context.d3;
+  const searchValue = element('scratchCountySearch').value;
+  const subdivisionId = 'CAN:ON-01';
+  const subdivision = {
+    type: 'Feature', id: subdivisionId,
+    properties: { name: 'Ontario', country: 'Canada', isoA3: 'CAN', region: 'Ontario' },
+    geometry: { type: 'Polygon', coordinates: [[[0,0],[10,0],[10,10],[0,10],[0,0]]] }
+  };
+  const usState = {
+    type: 'Feature', id: '06', properties: { name: 'California' },
+    geometry: { type: 'Polygon', coordinates: [[[-125,30],[-113,30],[-113,42],[-125,42],[-125,30]]] }
+  };
+  const zoomIdentity = { toString: () => 'translate(0,0) scale(1)' };
+  context.d3 = {
+    ...d3Geo,
+    select: () => scratchSelection(),
+    zoom: () => {
+      const behavior = () => {};
+      behavior.extent = () => behavior;
+      behavior.scaleExtent = value => { behavior.scale = value; return behavior; };
+      behavior.translateExtent = () => behavior;
+      behavior.on = () => behavior;
+      behavior.transform = () => {};
+      return behavior;
+    },
+    zoomIdentity
+  };
+  context.worldSubdivisionFeature = subdivision;
+  context.usSubdivisionState = usState;
+  vm.runInContext(`
+    globalThis.subdivisionScratchSaved = {
+      worldSubdivisionGeoJson, usaGeoJson, countyFeature: countyFeaturesById['CAN:ON-01'],
+      state: { ...AppState }, zoom: worldSubdivisionZoom, zoomBehavior: worldSubdivisionZoomBehavior,
+      renderedDataset: renderedScratchDataset, renderedCountyFeatures, projection: scratchProjection,
+      mapHeight: scratchMapHeight, commitLedger, refreshTravelUI, showNotification
+    };
+    worldSubdivisionGeoJson = [worldSubdivisionFeature];
+    usaGeoJson = [usSubdivisionState];
+    countyFeaturesById['CAN:ON-01'] = worldSubdivisionFeature;
+    AppState.scratchDataset = 'counties';
+    AppState.currentTab = 'scratch';
+    AppState.viewOnly = false;
+    AppState.counties = {};
+    AppState.statusOverrides = { pins: {}, regions: {}, counties: {}, nationalParks: {} };
+    commitLedger = change => {
+      change();
+      AppState.counties['CAN:ON-01'] = AppState.statusOverrides.counties['CAN:ON-01'];
+    };
+    refreshTravelUI = () => {};
+    showNotification = () => {};
+`, context);
+  try {
+    scratchNodes.length = 0;
+    element('btnScratchWorldSubdivisions').handlers.click();
+    assert.equal(vm.runInContext('AppState.scratchDataset', context), 'subdivisions');
+    assert.equal(vm.runInContext('worldSubdivisionZoomBehavior.scale.join(",")', context), '1,12');
+    const subdivisionPath = scratchNodes.find(node => node.attrs.class === 'scratch-world-subdivision');
+    assert.ok(subdivisionPath);
+    assert.equal(subdivisionPath.attrs['data-subdivision'][0], subdivisionId);
+    element('scratchCountySearch').value = 'Ontario';
+    assert.equal(vm.runInContext('scratchCountyMatches("Ontario")[0].id', context), subdivisionId);
+    subdivisionPath.click({ preventDefault() {} }, subdivision);
+    assert.equal(vm.runInContext(`AppState.statusOverrides.counties['${subdivisionId}']`, context), 'v');
+    assert.equal(vm.runInContext(`AppState.counties['${subdivisionId}']`, context), 'v');
+  } finally {
+    context.d3 = previousD3;
+    element('scratchCountySearch').value = searchValue;
+    vm.runInContext(`
+      worldSubdivisionGeoJson = subdivisionScratchSaved.worldSubdivisionGeoJson;
+      usaGeoJson = subdivisionScratchSaved.usaGeoJson;
+      if (subdivisionScratchSaved.countyFeature) countyFeaturesById['CAN:ON-01'] = subdivisionScratchSaved.countyFeature;
+      else delete countyFeaturesById['CAN:ON-01'];
+      Object.assign(AppState, subdivisionScratchSaved.state);
+      worldSubdivisionZoom = subdivisionScratchSaved.zoom;
+      worldSubdivisionZoomBehavior = subdivisionScratchSaved.zoomBehavior;
+      renderedScratchDataset = subdivisionScratchSaved.renderedDataset;
+      renderedCountyFeatures = subdivisionScratchSaved.renderedCountyFeatures;
+      scratchProjection = subdivisionScratchSaved.projection;
+      scratchMapHeight = subdivisionScratchSaved.mapHeight;
+      commitLedger = subdivisionScratchSaved.commitLedger;
+      refreshTravelUI = subdivisionScratchSaved.refreshTravelUI;
+      showNotification = subdivisionScratchSaved.showNotification;
+      delete globalThis.subdivisionScratchSaved;
+`, context);
+    delete context.worldSubdivisionFeature;
+    delete context.usSubdivisionState;
   }
 });
 check('passport export filenames include local date and time, not UTC', () => {

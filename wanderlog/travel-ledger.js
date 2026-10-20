@@ -9,6 +9,8 @@
     photography: 'Photography', anniversary: 'Anniversary', family: 'Friends/Family', solo: 'Solo', work: 'Work'
   });
   const isVisited = status => status === 'v' || status === 'l';
+  const validCountyId = id => typeof id === 'string' &&
+    (/^\d{5}$/.test(id) || /^[A-Z]{3}:[A-Za-z0-9_.-]+$/.test(id));
   const homeRadiusKm = 15 * 1.609344 / 2;
   const coloradoPlainsCounties = new Set([
     '08075', '08087', '08115', '08095', '08121', '08125', '08063', '08017',
@@ -40,7 +42,7 @@
   function validateStatuses(values, county = false) {
     if (!values || typeof values !== 'object' || Array.isArray(values) ||
         Object.entries(values).some(([id, status]) => !Object.hasOwn(ranks, status) ||
-          (county ? !/^\d{5}$/.test(id) : !id || ['__proto__', 'constructor', 'prototype'].includes(id)))) {
+          (county ? !validCountyId(id) : !id || ['__proto__', 'constructor', 'prototype'].includes(id)))) {
       throw new Error('Invalid passport status tiers.');
     }
     return { ...values };
@@ -56,7 +58,7 @@
       const records = value[field] ?? {};
       if (!records || typeof records !== 'object' || Array.isArray(records) ||
           Object.entries(records).some(([id, status]) => !Object.hasOwn(ranks, status) && status !== 'un' ||
-            (field === 'counties' ? !/^\d{5}$/.test(id) :
+            (field === 'counties' ? !validCountyId(id) :
               !id || ['__proto__', 'constructor', 'prototype'].includes(id)))) {
         throw new Error('Invalid map status overrides.');
       }
@@ -100,7 +102,7 @@
       ids.add(exp.id);
       for (const field of ['countyIds', 'parkIds', 'customPoiIds']) {
         if (!Array.isArray(exp[field]) || new Set(exp[field]).size !== exp[field].length ||
-            exp[field].some(id => field === 'countyIds' ? !/^\d{5}$/.test(id) : !validId(id))) {
+            exp[field].some(id => field === 'countyIds' ? !validCountyId(id) : !validId(id))) {
           throw new Error('Invalid expedition location IDs.');
         }
       }
@@ -120,7 +122,8 @@
       }
       if (exp.routeStops !== undefined) {
         if (!Array.isArray(exp.routeStops) || exp.routeStops.length !== exp.routeCoords.length || exp.routeStops.some((stop, index) =>
-          !stop || !['county', 'park', 'poi', 'place'].includes(stop.kind) || !validId(stop.id) ||
+          !stop || !['county', 'park', 'poi', 'place'].includes(stop.kind) ||
+          !(stop.kind === 'county' ? validCountyId(stop.id) : validId(stop.id)) ||
           typeof stop.name !== 'string' || !stop.name.trim() ||
           !Array.isArray(stop.coords) || stop.coords.length !== 2 ||
           JSON.stringify(stop.coords) !== JSON.stringify(exp.routeCoords[index]) ||
@@ -138,7 +141,7 @@
           if (!leg || !Object.hasOwn(transitTags, leg.mode) ||
               !['routed', 'direct', 'uploaded', 'none'].includes(routeSource) || !Array.isArray(leg.routeCoords) ||
               !Array.isArray(leg.countyIds) || new Set(leg.countyIds).size !== leg.countyIds.length ||
-              leg.countyIds.some(id => !/^\d{5}$/.test(id)) ||
+              leg.countyIds.some(id => !validCountyId(id)) ||
               (leg.mode === 'flight' ? routeSource === 'none'
                 ? leg.routeCoords.length || leg.countyIds.length
                 : routeSource !== 'uploaded' || leg.routeCoords.length < 2 || leg.countyIds.length :
@@ -224,7 +227,7 @@
     if (![political.countries, political.states].every(names => Array.isArray(names) &&
         names.every(name => typeof name === 'string' && name.trim())) ||
         !Array.isArray(political.counties) || political.counties.some(county =>
-          !/^\d{5}$/.test(county?.id) || typeof county.name !== 'string')) throw new Error('Invalid POI regions.');
+          !validCountyId(county?.id) || typeof county.name !== 'string')) throw new Error('Invalid POI regions.');
     const rarity = poi.rarity ? lookups.normalizeRarity(poi.rarity, poi.lat, poi.lng) : null;
     const rarityTier = rarity?.rarityTier ?? poi.rarityTier;
     if (rarityTier !== undefined && !['Uncharted', 'Hidden Gem', 'Deep Cut', 'Regional Staple', 'Beaten Path', 'Tourist Trap'].includes(rarityTier)) {
@@ -251,7 +254,7 @@
       throw new Error('Invalid legacy county records.');
     }
     for (const [id, cleared] of Object.entries(legacy.clearedCounties ?? {})) {
-      if (!/^\d{5}$/.test(id) || typeof cleared !== 'boolean') throw new Error('Invalid legacy county record.');
+      if (!validCountyId(id) || typeof cleared !== 'boolean') throw new Error('Invalid legacy county record.');
       if (cleared) counties[id] = promote(counties[id], 'v');
     }
     const incoming = parsed.customPois ?? legacy.customLocations;
@@ -284,7 +287,7 @@
       lookups.validateCoordinates(homeBase.lat, homeBase.lng);
       if (typeof homeBase.name !== 'string' || !homeBase.name.trim() ||
           !Number.isFinite(homeBase.radiusKm) || homeBase.radiusKm <= 0 ||
-          (homeBase.countyId && !/^\d{5}$/.test(homeBase.countyId))) throw new Error('Invalid home base.');
+          (homeBase.countyId && !validCountyId(homeBase.countyId))) throw new Error('Invalid home base.');
     }
     const migrated = {
       ...legacy, pins, regions, counties, customPois, expeditions, nationalParkScratch: { ...nationalParkScratch },
@@ -378,7 +381,7 @@
       result[field] = {};
       for (const [id, change] of Object.entries(changes)) {
         if (!id || ['__proto__', 'constructor', 'prototype'].includes(id) ||
-            (field === 'counties' && !/^\d{5}$/.test(id)) || !change ||
+            (field === 'counties' && !validCountyId(id)) || !change ||
             (change.before !== null && !Object.hasOwn(ranks, change.before)) || change.after !== 'v' ||
             (field === 'poiStatuses' && change.before === null) ||
             (ranks[change.before] || 0) >= ranks[change.after]) throw new Error('Invalid expedition promotion records.');

@@ -147,6 +147,42 @@ check('date validation handles day trips, leap days, invalid days and reversed r
     { countyIds: [], parkIds: [], customPoiIds: [] }, { countyIds: ['08065', '08065'] }
   ]) assert.throws(() => ledger.validateExpeditions([{ ...exp, ...change }], lookups));
 });
+check('international subdivision IDs validate in county ledgers, POIs, trips and derived country status', () => {
+  const subdivisionId = 'FRA:FR75';
+  const internationalPoi = {
+    ...poi, id: 'poi_paris', status: 'v',
+    political: { countries: ['France'], states: [], counties: [{ id: subdivisionId, name: 'Paris' }] }
+  };
+  const routeCoords = [[48.85, 2.35], [48.86, 2.36]];
+  const trip = {
+    ...exp, countyIds: [subdivisionId], transitTags: ['road'], routeCoords,
+    routeStops: [
+      { kind: 'county', id: subdivisionId, name: 'Paris', coords: routeCoords[0] },
+      { kind: 'place', id: 'paris_destination', name: 'Paris destination', coords: routeCoords[1] }
+    ],
+    routeLegs: [{
+      mode: 'road', routeSource: 'routed', routeCoords,
+      countyIds: [subdivisionId]
+    }]
+  };
+  const state = migrate({
+    counties: { [subdivisionId]: 'v' },
+    statusOverrides: { counties: { [subdivisionId]: 'w' } },
+    customPois: [internationalPoi], expeditions: [trip]
+  });
+  assert.equal(state.counties[subdivisionId], 'v');
+  assert.equal(state.statusOverrides.counties[subdivisionId], 'w');
+  assert.deepEqual(state.customPois[0].political.counties, [{ id: subdivisionId, name: 'Paris' }]);
+  assert.deepEqual(state.expeditions[0].countyIds, [subdivisionId]);
+  assert.deepEqual(state.expeditions[0].routeLegs[0].countyIds, [subdivisionId]);
+  ledger.syncDerivedState(state, {
+    countyRegions: { [subdivisionId]: { countries: ['France'], states: [], counties: [] } }
+  });
+  assert.equal(state.regions['c:France'], 'v');
+  for (const invalidId of ['FRA:Paris 1', 'frA:FR75', 'FRA:', 'FRA:FR/75']) {
+    assert.throws(() => migrate({ counties: { [invalidId]: 'v' } }));
+  }
+});
 check('missing POI references and conflicting ledgers reject explicitly', () => {
   assert.throws(() => migrate({ expeditions: [{ ...exp, customPoiIds: ['poi_missing'] }] }), /missing custom/);
 });
