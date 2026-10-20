@@ -140,7 +140,7 @@ check('mobile RPG HUD starts collapsed with an accessible stats toggle', () => {
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261020-route-biome-sampling')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261020-travel-biome-tags')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('storage-risk banner and unfinished-trip recovery controls are present', () => {
@@ -1269,6 +1269,17 @@ context.testExpedition = {
   routeCoords: [[37,-120],[38,-119]], minElevationFt: -100, maxElevationFt: 11000
 };
 vm.runInContext('addExpedition(testExpedition);renderPassportView();renderExpeditionHistory()', context);
+vm.runInContext(`
+  globalThis.travelBiomeRenderSaved = { cachedBiomeAt, BIOMES, statsCache };
+  cachedBiomeAt = lat => lat < 37.5 ? ['5'] : ['14'];
+  BIOMES = Ecoregions.biomeDefinitions();
+  statsCache = null;
+  renderExpeditionHistory();
+  cachedBiomeAt = travelBiomeRenderSaved.cachedBiomeAt;
+  BIOMES = travelBiomeRenderSaved.BIOMES;
+  statsCache = travelBiomeRenderSaved.statsCache;
+  delete globalThis.travelBiomeRenderSaved;
+`, context);
 check('expedition history escapes names, shows date/elevation/tags and starts metadata badges', () => {
   const history = element('travelLogFeed').innerHTML;
   assert.ok(history.includes('&lt;script&gt;Trip&lt;/script&gt;'));
@@ -1276,6 +1287,9 @@ check('expedition history escapes names, shows date/elevation/tags and starts me
   assert.ok(history.includes('-100 to 11,000 ft'));
   assert.ok(history.includes('AWD/Off-Road'));
   assert.ok(history.includes('Photography'));
+  assert.ok(history.includes('data-trip-biomes'));
+  assert.ok(history.includes('🌲 Temperate Conifer Forests'));
+  assert.ok(history.includes('🌱 Mangroves'));
   const achievements = element('achievementsContainer').innerHTML;
   assert.ok(achievements.includes('Under Pressure'));
   assert.ok(achievements.includes('Thin Air'));

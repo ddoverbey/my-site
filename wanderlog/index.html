@@ -972,14 +972,14 @@
     </form>
   </div>
 
-  <script src="./nps-catalog.js?v=20261020-route-biome-sampling"></script>
-  <script src="./national-parks-scratch.js?v=20261020-route-biome-sampling"></script>
-  <script src="./international-parks.js?v=20261020-route-biome-sampling"></script>
-  <script src="./ecoregions.js?v=20261020-route-biome-sampling"></script>
-  <script src="./coordinate-lookups.js?v=20261020-route-biome-sampling"></script>
-  <script src="./micro-states.js?v=20261020-route-biome-sampling"></script>
-  <script src="./travel-ledger.js?v=20261020-route-biome-sampling"></script>
-  <script src="./rarity-config.js?v=20261020-route-biome-sampling"></script>
+  <script src="./nps-catalog.js?v=20261020-travel-biome-tags"></script>
+  <script src="./national-parks-scratch.js?v=20261020-travel-biome-tags"></script>
+  <script src="./international-parks.js?v=20261020-travel-biome-tags"></script>
+  <script src="./ecoregions.js?v=20261020-travel-biome-tags"></script>
+  <script src="./coordinate-lookups.js?v=20261020-travel-biome-tags"></script>
+  <script src="./micro-states.js?v=20261020-travel-biome-tags"></script>
+  <script src="./travel-ledger.js?v=20261020-travel-biome-tags"></script>
+  <script src="./rarity-config.js?v=20261020-travel-biome-tags"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -3278,6 +3278,7 @@
           features.length, countyGeoJson.length, worldSubdivisionGeoJson.length, worldAdmin2GeoJson.length]));
         status.textContent = 'Custom-coordinate geography ready. Region and biome matches use simplified polygons.';
         backfillSavedGeography();
+        if (AppState.currentTab === 'travel') renderExpeditionHistory();
       } catch (error) {
         console.error('Failed to load coordinate geography', error);
         status.textContent = 'Custom-coordinate geography unavailable. Retry datasets; existing visits remain available.';
@@ -5286,7 +5287,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261020-route-biome-sampling"></script>
+  <script src="./expedition-ui.js?v=20261020-travel-biome-tags"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);

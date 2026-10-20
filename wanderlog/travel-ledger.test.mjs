@@ -348,6 +348,7 @@ check('expedition biome credit samples route geometry between stops with a bound
     }
   });
   assert.ok(progress.collectedBiomes.has('middle-of-route'));
+  assert.deepEqual(progress.biomesByExpedition.exp_test, ['middle-of-route']);
   assert.ok(biomeLookups > 400, 'densely samples this long route within the configured ceiling');
   assert.ok(biomeLookups <= 502, 'caps expensive route lookups plus the two stops');
 });

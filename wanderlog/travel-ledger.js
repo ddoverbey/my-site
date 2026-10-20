@@ -551,24 +551,24 @@
 
   function routeBiomeLines(trips) {
     return trips.flatMap(trip => {
-      if (!trip.routeLegs) return [trip.routeCoords];
-      return trip.routeLegs.map((leg, index) => {
+      const lines = !trip.routeLegs ? [trip.routeCoords] : trip.routeLegs.map((leg, index) => {
         if (leg.routeCoords.length > 1) return leg.routeCoords;
         if (leg.mode === 'flight' && leg.routeSource === 'none') {
           return [trip.routeStops[index].coords, trip.routeStops[index + 1].coords];
         }
         return [];
       });
-    }).filter(line => line.length > 1);
+      return lines.filter(line => line.length > 1).map(line => ({ expeditionId: trip.id, line }));
+    });
   }
 
-  function collectRouteBiomes(trips, biomeAt, collectedBiomes) {
+  function collectRouteBiomes(trips, biomeAt, collectedBiomes, biomesByExpedition) {
     const lines = routeBiomeLines(trips);
     const totalMiles = lines.reduce((total, line) => {
-      for (let i = 1; i < line.length; i++) {
+      for (let i = 1; i < line.line.length; i++) {
         total += distanceMiles(
-          { lat: line[i - 1][0], lng: line[i - 1][1] },
-          { lat: line[i][0], lng: line[i][1] }
+          { lat: line.line[i - 1][0], lng: line.line[i - 1][1] },
+          { lat: line.line[i][0], lng: line.line[i][1] }
         );
       }
       return total;
@@ -577,7 +577,7 @@
 
     const spacing = Math.max(ROUTE_BIOME_SAMPLE_MILES, totalMiles / MAX_ROUTE_BIOME_SAMPLES);
     let samples = 0;
-    for (const line of lines) {
+    for (const { expeditionId, line } of lines) {
       let distanceAlongLine = 0;
       let nextSampleAt = spacing;
       for (let i = 1; i < line.length && samples < MAX_ROUTE_BIOME_SAMPLES; i++) {
@@ -591,7 +591,11 @@
         while (segmentMiles && nextSampleAt < segmentEnd && samples < MAX_ROUTE_BIOME_SAMPLES) {
           const point = interpolateRouteCoordinate(start, end,
             (nextSampleAt - distanceAlongLine) / segmentMiles);
-          biomeAt(point[0], point[1]).forEach(biome => collectedBiomes.add(String(biome)));
+          biomeAt(point[0], point[1]).forEach(biome => {
+            const id = String(biome);
+            collectedBiomes.add(id);
+            biomesByExpedition.get(expeditionId)?.add(id);
+          });
           samples++;
           nextSampleAt += spacing;
         }
@@ -620,9 +624,15 @@
     trips.forEach(trip => trip.routeCoords.forEach(([lat, lng]) => addPoint({ lat, lng })));
     const coordinates = [...points.values()];
     const collectedBiomes = new Set(locations.flatMap(location => location.biomes).map(String));
+    const biomesByExpedition = new Map(trips.map(trip => [trip.id, new Set()]));
     trips.forEach(trip => trip.routeCoords.forEach(([lat, lng]) =>
-      sample(lat, lng, 'biomes').forEach(biome => collectedBiomes.add(String(biome)))));
-    collectRouteBiomes(trips, (lat, lng) => sample(lat, lng, 'biomes'), collectedBiomes);
+      sample(lat, lng, 'biomes').forEach(biome => {
+        const id = String(biome);
+        collectedBiomes.add(id);
+        biomesByExpedition.get(trip.id).add(id);
+      })));
+    collectRouteBiomes(trips, (lat, lng) => sample(lat, lng, 'biomes'),
+      collectedBiomes, biomesByExpedition);
     const homeCounties = new Set(state.homeBase
       ? (sample(state.homeBase.lat, state.homeBase.lng, 'political')?.counties?.map(county => county.id) ||
         (state.homeBase.countyId ? [state.homeBase.countyId] : [])) : []);
@@ -718,7 +728,9 @@
       longDark: coordinates.filter(point => point.lat > 66.5 || point.lat < -66.5).length,
       latitudeSpan: coordinates.length
         ? Math.max(...coordinates.map(point => point.lat)) - Math.min(...coordinates.map(point => point.lat)) : 0,
-      collectedBiomes
+      collectedBiomes,
+      biomesByExpedition: Object.fromEntries([...biomesByExpedition]
+        .map(([id, biomes]) => [id, [...biomes]]))
     };
   }
 

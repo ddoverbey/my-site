@@ -1417,6 +1417,7 @@ function renderExpeditionHistory() {
     if (globalRoutesOpen) renderGlobalRoutesMap();
     return;
   }
+  const biomesByExpedition = calculateStats().metadataProgress.biomesByExpedition;
   const sorted = [...AppState.expeditions].sort((a, b) =>
     (b.startDate || b.endDate || '').localeCompare(a.startDate || a.endDate || ''));
   for (const id of travelJournalDrafts.keys()) {
@@ -1430,6 +1431,12 @@ function renderExpeditionHistory() {
     const metrics = travelLogMetrics(exp);
     const flags = travelLogCountryFlags(exp);
     const stateFlags = travelLogStateFlags(exp);
+    const biomeMarkup = (biomesByExpedition[exp.id] || [])
+      .filter(id => BIOMES[id])
+      .map(id => {
+        const biome = BIOMES[id];
+        return `<span class="px-2 py-0.5 rounded-full text-[11px] border border-emerald-500/30 bg-emerald-950/40 text-emerald-200" title="${escapeHtml(biome.name)}">${escapeHtml(biome.icon)} ${escapeHtml(biome.name)}</span>`;
+      }).join('');
     const badgeMarkup = badges.map(badge =>
       `<span class="px-2 py-0.5 rounded-full text-[11px] border ${badge.tone}">${badge.icon} ${escapeHtml(badge.label)}</span>`);
     let divider = '';
@@ -1447,6 +1454,7 @@ function renderExpeditionHistory() {
           <div class="travel-journal-metrics"><span><small>Total mileage</small>${metrics.mileage}</span><span><small>Elevation range</small>${metrics.elevation}</span></div>
           ${metrics.changes ? `<p class="text-xs text-slate-400">${metrics.changes}</p>` : ''}
           <div class="flex flex-wrap gap-1.5">${badgeMarkup.slice(0, 4).join('')}${badges.length > 4 ? `<span class="text-xs text-slate-400">+${badges.length - 4}</span>` : ''}</div>
+          ${biomeMarkup ? `<div class="flex flex-wrap items-center gap-1.5" data-trip-biomes aria-label="Biomes recorded on this trip"><span class="text-[11px] text-emerald-300">Biomes</span>${biomeMarkup}</div>` : ''}
           ${flags.length ? `<ul class="passport-flags" data-trip-flags aria-label="Countries traversed outside your home country">${countryFlagMarkup(flags)}</ul>` : ''}
           ${stateFlags.length ? `<ul class="passport-flags" data-trip-state-flags aria-label="US states visited or traversed on this trip">${stateFlagMarkup(stateFlags)}</ul>` : ''}
           <span class="travel-journal-toggle text-xs text-sky-300">Open journal <span aria-hidden="true">⌄</span></span>
