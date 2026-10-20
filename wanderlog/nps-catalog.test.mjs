@@ -140,7 +140,7 @@ check('mobile RPG HUD starts collapsed with an accessible stats toggle', () => {
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261020-unmet-no-descriptions')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261020-hints-at-85')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('storage-risk banner and unfinished-trip recovery controls are present', () => {
@@ -2276,7 +2276,7 @@ check('waterfall milestone achievements disclose their independent 1, 5 and 10 g
         ));
         assert.equal(
           cards.includes(`Visit ${goal} custom waterfall location`),
-          count >= goal
+          count >= goal * 0.85
         );
       }
     }
@@ -2767,7 +2767,7 @@ check('biome milestone achievements independently use 3, total minus one and tot
   assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='gaiaWanderer').tiers[0].goal()", context), 15);
   vm.runInContext("delete BIOMES['15']", context);
 });
-check('atlas goals exclude unknown countries and hide all unmet descriptions', () => {
+check('atlas goals exclude unknown countries and withhold hints below the reveal threshold', () => {
   vm.runInContext(`
     applyPassport(migratePassport({}));PARKS=[];coordinateIndexes=null;
     worldGeoJson=[{properties:{name:'Canada'}},{properties:{name:'United States of America'}}];
@@ -2795,7 +2795,7 @@ check('atlas goals exclude unknown countries and hide all unmet descriptions', (
   assert.ok(!element('achievementsContainer').innerHTML.includes('Citizen of the World'));
   assert.ok(!element('achievementsContainer').innerHTML.includes('Manifest Destiny'));
 });
-check('every unmet achievement hides its description while keeping its name, number, and rarity art', () => {
+check('achievement hints appear at 85 percent, remain blurred until earned, and preserve numbers and rarity art', () => {
   const cards = [];
   const badges = [];
   const cardContainer = element('achievementsContainer');
@@ -2829,7 +2829,9 @@ check('every unmet achievement hides its description while keeping its name, num
           progress: s => s.testProgress, tiers: [disclosureTestCase]
         });
       `, context);
-      for (const progress of [0, testCase.goal / 2, testCase.goal]) {
+      for (const progress of [
+        0, testCase.goal / 2, testCase.goal * 0.849, testCase.goal * 0.85, testCase.goal
+      ]) {
         cards.length = 0;
         badges.length = 0;
         context.disclosureTestProgress = progress;
@@ -2847,7 +2849,10 @@ check('every unmet achievement hides its description while keeping its name, num
         const card = cards[0];
         assert.ok(card.innerHTML.includes(testCase.title), testCase.title);
         const unmet = progress < testCase.goal;
-        assert.equal(card.innerHTML.includes(testCase.desc), !unmet, testCase.title);
+        const hintVisible = progress >= testCase.goal * 0.85;
+        assert.equal(card.innerHTML.includes(testCase.desc), !unmet || hintVisible, testCase.title);
+        assert.equal(card.innerHTML.includes('class="text-[10px] achievement-hint'), unmet && hintVisible, testCase.title);
+        assert.equal(card.innerHTML.includes('Achievement hint, blurred until earned'), unmet && hintVisible, testCase.title);
         assert.ok(!card.innerHTML.includes('achievement-redacted'), testCase.title);
         assert.equal(card.innerHTML.includes('achievement-icon-hidden'), false, testCase.title);
         const unmetImage = vm.runInContext(
@@ -2855,12 +2860,13 @@ check('every unmet achievement hides its description while keeping its name, num
         );
         assert.equal(card.innerHTML.includes(`./assets/achievements/${unmetImage}`), unmet, testCase.title);
         assert.ok(!card.innerHTML.includes('Progress:'), testCase.title);
+        if (unmet && hintVisible) assert.ok(html.includes('.achievement-hint {\n      filter: blur(0.7px);'));
         assert.equal(card.innerHTML.includes('<progress '), !secret || !unmet, testCase.title);
         assert.equal(card.className.includes('achievement-complete'), secret && !unmet, testCase.title);
         if (unmet) {
           const count = (Math.floor(Math.min(progress, testCase.goal) * 10) / 10).toLocaleString('en');
           assert.ok(card.innerHTML.includes(`${count} / ${testCase.goal}`), testCase.title);
-          assert.ok(!card.innerHTML.includes(testCase.desc), testCase.title);
+          if (!hintVisible) assert.ok(!card.innerHTML.includes(testCase.desc), testCase.title);
           assert.equal((card.innerHTML.match(new RegExp(` / ${testCase.goal}`, 'g')) || []).length, 1);
           assert.equal(badges.length, 0, testCase.title);
         } else if (progress >= testCase.goal) {

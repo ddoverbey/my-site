@@ -282,6 +282,10 @@
       background-clip: text;
       color: transparent;
     }
+    .achievement-hint {
+      filter: blur(0.7px);
+      user-select: none;
+    }
     .achievement-complete {
       background: linear-gradient(135deg, rgba(120, 53, 15, .55), rgba(69, 26, 3, .72));
       border-color: rgba(251, 191, 36, .8);
@@ -717,7 +721,7 @@
       <section class="max-w-6xl mx-auto space-y-6 pb-20" aria-labelledby="achievementsTitle">
         <div class="rpg-panel p-6 rounded-2xl">
           <h2 id="achievementsTitle" class="cinzel text-xl font-bold text-amber-200">Achievements</h2>
-          <p class="text-xs text-slate-400 mt-2">Discover special milestones through your travels. Only started achievements appear; descriptions are hidden until a milestone is earned, and each milestone earns its own badge.</p>
+          <p class="text-xs text-slate-400 mt-2">Discover special milestones through your travels. Hints appear at 85% completion and remain blurred until earned; each milestone earns its own badge.</p>
           <p class="text-xs text-slate-400 mt-2">Overnight stays are inferred from expedition dates. Same-day distance badges use only single-day expeditions, never undated pins or assumed dates on multi-day trips.</p>
           <p class="text-xs text-slate-400 mt-2">Rarity reflects achievement difficulty, not stat bonuses. Earned badges appear on your Explorer Profile.</p>
           <div class="flex flex-wrap gap-x-4 gap-y-2 mt-3 text-[10px] uppercase font-bold" aria-label="Achievement rarity levels">
@@ -962,14 +966,14 @@
     </form>
   </div>
 
-  <script src="./nps-catalog.js?v=20261020-unmet-no-descriptions"></script>
-  <script src="./national-parks-scratch.js?v=20261020-unmet-no-descriptions"></script>
-  <script src="./international-parks.js?v=20261020-unmet-no-descriptions"></script>
-  <script src="./ecoregions.js?v=20261020-unmet-no-descriptions"></script>
-  <script src="./coordinate-lookups.js?v=20261020-unmet-no-descriptions"></script>
-  <script src="./micro-states.js?v=20261020-unmet-no-descriptions"></script>
-  <script src="./travel-ledger.js?v=20261020-unmet-no-descriptions"></script>
-  <script src="./rarity-config.js?v=20261020-unmet-no-descriptions"></script>
+  <script src="./nps-catalog.js?v=20261020-hints-at-85"></script>
+  <script src="./national-parks-scratch.js?v=20261020-hints-at-85"></script>
+  <script src="./international-parks.js?v=20261020-hints-at-85"></script>
+  <script src="./ecoregions.js?v=20261020-hints-at-85"></script>
+  <script src="./coordinate-lookups.js?v=20261020-hints-at-85"></script>
+  <script src="./micro-states.js?v=20261020-hints-at-85"></script>
+  <script src="./travel-ledger.js?v=20261020-hints-at-85"></script>
+  <script src="./rarity-config.js?v=20261020-hints-at-85"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -1221,6 +1225,7 @@
       legendary: { label: 'Legendary', color: '#fbbf24' },
       mythic: { label: 'Mythic', color: '#f0abfc' }
     };
+    const ACHIEVEMENT_HINT_THRESHOLD = 0.85;
     const ACHIEVEMENT_ART = {
       firstSteps: ['🏕️', '#14332c', ['common']],
       trailblazer: ['🏕️', '#14332c', ['uncommon']],
@@ -4613,16 +4618,24 @@
             </div>
             <div class="min-w-0 flex-1">
               <h5 class="text-xs font-bold text-slate-200">${escapeHtml(ach.title)}</h5>
-              ${visibleTiers.map(tier => `
-                ${tier.title === ach.title ? '' : `<p class="text-xs text-slate-200 mt-2">${escapeHtml(tier.title)}</p>`}
-                <p class="achievement-rarity text-[10px] uppercase font-bold mt-1" data-rarity="${tier.rarity}" style="${achievementBadgeStyle(ach, tier)}">${ACHIEVEMENT_RARITIES[tier.rarity].label}</p>
-                ${progress >= tier.goal
-                  ? `<p class="text-[10px] text-slate-400 leading-tight mt-0.5">${escapeHtml(tier.desc)}</p>` : ''}
-                ${isSecretAchievementTier(tier) && progress < tier.goal
-                  ? `<p class="text-[10px] text-amber-300 mt-1">${(Math.floor(Math.min(progress, tier.goal) * 10) / 10).toLocaleString('en')} / ${tier.goal} (${Math.floor(Math.min(progress / tier.goal, 1) * 100)}%)</p>`
-                  : `<p class="text-[10px] text-amber-300 mt-1">${(Math.floor(Math.min(progress, tier.goal) * 10) / 10).toLocaleString('en')} / ${tier.goal}${progress >= tier.goal ? ' • Complete' : ''}</p>
-                    <progress aria-label="${escapeHtml(tier.title)} completion" value="${Math.min(progress, tier.goal)}" max="${tier.goal}" class="w-full h-2 mt-1"></progress>`}
-              `).join('')}
+              ${visibleTiers.map(tier => {
+                const earned = progress >= tier.goal;
+                const hintReached = progress >= tier.goal * ACHIEVEMENT_HINT_THRESHOLD;
+                const description = earned
+                  ? `<p class="text-[10px] text-slate-400 leading-tight mt-0.5">${escapeHtml(tier.desc)}</p>`
+                  : hintReached
+                    ? `<p class="text-[10px] achievement-hint leading-tight mt-0.5" aria-label="Achievement hint, blurred until earned">${escapeHtml(tier.desc)}</p>`
+                    : '';
+                return `
+                  ${tier.title === ach.title ? '' : `<p class="text-xs text-slate-200 mt-2">${escapeHtml(tier.title)}</p>`}
+                  <p class="achievement-rarity text-[10px] uppercase font-bold mt-1" data-rarity="${tier.rarity}" style="${achievementBadgeStyle(ach, tier)}">${ACHIEVEMENT_RARITIES[tier.rarity].label}</p>
+                  ${description}
+                  ${isSecretAchievementTier(tier) && !earned
+                    ? `<p class="text-[10px] text-amber-300 mt-1">${(Math.floor(Math.min(progress, tier.goal) * 10) / 10).toLocaleString('en')} / ${tier.goal} (${Math.floor(Math.min(progress / tier.goal, 1) * 100)}%)</p>`
+                    : `<p class="text-[10px] text-amber-300 mt-1">${(Math.floor(Math.min(progress, tier.goal) * 10) / 10).toLocaleString('en')} / ${tier.goal}${earned ? ' • Complete' : ''}</p>
+                      <progress aria-label="${escapeHtml(tier.title)} completion" value="${Math.min(progress, tier.goal)}" max="${tier.goal}" class="w-full h-2 mt-1"></progress>`}
+                `;
+              }).join('')}
             </div>
           </div>
         `;
@@ -5223,7 +5236,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261020-unmet-no-descriptions"></script>
+  <script src="./expedition-ui.js?v=20261020-hints-at-85"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);
