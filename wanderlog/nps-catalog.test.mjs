@@ -140,7 +140,7 @@ check('mobile RPG HUD starts collapsed with an accessible stats toggle', () => {
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261020-provider-fallback')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261020-empty-coordinate-fields')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('storage-risk banner and unfinished-trip recovery controls are present', () => {
@@ -874,6 +874,22 @@ check('custom-location provider failures still save offline geography and waterf
   assert.ok(element('toastMsg').textContent.includes('rarity unavailable'));
   assert.ok(element('toastMsg').textContent.includes('Elevation unavailable'));
 });
+check('coordinate inputs stay empty as examples and only map-selected points populate the custom-location form', () => {
+  assert.doesNotMatch(html, /id="expeditionCoordinate(?:Lat|Lng)"[^>]*placeholder=/);
+  context.previousCustomLocationMap = vm.runInContext('map', context);
+  vm.runInContext('map={getCenter:()=>({lat:45,lng:-120})};openCustomLocation()', context);
+  assert.equal(element('customLocationLat').value, '');
+  assert.equal(element('customLocationLng').value, '');
+  vm.runInContext("openCustomLocation('44','-123');map=previousCustomLocationMap", context);
+  assert.equal(element('customLocationLat').value, '44');
+  assert.equal(element('customLocationLng').value, '-123');
+  delete context.previousCustomLocationMap;
+});
+element('customLocationName').value = 'Colosseum';
+element('customLocationLat').value = '41.8902';
+element('customLocationLng').value = '12.4922';
+element('customLocationStatus').value = 'v';
+element('customLocationCategory').value = 'waterfall';
 context.CoordinateLookups.lookupCoordinate = async () => { throw new Error('Overpass HTTP 503'); };
 await element('customLocationForm').handlers.submit({ preventDefault() {} });
 check('lookup failure leaves saved pins unchanged and presents a retryable error', () => {

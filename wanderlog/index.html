@@ -896,10 +896,10 @@
             </label>
             <div class="grid grid-cols-2 gap-2">
               <label class="block text-xs">Latitude
-                <input id="expeditionCoordinateLat" type="number" min="-90" max="90" step="any" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2" placeholder="40.6892">
+                <input id="expeditionCoordinateLat" type="number" min="-90" max="90" step="any" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2">
               </label>
               <label class="block text-xs">Longitude
-                <input id="expeditionCoordinateLng" type="number" min="-180" max="180" step="any" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2" placeholder="-74.0445">
+                <input id="expeditionCoordinateLng" type="number" min="-180" max="180" step="any" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2">
               </label>
             </div>
             <button id="btnAddExpeditionCoordinate" type="button" class="rounded-lg bg-slate-800 border border-slate-600 px-3 py-2 text-xs text-sky-200">Add coordinate stop</button>
@@ -972,14 +972,14 @@
     </form>
   </div>
 
-  <script src="./nps-catalog.js?v=20261020-provider-fallback"></script>
-  <script src="./national-parks-scratch.js?v=20261020-provider-fallback"></script>
-  <script src="./international-parks.js?v=20261020-provider-fallback"></script>
-  <script src="./ecoregions.js?v=20261020-provider-fallback"></script>
-  <script src="./coordinate-lookups.js?v=20261020-provider-fallback"></script>
-  <script src="./micro-states.js?v=20261020-provider-fallback"></script>
-  <script src="./travel-ledger.js?v=20261020-provider-fallback"></script>
-  <script src="./rarity-config.js?v=20261020-provider-fallback"></script>
+  <script src="./nps-catalog.js?v=20261020-empty-coordinate-fields"></script>
+  <script src="./national-parks-scratch.js?v=20261020-empty-coordinate-fields"></script>
+  <script src="./international-parks.js?v=20261020-empty-coordinate-fields"></script>
+  <script src="./ecoregions.js?v=20261020-empty-coordinate-fields"></script>
+  <script src="./coordinate-lookups.js?v=20261020-empty-coordinate-fields"></script>
+  <script src="./micro-states.js?v=20261020-empty-coordinate-fields"></script>
+  <script src="./travel-ledger.js?v=20261020-empty-coordinate-fields"></script>
+  <script src="./rarity-config.js?v=20261020-empty-coordinate-fields"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -3507,9 +3507,8 @@
     let customLookupPending = false;
     function openCustomLocation(lat, lng) {
       if (AppState.viewOnly || customLookupPending) return;
-      const center = map?.getCenter();
-      document.getElementById('customLocationLat').value = lat ?? center?.lat ?? '';
-      document.getElementById('customLocationLng').value = lng ?? center?.lng ?? '';
+      document.getElementById('customLocationLat').value = lat ?? '';
+      document.getElementById('customLocationLng').value = lng ?? '';
       document.getElementById('customLocationName').value = '';
       document.getElementById('customLocationCategory').value = '';
       document.querySelectorAll('#customPurposeTags input').forEach(input => { input.checked = false; });
@@ -5287,7 +5286,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261020-provider-fallback"></script>
+  <script src="./expedition-ui.js?v=20261020-empty-coordinate-fields"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);
