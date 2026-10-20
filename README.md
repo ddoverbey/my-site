@@ -766,7 +766,7 @@ Lived grants the same completion credit as Visited. Metadata badges:
 - **The Long Dark:** a visited/lived point strictly north of 66.5° N or south of 66.5° S.
 - **Pole to Pole:** at least 60 degrees between the northernmost and southernmost logged points.
 - **Manifest Destiny:** visited/lived completion across the loaded US county atlas.
-- **Fifty-Nifty:** visited/lived completion of all 50 US states.
+- **Statehopper / Semi-Centennial / Fifty-Nifty:** visit/lived credit in 10, 25 and all 50 US states.
 - **How????:** complete all countries/territories represented in the loaded
   World Nations atlas. This is atlas coverage, not a complete sovereign-country census.
 - **Country Roads, Take Me Home (Rare, 🛣️🏡):** visit/live in West Virginia and Shenandoah

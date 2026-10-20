@@ -2939,6 +2939,14 @@ check('unmet achievement artwork maps every rarity to its supplied placeholder',
 });
 check('every achievement tier has valid difficulty rarity and distinct emoji artwork', () => {
   assert.equal(vm.runInContext('ACHIEVEMENTS.every(a=>a.icon && /^#[0-9a-f]{6}$/i.test(a.background) && a.tiers.every(t=>ACHIEVEMENT_RARITIES[t.rarity]))', context), true);
+  const stateTiers = vm.runInContext(`ACHIEVEMENTS.find(a=>a.id==='states').tiers.map(t=>({
+    goal:t.goal,title:t.title,desc:t.desc,rarity:t.rarity
+  }))`, context);
+  assert.deepEqual(JSON.parse(JSON.stringify(stateTiers)), [
+    { goal: 10, title: 'Statehopper', desc: 'Visit 10 US states', rarity: 'rare' },
+    { goal: 25, title: 'Semi-Centennial', desc: 'Visit 25 US states', rarity: 'epic' },
+    { goal: 50, title: 'Fifty-Nifty', desc: 'Visit all 50 US states', rarity: 'legendary' }
+  ]);
   assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='earthSandwich').icon", context), '🌍🥪');
   assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='earthSandwich').background", context), '#172554');
   assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='earthSandwich').tiers[0].rarity", context), 'mythic');
