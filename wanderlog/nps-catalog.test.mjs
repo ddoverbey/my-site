@@ -4308,11 +4308,13 @@ check('Global Route Map renders country and expedition paths and toggles indepen
     AppState.homeBase = { name: 'Test Base', lat: 0, lng: 0 };
     AppState.expeditions = [{
       id: 'global-route-test', name: 'Atlantic Flight', startDate: '2026-06-01',
-      endDate: '2026-06-02', transitTags: ['flight'],
+      endDate: '2026-06-02', transitTags: ['flight'], purposeTags: [],
+      countyIds: [], parkIds: [], customPoiIds: [],
       routeStops: [
         { kind: 'place', name: 'New York', coords: [40.7,-74] },
         { kind: 'place', name: 'London', coords: [51.5,-0.1] }
       ],
+      routeCoords: [[40.7,-74],[51.5,-0.1]],
       routeLegs: [{
         mode: 'flight', routeSource: 'direct',
         routeCoords: [[40.7,-74],[51.5,-0.1]]
