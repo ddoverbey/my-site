@@ -222,10 +222,13 @@
     const political = poi.political || {
       countries: poi.country ? [poi.country] : [],
       states: poi.state ? [poi.state] : [],
+      admin1: [],
       counties: poi.countyId ? [{ id: poi.countyId, name: poi.countyId }] : []
     };
     if (![political.countries, political.states].every(names => Array.isArray(names) &&
         names.every(name => typeof name === 'string' && name.trim())) ||
+        (political.admin1 !== undefined && (!Array.isArray(political.admin1) || political.admin1.some(region =>
+          !lookups.validSubdivisionId(region?.id) || typeof region.name !== 'string' || !region.name.trim()))) ||
         !Array.isArray(political.counties) || political.counties.some(county =>
           !validCountyId(county?.id) || typeof county.name !== 'string')) throw new Error('Invalid POI regions.');
     const rarity = poi.rarity ? lookups.normalizeRarity(poi.rarity, poi.lat, poi.lng) : null;
@@ -306,6 +309,9 @@
       if (!political) return;
       for (const name of political.countries || []) state.regions[`c:${name}`] = promote(state.regions[`c:${name}`], status);
       for (const name of political.states || []) state.regions[`s:${name}`] = promote(state.regions[`s:${name}`], status);
+      for (const region of political.admin1 || []) {
+        state.regions[`s:${region.id}`] = promote(state.regions[`s:${region.id}`], status);
+      }
       for (const county of political.counties || []) state.counties[county.id] = promote(state.counties[county.id], status);
     };
     const markCounty = (id, status) => {
@@ -346,7 +352,12 @@
       });
       if (exp.routeLegs) {
         exp.routeCoords.forEach(([lat, lng]) => markRegions(politicalAt(lat, lng), 'v'));
-        exp.routeLegs.forEach(leg => leg.countyIds.forEach(id => markCounty(id, 'v')));
+        exp.routeLegs.forEach(leg => {
+          if (['road', 'awd'].includes(leg.mode)) {
+            leg.routeCoords.forEach(([lat, lng]) => markRegions(politicalAt(lat, lng), 'v'));
+          }
+          leg.countyIds.forEach(id => markCounty(id, 'v'));
+        });
       }
     }
     const after = promotionValues(state);

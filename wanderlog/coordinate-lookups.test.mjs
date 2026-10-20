@@ -6,6 +6,7 @@ import { feature as decode } from 'topojson-client';
 import lookups from './coordinate-lookups.js';
 import { collectBoundaries } from './import-geography.mjs';
 import { selectSubdivisionFeatures } from './import-subdivisions.mjs';
+import { buildAdmin2, selectAdmin2Features } from './import-admin2.mjs';
 
 let checks = 0;
 async function check(name, action) {
@@ -55,13 +56,28 @@ await check('D3 winding normalization respects exteriors, holes, islands, and th
 });
 await check('international subdivisions resolve to stable county-ledger IDs for locations and routes', () => {
   const subdivisionIndex = lookups.indexFeatures([subdivision], geo);
-  const political = lookups.politicalRegion(5, 5, { ...indexes, subdivisions: subdivisionIndex }, geo.geoContains);
+  const political = lookups.politicalRegion(5, 5, {
+    ...indexes, counties: subdivisionIndex, subdivisions: subdivisionIndex
+  }, geo.geoContains);
   assert.deepEqual(political.counties, [{ id: 'CAN:ON-01', name: 'Ontario' }]);
+  assert.deepEqual(political.admin1, [{ id: 'CAN:ON-01', name: 'Ontario' }]);
   assert.deepEqual(lookups.routeCountyIds([[5, 1], [5, 9]], subdivisionIndex, geo.geoContains), ['CAN:ON-01']);
   assert.equal(lookups.validCountyId('01001'), true);
   assert.equal(lookups.validCountyId('CAN:ON-01'), true);
   assert.equal(lookups.validCountyId('can:ON-01'), false);
   assert.equal(lookups.validCountyId('CAN:ON/01'), false);
+});
+await check('Admin-1 provinces remain separate from the Admin-2 county-equivalent returned for coordinates', () => {
+  const province = { ...subdivision, id: 'CAN:ON', properties: { ...subdivision.properties, name: 'Ontario' } };
+  const district = { ...subdivision, id: 'CAN:CD-001', properties: { name: 'Ottawa Division', country: 'CAN' } };
+  const provinceIndex = lookups.indexFeatures([province], geo);
+  const countyIndex = lookups.indexFeatures([district], geo);
+  const political = lookups.politicalRegion(5, 5, {
+    ...indexes, counties: countyIndex, subdivisions: provinceIndex
+  }, geo.geoContains);
+  assert.deepEqual(political.counties, [{ id: 'CAN:CD-001', name: 'Ottawa Division' }]);
+  assert.deepEqual(political.admin1, [{ id: 'CAN:ON', name: 'Ontario' }]);
+  assert.deepEqual(lookups.countyEquivalentFeatures([province], [district]), [district]);
 });
 await check('subdivision biome inheritance selects the predominant terrestrial biome', () => {
   const regions = lookups.indexFeatures([
@@ -107,14 +123,18 @@ await check('county biome fallback detects complete border intersections without
 const npsText = await readFile(new URL('./nps-boundaries.topojson', import.meta.url), 'utf8');
 const ecoText = await readFile(new URL('./ecoregions.topojson', import.meta.url), 'utf8');
 const subdivisionsText = await readFile(new URL('./world-subdivisions.topojson', import.meta.url), 'utf8');
+const admin2Text = await readFile(new URL('./world-admin2.topojson', import.meta.url), 'utf8');
 const nps = JSON.parse(npsText);
 const eco = JSON.parse(ecoText);
 const subdivisionsTopology = JSON.parse(subdivisionsText);
+const admin2Topology = JSON.parse(admin2Text);
 const npsIndex = lookups.npsBoundaryIndex(nps, decode);
 const ecoIndex = lookups.indexFeatures(decode(eco, eco.objects.ecoregions).features, geo);
 const subdivisions = lookups.subdivisionFeatures(subdivisionsTopology, decode);
 const subdivisionsIndex = lookups.indexFeatures(subdivisions, geo);
-await check('published snapshots meet download budgets and retain source provenance', () => {
+const admin2 = lookups.admin2Features(admin2Topology, decode);
+const countyEquivalent = lookups.countyEquivalentFeatures(subdivisions, admin2);
+await check('published geography snapshots meet size budgets and retain source provenance', () => {
   assert.ok(Buffer.byteLength(npsText) <= 750000);
   assert.ok(Buffer.byteLength(ecoText) <= 1800000);
   assert.equal(nps.metadata.source, lookups.NPS_SOURCE);
@@ -123,13 +143,36 @@ await check('published snapshots meet download budgets and retain source provena
   assert.equal(subdivisionsTopology.metadata.source, lookups.SUBDIVISION_SOURCE);
   assert.ok(subdivisions.length > 1000);
   assert.equal(subdivisionsIndex.length, subdivisions.length);
+  assert.ok(Buffer.byteLength(admin2Text) < 1_500_000);
+  assert.equal(admin2Topology.metadata.source, lookups.ADMIN2_SOURCE);
+  assert.equal(admin2Topology.metadata.license, 'CC-BY-4.0');
+  assert.equal(admin2.length, admin2Topology.objects.admin2.geometries.length);
+  assert.ok(lookups.ADMIN2_COUNTRIES.every(code => admin2.some(feature => feature.id.startsWith(`${code}:`))));
+  assert.ok(countyEquivalent.every(feature => !['CAN', 'MEX', 'DEU', 'AUS'].includes(feature.properties.isoA3)));
   assert.ok(subdivisions.every(feature =>
     /^[A-Z]{3}:[A-Za-z0-9_.-]+$/.test(feature.id) && feature.properties.isoA3 !== 'USA'));
   assert.equal(ecoIndex.length, 847);
   assert.ok(nps.objects.parks.geometries.length >= 400);
   assert.match(nps.metadata.method, /1.5%/);
   assert.match(eco.metadata.method, /0.8%/);
-  console.log(`  NPS: ${Buffer.byteLength(npsText)} bytes (${gzipSync(npsText).length} gzip); ecoregions: ${Buffer.byteLength(ecoText)} bytes (${gzipSync(ecoText).length} gzip).`);
+  console.log(`  Admin-2: ${Buffer.byteLength(admin2Text)} bytes; NPS: ${Buffer.byteLength(npsText)} bytes (${gzipSync(npsText).length} gzip); ecoregions: ${Buffer.byteLength(ecoText)} bytes (${gzipSync(ecoText).length} gzip).`);
+});
+await check('geoBoundaries Admin-2 importer validates IDs and emits only compact county properties', async () => {
+  const features = selectAdmin2Features({
+    type: 'FeatureCollection',
+    features: [{
+      type: 'Feature', properties: { shapeID: 'CAN-ADM2-01', shapeName: 'Ottawa Division' },
+      geometry: { type: 'Polygon', coordinates: [ring(0, 0, 1, 1)] }
+    }]
+  }, 'CAN');
+  assert.equal(features[0].id, 'CAN:CAN-ADM2-01');
+  assert.deepEqual(features[0].properties, {
+    id: 'CAN:CAN-ADM2-01', name: 'Ottawa Division', country: 'CAN'
+  });
+  const { topology, featureCount } = await buildAdmin2(features, []);
+  assert.equal(featureCount, 1);
+  assert.equal(topology.metadata.license, 'CC-BY-4.0');
+  assert.equal(topology.objects.admin2.geometries[0].properties.country, 'CAN');
 });
 await check('Yosemite/Zion boundary matches and combined Sequoia/Kings Canyon codes are explicit', () => {
   for (const [code, lat, lng] of [['yose', 37.75, -119.59], ['zion', 37.3, -113.05]]) {

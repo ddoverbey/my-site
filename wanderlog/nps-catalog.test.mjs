@@ -9,6 +9,7 @@ import coordinateLookups from './coordinate-lookups.js';
 import travelLedger from './travel-ledger.js';
 import nationalParksScratch from './national-parks-scratch.js';
 import { collectParks } from './import-nps.mjs';
+import { feature as decodeTopology } from 'topojson-client';
 const worldwide = JSON.parse(await readFile(new URL('./worldwide-national-parks.json', import.meta.url), 'utf8'));
 const wikidata = JSON.parse(await readFile(new URL('./wikidata-national-parks-query.json', import.meta.url), 'utf8'));
 const internationalParks = internationalCatalog.combineParks(worldwide, wikidata).parks;
@@ -139,7 +140,7 @@ check('mobile RPG HUD starts collapsed with an accessible stats toggle', () => {
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261019-international-subdivisions')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261019-international-subdivisions-phase2')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('storage-risk banner and unfinished-trip recovery controls are present', () => {
@@ -153,6 +154,9 @@ check('storage-risk banner and unfinished-trip recovery controls are present', (
 check('National Parks is a Scratch Map dataset, not a separate navigation page, with an expanded checklist', () => {
   assert.ok(html.includes('id="btnScratchNationalParks"'));
   assert.ok(html.includes('id="btnScratchWorldSubdivisions"'));
+  assert.ok(html.includes('World States / Provinces'));
+  assert.ok(html.includes('id="scratchCountyCountryFilter"'));
+  assert.ok(html.includes('Counties &amp; Districts'));
   assert.ok(html.includes("'subdivisions'"));
   assert.ok(!html.includes('data-tab="nationalparks"'));
   assert.ok(!html.includes('id="tabContent-nationalparks"'));
@@ -978,6 +982,172 @@ check('visited international subdivisions inherit their predominant terrestrial 
     delete context.subdivisionBiomeIndexes;
   }
 });
+{
+  const ring = [[-81,43],[-79,43],[-79,45],[-81,45],[-81,43]];
+  const admin1 = {
+    type: 'Feature', id: 'CAN:ONT',
+    properties: { name: 'Ontario', country: 'Canada', isoA3: 'CAN', region: 'Ontario' },
+    geometry: { type: 'Polygon', coordinates: [ring] }
+  };
+  const admin2 = {
+    type: 'Feature', id: 'CAN:CD-ON',
+    properties: { name: 'Ottawa Division', country: 'CAN' },
+    geometry: { type: 'Polygon', coordinates: [[[-80.8,43.2],[-80.2,43.2],[-80.2,43.8],[-80.8,43.8],[-80.8,43.2]]] }
+  };
+  const unrelated = {
+    type: 'Feature', id: '01001', properties: { name: 'Autauga' },
+    geometry: { type: 'Polygon', coordinates: [[[0,0],[1,0],[1,1],[0,1],[0,0]]] }
+  };
+  const ecoregionRing = [[-82,42],[-78,42],[-78,46],[-82,46],[-82,42]];
+  const ecoregionTopology = {
+    type: 'Topology',
+    metadata: { source: ecoregions.SOURCE, license: 'CC-BY-4.0', version: 1 },
+    arcs: [ecoregionRing],
+    objects: { ecoregions: { type: 'GeometryCollection', geometries: Array.from({ length: 800 }, (_, index) => ({
+      type: 'Polygon', arcs: [[0]],
+      properties: { ECO_ID: index + 1, ECO_NAME: 'Test region', BIOME_NUM: 5, REALM: 'Nearctic' }
+    })) } }
+  };
+  const stateRing = [[[0,0],[1,0],[1,1],[0,1],[0,0]]];
+  const savedFetch = context.fetch;
+  const savedTimeout = context.setTimeout;
+  const savedTopojson = context.topojson;
+  const savedD3 = context.d3;
+  context.fetch = async () => ({ ok: true, json: async () => ecoregionTopology });
+  context.setTimeout = callback => { queueMicrotask(callback); return 1; };
+  context.topojson = { feature: decodeTopology };
+  context.backfillAdmin1 = admin1;
+  context.backfillAdmin2 = admin2;
+  context.backfillUsCounty = unrelated;
+  context.backfillWorldCountry = {
+    type: 'Feature', id: 'CAN', properties: { name: 'Canada' },
+    geometry: { type: 'Polygon', coordinates: [ecoregionRing] }
+  };
+  context.backfillUsState = {
+    type: 'Feature', id: '01', properties: { name: 'Alabama' },
+    geometry: { type: 'Polygon', coordinates: stateRing }
+  };
+  context.backfillEcoregionTopology = ecoregionTopology;
+  context.d3 = { ...d3Geo };
+  vm.runInContext(`
+    globalThis.admin2BackfillSaved = {
+      coordinateIndexes, countyRegionCache, worldGeoJson,
+      usaRegionGeoJson, countyGeoJson, worldSubdivisionGeoJson, worldAdmin2GeoJson,
+      internationalCountyGeoJson, biomeCache: { ...countyBiomeCache }, biomeSignature: countyBiomeSignature,
+      parks: PARKS, state: { ...AppState }, saveState, drawFogOfWar, punchFogPolygon,
+      timeout: globalThis.setTimeout, features: {
+        admin1: countyFeaturesById['CAN:ONT'], admin2: countyFeaturesById['CAN:CD-ON'],
+        usCounty: countyFeaturesById['01001']
+      }
+    };
+    worldGeoJson = [backfillWorldCountry];
+    usaRegionGeoJson = [backfillUsState];
+    countyGeoJson = [backfillUsCounty];
+    worldSubdivisionGeoJson = [backfillAdmin1];
+    worldAdmin2GeoJson = [backfillAdmin2];
+    internationalCountyGeoJson = CoordinateLookups.countyEquivalentFeatures(worldSubdivisionGeoJson, worldAdmin2GeoJson);
+    countyFeaturesById['01001'] = backfillUsCounty;
+    countyFeaturesById['CAN:CD-ON'] = backfillAdmin2;
+    delete countyFeaturesById['CAN:ONT'];
+    countyRegionCache = null;
+    PARKS = [];
+    Object.assign(AppState, {
+      customPois: [{
+        id: 'poi_ottawa', name: 'Ottawa', lat: 43.5, lng: -80.5, status: 'v',
+        political: { countries: ['Canada'], states: [], counties: [{ id: 'CAN:ONT', name: 'Ontario' }] },
+        biomes: [], elevationFt: null
+      }],
+      expeditions: [{
+        id: 'trip_canada', name: 'Ontario road trip', startDate: '2026-01-01', endDate: '2026-01-02',
+        routeCoords: [[43.5,-80.5],[43.7,-80.4]], routeStops: [
+          { kind: 'place', id: 'start', name: 'Start', coords: [43.5,-80.5] },
+          { kind: 'place', id: 'end', name: 'End', coords: [43.7,-80.4] }
+        ],
+        routeLegs: [{
+          mode: 'road', routeCoords: [[43.5,-80.5],[43.7,-80.4]], countyIds: ['CAN:ONT']
+        }],
+        countyIds: ['CAN:ONT'], parkIds: [], customPoiIds: [], minElevationFt: null, maxElevationFt: null
+      }],
+      pins: {}, regions: {}, counties: {}, homeBase: null, expeditionPromotions: {},
+      statusOverrides: { pins: {}, regions: {}, counties: {}, nationalParks: {} }, viewOnly: false
+    });
+    globalThis.backfillSaveCalls = 0;
+    globalThis.backfillFogCalls = 0;
+    saveState = () => { backfillSaveCalls++; };
+    drawFogOfWar = () => { backfillFogCalls++; };
+`, context);
+  try {
+    await vm.runInContext('loadCoordinateGeography()', context);
+    check('loading coordinate geography backfills saved trips with Admin-2 IDs and excludes coarse province fog', () => {
+      assert.equal(vm.runInContext("AppState.customPois[0].political.counties.some(value => value.id === 'CAN:CD-ON')", context), true);
+      assert.equal(vm.runInContext("AppState.customPois[0].political.counties.some(value => value.id === 'CAN:ONT')", context), true);
+      assert.equal(vm.runInContext("AppState.customPois[0].political.admin1[0].id", context), 'CAN:ONT');
+      assert.equal(vm.runInContext("AppState.expeditions[0].routeLegs[0].countyIds.includes('CAN:CD-ON')", context), true);
+      assert.equal(vm.runInContext("AppState.expeditions[0].countyIds.includes('CAN:CD-ON')", context), true);
+      assert.equal(vm.runInContext("AppState.counties['CAN:CD-ON']", context), 'v');
+      assert.equal(vm.runInContext("AppState.regions['s:CAN:ONT']", context), 'v');
+      assert.equal(vm.runInContext("coordinateIndexes.counties.some(item => item.feature.id === 'CAN:ONT')", context), false);
+      assert.equal(vm.runInContext("countyFeaturesById['CAN:ONT']", context), undefined);
+      assert.equal(vm.runInContext('backfillSaveCalls', context), 1);
+      assert.equal(vm.runInContext('backfillFogCalls', context), 1);
+    });
+    context.backfillPunches = [];
+    vm.runInContext(`
+      punchFogPolygon = geometry => backfillPunches.push(geometry);
+      punchCountyFog(Object.keys(AppState.counties).filter(id => countyFeaturesById[id]));
+    `, context);
+    check('retroactively visited Canada trip punches only its matched Admin-2 polygon', () => {
+      assert.equal(context.backfillPunches.length, 1);
+      assert.equal(JSON.stringify(context.backfillPunches[0]), JSON.stringify(admin2.geometry));
+    });
+  } finally {
+    context.fetch = savedFetch;
+    context.setTimeout = savedTimeout;
+    context.topojson = savedTopojson;
+    context.d3 = savedD3;
+    vm.runInContext(`
+      coordinateIndexes = admin2BackfillSaved.coordinateIndexes;
+      countyRegionCache = admin2BackfillSaved.countyRegionCache;
+      worldGeoJson = admin2BackfillSaved.worldGeoJson;
+      usaRegionGeoJson = admin2BackfillSaved.usaRegionGeoJson;
+      countyGeoJson = admin2BackfillSaved.countyGeoJson;
+      worldSubdivisionGeoJson = admin2BackfillSaved.worldSubdivisionGeoJson;
+      worldAdmin2GeoJson = admin2BackfillSaved.worldAdmin2GeoJson;
+      internationalCountyGeoJson = admin2BackfillSaved.internationalCountyGeoJson;
+      PARKS = admin2BackfillSaved.parks;
+      coordinateCacheIndexes = null;
+      politicalCache.clear();
+      biomeCache.clear();
+      Object.keys(countyBiomeCache).forEach(key => delete countyBiomeCache[key]);
+      Object.assign(countyBiomeCache, admin2BackfillSaved.biomeCache);
+      countyBiomeSignature = admin2BackfillSaved.biomeSignature;
+      statsCache = null;
+      Object.assign(AppState, admin2BackfillSaved.state);
+      for (const [id, feature] of Object.entries({
+        'CAN:ONT': admin2BackfillSaved.features.admin1,
+        'CAN:CD-ON': admin2BackfillSaved.features.admin2,
+        '01001': admin2BackfillSaved.features.usCounty
+      })) {
+        if (feature) countyFeaturesById[id] = feature;
+        else delete countyFeaturesById[id];
+      }
+      saveState = admin2BackfillSaved.saveState;
+      drawFogOfWar = admin2BackfillSaved.drawFogOfWar;
+      punchFogPolygon = admin2BackfillSaved.punchFogPolygon;
+      globalThis.setTimeout = admin2BackfillSaved.timeout;
+      delete globalThis.admin2BackfillSaved;
+      delete globalThis.backfillSaveCalls;
+      delete globalThis.backfillFogCalls;
+      delete globalThis.backfillPunches;
+`, context);
+    delete context.backfillAdmin1;
+    delete context.backfillAdmin2;
+    delete context.backfillUsCounty;
+    delete context.backfillWorldCountry;
+    delete context.backfillUsState;
+    delete context.backfillEcoregionTopology;
+  }
+}
 check('visited county polygons credit their cached predominant biome without crediting transit or wishlist counties', () => {
   vm.runInContext(`
     AppState.customPois=[];AppState.expeditions=[];AppState.homeBase=null;AppState.pins={};AppState.regions={};
@@ -3801,10 +3971,10 @@ check('county search finds small counties by name, state and padded FIPS, with b
     const before=buttons.length;
     element('scratchCountySearch').handlers.input();
     assert.equal(buttons.length-before,50);
-    assert.ok(element('scratchCountySearchStatus').textContent.includes('70 matching counties'));
+    assert.ok(element('scratchCountySearchStatus').textContent.includes('70 matching counties or districts'));
     element('scratchCountySearch').value='no match';
     element('scratchCountySearch').handlers.input();
-    assert.ok(element('scratchCountySearchStatus').textContent.startsWith('No matching counties'));
+    assert.ok(element('scratchCountySearchStatus').textContent.startsWith('No matching counties or districts'));
     vm.runInContext('countyGeoJson=null;renderCountySearch()',context);
     assert.ok(element('scratchCountySearchStatus').textContent.includes('unavailable'));
   } finally {
@@ -3819,7 +3989,72 @@ check('county search finds small counties by name, state and padded FIPS, with b
     delete context.countySearchQuery;
   }
 });
-check('World Subdivisions renders global polygons with zoom and cycles their county-ledger status', () => {
+check('international County and District filter searches and cycles the selected country', () => {
+  const district = {
+    type: 'Feature', id: 'CAN:CD-ON',
+    properties: { name: 'Ottawa Division', country: 'CAN' },
+    geometry: { type: 'Polygon', coordinates: [[[-80.8,43.2],[-80.2,43.2],[-80.2,43.8],[-80.8,43.8],[-80.8,43.2]]] }
+  };
+  const province = {
+    type: 'Feature', id: 'CAN:ONT',
+    properties: { name: 'Ontario', country: 'Canada', isoA3: 'CAN', region: 'Ontario' },
+    geometry: district.geometry
+  };
+  context.countryFilterDistrict = district;
+  context.countryFilterProvince = province;
+  vm.runInContext(`
+    globalThis.countryFilterSaved = {
+      countyGeoJson, internationalCountyGeoJson, worldSubdivisionGeoJson,
+      feature: countyFeaturesById['CAN:CD-ON'], state: { ...AppState },
+      commitLedger, refreshTravelUI, showNotification,
+      filterValue: document.getElementById('scratchCountyCountryFilter').value,
+      filterHtml: document.getElementById('scratchCountyCountryFilter').innerHTML
+    };
+    countyGeoJson = [];
+    internationalCountyGeoJson = [countryFilterDistrict];
+    worldSubdivisionGeoJson = [countryFilterProvince];
+    countyFeaturesById['CAN:CD-ON'] = countryFilterDistrict;
+    AppState.scratchDataset = 'counties';
+    AppState.counties = {};
+    AppState.viewOnly = false;
+    AppState.statusOverrides = { pins: {}, regions: {}, counties: {}, nationalParks: {} };
+    document.getElementById('scratchCountyCountryFilter').value = 'US';
+    commitLedger = change => {
+      change();
+      AppState.counties['CAN:CD-ON'] = AppState.statusOverrides.counties['CAN:CD-ON'];
+    };
+    refreshTravelUI = () => {};
+    showNotification = () => {};
+    renderCountyCountryFilter();
+  `, context);
+  try {
+    assert.ok(element('scratchCountyCountryFilter').innerHTML.includes('value="CAN">Canada'));
+    element('scratchCountyCountryFilter').value = 'CAN';
+    assert.equal(vm.runInContext('scratchCountyFeatures().length', context), 1);
+    assert.equal(vm.runInContext('scratchCountyMatches("Ottawa Division Canada")[0].id', context), 'CAN:CD-ON');
+    vm.runInContext('cycleScratchStatus(scratchCountyMatches("Ottawa")[0])', context);
+    assert.equal(vm.runInContext("AppState.statusOverrides.counties['CAN:CD-ON']", context), 'v');
+    assert.equal(vm.runInContext("AppState.counties['CAN:CD-ON']", context), 'v');
+  } finally {
+    vm.runInContext(`
+      countyGeoJson = countryFilterSaved.countyGeoJson;
+      internationalCountyGeoJson = countryFilterSaved.internationalCountyGeoJson;
+      worldSubdivisionGeoJson = countryFilterSaved.worldSubdivisionGeoJson;
+      if (countryFilterSaved.feature) countyFeaturesById['CAN:CD-ON'] = countryFilterSaved.feature;
+      else delete countyFeaturesById['CAN:CD-ON'];
+      Object.assign(AppState, countryFilterSaved.state);
+      commitLedger = countryFilterSaved.commitLedger;
+      refreshTravelUI = countryFilterSaved.refreshTravelUI;
+      showNotification = countryFilterSaved.showNotification;
+      document.getElementById('scratchCountyCountryFilter').value = countryFilterSaved.filterValue;
+      document.getElementById('scratchCountyCountryFilter').innerHTML = countryFilterSaved.filterHtml;
+      delete globalThis.countryFilterSaved;
+`, context);
+    delete context.countryFilterDistrict;
+    delete context.countryFilterProvince;
+  }
+});
+check('World States and Provinces render global polygons with zoom and cycle region status', () => {
   const previousD3 = context.d3;
   const searchValue = element('scratchCountySearch').value;
   const subdivisionId = 'CAN:ON-01';
@@ -3862,11 +4097,12 @@ check('World Subdivisions renders global polygons with zoom and cycles their cou
     AppState.scratchDataset = 'counties';
     AppState.currentTab = 'scratch';
     AppState.viewOnly = false;
+    AppState.regions = {};
     AppState.counties = {};
     AppState.statusOverrides = { pins: {}, regions: {}, counties: {}, nationalParks: {} };
     commitLedger = change => {
       change();
-      AppState.counties['CAN:ON-01'] = AppState.statusOverrides.counties['CAN:ON-01'];
+      AppState.regions['s:CAN:ON-01'] = AppState.statusOverrides.regions['s:CAN:ON-01'];
     };
     refreshTravelUI = () => {};
     showNotification = () => {};
@@ -3882,8 +4118,8 @@ check('World Subdivisions renders global polygons with zoom and cycles their cou
     element('scratchCountySearch').value = 'Ontario';
     assert.equal(vm.runInContext('scratchCountyMatches("Ontario")[0].id', context), subdivisionId);
     subdivisionPath.click({ preventDefault() {} }, subdivision);
-    assert.equal(vm.runInContext(`AppState.statusOverrides.counties['${subdivisionId}']`, context), 'v');
-    assert.equal(vm.runInContext(`AppState.counties['${subdivisionId}']`, context), 'v');
+    assert.equal(vm.runInContext(`AppState.statusOverrides.regions['s:${subdivisionId}']`, context), 'v');
+    assert.equal(vm.runInContext(`AppState.regions['s:${subdivisionId}']`, context), 'v');
   } finally {
     context.d3 = previousD3;
     element('scratchCountySearch').value = searchValue;

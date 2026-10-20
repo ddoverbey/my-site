@@ -6,6 +6,8 @@
   const CACHE_TTL = 30 * 24 * 60 * 60 * 1000;
   const NPS_SOURCE = 'https://services1.arcgis.com/fBc8EJBxQRMcHlei/ArcGIS/rest/services/NPS_Land_Resources_Division_Boundary_and_Tract_Data_Service/FeatureServer/2';
   const SUBDIVISION_SOURCE = 'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_10m_admin_1_states_provinces.geojson';
+  const ADMIN2_COUNTRIES = ['CAN', 'MEX', 'DEU', 'AUS'];
+  const ADMIN2_SOURCE = 'geoBoundaries gbOpen ADM2';
   const validSubdivisionId = id => typeof id === 'string' && /^[A-Z]{3}:[A-Za-z0-9_.-]+$/.test(id);
   const validCountyId = id => typeof id === 'string' && (/^\d{5}$/.test(id) || validSubdivisionId(id));
 
@@ -50,6 +52,43 @@
     return features;
   }
 
+  function admin2Features(topology, decode) {
+    if (topology?.type !== 'Topology' || topology.metadata?.source !== ADMIN2_SOURCE ||
+        topology.metadata?.license !== 'CC-BY-4.0' || topology.metadata.version !== 1 ||
+        !topology.objects?.admin2 || !Array.isArray(topology.metadata?.sources) ||
+        topology.metadata.sources.length !== ADMIN2_COUNTRIES.length) {
+      throw new Error('Invalid world Admin-2 snapshot.');
+    }
+    const features = decode(topology, topology.objects.admin2).features;
+    if (!Array.isArray(features) || features.length < 1000) throw new Error('Incomplete world Admin-2 snapshot.');
+    const ids = new Set();
+    const countries = new Set();
+    for (const feature of features) {
+      const id = feature.id;
+      const country = feature.properties?.country;
+      if (!validSubdivisionId(id) || ids.has(id) || !ADMIN2_COUNTRIES.includes(country) ||
+          !id.startsWith(`${country}:`) || typeof feature.properties?.name !== 'string' ||
+          !feature.properties.name.trim() ||
+          !['Polygon', 'MultiPolygon'].includes(feature.geometry?.type)) {
+        throw new Error('Invalid world Admin-2 geometry, ID or properties.');
+      }
+      ids.add(id);
+      countries.add(country);
+    }
+    if (ADMIN2_COUNTRIES.some(country => !countries.has(country))) {
+      throw new Error('World Admin-2 snapshot is missing a required country.');
+    }
+    return features;
+  }
+
+  function countyEquivalentFeatures(subdivisions = [], admin2 = []) {
+    const overriddenCountries = new Set(ADMIN2_COUNTRIES);
+    return [
+      ...subdivisions.filter(feature => !overriddenCountries.has(feature.properties?.isoA3)),
+      ...admin2
+    ];
+  }
+
   function validateCoordinates(lat, lng) {
     if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
       throw new Error('Enter a latitude from -90 to 90 and a longitude from -180 to 180.');
@@ -87,11 +126,14 @@
     const microStates = indexes.microStates?.length ? findContaining(indexes.microStates, lat, lng, geoContains) : [];
     const countries = microStates.length ? microStates : findContaining(indexes.countries, lat, lng, geoContains);
     const states = findContaining(indexes.states, lat, lng, geoContains);
-    const counties = [...findContaining(indexes.counties, lat, lng, geoContains),
-      ...findContaining(indexes.subdivisions || [], lat, lng, geoContains)];
+    const counties = findContaining(indexes.counties, lat, lng, geoContains);
+    const admin1 = findContaining(indexes.subdivisions || [], lat, lng, geoContains);
     return {
       countries: countries.map(feature => feature.properties.name),
       states: states.map(feature => feature.properties.name),
+      admin1: [...new Map(admin1.map(feature => [String(feature.id), {
+        id: String(feature.id), name: feature.properties.name
+      }])).values()],
       counties: [...new Map(counties.map(feature => {
         const id = String(feature.id);
         return [id, { id: /^\d+$/.test(id) ? id.padStart(5, '0') : id, name: feature.properties.name }];
@@ -541,7 +583,8 @@
     lookupElevation, categoryForPoiCount, segmentDistanceKm, summarizeOsm, lookupRarity, lookupCoordinate,
     validateCustomLocations, migrateState, normalizeRarity, validateProviderRarity, coordinateDistanceKm,
     lookupRarityWithFallback, ELEVATION_URL, OVERPASS_URL, CACHE_TTL, NPS_SOURCE,
-    SUBDIVISION_SOURCE, npsBoundaryIndex
+    SUBDIVISION_SOURCE, ADMIN2_COUNTRIES, ADMIN2_SOURCE, npsBoundaryIndex, admin2Features,
+    countyEquivalentFeatures
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CoordinateLookups = api;

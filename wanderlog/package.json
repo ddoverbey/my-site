@@ -5,7 +5,8 @@
     "test": "node international-parks.test.mjs && node nps-catalog.test.mjs && node ecoregions.test.mjs && node coordinate-lookups.test.mjs && node micro-states.test.mjs && node rarity-worker/worker.test.mjs && node travel-ledger.test.mjs",
     "import:ecoregions": "node import-ecoregions.mjs",
     "import:geography": "node import-geography.mjs",
-    "import:micro-states": "node import-micro-states.mjs"
+    "import:micro-states": "node import-micro-states.mjs",
+    "import:admin2": "node import-admin2.mjs"
   },
   "devDependencies": {
     "@turf/area": "^7.3.0",

@@ -151,7 +151,10 @@ check('international subdivision IDs validate in county ledgers, POIs, trips and
   const subdivisionId = 'FRA:FR75';
   const internationalPoi = {
     ...poi, id: 'poi_paris', status: 'v',
-    political: { countries: ['France'], states: [], counties: [{ id: subdivisionId, name: 'Paris' }] }
+    political: {
+      countries: ['France'], states: [], admin1: [{ id: subdivisionId, name: 'Paris' }],
+      counties: [{ id: subdivisionId, name: 'Paris' }]
+    }
   };
   const routeCoords = [[48.85, 2.35], [48.86, 2.36]];
   const trip = {
@@ -173,12 +176,14 @@ check('international subdivision IDs validate in county ledgers, POIs, trips and
   assert.equal(state.counties[subdivisionId], 'v');
   assert.equal(state.statusOverrides.counties[subdivisionId], 'w');
   assert.deepEqual(state.customPois[0].political.counties, [{ id: subdivisionId, name: 'Paris' }]);
+  assert.deepEqual(state.customPois[0].political.admin1, [{ id: subdivisionId, name: 'Paris' }]);
   assert.deepEqual(state.expeditions[0].countyIds, [subdivisionId]);
   assert.deepEqual(state.expeditions[0].routeLegs[0].countyIds, [subdivisionId]);
   ledger.syncDerivedState(state, {
     countyRegions: { [subdivisionId]: { countries: ['France'], states: [], counties: [] } }
   });
   assert.equal(state.regions['c:France'], 'v');
+  assert.equal(state.regions[`s:${subdivisionId}`], 'v');
   for (const invalidId of ['FRA:Paris 1', 'frA:FR75', 'FRA:', 'FRA:FR/75']) {
     assert.throws(() => migrate({ counties: { [invalidId]: 'v' } }));
   }

@@ -341,7 +341,11 @@ function refreshTravelUI() {
 function countyLabel(id) {
   const feature = countyFeaturesById[id];
   if (CoordinateLookups.validSubdivisionId(id)) {
-    return `${feature?.properties?.name || id}, ${feature?.properties?.country || 'Unknown country'}`;
+    const country = feature?.properties?.country || 'Unknown country';
+    const countryName = /^[A-Z]{3}$/.test(country)
+      ? worldSubdivisionGeoJson?.find(entry => entry.properties.isoA3 === country)?.properties.country || country
+      : country;
+    return `${feature?.properties?.name || id}, ${countryName}`;
   }
   const state = usaRegionGeoJson?.find(state => String(state.id).padStart(2, '0') === id.slice(0, 2));
   return `${feature?.properties?.name || `County ${id}`}, ${state?.properties?.name || id}`;
@@ -777,7 +781,7 @@ async function previewExpeditionRoutes() {
     setExpeditionBusy(true);
     status.textContent = 'Preparing route preview...';
     const legs = [];
-    const countyIndex = [...coordinateIndexes.counties, ...(coordinateIndexes.subdivisions || [])];
+    const countyIndex = coordinateIndexes.counties;
     if (expeditionUploadedRoute && expeditionDraft.length !== 2) {
       throw new Error('An imported track needs exactly two expedition stops. Remove intermediate stops or clear the track.');
     }
