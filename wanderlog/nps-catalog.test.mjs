@@ -140,7 +140,7 @@ check('mobile RPG HUD starts collapsed with an accessible stats toggle', () => {
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261020-unmet-achievement-art')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261019-world-states-only')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('storage-risk banner and unfinished-trip recovery controls are present', () => {
@@ -4106,7 +4106,7 @@ check('international County and District filter searches and cycles the selected
     delete context.countryFilterProvince;
   }
 });
-check('World States and Provinces render global polygons with zoom and cycle region status', () => {
+check('World States and Provinces render US states without county boundaries and cycle region status', () => {
   const previousD3 = context.d3;
   const searchValue = element('scratchCountySearch').value;
   const subdivisionId = 'CAN:ON-01';
@@ -4167,7 +4167,7 @@ check('World States and Provinces render global polygons with zoom and cycle reg
     AppState.statusOverrides = { pins: {}, regions: {}, counties: {}, nationalParks: {} };
     commitLedger = change => {
       change();
-      AppState.regions['s:CAN:ON-01'] = AppState.statusOverrides.regions['s:CAN:ON-01'];
+      Object.assign(AppState.regions, AppState.statusOverrides.regions);
       Object.assign(AppState.counties, AppState.statusOverrides.counties);
     };
     refreshTravelUI = () => {};
@@ -4180,18 +4180,21 @@ check('World States and Provinces render global polygons with zoom and cycle reg
     assert.equal(vm.runInContext('AppState.scratchDataset', context), 'subdivisions');
     assert.equal(vm.runInContext('worldSubdivisionZoomBehavior.scale.join(",")', context), '1,12');
     assert.ok(generatedScratchPaths.includes(subdivision));
-    assert.ok(usCountyFeatures.every(feature => generatedScratchPaths.includes(feature)));
-    assert.equal(vm.runInContext('scratchStatusKey(countyGeoJson[0])', context), '06001');
+    assert.ok(generatedScratchPaths.includes(usState));
+    assert.ok(usCountyFeatures.every(feature => !generatedScratchPaths.includes(feature)));
+    assert.equal(vm.runInContext('scratchStatusKey(usaGeoJson[0])', context), 's:California');
     assert.equal(vm.runInContext("scratchStatusKey(worldSubdivisionGeoJson[0])", context), `s:${subdivisionId}`);
+    assert.equal(element('scratchStatsLabel').textContent, '0 / 2 Visited/Lived · 0 Transited');
     element('scratchCountySearch').value = 'Ontario';
     assert.equal(vm.runInContext('scratchCountyMatches("Ontario")[0].id', context), subdivisionId);
     vm.runInContext('cycleScratchStatus(worldSubdivisionGeoJson[0])', context);
     assert.equal(vm.runInContext(`AppState.statusOverrides.regions['s:${subdivisionId}']`, context), 'v');
     assert.equal(vm.runInContext(`AppState.regions['s:${subdivisionId}']`, context), 'v');
-    assert.equal(vm.runInContext('scratchCountyMatches("Alameda")[0].id', context), usCountyFeatures[0].id);
-    vm.runInContext('cycleScratchStatus(countyGeoJson[0])', context);
-    assert.equal(vm.runInContext("AppState.statusOverrides.counties['06001']", context), 'v');
-    assert.equal(vm.runInContext("AppState.counties['06001']", context), 'v');
+    assert.equal(vm.runInContext('scratchCountyMatches("California")[0].id', context), usState.id);
+    assert.equal(vm.runInContext('scratchCountyMatches("Alameda").length', context), 0);
+    vm.runInContext('cycleScratchStatus(usaGeoJson[0])', context);
+    assert.equal(vm.runInContext("AppState.statusOverrides.regions['s:California']", context), 'v');
+    assert.equal(vm.runInContext("AppState.regions['s:California']", context), 'v');
   } finally {
     context.d3 = previousD3;
     element('scratchCountySearch').value = searchValue;
