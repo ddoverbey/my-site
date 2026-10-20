@@ -721,7 +721,7 @@
       <section class="max-w-6xl mx-auto space-y-6 pb-20" aria-labelledby="achievementsTitle">
         <div class="rpg-panel p-6 rounded-2xl">
           <h2 id="achievementsTitle" class="cinzel text-xl font-bold text-amber-200">Achievements</h2>
-          <p class="text-xs text-slate-400 mt-2">Discover special milestones through your travels. Only started achievements appear; each shows your highest earned tier and your next goal. Legendary and Mythic criteria stay secret until completion.</p>
+          <p class="text-xs text-slate-400 mt-2">Discover special milestones through your travels. Only started achievements appear; each milestone earns its own badge. Legendary and Mythic criteria stay secret until completion.</p>
           <p class="text-xs text-slate-400 mt-2">Overnight stays are inferred from expedition dates. Same-day distance badges use only single-day expeditions, never undated pins or assumed dates on multi-day trips.</p>
           <p class="text-xs text-slate-400 mt-2">Rarity reflects achievement difficulty, not stat bonuses. Earned badges appear on your Explorer Profile.</p>
           <div class="flex flex-wrap gap-x-4 gap-y-2 mt-3 text-[10px] uppercase font-bold" aria-label="Achievement rarity levels">
@@ -966,14 +966,14 @@
     </form>
   </div>
 
-  <script src="./nps-catalog.js?v=20261020-global-county-zoom"></script>
-  <script src="./national-parks-scratch.js?v=20261020-global-county-zoom"></script>
-  <script src="./international-parks.js?v=20261020-global-county-zoom"></script>
-  <script src="./ecoregions.js?v=20261020-global-county-zoom"></script>
-  <script src="./coordinate-lookups.js?v=20261020-global-county-zoom"></script>
-  <script src="./micro-states.js?v=20261020-global-county-zoom"></script>
-  <script src="./travel-ledger.js?v=20261020-global-county-zoom"></script>
-  <script src="./rarity-config.js?v=20261020-global-county-zoom"></script>
+  <script src="./nps-catalog.js?v=20261020-separate-achievements"></script>
+  <script src="./national-parks-scratch.js?v=20261020-separate-achievements"></script>
+  <script src="./international-parks.js?v=20261020-separate-achievements"></script>
+  <script src="./ecoregions.js?v=20261020-separate-achievements"></script>
+  <script src="./coordinate-lookups.js?v=20261020-separate-achievements"></script>
+  <script src="./micro-states.js?v=20261020-separate-achievements"></script>
+  <script src="./travel-ledger.js?v=20261020-separate-achievements"></script>
+  <script src="./rarity-config.js?v=20261020-separate-achievements"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -1096,13 +1096,20 @@
     /* Dynamic Achievements */
     const ACHIEVEMENTS = [
       {
-        id: 'parks', title: 'Park Ranger', progress: s => s.visitedParks.length,
-        tiers: [
-          { goal: 1, title: 'First Steps', desc: 'Visit your 1st park or heritage destination' },
-          { goal: 5, title: 'Trailblazer', desc: 'Visit 5 park or heritage destinations' },
-          { goal: 15, title: 'Master Ranger', desc: 'Visit 15 park or heritage destinations' },
-          { goal: 30, title: 'Grand Voyager', desc: 'Visit 30 park or heritage destinations' }
-        ]
+        id: 'firstSteps', title: 'First Steps', progress: s => s.visitedParks.length,
+        tiers: [{ goal: 1, title: 'First Steps', desc: 'Visit your 1st park or heritage destination' }]
+      },
+      {
+        id: 'trailblazer', title: 'Trailblazer', progress: s => s.visitedParks.length,
+        tiers: [{ goal: 5, title: 'Trailblazer', desc: 'Visit 5 park or heritage destinations' }]
+      },
+      {
+        id: 'masterRanger', title: 'Master Ranger', progress: s => s.visitedParks.length,
+        tiers: [{ goal: 15, title: 'Master Ranger', desc: 'Visit 15 park or heritage destinations' }]
+      },
+      {
+        id: 'grandVoyager', title: 'Grand Voyager', progress: s => s.visitedParks.length,
+        tiers: [{ goal: 30, title: 'Grand Voyager', desc: 'Visit 30 park or heritage destinations' }]
       },
       {
         id: 'nps', title: 'NPS Explorer',
@@ -1114,49 +1121,59 @@
         }]
       },
       {
-        id: 'biomes', title: 'Biome Collector', progress: s => s.biomesSet.size,
-        tiers: [
-          { goal: 3, title: 'Junior Ecologist', desc: 'Log locations in 3 different terrestrial biomes' },
-          {
-            goal: () => Object.keys(BIOMES).length - 1, title: 'Almost There!',
-            secretDesc: 'The earth’s diverse environments are nearly all accounted for. Only a single missing ecosystem stands between you and planetary mastery.',
-            desc: 'Log all but one of the terrestrial biomes'
-          },
-          {
-            goal: () => Object.keys(BIOMES).length, title: 'Gaia Wanderer',
-            secretDesc: 'The complete spectrum of the natural world waits for a traveler who can reach beyond the familiar.',
-            desc: 'Log every terrestrial biome'
-          }
-        ]
+        id: 'juniorEcologist', title: 'Junior Ecologist', progress: s => s.biomesSet.size,
+        tiers: [{ goal: 3, title: 'Junior Ecologist', desc: 'Log locations in 3 different terrestrial biomes' }]
+      },
+      {
+        id: 'almostThere', title: 'Almost There!', progress: s => s.biomesSet.size,
+        tiers: [{
+          goal: () => Object.keys(BIOMES).length - 1, title: 'Almost There!',
+          secretDesc: 'The earth’s diverse environments are nearly all accounted for. Only a single missing ecosystem stands between you and planetary mastery.',
+          desc: 'Log all but one of the terrestrial biomes'
+        }]
+      },
+      {
+        id: 'gaiaWanderer', title: 'Gaia Wanderer', progress: s => s.biomesSet.size,
+        tiers: [{
+          goal: () => Object.keys(BIOMES).length, title: 'Gaia Wanderer',
+          secretDesc: 'The complete spectrum of the natural world waits for a traveler who can reach beyond the familiar.',
+          desc: 'Log every terrestrial biome'
+        }]
       },
       {
         id: 'rare_biomes', title: 'Anomaly Seeker', progress: s => s.rareBiomesCount,
         tiers: [{ goal: 3, title: 'Anomaly Seeker', desc: 'Unlock 3 Rare Biomes' }]
       },
       {
-        id: 'states', title: 'Continental Explorer', progress: s => s.statesCount,
-        tiers: [
-          { goal: 10, title: 'Statehopper', desc: 'Visit 10 US states' },
-          { goal: 25, title: 'Semi-Centennial', desc: 'Visit 25 US states' },
-          {
-            goal: 50, title: 'Fifty-Nifty',
-            secretDesc: 'A complete union of stars. Every corner of the republic must bear the mark of your passage.',
-            desc: 'Visit all 50 US states'
-          }
-        ]
+        id: 'statehopper', title: 'Statehopper', progress: s => s.statesCount,
+        tiers: [{ goal: 10, title: 'Statehopper', desc: 'Claim 10 US states' }]
+      },
+      {
+        id: 'semiCentennial', title: 'Semi-Centennial', progress: s => s.statesCount,
+        tiers: [{ goal: 25, title: 'Semi-Centennial', desc: 'Claim 25 US states' }]
+      },
+      {
+        id: 'fiftyNifty', title: 'Fifty-Nifty', progress: s => s.statesCount,
+        tiers: [{
+          goal: 50, title: 'Fifty-Nifty',
+          secretDesc: 'A complete union of stars. Every corner of the republic must bear the mark of your passage.',
+          desc: 'Claim all 50 US states'
+        }]
       },
       {
         id: 'countries', title: 'Globetrotter', progress: s => s.countriesCount,
         tiers: [{ goal: 5, title: 'Globetrotter', desc: 'Log 5 different nations' }]
       }
     ];
-    ACHIEVEMENTS.push({
-      id: 'waterfalls', title: 'Chasing Waterfalls', progress: s => s.metadataProgress.waterfalls,
-      tiers: [1, 5, 10].map(goal => ({
-        goal, title: 'Chasing Waterfalls',
-        desc: `Visit ${goal} custom waterfall location${goal === 1 ? '' : 's'}`
-      }))
-    });
+    for (const goal of [1, 5, 10]) {
+      ACHIEVEMENTS.push({
+        id: `waterfalls_${goal}`, title: 'Chasing Waterfalls', progress: s => s.metadataProgress.waterfalls,
+        tiers: [{
+          goal, title: 'Chasing Waterfalls',
+          desc: `Visit ${goal} custom waterfall location${goal === 1 ? '' : 's'}`
+        }]
+      });
+    }
     [
       ['subterranean', 'Under Pressure', 'Log a land-based stop below sea level', 1],
       ['thinAir', 'Thin Air', 'Log a stop at 10,000 ft or higher', 1],
@@ -1216,13 +1233,22 @@
       mythic: { label: 'Mythic', color: '#f0abfc' }
     };
     const ACHIEVEMENT_ART = {
-      parks: ['🏕️', '#14332c', ['common', 'uncommon', 'rare', 'epic']],
+      firstSteps: ['🏕️', '#14332c', ['common']],
+      trailblazer: ['🏕️', '#14332c', ['uncommon']],
+      masterRanger: ['🏕️', '#14332c', ['rare']],
+      grandVoyager: ['🏕️', '#14332c', ['epic']],
       nps: ['🏞️', '#422006', ['legendary']],
-      biomes: ['🌱', '#12352b', ['uncommon', 'legendary', 'mythic']],
+      juniorEcologist: ['🌱', '#12352b', ['uncommon']],
+      almostThere: ['🌱', '#12352b', ['legendary']],
+      gaiaWanderer: ['🌱', '#12352b', ['mythic']],
       rare_biomes: ['🔮', '#2e1065', ['rare']],
-      states: ['🇺🇸', '#172554', ['uncommon', 'rare', 'legendary']],
+      statehopper: ['🇺🇸', '#172554', ['uncommon']],
+      semiCentennial: ['🇺🇸', '#172554', ['rare']],
+      fiftyNifty: ['🇺🇸', '#172554', ['legendary']],
       countries: ['🛂', '#172554', ['rare']],
-      waterfalls: ['💧', '#0c4a6e', ['common', 'uncommon', 'rare']],
+      waterfalls_1: ['💧', '#0c4a6e', ['common']],
+      waterfalls_5: ['💧', '#0c4a6e', ['uncommon']],
+      waterfalls_10: ['💧', '#0c4a6e', ['rare']],
       subterranean: ['🌊⬇️', '#082f49', ['uncommon']],
       thinAir: ['🏔️', '#1e3a5f', ['rare']],
       whispers: ['🌲✨', '#14332c', ['uncommon']],
@@ -4484,7 +4510,7 @@
             previous < tier.goal && current.get(achievement.id) >= tier.goal);
           if (completed) {
             AudioEngine.playChime('levelup');
-            showNotification('🏆 Secret Trophy Revealed', `${completed.title} — class title unlocked.`, '✨');
+            showNotification('🏆 Secret Trophy Revealed', `${completed.title} — achievement unlocked.`, '✨');
           }
         });
       }
@@ -4581,8 +4607,8 @@
         if (progress <= 0) return;
         if (!completed && !next) return;
         const visibleTiers = [completed, next].filter(Boolean);
-        const iconTier = next || completed;
-        const unmet = !!next;
+        const iconTier = completed || next;
+        const unmet = !completed;
         const card = document.createElement('div');
         card.className = `p-3.5 rounded-2xl border ${
           completed && isSecretAchievementTier(completed)
@@ -4606,7 +4632,7 @@
                   : `<p class="text-[10px] text-slate-400 leading-tight mt-0.5">${escapeHtml(tier.desc)}</p>`}
                 ${isSecretAchievementTier(tier) && progress < tier.goal
                   ? `<p class="text-[10px] text-amber-300 mt-1">Progress: ${(Math.floor(Math.min(progress, tier.goal) * 10) / 10).toLocaleString('en')} / ${tier.goal} (${Math.floor(Math.min(progress / tier.goal, 1) * 100)}%)</p>`
-                  : `<p class="text-[10px] text-amber-300 mt-1">${(Math.floor(Math.min(progress, tier.goal) * 10) / 10).toLocaleString('en')} / ${tier.goal}${progress >= tier.goal ? ' • Complete' : ''}${!completed || completed !== tier ? '' : ' • Class title unlocked'}</p>
+                  : `<p class="text-[10px] text-amber-300 mt-1">${(Math.floor(Math.min(progress, tier.goal) * 10) / 10).toLocaleString('en')} / ${tier.goal}${progress >= tier.goal ? ' • Complete' : ''}</p>
                     <progress aria-label="${escapeHtml(tier.title)} progress" value="${Math.min(progress, tier.goal)}" max="${tier.goal}" class="w-full h-2 mt-1"></progress>`}
               `).join('')}
             </div>
@@ -5209,7 +5235,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261020-global-county-zoom"></script>
+  <script src="./expedition-ui.js?v=20261020-separate-achievements"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);

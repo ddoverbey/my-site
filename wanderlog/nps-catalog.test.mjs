@@ -140,7 +140,7 @@ check('mobile RPG HUD starts collapsed with an accessible stats toggle', () => {
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261020-global-county-zoom')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261020-separate-achievements')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('storage-risk banner and unfinished-trip recovery controls are present', () => {
@@ -1783,24 +1783,20 @@ check('read-only passports cannot add expeditions or POIs', () => {
   assert.throws(() => vm.runInContext('addExpedition({...testExpedition,id:"readonly"})', context), /read-only/);
   assert.throws(() => vm.runInContext('addCustomPoi(customLocation)', context), /read-only/);
 });
-check('achievement families reveal only the highest completed tier and next goal at exact boundaries', () => {
+check('each park milestone is a separate achievement and independently appears after travel starts', () => {
   vm.runInContext(`
     AppState.viewOnly=false; applyPassport(migratePassport({}));
     coordinateIndexes=null; npsCatalogLoaded=true;
     PARKS=Array.from({length:30},(_,i)=>({id:'tier'+i,name:'Park '+i,lat:37,lng:-120,biomes:[],states:[]}));
   `, context);
-  for (const [count, shown, hidden] of [
-    [1, ['First Steps', 'Trailblazer'], ['Master Ranger', 'Grand Voyager']],
-    [4, ['First Steps', 'Trailblazer'], ['Master Ranger', 'Grand Voyager']],
-    [5, ['Trailblazer', 'Master Ranger'], ['First Steps', 'Grand Voyager']],
-    [15, ['Master Ranger', 'Grand Voyager'], ['First Steps', 'Trailblazer']],
-    [30, ['Grand Voyager'], ['First Steps', 'Trailblazer', 'Master Ranger']]
-  ]) {
+  for (const count of [1, 4, 5, 15, 30]) {
     vm.runInContext(`AppState.pins=Object.fromEntries(PARKS.slice(0,${count}).map(p=>[p.id,'v']));renderPassportView()`, context);
     const cards = element('achievementsContainer').innerHTML;
-    for (const name of shown) assert.ok(cards.includes(name), `${count}: ${name}`);
-    for (const name of hidden) assert.ok(!cards.includes(name), `${count}: hidden ${name}`);
-    assert.equal((cards.match(/<h5[^>]*>Park Ranger<\/h5>/g) || []).length, 1);
+    for (const name of ['First Steps', 'Trailblazer', 'Master Ranger', 'Grand Voyager']) {
+      assert.equal((cards.match(new RegExp(`<h5[^>]*>${name}<\\/h5>`, 'g')) || []).length, 1, `${count}: ${name}`);
+    }
+    assert.ok(!cards.includes('Park Ranger'));
+    assert.ok(!cards.includes('Class title unlocked'));
   }
   vm.runInContext('npsCatalogLoaded=false;renderPassportView()', context);
   assert.ok(!element('achievementsContainer').innerHTML.includes('Completionist Legend'));
@@ -2259,7 +2255,7 @@ check('missing county data clears prior statistics and displays explicit retry g
   assert.equal(element('scratchStatsLabel').textContent, 'Dataset unavailable');
   assert.ok(scratchNodes.some(n => String(n.text).includes('Retry datasets')));
 });
-check('waterfall tiers disclose exact 1, 5 and 10 goals and hide nonmatching/transit records', () => {
+check('waterfall milestone achievements disclose their independent 1, 5 and 10 goals', () => {
   for (const count of [0, 1, 4, 5, 9, 10]) {
     context.fallsCount = count;
     vm.runInContext(`
@@ -2274,10 +2270,12 @@ check('waterfall tiers disclose exact 1, 5 and 10 goals and hide nonmatching/tra
     if (!count) assert.ok(!cards.includes('Chasing Waterfalls'));
     else {
       assert.ok(cards.includes('Chasing Waterfalls'));
-      const next = count < 5 ? 5 : 10;
-      assert.ok(cards.includes(`aria-label="Chasing Waterfalls progress" value="${Math.min(count, next)}" max="${next}"`));
-      if (count < 5) assert.ok(!cards.includes('Visit 10 custom waterfall'));
-      if (count >= 5) assert.ok(!cards.includes('Visit 1 custom waterfall location</p>'));
+      for (const goal of [1, 5, 10]) {
+        assert.ok(cards.includes(
+          `aria-label="Chasing Waterfalls progress" value="${Math.min(count, goal)}" max="${goal}"`
+        ));
+        assert.ok(cards.includes(`Visit ${goal} custom waterfall location`));
+      }
     }
   }
 });
@@ -2742,13 +2740,13 @@ check('dedicated achievement page hides untouched badges and does not duplicate 
     assert.equal(vm.runInContext(`ACHIEVEMENTS.some(achievement=>achievement.id==='${id}')`, context), false);
   }
 });
-check('biome achievement tiers use 3, total minus one and total with progressive disclosure', () => {
+check('biome milestone achievements independently use 3, total minus one and total', () => {
   for (const [count, visible, hidden] of [
     [0, [], ['Junior Ecologist', 'Almost There!', 'Gaia Wanderer']],
-    [1, ['Junior Ecologist'], ['Almost There!', 'Gaia Wanderer']],
-    [3, ['Junior Ecologist', 'Almost There!'], ['Gaia Wanderer']],
-    [13, ['Almost There!', 'Gaia Wanderer'], ['Junior Ecologist']],
-    [14, ['Gaia Wanderer'], ['Junior Ecologist', 'Almost There!']]
+    [1, ['Junior Ecologist', 'Almost There!', 'Gaia Wanderer'], []],
+    [3, ['Junior Ecologist', 'Almost There!', 'Gaia Wanderer'], []],
+    [13, ['Junior Ecologist', 'Almost There!', 'Gaia Wanderer'], []],
+    [14, ['Junior Ecologist', 'Almost There!', 'Gaia Wanderer'], []]
   ]) {
     context.biomeCount = count;
     vm.runInContext(`
@@ -2762,8 +2760,8 @@ check('biome achievement tiers use 3, total minus one and total with progressive
     hidden.forEach(title => assert.ok(!cards.includes(title), `${count}: hidden ${title}`));
   }
   vm.runInContext("BIOMES={...BIOMES,'15':{}}", context);
-  assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='biomes').tiers[1].goal()", context), 14);
-  assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='biomes').tiers[2].goal()", context), 15);
+  assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='almostThere').tiers[0].goal()", context), 14);
+  assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='gaiaWanderer').tiers[0].goal()", context), 15);
   vm.runInContext("delete BIOMES['15']", context);
 });
 check('atlas completion goals use actual datasets and exclude unknown countries and FIPS IDs', () => {
@@ -2868,7 +2866,8 @@ check('every real tier hides at zero, shows rarity art, redacts only Legendary/M
           assert.equal((card.innerHTML.match(new RegExp(` / ${testCase.goal}`, 'g')) || []).length, 1);
           assert.equal(badges.length, 0, testCase.title);
         } else if (progress >= testCase.goal) {
-          assert.ok(card.innerHTML.includes('Class title unlocked'), testCase.title);
+          assert.ok(card.innerHTML.includes(' • Complete'), testCase.title);
+          assert.ok(!card.innerHTML.includes('Class title unlocked'), testCase.title);
           if (testCase.secretDesc) assert.ok(!card.innerHTML.includes(testCase.secretDesc), testCase.title);
           assert.equal(badges.length, 1, testCase.title);
           assert.ok(badges[0].attributes.title.includes(testCase.desc), testCase.title);
@@ -2941,7 +2940,8 @@ check('achievement artwork maps all supplied images to real tiers and preserves 
   }
   assert.ok(vm.runInContext("achievementIconMarkup({icon:'🏕️'},{title:'Unmapped test tier'})", context).includes('🏕️'));
   assert.ok(html.includes('achievementIconMarkup(achievement, completed)'));
-  assert.ok(html.includes('achievementIconMarkup(ach, iconTier, unmet)'));
+  assert.ok(html.includes('const iconTier = completed || next;'));
+  assert.ok(html.includes('const unmet = !completed;'));
   delete context.artworkTitle;
 });
 check('unmet achievement artwork maps every rarity to its supplied placeholder', () => {
@@ -2961,19 +2961,54 @@ check('unmet achievement artwork maps every rarity to its supplied placeholder',
     assert.ok(markup.includes(`./assets/achievements/${filename}`), rarity);
     assert.ok(markup.includes('alt=""'), rarity);
   }
-  assert.ok(html.includes('const iconTier = next || completed;'));
-  assert.ok(html.includes('const unmet = !!next;'));
   delete context.artworkRarity;
 });
-check('every achievement tier has valid difficulty rarity and distinct emoji artwork', () => {
+check('a grouped achievement uses its highest completed tier artwork instead of the next tier placeholder', () => {
+  const cards = [];
+  const container = element('achievementsContainer');
+  const originalAppend = container.appendChild;
+  const originalCreate = context.document.createElement;
+  container.appendChild = card => cards.push(card);
+  context.document.createElement = () => ({ innerHTML: '', className: '' });
+  try {
+    vm.runInContext(`
+      const originalAchievements = ACHIEVEMENTS.slice();
+      const originalSnapshot = achievementProgressSnapshot;
+      try {
+        ACHIEVEMENTS.splice(0, ACHIEVEMENTS.length, {
+          id: 'groupedArtworkTest', title: 'Explorer Class', icon: '🧭', background: '#172554',
+          progress: stats => stats.testProgress,
+          tiers: [
+            {goal:1,title:'First Steps',desc:'First milestone',rarity:'common'},
+            {goal:5,title:'Trailblazer',desc:'Next milestone',rarity:'uncommon'}
+          ]
+        });
+        achievementProgressSnapshot = null;
+        renderAchievementsView({testProgress:3});
+      } finally {
+        ACHIEVEMENTS.splice(0, ACHIEVEMENTS.length, ...originalAchievements);
+        achievementProgressSnapshot = originalSnapshot;
+      }
+    `, context);
+    assert.equal(cards.length, 1);
+    assert.ok(cards[0].innerHTML.includes('./assets/achievements/first-steps.png'));
+    assert.ok(!cards[0].innerHTML.includes('./assets/achievements/unmet-common-uncommon.png'));
+    assert.ok(!cards[0].innerHTML.includes('./assets/achievements/trailblazer.png'));
+  } finally {
+    container.appendChild = originalAppend;
+    context.document.createElement = originalCreate;
+  }
+});
+check('every achievement milestone has valid difficulty rarity and distinct artwork', () => {
   assert.equal(vm.runInContext('ACHIEVEMENTS.every(a=>a.icon && /^#[0-9a-f]{6}$/i.test(a.background) && a.tiers.every(t=>ACHIEVEMENT_RARITIES[t.rarity]))', context), true);
-  const stateTiers = vm.runInContext(`ACHIEVEMENTS.find(a=>a.id==='states').tiers.map(t=>({
-    goal:t.goal,title:t.title,desc:t.desc,rarity:t.rarity
+  const stateAchievements = vm.runInContext(`ACHIEVEMENTS.filter(a=>
+    ['statehopper','semiCentennial','fiftyNifty'].includes(a.id)).map(a=>({
+    id:a.id,title:a.title,goal:a.tiers[0].goal,desc:a.tiers[0].desc,rarity:a.tiers[0].rarity
   }))`, context);
-  assert.deepEqual(JSON.parse(JSON.stringify(stateTiers)), [
-    { goal: 10, title: 'Statehopper', desc: 'Visit 10 US states', rarity: 'uncommon' },
-    { goal: 25, title: 'Semi-Centennial', desc: 'Visit 25 US states', rarity: 'rare' },
-    { goal: 50, title: 'Fifty-Nifty', desc: 'Visit all 50 US states', rarity: 'legendary' }
+  assert.deepEqual(JSON.parse(JSON.stringify(stateAchievements)), [
+    { id: 'statehopper', title: 'Statehopper', goal: 10, desc: 'Claim 10 US states', rarity: 'uncommon' },
+    { id: 'semiCentennial', title: 'Semi-Centennial', goal: 25, desc: 'Claim 25 US states', rarity: 'rare' },
+    { id: 'fiftyNifty', title: 'Fifty-Nifty', goal: 50, desc: 'Claim all 50 US states', rarity: 'legendary' }
   ]);
   assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='earthSandwich').icon", context), '🌍🥪');
   assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='earthSandwich').background", context), '#172554');
@@ -2984,7 +3019,7 @@ check('every achievement tier has valid difficulty rarity and distinct emoji art
   assert.ok(html.includes('.achievement-icon[data-rarity="mythic"]'));
   assert.ok(html.includes('linear-gradient(135deg, #fb7185'));
 });
-check('character badges include only highest earned tiers and update without duplication or stale awards', () => {
+check('character badges include every earned milestone without duplication or stale awards', () => {
   const captured = [];
   const container = element('earnedAchievementBadges');
   const originalAppend = container.appendChild;
@@ -2999,7 +3034,12 @@ check('character badges include only highest earned tiers and update without dup
     vm.runInContext('applyPassport(migratePassport({}));PARKS=[];coordinateIndexes=null;renderPassportView()', context);
     assert.equal(captured.length, 0);
     assert.ok(container.innerHTML.includes('earned achievement badges'));
-    for (const [count, rarity] of [[1, 'common'], [4, 'common'], [5, 'uncommon'], [10, 'rare']]) {
+    for (const [count, expected] of [
+      [1, [['waterfalls_1', 'common']]],
+      [4, [['waterfalls_1', 'common']]],
+      [5, [['waterfalls_1', 'common'], ['waterfalls_5', 'uncommon']]],
+      [10, [['waterfalls_1', 'common'], ['waterfalls_5', 'uncommon'], ['waterfalls_10', 'rare']]]
+    ]) {
       captured.length = 0;
       context.badgeWaterfalls = count;
       vm.runInContext(`
@@ -3009,15 +3049,18 @@ check('character badges include only highest earned tiers and update without dup
         }));
         renderPassportView();
       `, context);
-      const badges = captured.filter(badge => badge.attributes['data-achievement'] === 'waterfalls');
-      assert.equal(badges.length, 1);
-      assert.equal(badges[0].attributes['data-rarity'], rarity);
-      assert.ok(badges[0].attributes['aria-label'].includes('Chasing Waterfalls'));
-      assert.equal(badges[0].attributes.title, badges[0].attributes['aria-label']);
-      assert.ok(badges[0].innerHTML.includes('assets/achievements/chasing-waterfalls.png'));
+      const badges = captured.filter(badge => badge.attributes['data-achievement'].startsWith('waterfalls_'));
+      assert.deepEqual(badges.map(badge => [
+        badge.attributes['data-achievement'], badge.attributes['data-rarity']
+      ]), expected);
+      for (const badge of badges) {
+        assert.ok(badge.attributes['aria-label'].includes('Chasing Waterfalls'));
+        assert.equal(badge.attributes.title, badge.attributes['aria-label']);
+        assert.ok(badge.innerHTML.includes('assets/achievements/chasing-waterfalls.png'));
+      }
       assert.equal(captured.some(badge => badge.attributes['data-achievement'] === 'localLore'), false);
     }
-    const waterfall = captured.find(badge => badge.attributes['data-achievement'] === 'waterfalls');
+    const waterfall = captured.find(badge => badge.attributes['data-achievement'] === 'waterfalls_1');
     waterfall.handlers.click();
     assert.equal(vm.runInContext('AppState.currentTab', context), 'achievements');
     captured.length = 0;
@@ -3030,7 +3073,43 @@ check('character badges include only highest earned tiers and update without dup
     context.document.createElement = originalCreate;
   }
 });
-check('achievement cards show artwork and textual tier rarities without revealing zero-progress achievements', () => {
+check('state milestone badges are awarded independently at their own thresholds', () => {
+  const captured = [];
+  const container = element('earnedAchievementBadges');
+  const originalAppend = container.appendChild;
+  const originalCreate = context.document.createElement;
+  container.appendChild = badge => captured.push(badge);
+  context.document.createElement = () => ({
+    attributes: {},
+    setAttribute(name, value) { this.attributes[name] = value; },
+    addEventListener() {}
+  });
+  try {
+    for (const [count, expected] of [
+      [10, ['statehopper']],
+      [25, ['statehopper', 'semiCentennial']],
+      [50, ['statehopper', 'semiCentennial', 'fiftyNifty']]
+    ]) {
+      captured.length = 0;
+      context.stateBadgeCount = count;
+      vm.runInContext(`
+        (() => {
+          const savedAchievements = ACHIEVEMENTS.slice();
+          const stateAchievements = ACHIEVEMENTS.filter(achievement =>
+            ['statehopper', 'semiCentennial', 'fiftyNifty'].includes(achievement.id));
+          ACHIEVEMENTS.splice(0, ACHIEVEMENTS.length, ...stateAchievements);
+          renderEarnedAchievementBadges({statesCount:stateBadgeCount});
+          ACHIEVEMENTS.splice(0, ACHIEVEMENTS.length, ...savedAchievements);
+        })();
+      `, context);
+      assert.deepEqual(captured.map(badge => badge.attributes['data-achievement']), expected);
+    }
+  } finally {
+    container.appendChild = originalAppend;
+    context.document.createElement = originalCreate;
+  }
+});
+check('separate achievement cards show their own artwork and rarity without revealing untouched achievements', () => {
   vm.runInContext(`
     applyPassport(migratePassport({}));PARKS=[];coordinateIndexes=null;
     AppState.customPois=[{...customLocation,id:'poi_rarity_fall',category:'waterfall',status:'v'}];
