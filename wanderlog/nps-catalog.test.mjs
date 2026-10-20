@@ -140,7 +140,7 @@ check('mobile RPG HUD starts collapsed with an accessible stats toggle', () => {
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261019-world-us-scratch')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261020-unmet-achievement-art')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('storage-risk banner and unfinished-trip recovery controls are present', () => {
@@ -2758,7 +2758,9 @@ check('atlas completion goals use actual datasets and exclude unknown countries 
     'aria-label="Cryptic hint, blurred until completion"'
   ));
   assert.ok(html.includes('.achievement-redacted {\n      filter: blur(0.7px);'));
-  assert.match(element('achievementsContainer').innerHTML, /achievement-icon achievement-icon-hidden/);
+  assert.ok(element('achievementsContainer').innerHTML.includes(
+    './assets/achievements/unmet-legendary-mystic.png'
+  ));
   assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='worldAtlas').title", context), 'How????');
   assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='worldAtlas').tiers[0].title", context), 'How????');
   assert.ok(!element('achievementsContainer').innerHTML.includes(
@@ -2769,7 +2771,7 @@ check('atlas completion goals use actual datasets and exclude unknown countries 
   assert.ok(!element('achievementsContainer').innerHTML.includes('Citizen of the World'));
   assert.ok(!element('achievementsContainer').innerHTML.includes('Manifest Destiny'));
 });
-check('every real tier hides at zero, redacts only Legendary/Mythic, and reveals exact criteria on completion', () => {
+check('every real tier hides at zero, shows rarity art, redacts only Legendary/Mythic, and reveals exact criteria on completion', () => {
   const cards = [];
   const badges = [];
   const cardContainer = element('achievementsContainer');
@@ -2823,7 +2825,11 @@ check('every real tier hides at zero, redacts only Legendary/Mythic, and reveals
         const locked = secret && progress < testCase.goal;
         assert.equal(card.innerHTML.includes(testCase.desc), !locked, testCase.title);
         assert.equal(card.innerHTML.includes('achievement-redacted'), locked, testCase.title);
-        assert.equal(card.innerHTML.includes('achievement-icon-hidden'), locked, testCase.title);
+        assert.equal(card.innerHTML.includes('achievement-icon-hidden'), false, testCase.title);
+        const unmetImage = vm.runInContext(
+          `UNMET_ACHIEVEMENT_IMAGES[${JSON.stringify(testCase.rarity)}]`, context
+        );
+        assert.equal(card.innerHTML.includes(`./assets/achievements/${unmetImage}`), progress < testCase.goal, testCase.title);
         assert.equal(secret ? typeof testCase.secretDesc === 'string' : true, true, testCase.title);
         assert.equal(testCase.secretDesc ? card.innerHTML.includes(testCase.secretDesc) : false, locked, testCase.title);
         assert.equal(card.innerHTML.includes('Cryptic hint, blurred until completion'), locked, testCase.title);
@@ -2885,9 +2891,14 @@ check('secret completion effects fire once on crossing the goal, not initial loa
   assert.ok(result.notices[0][1].includes('Earth Sandwich'));
 });
 const achievementImages = vm.runInContext('Object.entries(ACHIEVEMENT_IMAGES)', context);
+const unmetAchievementImages = vm.runInContext('Object.entries(UNMET_ACHIEVEMENT_IMAGES)', context);
 for (const [title, filename] of achievementImages) {
   const data = await readFile(new URL(`./assets/achievements/${filename}`, import.meta.url));
   assert.equal(data.subarray(1, 4).toString(), 'PNG', `${title} artwork exists and is PNG`);
+}
+for (const [rarity, filename] of unmetAchievementImages) {
+  const data = await readFile(new URL(`./assets/achievements/${filename}`, import.meta.url));
+  assert.equal(data.subarray(1, 4).toString(), 'PNG', `${rarity} locked artwork exists and is PNG`);
 }
 check('achievement artwork maps all supplied images to real tiers and preserves emoji fallbacks', () => {
   assert.equal(achievementImages.length, 15);
@@ -2902,8 +2913,29 @@ check('achievement artwork maps all supplied images to real tiers and preserves 
   }
   assert.ok(vm.runInContext("achievementIconMarkup(ACHIEVEMENTS[0],ACHIEVEMENTS[0].tiers[2])", context).includes('🏕️'));
   assert.ok(html.includes('achievementIconMarkup(achievement, completed)'));
-  assert.ok(html.includes("hideIcon ? '' : achievementIconMarkup(ach, iconTier)"));
+  assert.ok(html.includes('achievementIconMarkup(ach, iconTier, unmet)'));
   delete context.artworkTitle;
+});
+check('unmet achievement artwork maps every rarity to its supplied placeholder', () => {
+  assert.deepEqual(Object.fromEntries(unmetAchievementImages), {
+    common: 'unmet-common-uncommon.png',
+    uncommon: 'unmet-common-uncommon.png',
+    rare: 'unmet-rare-epic.png',
+    epic: 'unmet-rare-epic.png',
+    legendary: 'unmet-legendary-mystic.png',
+    mythic: 'unmet-legendary-mystic.png'
+  });
+  for (const [rarity, filename] of unmetAchievementImages) {
+    context.artworkRarity = rarity;
+    const markup = vm.runInContext(
+      `achievementIconMarkup(ACHIEVEMENTS[0], {rarity:artworkRarity}, true)`, context
+    );
+    assert.ok(markup.includes(`./assets/achievements/${filename}`), rarity);
+    assert.ok(markup.includes('alt=""'), rarity);
+  }
+  assert.ok(html.includes('const iconTier = next || completed;'));
+  assert.ok(html.includes('const unmet = !!next;'));
+  delete context.artworkRarity;
 });
 check('every achievement tier has valid difficulty rarity and distinct emoji artwork', () => {
   assert.equal(vm.runInContext('ACHIEVEMENTS.every(a=>a.icon && /^#[0-9a-f]{6}$/i.test(a.background) && a.tiers.every(t=>ACHIEVEMENT_RARITIES[t.rarity]))', context), true);
@@ -2969,7 +3001,7 @@ check('achievement cards show artwork and textual tier rarities without revealin
     renderAchievementsView();
   `, context);
   const cards = element('achievementsContainer').innerHTML;
-  assert.ok(cards.includes('assets/achievements/chasing-waterfalls.png'));
+  assert.ok(cards.includes('assets/achievements/unmet-common-uncommon.png'));
   assert.ok(cards.includes('data-rarity="common"'));
   assert.ok(cards.includes('data-rarity="uncommon"'));
   assert.ok(cards.includes('>Common</p>'));

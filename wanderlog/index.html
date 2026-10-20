@@ -286,7 +286,6 @@
       filter: blur(0.7px);
       user-select: none;
     }
-    .achievement-icon-hidden { visibility: hidden; }
     .achievement-complete {
       background: linear-gradient(135deg, rgba(120, 53, 15, .55), rgba(69, 26, 3, .72));
       border-color: rgba(251, 191, 36, .8);
@@ -945,14 +944,14 @@
     </form>
   </div>
 
-  <script src="./nps-catalog.js?v=20261019-world-us-scratch"></script>
-  <script src="./national-parks-scratch.js?v=20261019-world-us-scratch"></script>
-  <script src="./international-parks.js?v=20261019-world-us-scratch"></script>
-  <script src="./ecoregions.js?v=20261019-world-us-scratch"></script>
-  <script src="./coordinate-lookups.js?v=20261019-world-us-scratch"></script>
-  <script src="./micro-states.js?v=20261019-world-us-scratch"></script>
-  <script src="./travel-ledger.js?v=20261019-world-us-scratch"></script>
-  <script src="./rarity-config.js?v=20261019-world-us-scratch"></script>
+  <script src="./nps-catalog.js?v=20261020-unmet-achievement-art"></script>
+  <script src="./national-parks-scratch.js?v=20261020-unmet-achievement-art"></script>
+  <script src="./international-parks.js?v=20261020-unmet-achievement-art"></script>
+  <script src="./ecoregions.js?v=20261020-unmet-achievement-art"></script>
+  <script src="./coordinate-lookups.js?v=20261020-unmet-achievement-art"></script>
+  <script src="./micro-states.js?v=20261020-unmet-achievement-art"></script>
+  <script src="./travel-ledger.js?v=20261020-unmet-achievement-art"></script>
+  <script src="./rarity-config.js?v=20261020-unmet-achievement-art"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -4455,8 +4454,17 @@
       'Zero Meridian': 'zero-meridian.png'
     };
 
-    function achievementIconMarkup(achievement, tier) {
-      const image = ACHIEVEMENT_IMAGES[tier.title];
+    const UNMET_ACHIEVEMENT_IMAGES = {
+      common: 'unmet-common-uncommon.png',
+      uncommon: 'unmet-common-uncommon.png',
+      rare: 'unmet-rare-epic.png',
+      epic: 'unmet-rare-epic.png',
+      legendary: 'unmet-legendary-mystic.png',
+      mythic: 'unmet-legendary-mystic.png'
+    };
+
+    function achievementIconMarkup(achievement, tier, unmet = false) {
+      const image = unmet ? UNMET_ACHIEVEMENT_IMAGES[tier.rarity] : ACHIEVEMENT_IMAGES[tier.title];
       return image ? `<img src="./assets/achievements/${image}" alt="" loading="lazy" decoding="async">`
         : `<span aria-hidden="true">${achievement.icon}</span>`;
     }
@@ -4498,8 +4506,8 @@
         if (progress <= 0) return;
         if (!completed && !next) return;
         const visibleTiers = [completed, next].filter(Boolean);
-        const iconTier = completed || next;
-        const hideIcon = !completed && isSecretAchievementTier(next);
+        const iconTier = next || completed;
+        const unmet = !!next;
         const card = document.createElement('div');
         card.className = `p-3.5 rounded-2xl border ${
           completed && isSecretAchievementTier(completed)
@@ -4510,8 +4518,8 @@
         }`;
         card.innerHTML = `
           <div class="flex items-center gap-3">
-            <div class="achievement-icon${hideIcon ? ' achievement-icon-hidden' : ''}" data-rarity="${iconTier.rarity}" style="${achievementBadgeStyle(ach, iconTier)}" aria-hidden="true">
-              ${hideIcon ? '' : achievementIconMarkup(ach, iconTier)}
+            <div class="achievement-icon" data-rarity="${iconTier.rarity}" style="${achievementBadgeStyle(ach, iconTier)}" aria-hidden="true">
+              ${achievementIconMarkup(ach, iconTier, unmet)}
             </div>
             <div class="min-w-0 flex-1">
               <h5 class="text-xs font-bold text-slate-200">${escapeHtml(ach.title)}</h5>
@@ -5126,7 +5134,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261019-world-us-scratch"></script>
+  <script src="./expedition-ui.js?v=20261020-unmet-achievement-art"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);
