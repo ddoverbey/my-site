@@ -2943,8 +2943,8 @@ check('every achievement tier has valid difficulty rarity and distinct emoji art
     goal:t.goal,title:t.title,desc:t.desc,rarity:t.rarity
   }))`, context);
   assert.deepEqual(JSON.parse(JSON.stringify(stateTiers)), [
-    { goal: 10, title: 'Statehopper', desc: 'Visit 10 US states', rarity: 'rare' },
-    { goal: 25, title: 'Semi-Centennial', desc: 'Visit 25 US states', rarity: 'epic' },
+    { goal: 10, title: 'Statehopper', desc: 'Visit 10 US states', rarity: 'uncommon' },
+    { goal: 25, title: 'Semi-Centennial', desc: 'Visit 25 US states', rarity: 'rare' },
     { goal: 50, title: 'Fifty-Nifty', desc: 'Visit all 50 US states', rarity: 'legendary' }
   ]);
   assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='earthSandwich').icon", context), '🌍🥪');
