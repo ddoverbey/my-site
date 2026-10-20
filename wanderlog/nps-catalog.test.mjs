@@ -140,7 +140,7 @@ check('mobile RPG HUD starts collapsed with an accessible stats toggle', () => {
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261020-route-flags')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261020-public-example-location')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('storage-risk banner and unfinished-trip recovery controls are present', () => {
@@ -3684,15 +3684,15 @@ check('custom coordinate stops can be added with an optional name and join the r
   assert.match(html, /<details class="rounded-lg border border-slate-700 bg-slate-950\/40 p-3">\s*<summary[^>]*>Add custom coordinates<\/summary>/);
   assert.doesNotMatch(html, /id="expeditionCoordinate(?:Lat|Lng)"[^>]*required/);
   context.crypto = { randomUUID: () => 'manual-stop' };
-  element('expeditionCoordinateName').value = 'Hidden waterfall';
-  element('expeditionCoordinateLat').value = '33.542056';
-  element('expeditionCoordinateLng').value = '-85.715361';
+  element('expeditionCoordinateName').value = 'Statue of Liberty';
+  element('expeditionCoordinateLat').value = '40.6892';
+  element('expeditionCoordinateLng').value = '-74.0445';
   element('btnAddExpeditionCoordinate').handlers.click();
   const named = vm.runInContext('expeditionDraft[1]', context);
   assert.equal(named.kind, 'place');
   assert.equal(named.id, 'coord_manual-stop');
-  assert.equal(named.name, 'Hidden waterfall');
-  assert.deepEqual(Array.from(named.coords), [33.542056, -85.715361]);
+  assert.equal(named.name, 'Statue of Liberty');
+  assert.deepEqual(Array.from(named.coords), [40.6892, -74.0445]);
   element('expeditionCoordinateName').value = '';
   element('expeditionCoordinateLat').value = '0';
   element('expeditionCoordinateLng').value = '0';
