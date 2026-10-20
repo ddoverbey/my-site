@@ -188,6 +188,24 @@ check('international subdivision IDs validate in county ledgers, POIs, trips and
     assert.throws(() => migrate({ counties: { [invalidId]: 'v' } }));
   }
 });
+check('derived route-region promotion bounds geography lookups for dense road tracks', () => {
+  const state = migrate({ expeditions: [exp] });
+  state.expeditions[0].routeLegs = [{
+    mode: 'road',
+    routeCoords: Array.from({ length: 20000 }, (_, index) => [45, -125 + index / 10000]),
+    countyIds: []
+  }];
+  let politicalLookups = 0;
+  ledger.syncDerivedState(state, {
+    politicalAt: () => {
+      politicalLookups++;
+      return { countries: ['Canada'], states: [], admin1: [{ id: 'CAN:ON' }], counties: [] };
+    }
+  });
+  assert.ok(politicalLookups <= 66, `expected at most 66 lookups, got ${politicalLookups}`);
+  assert.equal(state.regions['c:Canada'], 'v');
+  assert.equal(state.regions['s:CAN:ON'], 'v');
+});
 check('missing POI references and conflicting ledgers reject explicitly', () => {
   assert.throws(() => migrate({ expeditions: [{ ...exp, customPoiIds: ['poi_missing'] }] }), /missing custom/);
 });

@@ -140,7 +140,7 @@ check('mobile RPG HUD starts collapsed with an accessible stats toggle', () => {
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261019-international-subdivisions-phase2')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261019-bounded-route-lookups')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('storage-risk banner and unfinished-trip recovery controls are present', () => {

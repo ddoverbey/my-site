@@ -303,6 +303,25 @@
     return migrated;
   }
 
+  function* sampledRouteCoordinates(routes, limit) {
+    const validRoutes = routes.filter(route => Array.isArray(route) && route.length);
+    const pointCount = validRoutes.reduce((total, route) => total + route.length, 0);
+    const sampleCount = Math.min(pointCount, limit);
+    let routeIndex = 0;
+    let routeOffset = 0;
+    for (let sampleIndex = 0; sampleIndex < sampleCount; sampleIndex++) {
+      const targetIndex = sampleCount === 1 ? 0 :
+        Math.round(sampleIndex * (pointCount - 1) / (sampleCount - 1));
+      let currentOffset = routeOffset;
+      while (routeIndex < validRoutes.length && currentOffset + validRoutes[routeIndex].length <= targetIndex) {
+        currentOffset += validRoutes[routeIndex].length;
+        routeIndex++;
+      }
+      routeOffset = currentOffset;
+      yield validRoutes[routeIndex][targetIndex - currentOffset];
+    }
+  }
+
   function syncDerivedState(state, { parks = [], countyRegions = {}, politicalAt = () => null } = {}) {
     restoreExpeditionPromotions(state);
     const markRegions = (political, status) => {
@@ -352,10 +371,13 @@
       });
       if (exp.routeLegs) {
         exp.routeCoords.forEach(([lat, lng]) => markRegions(politicalAt(lat, lng), 'v'));
+        const roadRoutes = exp.routeLegs.filter(leg => ['road', 'awd'].includes(leg.mode))
+          .map(leg => leg.routeCoords);
+        // County IDs capture the full road trace; sample dense geometry only to promote parent regions.
+        for (const [lat, lng] of sampledRouteCoordinates(roadRoutes, 64)) {
+          markRegions(politicalAt(lat, lng), 'v');
+        }
         exp.routeLegs.forEach(leg => {
-          if (['road', 'awd'].includes(leg.mode)) {
-            leg.routeCoords.forEach(([lat, lng]) => markRegions(politicalAt(lat, lng), 'v'));
-          }
           leg.countyIds.forEach(id => markCounty(id, 'v'));
         });
       }
