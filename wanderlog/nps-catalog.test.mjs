@@ -140,7 +140,7 @@ check('mobile RPG HUD starts collapsed with an accessible stats toggle', () => {
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261020-separate-achievements')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261020-unmet-no-descriptions')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('storage-risk banner and unfinished-trip recovery controls are present', () => {
@@ -2272,9 +2272,12 @@ check('waterfall milestone achievements disclose their independent 1, 5 and 10 g
       assert.ok(cards.includes('Chasing Waterfalls'));
       for (const goal of [1, 5, 10]) {
         assert.ok(cards.includes(
-          `aria-label="Chasing Waterfalls progress" value="${Math.min(count, goal)}" max="${goal}"`
+          `aria-label="Chasing Waterfalls completion" value="${Math.min(count, goal)}" max="${goal}"`
         ));
-        assert.ok(cards.includes(`Visit ${goal} custom waterfall location`));
+        assert.equal(
+          cards.includes(`Visit ${goal} custom waterfall location`),
+          count >= goal
+        );
       }
     }
   }
@@ -2764,7 +2767,7 @@ check('biome milestone achievements independently use 3, total minus one and tot
   assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='gaiaWanderer').tiers[0].goal()", context), 15);
   vm.runInContext("delete BIOMES['15']", context);
 });
-check('atlas completion goals use actual datasets and exclude unknown countries and FIPS IDs', () => {
+check('atlas goals exclude unknown countries and hide all unmet descriptions', () => {
   vm.runInContext(`
     applyPassport(migratePassport({}));PARKS=[];coordinateIndexes=null;
     worldGeoJson=[{properties:{name:'Canada'}},{properties:{name:'United States of America'}}];
@@ -2776,17 +2779,12 @@ check('atlas completion goals use actual datasets and exclude unknown countries 
   assert.equal(vm.runInContext('calculateStats().atlasCountriesCount', context), 1);
   assert.equal(vm.runInContext('calculateStats().countiesCount', context), 1);
   assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='worldAtlas').tiers[0].goal(calculateStats())", context), 2);
-  assert.ok(element('achievementsContainer').innerHTML.includes('Progress: 1 / 2 (50%)'));
-  assert.ok(element('achievementsContainer').innerHTML.includes(
-    'The Earth is no longer just a map—it is your neighborhood. No sovereign border can remain uncrossed.'
-  ));
-  assert.ok(element('achievementsContainer').innerHTML.includes(
-    'aria-label="Cryptic hint, blurred until completion"'
-  ));
-  assert.ok(html.includes('.achievement-redacted {\n      filter: blur(0.7px);'));
-  assert.ok(element('achievementsContainer').innerHTML.includes(
-    './assets/achievements/unmet-legendary-mystic.png'
-  ));
+  const atlasCard = element('achievementsContainer').innerHTML;
+  assert.ok(atlasCard.includes('1 / 2 (50%)'));
+  assert.ok(!atlasCard.includes('Progress'));
+  assert.ok(!atlasCard.includes('The Earth is no longer just a map'));
+  assert.ok(!atlasCard.includes('Visit every country/territory represented'));
+  assert.ok(atlasCard.includes('./assets/achievements/unmet-legendary-mystic.png'));
   assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='worldAtlas').title", context), 'How????');
   assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='worldAtlas').tiers[0].title", context), 'How????');
   assert.ok(!element('achievementsContainer').innerHTML.includes(
@@ -2797,7 +2795,7 @@ check('atlas completion goals use actual datasets and exclude unknown countries 
   assert.ok(!element('achievementsContainer').innerHTML.includes('Citizen of the World'));
   assert.ok(!element('achievementsContainer').innerHTML.includes('Manifest Destiny'));
 });
-check('every real tier hides at zero, shows rarity art, redacts only Legendary/Mythic, and reveals exact criteria on completion', () => {
+check('every unmet achievement hides its description while keeping its name, number, and rarity art', () => {
   const cards = [];
   const badges = [];
   const cardContainer = element('achievementsContainer');
@@ -2813,7 +2811,7 @@ check('every real tier hides at zero, shows rarity art, redacts only Legendary/M
     addEventListener() {}
   });
   const cases = vm.runInContext(`ACHIEVEMENTS.flatMap(achievement => achievement.tiers.map(tier => ({
-    id: achievement.id, title: tier.title, desc: tier.desc, secretDesc: tier.secretDesc, rarity: tier.rarity,
+    id: achievement.id, title: tier.title, desc: tier.desc, rarity: tier.rarity,
     goal: typeof tier.goal === 'function'
       ? tier.goal({npsTotal:474,countyTotal:3231,atlasCountriesTotal:200}) : tier.goal
   })))`, context);
@@ -2848,27 +2846,26 @@ check('every real tier hides at zero, shows rarity art, redacts only Legendary/M
         assert.equal(cards.length, 1, testCase.title);
         const card = cards[0];
         assert.ok(card.innerHTML.includes(testCase.title), testCase.title);
-        const locked = secret && progress < testCase.goal;
-        assert.equal(card.innerHTML.includes(testCase.desc), !locked, testCase.title);
-        assert.equal(card.innerHTML.includes('achievement-redacted'), locked, testCase.title);
+        const unmet = progress < testCase.goal;
+        assert.equal(card.innerHTML.includes(testCase.desc), !unmet, testCase.title);
+        assert.ok(!card.innerHTML.includes('achievement-redacted'), testCase.title);
         assert.equal(card.innerHTML.includes('achievement-icon-hidden'), false, testCase.title);
         const unmetImage = vm.runInContext(
           `UNMET_ACHIEVEMENT_IMAGES[${JSON.stringify(testCase.rarity)}]`, context
         );
-        assert.equal(card.innerHTML.includes(`./assets/achievements/${unmetImage}`), progress < testCase.goal, testCase.title);
-        assert.equal(secret ? typeof testCase.secretDesc === 'string' : true, true, testCase.title);
-        assert.equal(testCase.secretDesc ? card.innerHTML.includes(testCase.secretDesc) : false, locked, testCase.title);
-        assert.equal(card.innerHTML.includes('Cryptic hint, blurred until completion'), locked, testCase.title);
-        assert.equal(card.innerHTML.includes('<progress '), !locked, testCase.title);
-        assert.equal(card.className.includes('achievement-complete'), secret && !locked, testCase.title);
-        if (locked) {
-          assert.ok(card.innerHTML.includes(` / ${testCase.goal} (50%)`), testCase.title);
+        assert.equal(card.innerHTML.includes(`./assets/achievements/${unmetImage}`), unmet, testCase.title);
+        assert.ok(!card.innerHTML.includes('Progress:'), testCase.title);
+        assert.equal(card.innerHTML.includes('<progress '), !secret || !unmet, testCase.title);
+        assert.equal(card.className.includes('achievement-complete'), secret && !unmet, testCase.title);
+        if (unmet) {
+          const count = (Math.floor(Math.min(progress, testCase.goal) * 10) / 10).toLocaleString('en');
+          assert.ok(card.innerHTML.includes(`${count} / ${testCase.goal}`), testCase.title);
+          assert.ok(!card.innerHTML.includes(testCase.desc), testCase.title);
           assert.equal((card.innerHTML.match(new RegExp(` / ${testCase.goal}`, 'g')) || []).length, 1);
           assert.equal(badges.length, 0, testCase.title);
         } else if (progress >= testCase.goal) {
           assert.ok(card.innerHTML.includes(' • Complete'), testCase.title);
           assert.ok(!card.innerHTML.includes('Class title unlocked'), testCase.title);
-          if (testCase.secretDesc) assert.ok(!card.innerHTML.includes(testCase.secretDesc), testCase.title);
           assert.equal(badges.length, 1, testCase.title);
           assert.ok(badges[0].attributes.title.includes(testCase.desc), testCase.title);
         } else {

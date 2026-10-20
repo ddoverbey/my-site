@@ -282,10 +282,6 @@
       background-clip: text;
       color: transparent;
     }
-    .achievement-redacted {
-      filter: blur(0.7px);
-      user-select: none;
-    }
     .achievement-complete {
       background: linear-gradient(135deg, rgba(120, 53, 15, .55), rgba(69, 26, 3, .72));
       border-color: rgba(251, 191, 36, .8);
@@ -721,7 +717,7 @@
       <section class="max-w-6xl mx-auto space-y-6 pb-20" aria-labelledby="achievementsTitle">
         <div class="rpg-panel p-6 rounded-2xl">
           <h2 id="achievementsTitle" class="cinzel text-xl font-bold text-amber-200">Achievements</h2>
-          <p class="text-xs text-slate-400 mt-2">Discover special milestones through your travels. Only started achievements appear; each milestone earns its own badge. Legendary and Mythic criteria stay secret until completion.</p>
+          <p class="text-xs text-slate-400 mt-2">Discover special milestones through your travels. Only started achievements appear; descriptions are hidden until a milestone is earned, and each milestone earns its own badge.</p>
           <p class="text-xs text-slate-400 mt-2">Overnight stays are inferred from expedition dates. Same-day distance badges use only single-day expeditions, never undated pins or assumed dates on multi-day trips.</p>
           <p class="text-xs text-slate-400 mt-2">Rarity reflects achievement difficulty, not stat bonuses. Earned badges appear on your Explorer Profile.</p>
           <div class="flex flex-wrap gap-x-4 gap-y-2 mt-3 text-[10px] uppercase font-bold" aria-label="Achievement rarity levels">
@@ -966,14 +962,14 @@
     </form>
   </div>
 
-  <script src="./nps-catalog.js?v=20261020-separate-achievements"></script>
-  <script src="./national-parks-scratch.js?v=20261020-separate-achievements"></script>
-  <script src="./international-parks.js?v=20261020-separate-achievements"></script>
-  <script src="./ecoregions.js?v=20261020-separate-achievements"></script>
-  <script src="./coordinate-lookups.js?v=20261020-separate-achievements"></script>
-  <script src="./micro-states.js?v=20261020-separate-achievements"></script>
-  <script src="./travel-ledger.js?v=20261020-separate-achievements"></script>
-  <script src="./rarity-config.js?v=20261020-separate-achievements"></script>
+  <script src="./nps-catalog.js?v=20261020-unmet-no-descriptions"></script>
+  <script src="./national-parks-scratch.js?v=20261020-unmet-no-descriptions"></script>
+  <script src="./international-parks.js?v=20261020-unmet-no-descriptions"></script>
+  <script src="./ecoregions.js?v=20261020-unmet-no-descriptions"></script>
+  <script src="./coordinate-lookups.js?v=20261020-unmet-no-descriptions"></script>
+  <script src="./micro-states.js?v=20261020-unmet-no-descriptions"></script>
+  <script src="./travel-ledger.js?v=20261020-unmet-no-descriptions"></script>
+  <script src="./rarity-config.js?v=20261020-unmet-no-descriptions"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -1116,7 +1112,6 @@
         progress: s => npsCatalogLoaded && s.npsTotal > 0 ? s.usParksCount : 0,
         tiers: [{
           goal: s => s.npsTotal, title: 'Completionist Legend',
-          secretDesc: 'An unimaginable dedication to preservation. No monument, historic site, or park in the grand registry can remain unseen.',
           desc: 'Visit every non-international NPS catalog listing'
         }]
       },
@@ -1128,7 +1123,6 @@
         id: 'almostThere', title: 'Almost There!', progress: s => s.biomesSet.size,
         tiers: [{
           goal: () => Object.keys(BIOMES).length - 1, title: 'Almost There!',
-          secretDesc: 'The earth’s diverse environments are nearly all accounted for. Only a single missing ecosystem stands between you and planetary mastery.',
           desc: 'Log all but one of the terrestrial biomes'
         }]
       },
@@ -1136,7 +1130,6 @@
         id: 'gaiaWanderer', title: 'Gaia Wanderer', progress: s => s.biomesSet.size,
         tiers: [{
           goal: () => Object.keys(BIOMES).length, title: 'Gaia Wanderer',
-          secretDesc: 'The complete spectrum of the natural world waits for a traveler who can reach beyond the familiar.',
           desc: 'Log every terrestrial biome'
         }]
       },
@@ -1156,7 +1149,6 @@
         id: 'fiftyNifty', title: 'Fifty-Nifty', progress: s => s.statesCount,
         tiers: [{
           goal: 50, title: 'Fifty-Nifty',
-          secretDesc: 'A complete union of stars. Every corner of the republic must bear the mark of your passage.',
           desc: 'Claim all 50 US states'
         }]
       },
@@ -1188,12 +1180,11 @@
       ['international', 'Terra Incognita', 'Log your first coordinate outside your home country', 1],
       ['touchGrass', 'Touch Grass', 'Visit a catalog destination designated as a National, State or Provincial Park', 1],
       ['fastTravel', 'Fast Travel', 'Log two stops more than 500 miles apart on the same day in single-day expeditions', 2],
-      ['earthSandwich', 'Earth Sandwich', 'Log two points within 100 miles of exact antipodes', 2,
-        'A feat of extraordinary geographic alignment. The details will reveal themselves upon discovery.'],
+      ['earthSandwich', 'Earth Sandwich', 'Log two points within 100 miles of exact antipodes', 2],
       ['longDark', 'The Long Dark', 'Log a location north of 66.5° N or south of 66.5° S', 1],
       ['latitudeSpan', 'Pole to Pole', 'Log coordinates spanning at least 60 degrees of latitude', 60]
-    ].forEach(([id, title, desc, goal, secretDesc]) => ACHIEVEMENTS.push({
-      id, title, tiers: [{ goal, title, desc, ...(secretDesc ? { secretDesc } : {}) }], progress: s => s.metadataProgress[id]
+    ].forEach(([id, title, desc, goal]) => ACHIEVEMENTS.push({
+      id, title, tiers: [{ goal, title, desc }], progress: s => s.metadataProgress[id]
     }));
     ACHIEVEMENTS.push(
       {
@@ -1211,7 +1202,6 @@
         id: 'counties', title: 'Manifest Destiny', progress: s => s.countiesCount,
         tiers: [{
           goal: s => s.countyTotal, title: 'Manifest Destiny',
-          secretDesc: 'A relentless, granular conquest. Thousands of invisible borders must be crossed until the entire atlas is painted with your travels.',
           desc: 'Visit every county in the loaded US county atlas'
         }]
       },
@@ -1219,7 +1209,6 @@
         id: 'worldAtlas', title: 'How????', progress: s => s.atlasCountriesCount,
         tiers: [{
           goal: s => s.atlasCountriesTotal, title: 'How????',
-          secretDesc: 'The Earth is no longer just a map—it is your neighborhood. No sovereign border can remain uncrossed.',
           desc: 'Visit every country/territory represented in the World Nations atlas'
         }]
       }
@@ -4627,13 +4616,12 @@
               ${visibleTiers.map(tier => `
                 ${tier.title === ach.title ? '' : `<p class="text-xs text-slate-200 mt-2">${escapeHtml(tier.title)}</p>`}
                 <p class="achievement-rarity text-[10px] uppercase font-bold mt-1" data-rarity="${tier.rarity}" style="${achievementBadgeStyle(ach, tier)}">${ACHIEVEMENT_RARITIES[tier.rarity].label}</p>
-                ${progress < tier.goal && isSecretAchievementTier(tier)
-                  ? `<p class="text-[10px] achievement-redacted leading-tight mt-0.5" aria-label="Cryptic hint, blurred until completion">${escapeHtml(tier.secretDesc || 'A mystery awaits those who venture far enough.')}</p>`
-                  : `<p class="text-[10px] text-slate-400 leading-tight mt-0.5">${escapeHtml(tier.desc)}</p>`}
+                ${progress >= tier.goal
+                  ? `<p class="text-[10px] text-slate-400 leading-tight mt-0.5">${escapeHtml(tier.desc)}</p>` : ''}
                 ${isSecretAchievementTier(tier) && progress < tier.goal
-                  ? `<p class="text-[10px] text-amber-300 mt-1">Progress: ${(Math.floor(Math.min(progress, tier.goal) * 10) / 10).toLocaleString('en')} / ${tier.goal} (${Math.floor(Math.min(progress / tier.goal, 1) * 100)}%)</p>`
+                  ? `<p class="text-[10px] text-amber-300 mt-1">${(Math.floor(Math.min(progress, tier.goal) * 10) / 10).toLocaleString('en')} / ${tier.goal} (${Math.floor(Math.min(progress / tier.goal, 1) * 100)}%)</p>`
                   : `<p class="text-[10px] text-amber-300 mt-1">${(Math.floor(Math.min(progress, tier.goal) * 10) / 10).toLocaleString('en')} / ${tier.goal}${progress >= tier.goal ? ' • Complete' : ''}</p>
-                    <progress aria-label="${escapeHtml(tier.title)} progress" value="${Math.min(progress, tier.goal)}" max="${tier.goal}" class="w-full h-2 mt-1"></progress>`}
+                    <progress aria-label="${escapeHtml(tier.title)} completion" value="${Math.min(progress, tier.goal)}" max="${tier.goal}" class="w-full h-2 mt-1"></progress>`}
               `).join('')}
             </div>
           </div>
@@ -5235,7 +5223,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261020-separate-achievements"></script>
+  <script src="./expedition-ui.js?v=20261020-unmet-no-descriptions"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);
