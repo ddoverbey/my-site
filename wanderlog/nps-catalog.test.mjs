@@ -140,7 +140,7 @@ check('mobile RPG HUD starts collapsed with an accessible stats toggle', () => {
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261021-state-flags')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261020-route-flags')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('storage-risk banner and unfinished-trip recovery controls are present', () => {
@@ -1479,7 +1479,17 @@ check('flag names reveal on interaction without toggling their surrounding trip 
 check('trip country flags exclude home-country aliases while state flags include home-state stops', () => {
   const result = vm.runInContext(`(()=>{
     const political=cachedPoliticalAt,home=AppState.homeBase,parks=PARKS,pois=AppState.customPois;
+    const oldStates=usaRegionGeoJson,oldSubdivisions=worldSubdivisionGeoJson;
+    const oldCountyFeatures={...countyFeaturesById};
     try {
+      usaRegionGeoJson=[
+        {id:'06',properties:{name:'California'}},
+        {id:'32',properties:{name:'Nevada'}}
+      ];
+      worldSubdivisionGeoJson=[{properties:{isoA3:'CAN',country:'Canada'}}];
+      countyFeaturesById['06073']={properties:{name:'San Diego County'}};
+      countyFeaturesById['32003']={properties:{name:'Clark County'}};
+      countyFeaturesById['CAN:Ontario']={properties:{name:'Ontario',country:'CAN'}};
       cachedPoliticalAt=(lat,lng)=>({
         countries:lat===0?['United States']:lat===1?['France']:['Canada'],
         states:lat===0?['California']:lat===1?['New Hampshire']:[]
@@ -1488,8 +1498,9 @@ check('trip country flags exclude home-country aliases while state flags include
       PARKS=[{id:'flagpark',intl:true,countryCode:'JP',country:'Japan',states:['Alabama']}];
       AppState.customPois=[{id:'flagpoi',political:{countries:['France'],states:['California']}}];
       const trip={routeStops:[{coords:[0,0]},{coords:[1,1]}],routeCoords:[[0,0],[1,1]],
-        routeLegs:[{mode:'flight',routeCoords:[[0,0],[2,2],[1,1]]}],
-        parkIds:['flagpark'],customPoiIds:['flagpoi'],countyIds:['06073']};
+        routeLegs:[{mode:'road',routeSource:'uploaded',routeCoords:[[0,0],[2,2],[1,1]],
+          countyIds:['06073','32003','CAN:Ontario']}],
+        parkIds:['flagpark'],customPoiIds:['flagpoi'],countyIds:[]};
       const foreign=travelLogCountryFlags(trip);
       const states=travelLogStateFlags(trip);
       AppState.homeBase=null;
@@ -1497,15 +1508,42 @@ check('trip country flags exclude home-country aliases while state flags include
       AppState.homeBase={lat:0,lng:0};
       const domestic=travelLogCountryFlags({...trip,routeStops:[{coords:[0,0]}],parkIds:[],customPoiIds:[]});
       return {foreign,noHome,domestic,states};
-    } finally {cachedPoliticalAt=political;AppState.homeBase=home;PARKS=parks;AppState.customPois=pois;}
+    } finally {
+      cachedPoliticalAt=political;AppState.homeBase=home;PARKS=parks;AppState.customPois=pois;
+      usaRegionGeoJson=oldStates;worldSubdivisionGeoJson=oldSubdivisions;
+      Object.keys(countyFeaturesById).forEach(id=>delete countyFeaturesById[id]);
+      Object.assign(countyFeaturesById,oldCountyFeatures);
+    }
   })()`, context);
   const plain = JSON.parse(JSON.stringify(result));
-  assert.deepEqual(plain.foreign.map(flag => flag.code), ['FR', 'JP']);
-  assert.deepEqual(plain.noHome.map(flag => flag.code), ['FR', 'JP', 'US']);
-  assert.deepEqual(plain.domestic, []);
-  assert.deepEqual(plain.states.map(flag => flag.name), ['Alabama', 'California', 'New Hampshire']);
+  assert.deepEqual(plain.foreign.map(flag => flag.code), ['CA', 'FR', 'JP']);
+  assert.deepEqual(plain.noHome.map(flag => flag.code), ['CA', 'FR', 'JP', 'US']);
+  assert.deepEqual(plain.domestic.map(flag => flag.code), ['CA']);
+  assert.deepEqual(plain.states.map(flag => flag.name), ['Alabama', 'California', 'Nevada', 'New Hampshire']);
   assert.ok(expeditionUi.includes('data-trip-flags'));
   assert.ok(expeditionUi.includes('data-trip-state-flags'));
+});
+check('uploaded non-road tracks resolve traversed region IDs once and reuse them for flag rendering', () => {
+  const result = vm.runInContext(`(()=>{
+    const previousIndexes=coordinateIndexes,previousLookup=CoordinateLookups.routeCountyIds;
+    let calls=0;
+    const trip={countyIds:[],routeLegs:[{
+      mode:'rail',routeSource:'uploaded',routeCoords:[[0,0],[1,1]],countyIds:[]
+    }]};
+    try {
+      coordinateIndexes={counties:[{}]};
+      CoordinateLookups.routeCountyIds=()=>{calls++;return ['CAN:Ontario'];};
+      const first=travelLogCountyIds(trip),second=travelLogCountyIds(trip);
+      return {calls,first,second};
+    } finally {
+      coordinateIndexes=previousIndexes;
+      CoordinateLookups.routeCountyIds=previousLookup;
+    }
+  })()`, context);
+  const plain = JSON.parse(JSON.stringify(result));
+  assert.equal(plain.calls, 1);
+  assert.deepEqual(plain.first, ['CAN:Ontario']);
+  assert.deepEqual(plain.second, ['CAN:Ontario']);
 });
 check('journal headings and bullet lists render safely without interpreting HTML or inline scripts', () => {
   context.journalFormattingFixture = '# Day one\n## Highlights\n- Sunrise\n* Waterfall\n### Next time\n<script>alert(1)</script>\n[link](javascript:bad)';

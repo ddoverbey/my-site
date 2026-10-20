@@ -1017,6 +1017,7 @@ const GLOBAL_ROUTE_COLORS = {
 };
 let globalRoutesOpen = false;
 let globalRoutesZoomBehavior = null;
+const travelLogCountyIdCache = new WeakMap();
 
 const TRAVEL_LOG_MONTHS = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE',
   'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'];
@@ -1082,7 +1083,7 @@ function travelLogCountryFlags(exp) {
     if (park) add(park.intl ? park.countryCode ? [park.country] : [] : ['United States of America']);
   });
   exp.customPoiIds.forEach(id => add(AppState.customPois.find(poi => poi.id === id)?.political?.countries));
-  if (exp.countyIds.length) countries.add('United States of America');
+  travelLogCountyRegions(exp).countries.forEach(country => countries.add(country));
   const home = AppState.homeBase;
   const homeCountries = home ? cachedPoliticalAt(home.lat, home.lng)?.countries ||
     (home.countyId ? ['United States of America'] : []) : [];
@@ -1102,8 +1103,50 @@ function travelLogStateFlags(exp) {
     if (park) add(park.states || (park.state ? park.state.split(',').map(state => state.trim()) : []));
   });
   exp.customPoiIds.forEach(id => add(AppState.customPois.find(poi => poi.id === id)?.political?.states));
-  exp.countyIds.forEach(id => add([countyLabel(id).split(', ').pop()]));
+  travelLogCountyRegions(exp).states.forEach(state => states.add(state));
   return profileStateFlags([...states]);
+}
+
+function travelLogCountyRegions(exp) {
+  const states = new Set();
+  const countries = new Set();
+  for (const id of travelLogCountyIds(exp)) {
+    if (CoordinateLookups.validSubdivisionId(id)) {
+      const country = countyFeaturesById[id]?.properties?.country || id.slice(0, 3);
+      const countryName = /^[A-Z]{3}$/.test(country)
+        ? worldSubdivisionGeoJson?.find(feature => feature.properties.isoA3 === country)?.properties.country || country
+        : country;
+      countries.add(countryName);
+      continue;
+    }
+    countries.add('United States of America');
+    const label = countyLabel(id);
+    const state = label.slice(label.lastIndexOf(', ') + 2);
+    if (NpsCatalog.isUsState(state)) states.add(state);
+  }
+  return { states, countries };
+}
+
+function travelLogCountyIds(exp) {
+  const routeLegs = exp.routeLegs || [];
+  const cached = travelLogCountyIdCache.get(exp);
+  if (cached && cached.routeLegs === exp.routeLegs && cached.countyIds === exp.countyIds &&
+      cached.indexes === coordinateIndexes) return cached.ids;
+
+  const ids = new Set(exp.countyIds || []);
+  routeLegs.forEach(leg => {
+    (leg.countyIds || []).forEach(id => ids.add(id));
+    if (leg.routeSource === 'uploaded' && !leg.countyIds?.length &&
+        coordinateIndexes?.counties?.length && leg.routeCoords?.length >= 2) {
+      CoordinateLookups.routeCountyIds(leg.routeCoords, coordinateIndexes.counties, d3.geoContains)
+        .forEach(id => ids.add(id));
+    }
+  });
+  const values = [...ids];
+  travelLogCountyIdCache.set(exp, {
+    routeLegs: exp.routeLegs, countyIds: exp.countyIds, indexes: coordinateIndexes, ids: values
+  });
+  return values;
 }
 
 function destroyTravelLogMaps() {
@@ -1404,8 +1447,8 @@ function renderExpeditionHistory() {
           <div class="travel-journal-metrics"><span><small>Total mileage</small>${metrics.mileage}</span><span><small>Elevation range</small>${metrics.elevation}</span></div>
           ${metrics.changes ? `<p class="text-xs text-slate-400">${metrics.changes}</p>` : ''}
           <div class="flex flex-wrap gap-1.5">${badgeMarkup.slice(0, 4).join('')}${badges.length > 4 ? `<span class="text-xs text-slate-400">+${badges.length - 4}</span>` : ''}</div>
-          ${flags.length ? `<ul class="passport-flags" data-trip-flags aria-label="Countries visited outside your home country">${countryFlagMarkup(flags)}</ul>` : ''}
-          ${stateFlags.length ? `<ul class="passport-flags" data-trip-state-flags aria-label="US states visited on this trip">${stateFlagMarkup(stateFlags)}</ul>` : ''}
+          ${flags.length ? `<ul class="passport-flags" data-trip-flags aria-label="Countries traversed outside your home country">${countryFlagMarkup(flags)}</ul>` : ''}
+          ${stateFlags.length ? `<ul class="passport-flags" data-trip-state-flags aria-label="US states visited or traversed on this trip">${stateFlagMarkup(stateFlags)}</ul>` : ''}
           <span class="travel-journal-toggle text-xs text-sky-300">Open journal <span aria-hidden="true">⌄</span></span>
           <span class="travel-journal-collapse-hint text-xs text-sky-300">Collapse journal <span aria-hidden="true">⌃</span></span>
         </div>
