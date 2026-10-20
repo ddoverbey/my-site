@@ -140,7 +140,7 @@ check('mobile RPG HUD starts collapsed with an accessible stats toggle', () => {
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261020-hints-at-85')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261021-state-flags')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('storage-risk banner and unfinished-trip recovery controls are present', () => {
@@ -1408,6 +1408,34 @@ check('profile flags use visited/lived countries only, sort alphabetically, dedu
     vm.runInContext(`applyPassport(${saved})`, context);
   }
 });
+check('profile state flags map visited and lived US states to supplied artwork, including the home state', () => {
+  const saved = vm.runInContext('JSON.stringify(passportPayload())', context);
+  try {
+    const result = vm.runInContext(`(()=>{
+      applyPassport(migratePassport({regions:{
+        's:California':'l','s:Alabama':'v','s:Wyoming':'w'
+      }}));
+      const stats=calculateStats();
+      return {states:stats.visitedStates,flags:profileStateFlags(stats.visitedStates)};
+    })()`, context);
+    const plain = JSON.parse(JSON.stringify(result));
+    assert.deepEqual(plain.states, ['California', 'Alabama']);
+    assert.deepEqual(plain.flags.map(flag => [flag.name, flag.src]), [
+      ['Alabama', './assets/pixel_usa_state_flags_av_reference/alabama.png'],
+      ['California', './assets/pixel_usa_state_flags_av_reference/california.png']
+    ]);
+    assert.deepEqual(JSON.parse(JSON.stringify(vm.runInContext(
+      "profileStateFlags(['New Hampshire','District of Columbia','New Hampshire'])", context
+    ))).map(flag => [flag.name, flag.src]), [
+      ['New Hampshire', './assets/pixel_usa_state_flags_av_reference/newhampshire.png']
+    ]);
+    vm.runInContext("renderProfileStateFlags(['California'])", context);
+    assert.ok(element('passportStateFlags').innerHTML.includes('California flag'));
+    assert.ok(html.includes('id="passportStateFlags"'));
+  } finally {
+    vm.runInContext(`applyPassport(${saved})`, context);
+  }
+});
 check('profile flag images retry the unknown asset once when a country has no flag file', () => {
   const list = element('passportFlags');
   const original = list.querySelectorAll;
@@ -1448,30 +1476,36 @@ check('flag names reveal on interaction without toggling their surrounding trip 
     assert.ok(html.includes('.country-flag-name { display: none;'));
   } finally { list.querySelectorAll = original; }
 });
-check('trip flags exclude home-country aliases and flyovers, include destinations, and sort alphabetically', () => {
+check('trip country flags exclude home-country aliases while state flags include home-state stops', () => {
   const result = vm.runInContext(`(()=>{
     const political=cachedPoliticalAt,home=AppState.homeBase,parks=PARKS,pois=AppState.customPois;
     try {
-      cachedPoliticalAt=(lat,lng)=>({countries:lat===0?['United States']:lat===1?['France']:['Canada']});
+      cachedPoliticalAt=(lat,lng)=>({
+        countries:lat===0?['United States']:lat===1?['France']:['Canada'],
+        states:lat===0?['California']:lat===1?['New Hampshire']:[]
+      });
       AppState.homeBase={lat:0,lng:0};
-      PARKS=[{id:'flagpark',intl:true,countryCode:'JP',country:'Japan'}];
-      AppState.customPois=[{id:'flagpoi',political:{countries:['France']}}];
+      PARKS=[{id:'flagpark',intl:true,countryCode:'JP',country:'Japan',states:['Alabama']}];
+      AppState.customPois=[{id:'flagpoi',political:{countries:['France'],states:['California']}}];
       const trip={routeStops:[{coords:[0,0]},{coords:[1,1]}],routeCoords:[[0,0],[1,1]],
         routeLegs:[{mode:'flight',routeCoords:[[0,0],[2,2],[1,1]]}],
         parkIds:['flagpark'],customPoiIds:['flagpoi'],countyIds:['06073']};
       const foreign=travelLogCountryFlags(trip);
+      const states=travelLogStateFlags(trip);
       AppState.homeBase=null;
       const noHome=travelLogCountryFlags(trip);
       AppState.homeBase={lat:0,lng:0};
       const domestic=travelLogCountryFlags({...trip,routeStops:[{coords:[0,0]}],parkIds:[],customPoiIds:[]});
-      return {foreign,noHome,domestic};
+      return {foreign,noHome,domestic,states};
     } finally {cachedPoliticalAt=political;AppState.homeBase=home;PARKS=parks;AppState.customPois=pois;}
   })()`, context);
   const plain = JSON.parse(JSON.stringify(result));
   assert.deepEqual(plain.foreign.map(flag => flag.code), ['FR', 'JP']);
   assert.deepEqual(plain.noHome.map(flag => flag.code), ['FR', 'JP', 'US']);
   assert.deepEqual(plain.domestic, []);
+  assert.deepEqual(plain.states.map(flag => flag.name), ['Alabama', 'California', 'New Hampshire']);
   assert.ok(expeditionUi.includes('data-trip-flags'));
+  assert.ok(expeditionUi.includes('data-trip-state-flags'));
 });
 check('journal headings and bullet lists render safely without interpreting HTML or inline scripts', () => {
   context.journalFormattingFixture = '# Day one\n## Highlights\n- Sunrise\n* Waterfall\n### Next time\n<script>alert(1)</script>\n[link](javascript:bad)';

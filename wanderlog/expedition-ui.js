@@ -1090,6 +1090,22 @@ function travelLogCountryFlags(exp) {
   return profileCountryFlags([...countries]).filter(flag => !homeKeys.has(flag.code || flag.name));
 }
 
+function travelLogStateFlags(exp) {
+  const states = new Set();
+  const add = values => (values || []).forEach(state => {
+    if (NpsCatalog.isUsState(state)) states.add(state);
+  });
+  (exp.routeStops?.length ? exp.routeStops.map(stop => stop.coords) : exp.routeCoords || [])
+    .filter(travelLogPoint).forEach(coords => add(cachedPoliticalAt(...coords)?.states));
+  exp.parkIds.forEach(id => {
+    const park = PARKS.find(item => item.id === id);
+    if (park) add(park.states || (park.state ? park.state.split(',').map(state => state.trim()) : []));
+  });
+  exp.customPoiIds.forEach(id => add(AppState.customPois.find(poi => poi.id === id)?.political?.states));
+  exp.countyIds.forEach(id => add([countyLabel(id).split(', ').pop()]));
+  return profileStateFlags([...states]);
+}
+
 function destroyTravelLogMaps() {
   travelLogResizeObserver?.disconnect();
   travelLogResizeObserver = null;
@@ -1370,6 +1386,7 @@ function renderExpeditionHistory() {
     const badges = travelLogBadges(exp);
     const metrics = travelLogMetrics(exp);
     const flags = travelLogCountryFlags(exp);
+    const stateFlags = travelLogStateFlags(exp);
     const badgeMarkup = badges.map(badge =>
       `<span class="px-2 py-0.5 rounded-full text-[11px] border ${badge.tone}">${badge.icon} ${escapeHtml(badge.label)}</span>`);
     let divider = '';
@@ -1388,6 +1405,7 @@ function renderExpeditionHistory() {
           ${metrics.changes ? `<p class="text-xs text-slate-400">${metrics.changes}</p>` : ''}
           <div class="flex flex-wrap gap-1.5">${badgeMarkup.slice(0, 4).join('')}${badges.length > 4 ? `<span class="text-xs text-slate-400">+${badges.length - 4}</span>` : ''}</div>
           ${flags.length ? `<ul class="passport-flags" data-trip-flags aria-label="Countries visited outside your home country">${countryFlagMarkup(flags)}</ul>` : ''}
+          ${stateFlags.length ? `<ul class="passport-flags" data-trip-state-flags aria-label="US states visited on this trip">${stateFlagMarkup(stateFlags)}</ul>` : ''}
           <span class="travel-journal-toggle text-xs text-sky-300">Open journal <span aria-hidden="true">⌄</span></span>
           <span class="travel-journal-collapse-hint text-xs text-sky-300">Collapse journal <span aria-hidden="true">⌃</span></span>
         </div>
@@ -1410,6 +1428,7 @@ function renderExpeditionHistory() {
     button.addEventListener('click', () => openExpedition(button.dataset.editExpedition));
   });
   container.querySelectorAll('[data-trip-flags]').forEach(wireCountryFlagFallbacks);
+  container.querySelectorAll('[data-trip-state-flags]').forEach(wireStateFlagInteractions);
   container.querySelectorAll('[data-trip]').forEach(card => {
     const exp = sorted.find(item => item.id === card.dataset.trip);
     const reveal = () => {
