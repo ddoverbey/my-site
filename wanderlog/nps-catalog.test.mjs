@@ -140,7 +140,7 @@ check('mobile RPG HUD starts collapsed with an accessible stats toggle', () => {
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261020-public-example-location')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261020-provider-fallback')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('storage-risk banner and unfinished-trip recovery controls are present', () => {
@@ -811,18 +811,68 @@ check('existing route corridors remain round-capped and 40 km wide', () => {
   assert.equal(stroke[1], vm.runInContext('calculatePixelRadius(37.5, 40)', context));
   assert.equal(stroke[2], 'round');
 });
-context.CoordinateLookups = { ...coordinateLookups, lookupCoordinate: async () => customLocation };
+const formLookupFeature = (name, coordinates, properties = {}) => ({
+  type: 'Feature', id: name, properties: { name, ...properties },
+  geometry: { type: 'Polygon', coordinates: [coordinates] }
+});
+const formLookupRing = [[10, 40], [15, 40], [15, 45], [10, 45], [10, 40]];
+const formLookupIndexes = {
+  countries: coordinateLookups.indexFeatures([
+    formLookupFeature('Italy', formLookupRing)
+  ], d3Geo),
+  states: coordinateLookups.indexFeatures([
+    formLookupFeature('Lazio', formLookupRing)
+  ], d3Geo),
+  counties: coordinateLookups.indexFeatures([
+    formLookupFeature('Lazio', formLookupRing, { country: 'Italy', isoA3: 'ITA' })
+  ], d3Geo),
+  ecoregions: coordinateLookups.indexFeatures([
+    formLookupFeature('Central Italian forests', formLookupRing, {
+      ECO_ID: 1, ECO_NAME: 'Central Italian forests', BIOME_NUM: 12, REALM: 'Palearctic'
+    })
+  ], d3Geo)
+};
+formLookupIndexes.counties[0].feature.id = 'ITA:LAZ';
+context.CoordinateLookups = { ...coordinateLookups };
 context.crypto = { randomUUID: () => 'saved-reference' };
-context.d3 = { ...d3Geo, geoContains() {} };
-vm.runInContext('coordinateIndexes = null; AppState.customLocations = [];', context);
+context.d3 = { ...d3Geo, geoContains: d3Geo.geoContains };
+context.formLookupIndexes = formLookupIndexes;
+vm.runInContext('coordinateIndexes = formLookupIndexes; AppState.customLocations = [];', context);
 element('customLocationName').value = 'Colosseum';
 element('customLocationLat').value = '41.8902';
 element('customLocationLng').value = '12.4922';
 element('customLocationStatus').value = 'v';
-await element('customLocationForm').handlers.submit({ preventDefault() {} });
-check('the custom-coordinate form saves only after lookup completion', () => {
+element('customLocationCategory').value = 'waterfall';
+const originalFetch = globalThis.fetch;
+const originalWarn = console.warn;
+globalThis.fetch = async url => {
+  if (url.includes('open-meteo')) return { ok: false, status: 503 };
+  if (url.includes('api.devonoverbey.com')) return { ok: false, status: 503 };
+  if (url.includes('overpass-api.de')) return { ok: false, status: 504 };
+  throw new Error(`Unexpected network request: ${url}`);
+};
+console.warn = () => {};
+try {
+  await element('customLocationForm').handlers.submit({ preventDefault() {} });
+} finally {
+  globalThis.fetch = originalFetch;
+  console.warn = originalWarn;
+}
+vm.runInContext('coordinateIndexes = null;', context);
+check('custom-location provider failures still save offline geography and waterfall achievement progress', () => {
   assert.equal(vm.runInContext('AppState.customLocations.length', context), 1);
   assert.equal(JSON.parse(savedJson).customPois[0].id, 'poi_saved-reference');
+  const saved = JSON.parse(vm.runInContext('JSON.stringify(AppState.customPois[0])', context));
+  assert.equal(saved.rarity, null);
+  assert.equal(saved.rarityTier, 'Uncharted');
+  assert.equal(saved.elevationFt, 0);
+  assert.deepEqual(saved.political.countries, ['Italy']);
+  assert.deepEqual(saved.political.states, ['Lazio']);
+  assert.deepEqual(saved.political.counties, [{ id: 'ITA:LAZ', name: 'Lazio' }]);
+  assert.deepEqual(saved.biomes, ['12']);
+  assert.equal(vm.runInContext('calculateStats().metadataProgress.waterfalls', context), 1);
+  assert.ok(element('toastMsg').textContent.includes('rarity unavailable'));
+  assert.ok(element('toastMsg').textContent.includes('Elevation unavailable'));
 });
 context.CoordinateLookups.lookupCoordinate = async () => { throw new Error('Overpass HTTP 503'); };
 await element('customLocationForm').handlers.submit({ preventDefault() {} });

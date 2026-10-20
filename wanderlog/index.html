@@ -938,7 +938,7 @@
   <div id="customLocationModal" role="dialog" aria-modal="true" aria-labelledby="customLocationTitle" class="hidden fixed inset-0 z-[1000] bg-black/85 flex items-center justify-center p-4">
     <form id="customLocationForm" class="rpg-panel rpg-panel-gold max-w-lg w-full max-h-[90vh] overflow-y-auto rounded-2xl p-6 space-y-4">
       <h2 id="customLocationTitle" class="cinzel text-xl text-amber-200">Custom Location</h2>
-      <p class="text-xs text-slate-400">Enter coordinates or right-click the map. Elevation and rarity lookups send coordinates to their providers. Region and biome lookups stay on your device.</p>
+      <p class="text-xs text-slate-400">Enter coordinates or right-click the map. Elevation and rarity lookups send coordinates to their providers. Region and biome lookups stay on your device. Locations still save if providers are unavailable.</p>
       <label class="block text-xs text-slate-300">Name
         <input id="customLocationName" required maxlength="150" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2" placeholder="e.g. Colosseum">
       </label>
@@ -972,14 +972,14 @@
     </form>
   </div>
 
-  <script src="./nps-catalog.js?v=20261020-public-example-location"></script>
-  <script src="./national-parks-scratch.js?v=20261020-public-example-location"></script>
-  <script src="./international-parks.js?v=20261020-public-example-location"></script>
-  <script src="./ecoregions.js?v=20261020-public-example-location"></script>
-  <script src="./coordinate-lookups.js?v=20261020-public-example-location"></script>
-  <script src="./micro-states.js?v=20261020-public-example-location"></script>
-  <script src="./travel-ledger.js?v=20261020-public-example-location"></script>
-  <script src="./rarity-config.js?v=20261020-public-example-location"></script>
+  <script src="./nps-catalog.js?v=20261020-provider-fallback"></script>
+  <script src="./national-parks-scratch.js?v=20261020-provider-fallback"></script>
+  <script src="./international-parks.js?v=20261020-provider-fallback"></script>
+  <script src="./ecoregions.js?v=20261020-provider-fallback"></script>
+  <script src="./coordinate-lookups.js?v=20261020-provider-fallback"></script>
+  <script src="./micro-states.js?v=20261020-provider-fallback"></script>
+  <script src="./travel-ledger.js?v=20261020-provider-fallback"></script>
+  <script src="./rarity-config.js?v=20261020-provider-fallback"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -3566,8 +3566,9 @@
             status.textContent = `Rarity endpoint unavailable (${error.message}). Trying the direct OSM density estimate...`;
           }
         });
+        const { lookupWarnings = [], ...locationMetadata } = metadata;
         const location = {
-          ...metadata, id: `poi_${crypto.randomUUID()}`, name, status: pinStatus,
+          ...locationMetadata, id: `poi_${crypto.randomUUID()}`, name, status: pinStatus,
           category: document.getElementById('customLocationCategory').value.trim(),
           purposeTags: [...document.querySelectorAll('#customPurposeTags input:checked')].map(input => input.value)
         };
@@ -3578,7 +3579,15 @@
         updateAllUI();
         customLookupPending = false;
         closeCustomLocation();
-        showNotification('Location saved', `${name}: ${metadata.rarity.rarityTier || metadata.rarity.category} (${metadata.rarity.reviewCount === null || metadata.rarity.method === 'osm-poi-density' ? 'density estimate' : 'review count'}${fallbackUsed ? '; direct OSM fallback' : ''}).`, '🗺️');
+        const rarityTier = metadata.rarity?.rarityTier || metadata.rarity?.category || metadata.rarityTier;
+        const raritySource = metadata.rarity
+          ? metadata.rarity.reviewCount === null || metadata.rarity.method === 'osm-poi-density'
+            ? 'density estimate' : 'review count'
+          : 'rarity unavailable';
+        const warningSummary = lookupWarnings.length ? ` ${lookupWarnings.join(' ')}` : '';
+        showNotification('Location saved',
+          `${name}: ${rarityTier} (${raritySource}${fallbackUsed ? '; direct OSM fallback' : ''}).${warningSummary}`,
+          '🗺️');
       } catch (error) {
         console.error('Custom-coordinate lookup failed', error);
         status.textContent = `Not saved: ${error.message} You can retry.`;
@@ -5278,7 +5287,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261020-public-example-location"></script>
+  <script src="./expedition-ui.js?v=20261020-provider-fallback"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);

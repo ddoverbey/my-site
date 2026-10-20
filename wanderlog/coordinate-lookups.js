@@ -4,6 +4,7 @@
   const ELEVATION_URL = 'https://api.open-meteo.com/v1/elevation';
   const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
   const CACHE_TTL = 30 * 24 * 60 * 60 * 1000;
+  const PROVIDER_TIMEOUT_MS = 3500;
   const NPS_SOURCE = 'https://services1.arcgis.com/fBc8EJBxQRMcHlei/ArcGIS/rest/services/NPS_Land_Resources_Division_Boundary_and_Tract_Data_Service/FeatureServer/2';
   const SUBDIVISION_SOURCE = 'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_10m_admin_1_states_provinces.geojson';
   const ADMIN2_COUNTRIES = ['CAN', 'MEX', 'DEU', 'AUS'];
@@ -339,15 +340,16 @@
     return [...new Set(ids)];
   }
 
-  async function fetchJson(url, options, fetcher) {
-    const response = await fetcher(url, { ...options, signal: AbortSignal.timeout(45000) });
+  async function fetchJson(url, options, fetcher, timeoutMs = 45000) {
+    const response = await fetcher(url, { ...options, signal: AbortSignal.timeout(timeoutMs) });
     if (!response.ok) throw new Error(`Lookup request failed (HTTP ${response.status}).`);
     return response.json();
   }
 
   async function lookupElevation(lat, lng, fetcher = root.fetch) {
     validateCoordinates(lat, lng);
-    const data = await fetchJson(`${ELEVATION_URL}?${new URLSearchParams({ latitude: lat, longitude: lng })}`, {}, fetcher);
+    const data = await fetchJson(`${ELEVATION_URL}?${new URLSearchParams({ latitude: lat, longitude: lng })}`,
+      {}, fetcher, PROVIDER_TIMEOUT_MS);
     if (!Array.isArray(data.elevation) || data.elevation.length !== 1 || !Number.isFinite(data.elevation[0])) {
       throw new Error('Elevation provider returned no valid elevation.');
     }
@@ -421,7 +423,7 @@
         }
         url.searchParams.set('lat', lat);
         url.searchParams.set('lng', lng);
-        const response = await fetcher(url.toString(), { signal: AbortSignal.timeout(35000) });
+        const response = await fetcher(url.toString(), { signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS) });
         if (!response.ok) throw new Error(`Rarity endpoint failed (HTTP ${response.status}).`);
         const data = validateProviderRarity(await response.json());
         if (coordinateDistanceKm(lat, lng, data.matchedLat, data.matchedLng) > 1) {
@@ -509,7 +511,7 @@
     const result = await fetchJson(OVERPASS_URL, {
       method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({ data: query }).toString()
-    }, fetcher);
+    }, fetcher, PROVIDER_TIMEOUT_MS);
     if (result.remark) throw new Error(`Overpass could not complete the query: ${result.remark}`);
     const data = summarizeOsm(result.elements, gridLat, gridLng);
     if (storage) storage.setItem(key, JSON.stringify({ version: 1, savedAt: now, data }));
@@ -523,13 +525,27 @@
     if (!indexes?.countries?.length || !indexes?.states?.length || !indexes?.counties?.length || !indexes?.ecoregions?.length) {
       throw new Error('Coordinate geography is unavailable. Retry datasets before saving a custom location.');
     }
-    const [elevation, political, biome, rarity] = await Promise.all([
+    const political = politicalRegion(lat, lng, indexes, geoContains);
+    const biome = biomeRegion(lat, lng, indexes.ecoregions, geoContains);
+    const [elevationResult, rarityResult] = await Promise.allSettled([
       lookupElevation(lat, lng, fetcher),
-      Promise.resolve().then(() => politicalRegion(lat, lng, indexes, geoContains)),
-      Promise.resolve().then(() => biomeRegion(lat, lng, indexes.ecoregions, geoContains)),
       lookupRarityWithFallback(lat, lng, { fetcher, storage, rarityEndpoint, onFallback })
     ]);
-    return { lat, lng, elevation, political, ...biome, rarity, lookedUpAt: new Date().toISOString() };
+    const lookupWarnings = [];
+    const describeFailure = (label, error) => {
+      const detail = error instanceof Error ? error.message : String(error);
+      console.warn(`${label} lookup unavailable; saving with fallback metadata.`, error);
+      lookupWarnings.push(`${label} unavailable: ${detail}`);
+    };
+    const elevation = elevationResult.status === 'fulfilled' ? elevationResult.value : null;
+    const rarity = rarityResult.status === 'fulfilled' ? rarityResult.value : null;
+    if (elevationResult.status === 'rejected') describeFailure('Elevation', elevationResult.reason);
+    if (rarityResult.status === 'rejected') describeFailure('Rarity', rarityResult.reason);
+    return {
+      lat, lng, elevation, elevationFt: elevation?.feet ?? 0, political, ...biome, rarity,
+      rarityTier: rarity?.rarityTier ?? rarity?.category ?? 'Uncharted',
+      lookupWarnings, lookedUpAt: new Date().toISOString()
+    };
   }
 
   function validateCustomLocations(locations) {
@@ -541,8 +557,10 @@
           !['v', 'w', 't', 'l'].includes(location.status)) throw new Error('Invalid custom location.');
       ids.add(location.id);
       validateCoordinates(location.lat, location.lng);
-      if (!Number.isFinite(location.elevation?.meters) || !Number.isFinite(location.elevation?.feet) ||
-          Math.abs(location.elevation.feet - location.elevation.meters * 3.28084) > 0.001 ||
+      const elevationUnavailable = location.elevation === null && location.elevationFt === 0;
+      if ((!elevationUnavailable && (!Number.isFinite(location.elevation?.meters) ||
+          !Number.isFinite(location.elevation?.feet) ||
+          Math.abs(location.elevation.feet - location.elevation.meters * 3.28084) > 0.001)) ||
           !Array.isArray(location.political?.countries) || !location.political.countries.every(value => typeof value === 'string') ||
           !Array.isArray(location.political?.states) || !location.political.states.every(value => typeof value === 'string') ||
           !Array.isArray(location.political?.counties) || !location.political.counties.every(county =>
@@ -556,6 +574,7 @@
           !Number.isFinite(Date.parse(location.lookedUpAt))) {
         throw new Error(`Invalid lookup metadata for ${location.name}.`);
       }
+      if (location.rarity === null && location.rarityTier === 'Uncharted') continue;
       normalizeRarity(location.rarity, location.lat, location.lng);
     }
     return locations;
@@ -584,7 +603,7 @@
     validateCustomLocations, migrateState, normalizeRarity, validateProviderRarity, coordinateDistanceKm,
     lookupRarityWithFallback, ELEVATION_URL, OVERPASS_URL, CACHE_TTL, NPS_SOURCE,
     SUBDIVISION_SOURCE, ADMIN2_COUNTRIES, ADMIN2_SOURCE, npsBoundaryIndex, admin2Features,
-    countyEquivalentFeatures
+    countyEquivalentFeatures, PROVIDER_TIMEOUT_MS
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CoordinateLookups = api;

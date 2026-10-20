@@ -265,17 +265,36 @@ await check('parallel pipeline starts both providers before either resolves and 
   assert.throws(() => lookups.validateCustomLocations([{ ...location, biomes: ['98'] }]));
   assert.throws(() => lookups.validateCustomLocations([location, location]), /Invalid custom/);
 });
-await check('missing geography and upstream failures cannot produce success-shaped lookup results', async () => {
+await check('missing offline geography blocks saving because political and biome data are required', async () => {
   await assert.rejects(lookups.lookupCoordinate(1, 1, { indexes: null }), /unavailable/);
-  await assert.rejects(lookups.lookupCoordinate(1, 1, {
-    indexes, geoContains: geo.geoContains, fetcher: async url =>
-      url.includes('elevation') ? response({ elevation: [1] }) : { ok: false, status: 503 }
-  }), /503/);
 });
 const provider = {
   placeName: 'Matched POI', reviewCount: 30, popularityScore: 30, rarityTier: 'Deep Cut',
   matchedLat: 1, matchedLng: 1, cached: true, source: 'Licensed provider'
 };
+await check('elevation, rarity endpoint, and Overpass requests use 3500 ms abort timeouts', async () => {
+  const originalTimeout = AbortSignal.timeout;
+  const timeouts = [];
+  AbortSignal.timeout = milliseconds => {
+    timeouts.push(milliseconds);
+    return originalTimeout(milliseconds);
+  };
+  try {
+    await lookups.lookupCoordinate(1, 1, {
+      indexes, geoContains: geo.geoContains, rarityEndpoint: 'https://api.example.test/rarity',
+      fetcher: async url => response(url.includes('elevation') ? { elevation: [1] } : provider)
+    });
+    await lookups.lookupRarityWithFallback(1, 1, {
+      rarityEndpoint: 'https://api.example.test/rarity',
+      fetcher: async url => url.includes('api.example.test')
+        ? { ok: false, status: 503 } : response({ elements: [] })
+    });
+  } finally {
+    AbortSignal.timeout = originalTimeout;
+  }
+  assert.deepEqual(timeouts, [3500, 3500, 3500, 3500]);
+  assert.equal(lookups.PROVIDER_TIMEOUT_MS, 3500);
+});
 await check('provider endpoint succeeds without Overpass and preserves actual review count/source', async () => {
   const urls = [];
   const result = await lookups.lookupRarityWithFallback(1, 1, {
@@ -341,10 +360,56 @@ await check('unavailable, malformed, or distant provider results explicitly fall
     assert.equal(rarity.rarityTier, 'Uncharted');
   }
 });
-await check('both endpoint and OSM failures propagate rather than saving unknown rarity', async () => {
+await check('the low-level rarity lookup reports failure for lookupCoordinate to handle', async () => {
   await assert.rejects(lookups.lookupRarityWithFallback(1, 1, {
-    rarityEndpoint: 'https://api.devonoverbey.com/rarity', fetcher: async () => ({ ok: false, status: 503 })
-  }), /503/);
+    rarityEndpoint: 'https://api.devonoverbey.com/rarity',
+    fetcher: async url => ({ ok: false, status: url.includes('api.devonoverbey.com') ? 503 : 504 })
+  }), /504/);
+});
+await check('failed rarity and elevation providers preserve offline regions and biomes with safe defaults', async () => {
+  const originalTimeout = AbortSignal.timeout;
+  const originalWarn = console.warn;
+  const timeouts = [];
+  const fallbacks = [];
+  AbortSignal.timeout = milliseconds => {
+    timeouts.push(milliseconds);
+    return originalTimeout(milliseconds);
+  };
+  console.warn = () => {};
+  try {
+    const result = await lookups.lookupCoordinate(1, 1, {
+      indexes, geoContains: geo.geoContains, rarityEndpoint: 'https://api.example.test/rarity',
+      onFallback: error => fallbacks.push(error),
+      fetcher: async url => {
+        if (url.includes('elevation')) return { ok: false, status: 503 };
+        if (url.includes('api.example.test')) return { ok: false, status: 503 };
+        if (url === lookups.OVERPASS_URL) return { ok: false, status: 504 };
+        throw new Error(`Unexpected provider URL: ${url}`);
+      }
+    });
+    assert.equal(result.elevation, null);
+    assert.equal(result.elevationFt, 0);
+    assert.equal(result.rarity, null);
+    assert.equal(result.rarityTier, 'Uncharted');
+    assert.deepEqual(result.political.countries, ['Test country']);
+    assert.deepEqual(result.political.states, ['Test state']);
+    assert.deepEqual(result.political.counties, [{ id: '01001', name: 'Test' }]);
+    assert.deepEqual(result.biomes, ['12']);
+    assert.equal(result.biomeStatus, 'matched');
+    assert.equal(result.lookupWarnings.length, 2);
+    assert.ok(result.lookupWarnings.some(warning => warning.includes('503')));
+    assert.ok(result.lookupWarnings.some(warning => warning.includes('504')));
+    assert.equal(fallbacks.length, 1);
+    assert.deepEqual(timeouts, [3500, 3500, 3500]);
+    const location = {
+      ...result, id: 'custom-provider-fallback', name: 'Waterfall', status: 'v',
+      elevation: result.elevation, category: 'waterfall'
+    };
+    assert.equal(lookups.validateCustomLocations([location])[0].rarityTier, 'Uncharted');
+  } finally {
+    AbortSignal.timeout = originalTimeout;
+    console.warn = originalWarn;
+  }
 });
 await check('legacy rarity migrates to v2 without changing visits, inventing reviews, or mutating input', () => {
   const legacy = {
