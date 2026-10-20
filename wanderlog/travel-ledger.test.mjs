@@ -327,6 +327,30 @@ check('achievement metadata uses inclusive high-altitude and strict below-sea th
   assert.equal(progress.whispers, 6);
   assert.equal(progress.focal, 6);
 });
+check('expedition biome credit samples route geometry between stops with a bounded lookup count', () => {
+  const state = migrate({ expeditions: [{
+    ...exp,
+    transitTags: ['road'],
+    routeCoords: [[0, 0], [0, 1]],
+    routeStops: [
+      { kind: 'place', id: 'route_start', name: 'Route Start', coords: [0, 0] },
+      { kind: 'place', id: 'route_end', name: 'Route End', coords: [0, 1] }
+    ],
+    routeLegs: [{
+      mode: 'road', routeSource: 'uploaded', routeCoords: [[0, 0], [0, 180], [0, 1]], countyIds: []
+    }]
+  }] });
+  let biomeLookups = 0;
+  const progress = ledger.metadataProgress(state, {
+    biomeAt: (lat, lng) => {
+      biomeLookups++;
+      return Math.abs(lat) < 1 && lng > 49.5 && lng < 50.5 ? ['middle-of-route'] : [];
+    }
+  });
+  assert.ok(progress.collectedBiomes.has('middle-of-route'));
+  assert.ok(biomeLookups > 400, 'densely samples this long route within the configured ceiling');
+  assert.ok(biomeLookups <= 502, 'caps expensive route lookups plus the two stops');
+});
 check('tag achievements reach exact counts without collapsing expeditions into separate trips', () => {
   const state = migrate({
     customPois: [poi],

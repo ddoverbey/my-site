@@ -516,6 +516,91 @@
     return 3958.7613 * 2 * Math.asin(Math.sqrt(Math.min(1, Math.max(0, haversine))));
   }
 
+  const ROUTE_BIOME_SAMPLE_MILES = 25;
+  const MAX_ROUTE_BIOME_SAMPLES = 500;
+
+  function interpolateRouteCoordinate(start, end, fraction) {
+    const radians = Math.PI / 180;
+    const toVector = ([lat, lng]) => [
+      Math.cos(lat * radians) * Math.cos(lng * radians),
+      Math.cos(lat * radians) * Math.sin(lng * radians),
+      Math.sin(lat * radians)
+    ];
+    const a = toVector(start);
+    const b = toVector(end);
+    const dot = Math.min(1, Math.max(-1, a[0] * b[0] + a[1] * b[1] + a[2] * b[2]));
+    const angle = Math.acos(dot);
+    const sine = Math.sin(angle);
+    if (Math.abs(sine) < 1e-8) {
+      const longitudeDelta = ((end[1] - start[1] + 540) % 360) - 180;
+      return [
+        start[0] + (end[0] - start[0]) * fraction,
+        ((start[1] + longitudeDelta * fraction + 540) % 360) - 180
+      ];
+    }
+    const startWeight = Math.sin((1 - fraction) * angle) / sine;
+    const endWeight = Math.sin(fraction * angle) / sine;
+    const x = startWeight * a[0] + endWeight * b[0];
+    const y = startWeight * a[1] + endWeight * b[1];
+    const z = startWeight * a[2] + endWeight * b[2];
+    return [
+      Math.atan2(z, Math.hypot(x, y)) / radians,
+      Math.atan2(y, x) / radians
+    ];
+  }
+
+  function routeBiomeLines(trips) {
+    return trips.flatMap(trip => {
+      if (!trip.routeLegs) return [trip.routeCoords];
+      return trip.routeLegs.map((leg, index) => {
+        if (leg.routeCoords.length > 1) return leg.routeCoords;
+        if (leg.mode === 'flight' && leg.routeSource === 'none') {
+          return [trip.routeStops[index].coords, trip.routeStops[index + 1].coords];
+        }
+        return [];
+      });
+    }).filter(line => line.length > 1);
+  }
+
+  function collectRouteBiomes(trips, biomeAt, collectedBiomes) {
+    const lines = routeBiomeLines(trips);
+    const totalMiles = lines.reduce((total, line) => {
+      for (let i = 1; i < line.length; i++) {
+        total += distanceMiles(
+          { lat: line[i - 1][0], lng: line[i - 1][1] },
+          { lat: line[i][0], lng: line[i][1] }
+        );
+      }
+      return total;
+    }, 0);
+    if (!totalMiles) return;
+
+    const spacing = Math.max(ROUTE_BIOME_SAMPLE_MILES, totalMiles / MAX_ROUTE_BIOME_SAMPLES);
+    let samples = 0;
+    for (const line of lines) {
+      let distanceAlongLine = 0;
+      let nextSampleAt = spacing;
+      for (let i = 1; i < line.length && samples < MAX_ROUTE_BIOME_SAMPLES; i++) {
+        const start = line[i - 1];
+        const end = line[i];
+        const segmentMiles = distanceMiles(
+          { lat: start[0], lng: start[1] },
+          { lat: end[0], lng: end[1] }
+        );
+        const segmentEnd = distanceAlongLine + segmentMiles;
+        while (segmentMiles && nextSampleAt < segmentEnd && samples < MAX_ROUTE_BIOME_SAMPLES) {
+          const point = interpolateRouteCoordinate(start, end,
+            (nextSampleAt - distanceAlongLine) / segmentMiles);
+          biomeAt(point[0], point[1]).forEach(biome => collectedBiomes.add(String(biome)));
+          samples++;
+          nextSampleAt += spacing;
+        }
+        distanceAlongLine = segmentEnd;
+      }
+      if (samples >= MAX_ROUTE_BIOME_SAMPLES) break;
+    }
+  }
+
   function metadataProgress(state, { parks = [], politicalAt = () => null, biomeAt = () => [] } = {}) {
     const pois = state.customPois.filter(poi => isVisited(poi.status));
     const trips = state.expeditions;
@@ -537,6 +622,7 @@
     const collectedBiomes = new Set(locations.flatMap(location => location.biomes).map(String));
     trips.forEach(trip => trip.routeCoords.forEach(([lat, lng]) =>
       sample(lat, lng, 'biomes').forEach(biome => collectedBiomes.add(String(biome)))));
+    collectRouteBiomes(trips, (lat, lng) => sample(lat, lng, 'biomes'), collectedBiomes);
     const homeCounties = new Set(state.homeBase
       ? (sample(state.homeBase.lat, state.homeBase.lng, 'political')?.counties?.map(county => county.id) ||
         (state.homeBase.countyId ? [state.homeBase.countyId] : [])) : []);
