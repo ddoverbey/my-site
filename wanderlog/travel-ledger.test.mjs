@@ -375,6 +375,25 @@ check('expedition biome sampling catches a biome on a route shorter than the pre
   assert.ok(progress.biomesByExpedition.exp_test.includes('short-route-biome'));
   assert.ok(sampledCoordinates.length > 2, 'adds an interior lookup on a roughly 24-mile route');
 });
+check('adding a long expedition does not change biome samples or credit on an existing short route', () => {
+  const routeTrip = (id, coords) => ({
+    ...exp, id, transitTags: ['road'], parkIds: [], customPoiIds: [], countyIds: [],
+    routeCoords: coords,
+    routeStops: coords.map((point, index) => ({
+      kind: 'place', id: `${id}_stop_${index}`, name: `${id} stop ${index}`, coords: point
+    })),
+    routeLegs: [{
+      mode: 'road', routeSource: 'uploaded', routeCoords: coords, countyIds: []
+    }]
+  });
+  const shortTrip = routeTrip('short_route', [[0, 0], [0, 0.35]]);
+  const longTrip = routeTrip('long_route', [[0, 0], [0, 179]]);
+  const collect = trips => ledger.metadataProgress(migrate({ expeditions: trips }), {
+    biomeAt: (lat, lng) => lat < 1 && lng > 0.3 && lng < 0.34 ? ['short-route-biome'] : []
+  }).biomesByExpedition.short_route;
+  assert.ok(collect([shortTrip]).includes('short-route-biome'));
+  assert.ok(collect([shortTrip, longTrip]).includes('short-route-biome'));
+});
 check('tag achievements reach exact counts without collapsing expeditions into separate trips', () => {
   const state = migrate({
     customPois: [poi],
