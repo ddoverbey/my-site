@@ -274,10 +274,38 @@
         linear-gradient(135deg, #fb7185, #fbbf24, #4ade80, #38bdf8, #c084fc) border-box;
       border-color: transparent;
     }
+    .achievement-icon[data-rarity="rare"],
+    .achievement-icon[data-rarity="epic"],
+    .achievement-icon[data-rarity="legendary"],
+    .achievement-icon[data-rarity="mythic"] {
+      box-shadow:
+        0 0 12px color-mix(in srgb, var(--rarity-color) 52%, transparent),
+        0 0 26px color-mix(in srgb, var(--rarity-color) 28%, transparent);
+    }
     .achievement-icon img { width: 100%; height: 100%; object-fit: contain; border-radius: inherit; image-rendering: pixelated; }
     button.achievement-icon:hover { transform: translateY(-2px); }
     button.achievement-icon:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
     .achievement-rarity { color: var(--rarity-color); }
+    .rarity-glow-text[data-rarity="rare"],
+    .rarity-glow-text[data-rarity="epic"],
+    .rarity-glow-text[data-rarity="legendary"],
+    .rarity-glow-text[data-rarity="mythic"],
+    .achievement-rarity[data-rarity="rare"],
+    .achievement-rarity[data-rarity="epic"],
+    .achievement-rarity[data-rarity="legendary"],
+    .achievement-rarity[data-rarity="mythic"] {
+      text-shadow:
+        0 0 7px color-mix(in srgb, var(--rarity-color, #f0abfc) 72%, transparent),
+        0 0 16px color-mix(in srgb, var(--rarity-color, #f0abfc) 36%, transparent);
+    }
+    #biomePokedexContainer .achievement-rarity[data-rarity="rare"],
+    #biomePokedexContainer .achievement-rarity[data-rarity="epic"],
+    #biomePokedexContainer .achievement-rarity[data-rarity="legendary"],
+    #biomePokedexContainer .achievement-rarity[data-rarity="mythic"] {
+      box-shadow:
+        0 0 8px color-mix(in srgb, var(--rarity-color) 48%, transparent),
+        inset 0 0 5px color-mix(in srgb, var(--rarity-color) 18%, transparent);
+    }
     .achievement-rarity[data-rarity="mythic"] {
       background: linear-gradient(90deg, #fb7185, #fbbf24, #4ade80, #38bdf8, #c084fc);
       background-clip: text;
@@ -639,8 +667,8 @@
             <span class="text-[10px] text-slate-500">of 14 terrestrial biomes</span>
           </div>
           <div class="rpg-panel p-4 rounded-2xl text-center">
-            <span class="text-[10px] uppercase text-slate-400 font-mono">Rare+ Biomes</span>
-            <div class="text-2xl font-bold font-mono text-cyan-400 mt-1" id="statRareBiomes">0</div>
+            <span class="text-[10px] uppercase text-cyan-300 font-mono rarity-glow-text" data-rarity="rare" style="--rarity-color:#22d3ee">Rare+ Biomes</span>
+            <div class="text-2xl font-bold font-mono text-cyan-400 mt-1 rarity-glow-text" id="statRareBiomes" data-rarity="rare" style="--rarity-color:#22d3ee">0</div>
             <span class="text-[10px] text-slate-500" id="statRareTotal">Area-based rarity loading</span>
           </div>
         </div>
@@ -734,10 +762,10 @@
           <div class="flex flex-wrap gap-x-4 gap-y-2 mt-3 text-[10px] uppercase font-bold" aria-label="Achievement rarity levels">
             <span class="achievement-rarity" style="--rarity-color: #cbd5e1">Common</span>
             <span class="achievement-rarity" style="--rarity-color: #4ade80">Uncommon</span>
-            <span class="achievement-rarity" style="--rarity-color: #22d3ee">Rare</span>
-            <span class="achievement-rarity" style="--rarity-color: #c084fc">Epic</span>
-            <span class="achievement-rarity" style="--rarity-color: #fbbf24">Legendary</span>
-            <span class="achievement-rarity" data-rarity="mythic">Mythic</span>
+            <span class="achievement-rarity" data-rarity="rare" style="--rarity-color: #22d3ee">Rare</span>
+            <span class="achievement-rarity" data-rarity="epic" style="--rarity-color: #c084fc">Epic</span>
+            <span class="achievement-rarity" data-rarity="legendary" style="--rarity-color: #fbbf24">Legendary</span>
+            <span class="achievement-rarity" data-rarity="mythic" style="--rarity-color: #f0abfc">Mythic</span>
           </div>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" id="achievementsContainer" aria-live="polite"></div>

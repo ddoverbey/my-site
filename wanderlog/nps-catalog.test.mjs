@@ -451,9 +451,19 @@ check('pokedex and rare totals use the 14 real biome types', () => {
   assert.ok(!pokedex.includes('Subterranean Cavern'));
 });
 check('Rare biome rarity uses a consistent cyan accent', () => {
-  assert.ok(html.includes('text-cyan-400 mt-1" id="statRareBiomes"'));
+  assert.ok(html.includes('text-cyan-400'));
+  assert.ok(html.includes('rarity-glow-text" data-rarity="rare"'));
+  assert.ok(html.includes('id="statRareBiomes" data-rarity="rare"'));
   assert.ok(html.includes('style="--rarity-color: #22d3ee">Rare</span>'));
   assert.equal(vm.runInContext("ACHIEVEMENT_RARITIES.rare.color", context), '#22d3ee');
+});
+check('rare-and-higher rarity text and achievement borders receive glow styling', () => {
+  for (const rarity of ['rare', 'epic', 'legendary', 'mythic']) {
+    assert.ok(html.includes(`.achievement-icon[data-rarity="${rarity}"]`));
+    assert.ok(html.includes(`.achievement-rarity[data-rarity="${rarity}"]`));
+  }
+  assert.ok(html.includes('#biomePokedexContainer .achievement-rarity[data-rarity="rare"]'));
+  assert.ok(html.includes('.rarity-glow-text[data-rarity="rare"]'));
 });
 vm.runInContext("AppState.pins = { fiordland: 'v', retired_destination: 'v', 'world-af-band-e-amir': 'v', npsa: 'v' }; updateHud();", context);
 check('international visits, retired saves and NPS-only US counts stay distinct', () => {
