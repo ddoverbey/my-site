@@ -352,6 +352,44 @@ check('expedition biome credit samples route geometry between stops with a bound
   assert.ok(biomeLookups > 400, 'densely samples this long route within the configured ceiling');
   assert.ok(biomeLookups <= 502, 'caps expensive route lookups plus the two stops');
 });
+check('flight and ferry routes do not credit transit biomes while land stops and roads do', () => {
+  const state = migrate({ expeditions: [{
+    ...exp,
+    transitTags: ['flight', 'road'],
+    routeCoords: [[0, 0], [0, 1], [0, 2]],
+    routeStops: [
+      { kind: 'place', id: 'airport', name: 'Airport Stop', coords: [0, 0] },
+      { kind: 'place', id: 'road_start', name: 'Road Start', coords: [0, 1] },
+      { kind: 'place', id: 'road_end', name: 'Road End', coords: [0, 2] }
+    ],
+    routeLegs: [
+      { mode: 'flight', routeSource: 'none', routeCoords: [], countyIds: [] },
+      { mode: 'road', routeSource: 'uploaded', routeCoords: [[0, 1], [0, 1.5], [0, 2]], countyIds: [] }
+    ]
+  }] });
+  const progress = ledger.metadataProgress(state, {
+    biomeAt: (lat, lng) => {
+      if (lat !== 0) return [];
+      if (lng === 0) return ['airport-stop-biome'];
+      if (lng > 0.3 && lng < 0.34) return ['overflight-biome'];
+      if (lng > 1.3 && lng < 1.34) return ['road-route-biome'];
+      return [];
+    }
+  });
+  assert.ok(progress.collectedBiomes.has('airport-stop-biome'));
+  assert.ok(progress.biomesByExpedition.exp_test.includes('road-route-biome'));
+  assert.ok(!progress.collectedBiomes.has('overflight-biome'));
+
+  for (const mode of ['flight', 'ferry']) {
+    const legacyTrip = migrate({ expeditions: [{
+      ...exp, transitTags: [mode], routeCoords: [[0, 0], [0, 0.5], [0, 1]]
+    }] });
+    const legacyProgress = ledger.metadataProgress(legacyTrip, {
+      biomeAt: (lat, lng) => lat === 0 && lng > 0.3 && lng < 0.34 ? ['transit-biome'] : []
+    });
+    assert.ok(!legacyProgress.collectedBiomes.has('transit-biome'), `${mode} route geometry is not land visitation`);
+  }
+});
 check('expedition biome sampling catches a biome on a route shorter than the previous sample interval', () => {
   const state = migrate({ expeditions: [{
     ...exp,
