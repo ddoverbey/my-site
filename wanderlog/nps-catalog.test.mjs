@@ -3273,7 +3273,7 @@ check('achievement hints appear at 85 percent, remain blurred until earned, and 
     context.document.createElement = originalCreate;
   }
 });
-check('achievement unlocks are grouped once and passport imports suppress their sound and popup', () => {
+check('achievement and XP level-ups notify once while passport imports suppress both', () => {
   const result = vm.runInContext(`(() => {
     const achievements = ACHIEVEMENTS.slice();
     const calculate = calculateStats;
@@ -3281,13 +3281,15 @@ check('achievement unlocks are grouped once and passport imports suppress their 
     const save = saveState;
     const restorePromotions = TravelLedger.restoreExpeditionPromotions;
     const playChime = AudioEngine.playChime;
-    const notify = showAchievementNotification;
+    const notify = showProgressNotification;
     const timeout = setTimeout;
     const chimes = [], notices = [], timers = [];
-    let progress = 0;
+    let progress = 0, level = 1;
     AudioEngine.playChime = sound => chimes.push(sound);
-    showAchievementNotification = unlocked => notices.push(unlocked.map(tier => tier.title));
-    calculateStats = () => ({testProgress:progress});
+    showProgressNotification = (unlocked, reachedLevel) => notices.push({
+      titles:unlocked.map(tier => tier.title), level:reachedLevel
+    });
+    calculateStats = () => ({testProgress:progress, level});
     syncDerivedState = () => {};
     saveState = () => {};
     TravelLedger.restoreExpeditionPromotions = () => {};
@@ -3306,8 +3308,9 @@ check('achievement unlocks are grouped once and passport imports suppress their 
           tiers: [{goal:2,title:'Another achievement'}]
         }
       );
-      commitLedger(() => { progress = 2; });
-      commitLedger(() => { progress = 3; }, {notifyAchievements:false});
+      commitLedger(() => { progress = 2; level = 2; });
+      commitLedger(() => { level = 3; });
+      commitLedger(() => { progress = 3; level = 4; }, {notifyProgress:false});
       timers.forEach(callback => callback());
       return {chimes, notices, importTimers:timers.length};
     } finally {
@@ -3317,17 +3320,20 @@ check('achievement unlocks are grouped once and passport imports suppress their 
       saveState = save;
       TravelLedger.restoreExpeditionPromotions = restorePromotions;
       AudioEngine.playChime = playChime;
-      showAchievementNotification = notify;
+      showProgressNotification = notify;
       setTimeout = timeout;
     }
   })()`, context);
-  assert.deepEqual(Array.from(result.chimes), ['levelup']);
-  assert.deepEqual(Array.from(result.notices[0]), [
+  assert.deepEqual(Array.from(result.chimes), ['levelup', 'levelup']);
+  assert.deepEqual(Array.from(result.notices[0].titles), [
     'First milestone', 'Second milestone', 'Another achievement'
   ]);
-  assert.equal(result.notices.length, 1);
-  assert.equal(result.importTimers, 1);
-  assert.match(html, /commitLedger\(\(\) => applyPassport\(parsed\), \{\s*notifyAchievements: false\s*\}\)/);
+  assert.equal(result.notices[0].level, 2);
+  assert.deepEqual(Array.from(result.notices[1].titles), []);
+  assert.equal(result.notices[1].level, 3);
+  assert.equal(result.notices.length, 2);
+  assert.equal(result.importTimers, 2);
+  assert.match(html, /commitLedger\(\(\) => applyPassport\(parsed\), \{\s*notifyProgress: false\s*\}\)/);
   assert.match(html, /<ul id="toastAchievementList"/);
 });
 check('achievement toast displays each unlocked tier as a safe list item', () => {
@@ -3336,7 +3342,15 @@ check('achievement toast displays each unlocked tier as a safe list item', () =>
     return {
       add(...tokens) { tokens.forEach(token => values.add(token)); },
       remove(...tokens) { tokens.forEach(token => values.delete(token)); },
-      contains(token) { return values.has(token); }
+      contains(token) { return values.has(token); },
+      toggle(token, force) {
+        if (force === undefined) {
+          if (values.has(token)) values.delete(token);
+          else values.add(token);
+        } else if (force) values.add(token);
+        else values.delete(token);
+        return values.has(token);
+      }
     };
   };
   const toastElements = {
@@ -3356,7 +3370,7 @@ check('achievement toast displays each unlocked tier as a safe list item', () =>
   context.document.createElement = tagName => ({ tagName, textContent: '' });
   try {
     vm.runInContext(`
-      showAchievementNotification([{title:'<First milestone>'},{title:'Second milestone'}]);
+      showProgressNotification([{title:'<First milestone>'},{title:'Second milestone'}]);
     `, context);
     assert.equal(toastElements.toastTitle.textContent, 'Achievements Unlocked');
     assert.deepEqual(
@@ -3365,6 +3379,13 @@ check('achievement toast displays each unlocked tier as a safe list item', () =>
     );
     assert.equal(toastElements.toastMsg.classList.contains('hidden'), true);
     assert.equal(toastElements.toastAchievementList.classList.contains('hidden'), false);
+    vm.runInContext('showProgressNotification([], 3)', context);
+    assert.equal(toastElements.toastTitle.textContent, 'Level Up!');
+    assert.equal(toastElements.toastMsg.textContent, 'You reached Level 3!');
+    assert.equal(toastElements.toastIcon.textContent, '⬆️');
+    assert.equal(toastElements.toastAchievementList.children.length, 0);
+    assert.equal(toastElements.toastAchievementList.classList.contains('hidden'), true);
+    assert.equal(toastElements.toastNotification.classList.contains('level-up-toast'), true);
   } finally {
     context.document.getElementById = originalGetElement;
     context.document.createElement = originalCreateElement;

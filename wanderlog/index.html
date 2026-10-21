@@ -242,6 +242,14 @@
       0% { background-position: -200% 0; }
       100% { background-position: 200% 0; }
     }
+    @keyframes levelUpFlash {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+      35% { box-shadow: 0 0 28px 8px rgba(245, 158, 11, 0.55); }
+    }
+    .level-up-toast { animation: levelUpFlash 850ms ease-out; }
+    @media (prefers-reduced-motion: reduce) {
+      .level-up-toast { animation: none; }
+    }
     .xp-glow {
       background: linear-gradient(90deg, #10b981 0%, #34d399 50%, #10b981 100%);
       background-size: 200% 100%;
@@ -1621,9 +1629,9 @@
     }
     let countyRegionCache = null;
 
-    function commitLedger(change, { notifyAchievements = true } = {}) {
+    function commitLedger(change, { notifyProgress = true } = {}) {
       const previous = JSON.stringify(passportPayload());
-      const previousStats = notifyAchievements ? calculateStats() : null;
+      const previousStats = notifyProgress ? calculateStats() : null;
       let currentStats = null;
       const visitedBefore = new Set([
         ...Object.entries(AppState.pins).filter(([, status]) => TravelLedger.isVisited(status)).map(([id]) => `park:${id}`),
@@ -1650,7 +1658,7 @@
           !visitedBefore.has(`micro:${entry.name}`)).map(entry => `micro:${entry.name}`)
       ];
       if (discovered.length) pulseDiscoveries(discovered);
-      if (previousStats && currentStats) notifyAchievementUnlocks(previousStats, currentStats);
+      if (previousStats && currentStats) notifyProgressUnlocks(previousStats, currentStats);
     }
 
     function addCustomPoi(poi) {
@@ -1727,14 +1735,19 @@
 
     let notificationTimeout = null;
 
-    function displayNotificationToast() {
+    function displayNotificationToast(levelUp = false) {
       const toast = document.getElementById('toastNotification');
       if (notificationTimeout !== null) clearTimeout(notificationTimeout);
+      toast.classList.remove('level-up-toast');
+      if (levelUp) {
+        void toast.offsetWidth;
+        toast.classList.add('level-up-toast');
+      }
       toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
       toast.classList.add('opacity-100', 'translate-y-0');
       notificationTimeout = setTimeout(() => {
         toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
-        toast.classList.remove('opacity-100', 'translate-y-0');
+        toast.classList.remove('opacity-100', 'translate-y-0', 'level-up-toast');
         notificationTimeout = null;
       }, 4000);
     }
@@ -1751,7 +1764,7 @@
       displayNotificationToast();
     }
 
-    function showAchievementNotification(unlocked) {
+    function showProgressNotification(unlocked, level = null) {
       const achievementList = document.getElementById('toastAchievementList');
       achievementList.replaceChildren();
       unlocked.forEach(achievement => {
@@ -1759,12 +1772,21 @@
         item.textContent = achievement.title;
         achievementList.appendChild(item);
       });
-      document.getElementById('toastTitle').textContent =
-        unlocked.length === 1 ? 'Achievement Unlocked' : 'Achievements Unlocked';
-      document.getElementById('toastMsg').classList.add('hidden');
-      document.getElementById('toastIcon').textContent = '🏆';
-      achievementList.classList.remove('hidden');
-      displayNotificationToast();
+      const isLevelUp = level !== null;
+      const messageElement = document.getElementById('toastMsg');
+      document.getElementById('toastTitle').textContent = isLevelUp
+        ? 'Level Up!'
+        : unlocked.length === 1 ? 'Achievement Unlocked' : 'Achievements Unlocked';
+      if (isLevelUp) {
+        messageElement.textContent = `You reached Level ${level}!`;
+        messageElement.classList.remove('hidden');
+        document.getElementById('toastIcon').textContent = '⬆️';
+      } else {
+        messageElement.classList.add('hidden');
+        document.getElementById('toastIcon').textContent = '🏆';
+      }
+      achievementList.classList.toggle('hidden', unlocked.length === 0);
+      displayNotificationToast(isLevelUp);
     }
   </script>
 
@@ -4712,12 +4734,13 @@
       return completedAchievementTiers(currentStats).filter(tier => !previouslyCompleted.has(tier.key));
     }
 
-    function notifyAchievementUnlocks(previousStats, currentStats) {
+    function notifyProgressUnlocks(previousStats, currentStats) {
       const unlocked = newlyCompletedAchievementTiers(previousStats, currentStats);
-      if (!unlocked.length) return;
+      const level = currentStats.level > previousStats.level ? currentStats.level : null;
+      if (!unlocked.length && level === null) return;
       setTimeout(() => {
         AudioEngine.playChime('levelup');
-        showAchievementNotification(unlocked);
+        showProgressNotification(unlocked, level);
       }, 0);
     }
 
@@ -5442,7 +5465,7 @@
           const includesRecoveryDraft = !!source?._unsavedExpeditionDraft;
           const parsed = migratePassport(source);
           await appReady;
-          commitLedger(() => applyPassport(parsed), { notifyAchievements: false });
+          commitLedger(() => applyPassport(parsed), { notifyProgress: false });
           let recoveryCleanupWarning = '';
           if (includesRecoveryDraft) {
             try {
