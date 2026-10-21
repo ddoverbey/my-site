@@ -4,7 +4,7 @@
   "license": "CC-BY-4.0",
   "attribution": "RESOLVE Ecoregions 2017, Dinerstein et al. (2017), updating WWF Terrestrial Ecoregions.",
   "citation": "https://doi.org/10.1093/biosci/bix014",
-  "generatedAt": "2026-10-14T01:42:42.806Z",
+  "generatedAt": "2026-10-21T23:13:14.459Z",
   "ecoregionCount": 847,
   "method": "WGS84 destination point intersects unsimplified terrestrial ecoregion polygons. Rarity uses spherical geodesic area share: common >=10%, uncommon >=2% and <10%, rare >=0.5% and <2%, epic >=0.25% and <0.5%, legendary >=0.1% and <0.25%, mythic <0.1% of classified biome land. Rock/ice and water excluded.",
   "biomes": [

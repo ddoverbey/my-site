@@ -1,6 +1,6 @@
 {
   "source": "https://developer.nps.gov/api/v1/parks",
-  "fetchedAt": "2026-10-13T22:16:47.974Z",
+  "fetchedAt": "2026-10-21T23:11:11.609Z",
   "total": 474,
   "data": [
     {
@@ -946,7 +946,7 @@
         }
       ],
       "fees": [],
-      "directionsInfo": "Traveling on U.S. Interstate 93, take exit 7 - Route 3 South to Braintree and Cape Cod. Take the first exit off Route 3 south - exit 42. Follow signs toward Quincy Center. Continue straight on Burgin Parkway through seven traffic lights. At the eighth traffic light, turn right onto Dimmock Street. After one block, turn right onto Hancock Street. The National Park Service Visitor Center, located at 1250 Hancock Street, is on your left. Validated parking is in the Presidents Place garage, 44 Saville Avenue.",
+      "directionsInfo": "Traveling on U.S. Interstate 93, take exit 7 - Route 3 South to Braintree and Cape Cod. Take the first exit off Route 3 south - exit 42. Follow signs toward Quincy Center. Continue straight on Burgin Parkway. Turn right onto Dimmock Street. After one block, turn right onto Hancock Street. The National Park Service Visitor Center, located at 1250 Hancock Street, is on your left. Validated parking is in the Presidents Place garage accessed via Saville",
       "directionsUrl": "http://www.nps.gov/adam/planyourvisit/directions.htm",
       "operatingHours": [
         {
@@ -1331,13 +1331,21 @@
           "exceptions": [
             {
               "exceptionHours": {
-                "wednesday": "Closed",
-                "monday": "Closed",
-                "thursday": "Closed",
-                "sunday": "Closed",
-                "tuesday": "Closed",
-                "friday": "Closed",
-                "saturday": "Closed"
+                "wednesday": "10:00AM - 4:00PM",
+                "monday": "10:00AM - 4:00PM",
+                "thursday": "10:00AM - 4:00PM",
+                "sunday": "10:00AM - 4:00PM",
+                "tuesday": "10:00AM - 4:00PM",
+                "friday": "10:00AM - 4:00PM",
+                "saturday": "10:00AM - 4:00PM"
+              },
+              "startDate": "2026-11-11",
+              "name": "Veteran's Day",
+              "endDate": "2026-11-11"
+            },
+            {
+              "exceptionHours": {
+                "thursday": "Closed"
               },
               "startDate": "2026-11-26",
               "name": "Thanksgiving Holiday Closure",
@@ -1370,6 +1378,60 @@
               "startDate": "2027-01-01",
               "name": "New Year's Day Closure",
               "endDate": "2027-01-01"
+            },
+            {
+              "exceptionHours": {
+                "monday": "10:00AM - 4:00PM"
+              },
+              "startDate": "2027-01-18",
+              "name": "Birthday of Martin Luther King Jr.",
+              "endDate": "2027-01-18"
+            },
+            {
+              "exceptionHours": {
+                "monday": "10:00AM - 4:00PM"
+              },
+              "startDate": "2027-02-15",
+              "name": "Washington's Birthday",
+              "endDate": "2027-02-15"
+            },
+            {
+              "exceptionHours": {
+                "monday": "10:00AM - 4:00PM"
+              },
+              "startDate": "2027-05-31",
+              "name": "Memorial Day",
+              "endDate": "2027-05-31"
+            },
+            {
+              "exceptionHours": {
+                "wednesday": "10:00AM - 4:00PM",
+                "monday": "10:00AM - 4:00PM",
+                "thursday": "10:00AM - 4:00PM",
+                "sunday": "10:00AM - 4:00PM",
+                "tuesday": "10:00AM - 4:00PM",
+                "friday": "10:00AM - 4:00PM",
+                "saturday": "10:00AM - 4:00PM"
+              },
+              "startDate": "2027-07-04",
+              "name": "Independence Day",
+              "endDate": "2027-07-04"
+            },
+            {
+              "exceptionHours": {
+                "monday": "10:00AM - 4:00PM"
+              },
+              "startDate": "2027-09-06",
+              "name": "Labor Day",
+              "endDate": "2027-09-06"
+            },
+            {
+              "exceptionHours": {
+                "monday": "10:00AM - 4:00PM"
+              },
+              "startDate": "2027-10-11",
+              "name": "Columbus Day",
+              "endDate": "2027-10-11"
             }
           ],
           "description": "INDOOR VISITOR CENTER AND MUSEUM",
@@ -6194,6 +6256,13 @@
           "altText": "Photograph of sandy shoreline.",
           "caption": "Sandspit on the southern tip of Outer Island.",
           "url": "https://www.nps.gov/common/uploads/structured_data/2F266113-B885-CCC5-FE97FEC5F1467F64.jpg"
+        },
+        {
+          "credit": "NPS / Billy Flynn",
+          "title": "Outer Island Lighthouse",
+          "altText": "White lighthouse rising above colorful fall trees along a rocky shoreline under a blue sky.",
+          "caption": "The Outer Island lighthouse was built in 1874 to guide ships past the archipelago to the rapidly growing ports on Lake Superior.",
+          "url": "https://www.nps.gov/common/uploads/structured_data/5405A96A-AE89-B2B4-29F5BE7AC095296A.jpg"
         }
       ],
       "weatherInfo": "Lake Superior is renowned for its cold temperatures, rough seas, fog, and sudden squalls. Boaters and paddlers should monitor marine weather forecasts and be constantly alert to changing conditions. Average daytime high temperatures range from 60 degrees Fahrenheit in May, to the upper 80s in mid-summer, to the mid-60s in September. Average lows vary from 40 degrees in May, to the upper 50s in mid-summer, to 50 degrees in September. Average water temperatures in May and June are only in the 40s.",
@@ -15423,34 +15492,6 @@
           "exceptions": [
             {
               "exceptionHours": {
-                "wednesday": "10:00AM - 4:15PM",
-                "monday": "Closed",
-                "thursday": "10:00AM - 4:15PM",
-                "sunday": "10:00AM - 4:15PM",
-                "tuesday": "10:00AM - 4:15PM",
-                "friday": "10:00AM - 4:15PM",
-                "saturday": "10:00AM - 4:15PM"
-              },
-              "startDate": "2027-01-01",
-              "name": "Winter Hours",
-              "endDate": "2027-03-31"
-            },
-            {
-              "exceptionHours": {
-                "wednesday": "10:00AM - 5:15PM",
-                "monday": "10:00AM - 5:15PM",
-                "thursday": "10:00AM - 5:15PM",
-                "sunday": "10:00AM - 5:15PM",
-                "tuesday": "10:00AM - 5:15PM",
-                "friday": "10:00AM - 5:15PM",
-                "saturday": "10:00AM - 5:15PM"
-              },
-              "startDate": "2026-04-15",
-              "name": "Summer Hours",
-              "endDate": "2026-10-31"
-            },
-            {
-              "exceptionHours": {
                 "wednesday": "1:00PM - 4:00PM",
                 "monday": "Closed",
                 "thursday": "1:00PM - 4:00PM",
@@ -15490,48 +15531,6 @@
               "startDate": "2026-12-25",
               "name": "Christmas Day",
               "endDate": "2026-12-25"
-            },
-            {
-              "exceptionHours": {
-                "wednesday": "Closed",
-                "monday": "Closed",
-                "thursday": "Closed",
-                "sunday": "Closed",
-                "tuesday": "Closed",
-                "friday": "Closed",
-                "saturday": "Closed"
-              },
-              "startDate": "2026-12-25",
-              "name": "Christmas Day",
-              "endDate": "2026-12-25"
-            },
-            {
-              "exceptionHours": {
-                "wednesday": "Closed",
-                "monday": "Closed",
-                "thursday": "Closed",
-                "sunday": "Closed",
-                "tuesday": "Closed",
-                "friday": "Closed",
-                "saturday": "Closed"
-              },
-              "startDate": "2026-12-24",
-              "name": "Christmas Eve",
-              "endDate": "2026-12-24"
-            },
-            {
-              "exceptionHours": {
-                "wednesday": "Closed",
-                "monday": "Closed",
-                "thursday": "Closed",
-                "sunday": "Closed",
-                "tuesday": "Closed",
-                "friday": "Closed",
-                "saturday": "Closed"
-              },
-              "startDate": "2027-01-01",
-              "name": "New Year's Day",
-              "endDate": "2027-01-01"
             },
             {
               "exceptionHours": {
@@ -18752,6 +18751,26 @@
           "cost": "15.00",
           "description": "Good for 7 consecutive days at all park entrances. Admits one individual hiker, bicyclist, or pedestrian.",
           "title": "Entrance - Per Person"
+        },
+        {
+          "cost": "25.00",
+          "description": "Admits Commercial Vehicle entrance with 1–6-person capacity",
+          "title": "Commercial Entrance - Sedan"
+        },
+        {
+          "cost": "40.00",
+          "description": "Admits Commercial Vehicle entrance with 7–15-person capacity",
+          "title": "Commercial Entrance - Van"
+        },
+        {
+          "cost": "40.00",
+          "description": "Admits Commercial Vehicle entrance with 16–25-person capacity",
+          "title": "Commercial Entrance - Mini-bus"
+        },
+        {
+          "cost": "100.00",
+          "description": "Admits Commercial Vehicle entrance with 26 or more-person capacity",
+          "title": "Commercial Entrance - Motor Coach"
         }
       ],
       "entrancePasses": [
@@ -21239,21 +21258,21 @@
             "friday": "6:00AM - 10:00PM",
             "saturday": "6:00AM - 10:00PM"
           },
-          "name": "Lincoln Park"
+          "name": "Folger Park"
         },
         {
           "exceptions": [],
-          "description": "Folger Park is currently closed for rehabilitation. The park is expected to reopen in winter 2025.",
+          "description": "Open: 6:00 a.m. to 10:00 p.m. daily",
           "standardHours": {
-            "wednesday": "Closed",
-            "monday": "Closed",
-            "thursday": "Closed",
-            "sunday": "Closed",
-            "tuesday": "Closed",
-            "friday": "Closed",
-            "saturday": "Closed"
+            "wednesday": "6:00AM - 10:00PM",
+            "monday": "6:00AM - 10:00PM",
+            "thursday": "6:00AM - 10:00PM",
+            "sunday": "6:00AM - 10:00PM",
+            "tuesday": "6:00AM - 10:00PM",
+            "friday": "6:00AM - 10:00PM",
+            "saturday": "6:00AM - 10:00PM"
           },
-          "name": "Folger Park"
+          "name": "Lincoln Park"
         },
         {
           "exceptions": [],
@@ -28471,7 +28490,7 @@
     {
       "id": "E98D419A-A118-49D5-89AF-3C4F9BE7372D",
       "url": "https://www.nps.gov/chir/index.htm",
-      "fullName": "Chiricahua National Monument",
+      "fullName": "Chiricahua National Park",
       "parkCode": "chir",
       "description": "Explore rhyolite pinnacles and balanced rocks on foot or by car. Relax at the campground under star-filled, dark skies. See how a mountain range rising between two deserts creates a home for diverse wildlife. Imagine history here. Prehistoric peoples, Apaches, Buffalo Soldiers, Civilian Conservation Corps, ranchers, and homesteaders inhabited Chiricahua.",
       "latitude": "32.01214618",
@@ -28619,7 +28638,7 @@
       "entranceFees": [],
       "entrancePasses": [],
       "fees": [],
-      "directionsInfo": "Chiricahua National Monument is in the southeast corner of Arizona. Interstate I10 from LA or Tucson to El Paso or Lordsburg runs about 40 miles north of the park. Exits in Willcox to Hwy 186 are the most direct paved access to the park from the north. (Exits 336, 340, and 344). Note: Exit 366 to Bowie will require driving 10 miles of dirt road. This route is recommended only if stopping at Fort Bowie National Historic Site.",
+      "directionsInfo": "Chiricahua National Park is in the southeast corner of Arizona. Interstate I10 from LA or Tucson to El Paso or Lordsburg runs about 40 miles north of the park. Exits in Willcox to Hwy 186 are the most direct paved access to the park from the north. (Exits 336, 340, and 344). Note: Exit 366 to Bowie will require driving 10 miles of dirt road. This route is recommended only if stopping at Fort Bowie National Historic Site.",
       "directionsUrl": "http://www.nps.gov/chir/planyourvisit/directions.htm",
       "operatingHours": [
         {
@@ -28634,7 +28653,7 @@
             "friday": "All Day",
             "saturday": "All Day"
           },
-          "name": "Chiricahua National Monument Facilities and Scenic Drive"
+          "name": "Chiricahua National Park Facilities and Scenic Drive"
         }
       ],
       "addresses": [
@@ -28707,7 +28726,7 @@
       ],
       "weatherInfo": "The park elevation goes from 5,124 feet at the entrance to 7,310 feet on Sugarloaf Mountain. The top of the park can be 5-10 degrees cooler and windier than the visitor center and entrance. The higher elevations generally have more sun exposure. Clothing layers are always recommended here. The park is often cooler than cities in Arizona with summer highs in the 80s and 90s. Winter lows are often near or below freezing.",
       "name": "Chiricahua",
-      "designation": "National Monument",
+      "designation": "National Park",
       "multimedia": [],
       "relevanceScore": 1
     },
@@ -32463,7 +32482,7 @@
       "latitude": "43.20345611",
       "longitude": "-113.4791609",
       "latLong": "lat:43.20345611, long:-113.4791609",
-      "pressEmail": "crmo_public_affairs@nps.gov",
+      "pressEmail": "pwr_public_affairs@nps.gov",
       "superintendentName": "",
       "activities": [
         {
@@ -41650,7 +41669,7 @@
       "entranceFees": [],
       "entrancePasses": [],
       "fees": [],
-      "directionsInfo": "Fire Island National Seashore Headquarters are located in Patchogue, New York, on Long Island. Fire Island National Seashore Headquarters: Via Long Island Expressway/I-495: Take Exit 61 (Patchogue-Holbrook Road) to Waverly Ave. Head south on Waverly Ave to West Ave. Turn right onto Laurel Street. Via NY-27: Take Exit 52 onto Waverly Ave. Head south on Waverly Ave to West Ave. Turn right onto Laurel Street.",
+      "directionsInfo": "Fire Island National Seashore Headquarters are located in Patchogue, New York, on Long Island. Fire Island National Seashore Headquarters: Via Long Island Expressway/I-495: Take Exit 61 (Patchogue-Holbrook Road) to Waverly Avenue. Head south on Waverly Ave to West Ave. Turn right onto Laurel Street. Via NY-27: Take Exit 52 onto Waverly Ave. Head south on Waverly Ave to West Ave. Turn right onto Laurel Street.",
       "directionsUrl": "http://www.nps.gov/fiis/planyourvisit/directions.htm",
       "operatingHours": [
         {
@@ -43148,6 +43167,12 @@
           "exceptions": [
             {
               "exceptionHours": {},
+              "startDate": "2026-11-11",
+              "name": "Veterans Day",
+              "endDate": "2026-11-11"
+            },
+            {
+              "exceptionHours": {},
               "startDate": "2026-11-26",
               "name": "Thanksgiving Day",
               "endDate": "2026-11-26"
@@ -44502,7 +44527,7 @@
               "endDate": "2027-01-01"
             }
           ],
-          "description": "Lanham Estates Picnic Area is open daily for pedestrian access from 6:00 a.m. to 10:00 p.m., and for vehicle access through gated areas from 7:00 a.m. to 10:00 p.m.; gates are closed on Thanksgiving Day, Christmas Day, and New Year’s Day.\n\n\n\n\n\n\n\n\nAsk ChatGPT",
+          "description": "Lanham Estates Picnic Area is open daily for pedestrian access from 6:00 a.m. to 10:00 p.m., and for vehicle access through gated areas from 7:00 a.m. to 10:00 p.m.; gates are closed on Thanksgiving Day, Christmas Day, and New Year’s Day.",
           "standardHours": {
             "wednesday": "7:00AM - 10:00PM",
             "monday": "7:00AM - 10:00PM",
@@ -44651,15 +44676,15 @@
               "endDate": "2027-01-01"
             }
           ],
-          "description": "The park is open daily for pedestrian access from 6:00 a.m. to 10:00 p.m., and the parking lot is open from 9:00 a.m. to 10:00 p.m.",
+          "description": "The National Park Service is imposing a temporary closure of Fort Foote Park. This temporary closure is necessary to provide for visitor safety during a comprehensive rehabilitation project to restore park resources and improve the visitor experience. Work will include resurfacing the parking lot and gravel roadway, replacing parking barriers, removing the abandoned restroom facility and reseeding the area, and replacing trash cans with new wildlife-proof trash cans.",
           "standardHours": {
-            "wednesday": "6:00AM - 10:00PM",
-            "monday": "6:00AM - 10:00PM",
-            "thursday": "6:00AM - 10:00PM",
-            "sunday": "6:00AM - 10:00PM",
-            "tuesday": "6:00AM - 10:00PM",
-            "friday": "6:00AM - 10:00PM",
-            "saturday": "6:00AM - 10:00PM"
+            "wednesday": "Closed",
+            "monday": "Closed",
+            "thursday": "Closed",
+            "sunday": "Closed",
+            "tuesday": "Closed",
+            "friday": "Closed",
+            "saturday": "Closed"
           },
           "name": "Fort Foote Park"
         },
@@ -44708,15 +44733,15 @@
               "endDate": "2027-01-01"
             }
           ],
-          "description": "Open daily for pedestrian access from 6:00 a.m. to 10:00 p.m., and for vehicle access through gated areas from 9:00 a.m. to 10:00 p.m.; gates are closed on Thanksgiving Day, Christmas Day, and New Year’s Day.",
+          "description": "The National Park Service is imposing a temporary closure of Fort Foote Park. This temporary closure is necessary to provide for visitor safety during a comprehensive rehabilitation project to restore park resources and improve the visitor experience. Work will include resurfacing the parking lot and gravel roadway, replacing parking barriers, removing the abandoned restroom facility and reseeding the area, and replacing trash cans with new wildlife-proof trash cans.",
           "standardHours": {
-            "wednesday": "9:00AM - 10:00PM",
-            "monday": "9:00AM - 10:00PM",
-            "thursday": "9:00AM - 10:00PM",
-            "sunday": "9:00AM - 10:00PM",
-            "tuesday": "9:00AM - 10:00PM",
-            "friday": "9:00AM - 10:00PM",
-            "saturday": "9:00AM - 10:00PM"
+            "wednesday": "Closed",
+            "monday": "Closed",
+            "thursday": "Closed",
+            "sunday": "Closed",
+            "tuesday": "Closed",
+            "friday": "Closed",
+            "saturday": "Closed"
           },
           "name": "Fort Foote Park Gated Areas"
         }
@@ -56882,67 +56907,74 @@
       ],
       "images": [
         {
-          "credit": "NPS Photo",
-          "title": "East Side Sunset",
-          "altText": "Jagged peaks rise out of a forested valley and an empty road curves off into the distance.",
-          "caption": "Going-to-the-Sun Road in the St. Mary Valley",
-          "url": "https://www.nps.gov/common/uploads/structured_data/C1C49B92-9BE9-6A08-F2C851A2A4ACEC8D.jpg"
+          "credit": "NPS",
+          "title": "A Park Ranger in front of Salamander Glacier",
+          "altText": "A park ranger standing with arms out in front of snow and ice.",
+          "caption": "Ranger-led programs are very popular in Glacier National Park.",
+          "url": "https://www.nps.gov/common/uploads/structured_data/50021801-C766-9756-F19A755835C4FF5D.jpg"
         },
         {
-          "credit": "George A. Grant Glacier National Park Archives",
-          "title": "Boulder Glacier in 1932",
-          "altText": "black and white picture of people standing near an ice cave in a glacier",
-          "caption": "Boulder Glacier with visitors observing ice cave, July 27, 1932",
-          "url": "https://www.nps.gov/common/uploads/structured_data/35C21C03-0338-DEDF-929F8655BF0CBEC4.jpg"
+          "credit": "NPS",
+          "title": "Mountain Goats are Iconic in Glacier",
+          "altText": "A young mountain goat surrounded by bushes",
+          "caption": "Mountains are adapted to Glacier's cold alpine environments.",
+          "url": "https://www.nps.gov/common/uploads/structured_data/51A43173-CB41-3C8E-B92B5E804896749D.jpg"
         },
         {
-          "credit": "Morton J. Elrod. Glacier National Park Archives",
-          "title": "Grinnell Glacier in 1911",
-          "altText": "a black and white landscape of a big glacier and mountains",
-          "caption": "Grinnell Glacier from Upper Grinnell Ridge in 1911 by Morton J. Elrod.",
-          "url": "https://www.nps.gov/common/uploads/structured_data/35F92864-02EA-D9ED-96EA9AD9116D52DC.jpg"
+          "credit": "NPS",
+          "title": "Peace and Inspiration",
+          "altText": "people sitting on a hill with clouds and mountain behind",
+          "caption": "Glacier is a place of peace and inspiration for many.",
+          "url": "https://www.nps.gov/common/uploads/structured_data/50F96AAF-076A-3F6A-A524ABA8BAB2D190.jpg"
         },
         {
-          "credit": "NPS Photo",
-          "title": "Swiftcurrent Fire Lookout",
-          "altText": "A small, brown and white structure sits on a rocky top with mountain peaks in the distance.",
-          "caption": "The historic Swiftcurrent Lookout was built in a Swiss chalet architectural style.",
-          "url": "https://www.nps.gov/common/uploads/structured_data/89491DA7-0FDD-BDB9-D0D03D996091EA72.jpg"
+          "credit": "NPS",
+          "title": "Grinnell Glacier from Lower Grinnell Ridge in 2016",
+          "altText": "Grinnell Glacier from Lower Grinnell Ridge in 2016",
+          "caption": "Grinnell Glacier from lower Grinnell Ridge on September 27, 2016.",
+          "url": "https://www.nps.gov/common/uploads/structured_data/52AA1BF2-F8F7-F07B-0B0DA9EBED705589.jpg"
         },
         {
-          "credit": "NPS Photo",
-          "title": "Grinnell Glacier from Upper Grinnell Ridge in 2021",
-          "altText": "Grinnell Glacier from Upper Grinnell Ridge in 2021",
-          "caption": "Seasonal snow is much whiter and cleaner than the rock and dirt covered glacial ice. Can you see the differences?",
-          "url": "https://www.nps.gov/common/uploads/structured_data/36387E8C-A3F5-0776-493EEA7289104D12.jpg"
+          "credit": "NPS",
+          "title": "Grinnell Glacier from Grinnell Ridge in 2025",
+          "altText": "Grinnell Glacier from Grinnell Ridge in 2025",
+          "caption": "Grinnell Glacier from Lower Grinnell Ridge on September 6, 2025.",
+          "url": "https://www.nps.gov/common/uploads/structured_data/52D95F47-BA47-85AF-A6109B9EE49C7B17.jpg"
         },
         {
-          "credit": "NPS Photo",
-          "title": "Grinnell Glacier in 2025",
-          "altText": "a mountain glacier with a lake and mountains behind",
-          "caption": "Grinnell Glacier from Upper Grinnell Ridge on September 6, 2025.",
-          "url": "https://www.nps.gov/common/uploads/structured_data/3676C0C4-DAE8-9603-7668281F66A34E69.jpg"
+          "credit": "NPS",
+          "title": "Big Horn Sheep on the Highline Trail",
+          "altText": "Big Horn Sheep on the Highline Trail mountains in the background",
+          "caption": "Big Horn Sheep on the Highline Trail",
+          "url": "https://www.nps.gov/common/uploads/structured_data/508F6529-D18E-0901-25421A17186B1798.jpg"
         },
         {
-          "credit": "NPS Photo",
-          "title": "Wildfires are a natural part of Glacier National Park",
-          "altText": "sun and fog shine in a burned forest",
-          "caption": "Scientists estimate that climate change has doubled the amount of acres burned in western US wildfires since the 1980s.",
-          "url": "https://www.nps.gov/common/uploads/structured_data/36AB8EF5-9A74-AD5F-CD831D39944CCF3F.jpg"
+          "credit": "NPS",
+          "title": "Swiftcurrent Glacier from Lookout in 2015",
+          "altText": "Swiftcurrent Glacier as seen from right outside the Swiftcurrent Firelookout on August 5, 2015.",
+          "caption": "Swiftcurrent Glacier as seen from right outside the Swiftcurrent Firelookout on August 5, 2015.",
+          "url": "https://www.nps.gov/common/uploads/structured_data/51C04B39-FF89-7EF8-25176969A2EC48F6.jpg"
         },
         {
-          "credit": "NPS Photo",
-          "title": "Whitebark Pine Tree & Grinnell Glacier",
-          "altText": "A pine tree with a glacier in the background in 2021.",
-          "caption": "Whitebark pine trees only grow at high elevations.",
-          "url": "https://www.nps.gov/common/uploads/structured_data/3982955C-C0C3-9CE9-92DA40FEF17B4A45.jpg"
+          "credit": "NPS",
+          "title": "Swiftcurrent Glacier from Lookout in 2025",
+          "altText": "Swiftcurrent Glacier as seen from right outside the Swiftcurrent Firelookout on August 30, 2025.",
+          "caption": "Swiftcurrent Glacier as seen from right outside the Swiftcurrent Firelookout on August 30, 2025.",
+          "url": "https://www.nps.gov/common/uploads/structured_data/51E53634-BE86-3E2D-50F690E75F45EF34.jpg"
         },
         {
-          "credit": "NPS Photo",
-          "title": "A Mountain Goat and a Snow Patch",
-          "altText": "a mountain goat laying on snow bank",
-          "caption": "Mountain goats in Glacier National Park rest on snow patches to cool down on hot days. Doing so helps them slow their breathing and conserve energy. Climate change raises temperatures and shrinks snow patches.",
-          "url": "https://www.nps.gov/common/uploads/structured_data/395CAD64-0AB6-F903-CCA1AF9999561FB8.jpg"
+          "credit": "NPS",
+          "title": "Park Ranger & St. Mary Lake",
+          "altText": "A park ranger gives the thumbs up in front of water.",
+          "caption": "Ranger-led activities are very popular in Glacier National Park.",
+          "url": "https://www.nps.gov/common/uploads/structured_data/50384B63-EA91-D693-A8D6D3E5970F9435.jpg"
+        },
+        {
+          "credit": "NPS",
+          "title": "Going-to-the-Sun Road crossing the St. Mary River",
+          "altText": "historic stone bridge with mountains behind",
+          "caption": "Going-to-the-Sun Road is not just mountains!",
+          "url": "https://www.nps.gov/common/uploads/structured_data/50B2C093-9FF2-B3E7-2CEDC92DD8D20DA0.jpg"
         }
       ],
       "weatherInfo": "Glacier's weather is highly variable and can be extreme. Expect warm, sunny summer days but be ready for any type of conditions. In the winter, temperatures can fall well below freezing and typically the park receives considerable amounts of snow. Glacier's geography, straddling the Continental Divide, sets the stage for clashes of two very different climates. Warm, wet Pacific air moves in from the west, and cold, dry Arctic air flows from the northeast. They meet at the Divide.",
@@ -59884,7 +59916,7 @@
             "wednesday": "9:00AM - 4:30PM",
             "monday": "9:00AM - 4:30PM",
             "thursday": "9:00AM - 4:30PM",
-            "sunday": "9:00AM - 4:30PM",
+            "sunday": "Closed",
             "tuesday": "9:00AM - 4:30PM",
             "friday": "9:00AM - 4:30PM",
             "saturday": "9:00AM - 4:30PM"
@@ -62851,15 +62883,15 @@
               "endDate": "2027-01-01"
             }
           ],
-          "description": "Good Luck Road Parking Area is temporarily closed. Please use the park entrance at 6565 Greenbelt Road, Greenbelt, MD 20770.",
+          "description": "Good Luck Road Parking Area gates are open to vehicles from 9:00 a.m. to 10:00 p.m. and are closed on Thanksgiving Day, Christmas Day, and New Year’s Day.",
           "standardHours": {
-            "wednesday": "Closed",
-            "monday": "Closed",
-            "thursday": "Closed",
-            "sunday": "Closed",
-            "tuesday": "Closed",
-            "friday": "Closed",
-            "saturday": "Closed"
+            "wednesday": "9:00AM - 10:00PM",
+            "monday": "9:00AM - 10:00PM",
+            "thursday": "9:00AM - 10:00PM",
+            "sunday": "9:00AM - 10:00PM",
+            "tuesday": "9:00AM - 10:00PM",
+            "friday": "9:00AM - 10:00PM",
+            "saturday": "9:00AM - 10:00PM"
           },
           "name": "Good Luck Road Parking Area"
         },
@@ -71997,9 +72029,9 @@
               "exceptionHours": {
                 "monday": "Closed"
               },
-              "startDate": "2027-10-12",
+              "startDate": "2027-10-11",
               "name": "Columbus Day",
-              "endDate": "2027-10-12"
+              "endDate": "2027-10-11"
             },
             {
               "exceptionHours": {
@@ -72011,9 +72043,9 @@
                 "friday": "10:00AM - 5:00PM",
                 "saturday": "10:00AM - 5:00PM"
               },
-              "startDate": "2027-10-12",
+              "startDate": "2027-10-11",
               "name": "Columbus Day",
-              "endDate": "2027-10-12"
+              "endDate": "2027-10-11"
             },
             {
               "exceptionHours": {
@@ -72050,20 +72082,6 @@
               "startDate": "2026-12-25",
               "name": "Christmas Day",
               "endDate": "2026-12-25"
-            },
-            {
-              "exceptionHours": {
-                "wednesday": "Closed",
-                "monday": "Closed",
-                "thursday": "Closed",
-                "sunday": "Closed",
-                "tuesday": "Closed",
-                "friday": "Closed",
-                "saturday": "Closed"
-              },
-              "startDate": "2027-01-01",
-              "name": "New Year's Day",
-              "endDate": "2027-01-01"
             },
             {
               "exceptionHours": {
@@ -73705,7 +73723,7 @@
       "entranceFees": [],
       "entrancePasses": [],
       "fees": [],
-      "directionsInfo": "By Subway: Take Green line (\"C\" -Cleveland Circle) trolley to Coolidge Corner stop. Walk four blocks north on Harvard Street, turn right on Beals Street and continue to number 83. By Car: From Exit 18 (I-90 E) or Exit 20 (1-90 W) follow the Allston/Brighton exit ramp, merge onto Cambridge Street and go one mile. At the fourth light, turn left on Harvard Street and proceed about one mile. Turn left on Beals Street and go to number 83. Limited Street Parking available.",
+      "directionsInfo": "By Subway: Take Green line (\"C\" -Cleveland Circle) trolley to Coolidge Corner stop. Walk four blocks north on Harvard Street, turn right on Beals Street and continue to number 83. By Car: From Exit 131 (I-90 E) follow the Allston/Brighton exit ramp, merge onto Cambridge Street and go one mile. At the fourth light, turn left on Harvard Street and proceed about one mile. Turn left on Beals Street and go to number 83. Limited Street Parking available.",
       "directionsUrl": "http://www.nps.gov/jofi/planyourvisit/directions.htm",
       "operatingHours": [
         {
@@ -75546,9 +75564,9 @@
                 "friday": "Closed",
                 "saturday": "Closed"
               },
-              "startDate": "2026-11-04",
+              "startDate": "2026-11-02",
               "name": "Late October to Late May",
-              "endDate": "2027-05-13"
+              "endDate": "2027-05-27"
             }
           ],
           "description": "The north entrance to Katahdin Woods and Waters National Monument is reached by turning on New River Road (also known as Messer Pond Road) from Maine Route 159/Grand Lake Road. This entrance is typically open to wheeled vehicle traffic from late May-late October.",
@@ -75575,9 +75593,9 @@
                 "friday": "Closed",
                 "saturday": "Closed"
               },
-              "startDate": "2026-10-31",
+              "startDate": "2026-11-02",
               "name": "Late October to Late May",
-              "endDate": "2027-05-25"
+              "endDate": "2027-05-27"
             }
           ],
           "description": "The south entrance to Katahdin Woods and Waters National Monument is reached via Maine Route 11 and Swift Brook Road. This entrance is typically open to wheeled vehicle traffic from late May-late October. Swift Brook Road is a private logging road. Two gates across this private logging road leading into the monument are managed by a neighboring timber company that determines when road conditions are appropriate to open the gates for the summer season.",
@@ -75604,9 +75622,9 @@
                 "friday": "Closed",
                 "saturday": "Closed"
               },
-              "startDate": "2026-11-04",
+              "startDate": "2026-11-02",
               "name": "Late October to Late May",
-              "endDate": "2027-05-23"
+              "endDate": "2027-05-27"
             }
           ],
           "description": "The Katahdin Loop Road is typically open to wheeled vehicle traffic from late May-late October. The Loop Road is accessed via Maine Route 11 and Swift Brook Road. Swift Brook Road is a private logging road and a neighboring timber company manages the two gates on the road leading into the monument. The timber company determines when the gates will open and close for the season depending on road conditions. The National Park Service manages the gate to the Katahdin Loop Road.",
@@ -88498,7 +88516,44 @@
       "directionsUrl": "http://www.nps.gov/memy/planyourvisit/directions.htm",
       "operatingHours": [
         {
-          "exceptions": [],
+          "exceptions": [
+            {
+              "exceptionHours": {},
+              "startDate": "2026-11-11",
+              "name": "Closed Veterans Day",
+              "endDate": "2026-11-11"
+            },
+            {
+              "exceptionHours": {},
+              "startDate": "2026-11-26",
+              "name": "Closed Thanksgiving Day",
+              "endDate": "2026-11-26"
+            },
+            {
+              "exceptionHours": {},
+              "startDate": "2026-12-25",
+              "name": "Closed Christmas Day",
+              "endDate": "2026-12-25"
+            },
+            {
+              "exceptionHours": {},
+              "startDate": "2027-01-01",
+              "name": "Closed New Years Day",
+              "endDate": "2027-01-01"
+            },
+            {
+              "exceptionHours": {},
+              "startDate": "2027-01-18",
+              "name": "Closed Martin Luther King Jr Day",
+              "endDate": "2027-01-18"
+            },
+            {
+              "exceptionHours": {},
+              "startDate": "2027-02-15",
+              "name": "Closed Presidents Day",
+              "endDate": "2027-02-15"
+            }
+          ],
           "description": "Our service hours are Tuesday-Saturday 9am-4pm, CLOSED from 12-1pm for lunch.\n\nGrounds of the home are open sunrise to sunset every day. Please respect neighbors' privacy and private property.",
           "standardHours": {
             "wednesday": "9:00AM - 4:00PM",
@@ -88544,10 +88599,10 @@
           "stateCode": "MS",
           "countryCode": "US",
           "provinceTerritoryCode": "",
-          "line1": "1425 Lelia Dr",
+          "line1": "1425 Lelia Dr.",
           "type": "Mailing",
-          "line3": "Medgar and Myrlie Evers Home National Monument",
-          "line2": "Ste A"
+          "line3": "",
+          "line2": "Suite A"
         }
       ],
       "images": [
@@ -88883,7 +88938,7 @@
       "longitude": "-84.7375361304",
       "latLong": "lat:37.0688158602, long:-84.7375361304",
       "pressEmail": "",
-      "superintendentName": "",
+      "superintendentName": "Dawn Davis",
       "activities": [
         {
           "id": "B33DC9B6-0B7D-4322-BAD7-A13A34C584A3",
@@ -92538,15 +92593,15 @@
         },
         {
           "exceptions": [],
-          "description": "Park grounds are open from sunrise to sunset daily. Unplanned closures or delayed openings may occur for snow and ice or tree removal or road construction and repair. Please check the alerts on the website for the most current information.",
+          "description": "Park grounds are open from sunrise to 6:00 p.m. daily. Unplanned closures or delayed openings may occur for snow and ice or tree removal or road construction and repair. Please check the alerts on the website for the most current information.",
           "standardHours": {
-            "wednesday": "Sunrise to Sunset",
-            "monday": "Sunrise to Sunset",
-            "thursday": "Sunrise to Sunset",
-            "sunday": "Sunrise to Sunset",
-            "tuesday": "Sunrise to Sunset",
-            "friday": "Sunrise to Sunset",
-            "saturday": "Sunrise to Sunset"
+            "wednesday": "Sunrise - 6:00PM",
+            "monday": "Sunrise - 6:00PM",
+            "thursday": "Sunrise - 6:00PM",
+            "sunday": "Sunrise - 6:00PM",
+            "tuesday": "Sunrise - 6:00PM",
+            "friday": "Sunrise - 6:00PM",
+            "saturday": "Sunrise - 6:00PM"
           },
           "name": "Park Grounds"
         }
@@ -106278,7 +106333,7 @@
       "entranceFees": [],
       "entrancePasses": [],
       "fees": [],
-      "directionsInfo": "GPS: Lat: 35.139 Long: -106.711 From Interstate 40, take the Unser Blvd. exit (#154) proceed north 3 miles to Western Trail. Turn left or west onto Western Trail and follow road to the Visitor Information Center parking lot. From Interstate 25, take the Paseo del Norte exit (#232) and proceed west to Coors Road exit south (must be in center lane to veer left at the Y). Proceed south on Coors Road to Western Trail. Turn right or west onto Western Trail and follow road to the Visitor Info Center parking lot.",
+      "directionsInfo": "GPS: Lat: 35.139 Long: -106.711 From Interstate 40, take the Unser Blvd. exit (#154) proceed north 3 miles to Western Trail. Turn left or west onto Western Trail and follow road to the Information Center parking lot. From Interstate 25, take the Paseo del Norte exit (#232) and proceed west to Coors Road exit south (must be in center lane to veer left at the Y). Proceed south on Coors Road to Western Trail. Turn right or west onto Western Trail and follow road to the Information Center parking lot.",
       "directionsUrl": "http://www.nps.gov/petr/planyourvisit/directions.htm",
       "operatingHours": [
         {
@@ -106319,39 +106374,16 @@
           "name": "Boca Negra Canyon"
         },
         {
-          "exceptions": [
-            {
-              "exceptionHours": {},
-              "startDate": "2026-11-26",
-              "name": "Rinconada Canyon Parking Lot closed on Thanksgiving Day",
-              "endDate": "2026-11-26"
-            },
-            {
-              "exceptionHours": {
-                "friday": "Closed"
-              },
-              "startDate": "2026-12-25",
-              "name": "Christmas Day Closure",
-              "endDate": "2026-12-25"
-            },
-            {
-              "exceptionHours": {
-                "friday": "Closed"
-              },
-              "startDate": "2027-01-01",
-              "name": "New Year's Day Closure",
-              "endDate": "2027-01-01"
-            }
-          ],
-          "description": "An undeveloped trail system, no water or services are provided. A 2.2-mile round trip trail where up to 300 petroglyphs can be viewed, especially in the back of the canyon. The natural earth surface trail is easy to moderate to walk. Picnic tables are located in the parking lot. A vault toilet is available. No water. Open for hiking on holidays. After hours parking is available outside of the gated parking lot. Lock your vehicle, secure your valuables, do not leave any items visible. Leashed pets allowed.",
+          "exceptions": [],
+          "description": "Water is not available. A 2.2-mile round trip trail where up to 300 petroglyphs can be viewed, especially in the back of the canyon. The natural earth surface trail is easy to moderate to walk. Picnic tables are located in the parking lot. A vault toilet is available. Open for hiking on holidays. Parking lot hours: 8 am to 5 pm daily. Access: Sunrise to sunset by parking in outer lot (3 spaces). Lock your vehicle, secure your valuables, do not leave any items visible. Leashed pets okay, must pick up poop.",
           "standardHours": {
-            "wednesday": "8:00AM - 5:00PM",
-            "monday": "8:00AM - 5:00PM",
-            "thursday": "8:00AM - 5:00PM",
-            "sunday": "8:00AM - 5:00PM",
-            "tuesday": "8:00AM - 5:00PM",
-            "friday": "8:00AM - 5:00PM",
-            "saturday": "8:00AM - 5:00PM"
+            "wednesday": "Sunrise to Sunset",
+            "monday": "Sunrise to Sunset",
+            "thursday": "Sunrise to Sunset",
+            "sunday": "Sunrise to Sunset",
+            "tuesday": "Sunrise to Sunset",
+            "friday": "Sunrise to Sunset",
+            "saturday": "Sunrise to Sunset"
           },
           "name": "Rinconada Canyon"
         },
@@ -106370,23 +106402,16 @@
           "name": "Piedras Marcadas Canyon"
         },
         {
-          "exceptions": [
-            {
-              "exceptionHours": {},
-              "startDate": "2026-11-26",
-              "name": "Volcanoes Day Use Area Parking Lot Closed on Thanksgiving Day",
-              "endDate": "2026-11-26"
-            }
-          ],
-          "description": "No petroglyph viewing available. One to four miles of hiking trails lead you to the scenic overlook or around the bases of the cinder cones. Hiking to the tops of cones is prohibited. No water available. Vault restroom, benches, and trash cans available. Leashed pets allowed. Owners must pick-up waste & place in trash can. Parking lot is located off Atrisco Vista Blvd. (I-40 exit #149) approximately 4.7 miles north of Interstate 40. Stop by the information center for a free trail guide.",
+          "exceptions": [],
+          "description": "No petroglyph viewing available. Parking lot hours: 9 am to 5 pm daily. Access: Sunrise to sunset. 1 to 4 miles of hiking trails lead you to the scenic overlook or around the bases of the cinder cones. Hiking to the tops of cones is prohibited. No water available. Vault restroom, benches, and trash cans available. Leashed pets allowed. Owners must pick-up waste & place in trash can. Parking lot is located off Atrisco Vista Blvd. (exit #149) about 4.7 miles north of I-40. Pick up a trail map at Info Center.",
           "standardHours": {
-            "wednesday": "9:00AM - 5:00PM",
-            "monday": "9:00AM - 5:00PM",
-            "thursday": "9:00AM - 5:00PM",
-            "sunday": "9:00AM - 5:00PM",
-            "tuesday": "9:00AM - 5:00PM",
-            "friday": "9:00AM - 5:00PM",
-            "saturday": "9:00AM - 5:00PM"
+            "wednesday": "Sunrise to Sunset",
+            "monday": "Sunrise to Sunset",
+            "thursday": "Sunrise to Sunset",
+            "sunday": "Sunrise to Sunset",
+            "tuesday": "Sunrise to Sunset",
+            "friday": "Sunrise to Sunset",
+            "saturday": "Sunrise to Sunset"
           },
           "name": "Volcanoes Day Use Area"
         }
@@ -106398,10 +106423,10 @@
           "stateCode": "NM",
           "countryCode": "US",
           "provinceTerritoryCode": "",
-          "line1": "Visitor Information Center",
+          "line1": "Information Center",
           "type": "Physical",
           "line3": "GPS Lat: 35.139   GPS Long: -106.711",
-          "line2": "Unser Blvd. NW at Western Trail"
+          "line2": "6510 Western Trail NW (Unser Blvd. NW at Western Trail)"
         },
         {
           "postalCode": "87120",
@@ -120320,7 +120345,7 @@
                 "friday": "Closed",
                 "saturday": "Closed"
               },
-              "startDate": "2026-11-01",
+              "startDate": "2026-10-18",
               "name": "Winter",
               "endDate": "2027-05-20"
             }
@@ -120349,7 +120374,7 @@
                 "friday": "Closed",
                 "saturday": "Closed"
               },
-              "startDate": "2026-10-13",
+              "startDate": "2026-10-18",
               "name": "Winter",
               "endDate": "2027-05-31"
             }
@@ -130113,9 +130138,9 @@
                 "friday": "Closed",
                 "saturday": "Closed"
               },
-              "startDate": "2026-09-06",
+              "startDate": "2026-09-09",
               "name": "Winter Season",
-              "endDate": "2027-05-31"
+              "endDate": "2027-05-28"
             }
           ],
           "description": "The visitor center is open Thursday - Sunday from 9:00am to 4:30pm, till September 7th. Please check the calendar for the most accurate information.",
