@@ -516,7 +516,7 @@
               <button id="btnScratchUsa" aria-pressed="false" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white">United States</button>
               <button id="btnScratchCounties" aria-pressed="false" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white">Counties &amp; Districts</button>
               <button id="btnScratchWorldSubdivisions" type="button" aria-pressed="false" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white">World States / Provinces</button>
-              <button id="btnScratchNationalParks" type="button" aria-pressed="false" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white">US National Parks (63)</button>
+              <button id="btnScratchNationalParks" type="button" aria-pressed="false" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white">US National Parks</button>
             </div>
             <div class="text-xs font-mono text-amber-300 bg-amber-950/40 border border-amber-500/30 px-3 py-1.5 rounded-xl" id="scratchStatsLabel">
               0 Visited/Lived · 0 Transited
@@ -566,7 +566,7 @@
         </section>
         <div id="scratchNationalParks" class="space-y-4 hidden">
         <div class="rpg-panel p-4 rounded-2xl space-y-3">
-          <h2 class="cinzel text-lg font-bold text-amber-200">63 National Parks</h2>
+          <h2 class="cinzel text-lg font-bold text-amber-200">National Parks</h2>
           <p class="text-xs text-slate-400">Click a park: Unexplored → Visited → Wishlist → Transited → Lived → Unexplored. Your map choice overrides the displayed travel-derived tier without changing trip records. Scroll to zoom; drag to pan.</p>
           <div class="flex flex-wrap gap-3 items-center text-xs">
             <span id="nationalParksStats" role="status" class="text-emerald-300">Loading National Parks…</span>
@@ -582,7 +582,7 @@
           <svg id="svgNationalParks" class="w-full" viewBox="0 0 960 640" role="group" aria-label="National Parks scratch-off map"></svg>
         </div>
         <details open class="rpg-panel p-4 rounded-2xl">
-          <summary class="text-sm text-amber-200 cursor-pointer">All 63 parks — accessible checklist</summary>
+          <summary class="text-sm text-amber-200 cursor-pointer">All parks — accessible checklist</summary>
           <div id="nationalParksChecklist" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mt-3"></div>
         </details>
         </div>
@@ -3766,7 +3766,7 @@
       let parks;
       try {
         parks = NationalParksScratch.parks(PARKS);
-        if (!npsCatalogLoaded || parks.length !== 63 || !usaRegionGeoJson?.length) {
+        if (!npsCatalogLoaded || !parks.length || !usaRegionGeoJson?.length) {
           throw new Error('National Parks catalog or map unavailable. Retry datasets in Settings.');
         }
       } catch (error) {
@@ -3776,7 +3776,7 @@
       }
       const progress = NationalParksScratch.progress(parks, AppState);
       const visited = progress.reduce((sum, region) => sum + region.visited, 0);
-      stats.textContent = `${visited} / 63 Visited · ${parks.filter(p => NationalParksScratch.status(p, AppState) === 'w').length} Wishlist`;
+      stats.textContent = `${visited} / ${parks.length} Visited · ${parks.filter(p => NationalParksScratch.status(p, AppState) === 'w').length} Wishlist`;
       if (!Object.keys(npsBoundariesByCode).length) stats.textContent += ' · Boundaries unavailable; showing location badges. Retry datasets in Settings.';
       const backdrop = region => region?.tier === 'mastered' ? '#065f46' :
         region?.tier === 'progress' ? '#102d28' : '#090d1a';

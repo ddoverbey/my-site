@@ -171,7 +171,7 @@ check('National Parks is a Scratch Map dataset, not a separate navigation page, 
   assert.ok(!html.includes('data-tab="nationalparks"'));
   assert.ok(!html.includes('id="tabContent-nationalparks"'));
   assert.ok(html.includes('id="scratchNationalParks"'));
-  assert.match(html, /<details open[^>]*>\s*<summary[^>]*>All 63 parks/);
+  assert.match(html, /<details open[^>]*>\s*<summary[^>]*>All parks — accessible checklist/);
 });
 check('Travel Ledger destinations render in a single full-width column', () => {
   assert.match(html, /<div class="grid grid-cols-1 gap-3" id="bucketListGrid">/);
@@ -2956,7 +2956,10 @@ check('real NPS filters return the official catalog exclusively and preserve com
   element('bucketFilterType').value = 'nps-parks';
   vm.runInContext('renderBucketListView()', context);
   const filtered = vm.runInContext('PARKS.filter(p=>matchesBucketType(p,"nps-parks"))', context);
-  assert.equal(filtered.length, 62);
+  const expectedParkCodes = actualSnapshot.data.filter(park =>
+    /\bNational (?:Park(?:s)?|and State Parks)\b/i.test(park.designation || '') ||
+    (!park.designation && park.parkCode === 'npsa')).map(park => park.parkCode).sort();
+  assert.deepEqual(Array.from(filtered, park => park.id).sort(), expectedParkCodes);
   assert.ok(filtered.every(p => !p.intl));
   assert.equal(filtered.filter(p => p.id === 'seki').length, 1);
   assert.ok(filtered.some(p => p.id === 'npsa'));
@@ -4280,9 +4283,18 @@ context.L=originalPreviewL;
 context.setTimeout=originalPreviewTimeout;
 vm.runInContext('AppState.viewOnly=false;map=null;',context);
 const scratchParks = nationalParksScratch.parks(catalog.normalizeParks(actualSnapshot.data));
-check('dedicated scratch page includes exactly 63 parks, not monuments or other NPS units', () => {
-  assert.equal(scratchParks.length, 63);
-  assert.equal(new Set(scratchParks.map(p => p.id)).size, 63);
+const expectedScratchParkRecords = actualSnapshot.data.filter(park =>
+  ['National Park', 'National Park & Preserve', 'National Parks'].includes(park.designation) ||
+  ['npsa', 'redw'].includes(park.parkCode));
+const expectedScratchParkCount = expectedScratchParkRecords.length +
+  Number(expectedScratchParkRecords.some(park => park.parkCode === 'seki'));
+check('dedicated scratch page includes current National Parks and excludes monuments or other NPS units', () => {
+  assert.equal(scratchParks.length, expectedScratchParkCount);
+  assert.equal(new Set(scratchParks.map(p => p.id)).size, expectedScratchParkCount);
+  for (const park of expectedScratchParkRecords) {
+    const ids = park.parkCode === 'seki' ? ['sequ', 'kica'] : [park.parkCode];
+    for (const id of ids) assert.ok(scratchParks.some(scratchPark => scratchPark.id === id), `${park.parkCode} missing from scratch map`);
+  }
   for (const id of ['npsa', 'redw', 'sequ', 'kica']) assert.ok(scratchParks.some(p => p.id === id));
   assert.ok(!scratchParks.some(p => p.id === 'seki' || p.designation === 'National Monument'));
   assert.ok(html.includes('id="btnScratchNationalParks"'));
@@ -4295,7 +4307,7 @@ check('dedicated scratch page includes exactly 63 parks, not monuments or other 
 check('park regions count each park once and master only after every member is visited', () => {
   const state = { pins: {}, expeditions: [], nationalParkScratch: {} };
   let progress = nationalParksScratch.progress(scratchParks, state);
-  assert.equal(progress.reduce((sum, r) => sum + r.total, 0), 63);
+  assert.equal(progress.reduce((sum, r) => sum + r.total, 0), scratchParks.length);
   assert.ok(progress.every(r => r.total > 0 && r.tier === 'unstarted'));
   const northeast = scratchParks.filter(p => p.regionId === 'northeast');
   state.pins[northeast[0].ledgerId] = 'l';
