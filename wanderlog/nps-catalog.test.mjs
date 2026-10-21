@@ -3204,7 +3204,6 @@ check('achievement hints appear at 85 percent, remain blurred until earned, and 
   })))`, context);
   vm.runInContext(`
     var disclosureTestAchievements = ACHIEVEMENTS.slice();
-    var disclosureTestSnapshot = achievementProgressSnapshot;
   `, context);
   try {
     for (const testCase of cases) {
@@ -3223,7 +3222,6 @@ check('achievement hints appear at 85 percent, remain blurred until earned, and 
         badges.length = 0;
         context.disclosureTestProgress = progress;
         vm.runInContext(`
-          achievementProgressSnapshot = null;
           renderAchievementsView({testProgress:disclosureTestProgress});
           renderEarnedAchievementBadges({testProgress:disclosureTestProgress});
         `, context);
@@ -3269,43 +3267,108 @@ check('achievement hints appear at 85 percent, remain blurred until earned, and 
   } finally {
     vm.runInContext(`
       ACHIEVEMENTS.splice(0, ACHIEVEMENTS.length, ...disclosureTestAchievements);
-      achievementProgressSnapshot = disclosureTestSnapshot;
     `, context);
     cardContainer.appendChild = originalCardAppend;
     badgeContainer.appendChild = originalBadgeAppend;
     context.document.createElement = originalCreate;
   }
 });
-check('secret completion effects fire once on crossing the goal, not initial load or repeated renders', () => {
+check('achievement unlocks are grouped once and passport imports suppress their sound and popup', () => {
   const result = vm.runInContext(`(() => {
     const achievements = ACHIEVEMENTS.slice();
-    const snapshot = achievementProgressSnapshot;
+    const calculate = calculateStats;
+    const synchronize = syncDerivedState;
+    const save = saveState;
+    const restorePromotions = TravelLedger.restoreExpeditionPromotions;
     const playChime = AudioEngine.playChime;
-    const notify = showNotification;
-    const chimes = [], notices = [];
+    const notify = showAchievementNotification;
+    const timeout = setTimeout;
+    const chimes = [], notices = [], timers = [];
+    let progress = 0;
     AudioEngine.playChime = sound => chimes.push(sound);
-    showNotification = (...args) => notices.push(args);
+    showAchievementNotification = unlocked => notices.push(unlocked.map(tier => tier.title));
+    calculateStats = () => ({testProgress:progress});
+    syncDerivedState = () => {};
+    saveState = () => {};
+    TravelLedger.restoreExpeditionPromotions = () => {};
+    setTimeout = callback => { timers.push(callback); return timers.length; };
     try {
-      const earthSandwich = achievements.find(a => a.id === 'earthSandwich');
-      ACHIEVEMENTS.splice(0, ACHIEVEMENTS.length, earthSandwich);
-      achievementProgressSnapshot = null;
-      announceSecretAchievementCompletions({metadataProgress:{earthSandwich:2}});
-      const initial = chimes.length;
-      announceSecretAchievementCompletions({metadataProgress:{earthSandwich:1}});
-      announceSecretAchievementCompletions({metadataProgress:{earthSandwich:2}});
-      announceSecretAchievementCompletions({metadataProgress:{earthSandwich:2}});
-      return {initial, chimes, notices};
+      ACHIEVEMENTS.splice(0, ACHIEVEMENTS.length,
+        {
+          id: 'firstAchievement', progress: stats => stats.testProgress,
+          tiers: [
+            {goal:1,title:'First milestone'},
+            {goal:2,title:'Second milestone'}
+          ]
+        },
+        {
+          id: 'secondAchievement', progress: stats => stats.testProgress,
+          tiers: [{goal:2,title:'Another achievement'}]
+        }
+      );
+      commitLedger(() => { progress = 2; });
+      commitLedger(() => { progress = 3; }, {notifyAchievements:false});
+      timers.forEach(callback => callback());
+      return {chimes, notices, importTimers:timers.length};
     } finally {
       ACHIEVEMENTS.splice(0, ACHIEVEMENTS.length, ...achievements);
-      achievementProgressSnapshot = snapshot;
+      calculateStats = calculate;
+      syncDerivedState = synchronize;
+      saveState = save;
+      TravelLedger.restoreExpeditionPromotions = restorePromotions;
       AudioEngine.playChime = playChime;
-      showNotification = notify;
+      showAchievementNotification = notify;
+      setTimeout = timeout;
     }
   })()`, context);
-  assert.equal(result.initial, 0);
   assert.deepEqual(Array.from(result.chimes), ['levelup']);
+  assert.deepEqual(Array.from(result.notices[0]), [
+    'First milestone', 'Second milestone', 'Another achievement'
+  ]);
   assert.equal(result.notices.length, 1);
-  assert.ok(result.notices[0][1].includes('Earth Sandwich'));
+  assert.equal(result.importTimers, 1);
+  assert.match(html, /commitLedger\(\(\) => applyPassport\(parsed\), \{\s*notifyAchievements: false\s*\}\)/);
+  assert.match(html, /<ul id="toastAchievementList"/);
+});
+check('achievement toast displays each unlocked tier as a safe list item', () => {
+  const classList = (...initial) => {
+    const values = new Set(initial);
+    return {
+      add(...tokens) { tokens.forEach(token => values.add(token)); },
+      remove(...tokens) { tokens.forEach(token => values.delete(token)); },
+      contains(token) { return values.has(token); }
+    };
+  };
+  const toastElements = {
+    toastNotification: { classList: classList('opacity-0', 'pointer-events-none', 'translate-y-4') },
+    toastTitle: { textContent: '' },
+    toastMsg: { textContent: '', classList: classList() },
+    toastIcon: { textContent: '' },
+    toastAchievementList: {
+      children: [], classList: classList('hidden'),
+      replaceChildren() { this.children = []; },
+      appendChild(child) { this.children.push(child); }
+    }
+  };
+  const originalGetElement = context.document.getElementById;
+  const originalCreateElement = context.document.createElement;
+  context.document.getElementById = id => toastElements[id] || originalGetElement(id);
+  context.document.createElement = tagName => ({ tagName, textContent: '' });
+  try {
+    vm.runInContext(`
+      showAchievementNotification([{title:'<First milestone>'},{title:'Second milestone'}]);
+    `, context);
+    assert.equal(toastElements.toastTitle.textContent, 'Achievements Unlocked');
+    assert.deepEqual(
+      toastElements.toastAchievementList.children.map(item => item.textContent),
+      ['<First milestone>', 'Second milestone']
+    );
+    assert.equal(toastElements.toastMsg.classList.contains('hidden'), true);
+    assert.equal(toastElements.toastAchievementList.classList.contains('hidden'), false);
+  } finally {
+    context.document.getElementById = originalGetElement;
+    context.document.createElement = originalCreateElement;
+  }
 });
 const achievementImages = vm.runInContext('Object.entries(ACHIEVEMENT_IMAGES)', context);
 const unmetAchievementImages = vm.runInContext('Object.entries(UNMET_ACHIEVEMENT_IMAGES)', context);
@@ -3363,7 +3426,6 @@ check('a grouped achievement uses its highest completed tier artwork instead of 
   try {
     vm.runInContext(`
       const originalAchievements = ACHIEVEMENTS.slice();
-      const originalSnapshot = achievementProgressSnapshot;
       try {
         ACHIEVEMENTS.splice(0, ACHIEVEMENTS.length, {
           id: 'groupedArtworkTest', title: 'Explorer Class', icon: '🧭', background: '#172554',
@@ -3373,11 +3435,9 @@ check('a grouped achievement uses its highest completed tier artwork instead of 
             {goal:5,title:'Trailblazer',desc:'Next milestone',rarity:'uncommon'}
           ]
         });
-        achievementProgressSnapshot = null;
         renderAchievementsView({testProgress:3});
       } finally {
         ACHIEVEMENTS.splice(0, ACHIEVEMENTS.length, ...originalAchievements);
-        achievementProgressSnapshot = originalSnapshot;
       }
     `, context);
     assert.equal(cards.length, 1);

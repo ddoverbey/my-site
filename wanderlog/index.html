@@ -956,11 +956,12 @@
     </form>
   </div>
 
-  <div id="toastNotification" class="fixed top-20 right-6 z-[1100] transform translate-y-4 opacity-0 pointer-events-none transition-all duration-300 rpg-panel rounded-2xl p-4 shadow-2xl flex items-center gap-3 border-amber-500/50 max-w-sm">
+  <div id="toastNotification" role="status" aria-live="polite" aria-atomic="true" class="fixed top-20 right-6 z-[1100] transform translate-y-4 opacity-0 pointer-events-none transition-all duration-300 rpg-panel rounded-2xl p-4 shadow-2xl flex items-center gap-3 border-amber-500/50 max-w-sm">
     <div class="text-2xl" id="toastIcon">🏆</div>
-    <div>
+    <div class="min-w-0">
       <h4 class="text-xs font-bold text-amber-300 uppercase tracking-wider" id="toastTitle">Achievement Unlocked</h4>
       <p class="text-xs text-slate-200 mt-0.5" id="toastMsg">You cleared the fog of your home!</p>
+      <ul id="toastAchievementList" class="hidden mt-1 list-disc list-inside text-xs text-emerald-200 space-y-0.5 max-h-32 overflow-y-auto"></ul>
     </div>
   </div>
 
@@ -1620,8 +1621,10 @@
     }
     let countyRegionCache = null;
 
-    function commitLedger(change) {
+    function commitLedger(change, { notifyAchievements = true } = {}) {
       const previous = JSON.stringify(passportPayload());
+      const previousStats = notifyAchievements ? calculateStats() : null;
+      let currentStats = null;
       const visitedBefore = new Set([
         ...Object.entries(AppState.pins).filter(([, status]) => TravelLedger.isVisited(status)).map(([id]) => `park:${id}`),
         ...AppState.customPois.filter(p => TravelLedger.isVisited(p.status)).map(p => `poi:${p.id}`),
@@ -1631,6 +1634,7 @@
         TravelLedger.restoreExpeditionPromotions(AppState);
         change();
         syncDerivedState();
+        if (previousStats) currentStats = calculateStats();
         saveState();
       } catch (error) {
         applyPassport(JSON.parse(previous));
@@ -1646,6 +1650,7 @@
           !visitedBefore.has(`micro:${entry.name}`)).map(entry => `micro:${entry.name}`)
       ];
       if (discovered.length) pulseDiscoveries(discovered);
+      if (previousStats && currentStats) notifyAchievementUnlocks(previousStats, currentStats);
     }
 
     function addCustomPoi(poi) {
@@ -1720,19 +1725,46 @@
       }
     }
 
-    function showNotification(title, message, icon = '🏆') {
-      const toast = document.getElementById('toastNotification');
-      document.getElementById('toastTitle').textContent = title;
-      document.getElementById('toastMsg').textContent = message;
-      document.getElementById('toastIcon').textContent = icon;
+    let notificationTimeout = null;
 
+    function displayNotificationToast() {
+      const toast = document.getElementById('toastNotification');
+      if (notificationTimeout !== null) clearTimeout(notificationTimeout);
       toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
       toast.classList.add('opacity-100', 'translate-y-0');
-
-      setTimeout(() => {
+      notificationTimeout = setTimeout(() => {
         toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
         toast.classList.remove('opacity-100', 'translate-y-0');
+        notificationTimeout = null;
       }, 4000);
+    }
+
+    function showNotification(title, message, icon = '🏆') {
+      const messageElement = document.getElementById('toastMsg');
+      const achievementList = document.getElementById('toastAchievementList');
+      document.getElementById('toastTitle').textContent = title;
+      messageElement.textContent = message;
+      messageElement.classList.remove('hidden');
+      document.getElementById('toastIcon').textContent = icon;
+      achievementList.replaceChildren();
+      achievementList.classList.add('hidden');
+      displayNotificationToast();
+    }
+
+    function showAchievementNotification(unlocked) {
+      const achievementList = document.getElementById('toastAchievementList');
+      achievementList.replaceChildren();
+      unlocked.forEach(achievement => {
+        const item = document.createElement('li');
+        item.textContent = achievement.title;
+        achievementList.appendChild(item);
+      });
+      document.getElementById('toastTitle').textContent =
+        unlocked.length === 1 ? 'Achievement Unlocked' : 'Achievements Unlocked';
+      document.getElementById('toastMsg').classList.add('hidden');
+      document.getElementById('toastIcon').textContent = '🏆';
+      achievementList.classList.remove('hidden');
+      displayNotificationToast();
     }
   </script>
 
@@ -4658,32 +4690,35 @@
     }
 
     const SECRET_ACHIEVEMENT_RARITIES = new Set(['legendary', 'mythic']);
-    let achievementProgressSnapshot = null;
 
     function isSecretAchievementTier(tier) {
       return SECRET_ACHIEVEMENT_RARITIES.has(tier.rarity);
     }
 
-    function announceSecretAchievementCompletions(stats) {
-      const current = new Map(ACHIEVEMENTS.map(achievement => [
-        achievement.id,
-        achievement.progress(stats)
-      ]));
-      if (achievementProgressSnapshot) {
-        ACHIEVEMENTS.forEach(achievement => {
-          const previous = achievementProgressSnapshot.get(achievement.id) || 0;
-          const completed = achievement.tiers.map(tier => ({
-            ...tier,
-            goal: typeof tier.goal === 'function' ? tier.goal(stats) : tier.goal
-          })).find(tier => isSecretAchievementTier(tier) &&
-            previous < tier.goal && current.get(achievement.id) >= tier.goal);
-          if (completed) {
-            AudioEngine.playChime('levelup');
-            showNotification('🏆 Secret Trophy Revealed', `${completed.title} — achievement unlocked.`, '✨');
-          }
+    function completedAchievementTiers(stats) {
+      return ACHIEVEMENTS.flatMap(achievement => {
+        const progress = achievement.progress(stats);
+        return achievement.tiers.flatMap((tier, index) => {
+          const goal = typeof tier.goal === 'function' ? tier.goal(stats) : tier.goal;
+          return goal > 0 && progress >= goal
+            ? [{ key: `${achievement.id}:${index}`, title: tier.title }]
+            : [];
         });
-      }
-      achievementProgressSnapshot = current;
+      });
+    }
+
+    function newlyCompletedAchievementTiers(previousStats, currentStats) {
+      const previouslyCompleted = new Set(completedAchievementTiers(previousStats).map(tier => tier.key));
+      return completedAchievementTiers(currentStats).filter(tier => !previouslyCompleted.has(tier.key));
+    }
+
+    function notifyAchievementUnlocks(previousStats, currentStats) {
+      const unlocked = newlyCompletedAchievementTiers(previousStats, currentStats);
+      if (!unlocked.length) return;
+      setTimeout(() => {
+        AudioEngine.playChime('levelup');
+        showAchievementNotification(unlocked);
+      }, 0);
     }
 
     function achievementBadgeStyle(achievement, tier) {
@@ -4769,7 +4804,6 @@
     function renderAchievementsView(stats = calculateStats()) {
       const achContainer = document.getElementById('achievementsContainer');
       achContainer.innerHTML = '';
-      announceSecretAchievementCompletions(stats);
 
       ACHIEVEMENTS.forEach(ach => {
         const { progress, completed, next } = achievementDisclosure(ach, stats);
@@ -5408,7 +5442,7 @@
           const includesRecoveryDraft = !!source?._unsavedExpeditionDraft;
           const parsed = migratePassport(source);
           await appReady;
-          commitLedger(() => applyPassport(parsed));
+          commitLedger(() => applyPassport(parsed), { notifyAchievements: false });
           let recoveryCleanupWarning = '';
           if (includesRecoveryDraft) {
             try {
