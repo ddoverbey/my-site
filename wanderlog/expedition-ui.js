@@ -18,6 +18,12 @@ let expeditionDraftDbPromise = null;
 let savedExpeditionDraft = null;
 let expeditionDraftSaveTimer = null;
 
+function rarityBadgeMarkup(tier) {
+  const rarity = CoordinateLookups.RARITY_TIERS[tier];
+  if (!rarity) return '';
+  return `<span class="inline-flex items-center gap-1 rounded-full border bg-slate-950/70 px-2 py-0.5 text-[10px] font-semibold" data-rarity-tier="${escapeHtml(tier)}" style="color:${rarity.color};border-color:${rarity.color}" title="Location rarity: ${escapeHtml(tier)}">${escapeHtml(rarity.icon)} ${escapeHtml(tier)}</span>`;
+}
+
 function expeditionDraftDatabase() {
   if (typeof indexedDB === 'undefined') return Promise.reject(new Error('This browser does not support IndexedDB.'));
   if (!expeditionDraftDbPromise) {
@@ -908,8 +914,13 @@ async function saveExpedition(event) {
       const batch = await Promise.all(stops.slice(offset, offset + 4).map(async stop => {
         const terrestrial = CoordinateLookups.biomeRegion(...stop.coords, coordinateIndexes.ecoregions, d3.geoContains).biomes.length > 0;
         const poi = stop.kind === 'poi' ? AppState.customPois.find(poi => poi.id === stop.id) : null;
+        const parkRarity = stop.kind === 'park' ? AppState.parkRarity?.[stop.id] : null;
+        const rarity = stop.rarity || poi?.rarity || parkRarity?.rarity ||
+          CoordinateLookups.cachedRarity(...stop.coords, localStorage);
+        const rarityTier = stop.rarityTier || rarity?.rarityTier || poi?.rarityTier || parkRarity?.rarityTier;
         const elevationFt = stop.elevationFt ?? poi?.elevationFt ?? (await CoordinateLookups.lookupElevation(...stop.coords)).feet;
-        return { ...stop, terrestrial, elevationFt };
+        return { ...stop, terrestrial, elevationFt, ...(rarity ? { rarity } : {}),
+          ...(CoordinateLookups.RARITY_TIERS[rarityTier] ? { rarityTier } : {}) };
       }));
       elevations.push(...batch);
     }
@@ -925,6 +936,7 @@ async function saveExpedition(event) {
     setExpeditionBusy(false);
     closeExpedition();
     refreshTravelUI();
+    void enrichExpeditionStopRarities(exp.id);
     AudioEngine.playChime('discover');
     showNotification(editing ? 'Expedition updated' : 'Expedition logged', `${exp.name}: ${stops.length} stops.`, '🗺️');
   } catch (error) {
@@ -933,6 +945,47 @@ async function saveExpedition(event) {
   } finally {
     setExpeditionBusy(false);
   }
+}
+
+async function enrichExpeditionStopRarities(expeditionId) {
+  if (AppState.viewOnly) return;
+  const expedition = AppState.expeditions.find(item => item.id === expeditionId);
+  if (!expedition) return;
+  const stops = [...(expedition.routeStops || [])];
+  let unavailable = false;
+  let updated = false;
+  for (let offset = 0; offset < stops.length; offset += 2) {
+    const batch = await Promise.all(stops.slice(offset, offset + 2).map(async stop => {
+      if (stop.rarityTier || !stop.coords) return stop;
+      try {
+        const rarity = CoordinateLookups.cachedRarity(...stop.coords, localStorage) ||
+          await CoordinateLookups.lookupRarityWithFallback(...stop.coords, {
+            storage: localStorage, rarityEndpoint: WanderlogConfig.rarityEndpoint
+          });
+        if (!rarity?.rarityTier || !CoordinateLookups.RARITY_TIERS[rarity.rarityTier]) return stop;
+        updated = true;
+        return { ...stop, rarity, rarityTier: rarity.rarityTier };
+      } catch (error) {
+        unavailable = true;
+        console.error('Expedition stop rarity lookup unavailable', expeditionId, stop.name, error);
+        return stop;
+      }
+    }));
+    stops.splice(offset, batch.length, ...batch);
+  }
+  if (updated) {
+    const current = AppState.expeditions.find(item => item.id === expeditionId);
+    if (current) {
+      try {
+        updateExpedition({ ...current, routeStops: stops });
+        refreshTravelUI();
+      } catch (error) {
+        console.error('Expedition rarity metadata could not be saved', expeditionId, error);
+        showNotification('Rarity badges not saved', error.message, '⚠️');
+      }
+    }
+  }
+  if (unavailable) showNotification('Some rarity lookups unavailable', 'The expedition was saved; missing rarity badges can be resolved when you are online.', '⚠️');
 }
 
 function downloadExpeditionRecovery() {
@@ -1466,7 +1519,10 @@ function renderExpeditionHistory() {
       <div class="travel-journal-details">
         <details><summary class="text-xs text-slate-400">Itinerary &amp; trip details</summary>
           ${regions ? `<p class="text-xs text-slate-300">${escapeHtml(regions)}</p>` : ''}
-          <ol class="travel-journal-itinerary">${names.map((name, index) => `<li>${escapeHtml(name)}${exp.routeLegs?.[index] ? `<small>${escapeHtml(TravelLedger.transitTags[exp.routeLegs[index].mode])}</small>` : ''}</li>`).join('')}</ol>
+          <ol class="travel-journal-itinerary">${names.map((name, index) => {
+            const stop = exp.routeStops?.[index];
+            return `<li>${escapeHtml(name)}${rarityBadgeMarkup(stop?.rarityTier || stop?.rarity?.rarityTier)}${exp.routeLegs?.[index] ? `<small>${escapeHtml(TravelLedger.transitTags[exp.routeLegs[index].mode])}</small>` : ''}</li>`;
+          }).join('')}</ol>
           <div class="flex flex-wrap gap-1.5">${badgeMarkup.join('')}</div>
           ${exp.reason ? `<p class="text-xs text-slate-400">${escapeHtml(exp.reason)}</p>` : ''}
         </details>

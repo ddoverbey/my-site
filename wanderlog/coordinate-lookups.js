@@ -5,6 +5,14 @@
   const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
   const CACHE_TTL = 30 * 24 * 60 * 60 * 1000;
   const PROVIDER_TIMEOUT_MS = 3500;
+  const RARITY_TIERS = Object.freeze({
+    'Tourist Trap': Object.freeze({ icon: '📸', color: '#94a3b8' }),
+    'Beaten Path': Object.freeze({ icon: '🥾', color: '#4ade80' }),
+    'Regional Staple': Object.freeze({ icon: '🧭', color: '#38bdf8' }),
+    'Deep Cut': Object.freeze({ icon: '🗺️', color: '#c084fc' }),
+    'Hidden Gem': Object.freeze({ icon: '💎', color: '#fbbf24' }),
+    Uncharted: Object.freeze({ icon: '🌌', color: '#f472b6' })
+  });
   const NPS_SOURCE = 'https://services1.arcgis.com/fBc8EJBxQRMcHlei/ArcGIS/rest/services/NPS_Land_Resources_Division_Boundary_and_Tract_Data_Service/FeatureServer/2';
   const SUBDIVISION_SOURCE = 'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_10m_admin_1_states_provinces.geojson';
   const ADMIN2_COUNTRIES = ['CAN', 'MEX', 'DEU', 'AUS'];
@@ -485,26 +493,8 @@
     const gridLng = Number(lng.toFixed(3));
     const key = `terra_osm_v1:${gridLat.toFixed(3)},${gridLng.toFixed(3)}`;
     const now = Date.now();
-    if (storage) {
-      const raw = storage.getItem(key);
-      if (raw) {
-        try {
-          const cached = JSON.parse(raw);
-          if (cached.version !== 1 || !Number.isFinite(cached.savedAt) ||
-              cached.data?.method !== 'osm-poi-density' || cached.data.radiusKm !== 5 ||
-              cached.data.category !== categoryForPoiCount(cached.data.nearbyPoiCount) ||
-              cached.data.sampledAt?.lat !== gridLat || cached.data.sampledAt?.lng !== gridLng ||
-              !(cached.data.nearestHighwayKm === null || (Number.isFinite(cached.data.nearestHighwayKm) &&
-                cached.data.nearestHighwayKm >= 0 && cached.data.nearestHighwayKm <= 5))) {
-            throw new Error('Invalid cached OSM metadata.');
-          }
-          if (now - cached.savedAt >= 0 && now - cached.savedAt < CACHE_TTL) return { ...cached.data, cached: true };
-        } catch (error) {
-          console.warn('Discarding invalid OSM cache entry', key, error);
-          storage.removeItem(key);
-        }
-      }
-    }
+    const cached = cachedRarity(lat, lng, storage, now);
+    if (cached) return cached;
     const query = `[out:json][timeout:30];(node(around:5000,${gridLat},${gridLng})["tourism"];` +
       `node(around:5000,${gridLat},${gridLng})["amenity"];` +
       `way(around:5000,${gridLat},${gridLng})["highway"~"^(motorway|trunk)$"];);out body geom;`;
@@ -516,6 +506,38 @@
     const data = summarizeOsm(result.elements, gridLat, gridLng);
     if (storage) storage.setItem(key, JSON.stringify({ version: 1, savedAt: now, data }));
     return { ...data, cached: false };
+  }
+
+  function cachedRarity(lat, lng, storage, now = Date.now()) {
+    validateCoordinates(lat, lng);
+    if (!storage) return null;
+    const gridLat = Number(lat.toFixed(3));
+    const gridLng = Number(lng.toFixed(3));
+    const key = `terra_osm_v1:${gridLat.toFixed(3)},${gridLng.toFixed(3)}`;
+    const raw = storage.getItem(key);
+    if (!raw) return null;
+    try {
+      const cached = JSON.parse(raw);
+      if (cached.version !== 1 || !Number.isFinite(cached.savedAt) ||
+          cached.data?.method !== 'osm-poi-density' || cached.data.radiusKm !== 5 ||
+          cached.data.category !== categoryForPoiCount(cached.data.nearbyPoiCount) ||
+          cached.data.sampledAt?.lat !== gridLat || cached.data.sampledAt?.lng !== gridLng ||
+          !(cached.data.nearestHighwayKm === null || (Number.isFinite(cached.data.nearestHighwayKm) &&
+            cached.data.nearestHighwayKm >= 0 && cached.data.nearestHighwayKm <= 5))) {
+        throw new Error('Invalid cached OSM metadata.');
+      }
+      if (now - cached.savedAt >= 0 && now - cached.savedAt < CACHE_TTL) {
+        return normalizeRarity({ ...cached.data, cached: true }, lat, lng);
+      }
+    } catch (error) {
+      console.warn('Discarding invalid OSM cache entry', key, error);
+      try {
+        storage.removeItem(key);
+      } catch (removeError) {
+        console.warn('Could not remove invalid OSM cache entry', key, removeError);
+      }
+    }
+    return null;
   }
 
   async function lookupCoordinate(lat, lng, {
@@ -599,7 +621,8 @@
     predominantBiome,
     validCountyId, validSubdivisionId, subdivisionFeatures,
     firstBoundaryIntersection, lookupRoadRoute, routeCountyIds,
-    lookupElevation, categoryForPoiCount, segmentDistanceKm, summarizeOsm, lookupRarity, lookupCoordinate,
+    lookupElevation, categoryForPoiCount, segmentDistanceKm, summarizeOsm, lookupRarity, cachedRarity,
+    lookupCoordinate, RARITY_TIERS,
     validateCustomLocations, migrateState, normalizeRarity, validateProviderRarity, coordinateDistanceKm,
     lookupRarityWithFallback, ELEVATION_URL, OVERPASS_URL, CACHE_TTL, NPS_SOURCE,
     SUBDIVISION_SOURCE, ADMIN2_COUNTRIES, ADMIN2_SOURCE, npsBoundaryIndex, admin2Features,

@@ -48,6 +48,16 @@ check('exact API coordinates and official metadata', () => {
   assert.deepEqual(yellowstone.activities, ['Hiking']);
   assert.deepEqual(yellowstone.states, ['Wyoming', 'Montana', 'Idaho']);
 });
+check('all rarity tiers expose their canonical badge icons and colors', () => {
+  assert.deepEqual(JSON.parse(JSON.stringify(coordinateLookups.RARITY_TIERS)), {
+    'Tourist Trap': { icon: '📸', color: '#94a3b8' },
+    'Beaten Path': { icon: '🥾', color: '#4ade80' },
+    'Regional Staple': { icon: '🧭', color: '#38bdf8' },
+    'Deep Cut': { icon: '🗺️', color: '#c084fc' },
+    'Hidden Gem': { icon: '💎', color: '#fbbf24' },
+    'Uncharted': { icon: '🌌', color: '#f472b6' }
+  });
+});
 check('all 405 records and multiple designations retained', () => {
   assert.equal(normalized.length, 405);
   assert.equal(new Set(normalized.map(p => p.designation)).size, 2);
@@ -140,7 +150,7 @@ check('mobile RPG HUD starts collapsed with an accessible stats toggle', () => {
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261020-travel-biome-tags')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261022-location-rarity')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('storage-risk banner and unfinished-trip recovery controls are present', () => {
@@ -1295,6 +1305,64 @@ check('expedition history escapes names, shows date/elevation/tags and starts me
   assert.ok(achievements.includes('Thin Air'));
   assert.ok(achievements.includes('value="1" max="5"'));
 });
+const savedRarityExpeditions = vm.runInContext('JSON.stringify(AppState.expeditions)', context);
+try {
+  vm.runInContext(`AppState.expeditions=[{
+    ...AppState.expeditions[0],
+    routeCoords:[[37,-120],[38,-119]],
+    routeStops:[
+      {kind:'place',id:'rarity_stop',name:'Hidden Gem Stop',coords:[37,-120],rarityTier:'Hidden Gem'},
+      {kind:'place',id:'rarity_stop_2',name:'Uncharted Stop',coords:[38,-119],rarityTier:'Uncharted'}
+    ]
+  }];renderExpeditionHistory()`, context);
+  check('Travel Log itinerary renders rarity badges for expedition stops', () => {
+    const itinerary = element('travelLogFeed').innerHTML;
+    assert.ok(itinerary.includes('Hidden Gem Stop'));
+    assert.ok(itinerary.includes('💎 Hidden Gem'));
+    assert.ok(itinerary.includes('🌌 Uncharted'));
+  });
+} finally {
+  context.savedRarityExpeditions = savedRarityExpeditions;
+  vm.runInContext('AppState.expeditions=JSON.parse(savedRarityExpeditions);renderExpeditionHistory()', context);
+}
+const rarityEnrichmentHelpers = vm.runInContext('({cachedRarity:CoordinateLookups.cachedRarity, lookupRarityWithFallback:CoordinateLookups.lookupRarityWithFallback, updateExpedition, refreshTravelUI})', context);
+const savedEnrichmentExpeditions = vm.runInContext('JSON.stringify(AppState.expeditions)', context);
+try {
+  vm.runInContext(`
+    AppState.expeditions=[{
+      ...AppState.expeditions[0],id:'exp_rarity_enrichment',
+      routeCoords:[[10.1234,20.2345]],
+      routeStops:[{kind:'place',id:'rarity_missing',name:'Lookup Place',coords:[10.1234,20.2345]}]
+    }];
+    CoordinateLookups.cachedRarity=()=>null;
+    CoordinateLookups.lookupRarityWithFallback=async (lat,lng)=>CoordinateLookups.normalizeRarity({
+      placeName:'Lookup Place',reviewCount:null,popularityScore:30,rarityTier:'Deep Cut',
+      matchedLat:lat,matchedLng:lng,cached:false,source:'Test rarity provider',method:'provider-popularity'
+    },lat,lng);
+    updateExpedition=updated=>{
+      const index=AppState.expeditions.findIndex(item=>item.id===updated.id);
+      AppState.expeditions[index]=updated;
+    };
+    refreshTravelUI=()=>{};
+  `, context);
+  await vm.runInContext("enrichExpeditionStopRarities('exp_rarity_enrichment')", context);
+  vm.runInContext('renderExpeditionHistory()', context);
+  check('missing expedition-stop rarity resolves asynchronously and displays its badge', () => {
+    assert.equal(vm.runInContext("AppState.expeditions[0].routeStops[0].rarityTier", context), 'Deep Cut');
+    assert.ok(element('travelLogFeed').innerHTML.includes('🗺️ Deep Cut'));
+  });
+} finally {
+  context.rarityEnrichmentHelpers = rarityEnrichmentHelpers;
+  context.savedEnrichmentExpeditions = savedEnrichmentExpeditions;
+  vm.runInContext(`
+    CoordinateLookups.cachedRarity=rarityEnrichmentHelpers.cachedRarity;
+    CoordinateLookups.lookupRarityWithFallback=rarityEnrichmentHelpers.lookupRarityWithFallback;
+    updateExpedition=rarityEnrichmentHelpers.updateExpedition;
+    refreshTravelUI=rarityEnrichmentHelpers.refreshTravelUI;
+    AppState.expeditions=JSON.parse(savedEnrichmentExpeditions);
+    renderExpeditionHistory();
+  `, context);
+}
 check('the travel log is its own tab rendering a chronological feed with per-trip mini-maps', () => {
   assert.ok(html.includes('data-tab="travel"'));
   assert.ok(html.includes('id="tabContent-travel"'));
@@ -2588,18 +2656,25 @@ vm.runInContext("AppState.currentTab='bucketlist';", context);
 element('bucketSearch').value = 'Sitka';
 await vm.runInContext('searchBucketPhotonCities("Sitka", ++bucketPhotonSearchVersion)', context);
 check('ledger Photon search filters populated places and renders one-click status options', () => {
-  assert.equal(vm.runInContext('bucketPhotonResults.length', context), 2);
+  assert.equal(vm.runInContext('bucketPhotonResults.length', context), 3);
   const matches = element('bucketCityMatchesList').innerHTML;
   assert.ok(matches.includes('Sitka'));
   assert.ok(matches.includes('Jamestown Bay'));
-  assert.ok(!matches.includes('Ignored attraction'));
+  assert.ok(matches.includes('Ignored attraction'));
   for (const status of ['v', 'w', 't', 'l']) assert.ok(matches.includes(`data-photon-status="${status}"`));
+  vm.runInContext("document.getElementById('bucketFilterType').value='parks';renderBucketCityMatches()", context);
+  assert.ok(element('bucketCityMatchesList').innerHTML.includes('Ignored attraction'));
+  assert.ok(!element('bucketCityMatchesList').innerHTML.includes('Sitka'));
+  vm.runInContext("document.getElementById('bucketFilterType').value='custom';renderBucketCityMatches()", context);
+  assert.ok(element('bucketCityMatchesList').innerHTML.includes('Sitka'));
 });
-const originalCityHelpers = vm.runInContext('({ addCustomPoi, renderParkMarkers, drawFogOfWar, updateAllUI, showNotification, cachedPoliticalAt, cachedBiomeAt, cachedBiomeRegionAt, coordinateIndexes })', context);
+const originalCityHelpers = vm.runInContext('({ addCustomPoi, renderParkMarkers, drawFogOfWar, updateAllUI, showNotification, cachedPoliticalAt, cachedBiomeAt, cachedBiomeRegionAt, coordinateIndexes, commitLedger, customPois:AppState.customPois, lookupCoordinate:CoordinateLookups.lookupCoordinate })', context);
 try {
   vm.runInContext(`
     coordinateIndexes={countries:[{}],states:[{}],counties:[{}],ecoregions:[{}]};
+    AppState.customPois=[];
     cityLookupCalls=[];
+    photonLookupCalls=[];
     cachedPoliticalAt=(lat,lng)=>{cityLookupCalls.push(['political',lat,lng]);return {
       countries:[],states:[],counties:[{id:'02220',name:'Sitka City and Borough'}]
     };};
@@ -2607,23 +2682,40 @@ try {
       ecoregions:[{id:1,name:'Pacific Coastal Mountains',realm:'Nearctic',biomeId:5}],biomeStatus:'matched'
     };};
     cachedBiomeAt=(lat,lng)=>{cityLookupCalls.push(['biome',lat,lng]);return ['5'];};
-    addCustomPoi=poi=>{capturedPhotonCity=poi;};
+    addCustomPoi=poi=>{capturedPhotonCity=poi;AppState.customPois.push(poi);};
+    commitLedger=mutate=>mutate();
+    CoordinateLookups.lookupCoordinate=async (lat,lng,options)=>{
+      photonLookupCalls.push({lat,lng,options});
+      return {
+        elevationFt:123,rarity:{
+          placeName:'Sitka',reviewCount:null,popularityScore:30,rarityTier:'Deep Cut',
+          matchedLat:lat,matchedLng:lng,cached:true,source:'Test rarity provider',method:'provider-popularity'
+        },rarityTier:'Deep Cut',
+        political:{countries:['United States'],states:['Alaska'],counties:[{id:'02220',name:'Sitka City and Borough'}]},
+        ecoregions:[{id:1,name:'Pacific Coastal Mountains',realm:'Nearctic',biomeId:5}],
+        biomes:['5'],biomeStatus:'matched',lookedUpAt:'2026-10-22T00:00:00.000Z'
+      };
+    };
     renderParkMarkers=()=>{};drawFogOfWar=()=>{};updateAllUI=()=>{};showNotification=()=>{};
-    savePhotonCity(bucketPhotonResults[0],'w');
   `, context);
+  await vm.runInContext("savePhotonCity(bucketPhotonResults[0],'w')", context);
   const city = context.capturedPhotonCity;
   const normalizedCity = travelLedger.normalizePoi(city, coordinateLookups);
-  check('Photon city saves resolved political and biome metadata without an Overpass lookup', () => {
+  check('Photon place saves offline geography and attaches rarity and elevation lookup results', () => {
     assert.equal(normalizedCity.name, 'Sitka');
     assert.equal(normalizedCity.category, 'City');
     assert.equal(normalizedCity.status, 'w');
-    assert.equal(normalizedCity.elevationFt, null);
-    assert.equal(normalizedCity.rarity, null);
+    assert.equal(normalizedCity.elevationFt, 123);
+    assert.equal(normalizedCity.rarity.rarityTier, 'Deep Cut');
+    assert.equal(normalizedCity.rarityTier, 'Deep Cut');
     assert.deepEqual(Array.from(normalizedCity.political.countries), ['United States']);
     assert.deepEqual(Array.from(normalizedCity.political.states), ['Alaska']);
     assert.deepEqual(JSON.parse(JSON.stringify(normalizedCity.political.counties)),
       [{ id: '02220', name: 'Sitka City and Borough' }]);
     assert.deepEqual(Array.from(normalizedCity.biomes), ['5']);
+    assert.equal(vm.runInContext('photonLookupCalls.length', context), 1);
+    assert.equal(vm.runInContext('photonLookupCalls[0].options.rarityEndpoint', context),
+      'https://api.devonoverbey.com/rarity');
     assert.deepEqual(Array.from(vm.runInContext('cityLookupCalls.map(call=>call[0])', context)),
       ['political', 'biome-region', 'biome']);
   });
@@ -2639,6 +2731,9 @@ try {
     cachedBiomeAt=originalCityHelpers.cachedBiomeAt;
     cachedBiomeRegionAt=originalCityHelpers.cachedBiomeRegionAt;
     coordinateIndexes=originalCityHelpers.coordinateIndexes;
+    commitLedger=originalCityHelpers.commitLedger;
+    AppState.customPois=originalCityHelpers.customPois;
+    CoordinateLookups.lookupCoordinate=originalCityHelpers.lookupCoordinate;
     AppState.currentTab='map';
   `, context);
   context.fetch = originalPhotonFetch;
@@ -2654,10 +2749,18 @@ vm.runInContext(`
       source:InternationalParks.wikidataSource,memberships:[],areaKm2:null,visitorCount:null}
   ];
   AppState.pins={filter_park:'v',filter_monument:'w'};
+  AppState.parkRarity={filter_park:{rarity:null,rarityTier:'Hidden Gem'}};
   AppState.customPois=[{...customLocation,id:'poi_filter',status:'v'}];
 `, context);
 element('bucketSearch').value = '';
 element('bucketFilterStatus').value = 'all';
+element('bucketFilterType').value = 'all';
+vm.runInContext('renderBucketListView()', context);
+check('catalog rarity badges appear on Travel Ledger cards and park popups', () => {
+  assert.ok(element('bucketListGrid').innerHTML.includes('💎 Hidden Gem'));
+  assert.ok(vm.runInContext('createPopupContent(PARKS[0])', context).includes('💎 Hidden Gem'));
+});
+vm.runInContext('AppState.parkRarity={}', context);
 check('type filter change renders only matching destinations and updates result count', () => {
   element('bucketFilterType').value = 'parks';
   element('bucketFilterType').handlers.change();

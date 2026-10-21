@@ -103,7 +103,7 @@ check('Photon city POIs persist without fabricated elevation or rarity metadata'
   assert.equal(state.customPois[0].rarity, null);
   assert.equal(state.customPois[0].category, 'City');
   assert.deepEqual(migrate(state), state);
-  assert.throws(() => migrate({ version: 2, customPois: [{ ...city, photonId: 'invalid' }] }), /Photon city reference/);
+  assert.throws(() => migrate({ version: 2, customPois: [{ ...city, photonId: 'invalid' }] }), /Photon place reference/);
 });
 check('legacy enriched custom locations retain exact provider metadata in customPois', () => {
   const legacy = {
@@ -432,6 +432,34 @@ check('Local Lore requires full Hidden Gem visits in the current home county and
   assert.equal(ledger.metadataProgress(migrate({ homeBase, customPois })).localLore, 5);
   assert.equal(ledger.metadataProgress(migrate({ customPois })).localLore, 0);
   assert.equal(ledger.metadataProgress(migrate({ homeBase: { ...homeBase, countyId: '06073' }, customPois })).localLore, 1);
+});
+check('rarity achievements include catalog parks, Photon ledger places and expedition-only stops without double counting', () => {
+  const photonPoi = {
+    ...poi, id: 'poi_photon_node_900', source: 'Photon', photonId: 'node:900',
+    elevationFt: null, countyId: '53059', rarityTier: 'Hidden Gem'
+  };
+  const trip = {
+    ...exp, parkIds: ['rarity_park'], customPoiIds: [photonPoi.id], countyIds: [],
+    routeCoords: [[45, -121], [45.1, -121], [45.2, -121]],
+    routeStops: [
+      { kind: 'park', id: 'rarity_park', name: 'Hidden Gem Park', coords: [45, -121], rarityTier: 'Hidden Gem' },
+      { kind: 'poi', id: photonPoi.id, name: 'Photon Hidden Gem', coords: [45.1, -121], rarityTier: 'Hidden Gem' },
+      { kind: 'place', id: 'unmapped-stop', name: 'Uncharted Stop', coords: [45.2, -121], rarityTier: 'Uncharted' }
+    ]
+  };
+  const state = migrate({
+    homeBase: { name: 'Home', lat: 45, lng: -121, radiusKm: 80, countyId: '53059' },
+    pins: { rarity_park: 'v' }, customPois: [photonPoi], expeditions: [trip],
+    parkRarity: { rarity_park: { rarity: null, rarityTier: 'Hidden Gem' } }
+  });
+  assert.equal(state.parkRarity.rarity_park.rarityTier, 'Hidden Gem');
+  const progress = ledger.metadataProgress(state, {
+    parks: [{ id: 'rarity_park', lat: 45, lng: -121, countyId: '53059', biomes: [], ...state.parkRarity.rarity_park }],
+    politicalAt: () => ({ counties: [{ id: '53059', name: 'Test County' }] }),
+    rarityTiers: lookups.RARITY_TIERS
+  });
+  assert.equal(progress.whispers, 3);
+  assert.equal(progress.localLore, 2);
 });
 check('distance and latitude badges use full logged coordinates, not wishlist, transits or home alone', () => {
   const homeBase = { name: 'Home', lat: 0, lng: 0, radiusKm: 80 };

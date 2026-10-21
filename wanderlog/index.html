@@ -972,14 +972,14 @@
     </form>
   </div>
 
-  <script src="./nps-catalog.js?v=20261020-travel-biome-tags"></script>
-  <script src="./national-parks-scratch.js?v=20261020-travel-biome-tags"></script>
-  <script src="./international-parks.js?v=20261020-travel-biome-tags"></script>
-  <script src="./ecoregions.js?v=20261020-travel-biome-tags"></script>
-  <script src="./coordinate-lookups.js?v=20261020-travel-biome-tags"></script>
-  <script src="./micro-states.js?v=20261020-travel-biome-tags"></script>
-  <script src="./travel-ledger.js?v=20261020-travel-biome-tags"></script>
-  <script src="./rarity-config.js?v=20261020-travel-biome-tags"></script>
+  <script src="./nps-catalog.js?v=20261022-location-rarity"></script>
+  <script src="./national-parks-scratch.js?v=20261022-location-rarity"></script>
+  <script src="./international-parks.js?v=20261022-location-rarity"></script>
+  <script src="./ecoregions.js?v=20261022-location-rarity"></script>
+  <script src="./coordinate-lookups.js?v=20261022-location-rarity"></script>
+  <script src="./micro-states.js?v=20261022-location-rarity"></script>
+  <script src="./travel-ledger.js?v=20261022-location-rarity"></script>
+  <script src="./rarity-config.js?v=20261022-location-rarity"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -1337,6 +1337,7 @@
       customPois: [],
       expeditions: [],
       expeditionPromotions: {},
+      parkRarity: {},
       nationalParkScratch: {},
       statusOverrides: { pins: {}, regions: {}, counties: {}, nationalParks: {} },
       currentTab: 'map',
@@ -1525,7 +1526,7 @@
     }
 
     function applyPassport(parsed) {
-      for (const field of ['homeBase', 'pins', 'regions', 'counties', 'customPois', 'expeditions', 'expeditionPromotions', 'nationalParkScratch']) AppState[field] = parsed[field] ?? (field === 'homeBase' ? null : field === 'customPois' || field === 'expeditions' ? [] : {});
+      for (const field of ['homeBase', 'pins', 'regions', 'counties', 'customPois', 'expeditions', 'expeditionPromotions', 'parkRarity', 'nationalParkScratch']) AppState[field] = parsed[field] ?? (field === 'homeBase' ? null : field === 'customPois' || field === 'expeditions' ? [] : {});
       AppState.statusOverrides = parsed.statusOverrides ?? { pins: {}, regions: {}, counties: {}, nationalParks: {} };
       AppState.clearedPolygons = Array.isArray(parsed.clearedPolygons) ? parsed.clearedPolygons : [];
       AppState.routes = Array.isArray(parsed.routes) ? parsed.routes : [];
@@ -1536,7 +1537,7 @@
       return {
         version: 2, homeBase: AppState.homeBase, pins: AppState.pins, regions: AppState.regions,
         counties: AppState.counties, customPois: AppState.customPois, expeditions: AppState.expeditions,
-        expeditionPromotions: AppState.expeditionPromotions,
+        expeditionPromotions: AppState.expeditionPromotions, parkRarity: AppState.parkRarity,
         nationalParkScratch: AppState.nationalParkScratch,
         statusOverrides: AppState.statusOverrides,
         clearedPolygons: AppState.clearedPolygons, routes: AppState.routes, mode: AppState.mode
@@ -1727,9 +1728,12 @@
       const wishlistParks = PARKS.filter(p => AppState.pins[p.id] === 'w');
       const visitedCustomLocations = AppState.customLocations.filter(p => TravelLedger.isVisited(p.status));
       const metadataProgress = TravelLedger.metadataProgress(AppState, {
-        parks: PARKS,
+        parks: PARKS.map(park => ({
+          ...park, ...(AppState.parkRarity[park.id] || {})
+        })),
         politicalAt: cachedPoliticalAt,
-        biomeAt: cachedBiomeAt
+        biomeAt: cachedBiomeAt,
+        rarityTiers: CoordinateLookups.RARITY_TIERS
       });
       
       const biomesSet = metadataProgress.collectedBiomes;
@@ -2966,7 +2970,109 @@
       refreshTravelUI();
     }
 
+    function rarityBadgeMarkup(tier) {
+      const rarity = CoordinateLookups.RARITY_TIERS[tier];
+      if (!rarity) return '';
+      return `<span class="inline-flex items-center gap-1 rounded-full border bg-slate-950/70 px-2 py-0.5 text-[10px] font-semibold" data-rarity-tier="${escapeHtml(tier)}" style="color:${rarity.color};border-color:${rarity.color}" title="Location rarity: ${escapeHtml(tier)}">${escapeHtml(rarity.icon)} ${escapeHtml(tier)}</span>`;
+    }
+    window.rarityBadgeMarkup = rarityBadgeMarkup;
+
+    function catalogRarityFor(park) {
+      const stored = AppState.parkRarity[park.id];
+      if (stored) return stored;
+      if (park.rarity || park.rarityTier) {
+        const rarity = park.rarity ? CoordinateLookups.normalizeRarity(park.rarity, park.lat, park.lng) : null;
+        return { rarity, rarityTier: rarity?.rarityTier || park.rarityTier };
+      }
+      return null;
+    }
+
+    function persistCatalogRarity(park, rarity) {
+      const entry = { rarity: rarity || null, rarityTier: rarity?.rarityTier || 'Uncharted' };
+      commitLedger(() => { AppState.parkRarity[park.id] = entry; });
+      setTimeout(() => updateAllUI(), 0);
+      return entry;
+    }
+
+    const catalogRarityPending = new Map();
+    const catalogRarityQueue = [];
+    const catalogRarityRetryAt = new Map();
+    let catalogRarityActive = 0;
+
+    function drainCatalogRarityQueue() {
+      while (catalogRarityActive < 2 && catalogRarityQueue.length) {
+        const job = catalogRarityQueue.shift();
+        catalogRarityActive++;
+        CoordinateLookups.lookupRarityWithFallback(job.park.lat, job.park.lng, {
+          storage: job.storage, rarityEndpoint: WanderlogConfig.rarityEndpoint
+        }).then(rarity => {
+          catalogRarityRetryAt.delete(job.park.id);
+          try {
+            job.resolve(persistCatalogRarity(job.park, rarity));
+          } catch (error) {
+            console.error('Catalog rarity could not be saved', job.park.id, error);
+            showNotification('Rarity not saved', error.message, '⚠️');
+            job.resolve(null);
+          }
+        }).catch(error => {
+          console.error('Catalog rarity lookup unavailable', job.park.id, error);
+          catalogRarityRetryAt.set(job.park.id, Date.now() + 5 * 60 * 1000);
+          if (['v', 'l'].includes(job.status)) {
+            showNotification('Rarity lookup unavailable', `${job.park.name}: ${error.message}`, '⚠️');
+          }
+          job.resolve(null);
+        }).finally(() => {
+          catalogRarityActive--;
+          catalogRarityPending.delete(job.park.id);
+          drainCatalogRarityQueue();
+        });
+      }
+    }
+
+    function ensureCatalogRarity(park, status = destinationStatus(park)) {
+      if (AppState.viewOnly || !Number.isFinite(park.lat) || !Number.isFinite(park.lng)) return Promise.resolve(null);
+      const known = catalogRarityFor(park);
+      if (known?.rarityTier && CoordinateLookups.RARITY_TIERS[known.rarityTier]) return Promise.resolve(known);
+      if ((catalogRarityRetryAt.get(park.id) || 0) > Date.now()) return Promise.resolve(null);
+      const hasVisitorCount = park.intl &&
+        park.visitorCount !== null && park.visitorCount !== undefined;
+      if (!hasVisitorCount && !['v', 'l'].includes(status)) return Promise.resolve(null);
+      if (typeof localStorage === 'undefined') return Promise.resolve(null);
+      let cached;
+      try {
+        cached = CoordinateLookups.cachedRarity(park.lat, park.lng, localStorage);
+      } catch (error) {
+        console.error('Catalog rarity cache lookup failed', park.id, error);
+        showNotification('Rarity cache unavailable', error.message, '⚠️');
+        return Promise.resolve(null);
+      }
+      if (cached) {
+        try { return Promise.resolve(persistCatalogRarity(park, cached)); }
+        catch (error) {
+          console.error('Cached catalog rarity could not be saved', park.id, error);
+          showNotification('Rarity not saved', error.message, '⚠️');
+          return Promise.resolve(null);
+        }
+      }
+      if (catalogRarityPending.has(park.id)) return catalogRarityPending.get(park.id);
+      let resolve;
+      const promise = new Promise(done => { resolve = done; });
+      catalogRarityPending.set(park.id, promise);
+      catalogRarityQueue.push({ park, status, resolve, storage: localStorage });
+      drainCatalogRarityQueue();
+      return promise;
+    }
+
+    function catalogDestinationWithRarity(park) {
+      const rarity = catalogRarityFor(park);
+      return rarity ? { ...park, ...rarity } : park;
+    }
+
     function createPopupContent(p) {
+      if (PARKS.includes(p)) {
+        ensureCatalogRarity(p);
+        p = catalogDestinationWithRarity(p);
+      }
       const cur = destinationStatus(p);
       const biomeTags = p.biomes.map(b => {
         const info = BIOMES[b] || { name: b, icon: '🌿' };
@@ -2980,6 +3086,7 @@
           <div class="flex items-start justify-between gap-2 border-b border-slate-700 pb-1.5">
             <div>
               <h4 class="font-bold text-sm text-amber-200">${escapeHtml(p.name)}</h4>
+              ${rarityBadgeMarkup(p.rarityTier || p.rarity?.rarityTier)}
               <span class="text-[11px] text-slate-400">${escapeHtml(p.state || p.country || '')}</span>
             </div>
             <span class="text-xs px-2 py-0.5 rounded font-bold uppercase ${
@@ -3049,8 +3156,10 @@
           const p = PARKS.find(item => item.id === parkId);
           showNotification('🗺️ Fog Pierced!', `You cleared the fog around ${p ? p.name : 'new territory'}!`, '✨');
         }
+        const catalogPark = PARKS.find(item => item.id === parkId);
+        if (catalogPark && ['v', 'l'].includes(status)) ensureCatalogRarity(catalogPark, status);
 
-      renderParkMarkers();
+        renderParkMarkers();
       drawFogOfWar();
       updateAllUI();
     }
@@ -4737,6 +4846,11 @@
     let bucketPhotonStatus = '';
     const bucketPhotonSaving = new Set();
     const PHOTON_CITY_PLACE_TYPES = new Set(['city', 'town', 'village', 'municipality', 'hamlet', 'island']);
+    const PHOTON_NATURE_TYPES = new Set([
+      'leisure:park', 'leisure:nature_reserve', 'boundary:protected_area', 'boundary:national_park',
+      'tourism:attraction', 'tourism:camp_site', 'natural:beach', 'natural:cave_entrance',
+      'natural:peak', 'natural:waterfall', 'natural:water', 'natural:wood'
+    ]);
 
     function renderBucketCityMatches() {
       const tray = document.getElementById('bucketCityMatches');
@@ -4744,7 +4858,7 @@
       const status = document.getElementById('bucketCityMatchesStatus');
       const query = document.getElementById('bucketSearch').value.trim();
       const type = document.getElementById('bucketFilterType').value;
-      if (query.length < 2 || !['all', 'cities'].includes(type)) {
+      if (query.length < 2 || !['all', 'parks', 'custom', 'cities'].includes(type)) {
         tray.classList.add('hidden');
         list.innerHTML = '';
         return;
@@ -4754,14 +4868,19 @@
       const saved = new Set(AppState.customPois
         .filter(poi => poi.source === 'Photon' && poi.photonId)
         .map(poi => poi.photonId));
-      const savedCities = AppState.customPois.filter(poi => poi.category === 'City');
-      const matches = bucketPhotonResults.filter(place => !saved.has(place.photonId) &&
-        !savedCities.some(poi => poi.name.trim().toLowerCase() === place.name.toLowerCase() &&
+      const savedPlaces = AppState.customPois.filter(poi => poi.source === 'Photon');
+      const typeMatches = bucketPhotonResults.filter(place =>
+        (type !== 'parks' || place.isNaturePlace) &&
+        (type !== 'cities' || place.category === 'City'));
+      const matches = typeMatches.filter(place =>
+        !saved.has(place.photonId) &&
+        !savedPlaces.some(poi => poi.name.trim().toLowerCase() === place.name.toLowerCase() &&
           Number.isFinite(poi.lat) && Number.isFinite(poi.lng) &&
           CoordinateLookups.coordinateDistanceKm(place.lat, place.lng, poi.lat, poi.lng) < 0.25)).slice(0, 5);
-      status.textContent = !matches.length && bucketPhotonResults.length
-        ? 'All matching cities and towns are already in your ledger.'
-        : bucketPhotonStatus;
+      status.textContent = !typeMatches.length && bucketPhotonResults.length
+        ? type === 'parks' ? 'No parks or natural landmarks match this search.' :
+          type === 'cities' ? 'No cities or towns match this search.' : 'No matching places for this filter.'
+        : !matches.length && typeMatches.length ? 'All matching places are already in your ledger.' : bucketPhotonStatus;
       list.innerHTML = matches.map(place => `
         <article class="p-3 rounded-xl border border-slate-700 bg-slate-900/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div class="min-w-0">
@@ -4777,7 +4896,7 @@
         </article>
       `).join('');
       if (!matches.length && !bucketPhotonStatus && !bucketPhotonResults.length) {
-        status.textContent = 'No city or town matches found.';
+        status.textContent = 'No places found.';
       }
     }
 
@@ -4792,6 +4911,7 @@
       try {
         const params = new URLSearchParams({ q: query, limit: '30' });
         PHOTON_CITY_PLACE_TYPES.forEach(placeType => params.append('osm_tag', `place:${placeType}`));
+        PHOTON_NATURE_TYPES.forEach(tag => params.append('osm_tag', tag));
         const response = await fetch(`https://photon.komoot.io/api/?${params}`, { signal: controller.signal });
         if (!response.ok) throw new Error(`Photon search failed (HTTP ${response.status}).`);
         const data = await response.json();
@@ -4800,10 +4920,14 @@
 
         const seen = new Set();
         bucketPhotonResults = data.features
-          .filter(feature => feature?.properties?.osm_key === 'place' &&
-            PHOTON_CITY_PLACE_TYPES.has(feature.properties.osm_value))
+          .filter(feature => {
+            const { osm_key: key, osm_value: value } = feature?.properties || {};
+            return (key === 'place' && PHOTON_CITY_PLACE_TYPES.has(value)) ||
+              PHOTON_NATURE_TYPES.has(`${key}:${value}`);
+          })
           .map(feature => {
             const properties = feature.properties;
+            const isCity = properties.osm_key === 'place';
             const coordinates = feature.geometry?.coordinates;
             const osmTypes = { n: 'node', w: 'way', r: 'relation' };
             const osmType = osmTypes[String(properties.osm_type).toLowerCase()] ||
@@ -4812,7 +4936,7 @@
                 !Number.isSafeInteger(properties.osm_id) || typeof properties.name !== 'string' ||
                 !properties.name.trim() || properties.name.trim().length > 150 || feature.geometry?.type !== 'Point' ||
                 !Array.isArray(coordinates) || coordinates.length !== 2) {
-              throw new Error('Photon returned an invalid city or town result.');
+              throw new Error('Photon returned an invalid place result.');
             }
             const [lng, lat] = coordinates;
             CoordinateLookups.validateCoordinates(lat, lng);
@@ -4827,20 +4951,21 @@
               .map(part => part.trim()))].join(', ');
             return {
               photonId, osmType, osmId: properties.osm_id, name: properties.name.trim(),
+              category: isCity ? 'City' : 'Place', isNaturePlace: !isCity,
               context, state, country, countryCode: typeof properties.countrycode === 'string'
                 ? properties.countrycode.toUpperCase() : '',
               lat, lng
             };
           }).filter(Boolean);
         bucketPhotonStatus = bucketPhotonResults.length
-          ? 'Choose a status to save a city or town. Rarity is not queried for these entries.'
-          : 'No city or town matches found.';
+          ? 'Choose a status to save a place. Rarity and elevation will be looked up after saving.'
+          : 'No places found.';
         if (AppState.currentTab === 'bucketlist') renderBucketListView();
       } catch (error) {
         if (version !== bucketPhotonSearchVersion || (error.name === 'AbortError' && !timedOut)) return;
         console.error('Photon city search failed', error);
         bucketPhotonResults = [];
-        bucketPhotonStatus = timedOut ? 'City search timed out. Try again.' : `City search failed: ${error.message}`;
+        bucketPhotonStatus = timedOut ? 'Place search timed out. Try again.' : `Place search failed: ${error.message}`;
         if (AppState.currentTab === 'bucketlist') renderBucketListView();
       } finally {
         clearTimeout(timeout);
@@ -4855,13 +4980,13 @@
       const version = ++bucketPhotonSearchVersion;
       const query = document.getElementById('bucketSearch').value.trim();
       bucketPhotonResults = [];
-      bucketPhotonStatus = query.length < 2 ? '' : 'Searching Photon for cities and towns...';
+      bucketPhotonStatus = query.length < 2 ? '' : 'Searching Photon for places...';
       if (AppState.currentTab === 'bucketlist') renderBucketListView();
       if (query.length < 2) return;
       bucketPhotonSearchTimer = setTimeout(() => searchBucketPhotonCities(query, version), 150);
     }
 
-    function savePhotonCity(place, status) {
+    async function savePhotonCity(place, status) {
       if (AppState.viewOnly) throw new Error('Shared passports are read-only.');
       if (!Object.hasOwn(TravelLedger.ranks, status)) throw new Error('Choose a supported travel status.');
       const existing = AppState.customPois.find(poi => poi.source === 'Photon' && poi.photonId === place.photonId);
@@ -4877,12 +5002,13 @@
       const biomeMetadata = cachedBiomeRegionAt(place.lat, place.lng);
       const biomes = cachedBiomeAt(place.lat, place.lng);
       if (!political || !biomeMetadata || !Array.isArray(biomes)) {
-        throw new Error('Could not resolve this city’s offline geography. The city was not saved.');
+        throw new Error('Could not resolve this place’s offline geography. The place was not saved.');
       }
+      const poiId = `poi_photon_${place.osmType}_${place.osmId}`;
       addCustomPoi({
-        id: `poi_photon_${place.osmType}_${place.osmId}`,
+        id: poiId,
         photonId: place.photonId, source: 'Photon', name: place.name, status,
-        lat: place.lat, lng: place.lng, category: 'City', countryCode: place.countryCode,
+        lat: place.lat, lng: place.lng, category: place.category || 'Place', countryCode: place.countryCode,
         political: {
           countries: political.countries.length ? political.countries : (place.country ? [place.country] : []),
           states: political.states.length ? political.states : (place.state ? [place.state] : []),
@@ -4891,10 +5017,31 @@
         ecoregions: biomeMetadata.ecoregions, biomes, biomeStatus: biomeMetadata.biomeStatus,
         lookedUpAt: new Date().toISOString()
       });
+      let lookupWarnings = [];
+      try {
+        const resolved = await CoordinateLookups.lookupCoordinate(place.lat, place.lng, {
+          indexes: coordinateIndexes, geoContains: d3.geoContains, storage: localStorage,
+          rarityEndpoint: WanderlogConfig.rarityEndpoint
+        });
+        lookupWarnings = resolved.lookupWarnings || [];
+        const savedPoi = AppState.customPois.find(poi => poi.id === poiId);
+        if (savedPoi) {
+          commitLedger(() => Object.assign(savedPoi, {
+            elevationFt: resolved.elevationFt, rarity: resolved.rarity, rarityTier: resolved.rarityTier,
+            political: resolved.political, ecoregions: resolved.ecoregions, biomes: resolved.biomes,
+            biomeStatus: resolved.biomeStatus, lookedUpAt: resolved.lookedUpAt
+          }));
+        }
+      } catch (error) {
+        console.error('Photon place metadata lookup failed after saving', poiId, error);
+        lookupWarnings = [`${place.name}: ${error.message}`];
+      }
       renderParkMarkers();
       drawFogOfWar();
       updateAllUI();
-      showNotification('City saved', `${place.name} added to your Travel Ledger.`, '🏙️');
+      showNotification(lookupWarnings?.length ? 'Place saved with fallback metadata' : 'Place saved',
+        lookupWarnings?.length ? lookupWarnings.join(' ') : `${place.name} added to your Travel Ledger.`,
+        lookupWarnings?.length ? '⚠️' : place.category === 'City' ? '🏙️' : '📍');
     }
 
     function renderBucketListView() {
@@ -4940,6 +5087,8 @@
 
       filtered.slice(start, end).forEach(p => {
         const cur = destinationStatus(p);
+        if (PARKS.includes(p)) ensureCatalogRarity(p, cur);
+        p = catalogDestinationWithRarity(p);
         const card = document.createElement('div');
         card.className = `p-3.5 rounded-2xl border ledger-card flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
           cur === 'l' ? 'border-blue-500/40 bg-blue-950/10' :
@@ -4949,7 +5098,7 @@
 
         card.innerHTML = `
           <div class="min-w-0 w-full sm:w-auto">
-            <h4 class="font-bold text-sm text-slate-200">${escapeHtml(p.name)}</h4>
+            <div class="flex flex-wrap items-center gap-2"><h4 class="font-bold text-sm text-slate-200">${escapeHtml(p.name)}</h4>${rarityBadgeMarkup(p.rarityTier || p.rarity?.rarityTier)}</div>
             <p class="text-xs" style="color:${TravelLedger.colors[cur] || '#94a3b8'}">${TravelLedger.labels[cur] || 'Unexplored'}${cur === 'l' ? ' 🏰' : ''}</p>
             ${p.designation ? `<p class="text-[11px] text-amber-300">${escapeHtml(p.designation)}</p>` : ''}
             ${p.url ? `<a href="${escapeHtml(p.url)}" target="_blank" rel="noopener noreferrer" class="text-[11px] text-sky-300 underline">${p.intl ? 'Park information source' : 'Official NPS site'}</a>` : ''}
@@ -5148,7 +5297,7 @@
 
     // Bucket List Search & Filter listeners
     document.getElementById('bucketSearch').addEventListener('input', handleBucketSearchInput);
-    document.getElementById('bucketCityMatchesList').addEventListener('click', event => {
+    document.getElementById('bucketCityMatchesList').addEventListener('click', async event => {
       const button = event.target.closest('button[data-photon-status]');
       if (!button || button.disabled) return;
       const place = bucketPhotonResults.find(item => item.photonId === button.dataset.photonId);
@@ -5160,10 +5309,11 @@
       if (bucketPhotonSaving.has(key)) return;
       bucketPhotonSaving.add(key);
       try {
-        savePhotonCity(place, button.dataset.photonStatus);
+        button.disabled = true;
+        await savePhotonCity(place, button.dataset.photonStatus);
       } catch (error) {
-        console.error('Photon city save failed', error);
-        bucketPhotonStatus = `City not saved: ${error.message}`;
+        console.error('Photon place save failed', error);
+        bucketPhotonStatus = `Place not saved: ${error.message}`;
         if (AppState.currentTab === 'bucketlist') renderBucketListView();
       } finally {
         bucketPhotonSaving.delete(key);
@@ -5287,7 +5437,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261020-travel-biome-tags"></script>
+  <script src="./expedition-ui.js?v=20261022-location-rarity"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);

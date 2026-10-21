@@ -5,6 +5,9 @@
   const colors = Object.freeze({ w: '#ec4899', t: '#64748b', v: '#10b981', l: '#3b82f6' });
   const transitTags = Object.freeze({ road: 'Drive / Road Trip', awd: 'AWD/Off-Road', ferry: 'Ferry / Boat', flight: 'Flight', rail: 'Rail / Train', foot: 'Walk / Hike' });
   const transitIcons = Object.freeze({ road: '🚙', awd: '🚙', ferry: '⛴️', flight: '✈️', rail: '🚆', foot: '🥾' });
+  const rarityTierNames = Object.freeze([
+    'Tourist Trap', 'Beaten Path', 'Regional Staple', 'Deep Cut', 'Hidden Gem', 'Uncharted'
+  ]);
   const purposeTags = Object.freeze({
     photography: 'Photography', anniversary: 'Anniversary', family: 'Friends/Family', solo: 'Solo', work: 'Work'
   });
@@ -130,7 +133,18 @@
           (stop.kind !== 'place' && !(stop.kind === 'county' ? exp.countyIds : stop.kind === 'park' ? exp.parkIds : exp.customPoiIds).includes(stop.id)) ||
           (stop.elevationFt !== undefined && !Number.isFinite(stop.elevationFt)) ||
           (stop.terrestrial !== undefined && typeof stop.terrestrial !== 'boolean'))) throw new Error('Invalid expedition stops.');
-        exp.routeStops.forEach(stop => lookups.validateCoordinates(...stop.coords));
+        exp.routeStops.forEach(stop => {
+          lookups.validateCoordinates(...stop.coords);
+          if (stop.rarityTier !== undefined && !Object.hasOwn(lookups.RARITY_TIERS, stop.rarityTier)) {
+            throw new Error('Invalid expedition stop rarity tier.');
+          }
+          if (stop.rarity !== undefined && stop.rarity !== null) {
+            const rarity = lookups.normalizeRarity(stop.rarity, ...stop.coords);
+            if (stop.rarityTier !== undefined && stop.rarityTier !== rarity.rarityTier) {
+              throw new Error('Expedition stop rarity does not match its tier.');
+            }
+          }
+        });
       }
       if (exp.routeLegs !== undefined) {
         if (!exp.routeStops?.length || exp.routeStops.length > 100 || !Array.isArray(exp.routeLegs) ||
@@ -190,6 +204,13 @@
         transitTags: validateTags(exp.transitTags, transitTags),
         purposeTags: validateTags(exp.purposeTags, purposeTags),
         routeCoords: exp.routeCoords.map(point => [...point]),
+        ...(exp.routeStops ? { routeStops: exp.routeStops.map(stop => {
+          if (stop.rarity === undefined || stop.rarity === null) {
+            return { ...stop, coords: [...stop.coords] };
+          }
+          const rarity = lookups.normalizeRarity(stop.rarity, ...stop.coords);
+          return { ...stop, coords: [...stop.coords], rarity, rarityTier: rarity.rarityTier };
+        }) } : {}),
         // Normalize legacy road-routed ferries without discarding imported tracks.
         ...(exp.routeLegs ? { routeLegs: exp.routeLegs.map((leg, index) => ({
           ...leg,
@@ -210,13 +231,13 @@
         poi.name.length > 150 || !Object.hasOwn(ranks, poi.status)) throw new Error('Invalid custom POI.');
     lookups.validateCoordinates(poi.lat, poi.lng);
     if (poi.elevation) lookups.validateCustomLocations([poi]);
-    const photonCity = poi.source === 'Photon' && poi.category === 'City';
-    if (photonCity && !/^(?:node|way|relation):\d+$/.test(poi.photonId || '')) {
-      throw new Error('Invalid Photon city reference.');
+    const photonPlace = poi.source === 'Photon';
+    if (photonPlace && !/^(?:node|way|relation):\d+$/.test(poi.photonId || '')) {
+      throw new Error('Invalid Photon place reference.');
     }
     const elevationFt = poi.elevation?.feet ?? poi.elevationFt;
-    if ((!photonCity && !Number.isFinite(elevationFt)) ||
-        (photonCity && elevationFt !== undefined && elevationFt !== null && !Number.isFinite(elevationFt)) ||
+    if ((!photonPlace && !Number.isFinite(elevationFt)) ||
+        (photonPlace && elevationFt !== undefined && elevationFt !== null && !Number.isFinite(elevationFt)) ||
         !Array.isArray(poi.biomes) ||
         poi.biomes.some(biome => !/^(?:[1-9]|1[0-4])$/.test(biome))) throw new Error('Invalid POI elevation or biomes.');
     const political = poi.political || {
@@ -233,7 +254,7 @@
           !validCountyId(county?.id) || typeof county.name !== 'string')) throw new Error('Invalid POI regions.');
     const rarity = poi.rarity ? lookups.normalizeRarity(poi.rarity, poi.lat, poi.lng) : null;
     const rarityTier = rarity?.rarityTier ?? poi.rarityTier;
-    if (rarityTier !== undefined && !['Uncharted', 'Hidden Gem', 'Deep Cut', 'Regional Staple', 'Beaten Path', 'Tourist Trap'].includes(rarityTier)) {
+    if (rarityTier !== undefined && !Object.hasOwn(lookups.RARITY_TIERS, rarityTier)) {
       throw new Error('Invalid POI rarity tier.');
     }
     const reviewCount = rarity ? rarity.reviewCount : poi.reviewCount ?? null;
@@ -276,6 +297,7 @@
       throw new Error('Invalid National Parks scratch records.');
     }
     const regions = validateStatuses(legacy.regions ?? {});
+    const parkRarity = validateParkRarity(parsed.parkRarity ?? legacy.parkRarity ?? {}, lookups, catalog);
     const expeditions = validateExpeditions(legacy.expeditions ?? [], lookups).map(exp => ({
       ...exp, parkIds: [...new Set(exp.parkIds.map(id => catalog.aliases[id] || id))],
       ...(exp.routeStops ? { routeStops: exp.routeStops.map(stop => ({
@@ -294,6 +316,7 @@
     }
     const migrated = {
       ...legacy, pins, regions, counties, customPois, expeditions, nationalParkScratch: { ...nationalParkScratch },
+      parkRarity,
       statusOverrides: validateStatusOverrides(parsed.statusOverrides),
       expeditionPromotions: validatePromotions(parsed.expeditionPromotions),
       homeBase: homeBase ? { ...homeBase, radiusKm: homeRadiusKm } : null
@@ -420,6 +443,30 @@
             (ranks[change.before] || 0) >= ranks[change.after]) throw new Error('Invalid expedition promotion records.');
         result[field][id] = { before: change.before, after: change.after };
       }
+    }
+    return result;
+  }
+
+  function validateParkRarity(value = {}, lookups, catalog) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      throw new Error('Invalid catalog rarity records.');
+    }
+    const result = {};
+    for (const [rawId, entry] of Object.entries(value)) {
+      const id = catalog.aliases[rawId] || rawId;
+      if (!validId(rawId) || !validId(id) || Object.hasOwn(result, id) ||
+          !entry || typeof entry !== 'object' || Array.isArray(entry) ||
+          !Object.hasOwn(lookups.RARITY_TIERS, entry.rarityTier)) {
+        throw new Error('Invalid catalog rarity record.');
+      }
+      let rarity = null;
+      if (entry.rarity !== null && entry.rarity !== undefined) {
+        const lat = entry.rarity.matchedLat ?? entry.rarity.sampledAt?.lat;
+        const lng = entry.rarity.matchedLng ?? entry.rarity.sampledAt?.lng;
+        rarity = lookups.normalizeRarity(entry.rarity, lat, lng);
+        if (rarity.rarityTier !== entry.rarityTier) throw new Error('Catalog rarity does not match its tier.');
+      }
+      result[id] = { rarity, rarityTier: entry.rarityTier };
     }
     return result;
   }
@@ -605,7 +652,9 @@
     }
   }
 
-  function metadataProgress(state, { parks = [], politicalAt = () => null, biomeAt = () => [] } = {}) {
+  function metadataProgress(state, {
+    parks = [], politicalAt = () => null, biomeAt = () => [], rarityTiers = null
+  } = {}) {
     const pois = state.customPois.filter(poi => isVisited(poi.status));
     const trips = state.expeditions;
     const visitedParks = parks.filter(park => isVisited(state.pins[park.id]));
@@ -638,6 +687,52 @@
         (state.homeBase.countyId ? [state.homeBase.countyId] : [])) : []);
     const homeCountries = new Set(state.homeBase
       ? sample(state.homeBase.lat, state.homeBase.lng, 'political')?.countries || [] : []);
+    const parkById = new Map(parks.map(park => [park.id, park]));
+    const poiById = new Map(state.customPois.map(poi => [poi.id, poi]));
+    const rarityEntities = new Map();
+    const addRarityEntity = (key, tier, location) => {
+      const knownTier = rarityTiers ? Object.hasOwn(rarityTiers, tier) : rarityTierNames.includes(tier);
+      if (key && knownTier && !rarityEntities.has(key)) {
+        rarityEntities.set(key, { tier, location });
+      }
+    };
+    visitedParks.forEach(park => addRarityEntity(`park:${park.id}`,
+      park.rarityTier ?? park.rarity?.rarityTier, park));
+    pois.forEach(poi => addRarityEntity(`poi:${poi.id}`, poi.rarityTier, poi));
+    trips.forEach(trip => (trip.routeStops || []).forEach(stop => {
+      const linked = stop.kind === 'park' ? parkById.get(stop.id) :
+        stop.kind === 'poi' ? poiById.get(stop.id) : null;
+      const tier = stop.rarityTier ?? linked?.rarityTier ?? linked?.rarity?.rarityTier;
+      const placeKey = Array.isArray(stop.coords) && stop.coords.length === 2 &&
+        stop.coords.every(Number.isFinite)
+        ? `place:${stop.coords.map(value => Number(value.toFixed(5))).join(',')}`
+        : validId(stop.id) ? `place:${stop.id}` : null;
+      const key = stop.kind === 'park' ? `park:${stop.id}` :
+        stop.kind === 'poi' ? `poi:${stop.id}` :
+        stop.photonId ? `photon:${stop.photonId}` :
+          stop.kind === 'county' ? `county:${stop.id}` :
+            stop.kind === 'place' ? placeKey : null;
+      addRarityEntity(key, tier, stop);
+    }));
+    const locationInHomeCounty = location => {
+      if (!homeCounties.size) return false;
+      const counties = new Set([
+        ...(location.political?.counties || []).map(county => county.id),
+        ...(location.countyId ? [location.countyId] : []),
+        ...(location.kind === 'county' ? [location.id] : [])
+      ]);
+      const coords = location.coords || (
+        Number.isFinite(location.lat) && Number.isFinite(location.lng) ? [location.lat, location.lng] : null
+      );
+      if (!counties.size && coords) {
+        sample(coords[0], coords[1], 'political')?.counties?.forEach(county => counties.add(county.id));
+      }
+      return [...counties].some(id => homeCounties.has(id));
+    };
+    const whispers = [...rarityEntities.values()]
+      .filter(entity => ['Uncharted', 'Hidden Gem'].includes(entity.tier)).length;
+    const localLore = [...rarityEntities.values()]
+      .filter(entity => entity.tier === 'Hidden Gem' && locationInHomeCounty(entity.location)).length;
     const awdLocations = new Set();
     trips.filter(trip => trip.transitTags.includes('awd')).forEach(trip => {
       if (trip.routeLegs) {
@@ -703,7 +798,7 @@
         trips.filter(exp => exp.minElevationFt !== null && exp.minElevationFt < 0).length,
       thinAir: pois.filter(poi => poi.elevationFt >= 10000).length +
         trips.filter(exp => exp.maxElevationFt !== null && exp.maxElevationFt >= 10000).length,
-      whispers: pois.filter(poi => ['Uncharted', 'Hidden Gem'].includes(poi.rarityTier)).length,
+      whispers,
       waterfalls: pois.filter(poi => poi.category?.trim().toLowerCase() === 'waterfall').length,
       overlander: awdLocations.size,
       mariner: trips.filter(exp => exp.transitTags.includes('ferry')).length,
@@ -711,8 +806,7 @@
         trips.filter(exp => exp.purposeTags.includes('photography') || /\bphotography\b/i.test(exp.reason || '')).length,
       southernCross: trips.filter(trip => overnightNights(trip) >= 1 &&
         trip.routeCoords.some(([lat]) => lat < 0)).length,
-      localLore: pois.filter(poi => poi.rarityTier === 'Hidden Gem' &&
-        poi.political.counties.some(county => homeCounties.has(county.id))).length,
+      localLore,
       zeroMeridian: state.homeBase ? 1 : 0,
       beyondHorizon: coordinates.some(point => state.homeBase && distanceMiles(state.homeBase, point) > 1000) ? 1 : 0,
       international: homeCountries.size ? coordinates.filter(point => {
