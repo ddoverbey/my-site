@@ -352,6 +352,29 @@ check('expedition biome credit samples route geometry between stops with a bound
   assert.ok(biomeLookups > 400, 'densely samples this long route within the configured ceiling');
   assert.ok(biomeLookups <= 502, 'caps expensive route lookups plus the two stops');
 });
+check('expedition biome sampling catches a biome on a route shorter than the previous sample interval', () => {
+  const state = migrate({ expeditions: [{
+    ...exp,
+    transitTags: ['road'],
+    routeCoords: [[0, 0], [0, 0.35]],
+    routeStops: [
+      { kind: 'place', id: 'route_start', name: 'Route Start', coords: [0, 0] },
+      { kind: 'place', id: 'route_end', name: 'Route End', coords: [0, 0.35] }
+    ],
+    routeLegs: [{
+      mode: 'road', routeSource: 'uploaded', routeCoords: [[0, 0], [0, 0.35]], countyIds: []
+    }]
+  }] });
+  const sampledCoordinates = [];
+  const progress = ledger.metadataProgress(state, {
+    biomeAt: (lat, lng) => {
+      sampledCoordinates.push([lat, lng]);
+      return lng > 0.3 && lng < 0.34 ? ['short-route-biome'] : [];
+    }
+  });
+  assert.ok(progress.biomesByExpedition.exp_test.includes('short-route-biome'));
+  assert.ok(sampledCoordinates.length > 2, 'adds an interior lookup on a roughly 24-mile route');
+});
 check('tag achievements reach exact counts without collapsing expeditions into separate trips', () => {
   const state = migrate({
     customPois: [poi],

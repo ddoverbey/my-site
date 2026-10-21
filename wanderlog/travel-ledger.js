@@ -563,7 +563,7 @@
     return 3958.7613 * 2 * Math.asin(Math.sqrt(Math.min(1, Math.max(0, haversine))));
   }
 
-  const ROUTE_BIOME_SAMPLE_MILES = 25;
+  const ROUTE_BIOME_SAMPLE_MILES = 22;
   const MAX_ROUTE_BIOME_SAMPLES = 500;
 
   function interpolateRouteCoordinate(start, end, fraction) {
