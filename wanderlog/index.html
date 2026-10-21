@@ -639,7 +639,7 @@
             <span class="text-[10px] text-slate-500">of 14 terrestrial biomes</span>
           </div>
           <div class="rpg-panel p-4 rounded-2xl text-center">
-            <span class="text-[10px] uppercase text-slate-400 font-mono">Rare Biomes</span>
+            <span class="text-[10px] uppercase text-slate-400 font-mono">Rare+ Biomes</span>
             <div class="text-2xl font-bold font-mono text-rose-400 mt-1" id="statRareBiomes">0</div>
             <span class="text-[10px] text-slate-500" id="statRareTotal">Area-based rarity loading</span>
           </div>
@@ -650,14 +650,15 @@
           <div class="flex items-center justify-between mb-4">
             <div>
               <h3 class="cinzel text-xl font-bold text-amber-200">Biome Pokédex</h3>
-              <p class="text-xs text-slate-400">Collect 14 real terrestrial biomes at destination coordinates</p>
+              <p class="text-xs text-slate-400">Collect 14 terrestrial biomes from logged stops and land routes</p>
             </div>
             <span class="text-xs font-mono text-amber-400 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30" id="biomeCompletionRatio">--/14 Found</span>
           </div>
           <p class="text-xs text-slate-400 mb-3">
             <a href="https://ecoregions.appspot.com/" target="_blank" rel="noopener noreferrer" class="text-sky-300 underline">RESOLVE Ecoregions 2017</a>
             (updated WWF framework), <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer" class="underline">CC BY 4.0</a>.
-            Game rarity: rare &lt;2%, uncommon 2–10%, common ≥10% of classified biome land area.
+            Rarity by classified biome land area: Common 10%+, Uncommon 2–&lt;10%, Rare 0.5–&lt;2%,
+            Epic 0.25–&lt;0.5%, Legendary 0.1–&lt;0.25%, Mythic &lt;0.1%. Anomaly Seeker counts Rare and higher.
             Point samples do not describe an entire park; oceans, rock/ice, and unclassified points earn no terrestrial biome.
           </p>
           <p id="biomeCatalogStatus" class="text-xs text-slate-400 mb-3" role="status" aria-live="polite">Loading ecoregion mappings...</p>
@@ -972,14 +973,14 @@
     </form>
   </div>
 
-  <script src="./nps-catalog.js?v=20261021-land-only-route-biomes"></script>
-  <script src="./national-parks-scratch.js?v=20261021-land-only-route-biomes"></script>
-  <script src="./international-parks.js?v=20261021-land-only-route-biomes"></script>
-  <script src="./ecoregions.js?v=20261021-land-only-route-biomes"></script>
-  <script src="./coordinate-lookups.js?v=20261021-land-only-route-biomes"></script>
-  <script src="./micro-states.js?v=20261021-land-only-route-biomes"></script>
-  <script src="./travel-ledger.js?v=20261021-land-only-route-biomes"></script>
-  <script src="./rarity-config.js?v=20261021-land-only-route-biomes"></script>
+  <script src="./nps-catalog.js?v=20261021-biome-rarity-tiers"></script>
+  <script src="./national-parks-scratch.js?v=20261021-biome-rarity-tiers"></script>
+  <script src="./international-parks.js?v=20261021-biome-rarity-tiers"></script>
+  <script src="./ecoregions.js?v=20261021-biome-rarity-tiers"></script>
+  <script src="./coordinate-lookups.js?v=20261021-biome-rarity-tiers"></script>
+  <script src="./micro-states.js?v=20261021-biome-rarity-tiers"></script>
+  <script src="./travel-ledger.js?v=20261021-biome-rarity-tiers"></script>
+  <script src="./rarity-config.js?v=20261021-biome-rarity-tiers"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -1145,7 +1146,7 @@
       },
       {
         id: 'rare_biomes', title: 'Anomaly Seeker', progress: s => s.rareBiomesCount,
-        tiers: [{ goal: 3, title: 'Anomaly Seeker', desc: 'Unlock 3 Rare Biomes' }]
+        tiers: [{ goal: 3, title: 'Anomaly Seeker', desc: 'Unlock 3 Rare-or-higher Biomes' }]
       },
       {
         id: 'statehopper', title: 'Statehopper', progress: s => s.statesCount,
@@ -1231,6 +1232,10 @@
       legendary: { label: 'Legendary', color: '#fbbf24' },
       mythic: { label: 'Mythic', color: '#f0abfc' }
     };
+    const ACHIEVEMENT_RARITY_ORDER = Object.keys(ACHIEVEMENT_RARITIES);
+    const RARE_OR_HIGHER_RARITIES = new Set(ACHIEVEMENT_RARITY_ORDER.slice(
+      ACHIEVEMENT_RARITY_ORDER.indexOf('rare')
+    ));
     const ACHIEVEMENT_HINT_THRESHOLD = 0.85;
     const ACHIEVEMENT_ART = {
       firstSteps: ['🏕️', '#14332c', ['common']],
@@ -1743,7 +1748,7 @@
         if (biome) biomesSet.add(biome);
       });
 
-      const rareBiomesList = Object.keys(BIOMES).filter(b => BIOMES[b].rarity === 'rare');
+      const rareBiomesList = Object.keys(BIOMES).filter(b => RARE_OR_HIGHER_RARITIES.has(BIOMES[b].rarity));
       const unlockedRare = rareBiomesList.filter(b => biomesSet.has(b));
 
       // Determine visited states and countries
@@ -4557,7 +4562,9 @@
       document.getElementById('statGlobalParks').textContent = stats.visitedParks.length;
       document.getElementById('statBiomes').textContent = biomeCatalogLoaded ? stats.biomesSet.size : '--';
       document.getElementById('statRareBiomes').textContent = biomeCatalogLoaded ? stats.rareBiomesCount : '--';
-      document.getElementById('statRareTotal').textContent = biomeCatalogLoaded ? `of ${Object.values(BIOMES).filter(b => b.rarity === 'rare').length} rare biomes` : 'Rarity unavailable';
+      document.getElementById('statRareTotal').textContent = biomeCatalogLoaded
+        ? `of ${Object.values(BIOMES).filter(b => RARE_OR_HIGHER_RARITIES.has(b.rarity)).length} rare+ biomes`
+        : 'Rarity unavailable';
 
       // Biome Pokédex cards
       const biomeContainer = document.getElementById('biomePokedexContainer');
@@ -4566,6 +4573,8 @@
 
       Object.entries(BIOMES).forEach(([key, info]) => {
         const isUnlocked = stats.biomesSet.has(key);
+        const rarity = ACHIEVEMENT_RARITIES[info.rarity];
+        const rarityColor = rarity?.color || '#94a3b8';
         const card = document.createElement('div');
         card.className = `p-3 rounded-2xl border transition-all duration-300 ${
           isUnlocked 
@@ -4575,11 +4584,11 @@
         card.innerHTML = `
           <div class="flex items-center justify-between">
             <span class="text-2xl">${info.icon}</span>
-            <span class="text-[9px] uppercase px-1.5 py-0.5 rounded font-mono font-bold ${
-              info.rarity === 'rare' ? 'bg-purple-950 text-purple-300 border border-purple-500/40' :
-              info.rarity === 'uncommon' ? 'bg-sky-950 text-sky-300 border border-sky-500/40' :
-              'bg-slate-800 text-slate-400'
-            }">${info.rarity}</span>
+            <span class="achievement-rarity text-[9px] uppercase px-1.5 py-0.5 rounded font-mono font-bold border"
+              data-rarity="${escapeHtml(info.rarity)}"
+              style="--rarity-color:${rarityColor};border-color:var(--rarity-color);background-color:color-mix(in srgb,var(--rarity-color) 12%,transparent)">
+              ${rarity?.label || 'Unavailable'}
+            </span>
           </div>
           <h4 class="font-bold text-xs text-slate-200 mt-2">${info.name}</h4>
           <p class="text-[10px] text-slate-400 mt-1">${info.areaShare === null ? 'Area data unavailable' : `${info.areaShare.toFixed(2)}% of classified biome land`}</p>
@@ -5437,7 +5446,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261021-land-only-route-biomes"></script>
+  <script src="./expedition-ui.js?v=20261021-biome-rarity-tiers"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);

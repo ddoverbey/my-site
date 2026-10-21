@@ -60,7 +60,7 @@ export async function buildSnapshot(source, parks) {
     attribution: 'RESOLVE Ecoregions 2017, Dinerstein et al. (2017), updating WWF Terrestrial Ecoregions.',
     citation: 'https://doi.org/10.1093/biosci/bix014',
     generatedAt: new Date().toISOString(), ecoregionCount: regionIds.size,
-    method: 'WGS84 destination point intersects unsimplified terrestrial ecoregion polygons. Rarity uses spherical geodesic area: rare <2%, uncommon <10%, common >=10% of classified biome land. Rock/ice and water excluded.',
+    method: 'WGS84 destination point intersects unsimplified terrestrial ecoregion polygons. Rarity uses spherical geodesic area share: common >=10%, uncommon >=2% and <10%, rare >=0.5% and <2%, epic >=0.25% and <0.5%, legendary >=0.1% and <0.25%, mythic <0.1% of classified biome land. Rock/ice and water excluded.',
     biomes: areas.map((areaKm2, index) => {
       const areaShare = areaKm2 / totalArea * 100;
       return { id: index + 1, name: ecoregions.names[index], areaKm2, areaShare, rarity: ecoregions.rarityForShare(areaShare) };

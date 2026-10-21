@@ -12,8 +12,12 @@ function check(name, action) {
   checks++;
 }
 
-check('rarity boundaries use exact percentages, not rounded labels', () => {
-  for (const [share, expected] of [[0, 'rare'], [1.999999, 'rare'], [2, 'uncommon'], [9.999999, 'uncommon'], [10, 'common'], [100, 'common']]) {
+check('six rarity tiers use exact area-share thresholds, not rounded labels', () => {
+  for (const [share, expected] of [
+    [0, 'mythic'], [0.099999, 'mythic'], [0.1, 'legendary'], [0.249999, 'legendary'],
+    [0.25, 'epic'], [0.499999, 'epic'], [0.5, 'rare'], [1.999999, 'rare'],
+    [2, 'uncommon'], [9.999999, 'uncommon'], [10, 'common'], [100, 'common']
+  ]) {
     assert.equal(ecoregions.rarityForShare(share), expected);
   }
   for (const invalid of [-1, NaN, Infinity, 101]) assert.throws(() => ecoregions.rarityForShare(invalid));
@@ -94,11 +98,16 @@ check('unclassified coastal points get no invented terrestrial biome', () => {
     assert.equal(park.biomeStatus, 'no-terrestrial-match');
   }
 });
-check('global area rarity replaces legacy cave, volcanic, and island tags', () => {
+check('global area rarity uses the six achievement tiers and replaces legacy biome tags', () => {
   assert.equal(Object.keys(applied.biomes).length, 14);
-  assert.deepEqual(snapshot.biomes.filter(b => b.rarity === 'rare').map(b => b.id), [3, 9, 14]);
+  assert.deepEqual(snapshot.biomes.filter(b => b.rarity === 'rare').map(b => b.id), [9]);
+  assert.deepEqual(snapshot.biomes.filter(b => b.rarity === 'epic').map(b => b.id), [3]);
+  assert.deepEqual(snapshot.biomes.filter(b => b.rarity === 'legendary').map(b => b.id), [14]);
+  assert.deepEqual(snapshot.biomes.filter(b => b.rarity === 'mythic').map(b => b.id), []);
   assert.equal(applied.biomes['11'].rarity, 'common');
-  assert.equal(applied.biomes['14'].xp, 65);
+  assert.equal(applied.biomes['3'].xp, 100);
+  assert.equal(applied.biomes['9'].xp, 65);
+  assert.equal(applied.biomes['14'].xp, 150);
   assert.ok(Math.abs(snapshot.biomes.reduce((sum, b) => sum + b.areaShare, 0) - 100) < 1e-9);
 });
 check('coordinate changes and new destinations cannot collect stale mappings', () => {

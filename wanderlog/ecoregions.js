@@ -17,12 +17,20 @@
   const colors = ['#22c55e', '#a3e635', '#16a34a', '#10b981', '#059669', '#0d9488',
     '#eab308', '#84cc16', '#14b8a6', '#06b6d4', '#c084fc', '#d97706', '#f59e0b', '#38bdf8'];
   const icons = ['🌴', '🌳', '🌲', '🌳', '🌲', '🌲', '🌾', '🌾', '🐊', '⛰️', '❄️', '🌿', '🏜️', '🌱'];
+  const xpByRarity = Object.freeze({
+    common: 15, uncommon: 30, rare: 65, epic: 100, legendary: 150, mythic: 200
+  });
 
   function rarityForShare(share) {
     if (!Number.isFinite(share) || share < 0 || share > 100) {
       throw new Error('Biome area share must be between 0 and 100 percent.');
     }
-    return share < 2 ? 'rare' : share < 10 ? 'uncommon' : 'common';
+    if (share >= 10) return 'common';
+    if (share >= 2) return 'uncommon';
+    if (share >= 0.5) return 'rare';
+    if (share >= 0.25) return 'epic';
+    if (share >= 0.1) return 'legendary';
+    return 'mythic';
   }
 
   function biomeDefinitions() {
@@ -86,7 +94,7 @@
     snapshot.biomes.forEach(biome => {
       Object.assign(biomes[biome.id], {
         rarity: biome.rarity, areaShare: biome.areaShare,
-        xp: biome.rarity === 'rare' ? 65 : biome.rarity === 'uncommon' ? 30 : 15
+        xp: xpByRarity[biome.rarity]
       });
     });
     const locations = parks.map(park => {

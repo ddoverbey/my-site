@@ -150,7 +150,7 @@ check('mobile RPG HUD starts collapsed with an accessible stats toggle', () => {
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261021-land-only-route-biomes')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261021-biome-rarity-tiers')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('storage-risk banner and unfinished-trip recovery controls are present', () => {
@@ -413,6 +413,25 @@ check('real visits collect only intersected biomes; wishlist and offshore points
   assert.equal(vm.runInContext('calculateStats().rareBiomesCount', context), 1);
   assert.ok(vm.runInContext("createPopupContent(PARKS.find(p => p.id === 'ever'))", context).includes('Bahamian-Antillean mangroves'));
 });
+check('Anomaly Seeker progress includes every rare-and-higher achievement rarity', () => {
+  const result = vm.runInContext(`(() => {
+    const original5 = BIOMES['5'].rarity;
+    const original14 = BIOMES['14'].rarity;
+    BIOMES['5'].rarity = 'epic';
+    BIOMES['14'].rarity = 'mythic';
+    statsCache = null;
+    const stats = calculateStats();
+    const achievement = ACHIEVEMENTS.find(a => a.tiers.some(tier => tier.title === 'Anomaly Seeker'));
+    const result = { count: stats.rareBiomesCount, progress: achievement.progress(stats) };
+    BIOMES['5'].rarity = original5;
+    BIOMES['14'].rarity = original14;
+    statsCache = null;
+    return result;
+  })()`, context);
+  assert.equal(result.count, 2);
+  assert.equal(result.progress, 2);
+  assert.deepEqual(Array.from(vm.runInContext('RARE_OR_HIGHER_RARITIES', context)), ['rare', 'epic', 'legendary', 'mythic']);
+});
 element('bucketSearch').value = 'south central rockies';
 vm.runInContext('renderBucketListView()', context);
 check('search finds real ecoregions and displays terrestrial biome labels', () => {
@@ -422,9 +441,14 @@ check('search finds real ecoregions and displays terrestrial biome labels', () =
 vm.runInContext('renderPassportView()', context);
 check('pokedex and rare totals use the 14 real biome types', () => {
   assert.equal(element('biomeCompletionRatio').textContent, '2 / 14 Found');
-  assert.equal(element('statRareTotal').textContent, 'of 3 rare biomes');
-  assert.ok(element('biomePokedexContainer').innerHTML.includes('0.23% of classified biome land'));
-  assert.ok(!element('biomePokedexContainer').innerHTML.includes('Subterranean Cavern'));
+  const pokedex = element('biomePokedexContainer').innerHTML;
+  assert.equal(element('statRareTotal').textContent, 'of 3 rare+ biomes');
+  assert.ok(pokedex.includes('0.23% of classified biome land'));
+  assert.ok(pokedex.includes('data-rarity="epic"'));
+  assert.ok(pokedex.includes('data-rarity="legendary"'));
+  assert.ok(pokedex.includes('--rarity-color:#c084fc'));
+  assert.ok(pokedex.includes('--rarity-color:#fbbf24'));
+  assert.ok(!pokedex.includes('Subterranean Cavern'));
 });
 vm.runInContext("AppState.pins = { fiordland: 'v', retired_destination: 'v', 'world-af-band-e-amir': 'v', npsa: 'v' }; updateHud();", context);
 check('international visits, retired saves and NPS-only US counts stay distinct', () => {

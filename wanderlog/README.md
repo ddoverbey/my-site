@@ -13,6 +13,23 @@ expeditions, track parks and regions, and earn achievements from your travel his
 Biome credit comes from logged stops and sampled land routes. Road, AWD, rail, and walking route
 geometry can count; flight and ferry transit geometry does not. Flight and ferry stops can still count.
 
+### Biome rarity
+
+Biome rarity is based on each biome's share of classified terrestrial land area. First-time biome
+collections award XP according to the same tier:
+
+| Tier | Share of classified biome land | First collection XP |
+| --- | ---: | ---: |
+| Common | 10% or more | 15 |
+| Uncommon | 2% to less than 10% | 30 |
+| Rare | 0.5% to less than 2% | 65 |
+| Epic | 0.25% to less than 0.5% | 100 |
+| Legendary | 0.1% to less than 0.25% | 150 |
+| Mythic | Less than 0.1% | 200 |
+
+The **Rare+ Biomes** statistic and **Anomaly Seeker** achievement count Rare, Epic, Legendary, and
+Mythic biomes. The current dataset has no Mythic biome.
+
 ## Run locally
 
 There is no build step or `npm start` script. Serve this directory over HTTP; opening `index.html`
