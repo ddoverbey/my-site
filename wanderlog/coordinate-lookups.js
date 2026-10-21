@@ -5,6 +5,7 @@
   const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
   const CACHE_TTL = 30 * 24 * 60 * 60 * 1000;
   const PROVIDER_TIMEOUT_MS = 3500;
+  const RARITY_TIMEOUT_MS = 12000;
   const RARITY_TIERS = Object.freeze({
     'Tourist Trap': Object.freeze({ icon: '📸', color: '#cbd5e1' }),
     'Beaten Path': Object.freeze({ icon: '🥾', color: '#4ade80' }),
@@ -13,6 +14,20 @@
     'Hidden Gem': Object.freeze({ icon: '💎', color: '#fbbf24' }),
     Uncharted: Object.freeze({ icon: '🌌', color: '#f0abfc' })
   });
+  const REMOTE_NPS_RARITIES = Object.freeze({
+    gaar: 'Uncharted', kova: 'Uncharted', lacl: 'Hidden Gem', katm: 'Hidden Gem',
+    wrst: 'Hidden Gem', npsa: 'Deep Cut', drto: 'Deep Cut', isro: 'Hidden Gem',
+    ania: 'Uncharted', noat: 'Uncharted', bela: 'Uncharted', cape: 'Deep Cut'
+  });
+  const ICONIC_NPS_PARKS = new Set([
+    'acad', 'arch', 'badl', 'bibe', 'brca', 'cany', 'cave', 'deva', 'dena', 'ever',
+    'glac', 'grca', 'grte', 'grsm', 'hale', 'havo', 'jotr', 'mora', 'olym', 'redw',
+    'romo', 'sagu', 'seki', 'shen', 'yell', 'yose', 'zion'
+  ]);
+  const HIGH_TRAFFIC_URBAN_NPS_UNITS = new Set([
+    'bost', 'fdrm', 'goga', 'gwmp', 'jeff', 'linc', 'mall', 'mlkm', 'wamo', 'wwii'
+  ]);
+  const MIDDLE_CATALOG_RARITIES = ['Beaten Path', 'Regional Staple', 'Deep Cut', 'Hidden Gem'];
   const NPS_SOURCE = 'https://services1.arcgis.com/fBc8EJBxQRMcHlei/ArcGIS/rest/services/NPS_Land_Resources_Division_Boundary_and_Tract_Data_Service/FeatureServer/2';
   const SUBDIVISION_SOURCE = 'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_10m_admin_1_states_provinces.geojson';
   const ADMIN2_COUNTRIES = ['CAN', 'MEX', 'DEU', 'AUS'];
@@ -374,6 +389,76 @@
     return 'Uncharted';
   }
 
+  function stableCatalogRarity(park, designation, memberships) {
+    const key = [park.id, park.name, designation, ...memberships].join('|');
+    let hash = 0;
+    for (const character of key) hash = (Math.imul(hash, 31) + character.charCodeAt(0)) >>> 0;
+    return MIDDLE_CATALOG_RARITIES[hash % MIDDLE_CATALOG_RARITIES.length];
+  }
+
+  function offlineCatalogRarity(park) {
+    const id = String(park.id || '').toLowerCase();
+    const designation = typeof park.designation === 'string' ? park.designation : '';
+    const memberships = Array.isArray(park.memberships)
+      ? park.memberships.filter(value => typeof value === 'string') : [];
+    const membershipText = memberships.join(' ').toLowerCase();
+    if (typeof park.visitorCount === 'number' && Number.isFinite(park.visitorCount) && park.visitorCount >= 0) {
+      if (park.visitorCount >= 1000000) return 'Tourist Trap';
+      if (park.visitorCount >= 250000) return 'Beaten Path';
+      if (park.visitorCount >= 50000) return 'Regional Staple';
+      if (park.visitorCount >= 10000) return 'Deep Cut';
+      if (park.visitorCount >= 1000) return 'Hidden Gem';
+      return 'Uncharted';
+    }
+    if (REMOTE_NPS_RARITIES[id]) return REMOTE_NPS_RARITIES[id];
+    if (park.intl) {
+      if (membershipText.includes('unesco world heritage')) return 'Beaten Path';
+      if (membershipText.includes('iucn green list')) return 'Deep Cut';
+      if (membershipText.includes('ramsar')) return 'Regional Staple';
+      if (membershipText.includes('dark sky')) return 'Hidden Gem';
+      return stableCatalogRarity(park, designation, memberships);
+    }
+    if (/national park/i.test(designation)) {
+      return ICONIC_NPS_PARKS.has(id) ? 'Tourist Trap' : 'Beaten Path';
+    }
+    if (/national memorial|national parkway|national mall/i.test(designation)) {
+      return HIGH_TRAFFIC_URBAN_NPS_UNITS.has(id) ? 'Tourist Trap' : 'Beaten Path';
+    }
+    if (/national monument|battlefield|military park/i.test(designation)) return 'Regional Staple';
+    if (/preserve|wilderness|wild and scenic|wildlife refuge/i.test(designation)) return 'Hidden Gem';
+    if (/historic/i.test(designation)) return 'Deep Cut';
+    if (/seashore|lakeshore|recreation area|scenic river|national trail/i.test(designation)) {
+      return 'Beaten Path';
+    }
+    return stableCatalogRarity(park, designation, memberships);
+  }
+
+  function knownCatalogRarity(value) {
+    if (!value || typeof value !== 'object') return null;
+    const rarity = value.rarity && typeof value.rarity === 'object'
+      ? value.rarity : typeof value.method === 'string' ? value : null;
+    const rarityTier = value.rarityTier || rarity?.rarityTier || rarity?.category;
+    return Object.hasOwn(RARITY_TIERS, rarityTier) ? { rarity, rarityTier } : null;
+  }
+
+  function catalogParkRarity(park, { savedRarity = null, storage = root.localStorage } = {}) {
+    if (!park || typeof park !== 'object') throw new Error('Catalog park metadata is required.');
+    const saved = knownCatalogRarity(savedRarity);
+    if (saved) return saved;
+    if (Number.isFinite(park.lat) && Number.isFinite(park.lng) && storage) {
+      try {
+        const cached = cachedRarity(park.lat, park.lng, storage);
+        const knownCache = knownCatalogRarity(cached);
+        if (knownCache) return knownCache;
+      } catch (error) {
+        console.warn('Catalog park rarity cache lookup failed', park.id, error);
+      }
+    }
+    const catalogRarity = knownCatalogRarity(park);
+    if (catalogRarity) return catalogRarity;
+    return { rarity: null, rarityTier: offlineCatalogRarity(park) };
+  }
+
   function validateProviderRarity(data) {
     if (!data || typeof data.placeName !== 'string' || !data.placeName.trim() ||
         !(data.reviewCount === null || (Number.isSafeInteger(data.reviewCount) && data.reviewCount >= 0)) ||
@@ -431,7 +516,7 @@
         }
         url.searchParams.set('lat', lat);
         url.searchParams.set('lng', lng);
-        const response = await fetcher(url.toString(), { signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS) });
+        const response = await fetcher(url.toString(), { signal: AbortSignal.timeout(RARITY_TIMEOUT_MS) });
         if (!response.ok) throw new Error(`Rarity endpoint failed (HTTP ${response.status}).`);
         const data = validateProviderRarity(await response.json());
         if (coordinateDistanceKm(lat, lng, data.matchedLat, data.matchedLng) > 1) {
@@ -470,13 +555,10 @@
     for (const element of elements) {
       if (element.type === 'node' && (element.tags?.amenity || element.tags?.tourism)) pois.add(element.id);
       if (element.type === 'way' && ['motorway', 'trunk'].includes(element.tags?.highway)) {
-        if (!Array.isArray(element.geometry) || element.geometry.some(point =>
-          !Number.isFinite(point.lat) || !Number.isFinite(point.lon))) {
-          throw new Error('Overpass returned incomplete highway geometry.');
+        if (!Number.isFinite(element.center?.lat) || !Number.isFinite(element.center?.lon)) {
+          throw new Error('Overpass returned an incomplete highway center.');
         }
-        for (let index = 1; index < element.geometry.length; index++) {
-          nearest = Math.min(nearest, segmentDistanceKm(lat, lng, element.geometry[index - 1], element.geometry[index]));
-        }
+        nearest = Math.min(nearest, coordinateDistanceKm(lat, lng, element.center.lat, element.center.lon));
       }
     }
     return {
@@ -495,13 +577,13 @@
     const now = Date.now();
     const cached = cachedRarity(lat, lng, storage, now);
     if (cached) return cached;
-    const query = `[out:json][timeout:30];(node(around:5000,${gridLat},${gridLng})["tourism"];` +
+    const query = `[out:json][timeout:10];(node(around:5000,${gridLat},${gridLng})["tourism"];` +
       `node(around:5000,${gridLat},${gridLng})["amenity"];` +
-      `way(around:5000,${gridLat},${gridLng})["highway"~"^(motorway|trunk)$"];);out body geom;`;
+      `way(around:5000,${gridLat},${gridLng})["highway"~"^(motorway|trunk)$"];);out center;`;
     const result = await fetchJson(OVERPASS_URL, {
       method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({ data: query }).toString()
-    }, fetcher, PROVIDER_TIMEOUT_MS);
+    }, fetcher, RARITY_TIMEOUT_MS);
     if (result.remark) throw new Error(`Overpass could not complete the query: ${result.remark}`);
     const data = summarizeOsm(result.elements, gridLat, gridLng);
     if (storage) storage.setItem(key, JSON.stringify({ version: 1, savedAt: now, data }));
@@ -541,7 +623,8 @@
   }
 
   async function lookupCoordinate(lat, lng, {
-    indexes, geoContains, fetcher = root.fetch, storage, rarityEndpoint = '', onFallback
+    indexes, geoContains, fetcher = root.fetch, storage, rarityEndpoint = '', onFallback,
+    skipRarityLookup = false
   }) {
     validateCoordinates(lat, lng);
     if (!indexes?.countries?.length || !indexes?.states?.length || !indexes?.counties?.length || !indexes?.ecoregions?.length) {
@@ -549,9 +632,12 @@
     }
     const political = politicalRegion(lat, lng, indexes, geoContains);
     const biome = biomeRegion(lat, lng, indexes.ecoregions, geoContains);
+    const rarityLookup = skipRarityLookup
+      ? Promise.resolve().then(() => cachedRarity(lat, lng, storage))
+      : lookupRarityWithFallback(lat, lng, { fetcher, storage, rarityEndpoint, onFallback });
     const [elevationResult, rarityResult] = await Promise.allSettled([
       lookupElevation(lat, lng, fetcher),
-      lookupRarityWithFallback(lat, lng, { fetcher, storage, rarityEndpoint, onFallback })
+      rarityLookup
     ]);
     const lookupWarnings = [];
     const describeFailure = (label, error) => {
@@ -562,7 +648,6 @@
     const elevation = elevationResult.status === 'fulfilled' ? elevationResult.value : null;
     const rarity = rarityResult.status === 'fulfilled' ? rarityResult.value : null;
     if (elevationResult.status === 'rejected') describeFailure('Elevation', elevationResult.reason);
-    if (rarityResult.status === 'rejected') describeFailure('Rarity', rarityResult.reason);
     return {
       lat, lng, elevation, elevationFt: elevation?.feet ?? 0, political, ...biome, rarity,
       rarityTier: rarity?.rarityTier ?? rarity?.category ?? 'Uncharted',
@@ -622,11 +707,11 @@
     validCountyId, validSubdivisionId, subdivisionFeatures,
     firstBoundaryIntersection, lookupRoadRoute, routeCountyIds,
     lookupElevation, categoryForPoiCount, segmentDistanceKm, summarizeOsm, lookupRarity, cachedRarity,
-    lookupCoordinate, RARITY_TIERS,
+    lookupCoordinate, catalogParkRarity, RARITY_TIERS,
     validateCustomLocations, migrateState, normalizeRarity, validateProviderRarity, coordinateDistanceKm,
     lookupRarityWithFallback, ELEVATION_URL, OVERPASS_URL, CACHE_TTL, NPS_SOURCE,
     SUBDIVISION_SOURCE, ADMIN2_COUNTRIES, ADMIN2_SOURCE, npsBoundaryIndex, admin2Features,
-    countyEquivalentFeatures, PROVIDER_TIMEOUT_MS
+    countyEquivalentFeatures, PROVIDER_TIMEOUT_MS, RARITY_TIMEOUT_MS
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CoordinateLookups = api;

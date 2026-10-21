@@ -914,7 +914,9 @@ async function saveExpedition(event) {
       const batch = await Promise.all(stops.slice(offset, offset + 4).map(async stop => {
         const terrestrial = CoordinateLookups.biomeRegion(...stop.coords, coordinateIndexes.ecoregions, d3.geoContains).biomes.length > 0;
         const poi = stop.kind === 'poi' ? AppState.customPois.find(poi => poi.id === stop.id) : null;
-        const parkRarity = stop.kind === 'park' ? AppState.parkRarity?.[stop.id] : null;
+        const parkRarity = stop.kind === 'park'
+          ? AppState.parkRarity?.[stop.id] || window.catalogParkRarityFor?.(stop.id)
+          : null;
         const rarity = stop.rarity || poi?.rarity || parkRarity?.rarity ||
           CoordinateLookups.cachedRarity(...stop.coords, localStorage);
         const rarityTier = stop.rarityTier || rarity?.rarityTier || poi?.rarityTier || parkRarity?.rarityTier;
@@ -952,21 +954,29 @@ async function enrichExpeditionStopRarities(expeditionId) {
   const expedition = AppState.expeditions.find(item => item.id === expeditionId);
   if (!expedition) return;
   const stops = [...(expedition.routeStops || [])];
-  let unavailable = false;
+  const rarityStorage = window.coordinateRarityStorage?.() || null;
   let updated = false;
   for (let offset = 0; offset < stops.length; offset += 2) {
     const batch = await Promise.all(stops.slice(offset, offset + 2).map(async stop => {
-      if (stop.rarityTier || !stop.coords) return stop;
+      if (!stop.coords) return stop;
+      if (stop.kind === 'park') {
+        const rarity = window.catalogParkRarityFor?.(stop.id);
+        if (rarity?.rarityTier && CoordinateLookups.RARITY_TIERS[rarity.rarityTier]) {
+          if (stop.rarityTier === rarity.rarityTier && stop.rarity) return stop;
+          updated = true;
+          return { ...stop, ...(rarity.rarity ? { rarity: rarity.rarity } : {}), rarityTier: rarity.rarityTier };
+        }
+      }
+      if (stop.rarityTier && stop.rarity) return stop;
       try {
-        const rarity = CoordinateLookups.cachedRarity(...stop.coords, localStorage) ||
+        const rarity = CoordinateLookups.cachedRarity(...stop.coords, rarityStorage) ||
           await CoordinateLookups.lookupRarityWithFallback(...stop.coords, {
-            storage: localStorage, rarityEndpoint: WanderlogConfig.rarityEndpoint
+            storage: rarityStorage, rarityEndpoint: WanderlogConfig.rarityEndpoint
           });
         if (!rarity?.rarityTier || !CoordinateLookups.RARITY_TIERS[rarity.rarityTier]) return stop;
         updated = true;
         return { ...stop, rarity, rarityTier: rarity.rarityTier };
       } catch (error) {
-        unavailable = true;
         console.error('Expedition stop rarity lookup unavailable', expeditionId, stop.name, error);
         return stop;
       }
@@ -985,7 +995,6 @@ async function enrichExpeditionStopRarities(expeditionId) {
       }
     }
   }
-  if (unavailable) showNotification('Some rarity lookups unavailable', 'The expedition was saved; missing rarity badges can be resolved when you are online.', '⚠️');
 }
 
 function downloadExpeditionRecovery() {
@@ -1521,7 +1530,8 @@ function renderExpeditionHistory() {
           ${regions ? `<p class="text-xs text-slate-300">${escapeHtml(regions)}</p>` : ''}
           <ol class="travel-journal-itinerary">${names.map((name, index) => {
             const stop = exp.routeStops?.[index];
-            return `<li>${escapeHtml(name)}${rarityBadgeMarkup(stop?.rarityTier || stop?.rarity?.rarityTier)}${exp.routeLegs?.[index] ? `<small>${escapeHtml(TravelLedger.transitTags[exp.routeLegs[index].mode])}</small>` : ''}</li>`;
+            const catalogRarity = stop?.kind === 'park' ? window.catalogParkRarityFor?.(stop.id) : null;
+            return `<li>${escapeHtml(name)}${rarityBadgeMarkup(stop?.rarityTier || stop?.rarity?.rarityTier || catalogRarity?.rarityTier)}${exp.routeLegs?.[index] ? `<small>${escapeHtml(TravelLedger.transitTags[exp.routeLegs[index].mode])}</small>` : ''}</li>`;
           }).join('')}</ol>
           <div class="flex flex-wrap gap-1.5">${badgeMarkup.join('')}</div>
           ${exp.reason ? `<p class="text-xs text-slate-400">${escapeHtml(exp.reason)}</p>` : ''}

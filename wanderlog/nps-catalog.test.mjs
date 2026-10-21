@@ -150,7 +150,7 @@ check('mobile RPG HUD starts collapsed with an accessible stats toggle', () => {
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261021-location-rarity-colors')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261021-offline-catalog-rarity')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('storage-risk banner and unfinished-trip recovery controls are present', () => {
@@ -894,18 +894,30 @@ element('customLocationStatus').value = 'v';
 element('customLocationCategory').value = 'waterfall';
 const originalFetch = globalThis.fetch;
 const originalWarn = console.warn;
+const originalCustomRarityHelpers = vm.runInContext('({cachedRarity:CoordinateLookups.cachedRarity,lookupRarityWithFallback:CoordinateLookups.lookupRarityWithFallback})', context);
 globalThis.fetch = async url => {
   if (url.includes('open-meteo')) return { ok: false, status: 503 };
   if (url.includes('api.devonoverbey.com')) return { ok: false, status: 503 };
   if (url.includes('overpass-api.de')) return { ok: false, status: 504 };
   throw new Error(`Unexpected network request: ${url}`);
 };
+vm.runInContext(`
+  CoordinateLookups.cachedRarity=()=>null;
+  CoordinateLookups.lookupRarityWithFallback=async ()=>{throw new Error('signal timed out');};
+`, context);
 console.warn = () => {};
 try {
   await element('customLocationForm').handlers.submit({ preventDefault() {} });
+  await new Promise(resolve => setImmediate(resolve));
 } finally {
   globalThis.fetch = originalFetch;
   console.warn = originalWarn;
+  context.originalCustomRarityHelpers = originalCustomRarityHelpers;
+  vm.runInContext(`
+    CoordinateLookups.cachedRarity=originalCustomRarityHelpers.cachedRarity;
+    CoordinateLookups.lookupRarityWithFallback=originalCustomRarityHelpers.lookupRarityWithFallback;
+    delete globalThis.originalCustomRarityHelpers;
+  `, context);
 }
 vm.runInContext('coordinateIndexes = null;', context);
 check('custom-location provider failures still save offline geography and waterfall achievement progress', () => {
@@ -920,7 +932,7 @@ check('custom-location provider failures still save offline geography and waterf
   assert.deepEqual(saved.political.counties, [{ id: 'ITA:LAZ', name: 'Lazio' }]);
   assert.deepEqual(saved.biomes, ['12']);
   assert.equal(vm.runInContext('calculateStats().metadataProgress.waterfalls', context), 1);
-  assert.ok(element('toastMsg').textContent.includes('rarity unavailable'));
+  assert.ok(!element('toastMsg').textContent.includes('rarity unavailable'));
   assert.ok(element('toastMsg').textContent.includes('Elevation unavailable'));
 });
 check('coordinate inputs stay empty as examples and only map-selected points populate the custom-location form', () => {
@@ -2707,13 +2719,14 @@ check('ledger Photon search filters populated places and renders one-click statu
   vm.runInContext("document.getElementById('bucketFilterType').value='custom';renderBucketCityMatches()", context);
   assert.ok(element('bucketCityMatchesList').innerHTML.includes('Sitka'));
 });
-const originalCityHelpers = vm.runInContext('({ addCustomPoi, renderParkMarkers, drawFogOfWar, updateAllUI, showNotification, cachedPoliticalAt, cachedBiomeAt, cachedBiomeRegionAt, coordinateIndexes, commitLedger, customPois:AppState.customPois, lookupCoordinate:CoordinateLookups.lookupCoordinate })', context);
+const originalCityHelpers = vm.runInContext('({ addCustomPoi, renderParkMarkers, drawFogOfWar, updateAllUI, showNotification, cachedPoliticalAt, cachedBiomeAt, cachedBiomeRegionAt, coordinateIndexes, commitLedger, customPois:AppState.customPois, lookupCoordinate:CoordinateLookups.lookupCoordinate, cachedRarity:CoordinateLookups.cachedRarity, lookupRarityWithFallback:CoordinateLookups.lookupRarityWithFallback })', context);
 try {
   vm.runInContext(`
     coordinateIndexes={countries:[{}],states:[{}],counties:[{}],ecoregions:[{}]};
     AppState.customPois=[];
     cityLookupCalls=[];
     photonLookupCalls=[];
+    photonRarityCalls=[];
     cachedPoliticalAt=(lat,lng)=>{cityLookupCalls.push(['political',lat,lng]);return {
       countries:[],states:[],counties:[{id:'02220',name:'Sitka City and Borough'}]
     };};
@@ -2726,18 +2739,24 @@ try {
     CoordinateLookups.lookupCoordinate=async (lat,lng,options)=>{
       photonLookupCalls.push({lat,lng,options});
       return {
-        elevationFt:123,rarity:{
-          placeName:'Sitka',reviewCount:null,popularityScore:30,rarityTier:'Deep Cut',
-          matchedLat:lat,matchedLng:lng,cached:true,source:'Test rarity provider',method:'provider-popularity'
-        },rarityTier:'Deep Cut',
+        elevationFt:123,rarity:null,rarityTier:'Uncharted',
         political:{countries:['United States'],states:['Alaska'],counties:[{id:'02220',name:'Sitka City and Borough'}]},
         ecoregions:[{id:1,name:'Pacific Coastal Mountains',realm:'Nearctic',biomeId:5}],
         biomes:['5'],biomeStatus:'matched',lookedUpAt:'2026-10-22T00:00:00.000Z'
       };
     };
+    CoordinateLookups.cachedRarity=()=>null;
+    CoordinateLookups.lookupRarityWithFallback=async (lat,lng)=>{
+      photonRarityCalls.push([lat,lng]);
+      return CoordinateLookups.normalizeRarity({
+        placeName:'Sitka',reviewCount:null,popularityScore:30,rarityTier:'Deep Cut',
+        matchedLat:lat,matchedLng:lng,cached:true,source:'Test rarity provider',method:'provider-popularity'
+      },lat,lng);
+    };
     renderParkMarkers=()=>{};drawFogOfWar=()=>{};updateAllUI=()=>{};showNotification=()=>{};
   `, context);
   await vm.runInContext("savePhotonCity(bucketPhotonResults[0],'w')", context);
+  await new Promise(resolve => setImmediate(resolve));
   const city = context.capturedPhotonCity;
   const normalizedCity = travelLedger.normalizePoi(city, coordinateLookups);
   check('Photon place saves offline geography and attaches rarity and elevation lookup results', () => {
@@ -2753,6 +2772,8 @@ try {
       [{ id: '02220', name: 'Sitka City and Borough' }]);
     assert.deepEqual(Array.from(normalizedCity.biomes), ['5']);
     assert.equal(vm.runInContext('photonLookupCalls.length', context), 1);
+    assert.equal(vm.runInContext('photonLookupCalls[0].options.skipRarityLookup', context), true);
+    assert.equal(vm.runInContext('photonRarityCalls.length', context), 1);
     assert.equal(vm.runInContext('photonLookupCalls[0].options.rarityEndpoint', context),
       'https://api.devonoverbey.com/rarity');
     assert.deepEqual(Array.from(vm.runInContext('cityLookupCalls.map(call=>call[0])', context)),
@@ -2773,6 +2794,8 @@ try {
     commitLedger=originalCityHelpers.commitLedger;
     AppState.customPois=originalCityHelpers.customPois;
     CoordinateLookups.lookupCoordinate=originalCityHelpers.lookupCoordinate;
+    CoordinateLookups.cachedRarity=originalCityHelpers.cachedRarity;
+    CoordinateLookups.lookupRarityWithFallback=originalCityHelpers.lookupRarityWithFallback;
     AppState.currentTab='map';
   `, context);
   context.fetch = originalPhotonFetch;
@@ -2781,9 +2804,9 @@ try {
 vm.runInContext(`
   applyPassport(migratePassport({}));AppState.currentTab='map';
   PARKS=[
-    {id:'filter_park',name:'Test National Park',designation:'National Park',lat:37,lng:-120,biomes:[],states:['California']},
-    {id:'filter_monument',name:'Test Monument',designation:'National Monument',lat:37,lng:-120,biomes:[],states:['Utah']},
-    {id:'filter_historic',name:'Test Historical Park',designation:'National Historical Park',lat:37,lng:-120,biomes:[],states:[]},
+    {id:'filter_park',name:'Test National Park',designation:'National Park',lat:14.6543,lng:112.3456,biomes:[],states:['California']},
+    {id:'filter_monument',name:'Test Monument',designation:'National Monument',lat:14.7543,lng:112.4456,biomes:[],states:['Utah']},
+    {id:'filter_historic',name:'Test Historical Park',designation:'National Historical Park',lat:14.8543,lng:112.5456,biomes:[],states:[]},
     {id:'filter_intl',name:'International Test',intl:true,country:'Canada',biomes:[],lat:51,lng:-115,
       source:InternationalParks.wikidataSource,memberships:[],areaKm2:null,visitorCount:null}
   ];
@@ -2798,7 +2821,59 @@ vm.runInContext('renderBucketListView()', context);
 check('catalog rarity badges appear on Travel Ledger cards and park popups', () => {
   assert.ok(element('bucketListGrid').innerHTML.includes('💎 Hidden Gem'));
   assert.ok(vm.runInContext('createPopupContent(PARKS[0])', context).includes('💎 Hidden Gem'));
+  assert.ok(element('bucketListGrid').innerHTML.includes('🥾 Beaten Path'));
+  assert.ok(vm.runInContext('createPopupContent(PARKS[1])', context).includes('🧭 Regional Staple'));
 });
+const originalCatalogRenderHelpers = vm.runInContext('({lookupRarityWithFallback:CoordinateLookups.lookupRarityWithFallback,showNotification})', context);
+try {
+  vm.runInContext(`
+    catalogRenderRarityCalls=0;catalogRenderNotices=[];
+    CoordinateLookups.lookupRarityWithFallback=async ()=>{
+      catalogRenderRarityCalls++;
+      throw new Error('signal timed out');
+    };
+    showNotification=(...args)=>catalogRenderNotices.push(args);
+    renderBucketListView();
+    createPopupContent(PARKS[0]);
+    renderExpeditionHistory();
+  `, context);
+  await new Promise(resolve => setImmediate(resolve));
+  check('rendering catalog parks and trip history is offline and produces no rarity timeout toasts', () => {
+    assert.equal(vm.runInContext('catalogRenderRarityCalls', context), 0);
+    assert.equal(vm.runInContext('catalogRenderNotices.length', context), 0);
+  });
+} finally {
+  context.originalCatalogRenderHelpers = originalCatalogRenderHelpers;
+  vm.runInContext(`
+    CoordinateLookups.lookupRarityWithFallback=originalCatalogRenderHelpers.lookupRarityWithFallback;
+    showNotification=originalCatalogRenderHelpers.showNotification;
+    delete globalThis.originalCatalogRenderHelpers;
+  `, context);
+}
+const savedCatalogItinerary = vm.runInContext('JSON.stringify({expeditions:AppState.expeditions,parkRarity:AppState.parkRarity})', context);
+try {
+  vm.runInContext(`
+    AppState.parkRarity={};
+    AppState.expeditions=[{
+      ...testExpedition,routeCoords:[[14.6543,112.3456]],transitTags:[],
+      routeStops:[{kind:'park',id:'filter_park',name:'Test National Park',coords:[14.6543,112.3456]}],
+      routeLegs:[],parkIds:['filter_park'],customPoiIds:[],countyIds:[]
+    }];
+    renderExpeditionHistory();
+  `, context);
+  check('catalog park itinerary stops display deterministic offline rarity badges', () => {
+    assert.ok(element('travelLogFeed').innerHTML.includes('🥾 Beaten Path'));
+  });
+} finally {
+  context.savedCatalogItinerary = savedCatalogItinerary;
+  vm.runInContext(`
+    const saved=JSON.parse(savedCatalogItinerary);
+    AppState.expeditions=saved.expeditions;
+    AppState.parkRarity=saved.parkRarity;
+    renderExpeditionHistory();
+    delete globalThis.savedCatalogItinerary;
+  `, context);
+}
 vm.runInContext('AppState.parkRarity={}', context);
 check('type filter change renders only matching destinations and updates result count', () => {
   element('bucketFilterType').value = 'parks';

@@ -30,6 +30,14 @@ collections award XP according to the same tier:
 The **Rare+ Biomes** statistic and **Anomaly Seeker** achievement count Rare, Epic, Legendary, and
 Mythic biomes. The current dataset has no Mythic biome.
 
+### Location rarity
+
+Catalog parks use saved rarity data when available and otherwise derive a consistent badge from
+their local catalog metadata, so opening a passport or viewing the Travel Ledger does not need
+network rarity lookups. Newly saved custom and Photon places, and expedition stops, can be enriched
+in the background; if a rarity service is unavailable, the place remains saved and usable without
+a rarity badge.
+
 ## Run locally
 
 There is no build step or `npm start` script. Serve this directory over HTTP; opening `index.html`

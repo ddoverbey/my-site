@@ -215,12 +215,12 @@ await check('OSM density categories use exact thresholds, not review-count claim
   }
   assert.throws(() => lookups.categoryForPoiCount(-1));
 });
-await check('OSM POIs are deduplicated and highway distance uses segments, not vertices', () => {
+await check('OSM POIs are deduplicated and highway distance uses the lightweight way center', () => {
   const summary = lookups.summarizeOsm([
     { id: 1, type: 'node', tags: { amenity: 'cafe', tourism: 'museum' } },
     { id: 1, type: 'node', tags: { tourism: 'museum' } },
     { id: 2, type: 'node', tags: { amenity: 'restaurant' } },
-    { id: 3, type: 'way', tags: { highway: 'motorway' }, geometry: [{ lat: 1, lon: 0 }, { lat: 1, lon: 2 }] }
+    { id: 3, type: 'way', tags: { highway: 'motorway' }, center: { lat: 1, lon: 1 } }
   ], 1, 1);
   assert.equal(summary.nearbyPoiCount, 2);
   assert.equal(summary.nearestHighwayKm, 0);
@@ -249,6 +249,35 @@ await check('30-day browser cache reuses rounded coordinate grids, expires, and 
   await assert.rejects(lookups.lookupRarity(1, 1, async () => response({ remark: 'runtime timeout', elements: [] }), failedCache), /timeout/);
   assert.equal(failedCache.values.size, 0);
 });
+await check('catalog park rarity prefers saved and cached values before deterministic offline metadata', async () => {
+  const park = { id: 'offline', name: 'Offline Park', designation: 'National Monument', lat: 1, lng: 1 };
+  assert.equal(lookups.catalogParkRarity(park).rarityTier, 'Regional Staple');
+  assert.equal(lookups.catalogParkRarity({ ...park, visitorCount: 1000000 }).rarityTier, 'Tourist Trap');
+  assert.equal(lookups.catalogParkRarity({ ...park, visitorCount: 250000 }).rarityTier, 'Beaten Path');
+  assert.equal(lookups.catalogParkRarity({ ...park, visitorCount: 50000 }).rarityTier, 'Regional Staple');
+  assert.equal(lookups.catalogParkRarity({ ...park, visitorCount: 10000 }).rarityTier, 'Deep Cut');
+  assert.equal(lookups.catalogParkRarity({ ...park, visitorCount: 1000 }).rarityTier, 'Hidden Gem');
+  assert.equal(lookups.catalogParkRarity({ ...park, visitorCount: 0 }).rarityTier, 'Uncharted');
+  assert.equal(lookups.catalogParkRarity(park, {
+    savedRarity: { rarity: null, rarityTier: 'Hidden Gem' }
+  }).rarityTier, 'Hidden Gem');
+  const cache = storage();
+  await lookups.lookupRarity(1, 1, async () => response({
+    elements: Array.from({ length: 12 }, (_, id) => ({ id, type: 'node', tags: { amenity: 'cafe' } }))
+  }), cache);
+  assert.equal(lookups.catalogParkRarity(park, { storage: cache }).rarityTier, 'Hidden Gem');
+});
+await check('Overpass uses a bounded timeout and lightweight center output', async () => {
+  let request;
+  await lookups.lookupRarity(1, 1, async (url, options) => {
+    request = { url, options };
+    return response({ elements: [] });
+  }, storage());
+  const query = new URLSearchParams(request.options.body).get('data');
+  assert.equal(request.url, lookups.OVERPASS_URL);
+  assert.match(query, /^\[out:json\]\[timeout:10\]/);
+  assert.ok(query.endsWith('out center;'));
+});
 await check('parallel pipeline starts both providers before either resolves and returns complete validated metadata', async () => {
   const pending = [];
   const operation = lookups.lookupCoordinate(1, 1, {
@@ -265,6 +294,27 @@ await check('parallel pipeline starts both providers before either resolves and 
   assert.throws(() => lookups.validateCustomLocations([{ ...location, biomes: ['98'] }]));
   assert.throws(() => lookups.validateCustomLocations([location, location]), /Invalid custom/);
 });
+await check('background rarity can be skipped while reusing its cache and still looking up elevation', async () => {
+  const requests = [];
+  const cache = storage();
+  await lookups.lookupRarity(1, 1, async () => response({
+    elements: Array.from({ length: 12 }, (_, id) => ({ id, type: 'node', tags: { amenity: 'cafe' } }))
+  }), cache);
+  const metadata = await lookups.lookupCoordinate(1, 1, {
+    indexes, geoContains: geo.geoContains, storage: cache, skipRarityLookup: true,
+    rarityEndpoint: 'https://api.example.test/rarity',
+    fetcher: async url => {
+      requests.push(url);
+      return response({ elevation: [25] });
+    }
+  });
+  assert.equal(requests.length, 1);
+  assert.ok(requests[0].includes('elevation'));
+  assert.equal(metadata.elevationFt, 25 * 3.28084);
+  assert.equal(metadata.rarity.rarityTier, 'Hidden Gem');
+  assert.equal(metadata.rarityTier, 'Hidden Gem');
+  assert.deepEqual(metadata.lookupWarnings, []);
+});
 await check('missing offline geography blocks saving because political and biome data are required', async () => {
   await assert.rejects(lookups.lookupCoordinate(1, 1, { indexes: null }), /unavailable/);
 });
@@ -272,7 +322,7 @@ const provider = {
   placeName: 'Matched POI', reviewCount: 30, popularityScore: 30, rarityTier: 'Deep Cut',
   matchedLat: 1, matchedLng: 1, cached: true, source: 'Licensed provider'
 };
-await check('elevation, rarity endpoint, and Overpass requests use 3500 ms abort timeouts', async () => {
+await check('elevation and rarity requests use separate bounded abort timeouts', async () => {
   const originalTimeout = AbortSignal.timeout;
   const timeouts = [];
   AbortSignal.timeout = milliseconds => {
@@ -292,8 +342,9 @@ await check('elevation, rarity endpoint, and Overpass requests use 3500 ms abort
   } finally {
     AbortSignal.timeout = originalTimeout;
   }
-  assert.deepEqual(timeouts, [3500, 3500, 3500, 3500]);
+  assert.deepEqual(timeouts, [12000, 3500, 12000, 12000]);
   assert.equal(lookups.PROVIDER_TIMEOUT_MS, 3500);
+  assert.equal(lookups.RARITY_TIMEOUT_MS, 12000);
 });
 await check('provider endpoint succeeds without Overpass and preserves actual review count/source', async () => {
   const urls = [];
@@ -396,11 +447,11 @@ await check('failed rarity and elevation providers preserve offline regions and 
     assert.deepEqual(result.political.counties, [{ id: '01001', name: 'Test' }]);
     assert.deepEqual(result.biomes, ['12']);
     assert.equal(result.biomeStatus, 'matched');
-    assert.equal(result.lookupWarnings.length, 2);
+    assert.equal(result.lookupWarnings.length, 1);
     assert.ok(result.lookupWarnings.some(warning => warning.includes('503')));
-    assert.ok(result.lookupWarnings.some(warning => warning.includes('504')));
+    assert.ok(!result.lookupWarnings.some(warning => warning.includes('504')));
     assert.equal(fallbacks.length, 1);
-    assert.deepEqual(timeouts, [3500, 3500, 3500]);
+    assert.deepEqual(timeouts, [12000, 3500, 12000]);
     const location = {
       ...result, id: 'custom-provider-fallback', name: 'Waterfall', status: 'v',
       elevation: result.elevation, category: 'waterfall'

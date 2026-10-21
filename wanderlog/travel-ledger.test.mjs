@@ -541,6 +541,26 @@ check('rarity achievements include catalog parks, Photon ledger places and exped
   assert.equal(progress.whispers, 3);
   assert.equal(progress.localLore, 2);
 });
+check('offline catalog rarity contributes to park and linked expedition-stop achievements', () => {
+  const park = { id: 'offline_rarity_park', lat: 45, lng: -121, biomes: [] };
+  const trip = {
+    ...exp, parkIds: [park.id], customPoiIds: [], countyIds: [],
+    routeCoords: [[45, -121]], routeStops: [
+      { kind: 'park', id: park.id, name: 'Offline Park', coords: [45, -121] }
+    ]
+  };
+  const state = migrate({ pins: { [park.id]: 'v' }, expeditions: [trip] });
+  let rarityLookups = 0;
+  const progress = ledger.metadataProgress(state, {
+    parks: [park], rarityTiers: lookups.RARITY_TIERS,
+    catalogParkRarity: () => {
+      rarityLookups++;
+      return { rarity: null, rarityTier: 'Uncharted' };
+    }
+  });
+  assert.equal(progress.whispers, 1, 'the linked trip stop must not double-count the visited park');
+  assert.equal(rarityLookups, 1);
+});
 check('distance and latitude badges use full logged coordinates, not wishlist, transits or home alone', () => {
   const homeBase = { name: 'Home', lat: 0, lng: 0, radiusKm: 80 };
   const longitude = miles => miles / 3958.7613 * 180 / Math.PI;

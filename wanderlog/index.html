@@ -1001,14 +1001,14 @@
     </form>
   </div>
 
-  <script src="./nps-catalog.js?v=20261021-location-rarity-colors"></script>
-  <script src="./national-parks-scratch.js?v=20261021-location-rarity-colors"></script>
-  <script src="./international-parks.js?v=20261021-location-rarity-colors"></script>
-  <script src="./ecoregions.js?v=20261021-location-rarity-colors"></script>
-  <script src="./coordinate-lookups.js?v=20261021-location-rarity-colors"></script>
-  <script src="./micro-states.js?v=20261021-location-rarity-colors"></script>
-  <script src="./travel-ledger.js?v=20261021-location-rarity-colors"></script>
-  <script src="./rarity-config.js?v=20261021-location-rarity-colors"></script>
+  <script src="./nps-catalog.js?v=20261021-offline-catalog-rarity"></script>
+  <script src="./national-parks-scratch.js?v=20261021-offline-catalog-rarity"></script>
+  <script src="./international-parks.js?v=20261021-offline-catalog-rarity"></script>
+  <script src="./ecoregions.js?v=20261021-offline-catalog-rarity"></script>
+  <script src="./coordinate-lookups.js?v=20261021-offline-catalog-rarity"></script>
+  <script src="./micro-states.js?v=20261021-offline-catalog-rarity"></script>
+  <script src="./travel-ledger.js?v=20261021-offline-catalog-rarity"></script>
+  <script src="./rarity-config.js?v=20261021-offline-catalog-rarity"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -1751,7 +1751,7 @@
 
     function travelStateKey() {
       return JSON.stringify([
-        AppState.homeBase, AppState.pins, AppState.regions, AppState.counties,
+        AppState.homeBase, AppState.pins, AppState.parkRarity, AppState.regions, AppState.counties,
         AppState.customPois, AppState.expeditions.map(({ journal, photos, ...travel }) => travel)
       ]);
     }
@@ -1761,12 +1761,11 @@
       const wishlistParks = PARKS.filter(p => AppState.pins[p.id] === 'w');
       const visitedCustomLocations = AppState.customLocations.filter(p => TravelLedger.isVisited(p.status));
       const metadataProgress = TravelLedger.metadataProgress(AppState, {
-        parks: PARKS.map(park => ({
-          ...park, ...(AppState.parkRarity[park.id] || {})
-        })),
+        parks: PARKS,
         politicalAt: cachedPoliticalAt,
         biomeAt: cachedBiomeAt,
-        rarityTiers: CoordinateLookups.RARITY_TIERS
+        rarityTiers: CoordinateLookups.RARITY_TIERS,
+        catalogParkRarity: park => catalogParkRarityFor(park)
       });
       
       const biomesSet = metadataProgress.collectedBiomes;
@@ -3010,102 +3009,63 @@
     }
     window.rarityBadgeMarkup = rarityBadgeMarkup;
 
-    function catalogRarityFor(park) {
-      const stored = AppState.parkRarity[park.id];
-      if (stored) return stored;
-      if (park.rarity || park.rarityTier) {
-        const rarity = park.rarity ? CoordinateLookups.normalizeRarity(park.rarity, park.lat, park.lng) : null;
-        return { rarity, rarityTier: rarity?.rarityTier || park.rarityTier };
-      }
-      return null;
+    function coordinateRarityStorage() {
+      if (typeof localStorage === 'undefined' ||
+          typeof localStorage.getItem !== 'function' ||
+          typeof localStorage.setItem !== 'function' ||
+          typeof localStorage.removeItem !== 'function') return null;
+      return localStorage;
     }
+    window.coordinateRarityStorage = coordinateRarityStorage;
 
-    function persistCatalogRarity(park, rarity) {
-      const entry = { rarity: rarity || null, rarityTier: rarity?.rarityTier || 'Uncharted' };
-      commitLedger(() => { AppState.parkRarity[park.id] = entry; });
-      setTimeout(() => updateAllUI(), 0);
-      return entry;
+    function catalogParkRarityFor(parkOrId) {
+      const park = typeof parkOrId === 'string'
+        ? PARKS.find(item => item.id === parkOrId)
+        : parkOrId;
+      if (!park) return null;
+      return CoordinateLookups.catalogParkRarity(park, {
+        savedRarity: AppState.parkRarity?.[park.id],
+        storage: coordinateRarityStorage()
+      });
     }
-
-    const catalogRarityPending = new Map();
-    const catalogRarityQueue = [];
-    const catalogRarityRetryAt = new Map();
-    let catalogRarityActive = 0;
-
-    function drainCatalogRarityQueue() {
-      while (catalogRarityActive < 2 && catalogRarityQueue.length) {
-        const job = catalogRarityQueue.shift();
-        catalogRarityActive++;
-        CoordinateLookups.lookupRarityWithFallback(job.park.lat, job.park.lng, {
-          storage: job.storage, rarityEndpoint: WanderlogConfig.rarityEndpoint
-        }).then(rarity => {
-          catalogRarityRetryAt.delete(job.park.id);
-          try {
-            job.resolve(persistCatalogRarity(job.park, rarity));
-          } catch (error) {
-            console.error('Catalog rarity could not be saved', job.park.id, error);
-            showNotification('Rarity not saved', error.message, '⚠️');
-            job.resolve(null);
-          }
-        }).catch(error => {
-          console.error('Catalog rarity lookup unavailable', job.park.id, error);
-          catalogRarityRetryAt.set(job.park.id, Date.now() + 5 * 60 * 1000);
-          if (['v', 'l'].includes(job.status)) {
-            showNotification('Rarity lookup unavailable', `${job.park.name}: ${error.message}`, '⚠️');
-          }
-          job.resolve(null);
-        }).finally(() => {
-          catalogRarityActive--;
-          catalogRarityPending.delete(job.park.id);
-          drainCatalogRarityQueue();
-        });
-      }
-    }
-
-    function ensureCatalogRarity(park, status = destinationStatus(park)) {
-      if (AppState.viewOnly || !Number.isFinite(park.lat) || !Number.isFinite(park.lng)) return Promise.resolve(null);
-      const known = catalogRarityFor(park);
-      if (known?.rarityTier && CoordinateLookups.RARITY_TIERS[known.rarityTier]) return Promise.resolve(known);
-      if ((catalogRarityRetryAt.get(park.id) || 0) > Date.now()) return Promise.resolve(null);
-      const hasVisitorCount = park.intl &&
-        park.visitorCount !== null && park.visitorCount !== undefined;
-      if (!hasVisitorCount && !['v', 'l'].includes(status)) return Promise.resolve(null);
-      if (typeof localStorage === 'undefined') return Promise.resolve(null);
-      let cached;
-      try {
-        cached = CoordinateLookups.cachedRarity(park.lat, park.lng, localStorage);
-      } catch (error) {
-        console.error('Catalog rarity cache lookup failed', park.id, error);
-        showNotification('Rarity cache unavailable', error.message, '⚠️');
-        return Promise.resolve(null);
-      }
-      if (cached) {
-        try { return Promise.resolve(persistCatalogRarity(park, cached)); }
-        catch (error) {
-          console.error('Cached catalog rarity could not be saved', park.id, error);
-          showNotification('Rarity not saved', error.message, '⚠️');
-          return Promise.resolve(null);
-        }
-      }
-      if (catalogRarityPending.has(park.id)) return catalogRarityPending.get(park.id);
-      let resolve;
-      const promise = new Promise(done => { resolve = done; });
-      catalogRarityPending.set(park.id, promise);
-      catalogRarityQueue.push({ park, status, resolve, storage: localStorage });
-      drainCatalogRarityQueue();
-      return promise;
-    }
+    window.catalogParkRarityFor = catalogParkRarityFor;
 
     function catalogDestinationWithRarity(park) {
-      const rarity = catalogRarityFor(park);
+      const rarity = catalogParkRarityFor(park);
       return rarity ? { ...park, ...rarity } : park;
     }
 
-    function createPopupContent(p) {
-      if (PARKS.includes(p)) {
-        ensureCatalogRarity(p);
-        p = catalogDestinationWithRarity(p);
+    async function enrichCustomPoiRarity(poiId) {
+      if (AppState.viewOnly) return null;
+      const poi = AppState.customPois.find(item => item.id === poiId);
+      if (!poi || (poi.rarity && CoordinateLookups.RARITY_TIERS[poi.rarityTier])) return null;
+      const storage = coordinateRarityStorage();
+      let rarity;
+      try {
+        rarity = CoordinateLookups.cachedRarity(poi.lat, poi.lng, storage) ||
+          await CoordinateLookups.lookupRarityWithFallback(poi.lat, poi.lng, {
+            storage, rarityEndpoint: WanderlogConfig.rarityEndpoint
+          });
+      } catch (error) {
+        console.error('Saved place rarity lookup unavailable', poiId, error);
+        return null;
       }
+      if (!rarity?.rarityTier || !CoordinateLookups.RARITY_TIERS[rarity.rarityTier]) return null;
+      const current = AppState.customPois.find(item => item.id === poiId);
+      if (!current) return null;
+      try {
+        commitLedger(() => Object.assign(current, { rarity, rarityTier: rarity.rarityTier }));
+      } catch (error) {
+        console.error('Saved place rarity metadata could not be stored', poiId, error);
+        showNotification('Rarity not saved', error.message, '⚠️');
+        return null;
+      }
+      updateAllUI();
+      return rarity;
+    }
+
+    function createPopupContent(p) {
+      if (PARKS.includes(p)) p = catalogDestinationWithRarity(p);
       const cur = destinationStatus(p);
       const biomeTags = p.biomes.map(b => {
         const info = BIOMES[b] || { name: b, icon: '🌿' };
@@ -3189,9 +3149,6 @@
           const p = PARKS.find(item => item.id === parkId);
           showNotification('🗺️ Fog Pierced!', `You cleared the fog around ${p ? p.name : 'new territory'}!`, '✨');
         }
-        const catalogPark = PARKS.find(item => item.id === parkId);
-        if (catalogPark && ['v', 'l'].includes(status)) ensureCatalogRarity(catalogPark, status);
-
         renderParkMarkers();
       drawFogOfWar();
       updateAllUI();
@@ -3696,17 +3653,13 @@
       const controls = [...document.getElementById('customLocationForm').querySelectorAll('input, select, button')];
       customLookupPending = true;
       controls.forEach(control => { control.disabled = true; });
-      let fallbackUsed = false;
-      status.textContent = 'Looking up elevation, region, ecoregion, and rarity...';
+      status.textContent = 'Looking up elevation, region, and ecoregion...';
       try {
         if (!name || !latText || !lngText) throw new Error('Enter a name and both coordinates.');
         const metadata = await CoordinateLookups.lookupCoordinate(Number(latText), Number(lngText), {
-          indexes: coordinateIndexes, geoContains: d3.geoContains, storage: localStorage,
+          indexes: coordinateIndexes, geoContains: d3.geoContains, storage: coordinateRarityStorage(),
           rarityEndpoint: WanderlogConfig.rarityEndpoint,
-          onFallback(error) {
-            fallbackUsed = true;
-            status.textContent = `Rarity endpoint unavailable (${error.message}). Trying the direct OSM density estimate...`;
-          }
+          skipRarityLookup: true
         });
         const { lookupWarnings = [], ...locationMetadata } = metadata;
         const location = {
@@ -3719,17 +3672,20 @@
         renderParkMarkers();
         drawFogOfWar();
         updateAllUI();
+        void enrichCustomPoiRarity(location.id);
         customLookupPending = false;
         closeCustomLocation();
-        const rarityTier = metadata.rarity?.rarityTier || metadata.rarity?.category || metadata.rarityTier;
         const raritySource = metadata.rarity
           ? metadata.rarity.reviewCount === null || metadata.rarity.method === 'osm-poi-density'
             ? 'density estimate' : 'review count'
-          : 'rarity unavailable';
+          : null;
+        const raritySummary = raritySource
+          ? ` ${metadata.rarity.rarityTier || metadata.rarity.category} (${raritySource}).`
+          : '';
         const warningSummary = lookupWarnings.length ? ` ${lookupWarnings.join(' ')}` : '';
         showNotification('Location saved',
-          `${name}: ${rarityTier} (${raritySource}${fallbackUsed ? '; direct OSM fallback' : ''}).${warningSummary}`,
-          '🗺️');
+          `${name} added to your Travel Ledger.${raritySummary}${warningSummary}`,
+          lookupWarnings.length ? '⚠️' : '🗺️');
       } catch (error) {
         console.error('Custom-coordinate lookup failed', error);
         status.textContent = `Not saved: ${error.message} You can retry.`;
@@ -5055,10 +5011,12 @@
         lookedUpAt: new Date().toISOString()
       });
       let lookupWarnings = [];
+      let needsRarityEnrichment = true;
       try {
         const resolved = await CoordinateLookups.lookupCoordinate(place.lat, place.lng, {
-          indexes: coordinateIndexes, geoContains: d3.geoContains, storage: localStorage,
-          rarityEndpoint: WanderlogConfig.rarityEndpoint
+          indexes: coordinateIndexes, geoContains: d3.geoContains, storage: coordinateRarityStorage(),
+          rarityEndpoint: WanderlogConfig.rarityEndpoint,
+          skipRarityLookup: true
         });
         lookupWarnings = resolved.lookupWarnings || [];
         const savedPoi = AppState.customPois.find(poi => poi.id === poiId);
@@ -5068,6 +5026,7 @@
             political: resolved.political, ecoregions: resolved.ecoregions, biomes: resolved.biomes,
             biomeStatus: resolved.biomeStatus, lookedUpAt: resolved.lookedUpAt
           }));
+          needsRarityEnrichment = !resolved.rarity?.rarityTier;
         }
       } catch (error) {
         console.error('Photon place metadata lookup failed after saving', poiId, error);
@@ -5076,6 +5035,7 @@
       renderParkMarkers();
       drawFogOfWar();
       updateAllUI();
+      if (needsRarityEnrichment) void enrichCustomPoiRarity(poiId);
       showNotification(lookupWarnings?.length ? 'Place saved with fallback metadata' : 'Place saved',
         lookupWarnings?.length ? lookupWarnings.join(' ') : `${place.name} added to your Travel Ledger.`,
         lookupWarnings?.length ? '⚠️' : place.category === 'City' ? '🏙️' : '📍');
@@ -5124,7 +5084,6 @@
 
       filtered.slice(start, end).forEach(p => {
         const cur = destinationStatus(p);
-        if (PARKS.includes(p)) ensureCatalogRarity(p, cur);
         p = catalogDestinationWithRarity(p);
         const card = document.createElement('div');
         card.className = `p-3.5 rounded-2xl border ledger-card flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
@@ -5474,7 +5433,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261021-location-rarity-colors"></script>
+  <script src="./expedition-ui.js?v=20261021-offline-catalog-rarity"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);

@@ -673,11 +673,24 @@
   }
 
   function metadataProgress(state, {
-    parks = [], politicalAt = () => null, biomeAt = () => [], rarityTiers = null
+    parks = [], politicalAt = () => null, biomeAt = () => [], rarityTiers = null,
+    catalogParkRarity = null
   } = {}) {
     const pois = state.customPois.filter(poi => isVisited(poi.status));
     const trips = state.expeditions;
-    const visitedParks = parks.filter(park => isVisited(state.pins[park.id]));
+    const rarityRelevantParkIds = new Set([
+      ...parks.filter(park => isVisited(state.pins[park.id])).map(park => park.id),
+      ...trips.flatMap(trip => (trip.routeStops || [])
+        .filter(stop => stop.kind === 'park').map(stop => stop.id))
+    ]);
+    const rarityAwareParks = catalogParkRarity
+      ? parks.map(park => {
+        if (!rarityRelevantParkIds.has(park.id)) return park;
+        const rarity = catalogParkRarity(park, state);
+        return rarity ? { ...park, ...rarity } : park;
+      })
+      : parks;
+    const visitedParks = rarityAwareParks.filter(park => isVisited(state.pins[park.id]));
     const locations = [...visitedParks, ...pois];
     const samples = new Map();
     const sample = (lat, lng, kind) => {
@@ -707,7 +720,7 @@
         (state.homeBase.countyId ? [state.homeBase.countyId] : [])) : []);
     const homeCountries = new Set(state.homeBase
       ? sample(state.homeBase.lat, state.homeBase.lng, 'political')?.countries || [] : []);
-    const parkById = new Map(parks.map(park => [park.id, park]));
+    const parkById = new Map(rarityAwareParks.map(park => [park.id, park]));
     const poiById = new Map(state.customPois.map(poi => [poi.id, poi]));
     const rarityEntities = new Map();
     const addRarityEntity = (key, tier, location) => {
