@@ -912,7 +912,8 @@ async function saveExpedition(event) {
     const elevations = [];
     for (let offset = 0; offset < stops.length; offset += 4) {
       const batch = await Promise.all(stops.slice(offset, offset + 4).map(async stop => {
-        const terrestrial = CoordinateLookups.biomeRegion(...stop.coords, coordinateIndexes.ecoregions, d3.geoContains).biomes.length > 0;
+        const terrestrial = CoordinateLookups.biomeRegion(...stop.coords, coordinateIndexes.ecoregions,
+          d3.geoContains, coordinateIndexes.mangroves).biomes.length > 0;
         const poi = stop.kind === 'poi' ? AppState.customPois.find(poi => poi.id === stop.id) : null;
         const parkRarity = stop.kind === 'park'
           ? AppState.parkRarity?.[stop.id] || window.catalogParkRarityFor?.(stop.id)

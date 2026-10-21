@@ -12,7 +12,8 @@ Players do not need an API key, and no key is included in the site.
    Name the secret `NPS_API_KEY` and paste the key into its value.
 3. Push the importer and workflow changes, then open **Actions > Import NPS catalog > Run workflow**.
 4. Download the successful run's `nps-catalog` artifact, unzip it, and add `nps-parks.json`,
-   `ecoregion-mapping.json`, `nps-boundaries.topojson`, and `ecoregions.topojson` to the
+   `ecoregion-mapping.json`, `nps-boundaries.topojson`, `ecoregions.topojson`, and
+   `mangroves.topojson` to the
    tracked [`wanderlog/`](wanderlog/) directory (capitalization matters on GitHub Pages).
 5. Commit and deploy that dataset with the site. Repeat steps 3-5 only when you want a refresh.
 
@@ -195,16 +196,19 @@ every type may require expanding the destination catalog.
 
 For a combined refresh, run **Actions > Import NPS catalog**. The workflow downloads NPS data,
 regenerates biome mappings from the licensed RESOLVE source, and tests both datasets before
-publishing them with compact boundary/coordinate geography in the same artifact. Deploy all four files together.
+publishing them with compact boundary/coordinate geography in the same artifact. Deploy all five generated data files together.
 
-For an offline/local mapping refresh:
+For a local source and geography refresh:
 
 1. Download the [RESOLVE 2017 shapefile ZIP](https://storage.googleapis.com/teow2016/Ecoregions2017.zip)
    and extract it **outside the repository**. Keep the `.shp`, `.dbf`, and `.prj` files together.
 2. From `wanderlog`, run `npm ci` (Node 22+ for the current data tooling), then
    `npm run import:ecoregions -- "C:\path\to\Ecoregions2017.shp"`.
-3. Run `npm test`. Commit the regenerated `ecoregion-mapping.json` together with any changed
-   `nps-parks.json` or international destination coordinates and deploy them together.
+   Also run `npm run import:geography -- "C:\path\to\Ecoregions2017.shp"` to regenerate the compact
+   ecoregion and detailed mangrove coordinate topologies.
+3. Run `npm test`. Commit the regenerated `ecoregion-mapping.json`, `ecoregions.topojson`, and
+   `mangroves.topojson` together with any changed `nps-parks.json` or international destination
+   coordinates and deploy them together.
 
 The importer streams source features, requires WGS84 and the source's CC-BY-4.0 license attribute,
 and records provenance, the shapefile SHA-256, methods, areas, and generation time.
@@ -255,10 +259,11 @@ Before saving a custom point, `Promise.all()` resolves:
   unmatched, not snapped to a nearby landmass. Simplified atlases can miss small islands and give
   approximate coastal/border matches.
 - **Biome/ecoregion:** local containment against [`ecoregions.topojson`](wanderlog/ecoregions.topojson),
-  derived from the same CC-BY-4.0 RESOLVE source as the catalog snapshot. D3 ring winding is normalized
-  and holes, multipart polygons, and antimeridian bounds are respected. Simplification makes this
-  an approximate classification, **not guaranteed exact near a boundary**. Rock/ice and water
-  are excluded. Existing catalog points still use their unsimplified precomputed mappings.
+  with [`mangroves.topojson`](wanderlog/mangroves.topojson) as a higher-detail overlay for biome 14.
+  Both are derived from the same CC-BY-4.0 RESOLVE source. D3 ring winding is normalized and holes,
+  multipart polygons, and antimeridian bounds are respected. Other simplified biomes remain approximate,
+  **not guaranteed exact near a boundary**. Rock/ice and water are excluded. Existing catalog points
+  still use their unsimplified precomputed mappings.
 - **Location rarity estimate:** a direct, keyless [Overpass](https://overpass-api.de/) request for
   distinct tourism/amenity **nodes** and motorway/trunk ways within 5 km. The label uses mapped
   POI density with the requested bands: Uncharted `<10`, Hidden Gem `10–29`, Deep Cut `30–99`,
@@ -302,11 +307,11 @@ npm test
 checks completeness and exact unit codes, and simplifies locally with Mapshaper weighted
 Visvalingam and `keep-shapes`. No data is uploaded to mapshaper.org. NPS keeps 1.5% of vertices;
 fine TopoJSON quantization preserves tiny historic-site polygons. RESOLVE keeps 0.8% to meet the
-1.8 MB uncompressed download budget (the published file is approximately 1.64 MiB, substantially
-smaller over HTTP compression). NPS is approximately 559 KiB with a 750 KB uncompressed budget. These are measured limits,
-not a promise that every future source refresh will fit the same size. Generation fails rather
-than silently removing small boundaries or exceeding the budgets. Source hashes, dates, methods,
-attribution, and RESOLVE licensing are embedded in both snapshots.
+1.8 MB uncompressed download budget. A separate unsimplified mangrove-only topology preserves
+coastal detail (currently about 3.50 MiB uncompressed / 751 KiB gzip), with a 4 MB uncompressed download budget. NPS is approximately 559 KiB with a
+750 KB uncompressed budget. These are measured limits, not a promise that every future source refresh
+will fit the same size. Generation fails rather than silently removing small boundaries or exceeding
+the budgets. Source hashes, dates, methods, attribution, and RESOLVE licensing are embedded in the snapshots.
 
 The **Import NPS catalog** workflow regenerates and tests all four datasets together.
 Public datasets and API metadata can change; regenerate explicitly rather than relying on

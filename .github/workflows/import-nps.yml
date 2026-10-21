@@ -40,4 +40,5 @@ jobs:
             wanderlog/ecoregion-mapping.json
             wanderlog/nps-boundaries.topojson
             wanderlog/ecoregions.topojson
+            wanderlog/mangroves.topojson
           if-no-files-found: error

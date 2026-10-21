@@ -122,14 +122,19 @@ await check('county biome fallback detects complete border intersections without
 
 const npsText = await readFile(new URL('./nps-boundaries.topojson', import.meta.url), 'utf8');
 const ecoText = await readFile(new URL('./ecoregions.topojson', import.meta.url), 'utf8');
+const mangroveText = await readFile(new URL('./mangroves.topojson', import.meta.url), 'utf8');
 const subdivisionsText = await readFile(new URL('./world-subdivisions.topojson', import.meta.url), 'utf8');
 const admin2Text = await readFile(new URL('./world-admin2.topojson', import.meta.url), 'utf8');
 const nps = JSON.parse(npsText);
 const eco = JSON.parse(ecoText);
+const mangroves = JSON.parse(mangroveText);
 const subdivisionsTopology = JSON.parse(subdivisionsText);
 const admin2Topology = JSON.parse(admin2Text);
 const npsIndex = lookups.npsBoundaryIndex(nps, decode);
-const ecoIndex = lookups.indexFeatures(decode(eco, eco.objects.ecoregions).features, geo);
+const ecoFeatures = decode(eco, eco.objects.ecoregions).features;
+const mangroveFeatures = decode(mangroves, mangroves.objects.mangroves).features;
+const ecoIndex = lookups.indexFeatures(ecoFeatures, geo);
+const mangroveIndex = lookups.indexFeatures(mangroveFeatures, geo);
 const subdivisions = lookups.subdivisionFeatures(subdivisionsTopology, decode);
 const subdivisionsIndex = lookups.indexFeatures(subdivisions, geo);
 const admin2 = lookups.admin2Features(admin2Topology, decode);
@@ -152,10 +157,17 @@ await check('published geography snapshots meet size budgets and retain source p
   assert.ok(subdivisions.every(feature =>
     /^[A-Z]{3}:[A-Za-z0-9_.-]+$/.test(feature.id) && feature.properties.isoA3 !== 'USA'));
   assert.equal(ecoIndex.length, 847);
+  assert.equal(mangroves.metadata.source, eco.metadata.source);
+  assert.equal(mangroves.metadata.sourceSha256, eco.metadata.sourceSha256);
+  assert.equal(mangroves.metadata.biome, 14);
+  assert.match(mangroves.metadata.method, /without geometry simplification/);
+  assert.ok(mangroveFeatures.length > 0 && mangroveFeatures.every(feature => feature.properties.BIOME_NUM === 14));
+  assert.ok(Buffer.byteLength(mangroveText) <= 4000000);
+  assert.ok(gzipSync(mangroveText).length <= 850000);
   assert.ok(nps.objects.parks.geometries.length >= 400);
   assert.match(nps.metadata.method, /1.5%/);
   assert.match(eco.metadata.method, /0.8%/);
-  console.log(`  Admin-2: ${Buffer.byteLength(admin2Text)} bytes; NPS: ${Buffer.byteLength(npsText)} bytes (${gzipSync(npsText).length} gzip); ecoregions: ${Buffer.byteLength(ecoText)} bytes (${gzipSync(ecoText).length} gzip).`);
+  console.log(`  Admin-2: ${Buffer.byteLength(admin2Text)} bytes; NPS: ${Buffer.byteLength(npsText)} bytes (${gzipSync(npsText).length} gzip); ecoregions: ${Buffer.byteLength(ecoText)} bytes (${gzipSync(ecoText).length} gzip); mangroves: ${Buffer.byteLength(mangroveText)} bytes (${gzipSync(mangroveText).length} gzip).`);
 });
 await check('geoBoundaries Admin-2 importer validates IDs and emits only compact county properties', async () => {
   const features = selectAdmin2Features({
@@ -190,6 +202,15 @@ await check('Colosseum and Spirit Falls map to real simplified RESOLVE ecoregion
   assert.ok(rome.ecoregions[0].name.includes('Italian'));
   assert.deepEqual(falls.biomes, ['5']);
   console.log(`  Colosseum: ${rome.ecoregions[0].name}; Spirit Falls: ${falls.ecoregions[0].name}.`);
+});
+await check('detailed mangrove polygons correct the simplified classification at San Juan airport', () => {
+  const lat = 18.4431995;
+  const lng = -65.9974304;
+  const simplified = lookups.biomeRegion(lat, lng, ecoIndex, geo.geoContains);
+  const detailed = lookups.biomeRegion(lat, lng, ecoIndex, geo.geoContains, mangroveIndex);
+  assert.deepEqual(simplified.biomes, ['1']);
+  assert.deepEqual(detailed.biomes, ['14']);
+  assert.equal(detailed.ecoregions[0].name, 'Bahamian-Antillean mangroves');
 });
 await check('boundary importer paginates all records and fails on partial pages/service errors', async () => {
   const features = Array.from({ length: 405 }, (_, id) => ({

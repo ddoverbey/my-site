@@ -166,8 +166,10 @@
     };
   }
 
-  function biomeRegion(lat, lng, index, geoContains) {
-    const regions = findContaining(index, lat, lng, geoContains).map(feature => ({
+  function biomeRegion(lat, lng, index, geoContains, mangroveIndex = []) {
+    const detailedMangroves = mangroveIndex.length
+      ? findContaining(mangroveIndex, lat, lng, geoContains) : [];
+    const regions = (detailedMangroves.length ? detailedMangroves : findContaining(index, lat, lng, geoContains)).map(feature => ({
       id: feature.properties.ECO_ID, name: feature.properties.ECO_NAME,
       biomeId: feature.properties.BIOME_NUM, realm: feature.properties.REALM
     }));
@@ -178,13 +180,14 @@
     };
   }
 
-  function predominantBiome(feature, index, geo) {
+  function predominantBiome(feature, index, geo, mangroveIndex = []) {
     if (!Array.isArray(index) || !geo?.geoArea || !geo?.geoBounds || !geo?.geoContains || !geo?.geoCentroid) {
       throw new Error('Indexed ecoregions and D3 geometry helpers are required.');
     }
     const normalized = normalizeFeature(feature, geo.geoArea);
     const [[west, south], [east, north]] = geo.geoBounds(normalized);
-    const candidates = index.filter(item => boundsOverlap(geo.geoBounds(normalized), item.bounds));
+    const candidates = [...mangroveIndex, ...index].filter(item =>
+      boundsOverlap(geo.geoBounds(normalized), item.bounds));
     const counts = new Map();
     const sample = (lng, lat) => {
       if (!geo.geoContains(normalized, [lng, lat])) return;
@@ -273,13 +276,13 @@
     return false;
   }
 
-  function firstBoundaryIntersection(feature, index, geo) {
+  function firstBoundaryIntersection(feature, index, geo, mangroveIndex = []) {
     if (!Array.isArray(index) || !geo?.geoArea || !geo?.geoBounds || !geo?.geoContains) {
       throw new Error('Indexed geography and D3 geometry helpers are required.');
     }
     const normalized = normalizeFeature(feature, geo.geoArea);
     const bounds = geo.geoBounds(normalized);
-    for (const item of index) {
+    for (const item of [...mangroveIndex, ...index]) {
       if (boundsOverlap(bounds, item.bounds) &&
           boundaryIntersectsFeature(normalized, item.feature, geo.geoContains)) return item.feature;
     }
@@ -631,7 +634,7 @@
       throw new Error('Coordinate geography is unavailable. Retry datasets before saving a custom location.');
     }
     const political = politicalRegion(lat, lng, indexes, geoContains);
-    const biome = biomeRegion(lat, lng, indexes.ecoregions, geoContains);
+    const biome = biomeRegion(lat, lng, indexes.ecoregions, geoContains, indexes.mangroves);
     const rarityLookup = skipRarityLookup
       ? Promise.resolve().then(() => cachedRarity(lat, lng, storage))
       : lookupRarityWithFallback(lat, lng, { fetcher, storage, rarityEndpoint, onFallback });

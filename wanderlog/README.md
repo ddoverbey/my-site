@@ -75,12 +75,12 @@ The app loads its catalog and compact geography snapshots from this directory. K
 
 - `nps-parks.json` and `nps-boundaries.topojson` for the National Park Service catalog and boundaries.
 - `worldwide-national-parks.json` and `wikidata-national-parks-query.json` for international park data.
-- `ecoregion-mapping.json` and `ecoregions.topojson` for park biome mappings and coordinate lookups.
+- `ecoregion-mapping.json` for park biome mappings, and `ecoregions.topojson` plus `mangroves.topojson` for coordinate lookups.
 - `world-subdivisions.topojson`, `world-admin2.topojson`, and `micro-states.topojson` for map boundaries.
 
 Biome and political-boundary matching uses simplified geographic data and may be approximate near
-coasts or borders. See the [repository README](../README.md) for data sources, attribution, refresh
-procedures, and implementation details.
+coasts or borders; mangrove matches use a separate detailed coastline layer. See the [repository README](../README.md) for
+data sources, attribution, refresh procedures, and implementation details.
 
 ## Development and tests
 

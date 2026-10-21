@@ -150,7 +150,7 @@ check('mobile RPG HUD starts collapsed with an accessible stats toggle', () => {
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261021-offline-catalog-rarity')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261022-detailed-mangroves')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('storage-risk banner and unfinished-trip recovery controls are present', () => {
@@ -1130,19 +1130,30 @@ check('visited international subdivisions inherit their predominant terrestrial 
   const ecoregionRing = [[-82,42],[-78,42],[-78,46],[-82,46],[-82,42]];
   const ecoregionTopology = {
     type: 'Topology',
-    metadata: { source: ecoregions.SOURCE, license: 'CC-BY-4.0', version: 1 },
+    metadata: { source: ecoregions.SOURCE, license: 'CC-BY-4.0', version: 1, sourceSha256: 'test-source-hash' },
     arcs: [ecoregionRing],
     objects: { ecoregions: { type: 'GeometryCollection', geometries: Array.from({ length: 800 }, (_, index) => ({
       type: 'Polygon', arcs: [[0]],
       properties: { ECO_ID: index + 1, ECO_NAME: 'Test region', BIOME_NUM: 5, REALM: 'Nearctic' }
     })) } }
   };
+  const mangroveTopology = {
+    type: 'Topology',
+    metadata: { source: ecoregions.SOURCE, license: 'CC-BY-4.0', version: 1, sourceSha256: 'test-source-hash', biome: 14 },
+    arcs: [ecoregionRing],
+    objects: { mangroves: { type: 'GeometryCollection', geometries: [{
+      type: 'Polygon', arcs: [[0]],
+      properties: { ECO_ID: 9001, ECO_NAME: 'Test mangrove', BIOME_NUM: 14, REALM: 'Nearctic' }
+    }] } }
+  };
   const stateRing = [[[0,0],[1,0],[1,1],[0,1],[0,0]]];
   const savedFetch = context.fetch;
   const savedTimeout = context.setTimeout;
   const savedTopojson = context.topojson;
   const savedD3 = context.d3;
-  context.fetch = async () => ({ ok: true, json: async () => ecoregionTopology });
+  context.fetch = async url => ({
+    ok: true, json: async () => url.includes('mangroves') ? mangroveTopology : ecoregionTopology
+  });
   context.setTimeout = callback => { queueMicrotask(callback); return 1; };
   context.topojson = { feature: decodeTopology };
   context.backfillAdmin1 = admin1;
@@ -1216,6 +1227,10 @@ check('visited international subdivisions inherit their predominant terrestrial 
       assert.equal(vm.runInContext("AppState.counties['CAN:CD-ON']", context), 'v');
       assert.equal(vm.runInContext("AppState.regions['s:CAN:ONT']", context), 'v');
       assert.equal(vm.runInContext("coordinateIndexes.counties.some(item => item.feature.id === 'CAN:ONT')", context), false);
+      assert.equal(JSON.stringify(vm.runInContext(
+        "CoordinateLookups.biomeRegion(43.5, -80.5, coordinateIndexes.ecoregions, d3.geoContains, coordinateIndexes.mangroves).biomes", context
+      )), '["14"]');
+      assert.equal(vm.runInContext('coordinateIndexes.mangroves.length', context), 1);
       assert.equal(vm.runInContext("countyFeaturesById['CAN:ONT']", context), undefined);
       assert.equal(vm.runInContext('backfillSaveCalls', context), 1);
       assert.equal(vm.runInContext('backfillFogCalls', context), 1);

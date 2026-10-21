@@ -1001,14 +1001,14 @@
     </form>
   </div>
 
-  <script src="./nps-catalog.js?v=20261021-offline-catalog-rarity"></script>
-  <script src="./national-parks-scratch.js?v=20261021-offline-catalog-rarity"></script>
-  <script src="./international-parks.js?v=20261021-offline-catalog-rarity"></script>
-  <script src="./ecoregions.js?v=20261021-offline-catalog-rarity"></script>
-  <script src="./coordinate-lookups.js?v=20261021-offline-catalog-rarity"></script>
-  <script src="./micro-states.js?v=20261021-offline-catalog-rarity"></script>
-  <script src="./travel-ledger.js?v=20261021-offline-catalog-rarity"></script>
-  <script src="./rarity-config.js?v=20261021-offline-catalog-rarity"></script>
+  <script src="./nps-catalog.js?v=20261022-detailed-mangroves"></script>
+  <script src="./national-parks-scratch.js?v=20261022-detailed-mangroves"></script>
+  <script src="./international-parks.js?v=20261022-detailed-mangroves"></script>
+  <script src="./ecoregions.js?v=20261022-detailed-mangroves"></script>
+  <script src="./coordinate-lookups.js?v=20261022-detailed-mangroves"></script>
+  <script src="./micro-states.js?v=20261022-detailed-mangroves"></script>
+  <script src="./travel-ledger.js?v=20261022-detailed-mangroves"></script>
+  <script src="./rarity-config.js?v=20261022-detailed-mangroves"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -3314,7 +3314,8 @@
     function cachedBiomeRegionAt(lat, lng) {
       if (!coordinateIndexes) return null;
       return cachedCoordinate(biomeCache, lat, lng, () =>
-        CoordinateLookups.biomeRegion(lat, lng, coordinateIndexes.ecoregions, d3.geoContains));
+        CoordinateLookups.biomeRegion(lat, lng, coordinateIndexes.ecoregions, d3.geoContains,
+          coordinateIndexes.mangroves));
     }
 
     // Computed on demand: resolving all ~3,200 counties up front blocked startup for many seconds.
@@ -3324,7 +3325,8 @@
       if (!feature || !coordinateIndexes?.ecoregions?.length) return null;
       const normalized = CoordinateLookups.normalizeFeature(feature, d3.geoArea);
       if (CoordinateLookups.validSubdivisionId(countyId)) {
-        const predominant = CoordinateLookups.predominantBiome(normalized, coordinateIndexes.ecoregions, d3);
+        const predominant = CoordinateLookups.predominantBiome(normalized, coordinateIndexes.ecoregions, d3,
+          coordinateIndexes.mangroves);
         if (predominant) {
           countyBiomeCache[countyId] = predominant;
           saveCountyBiomesSoon();
@@ -3335,7 +3337,7 @@
       let biomes = cachedBiomeAt(lat, lng);
       if (!biomes.length) {
         const intersecting = CoordinateLookups.firstBoundaryIntersection(
-          normalized, coordinateIndexes.ecoregions, d3);
+          normalized, coordinateIndexes.ecoregions, d3, coordinateIndexes.mangroves);
         if (intersecting) biomes = [String(intersecting.properties.BIOME_NUM)];
       }
       countyBiomeCache[countyId] = biomes.length ? String(biomes[0]) : null;
@@ -3351,17 +3353,30 @@
       countyBiomeSignature = null;
       const status = document.getElementById('coordinateGeographyStatus');
       try {
-        const response = await fetch('./ecoregions.topojson', { cache: 'no-cache' });
+        const [response, mangroveResponse] = await Promise.all([
+          fetch('./ecoregions.topojson', { cache: 'no-cache' }),
+          fetch('./mangroves.topojson', { cache: 'no-cache' })
+        ]);
         if (!response.ok) throw new Error(`Ecoregion geography request failed (HTTP ${response.status}).`);
-        const topology = await response.json();
+        if (!mangroveResponse.ok) throw new Error(`Detailed mangrove geography request failed (HTTP ${mangroveResponse.status}).`);
+        const [topology, mangroveTopology] = await Promise.all([response.json(), mangroveResponse.json()]);
         if (topology.metadata?.source !== Ecoregions.SOURCE || topology.metadata.license !== 'CC-BY-4.0' ||
             topology.metadata.version !== 1 || !topology.objects?.ecoregions) throw new Error('Invalid ecoregion geography snapshot.');
+        if (mangroveTopology.metadata?.source !== Ecoregions.SOURCE || mangroveTopology.metadata.license !== 'CC-BY-4.0' ||
+            mangroveTopology.metadata.version !== 1 || mangroveTopology.metadata.biome !== 14 ||
+            mangroveTopology.metadata.sourceSha256 !== topology.metadata.sourceSha256 ||
+            !mangroveTopology.objects?.mangroves) throw new Error('Invalid detailed mangrove geography snapshot.');
         if (!worldGeoJson?.length || !usaRegionGeoJson?.length || !countyGeoJson?.length ||
             !worldSubdivisionGeoJson?.length) throw new Error('Political atlas boundaries unavailable.');
         const features = topojson.feature(topology, topology.objects.ecoregions).features;
         if (features.length < 800 || features.some(feature =>
           !Number.isInteger(feature.properties.BIOME_NUM) || feature.properties.BIOME_NUM < 1 || feature.properties.BIOME_NUM > 14)) {
           throw new Error('Incomplete terrestrial ecoregion geography.');
+        }
+        const mangroveFeatures = topojson.feature(mangroveTopology, mangroveTopology.objects.mangroves).features;
+        if (!mangroveFeatures.length || mangroveFeatures.some(feature =>
+          !feature.geometry || feature.properties.BIOME_NUM !== 14)) {
+          throw new Error('Incomplete detailed mangrove geography.');
         }
         // Index one atlas per task so startup input is never blocked by a single ~250ms indexing pass.
         const indexes = {};
@@ -3372,10 +3387,17 @@
           await yieldToMain();
           if (loadId !== coordinateLoadId) return;
         }
+        indexes.mangroves = [];
+        for (const feature of mangroveFeatures) {
+          indexes.mangroves.push(...CoordinateLookups.indexFeatures([feature], d3));
+          await yieldToMain();
+          if (loadId !== coordinateLoadId) return;
+        }
         coordinateIndexes = indexes;
         restoreCountyBiomes(JSON.stringify([topology.metadata.source, topology.metadata.version,
-          features.length, countyGeoJson.length, worldSubdivisionGeoJson.length, worldAdmin2GeoJson.length]));
-        status.textContent = 'Custom-coordinate geography ready. Region and biome matches use simplified polygons.';
+          topology.metadata.sourceSha256, mangroveTopology.metadata.version, features.length,
+          mangroveFeatures.length, countyGeoJson.length, worldSubdivisionGeoJson.length, worldAdmin2GeoJson.length]));
+        status.textContent = 'Custom-coordinate geography ready. Mangroves use detailed coastlines; other biomes use simplified polygons.';
         backfillSavedGeography();
         if (AppState.currentTab === 'travel') renderExpeditionHistory();
       } catch (error) {
@@ -5433,7 +5455,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261021-offline-catalog-rarity"></script>
+  <script src="./expedition-ui.js?v=20261022-detailed-mangroves"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);

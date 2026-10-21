@@ -65,10 +65,40 @@ async function publish(name, topology, metadata, maxBytes) {
   console.log(`${name}: ${topology.objects[Object.keys(topology.objects)[0]].geometries.length} geometries, ${(size / 1024).toFixed(0)} KiB.`);
 }
 
+async function publishMangroves(shapefilePath, sourceSha256) {
+  const output = await mapshaper.applyCommands(
+    `-i "${shapefilePath}" -filter 'BIOME_NUM == 14' ` +
+    '-filter-fields ECO_ID,ECO_NAME,BIOME_NUM,REALM -rename-layers mangroves ' +
+    '-o format=topojson quantization=1000000'
+  );
+  const topology = JSON.parse(Object.values(output)[0]);
+  const features = decode(topology, topology.objects.mangroves).features;
+  if (!features.length || features.some(feature =>
+    !feature.geometry || feature.properties.BIOME_NUM !== 14)) {
+    throw new Error('Detailed mangrove geography is incomplete or contains a non-mangrove feature.');
+  }
+  await publish('mangroves.topojson', topology, {
+    source: ecoregions.SOURCE, license: 'CC-BY-4.0',
+    attribution: 'RESOLVE Ecoregions 2017, Dinerstein et al. (2017), updating WWF Terrestrial Ecoregions.',
+    citation: 'https://doi.org/10.1093/biosci/bix014',
+    sourceSha256, biome: 14,
+    method: 'Original BIOME_NUM 14 polygons without geometry simplification; TopoJSON quantization 1000000. Used to improve coastal mangrove point matches; water and rock/ice excluded.'
+  }, 4000000);
+}
+
+export async function buildMangroves(shapefilePath) {
+  if (!shapefilePath?.endsWith('.shp')) throw new Error('Pass the extracted RESOLVE Ecoregions2017.shp path.');
+  const projection = await readFile(shapefilePath.replace(/\.shp$/, '.prj'), 'utf8');
+  if (!projection.includes('GEOGCS["WGS 84"') || projection.includes('PROJCS[')) throw new Error('Expected RESOLVE WGS84 coordinates.');
+  const sourceSha256 = createHash('sha256').update(await readFile(shapefilePath)).digest('hex');
+  await publishMangroves(shapefilePath, sourceSha256);
+}
+
 export async function buildEcoregions(shapefilePath) {
   if (!shapefilePath?.endsWith('.shp')) throw new Error('Pass the extracted RESOLVE Ecoregions2017.shp path.');
   const projection = await readFile(shapefilePath.replace(/\.shp$/, '.prj'), 'utf8');
   if (!projection.includes('GEOGCS["WGS 84"') || projection.includes('PROJCS[')) throw new Error('Expected RESOLVE WGS84 coordinates.');
+  const sourceSha256 = createHash('sha256').update(await readFile(shapefilePath)).digest('hex');
   const output = await mapshaper.applyCommands(
     `-i "${shapefilePath}" -filter 'BIOME_NUM >= 1 && BIOME_NUM <= 14' ` +
     '-filter-fields ECO_ID,ECO_NAME,BIOME_NUM,REALM -rename-layers ecoregions ' +
@@ -79,9 +109,11 @@ export async function buildEcoregions(shapefilePath) {
     source: ecoregions.SOURCE, license: 'CC-BY-4.0',
     attribution: 'RESOLVE Ecoregions 2017, Dinerstein et al. (2017), updating WWF Terrestrial Ecoregions.',
     citation: 'https://doi.org/10.1093/biosci/bix014',
-    sourceSha256: createHash('sha256').update(await readFile(shapefilePath)).digest('hex'),
+    sourceSha256,
     method: 'Weighted Visvalingam 0.8%, keep-shapes, TopoJSON quantization 100000. Approximate custom-coordinate lookup; coastal/border classifications can differ from unsimplified polygons. Water and rock/ice excluded.'
   }, 1800000);
+
+  await publishMangroves(shapefilePath, sourceSha256);
 }
 
 async function main() {
