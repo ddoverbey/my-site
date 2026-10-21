@@ -50,12 +50,12 @@ check('exact API coordinates and official metadata', () => {
 });
 check('all rarity tiers expose their canonical badge icons and colors', () => {
   assert.deepEqual(JSON.parse(JSON.stringify(coordinateLookups.RARITY_TIERS)), {
-    'Tourist Trap': { icon: '📸', color: '#94a3b8' },
+    'Tourist Trap': { icon: '📸', color: '#cbd5e1' },
     'Beaten Path': { icon: '🥾', color: '#4ade80' },
-    'Regional Staple': { icon: '🧭', color: '#38bdf8' },
+    'Regional Staple': { icon: '🧭', color: '#22d3ee' },
     'Deep Cut': { icon: '🗺️', color: '#c084fc' },
     'Hidden Gem': { icon: '💎', color: '#fbbf24' },
-    'Uncharted': { icon: '🌌', color: '#f472b6' }
+    'Uncharted': { icon: '🌌', color: '#f0abfc' }
   });
 });
 check('all 405 records and multiple designations retained', () => {
@@ -150,7 +150,7 @@ check('mobile RPG HUD starts collapsed with an accessible stats toggle', () => {
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261021-biome-rarity-tiers')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261021-location-rarity-colors')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('storage-risk banner and unfinished-trip recovery controls are present', () => {

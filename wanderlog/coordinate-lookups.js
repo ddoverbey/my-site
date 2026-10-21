@@ -6,12 +6,12 @@
   const CACHE_TTL = 30 * 24 * 60 * 60 * 1000;
   const PROVIDER_TIMEOUT_MS = 3500;
   const RARITY_TIERS = Object.freeze({
-    'Tourist Trap': Object.freeze({ icon: '📸', color: '#94a3b8' }),
+    'Tourist Trap': Object.freeze({ icon: '📸', color: '#cbd5e1' }),
     'Beaten Path': Object.freeze({ icon: '🥾', color: '#4ade80' }),
-    'Regional Staple': Object.freeze({ icon: '🧭', color: '#38bdf8' }),
+    'Regional Staple': Object.freeze({ icon: '🧭', color: '#22d3ee' }),
     'Deep Cut': Object.freeze({ icon: '🗺️', color: '#c084fc' }),
     'Hidden Gem': Object.freeze({ icon: '💎', color: '#fbbf24' }),
-    Uncharted: Object.freeze({ icon: '🌌', color: '#f472b6' })
+    Uncharted: Object.freeze({ icon: '🌌', color: '#f0abfc' })
   });
   const NPS_SOURCE = 'https://services1.arcgis.com/fBc8EJBxQRMcHlei/ArcGIS/rest/services/NPS_Land_Resources_Division_Boundary_and_Tract_Data_Service/FeatureServer/2';
   const SUBDIVISION_SOURCE = 'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_10m_admin_1_states_provinces.geojson';
