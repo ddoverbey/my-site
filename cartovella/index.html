@@ -394,6 +394,11 @@
         🔗
       </button>
 
+      <button id="btnCloudAuth" type="button" class="header-icon relative" aria-label="Account and cloud sync" title="Account &amp; Cloud Sync">
+        ☁️
+        <span id="syncStatusDot" class="absolute top-1 right-1 w-2 h-2 rounded-full bg-slate-500" aria-hidden="true"></span>
+      </button>
+
       <details id="settingsMenu" class="relative">
         <summary aria-label="Settings" title="Settings" class="header-icon cursor-pointer">
           ⚙️
@@ -1038,14 +1043,46 @@
     </form>
   </div>
 
-  <script src="./nps-catalog.js?v=20261022-cartovella-terrafix"></script>
-  <script src="./national-parks-scratch.js?v=20261022-cartovella-terrafix"></script>
-  <script src="./international-parks.js?v=20261022-cartovella-terrafix"></script>
-  <script src="./ecoregions.js?v=20261022-cartovella-terrafix"></script>
-  <script src="./coordinate-lookups.js?v=20261022-cartovella-terrafix"></script>
-  <script src="./micro-states.js?v=20261022-cartovella-terrafix"></script>
-  <script src="./travel-ledger.js?v=20261022-cartovella-terrafix"></script>
-  <script src="./rarity-config.js?v=20261022-cartovella-terrafix"></script>
+  <div id="authModal" role="dialog" aria-modal="true" aria-labelledby="authModalTitle" class="hidden fixed inset-0 z-[1100] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
+    <section class="rpg-panel rpg-panel-gold relative w-full max-w-md rounded-2xl p-6 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+        <h2 id="authModalTitle" class="cinzel text-lg font-bold text-amber-200">Account &amp; Cloud Sync</h2>
+        <button id="btnCloseAuthModal" type="button" aria-label="Close account and cloud sync" class="rounded-lg px-2 py-1 text-slate-400 hover:text-white">×</button>
+      </div>
+      <div id="authViewLoggedOut" class="space-y-3">
+        <p class="text-xs text-slate-400">Sign in to sync your passport across devices. Your local save stays available offline.</p>
+        <label class="block text-xs text-slate-300">Email
+          <input id="authEmail" type="email" autocomplete="email" required class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100">
+        </label>
+        <label class="block text-xs text-slate-300">Password
+          <input id="authPassword" type="password" autocomplete="current-password" required class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100">
+        </label>
+        <p id="authErrorMsg" class="hidden text-xs text-rose-300" role="alert" aria-live="assertive"></p>
+        <div class="flex gap-2">
+          <button id="btnAuthLogin" type="button" class="flex-1 rounded-lg bg-amber-500 px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-amber-400">Sign In</button>
+          <button id="btnAuthSignUp" type="button" class="flex-1 rounded-lg border border-slate-600 px-3 py-2 text-sm text-slate-200 hover:bg-slate-800">Create Account</button>
+        </div>
+      </div>
+      <div id="authViewLoggedIn" class="hidden space-y-4">
+        <div class="rounded-xl border border-emerald-500/30 bg-slate-950/60 p-3">
+          <p class="text-xs font-semibold text-emerald-300">● Cloud Active</p>
+          <p id="authCurrentEmail" class="mt-1 truncate text-xs text-slate-200"></p>
+          <p id="authSyncStatusText" class="mt-2 text-[11px] text-slate-400" role="status" aria-live="polite">Waiting for cloud data…</p>
+        </div>
+        <button id="btnForceCloudSync" type="button" class="w-full rounded-lg border border-sky-500/40 bg-slate-900 px-3 py-2 text-sm text-sky-200 hover:bg-slate-800">Force Cloud Sync Now</button>
+        <button id="btnAuthLogout" type="button" class="w-full rounded-lg border border-rose-500/30 bg-rose-950/30 px-3 py-2 text-sm text-rose-300 hover:bg-rose-950/60">Sign Out</button>
+      </div>
+    </section>
+  </div>
+
+  <script src="./nps-catalog.js?v=20261022-cartovella-cloudsync"></script>
+  <script src="./national-parks-scratch.js?v=20261022-cartovella-cloudsync"></script>
+  <script src="./international-parks.js?v=20261022-cartovella-cloudsync"></script>
+  <script src="./ecoregions.js?v=20261022-cartovella-cloudsync"></script>
+  <script src="./coordinate-lookups.js?v=20261022-cartovella-cloudsync"></script>
+  <script src="./micro-states.js?v=20261022-cartovella-cloudsync"></script>
+  <script src="./travel-ledger.js?v=20261022-cartovella-cloudsync"></script>
+  <script src="./rarity-config.js?v=20261022-cartovella-cloudsync"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -1411,6 +1448,7 @@
       parkRarity: {},
       nationalParkScratch: {},
       statusOverrides: { pins: {}, regions: {}, counties: {}, nationalParks: {} },
+      extraPassportFields: {},
       currentTab: 'map',
       mode: 'rpg',    // 'rpg' or 'classic'
       pinFilter: 'none',
@@ -1427,8 +1465,36 @@
     const PASSPORT_STORAGE_FORMAT = 'encoded-route-polyline-v1';
     const PASSPORT_STORAGE_KEY = 'cartovella_state';
     const LEGACY_PASSPORT_STORAGE_KEYS = ['terra_incognita_state'];
+    const SUPABASE_URL = 'https://mrgdthihogxrqsfnknxd.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1yZ2R0aGlob2d4cnFzZm5rbnhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyNDk4NTYsImV4cCI6MjEwNDgyNTg1Nn0.1fwcaGPGrzUut3zng2NNkYZt7hUguhKPhfqYyu8MA3s';
+    const AUTH_SESSION_KEY = 'cartovella_cloud_session';
+    const PASSPORT_FIELDS = Object.freeze({
+      homeBase: () => null,
+      pins: () => ({}),
+      regions: () => ({}),
+      counties: () => ({}),
+      customPois: () => [],
+      expeditions: () => [],
+      expeditionPromotions: () => ({}),
+      parkRarity: () => ({}),
+      nationalParkScratch: () => ({}),
+      statusOverrides: () => ({ pins: {}, regions: {}, counties: {}, nationalParks: {} }),
+      clearedPolygons: () => [],
+      routes: () => [],
+      mode: () => 'rpg'
+    });
     const LOCAL_STORAGE_WARNING_BYTES = 3.5 * 1024 * 1024;
     const LOCAL_STORAGE_SAFE_LIMIT_BYTES = 4.5 * 1024 * 1024;
+    let cloudSession = null;
+    try {
+      cloudSession = JSON.parse(localStorage.getItem(AUTH_SESSION_KEY) || 'null');
+    } catch (error) {
+      console.error('Stored Cartovella cloud session is invalid.', error);
+      localStorage.removeItem(AUTH_SESSION_KEY);
+    }
+    let cloudHydrated = false;
+    let cloudSyncTimer = null;
+    let cloudSyncInProgress = false;
 
     function encodeRoutePolyline(route) {
       let previousLat = 0;
@@ -1601,21 +1667,22 @@
     }
 
     function applyPassport(parsed) {
-      for (const field of ['homeBase', 'pins', 'regions', 'counties', 'customPois', 'expeditions', 'expeditionPromotions', 'parkRarity', 'nationalParkScratch']) AppState[field] = parsed[field] ?? (field === 'homeBase' ? null : field === 'customPois' || field === 'expeditions' ? [] : {});
-      AppState.statusOverrides = parsed.statusOverrides ?? { pins: {}, regions: {}, counties: {}, nationalParks: {} };
-      AppState.clearedPolygons = Array.isArray(parsed.clearedPolygons) ? parsed.clearedPolygons : [];
-      AppState.routes = Array.isArray(parsed.routes) ? parsed.routes : [];
-      AppState.mode = parsed.mode || 'rpg';
+      Object.entries(PASSPORT_FIELDS).forEach(([field, createDefault]) => {
+        AppState[field] = parsed[field] ?? createDefault();
+      });
+      const knownFields = new Set(['version', ...Object.keys(PASSPORT_FIELDS), 'extraPassportFields']);
+      AppState.extraPassportFields = {
+        ...(parsed.extraPassportFields && typeof parsed.extraPassportFields === 'object'
+          ? parsed.extraPassportFields : {}),
+        ...Object.fromEntries(Object.entries(parsed).filter(([field]) => !knownFields.has(field)))
+      };
     }
 
     function passportPayload() {
       return {
-        version: 2, homeBase: AppState.homeBase, pins: AppState.pins, regions: AppState.regions,
-        counties: AppState.counties, customPois: AppState.customPois, expeditions: AppState.expeditions,
-        expeditionPromotions: AppState.expeditionPromotions, parkRarity: AppState.parkRarity,
-        nationalParkScratch: AppState.nationalParkScratch,
-        statusOverrides: AppState.statusOverrides,
-        clearedPolygons: AppState.clearedPolygons, routes: AppState.routes, mode: AppState.mode
+        ...AppState.extraPassportFields,
+        version: 2,
+        ...Object.fromEntries(Object.keys(PASSPORT_FIELDS).map(field => [field, AppState[field]]))
       };
     }
 
@@ -1779,12 +1846,22 @@
           throw error;
         }
         updateStorageWarning();
+        if (cloudHydrated && !AppState.viewOnly) scheduleCloudSync();
       } catch (error) {
         if (error?.name === 'QuotaExceededError' || error?.code === 22 || error?.code === 1014) {
           throw new Error('The browser rejected this save because its storage is full. Your expedition draft is still available; download a passport backup, then free browser storage or remove large route histories before retrying.');
         }
         throw error;
       }
+    }
+
+    function scheduleCloudSync() {
+      if (!cloudHydrated || AppState.viewOnly || !cloudSession?.access_token) return;
+      if (cloudSyncTimer !== null) clearTimeout(cloudSyncTimer);
+      cloudSyncTimer = setTimeout(() => {
+        cloudSyncTimer = null;
+        syncToCloud(false);
+      }, 1000);
     }
 
     let notificationTimeout = null;
@@ -5813,7 +5890,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261022-cartovella-terrafix"></script>
+  <script src="./expedition-ui.js?v=20261022-cartovella-cloudsync"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);
@@ -5946,12 +6023,302 @@
       setRpgMapHudCollapsed(rpgMapHud.dataset.collapsed !== 'true');
     });
 
+    function setCloudStatus(message, failed = false) {
+      const status = document.getElementById('authSyncStatusText');
+      if (status) status.textContent = message;
+      const dot = document.getElementById('syncStatusDot');
+      if (dot) {
+        dot.className = `absolute top-1 right-1 w-2 h-2 rounded-full ${
+          failed ? 'bg-rose-500' : cloudSession ? 'bg-emerald-400' : 'bg-slate-500'
+        }`;
+        dot.title = message;
+      }
+    }
+
+    function updateAuthUI() {
+      const isLoggedIn = !!cloudSession?.user;
+      document.getElementById('authViewLoggedIn').classList.toggle('hidden', !isLoggedIn);
+      document.getElementById('authViewLoggedOut').classList.toggle('hidden', isLoggedIn);
+      if (isLoggedIn) {
+        document.getElementById('authCurrentEmail').textContent = cloudSession.user.email || '';
+        setCloudStatus(cloudHydrated ? 'Cloud data is ready.' : 'Waiting for cloud data…');
+      } else {
+        setCloudStatus('Not signed in.');
+      }
+    }
+
+    function toggleAuthModal(show) {
+      const modal = document.getElementById('authModal');
+      modal.classList.toggle('hidden', !show);
+      if (show) {
+        updateAuthUI();
+        (cloudSession ? document.getElementById('btnForceCloudSync') :
+          document.getElementById('authEmail')).focus();
+      }
+    }
+
+    async function refreshCloudSession() {
+      if (!cloudSession?.refresh_token) return false;
+      try {
+        const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY },
+          body: JSON.stringify({ refresh_token: cloudSession.refresh_token })
+        });
+        if (!response.ok) return false;
+        const session = await response.json();
+        if (!session.access_token || !session.refresh_token || !session.user) {
+          throw new Error('Supabase returned an incomplete refreshed session.');
+        }
+        cloudSession = session;
+        localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(cloudSession));
+        updateAuthUI();
+        return true;
+      } catch (error) {
+        console.error('Cartovella cloud session refresh failed.', error);
+        return false;
+      }
+    }
+
+    async function cloudFetch(url, options = {}, retried = false) {
+      if (!cloudSession?.access_token) throw new Error('Sign in to access cloud sync.');
+      const headers = new Headers(options.headers || {});
+      headers.set('apikey', SUPABASE_ANON_KEY);
+      headers.set('Authorization', `Bearer ${cloudSession.access_token}`);
+      const response = await fetch(url, { ...options, headers });
+      if ((response.status === 401 || response.status === 403) && !retried &&
+          await refreshCloudSession()) {
+        return cloudFetch(url, options, true);
+      }
+      return response;
+    }
+
+    function showAuthError(message) {
+      const error = document.getElementById('authErrorMsg');
+      error.textContent = message;
+      error.classList.remove('hidden');
+    }
+
+    async function handleLogin() {
+      const error = document.getElementById('authErrorMsg');
+      error.textContent = '';
+      error.classList.add('hidden');
+      if (AppState.viewOnly) {
+        showAuthError('Cloud sync is unavailable while viewing a shared read-only passport.');
+        return;
+      }
+      try {
+        const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY },
+          body: JSON.stringify({
+            email: document.getElementById('authEmail').value.trim(),
+            password: document.getElementById('authPassword').value
+          })
+        });
+        const session = await response.json();
+        if (!response.ok) throw new Error(session.error_description || session.msg || session.message || 'Sign in failed.');
+        if (!session.access_token || !session.refresh_token || !session.user) {
+          throw new Error('Supabase returned an incomplete sign-in session.');
+        }
+        cloudSession = session;
+        localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(cloudSession));
+        cloudHydrated = false;
+        updateAuthUI();
+        await appReady;
+        if (await loadFromCloud()) toggleAuthModal(false);
+      } catch (cause) {
+        console.error('Cartovella sign-in failed.', cause);
+        showAuthError(cause.message);
+      }
+    }
+
+    async function handleSignUp() {
+      const error = document.getElementById('authErrorMsg');
+      error.textContent = '';
+      error.classList.add('hidden');
+      if (AppState.viewOnly) {
+        showAuthError('Cloud sync is unavailable while viewing a shared read-only passport.');
+        return;
+      }
+      try {
+        const response = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY },
+          body: JSON.stringify({
+            email: document.getElementById('authEmail').value.trim(),
+            password: document.getElementById('authPassword').value
+          })
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.msg || result.message || 'Account creation failed.');
+        if (!result.session?.access_token || !result.session?.user) {
+          showAuthError('Account created. Confirm your email, then sign in to enable cloud sync.');
+          return;
+        }
+        cloudSession = result.session;
+        localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(cloudSession));
+        cloudHydrated = false;
+        updateAuthUI();
+        await appReady;
+        if (await loadFromCloud()) toggleAuthModal(false);
+      } catch (cause) {
+        console.error('Cartovella account creation failed.', cause);
+        showAuthError(cause.message);
+      }
+    }
+
+    async function handleLogout() {
+      if (cloudSession?.access_token) {
+        try {
+          const response = await fetch(`${SUPABASE_URL}/auth/v1/logout`, {
+            method: 'POST',
+            headers: {
+              apikey: SUPABASE_ANON_KEY,
+              Authorization: `Bearer ${cloudSession.access_token}`
+            }
+          });
+          if (!response.ok) console.warn('Supabase sign-out returned HTTP', response.status);
+        } catch (error) {
+          console.error('Supabase sign-out request failed.', error);
+        }
+      }
+      if (cloudSyncTimer !== null) clearTimeout(cloudSyncTimer);
+      cloudSyncTimer = null;
+      cloudSession = null;
+      cloudHydrated = false;
+      localStorage.removeItem(AUTH_SESSION_KEY);
+      updateAuthUI();
+      toggleAuthModal(false);
+    }
+
+    async function syncToCloud(notify = false) {
+      if (AppState.viewOnly || !cloudSession?.access_token) return false;
+      if (!cloudHydrated) {
+        setCloudStatus('Cloud data is not loaded yet; sync is paused to protect your passport.', true);
+        return false;
+      }
+      if (cloudSyncInProgress) {
+        scheduleCloudSync();
+        return false;
+      }
+      cloudSyncInProgress = true;
+      try {
+        const response = await cloudFetch(`${SUPABASE_URL}/rest/v1/cartovella_passports`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Prefer: 'resolution=merge-duplicates'
+          },
+          body: JSON.stringify({
+            user_id: cloudSession.user.id,
+            passport_data: compactPassportForStorage(passportPayload()),
+            updated_at: new Date().toISOString()
+          })
+        });
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({}));
+          throw new Error(body.message || body.details || `Cloud save failed (HTTP ${response.status}).`);
+        }
+        setCloudStatus(`Last synced at ${new Date().toLocaleTimeString()}.`);
+        if (notify) showNotification('Cloud Sync Complete', 'Your Cartovella passport is safely synced.', '☁️');
+        return true;
+      } catch (error) {
+        console.error('Cartovella cloud sync failed.', error);
+        setCloudStatus(`Cloud sync failed: ${error.message}`, true);
+        if (notify) showNotification('Cloud Sync Failed', `${error.message} Your local save is still available.`, '⚠️');
+        return false;
+      } finally {
+        cloudSyncInProgress = false;
+      }
+    }
+
+    async function loadFromCloud() {
+      if (AppState.viewOnly || !cloudSession?.access_token) return false;
+      cloudHydrated = false;
+      setCloudStatus('Loading your cloud passport…');
+      try {
+        const response = await cloudFetch(
+          `${SUPABASE_URL}/rest/v1/cartovella_passports?user_id=eq.${encodeURIComponent(cloudSession.user.id)}&select=*`,
+          { method: 'GET' }
+        );
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({}));
+          throw new Error(body.message || `Cloud load failed (HTTP ${response.status}).`);
+        }
+        const records = await response.json();
+        if (!Array.isArray(records)) throw new Error('Supabase returned an unexpected passport response.');
+        if (records.length) {
+          const localBackup = passportPayload();
+          try {
+            const parsed = migratePassport(records[0].passport_data);
+            applyPassport(parsed);
+            syncDerivedState();
+            saveState();
+            cloudHydrated = true;
+          } catch (error) {
+            applyPassport(localBackup);
+            throw error;
+          }
+          if (AppState.homeBase) closeHomeModal();
+          updateHomeBaseMarker();
+          renderParkMarkers();
+          drawFogOfWar();
+          updateAllUI();
+          setCloudStatus('Cloud passport loaded and ready.');
+        } else {
+          cloudHydrated = true;
+          if (AppState.homeBase || TravelLedger.hasLoggedTravel(AppState)) {
+            if (!await syncToCloud(false)) {
+              throw new Error('No cloud passport exists and the local passport could not be uploaded.');
+            }
+          } else {
+            setCloudStatus('Cloud account ready. Add a home base or travel record to begin syncing.');
+          }
+        }
+        return true;
+      } catch (error) {
+        cloudHydrated = false;
+        console.error('Cartovella cloud passport load failed.', error);
+        setCloudStatus(`Cloud load failed: ${error.message} Local data was kept.`, true);
+        return false;
+      }
+    }
+
+    document.getElementById('btnCloudAuth').addEventListener('click', () => toggleAuthModal(true));
+    document.getElementById('btnCloseAuthModal').addEventListener('click', () => toggleAuthModal(false));
+    document.getElementById('authModal').addEventListener('click', event => {
+      if (event.target === event.currentTarget) toggleAuthModal(false);
+    });
+    document.getElementById('btnAuthLogin').addEventListener('click', handleLogin);
+    document.getElementById('btnAuthSignUp').addEventListener('click', handleSignUp);
+    document.getElementById('btnAuthLogout').addEventListener('click', handleLogout);
+    document.getElementById('btnForceCloudSync').addEventListener('click', () => syncToCloud(true));
+    document.getElementById('authPassword').addEventListener('keydown', event => {
+      if (event.key === 'Enter') handleLogin();
+    });
+    window.addEventListener('keydown', event => {
+      const modal = document.getElementById('authModal');
+      if (event.key === 'Escape' && !modal.classList.contains('hidden')) toggleAuthModal(false);
+    });
+
     window.addEventListener('DOMContentLoaded', () => {
       loadPersistedState();
       updateStorageWarning();
       // Decide on onboarding from saved state immediately, not after every dataset loads.
       if (!AppState.homeBase && !AppState.viewOnly) openHomeModal();
       appReady = startApp();
+      appReady.then(async () => {
+        updateAuthUI();
+        if (cloudSession?.access_token && !AppState.viewOnly) {
+          await loadFromCloud();
+        } else {
+          cloudHydrated = true;
+        }
+      }).catch(error => {
+        console.error('Cartovella startup failed before cloud hydration.', error);
+        setCloudStatus(`Startup failed: ${error.message}`, true);
+      });
     });
 
     let appLoading = false;

@@ -37,6 +37,11 @@ function check(name, action) {
   checks++;
   console.log(`PASS ${name}`);
 }
+async function checkAsync(name, action) {
+  await action();
+  checks++;
+  console.log(`PASS ${name}`);
+}
 
 const normalized = catalog.normalizeParks(records);
 const yellowstone = normalized.find(p => p.id === 'yell');
@@ -158,7 +163,7 @@ check('home citadel setup can be dismissed by its close button, backdrop, or Esc
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261022-cartovella-terrafix')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261022-cartovella-cloudsync')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('legacy app URL redirects to Cartovella while preserving share-link query and hash', () => {
@@ -193,6 +198,14 @@ check('Travel Ledger destinations render in a single full-width column', () => {
 });
 
 const elements = new Map();
+const localStorageRecords = new Map();
+const localStorage = {
+  get length() { return localStorageRecords.size; },
+  key(index) { return [...localStorageRecords.keys()][index] ?? null; },
+  getItem(key) { return localStorageRecords.get(String(key)) ?? null; },
+  setItem(key, value) { localStorageRecords.set(String(key), String(value)); },
+  removeItem(key) { localStorageRecords.delete(String(key)); }
+};
 class TestXmlElement {
   constructor(tagName, textContent = '', children = []) {
     this.tagName = tagName;
@@ -239,12 +252,147 @@ const context = vm.createContext({
   NpsCatalog: catalog, NationalParksScratch: nationalParksScratch, Ecoregions: ecoregions, InternationalParks: internationalCatalog, CoordinateLookups: coordinateLookups, TravelLedger: travelLedger,
   CartovellaConfig: { rarityEndpoint: 'https://api.devonoverbey.com/rarity' },
   tailwind: {}, console, Intl, URL, URLSearchParams, AbortController, setTimeout() {}, clearTimeout() {},
+  localStorage, Headers,
   DOMParser: TestDOMParser,
   document: { body: { classList: { toggle() {}, add() {}, remove() {} } }, getElementById: element, querySelectorAll: () => [], createElement: () => element(`created-${elements.size}`) },
   window: { addEventListener() {}, matchMedia: () => ({ matches: true }) },
   fetch: async url => ({ ok: true, json: async () => url.includes('wikidata') ? wikidata : url.includes('worldwide') ? worldwide : snapshot })
 });
 scripts.forEach(script => vm.runInContext(script, context));
+check('passport field registry round-trips defaults and unknown future fields', () => {
+  const keys = JSON.parse(vm.runInContext('JSON.stringify(Object.keys(PASSPORT_FIELDS))', context));
+  assert.deepEqual(keys, [
+    'homeBase', 'pins', 'regions', 'counties', 'customPois', 'expeditions',
+    'expeditionPromotions', 'parkRarity', 'nationalParkScratch', 'statusOverrides',
+    'clearedPolygons', 'routes', 'mode'
+  ]);
+  const source = {
+    version: 2,
+    homeBase: { name: 'Cloud Home', lat: 40, lng: -105, radiusKm: travelLedger.homeRadiusKm },
+    futureFeature: { enabled: true }
+  };
+  vm.runInContext(`applyPassport(migratePassport(${JSON.stringify(source)}))`, context);
+  const payload = JSON.parse(vm.runInContext('JSON.stringify(passportPayload())', context));
+  assert.deepEqual(payload.futureFeature, source.futureFeature);
+  assert.equal(Object.hasOwn(payload, 'extraPassportFields'), false);
+  assert.deepEqual(payload.pins, {});
+  assert.deepEqual(payload.routes, []);
+  vm.runInContext('applyPassport(migratePassport({version:2}))', context);
+});
+const cloudTestPassport = vm.runInContext('JSON.stringify(passportPayload())', context);
+const cloudTestSession = vm.runInContext('cloudSession', context);
+const cloudTestHydrated = vm.runInContext('cloudHydrated', context);
+const cloudTestStoredPassport = localStorage.getItem('cartovella_state');
+const cloudTestStoredSession = localStorage.getItem('cartovella_cloud_session');
+const originalCloudUiFunctions = Object.fromEntries([
+  'closeHomeModal', 'updateHomeBaseMarker', 'renderParkMarkers', 'drawFogOfWar', 'updateAllUI'
+].map(name => [name, context[name]]));
+await checkAsync('existing cloud passport sign-in hydrates local state and refreshes the UI', async () => {
+  const cloudSession = {
+    access_token: 'test-access', refresh_token: 'test-refresh',
+    user: { id: 'user-test', email: 'traveler@example.com' }
+  };
+  const passport = {
+    version: 2,
+    homeBase: { name: 'Cloud Home', lat: 40, lng: -105, radiusKm: travelLedger.homeRadiusKm }
+  };
+  let uiRefreshes = 0;
+  context.closeHomeModal = () => {};
+  context.updateHomeBaseMarker = () => {};
+  context.renderParkMarkers = () => {};
+  context.drawFogOfWar = () => {};
+  context.updateAllUI = () => { uiRefreshes++; };
+  vm.runInContext('appReady = Promise.resolve()', context);
+  element('authEmail').value = cloudSession.user.email;
+  element('authPassword').value = 'password';
+  const requests = [];
+  context.fetch = async (url, options = {}) => {
+    requests.push({ url: String(url), options });
+    if (String(url).includes('/auth/v1/token?grant_type=password')) {
+      return { ok: true, status: 200, json: async () => cloudSession };
+    }
+    if (String(url).includes('/rest/v1/cartovella_passports?')) {
+      return { ok: true, status: 200, json: async () => [{ passport_data: passport }] };
+    }
+    throw new Error(`Unexpected cloud request: ${url}`);
+  };
+  await vm.runInContext('handleLogin()', context);
+  assert.equal(requests.length, 2);
+  assert.ok(requests[1].url.includes('/rest/v1/cartovella_passports?user_id=eq.user-test'));
+  assert.equal(vm.runInContext('AppState.homeBase.name', context), 'Cloud Home');
+  assert.equal(element('authCurrentEmail').textContent, cloudSession.user.email);
+  assert.ok(uiRefreshes > 0);
+});
+await checkAsync('first cloud login seeds the namespaced passport row from existing local data', async () => {
+  const cloudSession = {
+    access_token: 'test-access', refresh_token: 'test-refresh',
+    user: { id: 'user-seed', email: 'seed@example.com' }
+  };
+  vm.runInContext(`
+    cloudSession = ${JSON.stringify(cloudSession)};
+    cloudHydrated = false;
+    AppState.homeBase = { name: 'Local Home', lat: 40, lng: -105, radiusKm: TravelLedger.homeRadiusKm };
+  `, context);
+  let uploaded;
+  context.fetch = async (url, options = {}) => {
+    if (String(url).includes('/rest/v1/cartovella_passports?')) {
+      return { ok: true, status: 200, json: async () => [] };
+    }
+    if (String(url).endsWith('/rest/v1/cartovella_passports')) {
+      uploaded = JSON.parse(options.body);
+      return { ok: true, status: 201, json: async () => [] };
+    }
+    throw new Error(`Unexpected cloud request: ${url}`);
+  };
+  assert.equal(await vm.runInContext('loadFromCloud()', context), true);
+  assert.equal(uploaded.user_id, cloudSession.user.id);
+  assert.equal(uploaded.passport_data.storageFormat, 'encoded-route-polyline-v1');
+  assert.equal(uploaded.passport_data.homeBase.name, 'Local Home');
+});
+await checkAsync('subsequent local saves debounce a compact passport upsert and shared links never sync', async () => {
+  const scheduled = new Map();
+  let timerId = 0;
+  const originalSetTimeout = context.setTimeout;
+  context.setTimeout = (callback, delay) => {
+    const id = ++timerId;
+    scheduled.set(id, { callback, delay });
+    return id;
+  };
+  context.clearTimeout = id => scheduled.delete(id);
+  let uploaded;
+  context.fetch = async (url, options = {}) => {
+    if (String(url).endsWith('/rest/v1/cartovella_passports')) {
+      uploaded = JSON.parse(options.body);
+      return { ok: true, status: 201, json: async () => [] };
+    }
+    throw new Error(`Unexpected cloud request: ${url}`);
+  };
+  vm.runInContext("AppState.regions['c:Testland'] = 'v'; saveState()", context);
+  const [timer] = scheduled.values();
+  assert.equal(timer.delay, 1000);
+  scheduled.clear();
+  await timer.callback();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(uploaded.passport_data.storageFormat, 'encoded-route-polyline-v1');
+  assert.equal(uploaded.passport_data.regions['c:Testland'], 'v');
+
+  const requestCount = uploaded ? 1 : 0;
+  vm.runInContext('AppState.viewOnly = true; syncToCloud(false)', context);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(uploaded ? 1 : 0, requestCount);
+  vm.runInContext(`
+    AppState.viewOnly = false;
+    applyPassport(migratePassport(${cloudTestPassport}));
+    cloudSession = ${JSON.stringify(cloudTestSession)};
+    cloudHydrated = ${cloudTestHydrated};
+  `, context);
+  for (const [name, original] of Object.entries(originalCloudUiFunctions)) context[name] = original;
+  if (cloudTestStoredPassport === null) localStorage.removeItem('cartovella_state');
+  else localStorage.setItem('cartovella_state', cloudTestStoredPassport);
+  if (cloudTestStoredSession === null) localStorage.removeItem('cartovella_cloud_session');
+  else localStorage.setItem('cartovella_cloud_session', cloudTestStoredSession);
+  context.setTimeout = originalSetTimeout;
+});
 const recoveredDraftStore = new Map();
 const recoveredDraftDatabase = {
   createObjectStore() {},

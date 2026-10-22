@@ -87,6 +87,19 @@ check('flat schema POIs retain fields while gaining political metadata; migratio
   assert.deepEqual(migrate(state), state);
   assert.deepEqual(JSON.parse(JSON.stringify(state)).expeditions, [exp]);
 });
+check('unknown top-level and nested passport fields survive migration and later migrations', () => {
+  const state = migrate({
+    version: 2,
+    futureFeature: { enabled: true, level: 3 },
+    extraPassportFields: { anotherFutureFeature: ['kept', 'intact'] }
+  });
+  assert.deepEqual(state.futureFeature, { enabled: true, level: 3 });
+  assert.deepEqual(state.extraPassportFields, {
+    anotherFutureFeature: ['kept', 'intact'],
+    futureFeature: { enabled: true, level: 3 }
+  });
+  assert.deepEqual(migrate(JSON.parse(JSON.stringify(state))), state);
+});
 check('Photon city POIs persist without fabricated elevation or rarity metadata', () => {
   const city = {
     id: 'poi_photon_node_1234', photonId: 'node:1234', source: 'Photon',

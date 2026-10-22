@@ -24,6 +24,11 @@
   ]);
   const clearsFog = status => status === 't' || isVisited(status);
   const journalLimits = Object.freeze({ text: 20000, photos: 4, photoCharacters: 180000 });
+  const passportFields = new Set([
+    'version', 'homeBase', 'pins', 'regions', 'counties', 'customPois', 'customLocations',
+    'expeditions', 'expeditionPromotions', 'parkRarity', 'nationalParkScratch', 'statusOverrides',
+    'clearedPolygons', 'routes', 'mode', 'clearedCounties', 'extraPassportFields'
+  ]);
 
   function validateJournal(journal = '', photos = []) {
     if (typeof journal !== 'string' || journal.length > journalLimits.text) {
@@ -319,6 +324,11 @@
       parkRarity,
       statusOverrides: validateStatusOverrides(parsed.statusOverrides),
       expeditionPromotions: validatePromotions(parsed.expeditionPromotions),
+      extraPassportFields: {
+        ...(legacy.extraPassportFields && typeof legacy.extraPassportFields === 'object' &&
+          !Array.isArray(legacy.extraPassportFields) ? legacy.extraPassportFields : {}),
+        ...Object.fromEntries(Object.entries(legacy).filter(([field]) => !passportFields.has(field)))
+      },
       homeBase: homeBase ? { ...homeBase, radiusKm: homeRadiusKm } : null
     };
     delete migrated.customLocations;
