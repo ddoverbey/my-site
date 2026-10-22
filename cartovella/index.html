@@ -1072,6 +1072,24 @@
         <button id="btnForceCloudSync" type="button" class="w-full rounded-lg border border-sky-500/40 bg-slate-900 px-3 py-2 text-sm text-sky-200 hover:bg-slate-800">Force Cloud Sync Now</button>
         <button id="btnAuthLogout" type="button" class="w-full rounded-lg border border-rose-500/30 bg-rose-950/30 px-3 py-2 text-sm text-rose-300 hover:bg-rose-950/60">Sign Out</button>
       </div>
+      <div id="cloudConflictView" class="hidden space-y-3">
+        <p class="text-sm font-semibold text-amber-200">Your browser and cloud saves differ</p>
+        <p class="text-xs text-slate-300">Do you want to overwrite your cloud save with this device’s passport? Nothing will be replaced until you choose.</p>
+        <p id="cloudConflictDates" class="rounded-lg bg-slate-950/70 p-3 text-[11px] text-slate-300"></p>
+        <div class="grid gap-2 sm:grid-cols-2">
+          <div class="rounded-xl border border-sky-500/30 bg-slate-950/60 p-3">
+            <p class="text-xs font-semibold text-sky-200">This browser</p>
+            <p id="cloudConflictLocalSummary" class="mt-1 whitespace-pre-line text-[11px] text-slate-400"></p>
+          </div>
+          <div class="rounded-xl border border-amber-500/30 bg-slate-950/60 p-3">
+            <p class="text-xs font-semibold text-amber-200">Cloud account</p>
+            <p id="cloudConflictRemoteSummary" class="mt-1 whitespace-pre-line text-[11px] text-slate-400"></p>
+          </div>
+        </div>
+        <button id="btnKeepLocalPassport" type="button" class="w-full rounded-lg bg-amber-500 px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-amber-400">Yes, overwrite the cloud save with this device</button>
+        <button id="btnKeepCloudPassport" type="button" class="w-full rounded-lg border border-slate-600 px-3 py-2 text-sm text-slate-200 hover:bg-slate-800">No, use the cloud save on this device</button>
+        <button id="btnCancelCloudConflict" type="button" class="w-full px-3 py-2 text-xs text-slate-400 hover:text-white">Cancel — don’t change either save</button>
+      </div>
     </section>
   </div>
 
@@ -1464,6 +1482,7 @@
 
     const PASSPORT_STORAGE_FORMAT = 'encoded-route-polyline-v1';
     const PASSPORT_STORAGE_KEY = 'cartovella_state';
+    const LOCAL_EDITED_AT_KEY = 'cartovella_local_edited_at';
     const LEGACY_PASSPORT_STORAGE_KEYS = ['terra_incognita_state'];
     const SUPABASE_URL = 'https://mrgdthihogxrqsfnknxd.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1yZ2R0aGlob2d4cnFzZm5rbnhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyNDk4NTYsImV4cCI6MjEwNDgyNTg1Nn0.1fwcaGPGrzUut3zng2NNkYZt7hUguhKPhfqYyu8MA3s';
@@ -1496,6 +1515,7 @@
     let cloudHydrated = false;
     let cloudSyncTimer = null;
     let cloudSyncInProgress = false;
+    let pendingCloudConflict = null;
 
     function encodeRoutePolyline(route) {
       let previousLat = 0;
@@ -1816,7 +1836,7 @@
         try {
           const parsed = migratePassport(JSON.parse(stored));
           applyPassport(parsed);
-          if (!AppState.viewOnly) saveState({ migrationSourceKey });
+          if (!AppState.viewOnly) saveState({ migrationSourceKey, recordEdit: false });
         } catch (e) {
           console.error("Failed to load local storage state", e);
           AppState.viewOnly = true;
@@ -1825,7 +1845,7 @@
       }
     }
 
-    function saveState({ migrationSourceKey = null } = {}) {
+    function saveState({ migrationSourceKey = null, recordEdit = true } = {}) {
       if (AppState.viewOnly) return;
       const replacingKeys = migrationSourceKey
         ? [PASSPORT_STORAGE_KEY, migrationSourceKey]
@@ -1846,6 +1866,7 @@
           }
           throw error;
         }
+        if (recordEdit) localStorage.setItem(LOCAL_EDITED_AT_KEY, new Date().toISOString());
         updateStorageWarning();
         if (cloudHydrated && !AppState.viewOnly) scheduleCloudSync();
       } catch (error) {
@@ -5999,7 +6020,7 @@
       await loadGeoDatasets();
       await Promise.all([loadNpsBoundaries(), loadCoordinateGeography()]);
       syncDerivedState();
-      saveState();
+      saveState({ recordEdit: false });
       if (map) {
         renderCountyHitboxes();
         renderParkMarkers();
@@ -6038,11 +6059,12 @@
 
     function updateAuthUI() {
       const isLoggedIn = !!cloudSession?.user;
-      document.getElementById('authViewLoggedIn').classList.toggle('hidden', !isLoggedIn);
-      document.getElementById('authViewLoggedOut').classList.toggle('hidden', isLoggedIn);
+      const hasConflict = !!pendingCloudConflict;
+      document.getElementById('cloudConflictView').classList.toggle('hidden', !hasConflict);
+      document.getElementById('authViewLoggedIn').classList.toggle('hidden', !isLoggedIn || hasConflict);
+      document.getElementById('authViewLoggedOut').classList.toggle('hidden', isLoggedIn || hasConflict);
       if (isLoggedIn) {
         document.getElementById('authCurrentEmail').textContent = cloudSession.user.email || '';
-        setCloudStatus(cloudHydrated ? 'Cloud data is ready.' : 'Waiting for cloud data…');
       } else {
         setCloudStatus('Not signed in.');
       }
@@ -6100,6 +6122,123 @@
       error.classList.remove('hidden');
     }
 
+    function stablePassportStringify(value) {
+      if (Array.isArray(value)) return `[${value.map(stablePassportStringify).join(',')}]`;
+      if (!value || typeof value !== 'object') return JSON.stringify(value);
+      return `{${Object.keys(value).sort().map(key =>
+        `${JSON.stringify(key)}:${stablePassportStringify(value[key])}`).join(',')}}`;
+    }
+
+    function passportConflictSummary(passport) {
+      const counts = Object.fromEntries(['pins', 'regions', 'counties', 'customPois', 'expeditions']
+        .map(field => [field, Array.isArray(passport[field])
+          ? passport[field].length : Object.keys(passport[field] || {}).length]));
+      return [
+        passport.homeBase?.name ? `Home: ${passport.homeBase.name}` : 'Home: not set',
+        `${counts.pins} destination marks`,
+        `${counts.regions} country/state marks`,
+        `${counts.counties} county/district marks`,
+        `${counts.customPois} custom locations`,
+        `${counts.expeditions} expeditions`
+      ].join('\n');
+    }
+
+    function getLocalEditedAt() {
+      const value = localStorage.getItem(LOCAL_EDITED_AT_KEY);
+      return value && Number.isFinite(Date.parse(value)) ? value : null;
+    }
+
+    function formatSaveDate(value) {
+      if (!value || !Number.isFinite(Date.parse(value))) return 'Date unavailable';
+      return new Date(value).toLocaleString();
+    }
+
+    function hasPassportData(passport) {
+      const hasValue = value => {
+        if (Array.isArray(value)) return value.length > 0;
+        if (value && typeof value === 'object') return Object.values(value).some(hasValue);
+        return value !== null && value !== undefined && value !== '';
+      };
+      return Object.entries(passport).some(([field, value]) =>
+        field !== 'version' && field !== 'mode' && field !== 'extraPassportFields' && hasValue(value)
+      );
+    }
+
+    function showCloudConflict(cloudPassport, cloudUpdatedAt) {
+      pendingCloudConflict = { cloudPassport, cloudUpdatedAt };
+      const localPassport = passportPayload();
+      document.getElementById('cloudConflictLocalSummary').textContent =
+        passportConflictSummary(localPassport);
+      document.getElementById('cloudConflictRemoteSummary').textContent =
+        passportConflictSummary(cloudPassport);
+      const localEditedAt = getLocalEditedAt();
+      document.getElementById('cloudConflictDates').textContent =
+        `Cloud save last updated: ${formatSaveDate(cloudUpdatedAt)}\n` +
+        `This device last edited: ${localEditedAt ? formatSaveDate(localEditedAt) : 'Unknown (this save predates local edit tracking)'}`;
+      cloudHydrated = false;
+      setCloudStatus('Your browser and cloud saves differ. Choose which copy to keep.', true);
+      toggleAuthModal(true);
+      updateAuthUI();
+      document.getElementById('btnKeepLocalPassport').focus();
+    }
+
+    function renderLoadedCloudPassport(parsed, cloudUpdatedAt = null) {
+      applyPassport(parsed);
+      syncDerivedState();
+      saveState({ recordEdit: false });
+      if (cloudUpdatedAt && Number.isFinite(Date.parse(cloudUpdatedAt))) {
+        localStorage.setItem(LOCAL_EDITED_AT_KEY, new Date(cloudUpdatedAt).toISOString());
+      }
+      cloudHydrated = true;
+      if (AppState.homeBase) closeHomeModal();
+      updateHomeBaseMarker();
+      renderParkMarkers();
+      drawFogOfWar();
+      updateAllUI();
+    }
+
+    async function resolveCloudConflict(useCloud) {
+      if (!pendingCloudConflict) return;
+      if (useCloud) {
+        try {
+          renderLoadedCloudPassport(
+            migratePassport(pendingCloudConflict.cloudPassport),
+            pendingCloudConflict.cloudUpdatedAt
+          );
+        } catch (error) {
+          console.error('Could not apply the selected cloud passport.', error);
+          setCloudStatus(`Could not load the cloud passport: ${error.message} Local data was kept.`, true);
+          return;
+        }
+        pendingCloudConflict = null;
+        updateAuthUI();
+        setCloudStatus('Cloud passport loaded. This device is now synced.');
+        toggleAuthModal(false);
+        return;
+      }
+
+      const existingConflict = pendingCloudConflict;
+      pendingCloudConflict = null;
+      cloudHydrated = true;
+      updateAuthUI();
+      const synced = await syncToCloud(true);
+      if (synced) toggleAuthModal(false);
+      else {
+        pendingCloudConflict = existingConflict;
+        cloudHydrated = false;
+        updateAuthUI();
+        toggleAuthModal(true);
+        document.getElementById('btnKeepLocalPassport').focus();
+      }
+    }
+
+    function cancelCloudConflict() {
+      pendingCloudConflict = null;
+      cloudHydrated = false;
+      updateAuthUI();
+      setCloudStatus('Both passports were left unchanged. Choose Force Cloud Sync Now to check again.', true);
+    }
+
     async function handleLogin() {
       const error = document.getElementById('authErrorMsg');
       error.textContent = '';
@@ -6125,9 +6264,13 @@
         cloudSession = session;
         localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(cloudSession));
         cloudHydrated = false;
+        pendingCloudConflict = null;
         updateAuthUI();
         await appReady;
         if (await loadFromCloud()) toggleAuthModal(false);
+        else if (!pendingCloudConflict) {
+          showAuthError(document.getElementById('authSyncStatusText').textContent);
+        }
       } catch (cause) {
         console.error('Cartovella sign-in failed.', cause);
         showAuthError(cause.message);
@@ -6160,9 +6303,13 @@
         cloudSession = result.session;
         localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(cloudSession));
         cloudHydrated = false;
+        pendingCloudConflict = null;
         updateAuthUI();
         await appReady;
         if (await loadFromCloud()) toggleAuthModal(false);
+        else if (!pendingCloudConflict) {
+          showAuthError(document.getElementById('authSyncStatusText').textContent);
+        }
       } catch (cause) {
         console.error('Cartovella account creation failed.', cause);
         showAuthError(cause.message);
@@ -6188,6 +6335,7 @@
       cloudSyncTimer = null;
       cloudSession = null;
       cloudHydrated = false;
+      pendingCloudConflict = null;
       localStorage.removeItem(AUTH_SESSION_KEY);
       updateAuthUI();
       toggleAuthModal(false);
@@ -6234,7 +6382,33 @@
       }
     }
 
-    async function loadFromCloud() {
+    async function handleForceCloudSync() {
+      if (!cloudSession?.access_token) {
+        toggleAuthModal(true);
+        return;
+      }
+      if (AppState.viewOnly) {
+        setCloudStatus('Cloud sync is unavailable while viewing a shared read-only passport.', true);
+        return;
+      }
+      if (!cloudHydrated) {
+        if (pendingCloudConflict) {
+          toggleAuthModal(true);
+          return;
+        }
+        setCloudStatus('Checking your cloud passport before syncing…');
+        if (await loadFromCloud({ notifySeed: true })) return;
+        if (!pendingCloudConflict) {
+          const errorMessage = document.getElementById('authSyncStatusText').textContent;
+          toggleAuthModal(true);
+          setCloudStatus(errorMessage, true);
+        }
+        return;
+      }
+      await syncToCloud(true);
+    }
+
+    async function loadFromCloud({ notifySeed = false } = {}) {
       if (AppState.viewOnly || !cloudSession?.access_token) return false;
       cloudHydrated = false;
       setCloudStatus('Loading your cloud passport…');
@@ -6245,32 +6419,39 @@
         );
         if (!response.ok) {
           const body = await response.json().catch(() => ({}));
-          throw new Error(body.message || `Cloud load failed (HTTP ${response.status}).`);
+          const reason = body.message || body.details || body.hint || body.code;
+          throw new Error(reason
+            ? `Cloud load failed (HTTP ${response.status}): ${reason}`
+            : `Cloud load failed (HTTP ${response.status}).`);
         }
         const records = await response.json();
         if (!Array.isArray(records)) throw new Error('Supabase returned an unexpected passport response.');
         if (records.length) {
-          const localBackup = passportPayload();
-          try {
-            const parsed = migratePassport(records[0].passport_data);
-            applyPassport(parsed);
-            syncDerivedState();
-            saveState();
-            cloudHydrated = true;
-          } catch (error) {
-            applyPassport(localBackup);
-            throw error;
+          const cloudPassport = migratePassport(records[0].passport_data);
+          const localSnapshot = compactPassportForStorage(passportPayload());
+          const cloudSnapshot = compactPassportForStorage(cloudPassport);
+          const localHasPassportData = hasPassportData(localSnapshot);
+          const cloudHasPassportData = hasPassportData(cloudSnapshot);
+          const passportsDiffer =
+            stablePassportStringify(localSnapshot) !== stablePassportStringify(cloudSnapshot);
+          if (localHasPassportData && cloudHasPassportData && passportsDiffer) {
+            showCloudConflict(cloudPassport, records[0].updated_at);
+            return false;
           }
-          if (AppState.homeBase) closeHomeModal();
-          updateHomeBaseMarker();
-          renderParkMarkers();
-          drawFogOfWar();
-          updateAllUI();
-          setCloudStatus('Cloud passport loaded and ready.');
+          if (localHasPassportData && !cloudHasPassportData) {
+            cloudHydrated = true;
+            if (!await syncToCloud(notifySeed)) {
+              throw new Error('The cloud passport was empty and the local passport could not be uploaded.');
+            }
+          } else {
+            renderLoadedCloudPassport(cloudPassport, records[0].updated_at);
+            setCloudStatus('Cloud passport loaded and ready.');
+          }
         } else {
           cloudHydrated = true;
-          if (AppState.homeBase || TravelLedger.hasLoggedTravel(AppState)) {
-            if (!await syncToCloud(false)) {
+          const localPassport = passportPayload();
+          if (hasPassportData(localPassport)) {
+            if (!await syncToCloud(notifySeed)) {
               throw new Error('No cloud passport exists and the local passport could not be uploaded.');
             }
           } else {
@@ -6294,7 +6475,10 @@
     document.getElementById('btnAuthLogin').addEventListener('click', handleLogin);
     document.getElementById('btnAuthSignUp').addEventListener('click', handleSignUp);
     document.getElementById('btnAuthLogout').addEventListener('click', handleLogout);
-    document.getElementById('btnForceCloudSync').addEventListener('click', () => syncToCloud(true));
+    document.getElementById('btnForceCloudSync').addEventListener('click', handleForceCloudSync);
+    document.getElementById('btnKeepLocalPassport').addEventListener('click', () => resolveCloudConflict(false));
+    document.getElementById('btnKeepCloudPassport').addEventListener('click', () => resolveCloudConflict(true));
+    document.getElementById('btnCancelCloudConflict').addEventListener('click', cancelCloudConflict);
     document.getElementById('authPassword').addEventListener('keydown', event => {
       if (event.key === 'Enter') handleLogin();
     });
@@ -6332,7 +6516,7 @@
         await loadBiomeCatalog();
         await Promise.all([loadNpsBoundaries(), loadCoordinateGeography()]);
         syncDerivedState();
-        saveState();
+        saveState({ recordEdit: false });
         initMap();
         drawFogOfWar();
         restoreModeView();

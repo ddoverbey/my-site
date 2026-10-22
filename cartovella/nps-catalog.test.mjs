@@ -278,6 +278,7 @@ check('passport field registry round-trips defaults and unknown future fields', 
   assert.deepEqual(payload.pins, {});
   assert.deepEqual(payload.routes, []);
   vm.runInContext('applyPassport(migratePassport({version:2}))', context);
+  assert.equal(vm.runInContext('hasPassportData(passportPayload())', context), false);
 });
 const cloudTestPassport = vm.runInContext('JSON.stringify(passportPayload())', context);
 const cloudTestSession = vm.runInContext('cloudSession', context);
@@ -303,6 +304,9 @@ await checkAsync('existing cloud passport sign-in hydrates local state and refre
   context.drawFogOfWar = () => {};
   context.updateAllUI = () => { uiRefreshes++; };
   vm.runInContext('appReady = Promise.resolve()', context);
+  vm.runInContext(`
+    AppState.homeBase = { name: 'Cloud Home', lat: 40, lng: -105, radiusKm: TravelLedger.homeRadiusKm };
+  `, context);
   element('authEmail').value = cloudSession.user.email;
   element('authPassword').value = 'password';
   const requests = [];
@@ -322,6 +326,103 @@ await checkAsync('existing cloud passport sign-in hydrates local state and refre
   assert.equal(vm.runInContext('AppState.homeBase.name', context), 'Cloud Home');
   assert.equal(element('authCurrentEmail').textContent, cloudSession.user.email);
   assert.ok(uiRefreshes > 0);
+});
+await checkAsync('different local and cloud passports are compared without replacing either copy', async () => {
+  const cloudUpdatedAt = '2026-05-14T12:30:00.000Z';
+  const localEditedAt = '2026-05-13T09:15:00.000Z';
+  const cloudSession = {
+    access_token: 'test-access', refresh_token: 'test-refresh',
+    user: { id: 'user-conflict', email: 'conflict@example.com' }
+  };
+  vm.runInContext(`
+    cloudSession = ${JSON.stringify(cloudSession)};
+    cloudHydrated = false;
+    pendingCloudConflict = null;
+    AppState.homeBase = { name: 'Local Home', lat: 41, lng: -104, radiusKm: TravelLedger.homeRadiusKm };
+  `, context);
+  localStorage.setItem('cartovella_local_edited_at', localEditedAt);
+  context.fetch = async () => ({
+    ok: true, status: 200,
+    json: async () => [{
+      passport_data: {
+        version: 2,
+        homeBase: { name: 'Cloud Home', lat: 40, lng: -105, radiusKm: travelLedger.homeRadiusKm }
+      },
+      updated_at: cloudUpdatedAt
+    }]
+  });
+  assert.equal(await vm.runInContext('loadFromCloud()', context), false);
+  assert.equal(vm.runInContext('AppState.homeBase.name', context), 'Local Home');
+  assert.equal(vm.runInContext('pendingCloudConflict.cloudPassport.homeBase.name', context), 'Cloud Home');
+  assert.match(element('cloudConflictLocalSummary').textContent, /Local Home/);
+  assert.match(element('cloudConflictRemoteSummary').textContent, /Cloud Home/);
+  assert.match(element('cloudConflictDates').textContent, /Cloud save last updated:/);
+  assert.match(element('cloudConflictDates').textContent, /This device last edited:/);
+  assert.doesNotMatch(element('cloudConflictDates').textContent, /Unknown/);
+});
+await checkAsync('choosing the cloud passport replaces local data only after the explicit choice', async () => {
+  context.closeHomeModal = () => {};
+  context.updateHomeBaseMarker = () => {};
+  context.renderParkMarkers = () => {};
+  context.drawFogOfWar = () => {};
+  context.updateAllUI = () => {};
+  await vm.runInContext('resolveCloudConflict(true)', context);
+  assert.equal(vm.runInContext('AppState.homeBase.name', context), 'Cloud Home');
+  assert.equal(vm.runInContext('pendingCloudConflict', context), null);
+  assert.equal(vm.runInContext('cloudHydrated', context), true);
+  assert.equal(localStorage.getItem('cartovella_local_edited_at'), '2026-05-14T12:30:00.000Z');
+});
+await checkAsync('keeping the browser passport explicitly uploads it to resolve a conflict', async () => {
+  const cloudSession = {
+    access_token: 'test-access', refresh_token: 'test-refresh',
+    user: { id: 'user-local-choice', email: 'local-choice@example.com' }
+  };
+  vm.runInContext(`
+    cloudSession = ${JSON.stringify(cloudSession)};
+    cloudHydrated = false;
+    pendingCloudConflict = {
+      cloudPassport: {
+        version: 2,
+        homeBase: { name: 'Cloud Home', lat: 40, lng: -105, radiusKm: TravelLedger.homeRadiusKm }
+      }
+    };
+    AppState.homeBase = { name: 'Local Home', lat: 41, lng: -104, radiusKm: TravelLedger.homeRadiusKm };
+  `, context);
+  let uploaded;
+  context.fetch = async (url, options = {}) => {
+    assert.ok(String(url).endsWith('/rest/v1/cartovella_passports'));
+    uploaded = JSON.parse(options.body);
+    return { ok: true, status: 201, json: async () => [] };
+  };
+  await vm.runInContext('resolveCloudConflict(false)', context);
+  assert.equal(uploaded.user_id, cloudSession.user.id);
+  assert.equal(uploaded.passport_data.homeBase.name, 'Local Home');
+  assert.equal(vm.runInContext('pendingCloudConflict', context), null);
+  assert.equal(vm.runInContext('cloudHydrated', context), true);
+});
+await checkAsync('force sync retries cloud loading and displays the underlying load failure', async () => {
+  const cloudSession = {
+    access_token: 'test-access', refresh_token: 'test-refresh',
+    user: { id: 'user-load-error', email: 'load-error@example.com' }
+  };
+  vm.runInContext(`
+    cloudSession = ${JSON.stringify(cloudSession)};
+    cloudHydrated = false;
+    pendingCloudConflict = null;
+  `, context);
+  let loadRequests = 0;
+  context.fetch = async url => {
+    assert.ok(String(url).includes('/rest/v1/cartovella_passports?'));
+    loadRequests++;
+    return {
+      ok: false, status: 404,
+      json: async () => ({ message: 'relation does not exist', code: '42P01' })
+    };
+  };
+  await vm.runInContext('handleForceCloudSync()', context);
+  assert.equal(loadRequests, 1);
+  assert.match(element('authSyncStatusText').textContent, /relation does not exist/);
+  assert.equal(vm.runInContext('cloudHydrated', context), false);
 });
 await checkAsync('first cloud login seeds the namespaced passport row from existing local data', async () => {
   const cloudSession = {
@@ -368,6 +469,7 @@ await checkAsync('subsequent local saves debounce a compact passport upsert and 
     throw new Error(`Unexpected cloud request: ${url}`);
   };
   vm.runInContext("AppState.regions['c:Testland'] = 'v'; saveState()", context);
+  assert.ok(Number.isFinite(Date.parse(localStorage.getItem('cartovella_local_edited_at'))));
   const [timer] = scheduled.values();
   assert.equal(timer.delay, 250);
   scheduled.clear();
