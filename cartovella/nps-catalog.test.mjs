@@ -158,7 +158,7 @@ check('home citadel setup can be dismissed by its close button, backdrop, or Esc
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261022-cartovella')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261022-cartovella-terrafix')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('legacy app URL redirects to Cartovella while preserving share-link query and hash', () => {

@@ -744,6 +744,30 @@ check('Terra Incognita resolves custom coordinates when saved political countrie
   });
   assert.equal(progress.international, 1);
 });
+check('Terra Incognita prefers current coordinate countries and recovers an unresolved home country', () => {
+  const state = migrate({
+    homeBase: { name: 'Home', lat: 39, lng: -105, radiusKm: 80 },
+    regions: { 'c:Home Country': 'l' },
+    customPois: [
+      {
+        ...poi, id: 'poi_home', lat: 40, lng: -104,
+        political: { countries: ['Foreign Country'], states: [], admin1: [], counties: [] }
+      },
+      {
+        ...poi, id: 'poi_foreign', lat: 48.85, lng: 2.35,
+        political: { countries: ['Home Country'], states: [], admin1: [], counties: [] }
+      }
+    ]
+  });
+  const progress = ledger.metadataProgress(state, {
+    politicalAt: lat => lat === 39
+      ? null
+      : lat < 45
+        ? { countries: ['Home Country'] }
+        : { countries: ['Foreign Country'] }
+  });
+  assert.equal(progress.international, 1);
+});
 const topology = JSON.parse(await readFile(new URL('./ecoregions.topojson', import.meta.url), 'utf8'));
 const ecoregions = lookups.indexFeatures(topojson.feature(topology, topology.objects.ecoregions).features, d3);
 check('existing unchanged terrestrial snapshot recognizes real below-sea-level and high-altitude stops', () => {
