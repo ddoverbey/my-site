@@ -369,7 +369,7 @@ await checkAsync('subsequent local saves debounce a compact passport upsert and 
   };
   vm.runInContext("AppState.regions['c:Testland'] = 'v'; saveState()", context);
   const [timer] = scheduled.values();
-  assert.equal(timer.delay, 1000);
+  assert.equal(timer.delay, 250);
   scheduled.clear();
   await timer.callback();
   await new Promise(resolve => setImmediate(resolve));

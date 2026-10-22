@@ -1050,7 +1050,7 @@
         <button id="btnCloseAuthModal" type="button" aria-label="Close account and cloud sync" class="rounded-lg px-2 py-1 text-slate-400 hover:text-white">×</button>
       </div>
       <div id="authViewLoggedOut" class="space-y-3">
-        <p class="text-xs text-slate-400">Sign in to sync your passport across devices. Your local save stays available offline.</p>
+        <p class="text-xs text-slate-400">Each change is saved on this device immediately and synced to your cloud passport shortly after. Your local save stays available offline.</p>
         <label class="block text-xs text-slate-300">Email
           <input id="authEmail" type="email" autocomplete="email" required class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100">
         </label>
@@ -1468,6 +1468,7 @@
     const SUPABASE_URL = 'https://mrgdthihogxrqsfnknxd.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1yZ2R0aGlob2d4cnFzZm5rbnhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyNDk4NTYsImV4cCI6MjEwNDgyNTg1Nn0.1fwcaGPGrzUut3zng2NNkYZt7hUguhKPhfqYyu8MA3s';
     const AUTH_SESSION_KEY = 'cartovella_cloud_session';
+    const CLOUD_SYNC_DEBOUNCE_MS = 250;
     const PASSPORT_FIELDS = Object.freeze({
       homeBase: () => null,
       pins: () => ({}),
@@ -1861,7 +1862,7 @@
       cloudSyncTimer = setTimeout(() => {
         cloudSyncTimer = null;
         syncToCloud(false);
-      }, 1000);
+      }, CLOUD_SYNC_DEBOUNCE_MS);
     }
 
     let notificationTimeout = null;
