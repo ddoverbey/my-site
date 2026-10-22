@@ -618,7 +618,7 @@ check('Earth Sandwich uses the configured 100-mile antipode tolerance without mi
     expeditions: [{ ...exp, routeCoords: [[0, 179], [0, -179]] }]
   })).earthSandwich, 1);
 });
-check('international coordinates require a known home country; Touch Grass requires a park designation', () => {
+check('Touch Grass requires a park designation', () => {
   const state = migrate({
     homeBase: { name: 'Home', lat: 45, lng: -121, radiusKm: 80 },
     pins: { us: 'v', canada: 'l', unknown: 'v', history: 'v', npsa: 'v' }
@@ -630,11 +630,8 @@ check('international coordinates require a known home country; Touch Grass requi
     { id: 'history', lat: 45, lng: -121, designation: 'National Historical Park', biomes: [] },
     { id: 'npsa', lat: -14, lng: -170, designation: '', biomes: [] }
   ];
-  const options = { parks, politicalAt: lat => lat === 45 ? { countries: ['United States of America'] } : null };
-  const progress = ledger.metadataProgress(state, options);
-  assert.equal(progress.international, 1);
+  const progress = ledger.metadataProgress(state, { parks });
   assert.equal(progress.touchGrass, 3);
-  assert.equal(ledger.metadataProgress({ ...state, homeBase: null }, options).international, 0);
 });
 check('biome achievements include expedition coordinates but do not invent ocean biomes or use wishlist locations', () => {
   const state = migrate({
@@ -728,45 +725,6 @@ check('unknown international labels never fabricate country completion', () => {
   const state = migrate({ pins: { unknown: 'v' } });
   ledger.syncDerivedState(state, { parks: [{ id: 'unknown', intl: true, country: 'Unverified region' }] });
   assert.deepEqual(state.regions, {});
-});
-check('Terra Incognita resolves custom coordinates when saved political countries are empty', () => {
-  const state = migrate({
-    homeBase: { name: 'Home', lat: 39, lng: -105, radiusKm: 80 },
-    customPois: [
-      { ...poi, id: 'poi_home', lat: 40, lng: -104, political: { countries: [], states: [], admin1: [], counties: [] } },
-      { ...poi, id: 'poi_foreign', lat: 48.85, lng: 2.35, political: { countries: [], states: [], admin1: [], counties: [] } }
-    ]
-  });
-  const progress = ledger.metadataProgress(state, {
-    politicalAt: lat => lat < 45
-      ? { countries: ['United States of America'] }
-      : { countries: ['France'] }
-  });
-  assert.equal(progress.international, 1);
-});
-check('Terra Incognita prefers current coordinate countries and recovers an unresolved home country', () => {
-  const state = migrate({
-    homeBase: { name: 'Home', lat: 39, lng: -105, radiusKm: 80 },
-    regions: { 'c:Home Country': 'l' },
-    customPois: [
-      {
-        ...poi, id: 'poi_home', lat: 40, lng: -104,
-        political: { countries: ['Foreign Country'], states: [], admin1: [], counties: [] }
-      },
-      {
-        ...poi, id: 'poi_foreign', lat: 48.85, lng: 2.35,
-        political: { countries: ['Home Country'], states: [], admin1: [], counties: [] }
-      }
-    ]
-  });
-  const progress = ledger.metadataProgress(state, {
-    politicalAt: lat => lat === 39
-      ? null
-      : lat < 45
-        ? { countries: ['Home Country'] }
-        : { countries: ['Foreign Country'] }
-  });
-  assert.equal(progress.international, 1);
 });
 const topology = JSON.parse(await readFile(new URL('./ecoregions.topojson', import.meta.url), 'utf8'));
 const ecoregions = lookups.indexFeatures(topojson.feature(topology, topology.objects.ecoregions).features, d3);

@@ -545,6 +545,32 @@ check('international visits, retired saves and NPS-only US counts stay distinct'
   assert.ok(element('savedCatalogStatus').textContent.includes('1 saved destination'));
   assert.equal(vm.runInContext('AppState.pins.retired_destination', context), 'v');
 });
+check('Terra Incognita unlocks at two visited countries without requiring a home base', () => {
+  const progress = vm.runInContext(`(() => {
+    const saved = {
+      regions: AppState.regions,
+      pins: AppState.pins,
+      customLocations: AppState.customLocations,
+      customPois: AppState.customPois,
+      expeditions: AppState.expeditions
+    };
+    try {
+      AppState.regions = { 'c:United States of America': 'v' };
+      AppState.pins = {};
+      AppState.customLocations = [];
+      AppState.customPois = [];
+      AppState.expeditions = [];
+      const terraIncognita = ACHIEVEMENTS.find(achievement => achievement.id === 'international');
+      const oneCountry = terraIncognita.progress(calculateStats());
+      AppState.regions['c:Canada'] = 'v';
+      const twoCountries = terraIncognita.progress(calculateStats());
+      return { oneCountry, twoCountries, goal: terraIncognita.tiers[0].goal };
+    } finally {
+      Object.assign(AppState, saved);
+    }
+  })()`, context);
+  assert.deepEqual({ ...progress }, { oneCountry: 1, twoCountries: 2, goal: 2 });
+});
 element('bucketSearch').value = 'afghanistan';
 vm.runInContext('renderBucketListView()', context);
 check('international ledger searches countries and shows attributed source metadata', () => {

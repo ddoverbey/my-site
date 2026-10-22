@@ -718,21 +718,6 @@
     const homeCounties = new Set(state.homeBase
       ? (sample(state.homeBase.lat, state.homeBase.lng, 'political')?.counties?.map(county => county.id) ||
         (state.homeBase.countyId ? [state.homeBase.countyId] : [])) : []);
-    const homeCountries = new Set(state.homeBase
-      ? sample(state.homeBase.lat, state.homeBase.lng, 'political')?.countries || [] : []);
-    if (state.homeBase && !homeCountries.size) {
-      if (typeof state.homeBase.country === 'string' && state.homeBase.country.trim()) {
-        homeCountries.add(state.homeBase.country);
-      }
-      Object.entries(state.regions).forEach(([id, status]) => {
-        if (id.startsWith('c:') && status === 'l') homeCountries.add(id.slice(2));
-      });
-    }
-    const countriesAtPoint = point => {
-      if (point.intl && point.countryCode && point.country) return [point.country];
-      const resolvedCountries = sample(point.lat, point.lng, 'political')?.countries;
-      return resolvedCountries?.length ? resolvedCountries : point.political?.countries || [];
-    };
     const parkById = new Map(rarityAwareParks.map(park => [park.id, park]));
     const poiById = new Map(state.customPois.map(poi => [poi.id, poi]));
     const rarityEntities = new Map();
@@ -855,9 +840,6 @@
       localLore,
       zeroMeridian: state.homeBase ? 1 : 0,
       beyondHorizon: coordinates.some(point => state.homeBase && distanceMiles(state.homeBase, point) > 1000) ? 1 : 0,
-      international: homeCountries.size ? coordinates.filter(point => {
-        return countriesAtPoint(point).some(country => !homeCountries.has(country));
-      }).length : 0,
       touchGrass: visitedParks.filter(park =>
         /\b(?:National|State|Provincial) (?:Park(?:s)?|and State Parks)\b/i.test(park.designation || '') ||
         (!park.intl && park.id === 'npsa')).length,
