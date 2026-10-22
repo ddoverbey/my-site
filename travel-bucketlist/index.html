@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Wanderlog • Travel Bucket List</title>
+<title>Cartovella • Travel Bucket List</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
   :root { --bg:#0f172a; --panel:#1e293b; --line:#334155; --text:#f1e9d2; --mute:#94a3b8; --visit:#22c55e; --wish:#f59e0b; --none:#334155; --gold:#f59e0b; }
@@ -79,7 +79,7 @@
 </head>
 <body>
 <header>
-  <h1>Wanderlog</h1>
+  <h1>Cartovella</h1>
   <nav id="nav">
     <button data-p="parks">RPG Explorer</button>
     <button data-p="passport">Trip Ledger</button>
@@ -200,7 +200,8 @@ const COUNTIES_URL = 'https://cdn.jsdelivr.net/npm/us-atlas@3/counties-10m.json'
 const TIERS = ['wishlist', 'transited', 'visited', 'lived'];
 const TO_LEGACY = {wishlist:'w', visited:'v', lived:'v'};   // 'transited' is not shown by the current UI
 const FROM_LEGACY = {w:'wishlist', v:'visited'};
-const STORE_KEY = 'wanderlog_v2';
+const STORE_KEY = 'cartovella_v2';
+const LEGACY_STORE_KEYS = ['wanderlog_v2', 'wanderlog'];
 const LOC_RE = /^[cpsk]:/;   // k: = county (FIPS)
 let state = {version:2, homeBase:null, expeditions:[], locations:{}};
 let S = {};               // legacy view: key -> 'v' | 'w'
@@ -271,8 +272,12 @@ function syncLegacy() {
   try {
     const v2 = localStorage.getItem(STORE_KEY);
     // First run after upgrade: migrate the old flat map once.
-    state = normalizeState(JSON.parse(v2 || localStorage.getItem('wanderlog') || '{}'));
-    if (!v2) save();
+    const legacy = LEGACY_STORE_KEYS.map(key => localStorage.getItem(key)).find(value => value !== null);
+    state = normalizeState(JSON.parse(v2 || legacy || '{}'));
+    if (!v2) {
+      save();
+      LEGACY_STORE_KEYS.forEach(key => localStorage.removeItem(key));
+    }
   } catch (e) { state = normalizeState(null); }
   syncLegacy();
 })();
@@ -637,7 +642,7 @@ document.getElementById('share').onclick = async e => {
 document.getElementById('export').onclick = () => {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([JSON.stringify(state, null, 2)], {type:'application/json'}));
-  a.download = 'wanderlog.json'; a.click();
+  a.download = 'cartovella.json'; a.click();
 };
 document.getElementById('import').onclick = () => document.getElementById('file').click();
 document.getElementById('file').onchange = async e => {

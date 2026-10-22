@@ -1,6 +1,6 @@
-# Wanderlog
+# Cartovella
 
-Wanderlog is a browser-based travel atlas and journal. Explore a fog-of-war map, record places and
+Cartovella is a browser-based travel atlas and journal. Explore a fog-of-war map, record places and
 expeditions, track parks and regions, and earn achievements from your travel history.
 
 ## Features

@@ -117,6 +117,7 @@ console.log('PASS changing API totals rejected');
 
 const html = (await readFile(new URL('./index.html', import.meta.url), 'utf8')).replace(/\r\n/g, '\n');
 const expeditionUi = await readFile(new URL('./expedition-ui.js', import.meta.url), 'utf8');
+const legacyRoute = await readFile(new URL('../wanderlog/index.html', import.meta.url), 'utf8');
 const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)]
   .map(match => /src="\.\/expedition-ui\.js(?:\?[^"]*)?"/.test(match[0]) ? expeditionUi : match[1]);
 check('every inline script parses', () => scripts.forEach(script => new vm.Script(script)));
@@ -157,14 +158,20 @@ check('home citadel setup can be dismissed by its close button, backdrop, or Esc
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261022-detailed-mangroves')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261022-cartovella')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
+});
+check('legacy app URL redirects to Cartovella while preserving share-link query and hash', () => {
+  assert.match(legacyRoute, /window\.location\.replace\(`\.\.\/cartovella\/\$\{window\.location\.search\}\$\{window\.location\.hash\}`\)/);
+  assert.match(legacyRoute, /href="\.\.\/cartovella\/"/);
 });
 check('storage-risk banner and unfinished-trip recovery controls are present', () => {
   assert.match(html, /id="storageWarning"[^>]*role="status"/);
   assert.match(html, /id="btnStorageExport"/);
   assert.match(html, /id="unfinishedDraftNotice"/);
-  assert.match(expeditionUi, /indexedDB\.open\(EXPEDITION_DRAFT_DB, 1\)/);
+  assert.match(expeditionUi, /indexedDB\.open\(name, 1\)/);
+  assert.match(expeditionUi, /EXPEDITION_DRAFT_DB = 'cartovella-local-recovery'/);
+  assert.match(expeditionUi, /LEGACY_EXPEDITION_DRAFT_DB = 'wanderlog-local-recovery'/);
   assert.match(expeditionUi, /btnRestoreDraftFromTravel/);
   assert.match(expeditionUi, /downloadExpeditionRecovery/);
 });
@@ -230,7 +237,7 @@ function element(id) {
 }
 const context = vm.createContext({
   NpsCatalog: catalog, NationalParksScratch: nationalParksScratch, Ecoregions: ecoregions, InternationalParks: internationalCatalog, CoordinateLookups: coordinateLookups, TravelLedger: travelLedger,
-  WanderlogConfig: { rarityEndpoint: 'https://api.devonoverbey.com/rarity' },
+  CartovellaConfig: { rarityEndpoint: 'https://api.devonoverbey.com/rarity' },
   tailwind: {}, console, Intl, URL, URLSearchParams, AbortController, setTimeout() {}, clearTimeout() {},
   DOMParser: TestDOMParser,
   document: { body: { classList: { toggle() {}, add() {}, remove() {} } }, getElementById: element, querySelectorAll: () => [], createElement: () => element(`created-${elements.size}`) },
@@ -285,6 +292,64 @@ check('IndexedDB draft recovery persists, restores, and clears an unfinished tri
   assert.equal(persistedDraftRoundTrip.name, 'Still going');
   assert.equal(persistedDraftRoundTrip.stops[0].name, 'Start');
   assert.equal(recoveredDraftStore.has('current'), false);
+});
+const previousIndexedDb = context.indexedDB;
+const legacyDraft = { name: 'Old route draft', stops: [{ name: 'Home' }, { name: 'Away' }] };
+const draftStores = new Map([['wanderlog-local-recovery', new Map([['current', { id: 'current', draft: legacyDraft }]])]]);
+const draftDatabases = new Map();
+function draftDatabase(store) {
+  return {
+    createObjectStore() {},
+    close() {},
+    transaction() {
+      const transaction = {
+        objectStore() {
+          return {
+            put(record) {
+              store.set(record.id, record);
+              queueMicrotask(() => transaction.oncomplete?.());
+            },
+            get(key) {
+              const request = {};
+              queueMicrotask(() => {
+                request.result = store.get(key);
+                request.onsuccess?.();
+              });
+              return request;
+            },
+            delete(key) {
+              store.delete(key);
+              queueMicrotask(() => transaction.oncomplete?.());
+            }
+          };
+        }
+      };
+      return transaction;
+    }
+  };
+}
+context.indexedDB = {
+  async databases() { return [{ name: 'wanderlog-local-recovery' }]; },
+  open(name) {
+    const request = {};
+    queueMicrotask(() => {
+      const existing = draftStores.has(name);
+      if (!existing) draftStores.set(name, new Map());
+      request.result = draftDatabase(draftStores.get(name));
+      if (!existing) request.onupgradeneeded?.();
+      request.onsuccess?.();
+    });
+    return request;
+  }
+};
+vm.runInContext('expeditionDraftDbPromise = null', context);
+const migratedLegacyDraft = await vm.runInContext('readExpeditionDraftRecovery()', context);
+vm.runInContext('expeditionDraftDbPromise = null', context);
+context.indexedDB = previousIndexedDb;
+check('legacy unfinished trips migrate from the old IndexedDB database to Cartovella recovery', () => {
+  assert.deepEqual(JSON.parse(JSON.stringify(migratedLegacyDraft)), legacyDraft);
+  assert.equal(draftStores.get('wanderlog-local-recovery').has('current'), false);
+  assert.equal(draftStores.get('cartovella-local-recovery').get('current').draft.name, 'Old route draft');
 });
 const geoJsonTrack = parseRouteFixture(JSON.stringify({
   type: 'FeatureCollection',
@@ -353,15 +418,15 @@ check('header navigation uses compact icons with accessible labels and synchroni
   element('toggleClassicMode').setAttribute = originalSet;
   element('toggleRpgMode').setAttribute = originalRpgSet;
 });
-check('Wanderlog branding uses one subtitle, without a page-like badge, and preserves descriptive SEO metadata', () => {
+check('Cartovella branding uses one subtitle, without a page-like badge, and preserves descriptive SEO metadata', () => {
   const header = html.slice(html.indexOf('<header'), html.indexOf('</header>'));
-  assert.ok(header.includes('>WANDERLOG</h1>'));
+  assert.ok(header.includes('>CARTOVELLA</h1>'));
   assert.ok(header.includes('>RPG Atlas</p>'));
   assert.ok(!header.includes('>RPG Atlas</span>'));
   assert.ok(!header.includes('TERRA INCOGNITA'));
   assert.ok(!header.includes('A Gamified Fog-of-War Travel Odyssey'));
-  assert.ok(html.includes('<title>Wanderlog • RPG Atlas &amp; Travel Journal</title>'));
-  assert.match(html, /<meta name="description" content="Wanderlog is a gamified fog-of-war travel atlas and journal/);
+  assert.ok(html.includes('<title>Cartovella • RPG Atlas &amp; Travel Journal</title>'));
+  assert.match(html, /<meta name="description" content="Cartovella is a gamified fog-of-war travel atlas and journal/);
 });
 check('destination pins default to None, pin filters stay out of the RPG HUD, and the fog toggle is not rendered', () => {
   assert.equal(vm.runInContext('AppState.pinFilter', context), 'none');
@@ -765,6 +830,26 @@ check('custom metadata survives local save/load and read-only shared passports; 
   savedJson = '{"pins":{},"regions":{}}';
   vm.runInContext('AppState.viewOnly = false; loadPersistedState()', context);
   assert.equal(vm.runInContext('AppState.customLocations.length', context), 0);
+});
+check('legacy Terra Incognita passport storage migrates to Cartovella without losing data', () => {
+  const previousStorage = context.localStorage;
+  const previousPassport = savedJson;
+  const values = new Map([['terra_incognita_state', JSON.stringify({ version: 2, pins: { yell: 'v' } })]]);
+  context.localStorage = {
+    get length() { return values.size; },
+    key(index) { return [...values.keys()][index] ?? null; },
+    getItem(key) { return values.get(key) ?? null; },
+    setItem(key, value) { values.set(key, value); },
+    removeItem(key) { values.delete(key); }
+  };
+  context.window.location.search = '';
+  vm.runInContext('AppState.viewOnly = false; loadPersistedState()', context);
+  assert.equal(values.has('terra_incognita_state'), false);
+  assert.equal(JSON.parse(values.get('cartovella_state')).pins.yell, 'v');
+  context.localStorage = previousStorage;
+  context.passportRestoreFixture = previousPassport;
+  vm.runInContext('AppState.viewOnly = false; applyPassport(migratePassport(JSON.parse(passportRestoreFixture)))', context);
+  delete context.passportRestoreFixture;
 });
 check('local storage compacts long route geometry and expands it losslessly to five decimal places', () => {
   context.routeCompressionFixture = Array.from({ length: 500 }, (_, index) => [
@@ -2012,7 +2097,7 @@ check('saved and imported road/AWD legs reveal entire crossed counties, includin
   }
 });
 check('all ledger fields survive local and shared payload migration', () => {
-  vm.runInContext('saveState();applyPassport(migratePassport(JSON.parse(localStorage.getItem("terra_incognita_state"))))', context);
+  vm.runInContext('saveState();applyPassport(migratePassport(JSON.parse(localStorage.getItem("cartovella_state"))))', context);
   const saved = JSON.parse(savedJson);
   assert.equal(saved.storageFormat, 'encoded-route-polyline-v1');
   assert.equal(saved.expeditions.length, 1);
@@ -3090,7 +3175,7 @@ check('saved Classic mode restores Travel Ledger, while every main-map entry ena
     assert.equal(classes.get('hud:hidden'), false);
     assert.equal(classes.get('map:hidden'), false);
     assert.equal(classes.get('ledger:hidden'), true);
-    vm.runInContext('applyPassport(migratePassport(JSON.parse(localStorage.getItem("terra_incognita_state"))));restoreModeView()', context);
+    vm.runInContext('applyPassport(migratePassport(JSON.parse(localStorage.getItem("cartovella_state"))));restoreModeView()', context);
     assert.equal(vm.runInContext('AppState.currentTab', context), 'map');
     assert.equal(vm.runInContext('AppState.mode', context), 'rpg');
   } finally {
@@ -3118,7 +3203,7 @@ check('travel anywhere grows the starting home circle into its county without ch
     assert.equal(vm.runInContext('AppState.homeBase.radiusKm', context), travelLedger.homeRadiusKm);
     assert.equal(vm.runInContext('AppState.counties["06073"]', context), 'l');
   }
-  vm.runInContext('saveState();applyPassport(migratePassport(JSON.parse(localStorage.getItem("terra_incognita_state"))))', context);
+  vm.runInContext('saveState();applyPassport(migratePassport(JSON.parse(localStorage.getItem("cartovella_state"))))', context);
   assert.equal(vm.runInContext('loggedCountyStatuses(false)["06073"]', context), 'l');
   vm.runInContext("AppState.pins={};AppState.expeditions=[testExpedition];", context);
   assert.equal(vm.runInContext('loggedCountyStatuses(false)["06073"]', context), 'l');
@@ -3645,7 +3730,7 @@ check('regional music achievements disclose partial prerequisites and award colo
   assert.ok(badges.includes('assets/achievements/rocky-mountain-high.png'));
   assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='countryRoads').tiers[0].rarity", context), 'rare');
   assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='rockyMountainHigh').tiers[0].rarity", context), 'uncommon');
-  vm.runInContext('saveState();applyPassport(migratePassport(JSON.parse(localStorage.getItem("terra_incognita_state"))));renderPassportView()', context);
+  vm.runInContext('saveState();applyPassport(migratePassport(JSON.parse(localStorage.getItem("cartovella_state"))));renderPassportView()', context);
   assert.equal(vm.runInContext('calculateStats().metadataProgress.countryRoads', context), 2);
   assert.equal(vm.runInContext('calculateStats().metadataProgress.rockyMountainHigh', context), 1);
 });
@@ -4899,8 +4984,8 @@ check('passport export filenames include local date and time, not UTC', () => {
     element('btnExport').handlers.click();
     element('btnStorageExport').handlers.click();
     assert.deepEqual(captured,[
-      'terra_incognita_passport_2026-01-01_00-04-09.json',
-      'terra_incognita_passport_2026-01-01_00-04-09.json'
+      'cartovella_passport_2026-01-01_00-04-09.json',
+      'cartovella_passport_2026-01-01_00-04-09.json'
     ]);
   } finally {
     vm.runInContext(`

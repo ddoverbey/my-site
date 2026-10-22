@@ -15,10 +15,10 @@ jobs:
         with:
           node-version: '22'
       - name: Install data importer dependencies
-        working-directory: wanderlog
+        working-directory: cartovella
         run: npm ci
       - name: Fetch complete official catalog
-        run: node wanderlog/import-nps.mjs
+        run: node cartovella/import-nps.mjs
         env:
           NPS_API_KEY: ${{ secrets.NPS_API_KEY }}
       - name: Download licensed RESOLVE source
@@ -26,19 +26,19 @@ jobs:
           curl --fail --location --retry 3 --output "$RUNNER_TEMP/Ecoregions2017.zip" https://storage.googleapis.com/teow2016/Ecoregions2017.zip
           unzip -q "$RUNNER_TEMP/Ecoregions2017.zip" -d "$RUNNER_TEMP/ecoregions"
       - name: Refresh terrestrial biome mappings
-        run: node wanderlog/import-ecoregions.mjs "$RUNNER_TEMP/ecoregions/Ecoregions2017.shp"
+        run: node cartovella/import-ecoregions.mjs "$RUNNER_TEMP/ecoregions/Ecoregions2017.shp"
       - name: Refresh compact park boundaries and coordinate geography
-        run: node wanderlog/import-geography.mjs "$RUNNER_TEMP/ecoregions/Ecoregions2017.shp"
+        run: node cartovella/import-geography.mjs "$RUNNER_TEMP/ecoregions/Ecoregions2017.shp"
       - name: Test generated catalogs and game integration
-        working-directory: wanderlog
+        working-directory: cartovella
         run: npm test
       - uses: actions/upload-artifact@v6
         with:
           name: nps-catalog
           path: |
-            wanderlog/nps-parks.json
-            wanderlog/ecoregion-mapping.json
-            wanderlog/nps-boundaries.topojson
-            wanderlog/ecoregions.topojson
-            wanderlog/mangroves.topojson
+            cartovella/nps-parks.json
+            cartovella/ecoregion-mapping.json
+            cartovella/nps-boundaries.topojson
+            cartovella/ecoregions.topojson
+            cartovella/mangroves.topojson
           if-no-files-found: error

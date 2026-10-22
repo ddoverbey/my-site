@@ -1,8 +1,8 @@
 # my-site
 
-## Wanderlog NPS catalog
+## Cartovella NPS catalog
 
-Wanderlog loads a static snapshot fetched directly from the [NPS API](https://www.nps.gov/subjects/developer/get-started.htm).
+Cartovella loads a static snapshot fetched directly from the [NPS API](https://www.nps.gov/subjects/developer/get-started.htm).
 Players do not need an API key, and no key is included in the site.
 
 ### One-time setup (or a later refresh)
@@ -14,7 +14,7 @@ Players do not need an API key, and no key is included in the site.
 4. Download the successful run's `nps-catalog` artifact, unzip it, and add `nps-parks.json`,
    `ecoregion-mapping.json`, `nps-boundaries.topojson`, `ecoregions.topojson`, and
    `mangroves.topojson` to the
-   tracked [`wanderlog/`](wanderlog/) directory (capitalization matters on GitHub Pages).
+   tracked [`cartovella/`](cartovella/) directory (capitalization matters on GitHub Pages).
 5. Commit and deploy that dataset with the site. Repeat steps 3-5 only when you want a refresh.
 
 The importer paginates the complete `/parks` endpoint, checks for 400+ unique records and valid metadata,
@@ -29,14 +29,14 @@ International destinations come from the user-supplied Parks of the World and Wi
 The snapshot date and any catalog-loading failure are visible in the game.
 Until the generated dataset is published, only the international destinations are available.
 
-For local generation, set `NPS_API_KEY` in the current shell and run `node .\wanderlog\import-nps.mjs`.
+For local generation, set `NPS_API_KEY` in the current shell and run `node .\cartovella\import-nps.mjs`.
 Node 16+ is sufficient; the workflow uses Node 22. Test without a key using
-`node .\wanderlog\nps-catalog.test.mjs`. That test needs no packages; the ecoregion importer and full
-test suite use the development dependencies in `wanderlog/package.json`.
+`node .\cartovella\nps-catalog.test.mjs`. That test needs no packages; the ecoregion importer and full
+test suite use the development dependencies in `cartovella/package.json`.
 
 ## International national parks
 
-[`worldwide-national-parks.json`](wanderlog/worldwide-national-parks.json) is the supplied
+[`worldwide-national-parks.json`](cartovella/worldwide-national-parks.json) is the supplied
 [Parks of the World](https://github.com/RohanNagar/parksoftheworld) curated dataset. It is not an
 official global park registry. Its current 73 entries cover a subset of the world's parks, and
 country fields use two-letter region codes, including dependencies and territories.
@@ -47,7 +47,7 @@ the NPS catalog fails to load; there is no worldwide-data fallback for U.S. park
 The supplied American Samoa entry and 127 U.S. Wikidata rows are excluded.
 The merged catalog contains 3,388 international destinations and 474 NPS listings: 3,862 total.
 
-[`wikidata-national-parks-query.json`](wanderlog/wikidata-national-parks-query.json) supplies
+[`wikidata-national-parks-query.json`](cartovella/wikidata-national-parks-query.json) supplies
 4,784 query rows, not 4,784 unique parks. Wikidata structured data is
 [CC0](https://www.wikidata.org/wiki/Wikidata:Licensing), but the query is not an official global
 registry: classifications, labels and current designation/status may be incomplete or inaccurate.
@@ -102,7 +102,7 @@ Each international source loads independently; failures are reported separately 
 do not erase saves, and leave the other international source and NPS available. Retry reloads
 both sources and the biome mappings.
 To update, replace the supplied JSON files, regenerate `ecoregion-mapping.json` using the combined
-refresh workflow or local importer, run `npm test` in `wanderlog`, and deploy the files together.
+refresh workflow or local importer, run `npm test` in `cartovella`, and deploy the files together.
 The workflow reads both checked-in international files through the same merge helper used by
 the browser; it does not download or silently replace them.
 
@@ -158,7 +158,7 @@ Home/discovery pulse frames repaint only the visible viewport. Fog polygon paths
 the overscanned canvas; routes and auras are also culled without changing their reveal extents.
 These optimizations do not change saved records, achievement rules or geography snapshots.
 
-Wanderlog maps NPS and international destination **coordinates**, not park boundaries, to the
+Cartovella maps NPS and international destination **coordinates**, not park boundaries, to the
 [RESOLVE Ecoregions 2017](https://ecoregions.appspot.com/) polygons, an update of WWF's 2001
 Terrestrial Ecoregions framework. The 14 biome types replace all former curated game biome tags.
 Ecoregion names and realms are shown in popups and the searchable ledger. Visited destinations
@@ -166,7 +166,7 @@ collect their intersected biome(s); wishlist entries do not. Saved visits remain
 collections, biome XP, achievements, and related character classes are recalculated under the new framework.
 No coastline, cave, volcanic, urban, or island label is passed off as a WWF terrestrial biome.
 
-The published [`ecoregion-mapping.json`](wanderlog/ecoregion-mapping.json) is a small derived snapshot,
+The published [`ecoregion-mapping.json`](cartovella/ecoregion-mapping.json) is a small derived snapshot,
 so browsers never download or process the 243 MB source shapefile. The current snapshot matches
 3,624 of 3,862 destination points after merging the Wikidata query. The other 238 points have no terrestrial
 intersection, including offshore/coastal NPS and international coordinates. These points
@@ -202,7 +202,7 @@ For a local source and geography refresh:
 
 1. Download the [RESOLVE 2017 shapefile ZIP](https://storage.googleapis.com/teow2016/Ecoregions2017.zip)
    and extract it **outside the repository**. Keep the `.shp`, `.dbf`, and `.prj` files together.
-2. From `wanderlog`, run `npm ci` (Node 22+ for the current data tooling), then
+2. From `cartovella`, run `npm ci` (Node 22+ for the current data tooling), then
    `npm run import:ecoregions -- "C:\path\to\Ecoregions2017.shp"`.
    Also run `npm run import:geography -- "C:\path\to\Ecoregions2017.shp"` to regenerate the compact
    ecoregion and detailed mangrove coordinate topologies.
@@ -231,7 +231,7 @@ Attribution and licensing are also displayed in the game and included in the der
 ## NPS boundaries and custom coordinates (Step 2)
 
 Fog remains entirely in the existing overscanned canvas. Visited NPS listings use polygons from
-[`nps-boundaries.topojson`](wanderlog/nps-boundaries.topojson) when available, **instead of** an
+[`nps-boundaries.topojson`](cartovella/nps-boundaries.topojson) when available, **instead of** an
 85 km point aura. A 10 km-equivalent canvas shadow softens their edges at the current zoom.
 International point-only destinations, and NPS listings with no matching boundary, retain their
 existing auras. County hitboxes, cleared polygons, route corridors, zoom animation, and the home
@@ -258,8 +258,8 @@ Before saving a custom point, `Promise.all()` resolves:
   atlases. Countries can be global; state and county coverage is U.S. only. Unmatched points remain
   unmatched, not snapped to a nearby landmass. Simplified atlases can miss small islands and give
   approximate coastal/border matches.
-- **Biome/ecoregion:** local containment against [`ecoregions.topojson`](wanderlog/ecoregions.topojson),
-  with [`mangroves.topojson`](wanderlog/mangroves.topojson) as a higher-detail overlay for biome 14.
+- **Biome/ecoregion:** local containment against [`ecoregions.topojson`](cartovella/ecoregions.topojson),
+  with [`mangroves.topojson`](cartovella/mangroves.topojson) as a higher-detail overlay for biome 14.
   Both are derived from the same CC-BY-4.0 RESOLVE source. D3 ring winding is normalized and holes,
   multipart polygons, and antimeridian bounds are respected. Other simplified biomes remain approximate,
   **not guaranteed exact near a boundary**. Rock/ice and water are excluded. Existing catalog points
@@ -295,7 +295,7 @@ OpenStreetMap contributor/ODbL credits appear with custom metadata.
 
 ### Regenerating compact geography
 
-Run `npm ci` in `wanderlog` using Node 22+, extract the licensed RESOLVE ZIP outside the repository,
+Run `npm ci` in `cartovella` using Node 22+, extract the licensed RESOLVE ZIP outside the repository,
 then run:
 
 ```sh
@@ -303,7 +303,7 @@ npm run import:geography -- "/path/to/Ecoregions2017.shp"
 npm test
 ```
 
-[`import-geography.mjs`](wanderlog/import-geography.mjs) paginates the current NPS service in WGS84,
+[`import-geography.mjs`](cartovella/import-geography.mjs) paginates the current NPS service in WGS84,
 checks completeness and exact unit codes, and simplifies locally with Mapshaper weighted
 Visvalingam and `keep-shapes`. No data is uploaded to mapshaper.org. NPS keeps 1.5% of vertices;
 fine TopoJSON quantization preserves tiny historic-site polygons. RESOLVE keeps 0.8% to meet the
@@ -320,7 +320,7 @@ as their original sampled metadata, rather than silently rewritten when a datase
 
 ## Provider-agnostic rarity proxy and AppState v2 (Step 3)
 
-[`rarity-config.js`](wanderlog/rarity-config.js) configures `rarityEndpoint`, defaulting to
+[`rarity-config.js`](cartovella/rarity-config.js) configures `rarityEndpoint`, defaulting to
 `https://api.devonoverbey.com/rarity`. Set it to another HTTPS URL or `''` for direct OSM only.
 There are no provider secrets in this configuration. New custom-coordinate lookups call the endpoint
 with `lat` and `lng`. Saved-pin browsing, map redraws, and passport migration do not call it.
@@ -356,7 +356,7 @@ map display, exports, and share links; the adapter itself grants no data-use rig
 
 ### Included open-data Cloudflare Worker
 
-[`rarity-worker/worker.mjs`](wanderlog/rarity-worker/worker.mjs) uses only OpenStreetMap data
+[`rarity-worker/worker.mjs`](cartovella/rarity-worker/worker.mjs) uses only OpenStreetMap data
 under ODbL. It returns `reviewCount: null`, a mapped tourism/amenity node count within 5 km,
 and the corresponding **density estimate**. It includes source attribution, query time,
 OSM database timestamp where provided, and separately calculated motorway/trunk proximity.
@@ -385,7 +385,7 @@ appropriate. The Worker never accepts a user-supplied upstream URL.
 
 ### Deployment (not performed automatically)
 
-From `wanderlog`, install the declared tooling with `npm ci`, then:
+From `cartovella`, install the declared tooling with `npm ci`, then:
 
 ```sh
 npx wrangler login
@@ -393,7 +393,7 @@ npx wrangler kv namespace create RARITY_CACHE --config rarity-worker/wrangler.js
 ```
 
 Replace `REPLACE_WITH_CREATED_KV_NAMESPACE_ID` in
-[`wrangler.jsonc`](wanderlog/rarity-worker/wrangler.jsonc) with the returned namespace ID.
+[`wrangler.jsonc`](cartovella/rarity-worker/wrangler.jsonc) with the returned namespace ID.
 Verify the custom domain route and `ALLOWED_ORIGINS` for your deployed site, and ensure rate-limit
 namespace `1001` does not unintentionally share counters with another Worker. For local browser
 testing, use a separate config with a localhost origin in the allowlist; never allow the `null`
@@ -415,7 +415,7 @@ are ignored through `.dev.vars*` and `.wrangler/`.
 
 AppState and new local saves, exports, and shared passports use `version: 2`.
 Passport backup filenames include the user's local date and time to the second:
-`terra_incognita_passport_YYYY-MM-DD_HH-mm-ss.json`.
+`cartovella_passport_YYYY-MM-DD_HH-mm-ss.json`.
 Legacy/unversioned and version-1 passports migrate their existing OSM metadata to the canonical
 rarity fields, preserving their coordinates, visits, biomes, counties, routes, and other records.
 Old OSM counts remain density scores and **never become review counts**. Migration is idempotent
@@ -433,7 +433,7 @@ the Worker bundle and declared bindings without a production deployment.
 
 ## Tiered travel ledger, expeditions and progressive achievements
 
-[`travel-ledger.js`](wanderlog/travel-ledger.js) defines the four status tiers for catalog pins,
+[`travel-ledger.js`](cartovella/travel-ledger.js) defines the four status tiers for catalog pins,
 custom POIs, county FIPS codes and state/country keys:
 
 | Tier | Color | Map and completion behavior |
@@ -551,7 +551,7 @@ data shows retry guidance instead of a misleading completion count.
 ### Logging and editing expeditions
 
 **🗺️ Log Expedition** on the map opens the wizard implemented in
-[`expedition-ui.js`](wanderlog/expedition-ui.js):
+[`expedition-ui.js`](cartovella/expedition-ui.js):
 
 1. Enter a trip name and an optional free-text **Reason for travel**. Start/end dates are optional;
    undated trips still earn location credit. **Day Trip?** sets both dates to the selected start date
@@ -655,7 +655,7 @@ unavailable, the form reports that and keeps the in-memory draft available for m
 
 ### Travel journal
 
-The header brands the app as **Wanderlog**, with a single **RPG Atlas** subtitle; the longer
+The header brands the app as **Cartovella**, with a single **RPG Atlas** subtitle; the longer
 fog-of-war description lives in SEO metadata. Navigation highlights the current page only:
 the compass is active on the RPG map, the clipboard on Travel Ledger, and other pages use
 their own navigation highlight without leaving a mode button selected.
@@ -700,7 +700,7 @@ image data on every frame.
 ### Progressive achievements
 
 Achievement cards and earned profile badges use matching tier artwork from
-`wanderlog/assets/achievements/` when available, retaining emoji icons for other tiers.
+`cartovella/assets/achievements/` when available, retaining emoji icons for other tiers.
 Pixel art keeps its original proportions and rarity borders. Locked secret-tier artwork
 remains hidden until completion.
 
@@ -708,7 +708,7 @@ The character profile collects pixel flags for Visited and Lived countries (not 
 Transited). Flags are alphabetized by English country name, deduplicated by ISO country code,
 and shown without frames or permanent name labels in both the profile and Travel Log.
 Hover, keyboard-focus, or tap/click a flag to reveal its name; flag activation does not toggle trip cards.
-Flags are rendered pixel-sharp from `wanderlog/assets/flags/`. Unknown countries or missing flag
+Flags are rendered pixel-sharp from `cartovella/assets/flags/`. Unknown countries or missing flag
 files use `unknown.png`. This collection follows existing travel-derived country statuses and
 manual overrides; it does not introduce a second saved country ledger. Pixel artwork is by
 DaFluffyPotato; country-code reference: https://flaglog.com/country-codes.

@@ -13,7 +13,8 @@ let homeSearchTimer = null;
 let expeditionReturnFocus = null;
 const expeditionRoadCache = new Map();
 let lastRoadRequest = 0;
-const EXPEDITION_DRAFT_DB = 'wanderlog-local-recovery';
+const EXPEDITION_DRAFT_DB = 'cartovella-local-recovery';
+const LEGACY_EXPEDITION_DRAFT_DB = 'wanderlog-local-recovery';
 let expeditionDraftDbPromise = null;
 let savedExpeditionDraft = null;
 let expeditionDraftSaveTimer = null;
@@ -27,24 +28,59 @@ function rarityBadgeMarkup(tier) {
 function expeditionDraftDatabase() {
   if (typeof indexedDB === 'undefined') return Promise.reject(new Error('This browser does not support IndexedDB.'));
   if (!expeditionDraftDbPromise) {
-    expeditionDraftDbPromise = new Promise((resolve, reject) => {
-      const request = indexedDB.open(EXPEDITION_DRAFT_DB, 1);
-      request.onupgradeneeded = () => request.result.createObjectStore('drafts', { keyPath: 'id' });
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error || new Error('Could not open local draft storage.'));
-      request.onblocked = () => reject(new Error('Local draft storage is blocked by another open Wanderlog tab.'));
-    });
+    expeditionDraftDbPromise = openExpeditionDraftDatabase(EXPEDITION_DRAFT_DB);
   }
   return expeditionDraftDbPromise;
 }
 
-async function readExpeditionDraftRecovery() {
-  const database = await expeditionDraftDatabase();
+function openExpeditionDraftDatabase(name) {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(name, 1);
+    request.onupgradeneeded = () => request.result.createObjectStore('drafts', { keyPath: 'id' });
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error('Could not open local draft storage.'));
+    request.onblocked = () => reject(new Error('Local draft storage is blocked by another open Cartovella tab.'));
+  });
+}
+
+function readDraftFromDatabase(database) {
   return new Promise((resolve, reject) => {
     const request = database.transaction('drafts', 'readonly').objectStore('drafts').get('current');
     request.onsuccess = () => resolve(request.result?.draft || null);
     request.onerror = () => reject(request.error || new Error('Could not read the saved expedition draft.'));
   });
+}
+
+function deleteDraftFromDatabase(database) {
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction('drafts', 'readwrite');
+    transaction.objectStore('drafts').delete('current');
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error || new Error('Could not clear the saved expedition draft.'));
+    transaction.onabort = () => reject(transaction.error || new Error('Clearing the expedition draft was aborted.'));
+  });
+}
+
+async function readExpeditionDraftRecovery() {
+  const database = await expeditionDraftDatabase();
+  const draft = await readDraftFromDatabase(database);
+  if (draft) return draft;
+
+  if (typeof indexedDB.databases === 'function') {
+    const existingDatabases = await indexedDB.databases();
+    if (!existingDatabases.some(database => database.name === LEGACY_EXPEDITION_DRAFT_DB)) return null;
+  }
+
+  const legacyDatabase = await openExpeditionDraftDatabase(LEGACY_EXPEDITION_DRAFT_DB);
+  try {
+    const legacyDraft = await readDraftFromDatabase(legacyDatabase);
+    if (!legacyDraft) return null;
+    await writeExpeditionDraftRecovery(legacyDraft);
+    await deleteDraftFromDatabase(legacyDatabase);
+    return legacyDraft;
+  } finally {
+    if (typeof legacyDatabase.close === 'function') legacyDatabase.close();
+  }
 }
 
 async function writeExpeditionDraftRecovery(draft) {
@@ -60,13 +96,7 @@ async function writeExpeditionDraftRecovery(draft) {
 
 async function deleteExpeditionDraftRecovery() {
   const database = await expeditionDraftDatabase();
-  return new Promise((resolve, reject) => {
-    const transaction = database.transaction('drafts', 'readwrite');
-    transaction.objectStore('drafts').delete('current');
-    transaction.oncomplete = () => resolve();
-    transaction.onerror = () => reject(transaction.error || new Error('Could not clear the saved expedition draft.'));
-    transaction.onabort = () => reject(transaction.error || new Error('Clearing the expedition draft was aborted.'));
-  });
+  return deleteDraftFromDatabase(database);
 }
 
 function setExpeditionRecoveryAvailable(draft) {
@@ -972,7 +1002,7 @@ async function enrichExpeditionStopRarities(expeditionId) {
       try {
         const rarity = CoordinateLookups.cachedRarity(...stop.coords, rarityStorage) ||
           await CoordinateLookups.lookupRarityWithFallback(...stop.coords, {
-            storage: rarityStorage, rarityEndpoint: WanderlogConfig.rarityEndpoint
+            storage: rarityStorage, rarityEndpoint: CartovellaConfig.rarityEndpoint
           });
         if (!rarity?.rarityTier || !CoordinateLookups.RARITY_TIERS[rarity.rarityTier]) return stop;
         updated = true;
@@ -1014,7 +1044,7 @@ function downloadExpeditionRecovery() {
   };
   downloadJsonFile(
     { ...passportPayload(), _unsavedExpeditionDraft: recoveryDraft },
-    `wanderlog-recovery-${new Date().toISOString().slice(0, 10)}.json`
+    `cartovella-recovery-${new Date().toISOString().slice(0, 10)}.json`
   );
   document.getElementById('expeditionRecoveryStatus').textContent =
     'Recovery file downloaded. Keep it somewhere safe; import it after deploying the updated app.';
@@ -1438,7 +1468,7 @@ async function exportGlobalRoutesPng() {
     x: 32, y: 608, fill: '#e2e8f0', 'font-family': 'Inter, Arial, sans-serif',
     'font-size': 20, 'font-weight': 600
   });
-  banner.textContent = `WANDERLOG • ${stats.cls} (Level ${stats.level}) • ${AppState.expeditions.length} Expeditions • ${stats.countriesCount} Countries`;
+  banner.textContent = `CARTOVELLA • ${stats.cls} (Level ${stats.level}) • ${AppState.expeditions.length} Expeditions • ${stats.countriesCount} Countries`;
 
   const svgBlob = new Blob([new XMLSerializer().serializeToString(svg)], { type: 'image/svg+xml;charset=utf-8' });
   const svgUrl = URL.createObjectURL(svgBlob);
@@ -1464,7 +1494,7 @@ async function exportGlobalRoutesPng() {
   const objectUrl = URL.createObjectURL(png);
   const download = document.createElement('a');
   download.href = objectUrl;
-  download.download = `wanderlog_routes_${localExportTimestamp()}.png`;
+  download.download = `cartovella_routes_${localExportTimestamp()}.png`;
   document.body.appendChild(download);
   download.click();
   download.remove();
