@@ -1253,6 +1253,16 @@ formLookupIndexes.counties[0].feature.id = 'ITA:LAZ';
 context.CoordinateLookups = { ...coordinateLookups };
 context.crypto = { randomUUID: () => 'saved-reference' };
 context.d3 = { ...d3Geo, geoContains: d3Geo.geoContains };
+check('dense route coverage is distance-sampled and cached by route', () => {
+  context.denseCoverageRoute = Array.from({ length: 1000 }, (_, index) =>
+    [39 + index * 0.00001, -105 + index * 0.00001]);
+  const result = vm.runInContext(`(() => {
+    const first = routeFogCircles(denseCoverageRoute, 20);
+    return { count: first.length, reused: first === routeFogCircles(denseCoverageRoute, 20) };
+  })()`, context);
+  assert.ok(result.count < 10);
+  assert.equal(result.reused, true);
+});
 context.formLookupIndexes = formLookupIndexes;
 vm.runInContext('coordinateIndexes = formLookupIndexes; AppState.customLocations = [];', context);
 element('customLocationName').value = 'Colosseum';

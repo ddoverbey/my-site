@@ -2012,6 +2012,7 @@
 
     let statsCache = null;
     let landMaskCache = null;
+    const routeFogCircleCache = new WeakMap();
     const LAND_COVERAGE_WIDTH = 1440;
     const LAND_COVERAGE_HEIGHT = 720;
     const EARTH_RADIUS_KM = 6371.0088;
@@ -2088,6 +2089,61 @@
       return geometries;
     }
 
+    function routeFogCircles(route, radiusKm) {
+      if (!Array.isArray(route) || route.length < 2) return [];
+      const cached = routeFogCircleCache.get(route);
+      if (cached?.radiusKm === radiusKm) return cached.circles;
+
+      const circles = [];
+      const addCircle = (lat, lng) => {
+        if (!Number.isFinite(lat) || !Number.isFinite(lng) || !(radiusKm > 0)) return;
+        circles.push(d3.geoCircle()
+          .center([lng, lat])
+          .radius(radiusKm / EARTH_RADIUS_KM * 180 / Math.PI)
+          .precision(2)());
+      };
+
+      let distanceSinceCircle = 0;
+      let previousWasValid = false;
+      for (let index = 1; index < route.length; index++) {
+        const [startLat, startLng] = route[index - 1] || [];
+        const [endLat, endLng] = route[index] || [];
+        if (![startLat, startLng, endLat, endLng].every(Number.isFinite)) {
+          distanceSinceCircle = 0;
+          previousWasValid = false;
+          continue;
+        }
+
+        const start = [startLng, startLat];
+        const end = [endLng, endLat];
+        if (!previousWasValid) {
+          addCircle(startLat, startLng);
+          distanceSinceCircle = 0;
+          previousWasValid = true;
+        }
+
+        const distanceKm = d3.geoDistance(start, end) * EARTH_RADIUS_KM;
+        if (!(distanceKm > 0)) continue;
+        const interpolate = d3.geoInterpolate(start, end);
+        let distanceAlongSegment = 0;
+        let remainingDistance = distanceKm;
+        while (distanceSinceCircle + remainingDistance >= radiusKm) {
+          const distanceToNextCircle = radiusKm - distanceSinceCircle;
+          distanceAlongSegment += distanceToNextCircle;
+          const [lng, lat] = interpolate(distanceAlongSegment / distanceKm);
+          addCircle(lat, lng);
+          remainingDistance -= distanceToNextCircle;
+          distanceSinceCircle = 0;
+        }
+        distanceSinceCircle += remainingDistance;
+      }
+
+      const [lastLat, lastLng] = route[route.length - 1] || [];
+      addCircle(lastLat, lastLng);
+      routeFogCircleCache.set(route, { radiusKm, circles });
+      return circles;
+    }
+
     function landCoverageStats() {
       const land = globalLandMask();
       if (!land) return { exploredPct: null, clearedPct: null };
@@ -2111,25 +2167,6 @@
           .center([lng, lat])
           .radius(radiusKm / EARTH_RADIUS_KM * 180 / Math.PI)
           .precision(2)());
-      };
-      const addRoute = (route, radiusKm = 20) => {
-        if (!Array.isArray(route) || route.length < 2) return;
-        for (let index = 1; index < route.length; index++) {
-          const [startLat, startLng] = route[index - 1] || [];
-          const [endLat, endLng] = route[index] || [];
-          if (![startLat, startLng, endLat, endLng].every(Number.isFinite)) continue;
-          const start = [startLng, startLat];
-          const end = [endLng, endLat];
-          const distanceKm = d3.geoDistance(start, end) * EARTH_RADIUS_KM;
-          const steps = Math.max(1, Math.ceil(distanceKm / radiusKm));
-          const interpolate = d3.geoInterpolate(start, end);
-          for (let step = 0; step < steps; step++) {
-            const [lng, lat] = interpolate(step / steps);
-            addCircle(lat, lng, radiusKm);
-          }
-        }
-        const [lat, lng] = route[route.length - 1] || [];
-        addCircle(lat, lng, radiusKm);
       };
 
       if (AppState.homeBase) {
@@ -2172,10 +2209,14 @@
       AppState.expeditions.forEach(expedition => {
         TravelLedger.flightStops(expedition).forEach(([lat, lng]) =>
           addCircle(lat, lng, FLIGHT_STOP_FOG_RADIUS_KM));
-        TravelLedger.fogRoutes(expedition).forEach(route => addRoute(route));
+        TravelLedger.fogRoutes(expedition).forEach(route => {
+          routeFogCircles(route, 20).forEach(geometry => circleGeometries.push(geometry));
+        });
       });
       AppState.clearedPolygons.forEach(geometry => clearedGeometries.push(geometry));
-      AppState.routes.forEach(route => addRoute(route));
+      AppState.routes.forEach(route => {
+        routeFogCircles(route, 20).forEach(geometry => circleGeometries.push(geometry));
+      });
       clearedGeometries.push(...circleGeometries);
 
       const { context: clearedContext } = coverageCanvas();
