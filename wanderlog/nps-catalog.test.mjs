@@ -3341,9 +3341,15 @@ check('achievement and XP level-ups notify once while passport imports suppress 
   assert.equal(result.notices.length, 2);
   assert.equal(result.importTimers, 2);
   assert.match(html, /commitLedger\(\(\) => applyPassport\(parsed\), \{\s*notifyProgress: false\s*\}\)/);
-  assert.match(html, /<ul id="toastAchievementList"/);
+  assert.match(html, /id="achievementNotification" role="dialog" aria-modal="true"/);
+  assert.match(html, /id="levelUpNotification"[^>]*fixed top-20 left-1\/2/);
+  assert.match(html, /btnDismissAchievement'\)\.addEventListener\('click', dismissAchievementNotification\)/);
+  assert.match(html, /btnDismissLevelUp'\)\.addEventListener\('click', hideLevelUpNotification\)/);
+  assert.match(html, /event\.target === event\.currentTarget\) dismissAchievementNotification\(\)/);
+  assert.match(html, /setTimeout\(hideLevelUpNotification, 8000\)/);
+  assert.match(html, /\.level-up-banner > div \{ animation: levelUpFlash/);
 });
-check('achievement toast displays each unlocked tier as a safe list item', () => {
+check('achievement modal is dismissible and level-up banner stays at top center', () => {
   const classList = (...initial) => {
     const values = new Set(initial);
     return {
@@ -3360,39 +3366,37 @@ check('achievement toast displays each unlocked tier as a safe list item', () =>
       }
     };
   };
-  const toastElements = {
-    toastNotification: { classList: classList('opacity-0', 'pointer-events-none', 'translate-y-4') },
-    toastTitle: { textContent: '' },
-    toastMsg: { textContent: '', classList: classList() },
-    toastIcon: { textContent: '' },
-    toastAchievementList: {
-      children: [], classList: classList('hidden'),
-      replaceChildren() { this.children = []; },
+  const notificationElements = {
+    achievementNotification: { classList: classList('hidden') },
+    achievementNotificationTitle: { textContent: '' },
+    btnDismissAchievement: { focus() {} },
+    achievementNotificationList: {
+      children: [], replaceChildren() { this.children = []; },
       appendChild(child) { this.children.push(child); }
-    }
+    },
+    levelUpNotification: { classList: classList('opacity-0', 'pointer-events-none', '-translate-y-4') },
+    levelUpMessage: { textContent: '' }
   };
   const originalGetElement = context.document.getElementById;
   const originalCreateElement = context.document.createElement;
-  context.document.getElementById = id => toastElements[id] || originalGetElement(id);
+  context.document.getElementById = id => notificationElements[id] || originalGetElement(id);
   context.document.createElement = tagName => ({ tagName, textContent: '' });
   try {
     vm.runInContext(`
       showProgressNotification([{title:'<First milestone>'},{title:'Second milestone'}]);
     `, context);
-    assert.equal(toastElements.toastTitle.textContent, 'Achievements Unlocked');
+    assert.equal(notificationElements.achievementNotificationTitle.textContent, 'Achievements Unlocked');
     assert.deepEqual(
-      toastElements.toastAchievementList.children.map(item => item.textContent),
+      notificationElements.achievementNotificationList.children.map(item => item.textContent),
       ['<First milestone>', 'Second milestone']
     );
-    assert.equal(toastElements.toastMsg.classList.contains('hidden'), true);
-    assert.equal(toastElements.toastAchievementList.classList.contains('hidden'), false);
+    assert.equal(notificationElements.achievementNotification.classList.contains('hidden'), false);
     vm.runInContext('showProgressNotification([], 3)', context);
-    assert.equal(toastElements.toastTitle.textContent, 'Level Up!');
-    assert.equal(toastElements.toastMsg.textContent, 'You reached Level 3!');
-    assert.equal(toastElements.toastIcon.textContent, '⬆️');
-    assert.equal(toastElements.toastAchievementList.children.length, 0);
-    assert.equal(toastElements.toastAchievementList.classList.contains('hidden'), true);
-    assert.equal(toastElements.toastNotification.classList.contains('level-up-toast'), true);
+    assert.equal(notificationElements.levelUpMessage.textContent, 'You reached Level 3!');
+    assert.equal(notificationElements.levelUpNotification.classList.contains('level-up-banner'), true);
+    vm.runInContext('dismissAchievementNotification(); hideLevelUpNotification()', context);
+    assert.equal(notificationElements.achievementNotification.classList.contains('hidden'), true);
+    assert.equal(notificationElements.levelUpNotification.classList.contains('opacity-0'), true);
   } finally {
     context.document.getElementById = originalGetElement;
     context.document.createElement = originalCreateElement;

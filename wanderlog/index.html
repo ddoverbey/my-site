@@ -246,9 +246,9 @@
       0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
       35% { box-shadow: 0 0 28px 8px rgba(245, 158, 11, 0.55); }
     }
-    .level-up-toast { animation: levelUpFlash 850ms ease-out; }
+    .level-up-banner > div { animation: levelUpFlash 850ms ease-out; }
     @media (prefers-reduced-motion: reduce) {
-      .level-up-toast { animation: none; }
+      .level-up-banner > div { animation: none; }
     }
     .xp-glow {
       background: linear-gradient(90deg, #10b981 0%, #34d399 50%, #10b981 100%);
@@ -972,7 +972,31 @@
     <div class="min-w-0">
       <h4 class="text-xs font-bold text-amber-300 uppercase tracking-wider" id="toastTitle">Achievement Unlocked</h4>
       <p class="text-xs text-slate-200 mt-0.5" id="toastMsg">You cleared the fog of your home!</p>
-      <ul id="toastAchievementList" class="hidden mt-1 list-disc list-inside text-xs text-emerald-200 space-y-0.5 max-h-32 overflow-y-auto"></ul>
+    </div>
+  </div>
+
+  <div id="achievementNotification" role="dialog" aria-modal="true" aria-labelledby="achievementNotificationTitle" class="hidden fixed inset-0 z-[1200] bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <section class="relative rpg-panel rpg-panel-gold max-w-md w-full rounded-3xl p-7 sm:p-9 text-center shadow-2xl shadow-amber-950/50">
+      <button id="btnDismissAchievement" type="button" aria-label="Close achievement notification" class="absolute top-3 right-3 rounded-lg px-2.5 py-1 text-xl leading-none text-slate-400 hover:text-white hover:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400">
+        <span aria-hidden="true">&times;</span>
+      </button>
+      <div class="text-5xl mb-3" aria-hidden="true">🏆</div>
+      <h2 id="achievementNotificationTitle" class="cinzel text-xl sm:text-2xl font-extrabold text-amber-200">Achievements Unlocked</h2>
+      <p class="text-sm text-slate-300 mt-2">Your travels have earned new achievements.</p>
+      <ul id="achievementNotificationList" class="mt-4 text-left list-disc list-inside text-sm text-emerald-200 space-y-1"></ul>
+    </section>
+  </div>
+
+  <div id="levelUpNotification" role="status" aria-live="polite" aria-atomic="true" class="fixed top-20 left-1/2 z-[1300] w-[min(92vw,28rem)] transform -translate-x-1/2 -translate-y-4 opacity-0 pointer-events-none transition-all duration-300">
+    <div class="rpg-panel rounded-2xl p-4 shadow-2xl border-amber-500/60 flex items-center gap-3">
+      <div class="text-3xl" aria-hidden="true">⬆️</div>
+      <div class="min-w-0 flex-1">
+        <h2 class="text-sm font-bold text-amber-200 uppercase tracking-wider">Level Up!</h2>
+        <p id="levelUpMessage" class="text-sm text-slate-100 mt-0.5"></p>
+      </div>
+      <button id="btnDismissLevelUp" type="button" aria-label="Dismiss level-up notification" class="rounded-lg px-2 py-1 text-lg leading-none text-slate-400 hover:text-white hover:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400">
+        <span aria-hidden="true">&times;</span>
+      </button>
     </div>
   </div>
 
@@ -1738,58 +1762,78 @@
 
     let notificationTimeout = null;
 
-    function displayNotificationToast(levelUp = false) {
+    function displayNotificationToast() {
       const toast = document.getElementById('toastNotification');
       if (notificationTimeout !== null) clearTimeout(notificationTimeout);
-      toast.classList.remove('level-up-toast');
-      if (levelUp) {
-        void toast.offsetWidth;
-        toast.classList.add('level-up-toast');
-      }
       toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
       toast.classList.add('opacity-100', 'translate-y-0');
       notificationTimeout = setTimeout(() => {
         toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
-        toast.classList.remove('opacity-100', 'translate-y-0', 'level-up-toast');
+        toast.classList.remove('opacity-100', 'translate-y-0');
         notificationTimeout = null;
       }, 4000);
     }
 
     function showNotification(title, message, icon = '🏆') {
       const messageElement = document.getElementById('toastMsg');
-      const achievementList = document.getElementById('toastAchievementList');
       document.getElementById('toastTitle').textContent = title;
       messageElement.textContent = message;
       messageElement.classList.remove('hidden');
       document.getElementById('toastIcon').textContent = icon;
-      achievementList.replaceChildren();
-      achievementList.classList.add('hidden');
       displayNotificationToast();
     }
 
-    function showProgressNotification(unlocked, level = null) {
-      const achievementList = document.getElementById('toastAchievementList');
+    let achievementNotificationReturnFocus = null;
+
+    function showAchievementNotification(unlocked) {
+      const modal = document.getElementById('achievementNotification');
+      const achievementList = document.getElementById('achievementNotificationList');
+      if (typeof modal.classList.contains === 'function' && modal.classList.contains('hidden')) {
+        achievementNotificationReturnFocus = document.activeElement;
+      }
       achievementList.replaceChildren();
       unlocked.forEach(achievement => {
         const item = document.createElement('li');
         item.textContent = achievement.title;
         achievementList.appendChild(item);
       });
-      const isLevelUp = level !== null;
-      const messageElement = document.getElementById('toastMsg');
-      document.getElementById('toastTitle').textContent = isLevelUp
-        ? 'Level Up!'
-        : unlocked.length === 1 ? 'Achievement Unlocked' : 'Achievements Unlocked';
-      if (isLevelUp) {
-        messageElement.textContent = `You reached Level ${level}!`;
-        messageElement.classList.remove('hidden');
-        document.getElementById('toastIcon').textContent = '⬆️';
-      } else {
-        messageElement.classList.add('hidden');
-        document.getElementById('toastIcon').textContent = '🏆';
-      }
-      achievementList.classList.toggle('hidden', unlocked.length === 0);
-      displayNotificationToast(isLevelUp);
+      document.getElementById('achievementNotificationTitle').textContent =
+        unlocked.length === 1 ? 'Achievement Unlocked' : 'Achievements Unlocked';
+      modal.classList.remove('hidden');
+      document.getElementById('btnDismissAchievement').focus();
+    }
+
+    function dismissAchievementNotification() {
+      document.getElementById('achievementNotification').classList.add('hidden');
+      const returnFocus = achievementNotificationReturnFocus;
+      achievementNotificationReturnFocus = null;
+      if (returnFocus && returnFocus.isConnected && typeof returnFocus.focus === 'function') returnFocus.focus();
+    }
+
+    let levelUpTimeout = null;
+
+    function hideLevelUpNotification() {
+      const banner = document.getElementById('levelUpNotification');
+      if (levelUpTimeout !== null) clearTimeout(levelUpTimeout);
+      banner.classList.add('opacity-0', 'pointer-events-none', '-translate-y-4');
+      banner.classList.remove('opacity-100', 'translate-y-0', 'level-up-banner');
+      levelUpTimeout = null;
+    }
+
+    function showLevelUpNotification(level) {
+      const banner = document.getElementById('levelUpNotification');
+      if (levelUpTimeout !== null) clearTimeout(levelUpTimeout);
+      banner.classList.remove('level-up-banner');
+      void banner.offsetWidth;
+      document.getElementById('levelUpMessage').textContent = `You reached Level ${level}!`;
+      banner.classList.remove('opacity-0', 'pointer-events-none', '-translate-y-4');
+      banner.classList.add('opacity-100', 'translate-y-0', 'level-up-banner');
+      levelUpTimeout = setTimeout(hideLevelUpNotification, 8000);
+    }
+
+    function showProgressNotification(unlocked, level = null) {
+      if (unlocked.length) showAchievementNotification(unlocked);
+      if (level !== null) showLevelUpNotification(level);
     }
   </script>
 
@@ -5531,10 +5575,18 @@
     document.getElementById('homeBaseModal').addEventListener('click', event => {
       if (event.target === event.currentTarget) closeHomeModal();
     });
+    document.getElementById('btnDismissAchievement').addEventListener('click', dismissAchievementNotification);
+    document.getElementById('achievementNotification').addEventListener('click', event => {
+      if (event.target === event.currentTarget) dismissAchievementNotification();
+    });
+    document.getElementById('btnDismissLevelUp').addEventListener('click', hideLevelUpNotification);
     window.addEventListener('keydown', event => {
-      if (event.key === 'Escape' && !document.getElementById('homeBaseModal').classList.contains('hidden')) {
-        closeHomeModal();
-      }
+      if (event.key !== 'Escape') return;
+      const achievement = document.getElementById('achievementNotification');
+      if (!achievement.classList.contains('hidden')) return dismissAchievementNotification();
+      const homeModal = document.getElementById('homeBaseModal');
+      if (!homeModal.classList.contains('hidden')) return closeHomeModal();
+      hideLevelUpNotification();
     });
     document.getElementById('btnHomeConfig').addEventListener('click', openHomeModal);
     document.getElementById('btnHomeImport').addEventListener('click', () => {
