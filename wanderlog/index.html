@@ -843,13 +843,16 @@
 
   </main>
 
-  <div id="homeBaseModal" class="hidden fixed inset-0 z-[1000] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 transition-all duration-300">
-    <div class="rpg-panel rpg-panel-gold max-w-lg w-full rounded-3xl p-6 sm:p-8 text-center space-y-6">
+  <div id="homeBaseModal" role="dialog" aria-modal="true" aria-labelledby="homeBaseModalTitle" class="hidden fixed inset-0 z-[1000] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 transition-all duration-300">
+    <div class="relative rpg-panel rpg-panel-gold max-w-lg w-full rounded-3xl p-6 sm:p-8 text-center space-y-6">
+      <button id="btnCloseHomeModal" type="button" aria-label="Close home citadel setup" class="absolute top-3 right-3 rounded-lg px-2.5 py-1 text-xl leading-none text-slate-400 hover:text-white hover:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400">
+        <span aria-hidden="true">&times;</span>
+      </button>
       <div class="w-20 h-20 mx-auto rounded-3xl bg-gradient-to-tr from-amber-600 to-amber-300 flex items-center justify-center text-4xl shadow-xl shadow-amber-500/20">
         🏰
       </div>
       <div>
-        <h2 class="cinzel text-2xl sm:text-3xl font-extrabold text-amber-200">Establish Your Home Citadel</h2>
+        <h2 id="homeBaseModalTitle" class="cinzel text-2xl sm:text-3xl font-extrabold text-amber-200">Establish Your Home Citadel</h2>
         <p class="text-sm text-slate-300 mt-2">
           Every explorer begins somewhere. Set your home to reveal a small circle 15 miles across (7.5-mile radius) and permanently claim its county, state, and country as Lived. Your first logged travel anywhere unlocks the whole home county. Establishing your first Citadel grants +50 XP and unlocks the Scout class.
         </p>
@@ -5524,6 +5527,15 @@
       document.getElementById('homeBaseModal').classList.add('hidden');
     }
 
+    document.getElementById('btnCloseHomeModal').addEventListener('click', closeHomeModal);
+    document.getElementById('homeBaseModal').addEventListener('click', event => {
+      if (event.target === event.currentTarget) closeHomeModal();
+    });
+    window.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && !document.getElementById('homeBaseModal').classList.contains('hidden')) {
+        closeHomeModal();
+      }
+    });
     document.getElementById('btnHomeConfig').addEventListener('click', openHomeModal);
     document.getElementById('btnHomeImport').addEventListener('click', () => {
       document.getElementById('fileInput').click();

@@ -147,6 +147,13 @@ check('mobile RPG HUD starts collapsed with an accessible stats toggle', () => {
   assert.match(hudBody, /id="hudClearedPct"/);
   assert.match(hudBody, /id="hudCountiesCount"/);
 });
+check('home citadel setup can be dismissed by its close button, backdrop, or Escape', () => {
+  assert.match(html, /id="homeBaseModal" role="dialog" aria-modal="true" aria-labelledby="homeBaseModalTitle"/);
+  assert.match(html, /id="btnCloseHomeModal" type="button" aria-label="Close home citadel setup"/);
+  assert.match(html, /btnCloseHomeModal'\)\.addEventListener\('click', closeHomeModal\)/);
+  assert.match(html, /event\.target === event\.currentTarget\) closeHomeModal\(\)/);
+  assert.match(html, /event\.key === 'Escape'[\s\S]*?closeHomeModal\(\)/);
+});
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
@@ -1314,7 +1321,7 @@ check('visited county polygons credit their cached predominant biome without cre
   `, context);
 });
 check('Citadel onboarding starts hidden, offers passport import, and county biomes resolve lazily', () => {
-  assert.match(html, /<div id="homeBaseModal" class="hidden /);
+  assert.match(html, /<div id="homeBaseModal"[^>]*class="hidden /);
   assert.ok(html.includes('id="btnHomeImport"'));
   assert.ok(!html.includes('buildCountyBiomeCache'));
   const startup = html.slice(html.indexOf("window.addEventListener('DOMContentLoaded'"));
