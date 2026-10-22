@@ -5089,17 +5089,10 @@
       'Zero Meridian': 'zero-meridian.png'
     };
 
-    const UNMET_ACHIEVEMENT_IMAGES = {
-      common: 'unmet-common-uncommon.png',
-      uncommon: 'unmet-common-uncommon.png',
-      rare: 'unmet-rare-epic.png',
-      epic: 'unmet-rare-epic.png',
-      legendary: 'unmet-legendary-mystic.png',
-      mythic: 'unmet-legendary-mystic.png'
-    };
+    const UNMET_ACHIEVEMENT_IMAGE = 'unmet.png';
 
     function achievementIconMarkup(achievement, tier, unmet = false) {
-      const image = unmet ? UNMET_ACHIEVEMENT_IMAGES[tier.rarity] : ACHIEVEMENT_IMAGES[tier.title];
+      const image = unmet ? UNMET_ACHIEVEMENT_IMAGE : ACHIEVEMENT_IMAGES[tier.title];
       return image ? `<img src="./assets/achievements/${image}" alt="" loading="lazy" decoding="async">`
         : `<span aria-hidden="true">${achievement.icon}</span>`;
     }
