@@ -729,6 +729,21 @@ check('unknown international labels never fabricate country completion', () => {
   ledger.syncDerivedState(state, { parks: [{ id: 'unknown', intl: true, country: 'Unverified region' }] });
   assert.deepEqual(state.regions, {});
 });
+check('Terra Incognita resolves custom coordinates when saved political countries are empty', () => {
+  const state = migrate({
+    homeBase: { name: 'Home', lat: 39, lng: -105, radiusKm: 80 },
+    customPois: [
+      { ...poi, id: 'poi_home', lat: 40, lng: -104, political: { countries: [], states: [], admin1: [], counties: [] } },
+      { ...poi, id: 'poi_foreign', lat: 48.85, lng: 2.35, political: { countries: [], states: [], admin1: [], counties: [] } }
+    ]
+  });
+  const progress = ledger.metadataProgress(state, {
+    politicalAt: lat => lat < 45
+      ? { countries: ['United States of America'] }
+      : { countries: ['France'] }
+  });
+  assert.equal(progress.international, 1);
+});
 const topology = JSON.parse(await readFile(new URL('./ecoregions.topojson', import.meta.url), 'utf8'));
 const ecoregions = lookups.indexFeatures(topojson.feature(topology, topology.objects.ecoregions).features, d3);
 check('existing unchanged terrestrial snapshot recognizes real below-sea-level and high-altitude stops', () => {

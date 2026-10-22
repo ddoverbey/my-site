@@ -843,8 +843,11 @@
       zeroMeridian: state.homeBase ? 1 : 0,
       beyondHorizon: coordinates.some(point => state.homeBase && distanceMiles(state.homeBase, point) > 1000) ? 1 : 0,
       international: homeCountries.size ? coordinates.filter(point => {
-        const countries = point.political?.countries ||
-          (point.intl && point.countryCode ? [point.country] : sample(point.lat, point.lng, 'political')?.countries || []);
+        const countries = point.political?.countries?.length
+          ? point.political.countries
+          : point.intl && point.countryCode
+            ? [point.country]
+            : sample(point.lat, point.lng, 'political')?.countries || [];
         return countries.some(country => !homeCountries.has(country));
       }).length : 0,
       touchGrass: visitedParks.filter(park =>
