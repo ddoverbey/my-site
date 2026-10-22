@@ -2312,11 +2312,21 @@ check('first Citadel marks containing geography Lived, uses a 15-mile diameter, 
   const stats = vm.runInContext('calculateStats()', context);
   assert.equal(stats.xp - stats.statesCount * 10 - stats.countriesCount * 20, 50);
   assert.equal(stats.level, 1);
-  assert.equal(stats.nextLevelXp, 100);
-  assert.equal(stats.levelProgressPct, 80);
+  assert.equal(stats.nextLevelXp, 300);
+  assert.ok(Math.abs(stats.levelProgressPct - (80 / 300 * 100)) < 1e-9);
   assert.equal(flight[1], 8);
   assert.equal(flight[2].duration, 1.8);
   assert.ok(element('toastMsg').textContent.includes('+50'));
+});
+check('Citadel-only XP stays below Level 2 and later thresholds follow the recalibrated curve', () => {
+  const progress = vm.runInContext(`({
+    homeOnlyMaxLevel: levelFromXp(50 + 10 + 20 + 200),
+    levels: [299,300,404,405,579,580,824,825,1139,1140].map(levelFromXp),
+    thresholds: [1,2,3,4,5,6].map(xpThresholdForLevel)
+  })`, context);
+  assert.equal(progress.homeOnlyMaxLevel, 1);
+  assert.deepEqual(Array.from(progress.levels), [1,2,2,3,3,4,4,5,5,6]);
+  assert.deepEqual(Array.from(progress.thresholds), [0,300,405,580,825,1140]);
 });
 check('home aura pulses on the existing canvas and settles to the exact saved radius', () => {
   movementCallback();
@@ -3349,7 +3359,7 @@ check('achievement and XP level-ups notify once while passport imports suppress 
   assert.match(html, /setTimeout\(hideLevelUpNotification, 8000\)/);
   assert.match(html, /\.level-up-banner > div \{ animation: levelUpFlash/);
 });
-check('achievement modal is dismissible and level-up banner stays at top center', () => {
+check('achievement modal shows rounded artwork cards and level-up banner stays at top center', () => {
   const classList = (...initial) => {
     const values = new Set(initial);
     return {
@@ -3380,16 +3390,23 @@ check('achievement modal is dismissible and level-up banner stays at top center'
   const originalGetElement = context.document.getElementById;
   const originalCreateElement = context.document.createElement;
   context.document.getElementById = id => notificationElements[id] || originalGetElement(id);
-  context.document.createElement = tagName => ({ tagName, textContent: '' });
+  context.document.createElement = tagName => ({
+    tagName, textContent: '', className: '', children: [],
+    appendChild(child) { this.children.push(child); }
+  });
   try {
     vm.runInContext(`
-      showProgressNotification([{title:'<First milestone>'},{title:'Second milestone'}]);
+      showProgressNotification([{title:'First Steps'},{title:'Anomaly Seeker'}]);
     `, context);
     assert.equal(notificationElements.achievementNotificationTitle.textContent, 'Achievements Unlocked');
-    assert.deepEqual(
-      notificationElements.achievementNotificationList.children.map(item => item.textContent),
-      ['<First milestone>', 'Second milestone']
-    );
+    const cards = notificationElements.achievementNotificationList.children;
+    assert.equal(cards.length, 2);
+    assert.ok(cards.every(card => card.className.includes('rounded-xl')));
+    assert.equal(cards[0].children[0].src, './assets/achievements/first-steps.png');
+    assert.ok(cards[0].children[0].className.includes('rounded-lg'));
+    assert.equal(cards[0].children[1].textContent, 'First Steps');
+    assert.equal(cards[1].children[0].src, './assets/achievements/anomaly-seeker.png');
+    assert.equal(cards[1].children[1].textContent, 'Anomaly Seeker');
     assert.equal(notificationElements.achievementNotification.classList.contains('hidden'), false);
     vm.runInContext('showProgressNotification([], 3)', context);
     assert.equal(notificationElements.levelUpMessage.textContent, 'You reached Level 3!');

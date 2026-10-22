@@ -30,6 +30,51 @@ collections award XP according to the same tier:
 The **Rare+ Biomes** statistic and **Anomaly Seeker** achievement count Rare, Epic, Legendary, and
 Mythic biomes. The current dataset has no Mythic biome.
 
+### XP and leveling
+
+XP is recalculated from your saved travel progress; it is not a separate spendable balance. Repeated
+visits to the same place do not award duplicate location XP.
+
+| Progress | XP |
+| --- | ---: |
+| Each visited park destination | 25 |
+| Each visited custom location | 25 |
+| Each distinct visited US state | 10 |
+| Each distinct visited country | 20 |
+| Establishing a home Citadel | 50 |
+| First collection of a biome | 15–200, based on its rarity tier above |
+| Completing a questline | Varies by questline |
+
+Home-base geography can also count its state, country, and home-county biome. The Citadel bonus is
+included while a home base is set; changing the home location does not award another 50 XP. Quest
+bonuses are awarded when every destination in a questline is visited:
+
+| Questline | Bonus XP |
+| --- | ---: |
+| The Mighty 5 | 150 |
+| Cascade Volcanoes | 120 |
+| The Last Frontier | 250 |
+| Subterranean Odyssey | 140 |
+| The Desert Furnace | 180 |
+| Realm of the Ancients | 150 |
+| Archipelago Wanderer | 200 |
+
+Level 1 begins at 0 XP. Level 2 requires 300 XP, so establishing a home Citadel alone will not
+advance a new explorer to Level 2. Later thresholds rise quadratically:
+
+| Level reached | Total XP required |
+| ---: | ---: |
+| 2 | 300 |
+| 3 | 405 |
+| 4 | 580 |
+| 5 | 825 |
+| 6 | 1,140 |
+
+For level `n` (2 or higher), the threshold is `265 + 35 × (n − 1)²` total XP. The XP bar shows
+progress from the current level's threshold to the next one. Gaining a level displays a top-center
+level-up banner with a chime; newly earned achievements appear separately in a centered, dismissible
+notification with their artwork.
+
 ### Location rarity
 
 Catalog parks use saved rarity data when available and otherwise derive a consistent badge from
