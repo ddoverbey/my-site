@@ -111,11 +111,13 @@ Completionist class. The current hard-coded Explorer Classes are:
 
 ### Explorer character
 
-The Explorer Profile includes a pixel-art character stage with appearance, outfit, hat, accessory,
-companion, and background choices. Character selections are stored in the passport and included in
-normal local, cloud, export, and shared-passport saves. Appearance and item catalogs, unlock rules,
-and procedural canvas drawing live in `character-creator.js`; catalog entries can later use an
-`imageSrc` PNG instead of the procedural fallback.
+The Explorer Profile includes a low-resolution pixel-art character stage with appearance, outfit,
+hat, accessory, companion, and background choices. Its Classic / Straight, Broad / V-Taper, and
+Curved / Hourglass body frames keep the original 160×90 logical stage; older `balanced`, `slender`,
+`broad`, and `sturdy` selections migrate to the closest frame. Character selections are stored in
+the passport and included in normal local, cloud, export, and shared-passport saves. Appearance and
+item catalogs, unlock rules, and procedural canvas drawing live in `character-creator.js`; catalog
+entries can later use an `imageSrc` PNG instead of the procedural fallback.
 
 Level, worldwide-destination, and existing achievement milestones unlock cosmetics. Starter,
 achievement, and patron/Pro background choices are available in the catalog; the 63 National Park

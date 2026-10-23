@@ -175,7 +175,7 @@ check('home citadel setup can be dismissed by its close button, backdrop, or Esc
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 10);
-  assert.ok(sources.every(source => source.endsWith('?v=20261023-cartovella-character-creator')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261023-cartovella-restored-arms')));
   assert.ok(sources.some(source => source.startsWith('./character-creator.js?')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
@@ -267,7 +267,7 @@ const context = vm.createContext({
   tailwind: {}, console, Intl, URL, URLSearchParams, AbortController, setTimeout() {}, clearTimeout() {},
   localStorage, Headers,
   DOMParser: TestDOMParser,
-  document: { body: { classList: { toggle() {}, add() {}, remove() {} } }, getElementById: element, querySelectorAll: () => [], createElement: () => element(`created-${elements.size}`) },
+  document: { body: { classList: { toggle() {}, add() {}, remove() {} } }, getElementById: element, querySelectorAll: () => [], createElement: tag => tag === 'canvas' ? { width: 0, height: 0, getContext: () => null } : element(`created-${elements.size}`) },
   window: { addEventListener() {}, matchMedia: () => ({ matches: true }) },
   fetch: async url => ({ ok: true, json: async () => url.includes('wikidata') ? wikidata : url.includes('worldwide') ? worldwide : snapshot })
 });
@@ -914,6 +914,16 @@ check('destination pins default to None, pin filters stay out of the RPG HUD, an
   assert.ok(!activeHtml.includes('id="pinFilterBtns"'));
   assert.ok(!activeHtml.includes('Show pins:'));
 });
+const catalogFixtures = new Map([
+  ['./nps-parks.json', snapshot],
+  ['./worldwide-national-parks.json', worldwide],
+  ['./wikidata-national-parks-query.json', wikidata]
+]);
+context.fetch = async url => {
+  const fixture = catalogFixtures.get(String(url));
+  if (!fixture) throw new Error(`Unexpected catalog request: ${url}`);
+  return { ok: true, json: async () => fixture };
+};
 await vm.runInContext('loadNpsCatalog()', context);
 await vm.runInContext('loadWorldwideCatalog()', context);
 check('app loads the complete snapshot without a player API key', () => {
@@ -1307,12 +1317,12 @@ check('custom ledger and popup show elevation, regions, source credits, and clea
 });
 let savedJson;
 context.localStorage = {
-  setItem(key, value) { savedJson = value; },
-  getItem() { return savedJson; }
+  setItem(key, value) { if (key === 'cartovella_state') savedJson = value; },
+  getItem(key) { return key === 'cartovella_state' ? savedJson : null; }
 };
 context.window.location = { search: '' };
 context.atob = value => Buffer.from(value, 'base64').toString('binary');
-vm.runInContext('saveState(); AppState.customLocations = []; loadPersistedState();', context);
+vm.runInContext('AppState.viewOnly = false; saveState(); AppState.customLocations = []; loadPersistedState();', context);
 check('local-storage capacity preflight rejects a payload above the conservative budget', () => {
   assert.throws(() => vm.runInContext(
     `assertPassportStorageCapacity({version:2,expeditions:[],test:'x'.repeat(2400000)})`, context
@@ -1588,7 +1598,7 @@ check('provider review metadata displays independently of OSM estimates and esca
   assert.ok(metadata.includes('&lt;script&gt;'));
   assert.ok(!metadata.includes('mapped POI nodes'));
 });
-context.localStorage.setItem = (key, value) => { savedJson = value; };
+context.localStorage.setItem = (key, value) => { if (key === 'cartovella_state') savedJson = value; };
 savedJson = '{"version":3,"pins":{"yose":"v"}}';
 vm.runInContext('AppState.viewOnly=false; loadPersistedState(); saveState();', context);
 check('future passport versions are surfaced and cannot overwrite the original stored data', () => {
@@ -2629,7 +2639,7 @@ check('failed expedition persistence rolls back every promoted region, county, p
   context.localStorage.setItem = () => { throw new Error('Storage full'); };
   assert.throws(() => vm.runInContext(`addExpedition({...testExpedition,id:'exp_second',countyIds:['06065']})`, context), /Storage full/);
   assert.equal(vm.runInContext('JSON.stringify(passportPayload())', context), before);
-  context.localStorage.setItem = (key, value) => { savedJson = value; };
+  context.localStorage.setItem = (key, value) => { if (key === 'cartovella_state') savedJson = value; };
 });
 context.CoordinateLookups = {
   ...coordinateLookups,
@@ -2963,7 +2973,7 @@ check('home storage failures roll back geography and never fly or report success
   assert.throws(() => vm.runInContext("setHometownCoordinates('Failed Citadel',39,-122)", context), /Storage full/);
   assert.equal(vm.runInContext('JSON.stringify(passportPayload())', context), before);
   assert.equal(flight, null);
-  context.localStorage.setItem = (key, value) => { savedJson = value; };
+  context.localStorage.setItem = (key, value) => { if (key === 'cartovella_state') savedJson = value; };
 });
 context.AbortSignal = { timeout: () => undefined };
 let geocoderCalls = 0;
@@ -3110,7 +3120,7 @@ check('National Parks dataset stays in Scratch Map and other dataset buttons sti
 });
 check('countries, states and counties cycle through every manual status independently of travel', () => {
   for (const dataset of ['world', 'usa', 'counties']) {
-    vm.runInContext(`applyPassport(migratePassport({}));AppState.scratchDataset='${dataset}';renderScratchMap()`, context);
+    vm.runInContext(`AppState.viewOnly=false;applyPassport(migratePassport({}));AppState.scratchDataset='${dataset}';renderScratchMap()`, context);
     for (const next of ['v', 'w', 't', 'l', 'un']) {
       const regions = scratchNodes.find(n => n.attrs.class === 'scratch-regions');
       regions.click({}, regions.data[0]);
@@ -3140,10 +3150,10 @@ check('Scratch Map clicks are read-only for shared passports and roll back faile
   vm.runInContext('cycleScratchStatus(countyGeoJson[0])', context);
   assert.equal(vm.runInContext('AppState.counties["06001"]', context), undefined);
   assert.equal(element('toastTitle').textContent, 'Travel record not saved');
-  context.localStorage.setItem = (key, value) => { savedJson = value; };
+  context.localStorage.setItem = (key, value) => { if (key === 'cartovella_state') savedJson = value; };
 });
 check('manual county status overrides travel-derived status without changing the expedition', () => {
-  vm.runInContext("applyPassport(migratePassport({}));AppState.scratchDataset='counties';AppState.expeditions=[{...testExpedition,id:'scratch-trip',countyIds:['06001']}];syncDerivedState();cycleScratchStatus(countyGeoJson[0])", context);
+  vm.runInContext("AppState.viewOnly=false;applyPassport(migratePassport({}));AppState.scratchDataset='counties';AppState.expeditions=[{...testExpedition,id:'scratch-trip',countyIds:['06001']}];syncDerivedState();cycleScratchStatus(countyGeoJson[0])", context);
   assert.equal(vm.runInContext('AppState.counties["06001"]', context), 'w');
   assert.equal(vm.runInContext('AppState.expeditions[0].countyIds[0]', context), '06001');
   assert.equal(JSON.parse(savedJson).expeditions[0].countyIds[0], '06001');
@@ -3254,7 +3264,7 @@ check('new custom POI saves and expedition promotions trigger pulses only after 
   context.localStorage.setItem = () => { throw new Error('Storage full'); };
   assert.throws(() => vm.runInContext("addCustomPoi({...customLocation,id:'poi_fail',status:'v'})", context), /Storage full/);
   assert.equal(vm.runInContext('discoveryPulses.has("poi:poi_fail")', context), false);
-  context.localStorage.setItem = (key, value) => { savedJson = value; };
+  context.localStorage.setItem = (key, value) => { if (key === 'cartovella_state') savedJson = value; };
   animationTime = 3200;
   animationCallback();
 });
@@ -3789,7 +3799,7 @@ check('atlas goals exclude unknown countries and withhold hints below the reveal
   assert.ok(!atlasCard.includes('Progress'));
   assert.ok(!atlasCard.includes('The Earth is no longer just a map'));
   assert.ok(!atlasCard.includes('Visit every country/territory represented'));
-  assert.ok(atlasCard.includes('./assets/achievements/unmet-legendary-mystic.png'));
+  assert.ok(atlasCard.includes('./assets/achievements/unmet.png'));
   assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='worldAtlas').title", context), 'How????');
   assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='worldAtlas').tiers[0].title", context), 'How????');
   assert.ok(!element('achievementsContainer').innerHTML.includes(
@@ -3858,9 +3868,7 @@ check('achievement hints appear at 85 percent, remain blurred until earned, and 
         assert.equal(card.innerHTML.includes('Achievement hint, blurred until earned'), unmet && hintVisible, testCase.title);
         assert.ok(!card.innerHTML.includes('achievement-redacted'), testCase.title);
         assert.equal(card.innerHTML.includes('achievement-icon-hidden'), false, testCase.title);
-        const unmetImage = vm.runInContext(
-          `UNMET_ACHIEVEMENT_IMAGES[${JSON.stringify(testCase.rarity)}]`, context
-        );
+        const unmetImage = vm.runInContext('UNMET_ACHIEVEMENT_IMAGE', context);
         assert.equal(card.innerHTML.includes(`./assets/achievements/${unmetImage}`), unmet, testCase.title);
         assert.ok(!card.innerHTML.includes('Progress:'), testCase.title);
         if (unmet && hintVisible) assert.ok(html.includes('.achievement-hint {\n      filter: blur(0.7px);'));
@@ -4021,15 +4029,13 @@ check('achievement modal shows rounded artwork cards and level-up banner stays a
   }
 });
 const achievementImages = vm.runInContext('Object.entries(ACHIEVEMENT_IMAGES)', context);
-const unmetAchievementImages = vm.runInContext('Object.entries(UNMET_ACHIEVEMENT_IMAGES)', context);
+const unmetAchievementImage = vm.runInContext('UNMET_ACHIEVEMENT_IMAGE', context);
 for (const [title, filename] of achievementImages) {
   const data = await readFile(new URL(`./assets/achievements/${filename}`, import.meta.url));
   assert.equal(data.subarray(1, 4).toString(), 'PNG', `${title} artwork exists and is PNG`);
 }
-for (const [rarity, filename] of unmetAchievementImages) {
-  const data = await readFile(new URL(`./assets/achievements/${filename}`, import.meta.url));
-  assert.equal(data.subarray(1, 4).toString(), 'PNG', `${rarity} locked artwork exists and is PNG`);
-}
+const unmetAchievementData = await readFile(new URL(`./assets/achievements/${unmetAchievementImage}`, import.meta.url));
+assert.equal(unmetAchievementData.subarray(1, 4).toString(), 'PNG', 'shared locked artwork exists and is PNG');
 check('achievement artwork maps all supplied images to real tiers and preserves emoji fallbacks', () => {
   assert.equal(achievementImages.length, 31);
   for (const [title, filename] of achievementImages) {
@@ -4047,24 +4053,11 @@ check('achievement artwork maps all supplied images to real tiers and preserves 
   assert.ok(html.includes('const unmet = !completed;'));
   delete context.artworkTitle;
 });
-check('unmet achievement artwork maps every rarity to its supplied placeholder', () => {
-  assert.deepEqual(Object.fromEntries(unmetAchievementImages), {
-    common: 'unmet-common-uncommon.png',
-    uncommon: 'unmet-common-uncommon.png',
-    rare: 'unmet-rare-epic.png',
-    epic: 'unmet-rare-epic.png',
-    legendary: 'unmet-legendary-mystic.png',
-    mythic: 'unmet-legendary-mystic.png'
-  });
-  for (const [rarity, filename] of unmetAchievementImages) {
-    context.artworkRarity = rarity;
-    const markup = vm.runInContext(
-      `achievementIconMarkup(ACHIEVEMENTS[0], {rarity:artworkRarity}, true)`, context
-    );
-    assert.ok(markup.includes(`./assets/achievements/${filename}`), rarity);
-    assert.ok(markup.includes('alt=""'), rarity);
-  }
-  delete context.artworkRarity;
+check('unmet achievements use the shared supplied placeholder artwork', () => {
+  assert.equal(unmetAchievementImage, 'unmet.png');
+  const markup = vm.runInContext('achievementIconMarkup(ACHIEVEMENTS[0], ACHIEVEMENTS[0].tiers[0], true)', context);
+  assert.ok(markup.includes('./assets/achievements/unmet.png'));
+  assert.ok(markup.includes('alt=""'));
 });
 check('a grouped achievement uses its highest completed tier artwork instead of the next tier placeholder', () => {
   const cards = [];
@@ -4092,7 +4085,7 @@ check('a grouped achievement uses its highest completed tier artwork instead of 
     `, context);
     assert.equal(cards.length, 1);
     assert.ok(cards[0].innerHTML.includes('./assets/achievements/first-steps.png'));
-    assert.ok(!cards[0].innerHTML.includes('./assets/achievements/unmet-common-uncommon.png'));
+    assert.ok(!cards[0].innerHTML.includes('./assets/achievements/unmet.png'));
     assert.ok(!cards[0].innerHTML.includes('./assets/achievements/trailblazer.png'));
   } finally {
     container.appendChild = originalAppend;
@@ -4216,7 +4209,7 @@ check('separate achievement cards show their own artwork and rarity without reve
     renderAchievementsView();
   `, context);
   const cards = element('achievementsContainer').innerHTML;
-  assert.ok(cards.includes('assets/achievements/unmet-common-uncommon.png'));
+  assert.ok(cards.includes('assets/achievements/unmet.png'));
   assert.ok(cards.includes('data-rarity="common"'));
   assert.ok(cards.includes('data-rarity="uncommon"'));
   assert.ok(cards.includes('>Common</p>'));
@@ -4870,7 +4863,7 @@ check('failed edits retain their draft and roll back route, county and promotion
   assert.equal(vm.runInContext('expeditionDraft.length',context),4);
   assert.ok(element('expeditionStatus').textContent.includes('Edit storage full'));
 });
-context.localStorage.setItem=(key,value)=>{savedJson=value;};
+context.localStorage.setItem=(key,value)=>{if(key==='cartovella_state')savedJson=value;};
 await element('expeditionForm').handlers.submit({preventDefault(){}});
 check('editing driving to flight removes driven-only county credit while preserving separate manual visits',()=>{
   assert.equal(vm.runInContext('AppState.expeditions.length',context),1);
@@ -5076,7 +5069,7 @@ check('failed park scratch persistence rolls back split records and all promoted
   context.localStorage.setItem = () => { throw new Error('Storage full'); };
   vm.runInContext('cycleNationalPark(scratchParkEntries.find(p=>p.id==="sequ"))', context);
   assert.equal(vm.runInContext('JSON.stringify(passportPayload())', context), before);
-  context.localStorage.setItem = (key, value) => { savedJson = value; };
+  context.localStorage.setItem = (key, value) => { if (key === 'cartovella_state') savedJson = value; };
 });
 check('invalid split scratch imports are rejected rather than creating extra parks or tiers', () => {
   for (const value of [{ yell: 'v' }, { sequ: 'l' }, { kica: 't' }, []]) {

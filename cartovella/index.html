@@ -1144,15 +1144,15 @@
     </section>
   </div>
 
-  <script src="./nps-catalog.js?v=20261023-cartovella-character-creator"></script>
-  <script src="./national-parks-scratch.js?v=20261023-cartovella-character-creator"></script>
-  <script src="./international-parks.js?v=20261023-cartovella-character-creator"></script>
-  <script src="./ecoregions.js?v=20261023-cartovella-character-creator"></script>
-  <script src="./coordinate-lookups.js?v=20261023-cartovella-character-creator"></script>
-  <script src="./micro-states.js?v=20261023-cartovella-character-creator"></script>
-  <script src="./travel-ledger.js?v=20261023-cartovella-character-creator"></script>
-  <script src="./character-creator.js?v=20261023-cartovella-character-creator"></script>
-  <script src="./rarity-config.js?v=20261023-cartovella-character-creator"></script>
+  <script src="./nps-catalog.js?v=20261023-cartovella-restored-arms"></script>
+  <script src="./national-parks-scratch.js?v=20261023-cartovella-restored-arms"></script>
+  <script src="./international-parks.js?v=20261023-cartovella-restored-arms"></script>
+  <script src="./ecoregions.js?v=20261023-cartovella-restored-arms"></script>
+  <script src="./coordinate-lookups.js?v=20261023-cartovella-restored-arms"></script>
+  <script src="./micro-states.js?v=20261023-cartovella-restored-arms"></script>
+  <script src="./travel-ledger.js?v=20261023-cartovella-restored-arms"></script>
+  <script src="./character-creator.js?v=20261023-cartovella-restored-arms"></script>
+  <script src="./rarity-config.js?v=20261023-cartovella-restored-arms"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -1331,10 +1331,10 @@
       const stops = expeditionStopCoordinates(expedition);
       stops.forEach(([lat, lng]) => {
         const political = cachedPoliticalAt(lat, lng);
-        political?.states.forEach(state => {
+        political?.states?.forEach(state => {
           if (NpsCatalog.isUsState(state)) states.add(state);
         });
-        political?.countries.forEach(country => countries.add(country));
+        political?.countries?.forEach(country => countries.add(country));
       });
       return { states, countries };
     }
@@ -6200,7 +6200,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261023-cartovella-character-creator"></script>
+  <script src="./expedition-ui.js?v=20261023-cartovella-restored-arms"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);

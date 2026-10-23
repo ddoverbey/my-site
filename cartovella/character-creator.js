@@ -29,10 +29,21 @@
     { id: 'violet', name: 'Violet', color: '#9c79c8', imageSrc: null }
   ];
   const BODY_SHAPES = [
-    { id: 'slender', name: 'Slender', imageSrc: null },
-    { id: 'balanced', name: 'Balanced', imageSrc: null },
-    { id: 'sturdy', name: 'Sturdy', imageSrc: null }
+    { id: 'straight', name: 'Classic / Straight Frame', imageSrc: null },
+    { id: 'vTaper', name: 'Broad / V-Taper Frame', imageSrc: null },
+    { id: 'hourglass', name: 'Curved / Hourglass Frame', imageSrc: null }
   ];
+  const BODY_SHAPE_PROFILES = Object.freeze({
+    straight: Object.freeze(Array(13).fill(12)),
+    vTaper: Object.freeze([15, 15, 15, 14, 13, 12, 11, 10, 10, 10, 11, 11, 12]),
+    hourglass: Object.freeze([13, 13, 12, 12, 11, 10, 9, 9, 9, 10, 11, 12, 13])
+  });
+  const BODY_SHAPE_ALIASES = new Map([
+    ['balanced', 'straight'],
+    ['slender', 'straight'],
+    ['broad', 'vTaper'],
+    ['sturdy', 'vTaper']
+  ]);
   const HEIGHTS = [
     { id: 'compact', name: 'Compact', imageSrc: null },
     { id: 'standard', name: 'Standard', imageSrc: null },
@@ -85,7 +96,6 @@
   ];
   const BACKGROUND_CATALOG = [
     { id: 'bg_campfire', name: 'Campfire Night', unlock: { type: 'starter' }, palette: 'campfire', imageSrc: null },
-    { id: 'bg_citadel', name: 'Home Citadel', unlock: { type: 'starter' }, palette: 'citadel', imageSrc: null },
     { id: 'bg_aurora', name: 'Aurora Borealis', unlock: { type: 'achievement', id: 'longDark' }, palette: 'aurora', imageSrc: null },
     { id: 'bg_observatory', name: 'Celestial Observatory', unlock: { type: 'achievement', id: 'worldAtlas' }, palette: 'observatory', imageSrc: null },
     { id: 'bg_sanctuary', name: 'Conservation Sanctuary', unlock: { type: 'donation', goal: 50 }, palette: 'sanctuary', imageSrc: null },
@@ -97,7 +107,7 @@
     hairStyle: 'short',
     hairColor: 'brown',
     eyeColor: 'brown',
-    bodyShape: 'balanced',
+    bodyShape: 'straight',
     height: 'standard',
     hat: 'hat_none',
     outfit: 'outfit_recruit',
@@ -125,12 +135,13 @@
     const normalizeId = (raw, allowed, fallback) => allowed.has(raw) ? raw : fallback;
     const validColorId = (raw, catalog, fallback) =>
       normalizeId(raw, knownIds(catalog), fallback);
+    const bodyShape = BODY_SHAPE_ALIASES.get(source.bodyShape) || source.bodyShape;
     return {
       skinTone: validColorId(source.skinTone, SKIN_TONES, DEFAULT_CHARACTER.skinTone),
       hairStyle: normalizeId(source.hairStyle, knownIds(HAIR_STYLES), DEFAULT_CHARACTER.hairStyle),
       hairColor: validColorId(source.hairColor, HAIR_COLORS, DEFAULT_CHARACTER.hairColor),
       eyeColor: validColorId(source.eyeColor, EYE_COLORS, DEFAULT_CHARACTER.eyeColor),
-      bodyShape: normalizeId(source.bodyShape, knownIds(BODY_SHAPES), DEFAULT_CHARACTER.bodyShape),
+      bodyShape: normalizeId(bodyShape, knownIds(BODY_SHAPES), DEFAULT_CHARACTER.bodyShape),
       height: normalizeId(source.height, knownIds(HEIGHTS), DEFAULT_CHARACTER.height),
       hat: normalizeId(source.hat, knownIds(HAT_CATALOG), DEFAULT_CHARACTER.hat),
       outfit: normalizeId(source.outfit, knownIds(OUTFIT_CATALOG), DEFAULT_CHARACTER.outfit),
@@ -235,7 +246,6 @@
     }
     const palettes = {
       campfire: ['#101a35', '#26364d', '#406044'],
-      citadel: ['#233b62', '#657d9a', '#48634f'],
       aurora: ['#091d3c', '#386b78', '#304c54'],
       observatory: ['#111332', '#51426d', '#313b59'],
       sanctuary: ['#1f3a35', '#52765a', '#405c42'],
@@ -253,20 +263,10 @@
       pixel(ctx, 100, 38, 48, 21, '#1d2b40');
       pixel(ctx, 25, 52, 20, 7, '#304057');
       pixel(ctx, 112, 49, 30, 9, '#304057');
-      pixel(ctx, 69, 67, 20, 3, '#553b2f');
-      pixel(ctx, 73, 60, 4, 9, '#d78339');
-      pixel(ctx, 79, 57, 4, 12, '#f3bd59');
-      pixel(ctx, 83, 61, 3, 8, '#df6136');
-    } else if (background.palette === 'citadel') {
-      pixel(ctx, 17, 42, 23, 27, '#374967');
-      pixel(ctx, 22, 35, 13, 9, '#b8a57b');
-      pixel(ctx, 120, 38, 24, 31, '#3a4a68');
-      pixel(ctx, 124, 31, 16, 9, '#c1ae83');
-      pixel(ctx, 65, 35, 30, 35, '#7b765e');
-      pixel(ctx, 70, 28, 20, 9, '#b8a57b');
-      pixel(ctx, 76, 55, 8, 15, '#382f34');
-      pixel(ctx, 71, 43, 4, 6, '#e9d18e');
-      pixel(ctx, 84, 43, 4, 6, '#e9d18e');
+      pixel(ctx, 18, 70, 20, 3, '#553b2f');
+      pixel(ctx, 22, 63, 4, 9, '#d78339');
+      pixel(ctx, 28, 60, 4, 12, '#f3bd59');
+      pixel(ctx, 32, 64, 3, 8, '#df6136');
     } else if (background.palette === 'aurora') {
       pixel(ctx, 0, 18, 67, 3, '#58c5a1');
       pixel(ctx, 12, 22, 53, 2, '#58c5a1');
@@ -311,6 +311,59 @@
     }
   }
 
+  function drawHat(ctx, hat, center, headTop) {
+    const outline = '#3a2d29';
+    const hatBase = headTop + 3;
+    const drawCrown = (widths, top) => {
+      widths.forEach((width, row) => {
+        const left = center - Math.floor(width / 2);
+        pixel(ctx, left - 1, top + row, width + 2, 1, outline);
+        pixel(ctx, left, top + row, width, 1, hat.color);
+      });
+    };
+    const drawBrim = (width, color = hat.color) => {
+      pixel(ctx, center - Math.floor(width / 2), hatBase - 2, width, 2, outline);
+      pixel(ctx, center - Math.floor(width / 2) + 1, hatBase - 2, width - 2, 1, color);
+    };
+
+    if (hat.id.includes('ranger')) {
+      drawCrown([4, 8, 10, 12, 14, 16], hatBase - 9);
+      pixel(ctx, center - 2, hatBase - 8, 2, 4, '#d4b477');
+      pixel(ctx, center - 7, hatBase - 3, 14, 1, '#765036');
+      drawBrim(22);
+      pixel(ctx, center - 1, hatBase - 3, 3, 2,
+        hat.id.includes('silver') ? '#d7dce1' :
+          hat.id.includes('gold') ? '#f5d96e' :
+            hat.id.includes('diamond') ? '#b5f0ee' : '#e6d194');
+    } else if (hat.id === 'hat_volunteer' || hat.id === 'hat_captain') {
+      drawCrown([8, 12, 14, 14], hatBase - 6);
+      drawBrim(19);
+      pixel(ctx, center + 2, hatBase - 1, 7, 1, '#4f443e');
+      if (hat.id === 'hat_captain') pixel(ctx, center - 2, hatBase - 4, 4, 2, '#e4d8b5');
+    } else if (hat.id === 'hat_pith') {
+      drawCrown([8, 12, 16, 18], hatBase - 6);
+      drawBrim(22, '#e4d09b');
+      pixel(ctx, center - 6, hatBase - 4, 12, 1, '#f2e2b6');
+    } else if (hat.id === 'hat_summit') {
+      drawCrown([8, 12, 14, 16], hatBase - 6);
+      drawBrim(18, '#8bb9c8');
+      pixel(ctx, center - 7, hatBase - 1, 14, 2, '#d1e9e7');
+      pixel(ctx, center - 6, hatBase - 1, 4, 2, '#3f6e80');
+      pixel(ctx, center + 2, hatBase - 1, 4, 2, '#3f6e80');
+    } else if (hat.id === 'hat_bandana') {
+      pixel(ctx, center - 7, hatBase - 2, 14, 2, outline);
+      pixel(ctx, center - 6, hatBase - 2, 12, 1, hat.color);
+      pixel(ctx, center + 6, hatBase - 3, 3, 3, hat.color);
+    } else if (hat.id === 'hat_golden_halo') {
+      pixel(ctx, center - 4, hatBase - 8, 8, 2, '#f3ca63');
+      pixel(ctx, center - 7, hatBase - 6, 2, 4, '#f3ca63');
+      pixel(ctx, center + 5, hatBase - 6, 2, 4, '#f3ca63');
+    } else {
+      drawCrown([8, 12, 14], hatBase - 5);
+      drawBrim(18);
+    }
+  }
+
   function drawPerson(ctx, character, redraw) {
     const skin = getItem(SKIN_TONES, character.skinTone).color;
     const hair = getItem(HAIR_COLORS, character.hairColor).color;
@@ -322,29 +375,47 @@
     const ground = 80;
     const legScale = character.height === 'compact' ? 0.85 : character.height === 'tall' ? 1.15 : 1;
     const torsoScale = character.height === 'compact' ? 0.92 : character.height === 'tall' ? 1.08 : 1;
-    const width = character.bodyShape === 'slender' ? 8 : character.bodyShape === 'sturdy' ? 13 : 10;
-    const legHeight = Math.round(12 * legScale);
-    const torsoHeight = Math.round(16 * torsoScale);
-    const headHeight = 11;
+    const bodyProfile = BODY_SHAPE_PROFILES[character.bodyShape] || BODY_SHAPE_PROFILES.straight;
+    const legHeight = Math.round(17 * legScale);
+    const torsoHeight = Math.round(13 * torsoScale);
+    const headHeight = 10;
     const headTop = ground - legHeight - torsoHeight - headHeight;
     const torsoTop = ground - legHeight - torsoHeight;
+    const torsoWidthAt = row => {
+      const index = Math.round(row * (bodyProfile.length - 1) / Math.max(1, torsoHeight - 1));
+      return bodyProfile[index];
+    };
+    const shoulderWidth = torsoWidthAt(0);
+    const hipWidth = torsoWidthAt(torsoHeight - 1);
+    const shoulderLeft = center - Math.floor(shoulderWidth / 2);
+    const shoulderRight = center + Math.floor(shoulderWidth / 2);
     const imageFor = (item, x, y, w, h) => {
       const image = getImage(item, redraw);
       if (!image) return false;
       ctx.drawImage(image, x, y, w, h);
       return true;
     };
-    pixel(ctx, center - width / 2 - 2, ground - 2, width + 4, 2, '#253444');
-    pixel(ctx, center - width / 2 + 1, ground - legHeight, 3, legHeight, '#33475a');
-    pixel(ctx, center + width / 2 - 4, ground - legHeight, 3, legHeight, '#33475a');
-    pixel(ctx, center - width / 2 + 1, ground - 2, 4, 2, '#4d3c35');
-    pixel(ctx, center + width / 2 - 4, ground - 2, 4, 2, '#4d3c35');
-    pixel(ctx, center - width / 2 - 3, torsoTop, width + 6, torsoHeight, outfit.color);
-    pixel(ctx, center - width / 2 - 5, torsoTop + 2, 3, Math.max(5, torsoHeight - 4), skin);
-    pixel(ctx, center + width / 2 + 2, torsoTop + 2, 3, Math.max(5, torsoHeight - 4), skin);
-    pixel(ctx, center - width / 2 - 3, torsoTop + torsoHeight - 4, width + 6, 2, '#384c42');
-    pixel(ctx, center - width / 2 - 1, headTop + headHeight - 1, 3, 4, skin);
-    pixel(ctx, center + width / 2 - 2, headTop + headHeight - 1, 3, 4, skin);
+    pixel(ctx, center - Math.ceil(hipWidth / 2) - 2, ground - 2, hipWidth + 4, 2, '#253444');
+    pixel(ctx, center - 4, ground - legHeight, 3, legHeight, '#33475a');
+    pixel(ctx, center + 1, ground - legHeight, 3, legHeight, '#33475a');
+    pixel(ctx, center - 5, ground - 2, 4, 2, '#4d3c35');
+    pixel(ctx, center + 1, ground - 2, 4, 2, '#4d3c35');
+    for (let row = 0; row < torsoHeight; row++) {
+      const rowWidth = torsoWidthAt(row);
+      const left = center - Math.floor(rowWidth / 2);
+      pixel(ctx, left - 1, torsoTop + row, rowWidth + 2, 1, '#253444');
+      pixel(ctx, left, torsoTop + row, rowWidth, 1, outfit.color);
+    }
+    for (let row = 2; row < torsoHeight - 2; row++) {
+      const rowWidth = torsoWidthAt(row);
+      const left = center - Math.floor(rowWidth / 2);
+      pixel(ctx, left - 4, torsoTop + row, 3, 1, skin);
+      pixel(ctx, left + rowWidth + 1, torsoTop + row, 3, 1, skin);
+    }
+    pixel(ctx, center - Math.ceil(shoulderWidth / 2) - 1, torsoTop, shoulderWidth + 2, 1, '#253444');
+    pixel(ctx, center - Math.ceil(hipWidth / 2) - 1, torsoTop + torsoHeight - 1, hipWidth + 2, 1, '#384c42');
+    pixel(ctx, center - 7, headTop + 5, 2, 2, skin);
+    pixel(ctx, center + 5, headTop + 5, 2, 2, skin);
     pixel(ctx, center - 5, headTop, 10, headHeight, skin);
     pixel(ctx, center - 3, headTop + 5, 2, 2, eyes);
     pixel(ctx, center + 2, headTop + 5, 2, 2, eyes);
@@ -353,29 +424,26 @@
     if (!imageFor(hairStyle, center - 8, headTop - 4, 16, 18)) {
       drawHair(ctx, character.hairStyle, hair, center, headTop - 1);
     }
-    if (hat.id !== 'hat_none' && !imageFor(hat, center - 8, headTop - 7, 16, 8)) {
-      pixel(ctx, center - 8, headTop - 6, 16, 4, hat.color);
-      pixel(ctx, center - 10, headTop - 3, 20, 2, '#594638');
-      if (hat.id.includes('ranger')) pixel(ctx, center - 3, headTop - 5, 6, 1, '#e6d194');
-      if (hat.id === 'hat_summit') {
-        pixel(ctx, center - 8, headTop - 1, 16, 2, '#d1e9e7');
-        pixel(ctx, center - 5, headTop - 1, 4, 2, '#3f6e80');
-        pixel(ctx, center + 1, headTop - 1, 4, 2, '#3f6e80');
-      }
+    if (hat.id !== 'hat_none' && !imageFor(hat, center - 11, headTop - 6, 22, 10)) {
+      drawHat(ctx, hat, center, headTop);
     }
     if (outfit.id === 'outfit_flannel') {
-      pixel(ctx, center - 1, torsoTop + 1, 2, torsoHeight - 2, '#e6c484');
-      pixel(ctx, center - width / 2 - 2, torsoTop + 7, width + 4, 2, '#754944');
+      pixel(ctx, center - 1, torsoTop + 1, 2, Math.max(3, torsoHeight - 7), '#e6c484');
+      const beltWidth = torsoWidthAt(Math.min(7, torsoHeight - 1));
+      pixel(ctx, center - Math.floor(beltWidth / 2), torsoTop + 7, beltWidth, 2, '#754944');
     } else if (outfit.id === 'outfit_vest' || outfit.id === 'outfit_naturalist') {
-      pixel(ctx, center - 2, torsoTop + 4, 4, torsoHeight - 5, '#d7b66d');
-      pixel(ctx, center - width / 2, torsoTop + 7, 3, 4, '#594e37');
-      pixel(ctx, center + width / 2 - 3, torsoTop + 7, 3, 4, '#594e37');
+      pixel(ctx, center - 1, torsoTop + 3, 2, Math.max(3, torsoHeight - 8), '#d7b66d');
+      const pocketWidth = torsoWidthAt(Math.min(5, torsoHeight - 1));
+      pixel(ctx, center - Math.floor(pocketWidth / 2) + 1, torsoTop + 5, 2, 3, '#594e37');
+      pixel(ctx, center + Math.floor(pocketWidth / 2) - 3, torsoTop + 5, 2, 3, '#594e37');
     } else if (outfit.id === 'outfit_parka') {
-      pixel(ctx, center - width / 2 - 1, torsoTop + 2, width + 2, 2, '#d7e1df');
+      const trimWidth = torsoWidthAt(Math.min(2, torsoHeight - 1));
+      pixel(ctx, center - Math.floor(trimWidth / 2), torsoTop + 2, trimWidth, 2, '#d7e1df');
     } else if (outfit.id === 'outfit_rain') {
-      pixel(ctx, center - width / 2 - 4, torsoTop + 1, width + 8, 3, '#9bbbd0');
+      const trimWidth = torsoWidthAt(Math.min(1, torsoHeight - 1));
+      pixel(ctx, center - Math.floor(trimWidth / 2), torsoTop + 1, trimWidth, 3, '#9bbbd0');
     } else if (outfit.id === 'outfit_astral' || outfit.id === 'outfit_sovereign') {
-      pixel(ctx, center - 1, torsoTop + 3, 2, torsoHeight - 5, '#e1c779');
+      pixel(ctx, center - 1, torsoTop + 3, 2, Math.max(3, torsoHeight - 8), '#e1c779');
     }
     imageFor(outfit, center - 12, torsoTop, 24, torsoHeight + legHeight / 2);
     if (accessory.id !== 'accessory_none' && !imageFor(accessory, center - 14, torsoTop + 5, 24, torsoHeight)) {
@@ -403,41 +471,96 @@
       ctx.drawImage(image, 102, 64, 20, 16);
       return;
     }
+    const outline = '#263442';
+    const drawBody = (x, y, widths, color) => {
+      const maxWidth = Math.max(...widths);
+      pixel(ctx, x + Math.floor((maxWidth - widths[0]) / 2) - 1, y - 1, widths[0] + 2, 1, outline);
+      widths.forEach((width, row) => {
+        const left = x + Math.floor((maxWidth - width) / 2);
+        pixel(ctx, left - 1, y + row, width + 2, 1, outline);
+        pixel(ctx, left, y + row, width, 1, color);
+      });
+      const lastWidth = widths[widths.length - 1];
+      pixel(ctx, x + Math.floor((maxWidth - lastWidth) / 2) - 1, y + widths.length, lastWidth + 2, 1, outline);
+    };
     if (pet.kind === 'pufflin') {
-      pixel(ctx, 105, 68, 15, 10, pet.color);
-      pixel(ctx, 108, 64, 4, 5, pet.color);
-      pixel(ctx, 115, 63, 4, 6, pet.color);
-      pixel(ctx, 108, 71, 2, 2, '#17283b');
-      pixel(ctx, 115, 71, 2, 2, '#17283b');
-      pixel(ctx, 111, 75, 4, 2, '#f2d8cc');
-      pixel(ctx, 110, 78, 3, 2, pet.color);
-      pixel(ctx, 115, 78, 3, 2, pet.color);
+      const x = 102;
+      const y = 67;
+      drawBody(x, y, [8, 12, 16, 18, 18, 18, 18, 18, 16, 14, 10], pet.color);
+      pixel(ctx, x + 7, y - 3, 5, 3, outline);
+      pixel(ctx, x + 8, y - 5, 4, 3, pet.color);
+      pixel(ctx, x + 10, y - 6, 3, 2, pet.color);
+      pixel(ctx, x + 4, y + 4, 3, 3, '#fff6e6');
+      pixel(ctx, x + 12, y + 4, 3, 3, '#fff6e6');
+      pixel(ctx, x + 5, y + 5, 1, 2, '#203347');
+      pixel(ctx, x + 13, y + 5, 1, 2, '#203347');
+      pixel(ctx, x + 8, y + 8, 3, 1, '#522f46');
+      pixel(ctx, x + 4, y + 11, 4, 2, outline);
+      pixel(ctx, x + 12, y + 11, 4, 2, outline);
+      pixel(ctx, x + 5, y + 11, 3, 1, pet.color);
+      pixel(ctx, x + 12, y + 11, 3, 1, pet.color);
     } else if (pet.kind === 'puppy') {
-      pixel(ctx, 105, 68, 15, 10, pet.color);
-      pixel(ctx, 105, 65, 4, 8, '#a8753d');
-      pixel(ctx, 117, 65, 4, 8, '#a8753d');
-      pixel(ctx, 109, 70, 2, 2, '#372f32');
-      pixel(ctx, 115, 70, 2, 2, '#372f32');
-      pixel(ctx, 112, 74, 3, 2, '#704747');
-      pixel(ctx, 118, 69, 4, 2, pet.color);
+      const x = 103;
+      drawBody(x, 70, [8, 13, 16, 17, 17, 15, 12], pet.color);
+      pixel(ctx, x + 15, 70, 3, 3, '#a8753d');
+      pixel(ctx, x + 17, 68, 3, 3, '#a8753d');
+      pixel(ctx, x + 18, 66, 2, 3, '#a8753d');
+      pixel(ctx, x + 2, 64, 4, 8, '#8c5b34');
+      pixel(ctx, x + 13, 64, 4, 8, '#8c5b34');
+      drawBody(x + 3, 63, [5, 9, 12, 13, 13, 12, 10], pet.color);
+      pixel(ctx, x + 6, 67, 2, 2, '#fff0dc');
+      pixel(ctx, x + 12, 67, 2, 2, '#fff0dc');
+      pixel(ctx, x + 7, 68, 1, 1, '#3a3030');
+      pixel(ctx, x + 13, 68, 1, 1, '#3a3030');
+      pixel(ctx, x + 8, 70, 6, 3, '#f0d5a7');
+      pixel(ctx, x + 10, 70, 2, 2, '#302a2a');
+      pixel(ctx, x + 5, 76, 5, 3, '#f0d5a7');
+      pixel(ctx, x + 13, 76, 5, 3, '#f0d5a7');
     } else if (pet.kind === 'kitten') {
-      pixel(ctx, 106, 68, 15, 10, pet.color);
-      pixel(ctx, 106, 64, 5, 6, pet.color);
-      pixel(ctx, 116, 64, 5, 6, pet.color);
-      pixel(ctx, 108, 65, 2, 3, '#d98d91');
-      pixel(ctx, 117, 65, 2, 3, '#d98d91');
-      pixel(ctx, 109, 71, 2, 2, '#252d34');
-      pixel(ctx, 116, 71, 2, 2, '#252d34');
-      pixel(ctx, 112, 74, 3, 2, '#d98d91');
-      pixel(ctx, 119, 74, 4, 2, pet.color);
+      const x = 103;
+      drawBody(x + 1, 70, [8, 12, 15, 16, 16, 14, 11], pet.color);
+      pixel(ctx, x + 14, 71, 3, 3, '#697789');
+      pixel(ctx, x + 16, 69, 3, 3, '#697789');
+      pixel(ctx, x + 15, 67, 3, 3, '#697789');
+      pixel(ctx, x + 4, 63, 3, 5, outline);
+      pixel(ctx, x + 3, 64, 5, 4, outline);
+      pixel(ctx, x + 14, 63, 3, 5, outline);
+      pixel(ctx, x + 13, 64, 5, 4, outline);
+      drawBody(x + 3, 65, [6, 10, 13, 14, 14, 12, 10], pet.color);
+      pixel(ctx, x + 5, 64, 1, 3, '#d98d91');
+      pixel(ctx, x + 15, 64, 1, 3, '#d98d91');
+      pixel(ctx, x + 6, 69, 2, 2, '#f5f1e7');
+      pixel(ctx, x + 12, 69, 2, 2, '#f5f1e7');
+      pixel(ctx, x + 7, 69, 1, 2, '#415d69');
+      pixel(ctx, x + 13, 69, 1, 2, '#415d69');
+      pixel(ctx, x + 9, 72, 3, 1, '#d98d91');
+      pixel(ctx, x + 10, 73, 1, 1, outline);
+      pixel(ctx, x + 2, 72, 5, 1, '#d9d6d0');
+      pixel(ctx, x + 15, 72, 5, 1, '#d9d6d0');
+      pixel(ctx, x + 8, 66, 2, 1, '#65717c');
+      pixel(ctx, x + 11, 66, 2, 1, '#65717c');
+      pixel(ctx, x + 6, 77, 4, 2, '#d8dbe0');
+      pixel(ctx, x + 13, 77, 4, 2, '#d8dbe0');
     } else {
-      pixel(ctx, 105, 68, 15, 10, pet.color);
-      pixel(ctx, 106, 64, 5, 5, pet.color);
-      pixel(ctx, 115, 64, 5, 5, pet.color);
-      pixel(ctx, 109, 71, 2, 2, '#252d34');
-      pixel(ctx, 116, 71, 2, 2, '#252d34');
-      pixel(ctx, 112, 74, 3, 2, '#e5d7c4');
-      pixel(ctx, 118, 69, 5, 3, '#b75f39');
+      const x = 103;
+      drawBody(x + 1, 70, [8, 12, 15, 16, 16, 14, 11], pet.color);
+      pixel(ctx, x + 14, 71, 3, 3, '#613a2c');
+      pixel(ctx, x + 16, 69, 3, 3, '#613a2c');
+      pixel(ctx, x + 15, 67, 3, 3, '#613a2c');
+      pixel(ctx, x + 4, 63, 4, 5, '#7a4932');
+      pixel(ctx, x + 14, 63, 4, 5, '#7a4932');
+      drawBody(x + 3, 65, [6, 10, 13, 14, 14, 12, 10], pet.color);
+      pixel(ctx, x + 6, 69, 2, 2, '#fff0dc');
+      pixel(ctx, x + 12, 69, 2, 2, '#fff0dc');
+      pixel(ctx, x + 7, 69, 1, 2, '#382e2d');
+      pixel(ctx, x + 13, 69, 1, 2, '#382e2d');
+      pixel(ctx, x + 9, 72, 3, 1, '#ead4b7');
+      pixel(ctx, x + 2, 72, 5, 1, '#ead4b7');
+      pixel(ctx, x + 15, 72, 5, 1, '#ead4b7');
+      pixel(ctx, x + 6, 77, 4, 2, '#ead4b7');
+      pixel(ctx, x + 13, 77, 4, 2, '#ead4b7');
+      pixel(ctx, x + 17, 71, 2, 1, '#513a34');
+      pixel(ctx, x + 18, 73, 2, 1, '#ead4b7');
     }
   }
 
@@ -608,7 +731,7 @@
   const api = {
     DEFAULT_CHARACTER, SKIN_TONES, HAIR_STYLES, HAIR_COLORS, EYE_COLORS, BODY_SHAPES, HEIGHTS,
     OUTFIT_CATALOG, HAT_CATALOG, ACCESSORY_CATALOG, PET_CATALOG, BACKGROUND_CATALOG,
-    normalizeCharacter, achievementProgress, unlockStatus, drawStage, render
+    BODY_SHAPE_PROFILES, normalizeCharacter, achievementProgress, unlockStatus, drawPet, drawStage, render
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CharacterCreator = api;

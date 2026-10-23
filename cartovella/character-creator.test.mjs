@@ -23,6 +23,7 @@ check('starter character is complete and defaults to the original pixel companio
   assert.equal(characterCreator.normalizeCharacter().outfit, 'outfit_recruit');
   assert.equal(characterCreator.normalizeCharacter().pet, 'pet_pufflin_blue');
   assert.equal(characterCreator.normalizeCharacter().background, 'bg_campfire');
+  assert.equal(characterCreator.normalizeCharacter().bodyShape, 'straight');
   assert.equal(characterCreator.normalizeCharacter().proUnlocked, false);
 });
 check('character migration clamps invalid values and preserves safe selections', () => {
@@ -33,10 +34,52 @@ check('character migration clamps invalid values and preserves safe selections',
   }), {
     ...characterCreator.DEFAULT_CHARACTER,
     skinTone: 'deep', hairStyle: 'curls', outfit: 'outfit_parka',
-    pet: 'pet_kitten_gray', background: 'bg_citadel',
+    pet: 'pet_kitten_gray', background: 'bg_campfire',
     proUnlocked: false, donationUsd: 1000000
   });
   assert.equal(characterCreator.normalizeCharacter({ hat: 'not-a-hat' }).hat, 'hat_none');
+  assert.equal(characterCreator.normalizeCharacter({ background: 'bg_citadel' }).background, 'bg_campfire');
+});
+check('inclusive body frames migrate legacy selections', () => {
+  assert.deepEqual(characterCreator.BODY_SHAPES.map(frame => [frame.id, frame.name]), [
+    ['straight', 'Classic / Straight Frame'],
+    ['vTaper', 'Broad / V-Taper Frame'],
+    ['hourglass', 'Curved / Hourglass Frame']
+  ]);
+  assert.equal(characterCreator.normalizeCharacter({ bodyShape: 'balanced' }).bodyShape, 'straight');
+  assert.equal(characterCreator.normalizeCharacter({ bodyShape: 'slender' }).bodyShape, 'straight');
+  assert.equal(characterCreator.normalizeCharacter({ bodyShape: 'broad' }).bodyShape, 'vTaper');
+  assert.equal(characterCreator.normalizeCharacter({ bodyShape: 'sturdy' }).bodyShape, 'vTaper');
+  assert.equal(characterCreator.normalizeCharacter({ bodyShape: 'hourglass' }).bodyShape, 'hourglass');
+});
+check('low-resolution frame profiles keep the V-taper broad at the shoulders and hourglass defined', () => {
+  const { straight, vTaper, hourglass } = characterCreator.BODY_SHAPE_PROFILES;
+  assert.equal(straight.length, 13);
+  assert.ok(straight.every(width => width === straight[0]));
+  assert.ok(Math.max(...vTaper.slice(0, 5)) > Math.max(...vTaper.slice(12)));
+  assert.ok(Math.min(...hourglass.slice(5, 11)) < hourglass[0]);
+  assert.ok(Math.max(...hourglass.slice(12)) <= hourglass[0]);
+});
+check('low-resolution companion sprites include recognizable facial and species details', () => {
+  const context = {
+    fillStyle: '',
+    pixels: [],
+    fillRect(x, y, width, height) { this.pixels.push({ x, y, width, height, color: this.fillStyle }); }
+  };
+  const cases = [
+    ['pet_pufflin_blue', ['#fff6e6', '#203347']],
+    ['pet_puppy_gold', ['#f0d5a7', '#8c5b34']],
+    ['pet_kitten_gray', ['#d98d91', '#d9d6d0']]
+  ];
+  for (const [petId, details] of cases) {
+    context.pixels = [];
+    const pet = characterCreator.PET_CATALOG.find(item => item.id === petId);
+    characterCreator.drawPet(context, pet, () => {});
+    assert.ok(context.pixels.length >= 35, `${petId} should have a shaped sprite`);
+    for (const detail of details) {
+      assert.ok(context.pixels.some(pixel => pixel.color === detail), `${petId} should include ${detail}`);
+    }
+  }
 });
 check('level and destination unlocks show exact current progress', () => {
   const character = characterCreator.normalizeCharacter();
@@ -66,20 +109,81 @@ check('existing achievement IDs drive character rewards', () => {
 });
 check('national park dioramas are deferred while generic backgrounds remain selectable', () => {
   assert.deepEqual(characterCreator.BACKGROUND_CATALOG.map(item => item.id), [
-    'bg_campfire', 'bg_citadel', 'bg_aurora', 'bg_observatory', 'bg_sanctuary', 'bg_pro_celestial'
+    'bg_campfire', 'bg_aurora', 'bg_observatory', 'bg_sanctuary', 'bg_pro_celestial'
   ]);
   assert.ok(characterCreator.BACKGROUND_CATALOG.every(item => item.id.startsWith('bg_')));
 });
 check('procedural stage renderer paints a pixel character and companion', () => {
   let pixels = 0;
+  let maxX = 0;
+  let scaleX = 0;
+  let scaleY = 0;
   const context = {
-    clearRect() {}, save() {}, scale() {}, restore() {},
-    fillRect() { pixels++; }
+    clearRect() {}, save() {}, scale(x, y) { scaleX = x; scaleY = y; }, restore() {},
+    fillRect(x, y, width) { pixels++; maxX = Math.max(maxX, x + width); }
   };
   characterCreator.drawStage({
     width: 320, height: 180, getContext: () => context
   }, characterCreator.DEFAULT_CHARACTER);
-  assert.ok(pixels > 20);
+  assert.equal(scaleX, 2);
+  assert.equal(scaleY, 2);
+  assert.equal(maxX, 160, 'drawing keeps the original 160×90 logical stage');
+  assert.ok(pixels > 100);
+});
+check('avatar proportions use longer legs and a ranger hat brim seated on the head', () => {
+  const fills = [];
+  const context = {
+    fillStyle: '',
+    clearRect() {}, save() {}, scale() {}, restore() {},
+    fillRect(x, y, width, height) { fills.push({ x, y, width, height, color: this.fillStyle }); }
+  };
+  characterCreator.drawStage({
+    width: 320, height: 180, getContext: () => context
+  }, { ...characterCreator.DEFAULT_CHARACTER, hat: 'hat_ranger_brown' });
+  const torsoRows = new Set(fills
+    .filter(fill => fill.color === '#5d9d79' && fill.height === 1 && fill.y >= 45 && fill.y <= 65)
+    .map(fill => fill.y));
+  assert.equal(torsoRows.size, 13);
+  assert.ok(fills.some(fill => fill.color === '#33475a' && fill.height === 17));
+  assert.ok(fills.some(fill =>
+    fill.color === '#3a2d29' && fill.x === 68 && fill.y === 41 && fill.width === 22 && fill.height === 2
+  ));
+});
+check('campfire flames stay clear of the explorer and legs', () => {
+  const fills = [];
+  const context = {
+    fillStyle: '',
+    clearRect() {}, save() {}, scale() {}, restore() {},
+    fillRect(x, y, width, height) { fills.push({ x, y, width, height, color: this.fillStyle }); }
+  };
+  characterCreator.drawStage({
+    width: 320, height: 180, getContext: () => context
+  }, characterCreator.DEFAULT_CHARACTER);
+  const flames = fills.filter(fill => ['#d78339', '#f3bd59', '#df6136'].includes(fill.color));
+  assert.equal(flames.length, 3);
+  assert.ok(flames.every(fill => fill.x + fill.width < 60));
+  assert.deepEqual(flames.map(({ x, y }) => [x, y]), [[22, 63], [28, 60], [32, 64]]);
+});
+check('arms remain visible while stray skin pixels stay off the shoulders', () => {
+  const fills = [];
+  const context = {
+    fillStyle: '',
+    clearRect() {}, save() {}, scale() {}, restore() {},
+    fillRect(x, y, width, height) { fills.push({ x, y, width, height, color: this.fillStyle }); }
+  };
+  characterCreator.drawStage({
+    width: 320, height: 180, getContext: () => context
+  }, characterCreator.DEFAULT_CHARACTER);
+  const skin = characterCreator.SKIN_TONES.find(tone => tone.id === 'warm').color;
+  assert.ok(fills.some(fill =>
+    fill.color === skin && fill.x === 69 && fill.y === 52 && fill.width === 3 && fill.height === 1
+  ));
+  assert.ok(fills.some(fill =>
+    fill.color === skin && fill.x === 86 && fill.y === 52 && fill.width === 3 && fill.height === 1
+  ));
+  assert.equal(fills.some(fill =>
+    fill.color === skin && fill.y === 50 && (fill.x < 73 || fill.x >= 85)
+  ), false);
 });
 
 console.log(`\n${checks} character creator checks passed.`);
