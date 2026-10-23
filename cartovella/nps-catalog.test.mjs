@@ -165,7 +165,7 @@ check('home citadel setup can be dismissed by its close button, backdrop, or Esc
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261023-cartovella-year-atlas')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261023-cartovella-cloud-autosave')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('legacy app URL redirects to Cartovella while preserving share-link query and hash', () => {
@@ -287,6 +287,7 @@ const cloudTestSession = vm.runInContext('cloudSession', context);
 const cloudTestHydrated = vm.runInContext('cloudHydrated', context);
 const cloudTestStoredPassport = localStorage.getItem('cartovella_state');
 const cloudTestStoredSession = localStorage.getItem('cartovella_cloud_session');
+const cloudTestStoredDirtyState = localStorage.getItem('cartovella_cloud_dirty');
 const originalCloudUiFunctions = Object.fromEntries([
   'closeHomeModal', 'updateHomeBaseMarker', 'renderParkMarkers', 'drawFogOfWar', 'updateAllUI'
 ].map(name => [name, context[name]]));
@@ -330,7 +331,7 @@ await checkAsync('existing cloud passport sign-in hydrates local state', async (
 });
 await checkAsync('different local and cloud passports are compared without replacing either copy', async () => {
   const cloudUpdatedAt = '2026-05-14T12:30:00.000Z';
-  const localEditedAt = '2026-05-13T09:15:00.000Z';
+  const localEditedAt = '2026-05-15T09:15:00.000Z';
   const cloudSession = {
     access_token: 'test-access', refresh_token: 'test-refresh',
     user: { id: 'user-conflict', email: 'conflict@example.com' }
@@ -343,6 +344,7 @@ await checkAsync('different local and cloud passports are compared without repla
     AppState.regions = { 'c:Localland': 'v' };
   `, context);
   localStorage.setItem('cartovella_local_edited_at', localEditedAt);
+  localStorage.removeItem('cartovella_cloud_dirty');
   context.fetch = async () => ({
     ok: true, status: 200,
     json: async () => [{
@@ -364,6 +366,43 @@ await checkAsync('different local and cloud passports are compared without repla
   assert.doesNotMatch(element('cloudConflictDates').textContent, /Unknown/);
   assert.ok(html.indexOf('id="btnKeepCloudPassport"') < html.indexOf('id="btnKeepLocalPassport"'));
   assert.match(html, /btnKeepCloudPassport'\)\.focus\(\)/);
+  assert.match(html, /Choose one save to keep\. The other copy will be replaced/);
+  assert.match(html, /Keep the cloud account's save/);
+  assert.match(html, /Replace the save on this browser with the cloud copy/);
+  assert.match(html, /Keep this browser's save/);
+  assert.match(html, /Replace the cloud account's copy with this browser's version/);
+  assert.match(html, /id="btnManualSave"[^>]*aria-label="Save now"/);
+});
+await checkAsync('a clean browser reload accepts the cloud copy without repeating a conflict', async () => {
+  const cloudSession = {
+    access_token: 'test-access', refresh_token: 'test-refresh',
+    user: { id: 'user-clean-reload', email: 'clean-reload@example.com' }
+  };
+  const cloudUpdatedAt = '2026-05-14T12:30:00.000Z';
+  vm.runInContext(`
+    cloudSession = ${JSON.stringify(cloudSession)};
+    cloudHydrated = false;
+    pendingCloudConflict = null;
+    AppState.homeBase = { name: 'Old Local Home', lat: 41, lng: -104, radiusKm: TravelLedger.homeRadiusKm };
+    AppState.regions = { 'c:Oldland': 'v' };
+  `, context);
+  localStorage.setItem('cartovella_local_edited_at', '2026-05-15T09:15:00.000Z');
+  localStorage.setItem('cartovella_cloud_dirty', 'false');
+  context.fetch = async () => ({
+    ok: true, status: 200,
+    json: async () => [{
+      passport_data: {
+        version: 2,
+        homeBase: { name: 'Cloud Home', lat: 40, lng: -105, radiusKm: travelLedger.homeRadiusKm },
+        regions: { 'c:Cloudland': 'v' }
+      },
+      updated_at: cloudUpdatedAt
+    }]
+  });
+  assert.equal(await vm.runInContext('loadFromCloud()', context), true);
+  assert.equal(vm.runInContext('AppState.homeBase.name', context), 'Cloud Home');
+  assert.equal(vm.runInContext('pendingCloudConflict', context), null);
+  assert.equal(localStorage.getItem('cartovella_cloud_dirty'), 'false');
 });
 await checkAsync('cloud passport wins when the device has no home base or no progress beyond its home base', async () => {
   const cloudSession = {
@@ -508,8 +547,10 @@ await checkAsync('subsequent local saves debounce a compact passport upsert and 
   };
   context.clearTimeout = id => scheduled.delete(id);
   let uploaded;
+  let uploadCount = 0;
   context.fetch = async (url, options = {}) => {
     if (String(url).endsWith('/rest/v1/cartovella_passports')) {
+      uploadCount++;
       uploaded = JSON.parse(options.body);
       return { ok: true, status: 201, json: async () => [] };
     }
@@ -517,6 +558,7 @@ await checkAsync('subsequent local saves debounce a compact passport upsert and 
   };
   vm.runInContext("AppState.regions['c:Testland'] = 'v'; saveState()", context);
   assert.ok(Number.isFinite(Date.parse(localStorage.getItem('cartovella_local_edited_at'))));
+  assert.equal(localStorage.getItem('cartovella_cloud_dirty'), 'true');
   const [timer] = scheduled.values();
   assert.equal(timer.delay, 250);
   scheduled.clear();
@@ -524,11 +566,19 @@ await checkAsync('subsequent local saves debounce a compact passport upsert and 
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(uploaded.passport_data.storageFormat, 'encoded-route-polyline-v1');
   assert.equal(uploaded.passport_data.regions['c:Testland'], 'v');
+  assert.equal(localStorage.getItem('cartovella_cloud_dirty'), 'false');
 
-  const requestCount = uploaded ? 1 : 0;
+  vm.runInContext("AppState.regions['c:ManualSave'] = 'v'; saveState()", context);
+  assert.equal(localStorage.getItem('cartovella_cloud_dirty'), 'true');
+  await element('btnManualSave').handlers.click();
+  assert.equal(uploadCount, 2);
+  assert.equal(uploaded.passport_data.regions['c:ManualSave'], 'v');
+  assert.equal(localStorage.getItem('cartovella_cloud_dirty'), 'false');
+
+  const requestCount = uploadCount;
   vm.runInContext('AppState.viewOnly = true; syncToCloud(false)', context);
   await new Promise(resolve => setImmediate(resolve));
-  assert.equal(uploaded ? 1 : 0, requestCount);
+  assert.equal(uploadCount, requestCount);
   vm.runInContext(`
     AppState.viewOnly = false;
     applyPassport(migratePassport(${cloudTestPassport}));
@@ -540,6 +590,8 @@ await checkAsync('subsequent local saves debounce a compact passport upsert and 
   else localStorage.setItem('cartovella_state', cloudTestStoredPassport);
   if (cloudTestStoredSession === null) localStorage.removeItem('cartovella_cloud_session');
   else localStorage.setItem('cartovella_cloud_session', cloudTestStoredSession);
+  if (cloudTestStoredDirtyState === null) localStorage.removeItem('cartovella_cloud_dirty');
+  else localStorage.setItem('cartovella_cloud_dirty', cloudTestStoredDirtyState);
   context.setTimeout = originalSetTimeout;
 });
 const recoveredDraftStore = new Map();

@@ -394,6 +394,8 @@
         🔗
       </button>
 
+      <button id="btnManualSave" type="button" class="header-icon" aria-label="Save now" title="Save now">💾</button>
+
       <button id="btnCloudAuth" type="button" class="header-icon relative" aria-label="Account and cloud sync" title="Account &amp; Cloud Sync">
         ☁️
         <span id="syncStatusDot" class="absolute top-1 right-1 w-2 h-2 rounded-full bg-slate-500" aria-hidden="true"></span>
@@ -1099,8 +1101,8 @@
         <button id="btnAuthLogout" type="button" class="w-full rounded-lg border border-rose-500/30 bg-rose-950/30 px-3 py-2 text-sm text-rose-300 hover:bg-rose-950/60">Sign Out</button>
       </div>
       <div id="cloudConflictView" class="hidden space-y-3">
-        <p class="text-sm font-semibold text-amber-200">Your browser and cloud saves differ</p>
-        <p class="text-xs text-slate-300">Choose which passport to use on this device. Nothing will be replaced until you choose.</p>
+        <p class="text-sm font-semibold text-amber-200">Your browser and cloud saves are different</p>
+        <p class="text-xs text-slate-300">Choose one save to keep. The other copy will be replaced; Cartovella does not merge saves.</p>
         <p id="cloudConflictDates" class="rounded-lg bg-slate-950/70 p-3 text-[11px] text-slate-300"></p>
         <div class="grid gap-2 sm:grid-cols-2">
           <div class="rounded-xl border border-sky-500/30 bg-slate-950/60 p-3">
@@ -1112,21 +1114,27 @@
             <p id="cloudConflictRemoteSummary" class="mt-1 whitespace-pre-line text-[11px] text-slate-400"></p>
           </div>
         </div>
-        <button id="btnKeepCloudPassport" type="button" class="w-full rounded-lg bg-amber-500 px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-amber-400">Use the cloud save on this device</button>
-        <button id="btnKeepLocalPassport" type="button" class="w-full rounded-lg border border-slate-600 px-3 py-2 text-sm text-slate-200 hover:bg-slate-800">Overwrite the cloud save with this device</button>
+        <button id="btnKeepCloudPassport" type="button" class="w-full rounded-lg bg-amber-500 px-3 py-2 text-left text-sm text-slate-950 hover:bg-amber-400">
+          <span class="block font-semibold">Keep the cloud account's save</span>
+          <span class="mt-1 block text-xs font-normal">Replace the save on this browser with the cloud copy.</span>
+        </button>
+        <button id="btnKeepLocalPassport" type="button" class="w-full rounded-lg border border-slate-600 px-3 py-2 text-left text-sm text-slate-200 hover:bg-slate-800">
+          <span class="block font-semibold">Keep this browser's save</span>
+          <span class="mt-1 block text-xs font-normal text-slate-400">Replace the cloud account's copy with this browser's version.</span>
+        </button>
         <button id="btnCancelCloudConflict" type="button" class="w-full px-3 py-2 text-xs text-slate-400 hover:text-white">Cancel — don’t change either save</button>
       </div>
     </section>
   </div>
 
-  <script src="./nps-catalog.js?v=20261023-cartovella-year-atlas"></script>
-  <script src="./national-parks-scratch.js?v=20261023-cartovella-year-atlas"></script>
-  <script src="./international-parks.js?v=20261023-cartovella-year-atlas"></script>
-  <script src="./ecoregions.js?v=20261023-cartovella-year-atlas"></script>
-  <script src="./coordinate-lookups.js?v=20261023-cartovella-year-atlas"></script>
-  <script src="./micro-states.js?v=20261023-cartovella-year-atlas"></script>
-  <script src="./travel-ledger.js?v=20261023-cartovella-year-atlas"></script>
-  <script src="./rarity-config.js?v=20261023-cartovella-year-atlas"></script>
+  <script src="./nps-catalog.js?v=20261023-cartovella-cloud-autosave"></script>
+  <script src="./national-parks-scratch.js?v=20261023-cartovella-cloud-autosave"></script>
+  <script src="./international-parks.js?v=20261023-cartovella-cloud-autosave"></script>
+  <script src="./ecoregions.js?v=20261023-cartovella-cloud-autosave"></script>
+  <script src="./coordinate-lookups.js?v=20261023-cartovella-cloud-autosave"></script>
+  <script src="./micro-states.js?v=20261023-cartovella-cloud-autosave"></script>
+  <script src="./travel-ledger.js?v=20261023-cartovella-cloud-autosave"></script>
+  <script src="./rarity-config.js?v=20261023-cartovella-cloud-autosave"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -1509,6 +1517,7 @@
     const PASSPORT_STORAGE_FORMAT = 'encoded-route-polyline-v1';
     const PASSPORT_STORAGE_KEY = 'cartovella_state';
     const LOCAL_EDITED_AT_KEY = 'cartovella_local_edited_at';
+    const LOCAL_CLOUD_DIRTY_KEY = 'cartovella_cloud_dirty';
     const LEGACY_PASSPORT_STORAGE_KEYS = ['terra_incognita_state'];
     const SUPABASE_URL = 'https://mrgdthihogxrqsfnknxd.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1yZ2R0aGlob2d4cnFzZm5rbnhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyNDk4NTYsImV4cCI6MjEwNDgyNTg1Nn0.1fwcaGPGrzUut3zng2NNkYZt7hUguhKPhfqYyu8MA3s';
@@ -1892,7 +1901,10 @@
           }
           throw error;
         }
-        if (recordEdit) localStorage.setItem(LOCAL_EDITED_AT_KEY, new Date().toISOString());
+        if (recordEdit) {
+          localStorage.setItem(LOCAL_EDITED_AT_KEY, new Date().toISOString());
+          localStorage.setItem(LOCAL_CLOUD_DIRTY_KEY, 'true');
+        }
         updateStorageWarning();
         if (cloudHydrated && !AppState.viewOnly) scheduleCloudSync();
       } catch (error) {
@@ -1906,6 +1918,7 @@
     function scheduleCloudSync() {
       if (!cloudHydrated || AppState.viewOnly || !cloudSession?.access_token) return;
       if (cloudSyncTimer !== null) clearTimeout(cloudSyncTimer);
+      setCloudStatus('Saving changes to your cloud passport…');
       cloudSyncTimer = setTimeout(() => {
         cloudSyncTimer = null;
         syncToCloud(false);
@@ -5979,7 +5992,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261023-cartovella-year-atlas"></script>
+  <script src="./expedition-ui.js?v=20261023-cartovella-cloud-autosave"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);
@@ -6118,11 +6131,14 @@
       if (status) status.textContent = message;
       const dot = document.getElementById('syncStatusDot');
       if (dot) {
+        const saving = message.startsWith('Saving') || message.startsWith('A newer change');
         dot.className = `absolute top-1 right-1 w-2 h-2 rounded-full ${
-          failed ? 'bg-rose-500' : cloudSession ? 'bg-emerald-400' : 'bg-slate-500'
+          failed ? 'bg-rose-500' : saving ? 'bg-amber-400' : cloudSession ? 'bg-emerald-400' : 'bg-slate-500'
         }`;
         dot.title = message;
       }
+      const saveButton = document.getElementById('btnManualSave');
+      if (saveButton) saveButton.title = cloudSession ? `Save now. ${message}` : 'Save now on this device.';
     }
 
     function updateAuthUI() {
@@ -6217,6 +6233,15 @@
       return value && Number.isFinite(Date.parse(value)) ? value : null;
     }
 
+    function hasUnsyncedLocalChanges(cloudUpdatedAt) {
+      const dirtyState = localStorage.getItem(LOCAL_CLOUD_DIRTY_KEY);
+      if (dirtyState === 'true') return true;
+      if (dirtyState === 'false') return false;
+      const localEditedAt = getLocalEditedAt();
+      return !!localEditedAt && !!cloudUpdatedAt &&
+        Date.parse(localEditedAt) > Date.parse(cloudUpdatedAt);
+    }
+
     function formatSaveDate(value) {
       if (!value || !Number.isFinite(Date.parse(value))) return 'Date unavailable';
       return new Date(value).toLocaleString();
@@ -6258,6 +6283,7 @@
       if (cloudUpdatedAt && Number.isFinite(Date.parse(cloudUpdatedAt))) {
         localStorage.setItem(LOCAL_EDITED_AT_KEY, new Date(cloudUpdatedAt).toISOString());
       }
+      localStorage.setItem(LOCAL_CLOUD_DIRTY_KEY, 'false');
       cloudHydrated = true;
       if (AppState.homeBase) closeHomeModal();
       updateHomeBaseMarker();
@@ -6422,6 +6448,8 @@
       }
       cloudSyncInProgress = true;
       try {
+        const passportData = compactPassportForStorage(passportPayload());
+        const uploadedSnapshot = stablePassportStringify(passportData);
         const response = await cloudFetch(`${SUPABASE_URL}/rest/v1/cartovella_passports`, {
           method: 'POST',
           headers: {
@@ -6430,7 +6458,7 @@
           },
           body: JSON.stringify({
             user_id: cloudSession.user.id,
-            passport_data: compactPassportForStorage(passportPayload()),
+            passport_data: passportData,
             updated_at: new Date().toISOString()
           })
         });
@@ -6438,8 +6466,30 @@
           const body = await response.json().catch(() => ({}));
           throw new Error(body.message || body.details || `Cloud save failed (HTTP ${response.status}).`);
         }
-        setCloudStatus(`Last synced at ${new Date().toLocaleTimeString()}.`);
-        if (notify) showNotification('Cloud Sync Complete', 'Your Cartovella passport is safely synced.', '☁️');
+        const currentSnapshot = stablePassportStringify(compactPassportForStorage(passportPayload()));
+        let savedCurrentState = currentSnapshot === uploadedSnapshot;
+        if (savedCurrentState) {
+          try {
+            localStorage.setItem(LOCAL_CLOUD_DIRTY_KEY, 'false');
+          } catch (error) {
+            console.error('Cloud passport was saved, but local sync state could not be recorded.', error);
+            savedCurrentState = false;
+          }
+        }
+        if (savedCurrentState) {
+          setCloudStatus(`Saved to cloud at ${new Date().toLocaleTimeString()}.`);
+        } else if (currentSnapshot !== uploadedSnapshot) {
+          setCloudStatus('A newer change is still being saved…');
+          scheduleCloudSync();
+        } else {
+          setCloudStatus('Cloud save succeeded, but this browser could not record the sync state.', true);
+        }
+        if (notify) {
+          showNotification('Cloud Save Complete',
+            savedCurrentState ? 'Your Cartovella passport is safely synced.' :
+              'The uploaded version is saved; any newer changes are still syncing.',
+            '☁️');
+        }
         return true;
       } catch (error) {
         console.error('Cartovella cloud sync failed.', error);
@@ -6477,6 +6527,34 @@
       await syncToCloud(true);
     }
 
+    async function handleManualSave() {
+      if (AppState.viewOnly) {
+        setCloudStatus('This shared passport is read-only and cannot be saved.', true);
+        showNotification('Passport is read-only', 'This shared passport cannot be saved from this view.', '⚠️');
+        return;
+      }
+      try {
+        saveState({ recordEdit: false });
+      } catch (error) {
+        console.error('Manual passport save failed.', error);
+        setCloudStatus(`Save failed: ${error.message}`, true);
+        showNotification('Save Failed', error.message, '⚠️');
+        return;
+      }
+      if (!cloudSession?.access_token) {
+        setCloudStatus('Saved on this device. Sign in to sync across devices.');
+        showNotification('Saved on this device', 'Sign in to also save this passport to your cloud account.', '💾');
+        return;
+      }
+      if (cloudSyncTimer !== null) clearTimeout(cloudSyncTimer);
+      cloudSyncTimer = null;
+      if (!cloudHydrated || pendingCloudConflict) {
+        await handleForceCloudSync();
+        return;
+      }
+      await syncToCloud(true);
+    }
+
     async function loadFromCloud({ notifySeed = false } = {}) {
       if (AppState.viewOnly || !cloudSession?.access_token) return false;
       cloudHydrated = false;
@@ -6505,8 +6583,8 @@
           const cloudHasPassportData = hasPassportData(cloudPassport);
           const passportsDiffer =
             stablePassportStringify(localSnapshot) !== stablePassportStringify(cloudSnapshot);
-          if (localSnapshot.homeBase && localHasProgress &&
-              cloudHasPassportData && passportsDiffer) {
+          if (localSnapshot.homeBase && localHasProgress && cloudHasPassportData &&
+              passportsDiffer && hasUnsyncedLocalChanges(records[0].updated_at)) {
             showCloudConflict(cloudPassport, records[0].updated_at);
             return false;
           }
@@ -6547,6 +6625,12 @@
     document.getElementById('btnAuthSignUp').addEventListener('click', handleSignUp);
     document.getElementById('btnAuthLogout').addEventListener('click', handleLogout);
     document.getElementById('btnForceCloudSync').addEventListener('click', handleForceCloudSync);
+    document.getElementById('btnManualSave').addEventListener('click', () =>
+      handleManualSave().catch(error => {
+        console.error('Manual passport save failed.', error);
+        setCloudStatus(`Save failed: ${error.message}`, true);
+        showNotification('Save Failed', error.message, '⚠️');
+      }));
     document.getElementById('btnKeepLocalPassport').addEventListener('click', () => resolveCloudConflict(false));
     document.getElementById('btnKeepCloudPassport').addEventListener('click', () => resolveCloudConflict(true));
     document.getElementById('btnCancelCloudConflict').addEventListener('click', cancelCloudConflict);
