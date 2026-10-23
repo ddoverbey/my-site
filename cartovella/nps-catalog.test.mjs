@@ -156,6 +156,8 @@ check('mobile RPG HUD starts collapsed with an accessible stats toggle', () => {
 check('home citadel setup can be dismissed by its close button, backdrop, or Escape', () => {
   assert.match(html, /id="homeBaseModal" role="dialog" aria-modal="true" aria-labelledby="homeBaseModalTitle"/);
   assert.match(html, /id="btnCloseHomeModal" type="button" aria-label="Close home citadel setup"/);
+  assert.match(html, /id="btnHomeSignIn"[^>]*>[\s\S]*?Sign In to an Existing Account/);
+  assert.match(html, /btnHomeSignIn'\)\.addEventListener\('click', \(\) => toggleAuthModal\(true\)\)/);
   assert.match(html, /btnCloseHomeModal'\)\.addEventListener\('click', closeHomeModal\)/);
   assert.match(html, /event\.target === event\.currentTarget\) closeHomeModal\(\)/);
   assert.match(html, /event\.key === 'Escape'[\s\S]*?closeHomeModal\(\)/);
@@ -288,7 +290,7 @@ const cloudTestStoredSession = localStorage.getItem('cartovella_cloud_session');
 const originalCloudUiFunctions = Object.fromEntries([
   'closeHomeModal', 'updateHomeBaseMarker', 'renderParkMarkers', 'drawFogOfWar', 'updateAllUI'
 ].map(name => [name, context[name]]));
-await checkAsync('existing cloud passport sign-in hydrates local state and refreshes the UI', async () => {
+await checkAsync('existing cloud passport sign-in hydrates local state', async () => {
   const cloudSession = {
     access_token: 'test-access', refresh_token: 'test-refresh',
     user: { id: 'user-test', email: 'traveler@example.com' }
@@ -297,14 +299,13 @@ await checkAsync('existing cloud passport sign-in hydrates local state and refre
     version: 2,
     homeBase: { name: 'Cloud Home', lat: 40, lng: -105, radiusKm: travelLedger.homeRadiusKm }
   };
-  let uiRefreshes = 0;
   context.closeHomeModal = () => {};
   context.updateHomeBaseMarker = () => {};
   context.renderParkMarkers = () => {};
   context.drawFogOfWar = () => {};
-  context.updateAllUI = () => { uiRefreshes++; };
   vm.runInContext('appReady = Promise.resolve()', context);
   vm.runInContext(`
+    applyPassport(migratePassport({ version: 2 }));
     AppState.homeBase = { name: 'Cloud Home', lat: 40, lng: -105, radiusKm: TravelLedger.homeRadiusKm };
   `, context);
   element('authEmail').value = cloudSession.user.email;
@@ -325,7 +326,7 @@ await checkAsync('existing cloud passport sign-in hydrates local state and refre
   assert.ok(requests[1].url.includes('/rest/v1/cartovella_passports?user_id=eq.user-test'));
   assert.equal(vm.runInContext('AppState.homeBase.name', context), 'Cloud Home');
   assert.equal(element('authCurrentEmail').textContent, cloudSession.user.email);
-  assert.ok(uiRefreshes > 0);
+  assert.equal(vm.runInContext('cloudHydrated', context), true, element('authSyncStatusText').textContent);
 });
 await checkAsync('different local and cloud passports are compared without replacing either copy', async () => {
   const cloudUpdatedAt = '2026-05-14T12:30:00.000Z';
@@ -339,6 +340,7 @@ await checkAsync('different local and cloud passports are compared without repla
     cloudHydrated = false;
     pendingCloudConflict = null;
     AppState.homeBase = { name: 'Local Home', lat: 41, lng: -104, radiusKm: TravelLedger.homeRadiusKm };
+    AppState.regions = { 'c:Localland': 'v' };
   `, context);
   localStorage.setItem('cartovella_local_edited_at', localEditedAt);
   context.fetch = async () => ({
@@ -346,7 +348,8 @@ await checkAsync('different local and cloud passports are compared without repla
     json: async () => [{
       passport_data: {
         version: 2,
-        homeBase: { name: 'Cloud Home', lat: 40, lng: -105, radiusKm: travelLedger.homeRadiusKm }
+        homeBase: { name: 'Cloud Home', lat: 40, lng: -105, radiusKm: travelLedger.homeRadiusKm },
+        regions: { 'c:Cloudland': 'v' }
       },
       updated_at: cloudUpdatedAt
     }]
@@ -359,6 +362,38 @@ await checkAsync('different local and cloud passports are compared without repla
   assert.match(element('cloudConflictDates').textContent, /Cloud save last updated:/);
   assert.match(element('cloudConflictDates').textContent, /This device last edited:/);
   assert.doesNotMatch(element('cloudConflictDates').textContent, /Unknown/);
+  assert.ok(html.indexOf('id="btnKeepCloudPassport"') < html.indexOf('id="btnKeepLocalPassport"'));
+  assert.match(html, /btnKeepCloudPassport'\)\.focus\(\)/);
+});
+await checkAsync('cloud passport wins when the device has no home base or no progress beyond its home base', async () => {
+  const cloudSession = {
+    access_token: 'test-access', refresh_token: 'test-refresh',
+    user: { id: 'user-cloud-default', email: 'cloud-default@example.com' }
+  };
+  const cloudPassport = {
+    version: 2,
+    homeBase: { name: 'Cloud Home', lat: 40, lng: -105, radiusKm: travelLedger.homeRadiusKm },
+    regions: { 'c:Cloudland': 'v' }
+  };
+  vm.runInContext(`cloudSession = ${JSON.stringify(cloudSession)}`, context);
+  for (const localPassport of [
+    { version: 2, regions: { 'c:Localland': 'v' } },
+    { version: 2, homeBase: { name: 'Local Home', lat: 41, lng: -104, radiusKm: travelLedger.homeRadiusKm } }
+  ]) {
+    vm.runInContext(`
+      applyPassport(migratePassport(${JSON.stringify(localPassport)}));
+      cloudHydrated = false;
+      pendingCloudConflict = null;
+    `, context);
+    context.fetch = async () => ({
+      ok: true, status: 200,
+      json: async () => [{ passport_data: cloudPassport, updated_at: '2026-05-14T12:30:00.000Z' }]
+    });
+    assert.equal(await vm.runInContext('loadFromCloud()', context), true);
+    assert.equal(vm.runInContext('AppState.homeBase.name', context), 'Cloud Home');
+    assert.equal(vm.runInContext('AppState.regions["c:Cloudland"]', context), 'v');
+    assert.equal(vm.runInContext('pendingCloudConflict', context), null);
+  }
 });
 await checkAsync('choosing the cloud passport replaces local data only after the explicit choice', async () => {
   context.closeHomeModal = () => {};
@@ -1693,6 +1728,7 @@ check('visited county polygons credit their cached predominant biome without cre
 });
 check('Citadel onboarding starts hidden, offers passport import, and county biomes resolve lazily', () => {
   assert.match(html, /<div id="homeBaseModal"[^>]*class="hidden /);
+  assert.ok(html.includes('id="btnHomeSignIn"'));
   assert.ok(html.includes('id="btnHomeImport"'));
   assert.ok(!html.includes('buildCountyBiomeCache'));
   const startup = html.slice(html.indexOf("window.addEventListener('DOMContentLoaded'"));

@@ -896,6 +896,9 @@
           <span>RETURNING EXPLORER?</span>
           <div class="flex-1 h-px bg-slate-800"></div>
         </div>
+        <button id="btnHomeSignIn" type="button" class="w-full py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 font-semibold text-slate-950 text-sm flex items-center justify-center gap-2 transition-all">
+          <span aria-hidden="true">☁️</span> Sign In to an Existing Account
+        </button>
         <button id="btnHomeImport" type="button" class="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 font-semibold text-slate-200 text-sm flex items-center justify-center gap-2 transition-all">
           <span aria-hidden="true">📂</span> Import Passport (.json)
         </button>
@@ -1074,7 +1077,7 @@
       </div>
       <div id="cloudConflictView" class="hidden space-y-3">
         <p class="text-sm font-semibold text-amber-200">Your browser and cloud saves differ</p>
-        <p class="text-xs text-slate-300">Do you want to overwrite your cloud save with this device’s passport? Nothing will be replaced until you choose.</p>
+        <p class="text-xs text-slate-300">Choose which passport to use on this device. Nothing will be replaced until you choose.</p>
         <p id="cloudConflictDates" class="rounded-lg bg-slate-950/70 p-3 text-[11px] text-slate-300"></p>
         <div class="grid gap-2 sm:grid-cols-2">
           <div class="rounded-xl border border-sky-500/30 bg-slate-950/60 p-3">
@@ -1086,8 +1089,8 @@
             <p id="cloudConflictRemoteSummary" class="mt-1 whitespace-pre-line text-[11px] text-slate-400"></p>
           </div>
         </div>
-        <button id="btnKeepLocalPassport" type="button" class="w-full rounded-lg bg-amber-500 px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-amber-400">Yes, overwrite the cloud save with this device</button>
-        <button id="btnKeepCloudPassport" type="button" class="w-full rounded-lg border border-slate-600 px-3 py-2 text-sm text-slate-200 hover:bg-slate-800">No, use the cloud save on this device</button>
+        <button id="btnKeepCloudPassport" type="button" class="w-full rounded-lg bg-amber-500 px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-amber-400">Use the cloud save on this device</button>
+        <button id="btnKeepLocalPassport" type="button" class="w-full rounded-lg border border-slate-600 px-3 py-2 text-sm text-slate-200 hover:bg-slate-800">Overwrite the cloud save with this device</button>
         <button id="btnCancelCloudConflict" type="button" class="w-full px-3 py-2 text-xs text-slate-400 hover:text-white">Cancel — don’t change either save</button>
       </div>
     </section>
@@ -5983,6 +5986,7 @@
       hideLevelUpNotification();
     });
     document.getElementById('btnHomeConfig').addEventListener('click', openHomeModal);
+    document.getElementById('btnHomeSignIn').addEventListener('click', () => toggleAuthModal(true));
     document.getElementById('btnHomeImport').addEventListener('click', () => {
       document.getElementById('fileInput').click();
     });
@@ -6101,6 +6105,7 @@
     function updateAuthUI() {
       const isLoggedIn = !!cloudSession?.user;
       const hasConflict = !!pendingCloudConflict;
+      document.getElementById('btnHomeSignIn').classList.toggle('hidden', isLoggedIn);
       document.getElementById('cloudConflictView').classList.toggle('hidden', !hasConflict);
       document.getElementById('authViewLoggedIn').classList.toggle('hidden', !isLoggedIn || hasConflict);
       document.getElementById('authViewLoggedOut').classList.toggle('hidden', isLoggedIn || hasConflict);
@@ -6220,7 +6225,7 @@
       setCloudStatus('Your browser and cloud saves differ. Choose which copy to keep.', true);
       toggleAuthModal(true);
       updateAuthUI();
-      document.getElementById('btnKeepLocalPassport').focus();
+      document.getElementById('btnKeepCloudPassport').focus();
     }
 
     function renderLoadedCloudPassport(parsed, cloudUpdatedAt = null) {
@@ -6269,7 +6274,7 @@
         cloudHydrated = false;
         updateAuthUI();
         toggleAuthModal(true);
-        document.getElementById('btnKeepLocalPassport').focus();
+        document.getElementById('btnKeepCloudPassport').focus();
       }
     }
 
@@ -6467,15 +6472,18 @@
         }
         const records = await response.json();
         if (!Array.isArray(records)) throw new Error('Supabase returned an unexpected passport response.');
+        const localPassport = passportPayload();
         if (records.length) {
           const cloudPassport = migratePassport(records[0].passport_data);
-          const localSnapshot = compactPassportForStorage(passportPayload());
+          const localSnapshot = compactPassportForStorage(localPassport);
           const cloudSnapshot = compactPassportForStorage(cloudPassport);
-          const localHasPassportData = hasPassportData(localSnapshot);
-          const cloudHasPassportData = hasPassportData(cloudSnapshot);
+          const localHasPassportData = hasPassportData(localPassport);
+          const localHasProgress = hasPassportData({ ...localPassport, homeBase: null });
+          const cloudHasPassportData = hasPassportData(cloudPassport);
           const passportsDiffer =
             stablePassportStringify(localSnapshot) !== stablePassportStringify(cloudSnapshot);
-          if (localHasPassportData && cloudHasPassportData && passportsDiffer) {
+          if (localSnapshot.homeBase && localHasProgress &&
+              cloudHasPassportData && passportsDiffer) {
             showCloudConflict(cloudPassport, records[0].updated_at);
             return false;
           }
@@ -6490,7 +6498,6 @@
           }
         } else {
           cloudHydrated = true;
-          const localPassport = passportPayload();
           if (hasPassportData(localPassport)) {
             if (!await syncToCloud(notifySeed)) {
               throw new Error('No cloud passport exists and the local passport could not be uploaded.');
