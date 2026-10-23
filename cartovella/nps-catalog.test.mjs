@@ -395,6 +395,18 @@ await checkAsync('cloud passport wins when the device has no home base or no pro
     assert.equal(vm.runInContext('pendingCloudConflict', context), null);
   }
 });
+check('cloud hydration restores the tab that matches the loaded mode', () => {
+  const cloudHydration = html.slice(
+    html.indexOf('function renderLoadedCloudPassport'),
+    html.indexOf('async function resolveCloudConflict')
+  );
+  const modeViewRestore = html.slice(
+    html.indexOf('function restoreModeView()'),
+    html.indexOf('// Toggle Mode: RPG vs Classic')
+  );
+  assert.match(cloudHydration, /restoreModeView\(\)/);
+  assert.match(modeViewRestore, /switchTab\(AppState\.mode === 'classic' \? 'bucketlist' : 'map'\)/);
+});
 await checkAsync('choosing the cloud passport replaces local data only after the explicit choice', async () => {
   context.closeHomeModal = () => {};
   context.updateHomeBaseMarker = () => {};
