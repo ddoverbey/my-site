@@ -291,6 +291,109 @@ check('passport field registry round-trips defaults and unknown future fields', 
   vm.runInContext('applyPassport(migratePassport({version:2}))', context);
   assert.equal(vm.runInContext('hasPassportData(passportPayload())', context), false);
 });
+check('every saved expedition earns base XP and route distance adds capped XP in every mode', () => {
+  const degreeMiles = travelLedger.distanceMiles({ lat: 0, lng: 0 }, { lat: 0, lng: 1 });
+  context.expeditionXpFixture = {
+    routeStops: [{ coords: [0, 0] }, { coords: [0, 1] }],
+    routeLegs: [{ mode: 'flight', routeCoords: [] }]
+  };
+  assert.ok(Math.abs(vm.runInContext('expeditionDistanceMiles(expeditionXpFixture)', context) - degreeMiles) < 0.001);
+  assert.equal(vm.runInContext('expeditionExperiencePoints(expeditionXpFixture)', context), 7);
+  context.expeditionXpFixture = { routeCoords: [] };
+  assert.equal(vm.runInContext('expeditionExperiencePoints(expeditionXpFixture)', context), 5);
+  context.expeditionXpFixture = { routeCoords: [[0, 0], [0, 20]] };
+  assert.equal(vm.runInContext('expeditionExperiencePoints(expeditionXpFixture)', context), 35);
+  delete context.expeditionXpFixture;
+});
+check('total passport XP includes each logged expedition', () => {
+  const originalExpeditions = vm.runInContext('JSON.stringify(AppState.expeditions)', context);
+  const milesPerLongitudeDegree = travelLedger.distanceMiles({ lat: 0, lng: 0 }, { lat: 0, lng: 1 });
+  try {
+    const before = vm.runInContext('computeStats().xp', context);
+    const makeTrip = (id, miles) => ({
+      id, name: id, startDate: null, endDate: null, dayTrip: false, reason: '',
+      countyIds: [], parkIds: [], customPoiIds: [],
+      routeCoords: miles === null ? [] : [[0, 0], [0, miles / milesPerLongitudeDegree]],
+      transitTags: ['flight'], purposeTags: [], minElevationFt: null, maxElevationFt: null
+    });
+    context.expeditionXpFixture = makeTrip('short-flight', milesPerLongitudeDegree);
+    vm.runInContext('AppState.expeditions = [expeditionXpFixture]', context);
+    assert.equal(vm.runInContext('computeStats().xp', context) - before, 7);
+
+    context.expeditionXpFixture = [50, 50, 50].map((miles, index) => makeTrip(`local-${index}`, miles));
+    vm.runInContext('AppState.expeditions = expeditionXpFixture', context);
+    assert.equal(vm.runInContext('computeStats().xp', context) - before, 96);
+
+    context.expeditionXpFixture = [makeTrip('long-haul', 550)];
+    vm.runInContext('AppState.expeditions = expeditionXpFixture', context);
+    assert.equal(vm.runInContext('computeStats().xp', context) - before, 127);
+  } finally {
+    vm.runInContext(`AppState.expeditions = ${originalExpeditions}`, context);
+    delete context.expeditionXpFixture;
+  }
+});
+check('trip questlines count distinct saved trips and require regional stops within one trip', () => {
+  const originalExpeditions = vm.runInContext('JSON.stringify(AppState.expeditions)', context);
+  const originalPoliticalAt = context.cachedPoliticalAt;
+  const milesPerLongitudeDegree = travelLedger.distanceMiles({ lat: 0, lng: 0 }, { lat: 0, lng: 1});
+  try {
+    context.questExpeditionFixture = [50, 75, 95, 150].map((miles, index) => ({
+      id: `short-${index}`, routeCoords: [[0, 0], [0, miles / milesPerLongitudeDegree]]
+    })).concat([{ id: 'unknown-distance', routeCoords: [] }]);
+    vm.runInContext('AppState.expeditions = questExpeditionFixture', context);
+    let progress = JSON.parse(vm.runInContext(
+      "JSON.stringify(questProgress(QUESTLINES.find(quest => quest.id === 'localRambler')))", context
+    ));
+    assert.equal(progress.progress, 3);
+    assert.equal(progress.complete, true);
+
+    context.questExpeditionFixture = [{
+      id: 'long-haul', routeCoords: [[0, 0], [0, 550 / milesPerLongitudeDegree]]
+    }];
+    vm.runInContext('AppState.expeditions = questExpeditionFixture', context);
+    progress = JSON.parse(vm.runInContext(
+      "JSON.stringify(questProgress(QUESTLINES.find(quest => quest.id === 'longHaul')))", context
+    ));
+    assert.equal(progress.complete, true);
+    assert.equal(progress.label, '500 / 500 miles');
+
+    context.cachedPoliticalAt = lat => ({
+      states: ({ 1: ['Colorado'], 2: ['Utah'], 3: ['Wyoming'] })[lat] || [],
+      countries: lat >= 10 ? ({ 10: ['Canada'], 11: ['Mexico'] })[lat] || [] : ['United States of America']
+    });
+    context.questExpeditionFixture = [{
+      id: 'two-states', routeStops: [{ coords: [1, 0] }, { coords: [2, 0] }]
+    }];
+    vm.runInContext('AppState.expeditions = questExpeditionFixture', context);
+    progress = JSON.parse(vm.runInContext(
+      "JSON.stringify(questProgress(QUESTLINES.find(quest => quest.id === 'crossingPaths')))", context
+    ));
+    assert.equal(progress.complete, false);
+    assert.equal(progress.label, '2 / 3 US states');
+
+    context.questExpeditionFixture = [{
+      id: 'three-states', routeStops: [{ coords: [1, 0] }, { coords: [2, 0] }, { coords: [3, 0] }]
+    }];
+    vm.runInContext('AppState.expeditions = questExpeditionFixture', context);
+    progress = JSON.parse(vm.runInContext(
+      "JSON.stringify(questProgress(QUESTLINES.find(quest => quest.id === 'crossingPaths')))", context
+    ));
+    assert.equal(progress.complete, true);
+
+    context.questExpeditionFixture = [{
+      id: 'two-countries', routeStops: [{ coords: [10, 0] }, { coords: [11, 0] }]
+    }];
+    vm.runInContext('AppState.expeditions = questExpeditionFixture', context);
+    progress = JSON.parse(vm.runInContext(
+      "JSON.stringify(questProgress(QUESTLINES.find(quest => quest.id === 'crossingPaths')))", context
+    ));
+    assert.equal(progress.complete, true);
+  } finally {
+    context.cachedPoliticalAt = originalPoliticalAt;
+    vm.runInContext(`AppState.expeditions = ${originalExpeditions}`, context);
+    delete context.questExpeditionFixture;
+  }
+});
 const cloudTestPassport = vm.runInContext('JSON.stringify(passportPayload())', context);
 const cloudTestSession = vm.runInContext('cloudSession', context);
 const cloudTestHydrated = vm.runInContext('cloudHydrated', context);

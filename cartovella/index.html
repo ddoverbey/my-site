@@ -1248,11 +1248,128 @@
       { id: 'caverns', title: 'Subterranean Odyssey', desc: 'Venture deep beneath the Earth’s mantle', parkIds: ['carlsbad','mammoth','windcave'], bonusXp: 140 },
       { id: 'deserts', title: 'The Desert Furnace', desc: 'Endure the harshest arid ecosystems of North America', parkIds: ['deathvalley','joshuatree','saguaro','whitesands','bigbend'], bonusXp: 180 },
       { id: 'giants', title: 'Realm of the Ancients', desc: 'Walk among the ancient giant trees of California', parkIds: ['redwood','sequoia','kingscanyon','yosemite'], bonusXp: 150 },
-      { id: 'islands', title: 'Archipelago Wanderer', desc: 'Visit isolated ocean national parks', parkIds: ['channel','drytortugas','biscayne','virginislands','haleakala'], bonusXp: 200 }
+      { id: 'islands', title: 'Archipelago Wanderer', desc: 'Visit isolated ocean national parks', parkIds: ['channel','drytortugas','biscayne','virginislands','haleakala'], bonusXp: 200 },
+      { id: 'localRambler', title: 'Local Rambler', desc: 'Log 3 distinct trips of 100 miles or less.', type: 'tripCount', tripCount: 3, maxDistanceMiles: 100, bonusXp: 75 },
+      { id: 'longHaul', title: 'Long Haul', desc: 'Complete one logged trip of at least 500 miles.', type: 'distance', minDistanceMiles: 500, bonusXp: 100 },
+      { id: 'crossingPaths', title: 'Crossing Paths', desc: 'Complete one trip with stops in 3 US states or 2 countries.', type: 'regionalCrossing', minUsStates: 3, minCountries: 2, bonusXp: 125 }
     ];
     QUESTLINES.forEach(q => {
-      q.parkIds = [...new Set(q.parkIds.map(id => NpsCatalog.aliases[id] || id))];
+      if (q.parkIds) q.parkIds = [...new Set(q.parkIds.map(id => NpsCatalog.aliases[id] || id))];
     });
+
+    function pathDistanceMiles(coordinates) {
+      if (!Array.isArray(coordinates) || coordinates.length < 2) return 0;
+      let miles = 0;
+      for (let index = 1; index < coordinates.length; index++) {
+        const [fromLat, fromLng] = coordinates[index - 1];
+        const [toLat, toLng] = coordinates[index];
+        miles += TravelLedger.distanceMiles(
+          { lat: fromLat, lng: fromLng },
+          { lat: toLat, lng: toLng }
+        );
+      }
+      return miles;
+    }
+
+    function expeditionDistanceMiles(expedition) {
+      if (Array.isArray(expedition.routeLegs) && expedition.routeStops?.length) {
+        return expedition.routeLegs.reduce((total, leg, index) => {
+          const coordinates = leg.routeCoords?.length > 1 ? leg.routeCoords : [
+            expedition.routeStops[index]?.coords, expedition.routeStops[index + 1]?.coords
+          ].filter(Boolean);
+          return total + pathDistanceMiles(coordinates);
+        }, 0);
+      }
+      return pathDistanceMiles(expedition.routeStops?.map(stop => stop.coords) || expedition.routeCoords);
+    }
+
+    function expeditionHasDistance(expedition) {
+      if (expedition.routeLegs?.length && expedition.routeStops?.length) return true;
+      const coordinates = expedition.routeStops?.map(stop => stop.coords) || expedition.routeCoords;
+      return Array.isArray(coordinates) && coordinates.length > 1;
+    }
+
+    function expeditionExperiencePoints(expedition, distanceMiles = expeditionDistanceMiles(expedition)) {
+      return 5 + Math.min(30, Math.floor(distanceMiles / 25));
+    }
+
+    function expeditionStopCoordinates(expedition) {
+      if (expedition.routeStops?.length) return expedition.routeStops.map(stop => stop.coords);
+      const coordinates = [];
+      expedition.parkIds.forEach(id => {
+        const park = PARKS.find(place => place.id === id);
+        if (Number.isFinite(park?.lat) && Number.isFinite(park?.lng)) coordinates.push([park.lat, park.lng]);
+      });
+      expedition.customPoiIds.forEach(id => {
+        const poi = AppState.customPois.find(place => place.id === id);
+        if (Number.isFinite(poi?.lat) && Number.isFinite(poi?.lng)) coordinates.push([poi.lat, poi.lng]);
+      });
+      return coordinates;
+    }
+
+    function expeditionRegionCounts(expedition) {
+      const states = new Set();
+      const countries = new Set();
+      const stops = expeditionStopCoordinates(expedition);
+      stops.forEach(([lat, lng]) => {
+        const political = cachedPoliticalAt(lat, lng);
+        political?.states.forEach(state => {
+          if (NpsCatalog.isUsState(state)) states.add(state);
+        });
+        political?.countries.forEach(country => countries.add(country));
+      });
+      return { states, countries };
+    }
+
+    function questProgress(quest, distancesByExpedition = null) {
+      const distanceFor = expedition => distancesByExpedition?.get(expedition.id) ??
+        expeditionDistanceMiles(expedition);
+      if (quest.parkIds) {
+        const total = quest.parkIds.length;
+        const progress = quest.parkIds.filter(id => TravelLedger.isVisited(AppState.pins[id])).length;
+        return { progress, total, complete: progress === total, label: `${progress} / ${total}` };
+      }
+      if (quest.type === 'tripCount') {
+        const qualifyingTrips = AppState.expeditions.filter(expedition =>
+          expeditionHasDistance(expedition) &&
+          distanceFor(expedition) <= quest.maxDistanceMiles).length;
+        const progress = Math.min(qualifyingTrips, quest.tripCount);
+        return {
+          progress, total: quest.tripCount, complete: progress === quest.tripCount,
+          label: `${progress} / ${quest.tripCount} trips`
+        };
+      }
+      if (quest.type === 'distance') {
+        const bestDistance = AppState.expeditions.reduce((best, expedition) =>
+          Math.max(best, distanceFor(expedition)), 0);
+        const progress = Math.min(bestDistance, quest.minDistanceMiles);
+        return {
+          progress, total: quest.minDistanceMiles, complete: bestDistance >= quest.minDistanceMiles,
+          label: `${Math.floor(progress)} / ${quest.minDistanceMiles} miles`
+        };
+      }
+      if (quest.type === 'regionalCrossing') {
+        let bestProgress = 0;
+        let bestLabel = `0 / ${quest.minUsStates} US states`;
+        let complete = false;
+        AppState.expeditions.forEach(expedition => {
+          const { states, countries } = expeditionRegionCounts(expedition);
+          const stateProgress = Math.min(states.size / quest.minUsStates, 1);
+          const countryProgress = Math.min(countries.size / quest.minCountries, 1);
+          if (states.size >= quest.minUsStates || countries.size >= quest.minCountries) complete = true;
+          if (stateProgress > bestProgress) {
+            bestProgress = stateProgress;
+            bestLabel = `${Math.min(states.size, quest.minUsStates)} / ${quest.minUsStates} US states`;
+          }
+          if (countryProgress > bestProgress) {
+            bestProgress = countryProgress;
+            bestLabel = `${Math.min(countries.size, quest.minCountries)} / ${quest.minCountries} countries`;
+          }
+        });
+        return { progress: bestProgress, total: 1, complete, label: bestLabel };
+      }
+      throw new Error(`Unsupported questline type: ${quest.type}`);
+    }
 
     /* Dynamic Achievements */
     const ACHIEVEMENTS = [
@@ -2297,6 +2414,8 @@
       const visitedParks = PARKS.filter(p => TravelLedger.isVisited(AppState.pins[p.id]));
       const wishlistParks = PARKS.filter(p => AppState.pins[p.id] === 'w');
       const visitedCustomLocations = AppState.customLocations.filter(p => TravelLedger.isVisited(p.status));
+      const expeditionDistances = new Map(AppState.expeditions.map(expedition =>
+        [expedition.id, expeditionDistanceMiles(expedition)]));
       const metadataProgress = TravelLedger.metadataProgress(AppState, {
         parks: PARKS,
         politicalAt: cachedPoliticalAt,
@@ -2352,6 +2471,8 @@
       xp += visitedCustomLocations.length * 25;
       xp += visitedStates.size * 10;
       xp += visitedCountries.size * 20;
+      xp += AppState.expeditions.reduce((total, expedition) =>
+        total + expeditionExperiencePoints(expedition, expeditionDistances.get(expedition.id)), 0);
 
       // Biome XP bonuses
       biomesSet.forEach(b => {
@@ -2363,9 +2484,11 @@
 
       // Completed quests bonus
       let completedQuestsCount = 0;
+      const questProgressById = {};
       QUESTLINES.forEach(q => {
-        const isDone = q.parkIds.every(pid => TravelLedger.isVisited(AppState.pins[pid]));
-        if (isDone) {
+        const progress = questProgress(q, expeditionDistances);
+        questProgressById[q.id] = progress;
+        if (progress.complete) {
           completedQuestsCount++;
           xp += q.bonusXp;
         }
@@ -2445,6 +2568,7 @@
         countriesCount: visitedCountries.size,
         visitedCountries: [...visitedCountries],
         visitedStates: [...visitedStates],
+        questProgress: questProgressById,
         atlasCountriesCount: (worldGeoJson || []).filter(feature => visitedCountries.has(feature.properties.name)).length +
           microStateCatalog.filter(entry => visitedCountries.has(entry.name)).length,
         atlasCountriesTotal: (worldGeoJson?.length || 0) + microStateCatalog.length,
@@ -5194,9 +5318,8 @@
       questsContainer.innerHTML = '';
 
       QUESTLINES.forEach(q => {
-        const visitedInQuest = q.parkIds.filter(pid => TravelLedger.isVisited(AppState.pins[pid])).length;
-        const isComplete = visitedInQuest === q.parkIds.length;
-        const pct = Math.round((visitedInQuest / q.parkIds.length) * 100);
+        const { progress, total, complete: isComplete, label } = stats.questProgress[q.id];
+        const pct = Math.round((progress / total) * 100);
 
         const card = document.createElement('div');
         card.className = `p-4 rounded-2xl border ${
@@ -5213,7 +5336,7 @@
           <div class="mt-3">
             <div class="flex justify-between text-[11px] text-slate-400 mb-1">
               <span>Progress</span>
-              <span>${visitedInQuest} / ${q.parkIds.length}</span>
+            <span>${label}</span>
             </div>
             <div class="w-full bg-slate-900 rounded-full h-2 overflow-hidden border border-slate-800">
               <div class="h-full bg-gradient-to-r ${isComplete ? 'from-emerald-500 to-teal-400' : 'from-amber-500 to-amber-300'}" style="width: ${pct}%"></div>

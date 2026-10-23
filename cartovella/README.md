@@ -33,7 +33,9 @@ Mythic biomes. The current dataset has no Mythic biome.
 ### XP and leveling
 
 XP is recalculated from your saved travel progress; it is not a separate spendable balance. Repeated
-visits to the same place do not award duplicate location XP.
+visits to the same place do not award duplicate location XP. Every saved expedition also contributes
+XP based on its recorded distance; trips are recalculated from the passport, so editing or removing a
+trip updates its XP rather than leaving a separate balance behind.
 
 | Progress | XP |
 | --- | ---: |
@@ -43,11 +45,18 @@ visits to the same place do not award duplicate location XP.
 | Each distinct visited country | 20 |
 | Establishing a home Citadel | 50 |
 | First collection of a biome | 15–200, based on its rarity tier above |
+| Each logged expedition | 5 base XP, plus 1 XP per full 25 route miles (up to 30 distance XP) |
 | Completing a questline | Varies by questline |
+
+An expedition can earn up to 35 XP. Distance is summed across its route legs; when route geometry is
+unavailable, Cartovella estimates each leg between its ordered stops. Flight and ferry distances count
+for expedition XP even though those modes do not count toward land-route biome credit. A trip without
+measurable distance still earns the 5 base XP.
 
 Home-base geography can also count its state, country, and home-county biome. The Citadel bonus is
 included while a home base is set; changing the home location does not award another 50 XP. Quest
-bonuses are awarded when every destination in a questline is visited:
+bonuses are calculated once from the current passport. Park questlines complete when every listed
+destination is visited; expedition questlines use distinct saved trip records:
 
 | Questline | Bonus XP |
 | --- | ---: |
@@ -58,6 +67,12 @@ bonuses are awarded when every destination in a questline is visited:
 | The Desert Furnace | 180 |
 | Realm of the Ancients | 150 |
 | Archipelago Wanderer | 200 |
+| Local Rambler — log 3 trips of 100 miles or less | 75 |
+| Long Haul — complete one trip of at least 500 miles | 100 |
+| Crossing Paths — one trip with stops in 3 US states or 2 countries | 125 |
+
+Local Rambler counts trips with measurable route distance; a trip with no recorded stops or route
+geometry earns its base expedition XP but cannot count toward the 100-mile quest.
 
 Level 1 begins at 0 XP. Level 2 requires 300 XP, so establishing a home Citadel alone will not
 advance a new explorer to Level 2. Later thresholds rise quadratically:
