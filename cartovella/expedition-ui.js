@@ -1108,8 +1108,23 @@ const GLOBAL_ROUTE_COLORS = {
   road: '#f59e0b', awd: '#f59e0b', flight: '#38bdf8',
   ferry: '#10b981', rail: '#c084fc', foot: '#f472b6'
 };
+// Continent membership follows Annexare Countries (MIT): https://github.com/annexare/Countries.
+const ROUTE_MAP_CONTINENT_COUNTRIES = Object.freeze({
+  Africa: 'AC AO BF BI BJ BW CD CF CG CI CM CV DJ DZ EG EH ER ET GA GH GM GN GQ GW KE KM LR LS LY MA MG ML MR MU MW MZ NA NE NG RE RW SC SD SH SL SN SO SS ST SZ TA TD TG TN TZ UG YT ZA ZM ZW',
+  Asia: 'AE AF AM AZ BD BH BN BT CC CN CX GE HK ID IL IN IO IQ IR JO JP KG KH KP KR KW KZ LA LB LK MM MN MO MV MY NP OM PH PK PS QA RU SA SG SY TH TJ TM TR TW UZ VN YE',
+  Europe: 'AD AL AT AX BA BE BG CH CY CZ DE DK EE ES FI FO FR GB GG GI GR HR HU IE IM IS IT JE LI LT LU LV MC MD ME MK MT NL NO PL PT RO RS SE SI SJ SK SM UA VA XK',
+  'North America': 'AG AI AW BB BL BM BQ BS BZ CA CR CU CW DM DO GD GL GP GT HN HT JM KN KY LC MF MQ MS MX NI PA PM PR SV SX TC TT US VC VG VI',
+  'South America': 'AR BO BR CL CO EC FK GF GY PE PY SR UY VE',
+  Oceania: 'AS AU CK FJ FM GU KI MH MP NC NF NR NU NZ PF PG PN PW SB TK TL TO TV UM VU WF WS',
+  Antarctica: 'AQ BV GS HM TF'
+});
+const ROUTE_MAP_CONTINENT_BY_COUNTRY = new Map();
+Object.entries(ROUTE_MAP_CONTINENT_COUNTRIES).forEach(([continent, countryCodes]) => {
+  countryCodes.split(' ').forEach(code => ROUTE_MAP_CONTINENT_BY_COUNTRY.set(code, continent));
+});
 let globalRoutesOpen = false;
 let globalRoutesZoomBehavior = null;
+let globalRoutesScope = 'global';
 const travelLogCountyIdCache = new WeakMap();
 
 const TRAVEL_LOG_MONTHS = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE',
@@ -1349,9 +1364,105 @@ function renderTravelLogMiniMap(exp) {
   else miniMap.setView(points[0], 8);
 }
 
+function routeMapCountryCode(feature) {
+  return feature?.properties?.name ? InternationalParks.countryCode(feature.properties.name) : null;
+}
+
+function routeMapCountryCodesAt(coords, features, cache) {
+  const key = `${coords[0]},${coords[1]}`;
+  if (cache.has(key)) return cache.get(key);
+  const codes = new Set((cachedPoliticalAt(coords[0], coords[1])?.countries || [])
+    .map(country => InternationalParks.countryCode(country)).filter(Boolean));
+  if (!codes.size) {
+    const feature = features.find(candidate => candidate?.geometry &&
+      d3.geoContains(candidate, [coords[1], coords[0]]));
+    const code = routeMapCountryCode(feature);
+    if (code) codes.add(code);
+  }
+  const result = [...codes];
+  cache.set(key, result);
+  return result;
+}
+
+function routeMapExpeditionPoints(exp) {
+  const stops = (exp.routeStops || []).map(stop => stop?.coords).filter(travelLogPoint);
+  return stops.length ? stops : (exp.routeCoords || []).filter(travelLogPoint);
+}
+
 function renderGlobalRoutesMap() {
   const svg = document.getElementById('svgGlobalRoutesMap');
-  const features = worldGeoJson || [];
+  const allFeatures = worldGeoJson || [];
+  const countryCache = new Map();
+  const home = AppState.homeBase && travelLogPoint([AppState.homeBase.lat, AppState.homeBase.lng])
+    ? AppState.homeBase : null;
+  const homeCodes = home
+    ? routeMapCountryCodesAt([home.lat, home.lng], allFeatures, countryCache) : [];
+  if (home?.countyId && !homeCodes.includes('US')) homeCodes.push('US');
+  const homeCountryCode = homeCodes.find(code =>
+    allFeatures.some(feature => routeMapCountryCode(feature) === code)) || null;
+  const homeFeature = homeCountryCode
+    ? allFeatures.find(feature => routeMapCountryCode(feature) === homeCountryCode) : null;
+  const homeCountryName = homeFeature?.properties?.name ||
+    (homeCountryCode ? new Intl.DisplayNames(['en'], { type: 'region' }).of(homeCountryCode) : null);
+  const homeContinent = homeCountryCode ? ROUTE_MAP_CONTINENT_BY_COUNTRY.get(homeCountryCode) : null;
+  const domesticCodes = homeCountryCode ? new Set([homeCountryCode]) : null;
+  const continentCodes = homeContinent
+    ? new Set(ROUTE_MAP_CONTINENT_COUNTRIES[homeContinent].split(' ')) : null;
+  const domesticFeatures = domesticCodes
+    ? allFeatures.filter(feature => domesticCodes.has(routeMapCountryCode(feature))) : [];
+  const continentFeatures = continentCodes
+    ? allFeatures.filter(feature => continentCodes.has(routeMapCountryCode(feature))) : [];
+
+  const scopeControl = document.getElementById('globalRoutesScope');
+  const domesticOption = document.getElementById('globalRoutesDomesticOption');
+  const continentOption = document.getElementById('globalRoutesContinentOption');
+  domesticOption.textContent = homeCountryName ? `Domestic · ${homeCountryName}` :
+    AppState.homeBase ? 'Domestic (unavailable)' : 'Domestic (set home base)';
+  continentOption.textContent = homeContinent ? `Continental · ${homeContinent}` :
+    AppState.homeBase ? 'Continental (unavailable)' : 'Continental (set home base)';
+  domesticOption.disabled = !domesticFeatures.length;
+  continentOption.disabled = !continentFeatures.length;
+
+  let scope = globalRoutesScope;
+  let mapFeatures = allFeatures;
+  let scopeCodes = null;
+  let scopeLabel = 'Global';
+  let scopeNotice = '';
+  if (scope === 'domestic') {
+    if (!domesticFeatures.length) {
+      scope = 'global';
+      scopeNotice = 'Domestic view needs a recognized home country and loaded map boundaries.';
+    } else {
+      mapFeatures = domesticFeatures;
+      scopeCodes = domesticCodes;
+      scopeLabel = `Domestic · ${homeCountryName}`;
+    }
+  } else if (scope === 'continental') {
+    if (!continentFeatures.length) {
+      scope = 'global';
+      scopeNotice = homeCountryCode
+        ? 'A continental view is not available for this home country.'
+        : 'Continental view needs a recognized home country and loaded map boundaries.';
+    } else {
+      mapFeatures = continentFeatures;
+      scopeCodes = continentCodes;
+      scopeLabel = `Continental · ${homeContinent}`;
+    }
+  }
+  globalRoutesScope = scope;
+  scopeControl.value = scope;
+
+  const expeditionInScope = exp => scopeCodes && routeMapExpeditionPoints(exp).some(coords =>
+    routeMapCountryCodesAt(coords, allFeatures, countryCache).some(code => scopeCodes.has(code)));
+  const expeditions = scopeCodes ? AppState.expeditions.filter(expeditionInScope) : AppState.expeditions;
+  document.getElementById('globalRoutesScopeStatus').textContent = scopeNotice ||
+    (scopeCodes
+      ? `Showing ${expeditions.length} of ${AppState.expeditions.length} expeditions with a stop in ${scopeLabel}. Cross-region routes may be clipped at the map edge.`
+      : homeCountryCode
+        ? `Showing all ${expeditions.length} expeditions worldwide.`
+        : 'Showing all expeditions worldwide. Set a home base to enable domestic and continental views.');
+
+  const features = mapFeatures;
   const collection = { type: 'FeatureCollection', features };
   const projection = d3.geoNaturalEarth1();
   if (features.length) projection.fitExtent([[24, 24], [1176, 560]], collection);
@@ -1367,7 +1478,7 @@ function renderGlobalRoutesMap() {
   const routes = [];
   const markers = [];
 
-  AppState.expeditions.forEach(exp => {
+  expeditions.forEach(exp => {
     const title = `${exp.name || 'Expedition'} · ${travelLogDateRange(exp)}`;
     travelLogLegs(exp).forEach(leg => {
       if (!Array.isArray(leg.coords) || leg.coords.length < 2 || !leg.coords.every(travelLogPoint)) return;
@@ -1388,18 +1499,21 @@ function renderGlobalRoutesMap() {
     });
     (exp.routeStops || []).forEach(stop => {
       if (!travelLogPoint(stop?.coords)) return;
+      if (scopeCodes &&
+          !routeMapCountryCodesAt(stop.coords, allFeatures, countryCache).some(code => scopeCodes.has(code))) return;
       const [cx, cy] = projection([stop.coords[1], stop.coords[0]]);
       markers.push(`<circle class="global-route-stop" cx="${cx}" cy="${cy}" r="2.5" fill="#e2e8f0" stroke="#020617" stroke-width="1"><title>${escapeHtml(`${exp.name || 'Expedition'} · ${stop.name || 'Stop'}`)}</title></circle>`);
     });
   });
 
-  const home = AppState.homeBase && travelLogPoint([AppState.homeBase.lat, AppState.homeBase.lng])
+  const homePosition = AppState.homeBase && travelLogPoint([AppState.homeBase.lat, AppState.homeBase.lng])
     ? projection([AppState.homeBase.lng, AppState.homeBase.lat]) : null;
-  const homeMarker = home
-    ? `<g class="global-route-home"><title>${escapeHtml(`Home Base · ${AppState.homeBase.name}`)}</title><circle cx="${home[0]}" cy="${home[1]}" r="11" fill="#f59e0b" fill-opacity="0.2" stroke="#fbbf24" stroke-width="1.5"></circle><text x="${home[0]}" y="${home[1] + 6}" text-anchor="middle" font-size="17" fill="#fbbf24">★</text></g>`
+  const homeMarker = homePosition
+    ? `<g class="global-route-home"><title>${escapeHtml(`Home Base · ${AppState.homeBase.name}`)}</title><circle cx="${homePosition[0]}" cy="${homePosition[1]}" r="11" fill="#f59e0b" fill-opacity="0.2" stroke="#fbbf24" stroke-width="1.5"></circle><text x="${homePosition[0]}" y="${homePosition[1] + 6}" text-anchor="middle" font-size="17" fill="#fbbf24">★</text></g>`
     : '';
 
   svg.innerHTML = `<rect class="global-routes-ocean" width="1200" height="630" fill="#040814"></rect><g class="global-routes-zoom"><path class="global-routes-graticule" fill="none" stroke="#1e293b" stroke-width="0.6" d="${graticule}"></path>${countries}${routes.join('')}${markers.join('')}${homeMarker}</g>`;
+  svg.setAttribute('aria-label', `${scopeLabel} route map showing ${expeditions.length} expeditions`);
   globalRoutesZoomBehavior = d3.zoom().scaleExtent([1, 14]).on('zoom', event => {
     d3.select(svg).select('.global-routes-zoom').attr('transform', event.transform);
   });
@@ -1876,6 +1990,17 @@ document.getElementById('btnExpedition').addEventListener('click', () => openExp
 document.getElementById('btnHistoryExpedition').addEventListener('click', () => openExpedition());
 document.getElementById('btnToggleTravelRoutes').addEventListener('click', () =>
   setGlobalRoutesView(!globalRoutesOpen));
+document.getElementById('globalRoutesScope').addEventListener('change', event => {
+  const scope = event.currentTarget.value;
+  if (!['global', 'domestic', 'continental'].includes(scope)) {
+    event.currentTarget.value = globalRoutesScope;
+    document.getElementById('globalRoutesScopeStatus').textContent = 'Choose a valid route map area.';
+    return;
+  }
+  globalRoutesScope = scope;
+  renderGlobalRoutesMap();
+  resetGlobalRoutesZoom();
+});
 document.getElementById('btnResetGlobalRoutesZoom').addEventListener('click', resetGlobalRoutesZoom);
 document.getElementById('btnExportRoutesPng').addEventListener('click', () => {
   exportGlobalRoutesPng().catch(error => {

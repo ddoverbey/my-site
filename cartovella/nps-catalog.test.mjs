@@ -165,7 +165,7 @@ check('home citadel setup can be dismissed by its close button, backdrop, or Esc
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261022-cartovella-cloudsync')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261023-cartovella-route-scopes')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('legacy app URL redirects to Cartovella while preserving share-link query and hash', () => {
@@ -5434,6 +5434,10 @@ check('Global Route Map renders country and expedition paths and toggles indepen
   const toggleAttributes = {};
   const toggle = element('btnToggleTravelRoutes');
   const originalSetAttribute = toggle.setAttribute;
+  const originalPoliticalAt = context.cachedPoliticalAt;
+  const routeScope = element('globalRoutesScope');
+  const domesticOption = element('globalRoutesDomesticOption');
+  const continentOption = element('globalRoutesContinentOption');
   toggle.setAttribute = (name, value) => { toggleAttributes[name] = value; };
   const zoomIdentity = { toString: () => 'translate(0,0) scale(1)' };
   context.d3 = {
@@ -5455,13 +5459,24 @@ check('Global Route Map renders country and expedition paths and toggles indepen
   vm.runInContext(`
     globalThis.routeMapTestSaved = {
       expeditions: AppState.expeditions, homeBase: AppState.homeBase, worldGeoJson,
-      open: globalRoutesOpen, zoom: globalRoutesZoomBehavior
+      open: globalRoutesOpen, zoom: globalRoutesZoomBehavior, scope: globalRoutesScope,
+      politicalAt: cachedPoliticalAt
     };
-    worldGeoJson = [{
-      type: 'Feature', properties: { name: 'Example Nation' },
-      geometry: { type: 'Polygon', coordinates: [[[-160,-55],[-160,70],[165,70],[165,-55],[-160,-55]]] }
-    }];
-    AppState.homeBase = { name: 'Test Base', lat: 0, lng: 0 };
+    worldGeoJson = [
+      { type: 'Feature', properties: { name: 'United States of America' },
+        geometry: { type: 'Polygon', coordinates: [[[-125,24],[-125,49],[-66,49],[-66,24],[-125,24]]] } },
+      { type: 'Feature', properties: { name: 'Canada' },
+        geometry: { type: 'Polygon', coordinates: [[[-141,49],[-141,70],[-52,70],[-52,49],[-141,49]]] } },
+      { type: 'Feature', properties: { name: 'France' },
+        geometry: { type: 'Polygon', coordinates: [[[-5,42],[-5,51],[8,51],[8,42],[-5,42]]] } },
+      { type: 'Feature', properties: { name: 'United Kingdom' },
+        geometry: { type: 'Polygon', coordinates: [[[-8,50],[-8,59],[2,59],[2,50],[-8,50]]] } }
+    ];
+    cachedPoliticalAt = (lat, lng) => ({
+      countries: lng < -60 ? ['United States of America'] :
+        lng < -50 ? ['Canada'] : lng < 0 ? ['United Kingdom'] : ['France']
+    });
+    AppState.homeBase = { name: 'Test Base', lat: 40.7, lng: -74 };
     AppState.expeditions = [{
       id: 'global-route-test', name: 'Atlantic Flight', startDate: '2026-06-01',
       endDate: '2026-06-02', transitTags: ['flight'], purposeTags: [],
@@ -5475,8 +5490,22 @@ check('Global Route Map renders country and expedition paths and toggles indepen
         mode: 'flight', routeSource: 'direct',
         routeCoords: [[40.7,-74],[51.5,-0.1]]
       }]
+    }, {
+      id: 'europe-route-test', name: 'European Weekend', startDate: '2026-06-03',
+      endDate: '2026-06-04', transitTags: ['train'], purposeTags: [],
+      countyIds: [], parkIds: [], customPoiIds: [],
+      routeStops: [
+        { kind: 'place', name: 'Paris', coords: [48.9,2.3] },
+        { kind: 'place', name: 'London', coords: [51.5,-0.1] }
+      ],
+      routeCoords: [[48.9,2.3],[51.5,-0.1]],
+      routeLegs: [{
+        mode: 'train', routeSource: 'direct',
+        routeCoords: [[48.9,2.3],[51.5,-0.1]]
+      }]
     }];
     globalRoutesOpen = false;
+    globalRoutesScope = 'global';
   `, context);
   try {
     toggle.handlers.click();
@@ -5490,6 +5519,42 @@ check('Global Route Map renders country and expedition paths and toggles indepen
     assert.equal(classLists.get('btnExportRoutesPng').state.hidden, false);
     assert.equal(toggleAttributes['aria-expanded'], 'true');
     assert.equal(toggleAttributes['aria-pressed'], 'true');
+
+    assert.equal(domesticOption.disabled, false);
+    assert.equal(continentOption.disabled, false);
+    assert.match(continentOption.textContent, /North America/);
+    vm.runInContext('globalThis.routeMapScopeSavedHomeBase = AppState.homeBase; AppState.homeBase = null', context);
+    routeScope.value = 'domestic';
+    routeScope.handlers.change({ currentTarget: routeScope });
+    assert.equal(routeScope.value, 'global');
+    assert.equal(domesticOption.disabled, true);
+    assert.equal(continentOption.disabled, true);
+    assert.match(element('globalRoutesScopeStatus').textContent, /Domestic view needs a recognized home country/);
+
+    vm.runInContext('AppState.homeBase = routeMapScopeSavedHomeBase; delete globalThis.routeMapScopeSavedHomeBase', context);
+    routeScope.value = 'global';
+    routeScope.handlers.change({ currentTarget: routeScope });
+    routeScope.value = 'domestic';
+    routeScope.handlers.change({ currentTarget: routeScope });
+    let regionalSvg = element('svgGlobalRoutesMap').innerHTML;
+    assert.match(regionalSvg, /<title>United States of America<\/title>/);
+    assert.doesNotMatch(regionalSvg, /<title>France<\/title>|<title>United Kingdom<\/title>/);
+    assert.match(regionalSvg, /Atlantic Flight/);
+    assert.doesNotMatch(regionalSvg, /European Weekend/);
+    assert.match(element('globalRoutesScopeStatus').textContent, /Domestic · United States of America/);
+
+    routeScope.value = 'continental';
+    routeScope.handlers.change({ currentTarget: routeScope });
+    regionalSvg = element('svgGlobalRoutesMap').innerHTML;
+    assert.match(regionalSvg, /<title>United States of America<\/title>/);
+    assert.match(regionalSvg, /<title>Canada<\/title>/);
+    assert.doesNotMatch(regionalSvg, /<title>France<\/title>|<title>United Kingdom<\/title>/);
+    assert.match(regionalSvg, /Atlantic Flight/);
+    assert.doesNotMatch(regionalSvg, /European Weekend/);
+    assert.match(element('globalRoutesScopeStatus').textContent, /Continental · North America/);
+
+    routeScope.value = 'global';
+    routeScope.handlers.change({ currentTarget: routeScope });
     toggle.handlers.click();
     assert.equal(classLists.get('travelGlobalRoutesPanel').state.hidden, true);
     assert.equal(classLists.get('travelLogFeed').state.hidden, false);
@@ -5499,6 +5564,7 @@ check('Global Route Map renders country and expedition paths and toggles indepen
   } finally {
     for (const [id, entry] of classLists) element(id).classList = entry.original;
     toggle.setAttribute = originalSetAttribute;
+    context.cachedPoliticalAt = originalPoliticalAt;
     context.d3 = previousD3;
     vm.runInContext(`
       AppState.expeditions = routeMapTestSaved.expeditions;
@@ -5506,6 +5572,9 @@ check('Global Route Map renders country and expedition paths and toggles indepen
       worldGeoJson = routeMapTestSaved.worldGeoJson;
       globalRoutesOpen = routeMapTestSaved.open;
       globalRoutesZoomBehavior = routeMapTestSaved.zoom;
+      globalRoutesScope = routeMapTestSaved.scope;
+      cachedPoliticalAt = routeMapTestSaved.politicalAt;
+      delete globalThis.routeMapScopeSavedHomeBase;
       delete globalThis.routeMapTestSaved;
     `, context);
   }
