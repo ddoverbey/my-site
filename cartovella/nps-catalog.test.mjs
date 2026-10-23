@@ -165,7 +165,7 @@ check('home citadel setup can be dismissed by its close button, backdrop, or Esc
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261023-cartovella-route-scopes')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261023-cartovella-year-atlas')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('legacy app URL redirects to Cartovella while preserving share-link query and hash', () => {
@@ -5435,7 +5435,10 @@ check('Global Route Map renders country and expedition paths and toggles indepen
   const toggle = element('btnToggleTravelRoutes');
   const originalSetAttribute = toggle.setAttribute;
   const originalPoliticalAt = context.cachedPoliticalAt;
+  const originalCreateElementNS = context.document.createElementNS;
   const routeScope = element('globalRoutesScope');
+  const routeYear = element('globalRoutesYear');
+  const atlasStyle = element('globalRoutesAtlasStyle');
   const domesticOption = element('globalRoutesDomesticOption');
   const continentOption = element('globalRoutesContinentOption');
   toggle.setAttribute = (name, value) => { toggleAttributes[name] = value; };
@@ -5460,7 +5463,8 @@ check('Global Route Map renders country and expedition paths and toggles indepen
     globalThis.routeMapTestSaved = {
       expeditions: AppState.expeditions, homeBase: AppState.homeBase, worldGeoJson,
       open: globalRoutesOpen, zoom: globalRoutesZoomBehavior, scope: globalRoutesScope,
-      politicalAt: cachedPoliticalAt
+      year: globalRoutesYear, atlasStyle: globalRoutesAtlasStyle,
+      visibleExpeditions: globalRoutesVisibleExpeditions, politicalAt: cachedPoliticalAt
     };
     worldGeoJson = [
       { type: 'Feature', properties: { name: 'United States of America' },
@@ -5491,8 +5495,8 @@ check('Global Route Map renders country and expedition paths and toggles indepen
         routeCoords: [[40.7,-74],[51.5,-0.1]]
       }]
     }, {
-      id: 'europe-route-test', name: 'European Weekend', startDate: '2026-06-03',
-      endDate: '2026-06-04', transitTags: ['train'], purposeTags: [],
+      id: 'europe-route-test', name: 'European Weekend', startDate: '2025-06-03',
+      endDate: '2025-06-04', transitTags: ['train'], purposeTags: [],
       countyIds: [], parkIds: [], customPoiIds: [],
       routeStops: [
         { kind: 'place', name: 'Paris', coords: [48.9,2.3] },
@@ -5506,6 +5510,9 @@ check('Global Route Map renders country and expedition paths and toggles indepen
     }];
     globalRoutesOpen = false;
     globalRoutesScope = 'global';
+    globalRoutesYear = 'all';
+    globalRoutesAtlasStyle = 'midnight';
+    globalRoutesVisibleExpeditions = [];
   `, context);
   try {
     toggle.handlers.click();
@@ -5519,6 +5526,49 @@ check('Global Route Map renders country and expedition paths and toggles indepen
     assert.equal(classLists.get('btnExportRoutesPng').state.hidden, false);
     assert.equal(toggleAttributes['aria-expanded'], 'true');
     assert.equal(toggleAttributes['aria-pressed'], 'true');
+    assert.equal(routeYear.value, 'all');
+    assert.match(routeYear.innerHTML, /value="2026">2026/);
+    assert.match(routeYear.innerHTML, /value="2025">2025/);
+    assert.match(html, /Atlas styles recolor the built-in vector map; no external basemap tiles are loaded/);
+    assert.match(html, /<footer[^>]*>[\s\S]*?Cartovella<\/span>/);
+
+    routeYear.value = '2025';
+    routeYear.handlers.change({ currentTarget: routeYear });
+    let yearlySvg = element('svgGlobalRoutesMap').innerHTML;
+    assert.doesNotMatch(yearlySvg, /Atlantic Flight/);
+    assert.match(yearlySvg, /European Weekend/);
+    assert.match(element('globalRoutesScopeStatus').textContent, /for 2025/);
+    assert.equal(vm.runInContext('globalRoutesExportYearLabel()', context), '2025');
+
+    const exportElements = [];
+    context.document.createElementNS = (namespace, name) => ({
+      namespace, name, attributes: {}, children: [], textContent: '',
+      setAttribute(key, value) { this.attributes[key] = value; },
+      appendChild(child) { this.children.push(child); }
+    });
+    context.routeMapExportSvg = { children: [], appendChild(child) { this.children.push(child); } };
+    const yearTitle = vm.runInContext(
+      'appendGlobalRoutesExportYearTitle(routeMapExportSvg, GLOBAL_ROUTE_MAP_STYLES[globalRoutesAtlasStyle])',
+      context
+    );
+    exportElements.push(...context.routeMapExportSvg.children);
+    assert.equal(yearTitle.textContent, '2025');
+    assert.equal(yearTitle.attributes['font-size'], 78);
+    assert.equal(exportElements[0].attributes.class, 'global-routes-export-year');
+
+    routeYear.value = 'all';
+    routeYear.handlers.change({ currentTarget: routeYear });
+    assert.equal(vm.runInContext('globalRoutesExportYearLabel()', context), 'ALL YEARS');
+    atlasStyle.value = 'classic';
+    atlasStyle.handlers.change({ currentTarget: atlasStyle });
+    assert.match(element('svgGlobalRoutesMap').innerHTML, /fill="#dceaf2"/);
+    assert.match(element('svgGlobalRoutesMap').innerHTML, /fill="#f5f1e6"/);
+    atlasStyle.value = 'parchment';
+    atlasStyle.handlers.change({ currentTarget: atlasStyle });
+    assert.match(element('svgGlobalRoutesMap').innerHTML, /fill="#e9dec5"/);
+    assert.match(element('svgGlobalRoutesMap').innerHTML, /fill="#d3c19d"/);
+    atlasStyle.value = 'midnight';
+    atlasStyle.handlers.change({ currentTarget: atlasStyle });
 
     assert.equal(domesticOption.disabled, false);
     assert.equal(continentOption.disabled, false);
@@ -5565,6 +5615,9 @@ check('Global Route Map renders country and expedition paths and toggles indepen
     for (const [id, entry] of classLists) element(id).classList = entry.original;
     toggle.setAttribute = originalSetAttribute;
     context.cachedPoliticalAt = originalPoliticalAt;
+    if (originalCreateElementNS === undefined) delete context.document.createElementNS;
+    else context.document.createElementNS = originalCreateElementNS;
+    delete context.routeMapExportSvg;
     context.d3 = previousD3;
     vm.runInContext(`
       AppState.expeditions = routeMapTestSaved.expeditions;
@@ -5573,6 +5626,9 @@ check('Global Route Map renders country and expedition paths and toggles indepen
       globalRoutesOpen = routeMapTestSaved.open;
       globalRoutesZoomBehavior = routeMapTestSaved.zoom;
       globalRoutesScope = routeMapTestSaved.scope;
+      globalRoutesYear = routeMapTestSaved.year;
+      globalRoutesAtlasStyle = routeMapTestSaved.atlasStyle;
+      globalRoutesVisibleExpeditions = routeMapTestSaved.visibleExpeditions;
       cachedPoliticalAt = routeMapTestSaved.politicalAt;
       delete globalThis.routeMapScopeSavedHomeBase;
       delete globalThis.routeMapTestSaved;

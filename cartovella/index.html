@@ -765,9 +765,20 @@
                 <option id="globalRoutesDomesticOption" value="domestic">Domestic (set home base)</option>
                 <option id="globalRoutesContinentOption" value="continental">Continental (set home base)</option>
               </select>
+              <label for="globalRoutesYear" class="text-xs text-slate-300">Year</label>
+              <select id="globalRoutesYear" class="rounded-lg border border-slate-700 bg-slate-900 px-2 py-2 text-xs text-slate-100" aria-label="Filter route map by year">
+                <option value="all">All years</option>
+              </select>
+              <label for="globalRoutesAtlasStyle" class="text-xs text-slate-300">Atlas style</label>
+              <select id="globalRoutesAtlasStyle" class="rounded-lg border border-slate-700 bg-slate-900 px-2 py-2 text-xs text-slate-100" aria-label="Choose route map atlas style">
+                <option value="midnight">Midnight</option>
+                <option value="classic">Classic</option>
+                <option value="parchment">Parchment</option>
+              </select>
               <button id="btnResetGlobalRoutesZoom" type="button" class="shrink-0 rounded-lg bg-slate-800 px-3 py-2 text-xs text-slate-200">Reset zoom</button>
             </div>
           </div>
+          <p class="text-[10px] text-slate-500">Atlas styles recolor the built-in vector map; no external basemap tiles are loaded.</p>
           <p id="globalRoutesScopeStatus" class="text-[11px] text-slate-400" role="status" aria-live="polite"></p>
           <svg id="svgGlobalRoutesMap" class="w-full rounded-xl bg-[#040814]" viewBox="0 0 1200 630" role="img" aria-label="Global map of all logged expeditions" tabindex="0"></svg>
         </section>
@@ -857,6 +868,9 @@
     </div>
 
   </main>
+  <footer class="flex-none px-3 py-1 text-center text-[10px] tracking-[0.2em] text-slate-500/70" aria-label="Cartovella">
+    <span class="cinzel">Cartovella</span>
+  </footer>
 
   <div id="homeBaseModal" role="dialog" aria-modal="true" aria-labelledby="homeBaseModalTitle" class="hidden fixed inset-0 z-[1000] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 transition-all duration-300">
     <div class="relative rpg-panel rpg-panel-gold max-w-lg w-full rounded-3xl p-6 sm:p-8 text-center space-y-6">
@@ -1105,14 +1119,14 @@
     </section>
   </div>
 
-  <script src="./nps-catalog.js?v=20261023-cartovella-route-scopes"></script>
-  <script src="./national-parks-scratch.js?v=20261023-cartovella-route-scopes"></script>
-  <script src="./international-parks.js?v=20261023-cartovella-route-scopes"></script>
-  <script src="./ecoregions.js?v=20261023-cartovella-route-scopes"></script>
-  <script src="./coordinate-lookups.js?v=20261023-cartovella-route-scopes"></script>
-  <script src="./micro-states.js?v=20261023-cartovella-route-scopes"></script>
-  <script src="./travel-ledger.js?v=20261023-cartovella-route-scopes"></script>
-  <script src="./rarity-config.js?v=20261023-cartovella-route-scopes"></script>
+  <script src="./nps-catalog.js?v=20261023-cartovella-year-atlas"></script>
+  <script src="./national-parks-scratch.js?v=20261023-cartovella-year-atlas"></script>
+  <script src="./international-parks.js?v=20261023-cartovella-year-atlas"></script>
+  <script src="./ecoregions.js?v=20261023-cartovella-year-atlas"></script>
+  <script src="./coordinate-lookups.js?v=20261023-cartovella-year-atlas"></script>
+  <script src="./micro-states.js?v=20261023-cartovella-year-atlas"></script>
+  <script src="./travel-ledger.js?v=20261023-cartovella-year-atlas"></script>
+  <script src="./rarity-config.js?v=20261023-cartovella-year-atlas"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -5965,7 +5979,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261023-cartovella-route-scopes"></script>
+  <script src="./expedition-ui.js?v=20261023-cartovella-year-atlas"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);

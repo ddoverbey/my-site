@@ -1108,6 +1108,25 @@ const GLOBAL_ROUTE_COLORS = {
   road: '#f59e0b', awd: '#f59e0b', flight: '#38bdf8',
   ferry: '#10b981', rail: '#c084fc', foot: '#f472b6'
 };
+const GLOBAL_ROUTE_MAP_STYLES = Object.freeze({
+  midnight: {
+    ocean: '#040814', land: '#0f172a', visited: '#13233f',
+    border: '#1e293b', graticule: '#1e293b', text: '#e2e8f0',
+    routes: GLOBAL_ROUTE_COLORS
+  },
+  classic: {
+    ocean: '#dceaf2', land: '#f5f1e6', visited: '#c6dfc4',
+    border: '#82919c', graticule: '#afbdc4', text: '#1e293b',
+    routes: { road: '#b45309', awd: '#b45309', flight: '#0369a1',
+      ferry: '#047857', rail: '#7e22ce', foot: '#be185d' }
+  },
+  parchment: {
+    ocean: '#e9dec5', land: '#d3c19d', visited: '#a7bd91',
+    border: '#907d5a', graticule: '#bcac8c', text: '#3b3428',
+    routes: { road: '#92400e', awd: '#92400e', flight: '#075985',
+      ferry: '#166534', rail: '#6b21a8', foot: '#9d174d' }
+  }
+});
 // Continent membership follows Annexare Countries (MIT): https://github.com/annexare/Countries.
 const ROUTE_MAP_CONTINENT_COUNTRIES = Object.freeze({
   Africa: 'AC AO BF BI BJ BW CD CF CG CI CM CV DJ DZ EG EH ER ET GA GH GM GN GQ GW KE KM LR LS LY MA MG ML MR MU MW MZ NA NE NG RE RW SC SD SH SL SN SO SS ST SZ TA TD TG TN TZ UG YT ZA ZM ZW',
@@ -1125,6 +1144,9 @@ Object.entries(ROUTE_MAP_CONTINENT_COUNTRIES).forEach(([continent, countryCodes]
 let globalRoutesOpen = false;
 let globalRoutesZoomBehavior = null;
 let globalRoutesScope = 'global';
+let globalRoutesYear = 'all';
+let globalRoutesAtlasStyle = 'midnight';
+let globalRoutesVisibleExpeditions = [];
 const travelLogCountyIdCache = new WeakMap();
 
 const TRAVEL_LOG_MONTHS = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE',
@@ -1140,6 +1162,32 @@ function travelLogPeriod(exp) {
 function travelLogDateRange(exp) {
   if (!exp.startDate && !exp.endDate) return 'Dates not specified';
   return `${exp.startDate || '?'} – ${exp.endDate || '?'}`;
+}
+
+function routeMapYearFromDate(date) {
+  if (typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+  const parsed = new Date(`${date}T00:00:00.000Z`);
+  return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === date
+    ? Number(date.slice(0, 4)) : null;
+}
+
+function routeMapExpeditionYears(exp) {
+  const startYear = routeMapYearFromDate(exp.startDate);
+  const endYear = routeMapYearFromDate(exp.endDate);
+  if (startYear === null && endYear === null) return [];
+  const firstYear = Math.min(startYear ?? endYear, endYear ?? startYear);
+  const lastYear = Math.max(startYear ?? endYear, endYear ?? startYear);
+  return Array.from({ length: lastYear - firstYear + 1 }, (_, index) => firstYear + index);
+}
+
+function routeMapAvailableYears() {
+  const years = new Set();
+  AppState.expeditions.forEach(exp => routeMapExpeditionYears(exp).forEach(year => years.add(year)));
+  return [...years].sort((a, b) => b - a);
+}
+
+function globalRoutesExportYearLabel() {
+  return globalRoutesYear === 'all' ? 'ALL YEARS' : globalRoutesYear;
 }
 
 function travelLogStopNames(exp) {
@@ -1416,12 +1464,29 @@ function renderGlobalRoutesMap() {
   const scopeControl = document.getElementById('globalRoutesScope');
   const domesticOption = document.getElementById('globalRoutesDomesticOption');
   const continentOption = document.getElementById('globalRoutesContinentOption');
+  const yearControl = document.getElementById('globalRoutesYear');
+  const atlasStyleControl = document.getElementById('globalRoutesAtlasStyle');
   domesticOption.textContent = homeCountryName ? `Domestic · ${homeCountryName}` :
     AppState.homeBase ? 'Domestic (unavailable)' : 'Domestic (set home base)';
   continentOption.textContent = homeContinent ? `Continental · ${homeContinent}` :
     AppState.homeBase ? 'Continental (unavailable)' : 'Continental (set home base)';
   domesticOption.disabled = !domesticFeatures.length;
   continentOption.disabled = !continentFeatures.length;
+
+  const availableYears = routeMapAvailableYears();
+  let yearNotice = '';
+  if (globalRoutesYear !== 'all' &&
+      (!/^\d{4}$/.test(globalRoutesYear) || !availableYears.includes(Number(globalRoutesYear)))) {
+    globalRoutesYear = 'all';
+    yearNotice = 'The selected year is no longer available. Showing all years.';
+  }
+  yearControl.innerHTML = `<option value="all">All years</option>${availableYears
+    .map(year => `<option value="${year}">${year}</option>`).join('')}`;
+  yearControl.value = globalRoutesYear;
+  atlasStyleControl.value = globalRoutesAtlasStyle;
+  const yearFilteredExpeditions = globalRoutesYear === 'all'
+    ? AppState.expeditions
+    : AppState.expeditions.filter(exp => routeMapExpeditionYears(exp).includes(Number(globalRoutesYear)));
 
   let scope = globalRoutesScope;
   let mapFeatures = allFeatures;
@@ -1454,25 +1519,30 @@ function renderGlobalRoutesMap() {
 
   const expeditionInScope = exp => scopeCodes && routeMapExpeditionPoints(exp).some(coords =>
     routeMapCountryCodesAt(coords, allFeatures, countryCache).some(code => scopeCodes.has(code)));
-  const expeditions = scopeCodes ? AppState.expeditions.filter(expeditionInScope) : AppState.expeditions;
-  document.getElementById('globalRoutesScopeStatus').textContent = scopeNotice ||
+  const expeditions = scopeCodes
+    ? yearFilteredExpeditions.filter(expeditionInScope) : yearFilteredExpeditions;
+  globalRoutesVisibleExpeditions = expeditions;
+  const yearLabel = globalRoutesYear === 'all' ? 'all years' : globalRoutesYear;
+  const notices = [yearNotice, scopeNotice].filter(Boolean).join(' ');
+  document.getElementById('globalRoutesScopeStatus').textContent = notices ||
     (scopeCodes
-      ? `Showing ${expeditions.length} of ${AppState.expeditions.length} expeditions with a stop in ${scopeLabel}. Cross-region routes may be clipped at the map edge.`
+      ? `Showing ${expeditions.length} of ${yearFilteredExpeditions.length} expeditions with a stop in ${scopeLabel} for ${yearLabel}. Cross-region routes may be clipped at the map edge.`
       : homeCountryCode
-        ? `Showing all ${expeditions.length} expeditions worldwide.`
-        : 'Showing all expeditions worldwide. Set a home base to enable domestic and continental views.');
+        ? `Showing ${expeditions.length} expeditions worldwide for ${yearLabel}.`
+        : `Showing ${expeditions.length} expeditions worldwide for ${yearLabel}. Set a home base to enable domestic and continental views.`);
 
   const features = mapFeatures;
   const collection = { type: 'FeatureCollection', features };
   const projection = d3.geoNaturalEarth1();
   if (features.length) projection.fitExtent([[24, 24], [1176, 560]], collection);
   const path = d3.geoPath(projection);
+  const mapStyle = GLOBAL_ROUTE_MAP_STYLES[globalRoutesAtlasStyle];
   const stats = calculateStats();
   const visitedCountries = new Set(stats.visitedCountries);
   const countries = features.filter(feature => feature?.geometry).map(feature => {
     const name = feature.properties?.name || 'Unknown country';
-    const fill = visitedCountries.has(name) ? '#13233f' : '#0f172a';
-    return `<path class="global-country" fill="${fill}" stroke="#1e293b" stroke-width="0.8" d="${path(feature) || ''}"><title>${escapeHtml(name)}</title></path>`;
+    const fill = visitedCountries.has(name) ? mapStyle.visited : mapStyle.land;
+    return `<path class="global-country" fill="${fill}" stroke="${mapStyle.border}" stroke-width="0.8" d="${path(feature) || ''}"><title>${escapeHtml(name)}</title></path>`;
   }).join('');
   const graticule = path(d3.geoGraticule()) || '';
   const routes = [];
@@ -1494,7 +1564,7 @@ function renderGlobalRoutesMap() {
         : leg.coords.map(([lat, lng]) => [lng, lat]);
       const routePath = path({ type: 'LineString', coordinates });
       if (!routePath) return;
-      const color = GLOBAL_ROUTE_COLORS[leg.mode] || '#94a3b8';
+      const color = mapStyle.routes[leg.mode] || '#94a3b8';
       routes.push(`<path class="global-route" data-mode="${escapeHtml(leg.mode)}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"${leg.mode === 'flight' ? ' stroke-dasharray="6 5"' : ''} d="${routePath}"><title>${escapeHtml(title)}</title></path>`);
     });
     (exp.routeStops || []).forEach(stop => {
@@ -1512,8 +1582,9 @@ function renderGlobalRoutesMap() {
     ? `<g class="global-route-home"><title>${escapeHtml(`Home Base · ${AppState.homeBase.name}`)}</title><circle cx="${homePosition[0]}" cy="${homePosition[1]}" r="11" fill="#f59e0b" fill-opacity="0.2" stroke="#fbbf24" stroke-width="1.5"></circle><text x="${homePosition[0]}" y="${homePosition[1] + 6}" text-anchor="middle" font-size="17" fill="#fbbf24">★</text></g>`
     : '';
 
-  svg.innerHTML = `<rect class="global-routes-ocean" width="1200" height="630" fill="#040814"></rect><g class="global-routes-zoom"><path class="global-routes-graticule" fill="none" stroke="#1e293b" stroke-width="0.6" d="${graticule}"></path>${countries}${routes.join('')}${markers.join('')}${homeMarker}</g>`;
+  svg.innerHTML = `<rect class="global-routes-ocean" width="1200" height="630" fill="${mapStyle.ocean}"></rect><g class="global-routes-zoom"><path class="global-routes-graticule" fill="none" stroke="${mapStyle.graticule}" stroke-width="0.6" d="${graticule}"></path>${countries}${routes.join('')}${markers.join('')}${homeMarker}</g>`;
   svg.setAttribute('aria-label', `${scopeLabel} route map showing ${expeditions.length} expeditions`);
+  svg.setAttribute('data-atlas-style', globalRoutesAtlasStyle);
   globalRoutesZoomBehavior = d3.zoom().scaleExtent([1, 14]).on('zoom', event => {
     d3.select(svg).select('.global-routes-zoom').attr('transform', event.transform);
   });
@@ -1543,6 +1614,20 @@ function appendSvgElement(parent, name, attributes = {}) {
   Object.entries(attributes).forEach(([key, value]) => element.setAttribute(key, value));
   parent.appendChild(element);
   return element;
+}
+
+function appendGlobalRoutesExportYearTitle(svg, mapStyle) {
+  const group = appendSvgElement(svg, 'g', { class: 'global-routes-export-year' });
+  appendSvgElement(group, 'rect', {
+    x: 360, y: 18, width: 480, height: 104, rx: 14,
+    fill: mapStyle.land, 'fill-opacity': 0.94, stroke: mapStyle.border, 'stroke-width': 2
+  });
+  const title = appendSvgElement(group, 'text', {
+    x: 600, y: 94, fill: mapStyle.text, 'font-family': 'Inter, Arial, sans-serif',
+    'font-size': globalRoutesYear === 'all' ? 58 : 78, 'font-weight': 700, 'text-anchor': 'middle'
+  });
+  title.textContent = globalRoutesExportYearLabel();
+  return title;
 }
 
 function canvasPngBlob(canvas) {
@@ -1575,14 +1660,21 @@ async function exportGlobalRoutesPng() {
   svg.setAttribute('height', '1260');
   svg.querySelector('.global-routes-zoom')?.setAttribute('transform', 'translate(0,0) scale(1)');
 
+  const mapStyle = GLOBAL_ROUTE_MAP_STYLES[globalRoutesAtlasStyle];
   const stats = calculateStats();
+  appendGlobalRoutesExportYearTitle(svg, mapStyle);
   const footer = appendSvgElement(svg, 'g', { class: 'global-routes-export-footer' });
-  appendSvgElement(footer, 'rect', { x: 0, y: 570, width: 1200, height: 60, fill: '#0b1220' });
+  appendSvgElement(footer, 'rect', { x: 0, y: 570, width: 1200, height: 60, fill: mapStyle.land });
   const banner = appendSvgElement(footer, 'text', {
-    x: 32, y: 608, fill: '#e2e8f0', 'font-family': 'Inter, Arial, sans-serif',
+    x: 32, y: 608, fill: mapStyle.text, 'font-family': 'Inter, Arial, sans-serif',
     'font-size': 20, 'font-weight': 600
   });
-  banner.textContent = `CARTOVELLA • ${stats.cls} (Level ${stats.level}) • ${AppState.expeditions.length} Expeditions • ${stats.countriesCount} Countries`;
+  banner.textContent = `${stats.cls} (Level ${stats.level}) • ${globalRoutesVisibleExpeditions.length} Expeditions • ${stats.countriesCount} Countries`;
+  const watermark = appendSvgElement(footer, 'text', {
+    x: 1168, y: 608, fill: mapStyle.text, 'fill-opacity': 0.7,
+    'font-family': 'Cinzel, Georgia, serif', 'font-size': 14, 'font-weight': 600, 'text-anchor': 'end'
+  });
+  watermark.textContent = 'Cartovella';
 
   const svgBlob = new Blob([new XMLSerializer().serializeToString(svg)], { type: 'image/svg+xml;charset=utf-8' });
   const svgUrl = URL.createObjectURL(svgBlob);
@@ -2000,6 +2092,29 @@ document.getElementById('globalRoutesScope').addEventListener('change', event =>
   globalRoutesScope = scope;
   renderGlobalRoutesMap();
   resetGlobalRoutesZoom();
+});
+document.getElementById('globalRoutesYear').addEventListener('change', event => {
+  const year = event.currentTarget.value;
+  if (year !== 'all' &&
+      (!/^\d{4}$/.test(year) || !routeMapAvailableYears().includes(Number(year)))) {
+    event.currentTarget.value = globalRoutesYear;
+    document.getElementById('globalRoutesScopeStatus').textContent =
+      'Choose a year with at least one dated expedition.';
+    return;
+  }
+  globalRoutesYear = year;
+  renderGlobalRoutesMap();
+  resetGlobalRoutesZoom();
+});
+document.getElementById('globalRoutesAtlasStyle').addEventListener('change', event => {
+  const style = event.currentTarget.value;
+  if (!Object.prototype.hasOwnProperty.call(GLOBAL_ROUTE_MAP_STYLES, style)) {
+    event.currentTarget.value = globalRoutesAtlasStyle;
+    document.getElementById('globalRoutesScopeStatus').textContent = 'Choose a valid atlas style.';
+    return;
+  }
+  globalRoutesAtlasStyle = style;
+  renderGlobalRoutesMap();
 });
 document.getElementById('btnResetGlobalRoutesZoom').addEventListener('click', resetGlobalRoutesZoom);
 document.getElementById('btnExportRoutesPng').addEventListener('click', () => {
