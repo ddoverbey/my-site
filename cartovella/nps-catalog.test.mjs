@@ -5555,6 +5555,23 @@ check('Global Route Map renders country and expedition paths and toggles indepen
     assert.equal(yearTitle.textContent, '2025');
     assert.equal(yearTitle.attributes['font-size'], 78);
     assert.equal(exportElements[0].attributes.class, 'global-routes-export-year');
+    const exportRect = exportElements[0].children[0];
+    assert.ok(exportRect.attributes.y + exportRect.attributes.height < 120);
+
+    const exportLayoutAttributes = {};
+    const exportOcean = { attributes: {}, setAttribute(key, value) { this.attributes[key] = value; } };
+    const exportZoom = { attributes: {}, setAttribute(key, value) { this.attributes[key] = value; } };
+    context.routeMapLayoutSvg = {
+      setAttribute(key, value) { exportLayoutAttributes[key] = value; },
+      querySelector(selector) {
+        return selector === '.global-routes-ocean' ? exportOcean : exportZoom;
+      }
+    };
+    vm.runInContext('prepareGlobalRoutesExportSvg(routeMapLayoutSvg)', context);
+    assert.equal(exportLayoutAttributes.viewBox, '0 0 1200 750');
+    assert.equal(exportLayoutAttributes.height, '1500');
+    assert.equal(exportOcean.attributes.height, '750');
+    assert.equal(exportZoom.attributes.transform, 'translate(0,120) scale(1)');
 
     routeYear.value = 'all';
     routeYear.handlers.change({ currentTarget: routeYear });
@@ -5618,6 +5635,7 @@ check('Global Route Map renders country and expedition paths and toggles indepen
     if (originalCreateElementNS === undefined) delete context.document.createElementNS;
     else context.document.createElementNS = originalCreateElementNS;
     delete context.routeMapExportSvg;
+    delete context.routeMapLayoutSvg;
     context.d3 = previousD3;
     vm.runInContext(`
       AppState.expeditions = routeMapTestSaved.expeditions;

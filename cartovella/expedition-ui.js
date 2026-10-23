@@ -1616,14 +1616,23 @@ function appendSvgElement(parent, name, attributes = {}) {
   return element;
 }
 
+function prepareGlobalRoutesExportSvg(svg) {
+  svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  svg.setAttribute('viewBox', '0 0 1200 750');
+  svg.setAttribute('width', '2400');
+  svg.setAttribute('height', '1500');
+  svg.querySelector('.global-routes-ocean')?.setAttribute('height', '750');
+  svg.querySelector('.global-routes-zoom')?.setAttribute('transform', 'translate(0,120) scale(1)');
+}
+
 function appendGlobalRoutesExportYearTitle(svg, mapStyle) {
   const group = appendSvgElement(svg, 'g', { class: 'global-routes-export-year' });
   appendSvgElement(group, 'rect', {
-    x: 360, y: 18, width: 480, height: 104, rx: 14,
+    x: 360, y: 10, width: 480, height: 100, rx: 14,
     fill: mapStyle.land, 'fill-opacity': 0.94, stroke: mapStyle.border, 'stroke-width': 2
   });
   const title = appendSvgElement(group, 'text', {
-    x: 600, y: 94, fill: mapStyle.text, 'font-family': 'Inter, Arial, sans-serif',
+    x: 600, y: 80, fill: mapStyle.text, 'font-family': 'Inter, Arial, sans-serif',
     'font-size': globalRoutesYear === 'all' ? 58 : 78, 'font-weight': 700, 'text-anchor': 'middle'
   });
   title.textContent = globalRoutesExportYearLabel();
@@ -1655,23 +1664,20 @@ function canvasPngBlob(canvas) {
 async function exportGlobalRoutesPng() {
   renderGlobalRoutesMap();
   const svg = document.getElementById('svgGlobalRoutesMap').cloneNode(true);
-  svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-  svg.setAttribute('width', '2400');
-  svg.setAttribute('height', '1260');
-  svg.querySelector('.global-routes-zoom')?.setAttribute('transform', 'translate(0,0) scale(1)');
+  prepareGlobalRoutesExportSvg(svg);
 
   const mapStyle = GLOBAL_ROUTE_MAP_STYLES[globalRoutesAtlasStyle];
   const stats = calculateStats();
   appendGlobalRoutesExportYearTitle(svg, mapStyle);
   const footer = appendSvgElement(svg, 'g', { class: 'global-routes-export-footer' });
-  appendSvgElement(footer, 'rect', { x: 0, y: 570, width: 1200, height: 60, fill: mapStyle.land });
+  appendSvgElement(footer, 'rect', { x: 0, y: 690, width: 1200, height: 60, fill: mapStyle.land });
   const banner = appendSvgElement(footer, 'text', {
-    x: 32, y: 608, fill: mapStyle.text, 'font-family': 'Inter, Arial, sans-serif',
+    x: 32, y: 728, fill: mapStyle.text, 'font-family': 'Inter, Arial, sans-serif',
     'font-size': 20, 'font-weight': 600
   });
   banner.textContent = `${stats.cls} (Level ${stats.level}) • ${globalRoutesVisibleExpeditions.length} Expeditions • ${stats.countriesCount} Countries`;
   const watermark = appendSvgElement(footer, 'text', {
-    x: 1168, y: 608, fill: mapStyle.text, 'fill-opacity': 0.7,
+    x: 1168, y: 728, fill: mapStyle.text, 'fill-opacity': 0.7,
     'font-family': 'Cinzel, Georgia, serif', 'font-size': 14, 'font-weight': 600, 'text-anchor': 'end'
   });
   watermark.textContent = 'Cartovella';
