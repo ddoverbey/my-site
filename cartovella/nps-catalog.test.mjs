@@ -5443,8 +5443,13 @@ check('Global Route Map renders country and expedition paths and toggles indepen
   const continentOption = element('globalRoutesContinentOption');
   toggle.setAttribute = (name, value) => { toggleAttributes[name] = value; };
   const zoomIdentity = { toString: () => 'translate(0,0) scale(1)' };
+  let albersUsaProjectionCalls = 0;
   context.d3 = {
     ...d3Geo,
+    geoAlbersUsa: () => {
+      albersUsaProjectionCalls++;
+      return d3Geo.geoAlbersUsa();
+    },
     select: () => ({
       call(callback, ...args) { callback(this, ...args); return this; },
       select: () => ({ attr() { return this; } })
@@ -5516,6 +5521,7 @@ check('Global Route Map renders country and expedition paths and toggles indepen
   `, context);
   try {
     toggle.handlers.click();
+    assert.equal(albersUsaProjectionCalls, 0);
     const svg = element('svgGlobalRoutesMap').innerHTML;
     assert.match(svg, /class="global-country"/);
     assert.match(svg, /class="global-route"/);
@@ -5603,6 +5609,7 @@ check('Global Route Map renders country and expedition paths and toggles indepen
     routeScope.handlers.change({ currentTarget: routeScope });
     routeScope.value = 'domestic';
     routeScope.handlers.change({ currentTarget: routeScope });
+    assert.equal(albersUsaProjectionCalls, 1);
     let regionalSvg = element('svgGlobalRoutesMap').innerHTML;
     assert.match(regionalSvg, /<title>United States of America<\/title>/);
     assert.doesNotMatch(regionalSvg, /<title>France<\/title>|<title>United Kingdom<\/title>/);
@@ -5612,6 +5619,7 @@ check('Global Route Map renders country and expedition paths and toggles indepen
 
     routeScope.value = 'continental';
     routeScope.handlers.change({ currentTarget: routeScope });
+    assert.equal(albersUsaProjectionCalls, 1);
     regionalSvg = element('svgGlobalRoutesMap').innerHTML;
     assert.match(regionalSvg, /<title>United States of America<\/title>/);
     assert.match(regionalSvg, /<title>Canada<\/title>/);
@@ -5620,6 +5628,15 @@ check('Global Route Map renders country and expedition paths and toggles indepen
     assert.doesNotMatch(regionalSvg, /European Weekend/);
     assert.match(element('globalRoutesScopeStatus').textContent, /Continental · North America/);
 
+    vm.runInContext("AppState.homeBase = { name: 'France Base', lat: 48.9, lng: 2.3 }", context);
+    routeScope.value = 'domestic';
+    routeScope.handlers.change({ currentTarget: routeScope });
+    assert.equal(albersUsaProjectionCalls, 1);
+    regionalSvg = element('svgGlobalRoutesMap').innerHTML;
+    assert.match(regionalSvg, /<title>France<\/title>/);
+    assert.doesNotMatch(regionalSvg, /<title>United States of America<\/title>/);
+
+    vm.runInContext("AppState.homeBase = { name: 'Test Base', lat: 40.7, lng: -74 }", context);
     routeScope.value = 'global';
     routeScope.handlers.change({ currentTarget: routeScope });
     toggle.handlers.click();

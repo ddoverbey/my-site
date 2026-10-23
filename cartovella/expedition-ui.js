@@ -1533,7 +1533,8 @@ function renderGlobalRoutesMap() {
 
   const features = mapFeatures;
   const collection = { type: 'FeatureCollection', features };
-  const projection = d3.geoNaturalEarth1();
+  const projection = scope === 'domestic' && homeCountryCode === 'US'
+    ? d3.geoAlbersUsa() : d3.geoNaturalEarth1();
   if (features.length) projection.fitExtent([[24, 24], [1176, 560]], collection);
   const path = d3.geoPath(projection);
   const mapStyle = GLOBAL_ROUTE_MAP_STYLES[globalRoutesAtlasStyle];
