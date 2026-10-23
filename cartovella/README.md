@@ -69,11 +69,30 @@ advance a new explorer to Level 2. Later thresholds rise quadratically:
 | 4 | 580 |
 | 5 | 825 |
 | 6 | 1,140 |
+| 7 | 1,525 |
+| 8 | 1,980 |
+| 9 | 2,505 |
+| 10 | 3,100 |
 
 For level `n` (2 or higher), the threshold is `265 + 35 × (n − 1)²` total XP. The XP bar shows
 progress from the current level's threshold to the next one. Gaining a level displays a top-center
 level-up banner with a chime; newly earned achievements appear separately in a centered, dismissible
 notification with their artwork.
+
+Numeric levels do not have individual hard-coded names or a maximum level. The Explorer Class shown
+alongside a level is a separate title based on travel progress; for example, **Level 9 · Park
+Completionist** means the explorer has reached the Level 9 XP threshold and currently has the Park
+Completionist class. The current hard-coded Explorer Classes are:
+
+| Explorer Class | Description |
+| --- | --- |
+| Fresh Recruit | Default class before establishing a home Citadel. |
+| Scout | Default class after establishing a home Citadel, until a travel archetype qualifies. |
+| Alpine Ranger | Explorer of conifer forests, montane grasslands, and arid shrublands. |
+| Park Completionist | Devoted explorer of national preserves and wild sanctuaries. |
+| Biome Hunter | Explorer of boreal forests and tundra ecoregions. |
+| Globetrotter | Crosser of oceans and student of international cultures. |
+| Pioneer Wayfarer | Master of highways, state borders, and open skylines. |
 
 ### Location rarity
 
