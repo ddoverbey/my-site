@@ -1150,7 +1150,7 @@
       BIOMES = Ecoregions.biomeDefinitions();
       PARKS = PARKS.map(p => ({ ...p, biomes: [], ecoregions: [], biomeStatus: 'unavailable' }));
       try {
-        const response = await fetch('./ecoregion-mapping.json', { cache: 'no-cache' });
+        const response = await fetch('./ecoregion-mapping.json');
         if (!response.ok) throw new Error(`Ecoregion request failed (HTTP ${response.status}).`);
         const result = Ecoregions.applySnapshot(PARKS, await response.json());
         PARKS = result.parks;
@@ -1185,7 +1185,7 @@
         const status = document.getElementById(statusId);
         status.textContent = `Loading ${label}...`;
         try {
-          const response = await fetch(path, { cache: 'no-cache' });
+          const response = await fetch(path);
           if (!response.ok) throw new Error(`${label} request failed (HTTP ${response.status}).`);
           const result = normalize(await response.json());
           status.textContent = `${result.parks.length} ${label} parks; ${result.excludedCount} U.S./territory rows excluded.${result.duplicateRowCount ? ` ${result.duplicateRowCount} repeated rows grouped.` : ''}`;
@@ -1218,7 +1218,7 @@
       status.textContent = 'Loading official NPS catalog...';
       retry.classList.add('hidden');
       try {
-        const response = await fetch('./nps-parks.json', { cache: 'no-cache' });
+        const response = await fetch('./nps-parks.json');
         if (!response.ok) throw new Error(`Catalog request failed (HTTP ${response.status}).`);
         const dataset = await response.json();
         if (dataset.source !== 'https://developer.nps.gov/api/v1/parks' ||
@@ -3796,6 +3796,7 @@
 
     function backfillSavedGeography() {
       if (!coordinateIndexes || AppState.viewOnly) return;
+      let changed = false;
       const mergeBy = (current, additions, keyOf) => {
         const values = Array.isArray(current) ? [...current] : [];
         const keys = new Set(values.map(keyOf));
@@ -3804,6 +3805,7 @@
           if (!keys.has(key)) {
             values.push(value);
             keys.add(key);
+            changed = true;
           }
         });
         return values;
@@ -3825,7 +3827,11 @@
           const expeditionCountyIds = new Set(expedition.countyIds || []);
           (expedition.routeStops || []).forEach(stop => {
             const [lat, lng] = stop.coords;
-            cachedPoliticalAt(lat, lng)?.counties.forEach(county => expeditionCountyIds.add(county.id));
+            cachedPoliticalAt(lat, lng)?.counties.forEach(county => {
+              if (expeditionCountyIds.has(county.id)) return;
+              expeditionCountyIds.add(county.id);
+              changed = true;
+            });
           });
           (expedition.routeLegs || []).forEach(leg => {
             if (!['road', 'awd'].includes(leg.mode) || leg.routeCoords.length < 2) return;
@@ -3836,9 +3842,11 @@
           });
           expedition.countyIds = [...expeditionCountyIds];
         });
-        syncDerivedState();
-        saveState();
-        drawFogOfWar();
+        if (changed) {
+          syncDerivedState();
+          saveState({ recordEdit: false });
+          drawFogOfWar();
+        }
       } catch (error) {
         console.error('Failed to backfill saved travel geography', error);
         showNotification('Travel geography not updated', error.message, '⚠️');
@@ -3893,8 +3901,8 @@
       const status = document.getElementById('coordinateGeographyStatus');
       try {
         const [response, mangroveResponse] = await Promise.all([
-          fetch('./ecoregions.topojson', { cache: 'no-cache' }),
-          fetch('./mangroves.topojson', { cache: 'no-cache' })
+          fetch('./ecoregions.topojson'),
+          fetch('./mangroves.topojson')
         ]);
         if (!response.ok) throw new Error(`Ecoregion geography request failed (HTTP ${response.status}).`);
         if (!mangroveResponse.ok) throw new Error(`Detailed mangrove geography request failed (HTTP ${mangroveResponse.status}).`);
@@ -3955,7 +3963,7 @@
       npsBoundariesByCode = {};
       const status = document.getElementById('npsBoundaryStatus');
       try {
-        const response = await fetch('./nps-boundaries.topojson', { cache: 'no-cache' });
+        const response = await fetch('./nps-boundaries.topojson');
         if (!response.ok) throw new Error(`NPS boundaries request failed (HTTP ${response.status}).`);
         npsBoundariesByCode = CoordinateLookups.npsBoundaryIndex(await response.json(), topojson.feature);
         const mapped = PARKS.filter(p => !p.intl && npsBoundariesByCode[p.id]).length;
@@ -3967,51 +3975,80 @@
       }
     }
 
-    async function loadGeoDatasets() {
+    async function fetchGeoJson(url, label) {
+      try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`${label} request failed (HTTP ${response.status}).`);
+        return await response.json();
+      } catch (error) {
+        console.error(`Failed to load ${label}`, error);
+        return null;
+      }
+    }
+
+    async function loadCoreGeoDatasets() {
       worldGeoJson = null;
       worldSubdivisionGeoJson = null;
-      worldAdmin2GeoJson = [];
-      internationalCountyGeoJson = [];
       usaGeoJson = null;
-      countyGeoJson = null;
       usaRegionGeoJson = null;
-      Object.keys(countyFeaturesById).forEach(id => delete countyFeaturesById[id]);
       try {
         const [worldRes, usaRes] = await Promise.all([
-          fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json').then(r => r.json()),
-          fetch('https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json').then(r => r.json())
+          fetchGeoJson('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json', 'world atlas'),
+          fetchGeoJson('https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json', 'state atlas')
         ]);
+        if (!worldRes || !usaRes) return;
         worldGeoJson = topojson.feature(worldRes, worldRes.objects.countries).features;
         usaRegionGeoJson = topojson.feature(usaRes, usaRes.objects.states).features;
         scratchStateMesh = topojson.mesh(usaRes, usaRes.objects.states, (a, b) => a !== b);
         usaGeoJson = usaRegionGeoJson.filter(f => +f.id <= 56 && f.id !== '11');
-      } catch (e) {
-        console.error("Failed to load geographic atlas boundaries", e);
+      } catch (error) {
+        worldGeoJson = null;
+        usaGeoJson = null;
+        usaRegionGeoJson = null;
+        console.error('Failed to parse core geographic atlas boundaries', error);
       }
-      try {
-        const countiesRes = await fetch('https://cdn.jsdelivr.net/npm/us-atlas@3/counties-10m.json').then(r => r.json());
-        countyGeoJson = topojson.feature(countiesRes, countiesRes.objects.counties).features;
-        countyGeoJson.forEach(feature => {
-          countyFeaturesById[String(feature.id).padStart(5, '0')] = feature;
-        });
-      } catch (e) {
-        console.error("Failed to load US county boundaries", e);
+    }
+
+    async function loadSupplementalGeoDatasets() {
+      worldSubdivisionGeoJson = null;
+      worldAdmin2GeoJson = [];
+      internationalCountyGeoJson = [];
+      countyGeoJson = null;
+      microStateGeoJson = null;
+      microStateCatalog = [];
+      Object.keys(countyFeaturesById).forEach(id => delete countyFeaturesById[id]);
+      const [counties, subdivisions, admin2, microStates] = await Promise.all([
+        fetchGeoJson('https://cdn.jsdelivr.net/npm/us-atlas@3/counties-10m.json', 'US county boundaries'),
+        fetchGeoJson('./world-subdivisions.topojson', 'world subdivision boundaries'),
+        fetchGeoJson('./world-admin2.topojson', 'world Admin-2 boundaries'),
+        fetchGeoJson('./micro-states.topojson', 'micro-state boundaries')
+      ]);
+      if (counties) {
+        try {
+          countyGeoJson = topojson.feature(counties, counties.objects.counties).features;
+          countyGeoJson.forEach(feature => {
+            countyFeaturesById[String(feature.id).padStart(5, '0')] = feature;
+          });
+        } catch (error) {
+          countyGeoJson = null;
+          console.error('Failed to parse US county boundaries', error);
+        }
       }
-      try {
-        const response = await fetch('./world-subdivisions.topojson', { cache: 'no-cache' });
-        if (!response.ok) throw new Error(`World subdivision request failed (HTTP ${response.status}).`);
-        worldSubdivisionGeoJson = CoordinateLookups.subdivisionFeatures(await response.json(), topojson.feature);
-      } catch (e) {
-        worldSubdivisionGeoJson = null;
-        console.error('Failed to load world subdivision boundaries', e);
+      if (subdivisions) {
+        try {
+          worldSubdivisionGeoJson = CoordinateLookups.subdivisionFeatures(subdivisions, topojson.feature);
+        } catch (error) {
+          worldSubdivisionGeoJson = null;
+          console.error('Failed to parse world subdivision boundaries', error);
+        }
       }
-      try {
-        const response = await fetch('./world-admin2.topojson', { cache: 'no-cache' });
-        if (!response.ok) throw new Error(`World Admin-2 request failed (HTTP ${response.status}).`);
-        worldAdmin2GeoJson = CoordinateLookups.admin2Features(await response.json(), topojson.feature);
-      } catch (e) {
-        worldAdmin2GeoJson = [];
-        console.error('Failed to load world Admin-2 boundaries', e);
+      if (admin2) {
+        try {
+          worldAdmin2GeoJson = CoordinateLookups.admin2Features(admin2, topojson.feature);
+        } catch (error) {
+          worldAdmin2GeoJson = [];
+          console.error('Failed to parse world Admin-2 boundaries', error);
+        }
       }
       if (worldSubdivisionGeoJson) {
         internationalCountyGeoJson = CoordinateLookups.countyEquivalentFeatures(
@@ -4019,16 +4056,21 @@
         );
         internationalCountyGeoJson.forEach(feature => { countyFeaturesById[String(feature.id)] = feature; });
       }
-      try {
-        const response = await fetch('./micro-states.topojson', { cache: 'no-cache' });
-        if (!response.ok) throw new Error(`Micro-state request failed (HTTP ${response.status}).`);
-        microStateGeoJson = MicroStates.validateTopology(await response.json(), topojson.feature);
-        microStateCatalog = MicroStates.catalog(microStateGeoJson);
-      } catch (e) {
-        microStateGeoJson = null;
-        microStateCatalog = [];
-        console.error("Failed to load micro-state boundaries", e);
+      if (microStates) {
+        try {
+          microStateGeoJson = MicroStates.validateTopology(microStates, topojson.feature);
+          microStateCatalog = MicroStates.catalog(microStateGeoJson);
+        } catch (error) {
+          microStateGeoJson = null;
+          microStateCatalog = [];
+          console.error('Failed to parse micro-state boundaries', error);
+        }
       }
+    }
+
+    async function loadGeoDatasets() {
+      await loadCoreGeoDatasets();
+      await loadSupplementalGeoDatasets();
     }
 
     const loggedCountyCache = new Map();
@@ -6031,12 +6073,15 @@
       if (AppState.viewOnly) return;
       CoordinateLookups.validateCoordinates(Number(lat), Number(lng));
       if (typeof name !== 'string' || !name.trim()) throw new Error('Enter a home name.');
-      if (appLoading) {
+      if (appLoading || (!coordinateIndexes && startupDataReady)) {
         document.getElementById('homeLookupStatus').textContent = 'Preparing atlas geography…';
-        appReady.then(() => {
+        (startupDataReady || appReady).then(() => {
           document.getElementById('homeLookupStatus').textContent = '';
           try { setHometownCoordinates(name, lat, lng); }
           catch (error) { console.error('Home save failed', error); showNotification('Home not saved', error.message, '⚠️'); }
+        }).catch(error => {
+          console.error('Home setup could not wait for atlas geography.', error);
+          showNotification('Home not saved', error.message, '⚠️');
         });
         return;
       }
@@ -6095,8 +6140,7 @@
 
     // App Startup Entry Point
     document.getElementById('btnRetryNps').addEventListener('click', async () => {
-      await loadNpsCatalog();
-      await loadWorldwideCatalog();
+      await Promise.all([loadNpsCatalog(), loadWorldwideCatalog()]);
       await loadBiomeCatalog();
       await loadGeoDatasets();
       await Promise.all([loadNpsBoundaries(), loadCoordinateGeography()]);
@@ -6645,31 +6689,37 @@
     window.addEventListener('DOMContentLoaded', () => {
       loadPersistedState();
       updateStorageWarning();
+      updateAuthUI();
+      if (cloudSession?.access_token && !AppState.viewOnly) {
+        setCloudStatus('Restoring your signed-in session…');
+      }
       // Decide on onboarding from saved state immediately, not after every dataset loads.
       if (!AppState.homeBase && !AppState.viewOnly) openHomeModal();
       appReady = startApp();
-      appReady.then(async () => {
-        updateAuthUI();
+      startupDataReady = appReady.then(async () => {
         if (cloudSession?.access_token && !AppState.viewOnly) {
           await loadFromCloud();
         } else {
           cloudHydrated = true;
         }
+        await finishStartupDatasets();
+        startupDataReady = null;
       }).catch(error => {
-        console.error('Cartovella startup failed before cloud hydration.', error);
+        startupDataReady = null;
+        console.error('Cartovella startup failed.', error);
         setCloudStatus(`Startup failed: ${error.message}`, true);
+        document.getElementById('btnRetryNps').classList.remove('hidden');
       });
     });
 
     let appLoading = false;
     let appReady = Promise.resolve();
+    let startupDataReady = null;
 
     async function startApp() {
       appLoading = true;
       try {
-        await Promise.all([loadGeoDatasets(), loadNpsCatalog(), loadWorldwideCatalog()]);
-        await loadBiomeCatalog();
-        await Promise.all([loadNpsBoundaries(), loadCoordinateGeography()]);
+        await loadCoreGeoDatasets();
         syncDerivedState();
         saveState({ recordEdit: false });
         initMap();
@@ -6679,6 +6729,23 @@
       } finally {
         appLoading = false;
       }
+    }
+
+    async function finishStartupDatasets() {
+      await Promise.all([
+        loadNpsCatalog(),
+        loadWorldwideCatalog(),
+        loadSupplementalGeoDatasets()
+      ]);
+      await loadBiomeCatalog();
+      await Promise.all([loadNpsBoundaries(), loadCoordinateGeography()]);
+      syncDerivedState();
+      if (map) {
+        renderCountyHitboxes();
+        renderParkMarkers();
+        drawFogOfWar();
+      }
+      updateAllUI();
     }
   </script>
 </body>

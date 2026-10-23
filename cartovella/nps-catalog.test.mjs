@@ -126,6 +126,15 @@ const legacyRoute = await readFile(new URL('../wanderlog/index.html', import.met
 const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)]
   .map(match => /src="\.\/expedition-ui\.js(?:\?[^"]*)?"/.test(match[0]) ? expeditionUi : match[1]);
 check('every inline script parses', () => scripts.forEach(script => new vm.Script(script)));
+check('refresh restores the signed-in UI and local atlas before supplemental data finishes loading', () => {
+  const startup = html.slice(html.indexOf("window.addEventListener('DOMContentLoaded'"));
+  const startApp = html.slice(html.indexOf('async function startApp()'));
+  assert.ok(startup.indexOf('updateAuthUI()') < startup.indexOf('appReady = startApp()'));
+  assert.ok(startup.indexOf('appReady = startApp()') < startup.indexOf('loadFromCloud()'));
+  assert.match(startApp, /await loadCoreGeoDatasets\(\)[\s\S]*?initMap\(\)/);
+  assert.match(startup, /await finishStartupDatasets\(\)/);
+  assert.doesNotMatch(html, /cache:\s*'no-cache'/);
+});
 check('Travel Ledger header is compact with no description beneath its title', () => {
   const header=html.slice(html.indexOf('<div id="tabContent-bucketlist"'),html.indexOf('<section id="bucketCityMatches"'));
   assert.ok(header.includes('>Travel Ledger</h2>'));
@@ -325,6 +334,7 @@ await checkAsync('existing cloud passport sign-in hydrates local state', async (
   await vm.runInContext('handleLogin()', context);
   assert.equal(requests.length, 2);
   assert.ok(requests[1].url.includes('/rest/v1/cartovella_passports?user_id=eq.user-test'));
+  assert.deepEqual(JSON.parse(localStorage.getItem('cartovella_cloud_session')), cloudSession);
   assert.equal(vm.runInContext('AppState.homeBase.name', context), 'Cloud Home');
   assert.equal(element('authCurrentEmail').textContent, cloudSession.user.email);
   assert.equal(vm.runInContext('cloudHydrated', context), true, element('authSyncStatusText').textContent);
