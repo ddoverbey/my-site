@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import ledger from './travel-ledger.js';
 import lookups from './coordinate-lookups.js';
 import catalog from './nps-catalog.js';
+import characterCreator from './character-creator.js';
 import { readFile } from 'node:fs/promises';
 import * as d3 from 'd3-geo';
 import * as topojson from 'topojson-client';
@@ -24,6 +25,16 @@ const exp = {
   routeCoords: [[39.24, -106.29], [39.19, -106.81]], minElevationFt: 5280, maxElevationFt: 12095
 };
 const migrate = state => ledger.migrateState(state, lookups, catalog);
+check('character selections survive passport migration with safe catalog defaults', () => {
+  const state = ledger.migrateState({
+    character: { hairColor: 'teal', outfit: 'outfit_parka', pet: 'pet_kitten_gray', unsafe: true }
+  }, lookups, catalog, characterCreator.normalizeCharacter);
+  assert.equal(state.character.hairColor, 'teal');
+  assert.equal(state.character.outfit, 'outfit_parka');
+  assert.equal(state.character.pet, 'pet_kitten_gray');
+  assert.equal(Object.hasOwn(state.character, 'unsafe'), false);
+  assert.equal(Object.hasOwn(state.extraPassportFields, 'character'), false);
+});
 check('journals and embedded photos survive Passport round-trips without changing legacy trips', () => {
   const photo = 'data:image/jpeg;base64,YWJjZA==';
   const trip = { ...exp, journal: 'A detour worth remembering.\nBack next summer!', photos: [photo] };

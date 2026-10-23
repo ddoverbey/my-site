@@ -27,7 +27,7 @@
   const passportFields = new Set([
     'version', 'homeBase', 'pins', 'regions', 'counties', 'customPois', 'customLocations',
     'expeditions', 'expeditionPromotions', 'parkRarity', 'nationalParkScratch', 'statusOverrides',
-    'clearedPolygons', 'routes', 'mode', 'clearedCounties', 'extraPassportFields'
+    'clearedPolygons', 'routes', 'mode', 'character', 'clearedCounties', 'extraPassportFields'
   ]);
 
   function validateJournal(journal = '', photos = []) {
@@ -276,7 +276,7 @@
     };
   }
 
-  function migrateState(parsed, lookups, catalog) {
+  function migrateState(parsed, lookups, catalog, normalizeCharacter = null) {
     const legacy = lookups.migrateState(parsed);
     const counties = validateStatuses(legacy.counties ?? {}, true);
     if (legacy.clearedCounties && (typeof legacy.clearedCounties !== 'object' || Array.isArray(legacy.clearedCounties))) {
@@ -321,6 +321,8 @@
     }
     const migrated = {
       ...legacy, pins, regions, counties, customPois, expeditions, nationalParkScratch: { ...nationalParkScratch },
+      ...(typeof normalizeCharacter === 'function'
+        ? { character: normalizeCharacter(legacy.character) } : {}),
       parkRarity,
       statusOverrides: validateStatusOverrides(parsed.statusOverrides),
       expeditionPromotions: validatePromotions(parsed.expeditionPromotions),

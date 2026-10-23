@@ -7,6 +7,7 @@ import ecoregions from './ecoregions.js';
 import internationalCatalog from './international-parks.js';
 import coordinateLookups from './coordinate-lookups.js';
 import travelLedger from './travel-ledger.js';
+import characterCreator from './character-creator.js';
 import nationalParksScratch from './national-parks-scratch.js';
 import { collectParks } from './import-nps.mjs';
 import { feature as decodeTopology } from 'topojson-client';
@@ -173,8 +174,9 @@ check('home citadel setup can be dismissed by its close button, backdrop, or Esc
 });
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
-  assert.equal(sources.length, 9);
-  assert.ok(sources.every(source => source.endsWith('?v=20261023-cartovella-cloud-autosave')));
+  assert.equal(sources.length, 10);
+  assert.ok(sources.every(source => source.endsWith('?v=20261023-cartovella-character-creator')));
+  assert.ok(sources.some(source => source.startsWith('./character-creator.js?')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
 check('legacy app URL redirects to Cartovella while preserving share-link query and hash', () => {
@@ -260,7 +262,7 @@ function element(id) {
   return elements.get(id);
 }
 const context = vm.createContext({
-  NpsCatalog: catalog, NationalParksScratch: nationalParksScratch, Ecoregions: ecoregions, InternationalParks: internationalCatalog, CoordinateLookups: coordinateLookups, TravelLedger: travelLedger,
+  NpsCatalog: catalog, NationalParksScratch: nationalParksScratch, Ecoregions: ecoregions, InternationalParks: internationalCatalog, CoordinateLookups: coordinateLookups, TravelLedger: travelLedger, CharacterCreator: characterCreator,
   CartovellaConfig: { rarityEndpoint: 'https://api.devonoverbey.com/rarity' },
   tailwind: {}, console, Intl, URL, URLSearchParams, AbortController, setTimeout() {}, clearTimeout() {},
   localStorage, Headers,
@@ -275,7 +277,7 @@ check('passport field registry round-trips defaults and unknown future fields', 
   assert.deepEqual(keys, [
     'homeBase', 'pins', 'regions', 'counties', 'customPois', 'expeditions',
     'expeditionPromotions', 'parkRarity', 'nationalParkScratch', 'statusOverrides',
-    'clearedPolygons', 'routes', 'mode'
+    'character', 'clearedPolygons', 'routes', 'mode'
   ]);
   const source = {
     version: 2,
@@ -288,6 +290,21 @@ check('passport field registry round-trips defaults and unknown future fields', 
   assert.equal(Object.hasOwn(payload, 'extraPassportFields'), false);
   assert.deepEqual(payload.pins, {});
   assert.deepEqual(payload.routes, []);
+  assert.deepEqual(payload.character, characterCreator.DEFAULT_CHARACTER);
+});
+check('character stage is above the hero and uses only existing achievement unlock IDs', () => {
+  assert.ok(html.indexOf('id="characterStage"') < html.indexOf('<!-- Hero Character Banner -->'));
+  assert.match(html, /CharacterCreator\.render\(\{[\s\S]*?achievements: ACHIEVEMENTS/);
+  assert.match(html, /character: \(\) => CharacterCreator\.normalizeCharacter\(\)/);
+  const achievementIds = new Set(JSON.parse(vm.runInContext(
+    'JSON.stringify(ACHIEVEMENTS.map(achievement => achievement.id))', context
+  )));
+  const unlockIds = [
+    characterCreator.OUTFIT_CATALOG, characterCreator.HAT_CATALOG,
+    characterCreator.ACCESSORY_CATALOG, characterCreator.PET_CATALOG,
+    characterCreator.BACKGROUND_CATALOG
+  ].flat().map(item => item.unlock.id).filter(Boolean);
+  unlockIds.forEach(id => assert.ok(achievementIds.has(id), `missing achievement ${id}`));
   vm.runInContext('applyPassport(migratePassport({version:2}))', context);
   assert.equal(vm.runInContext('hasPassportData(passportPayload())', context), false);
 });

@@ -607,7 +607,24 @@
     <!-- VIEW 3: PASSPORT / RPG CHARACTER SHEET -->
     <div id="tabContent-passport" class="w-full h-full p-4 md:p-8 overflow-y-auto hidden">
       <div class="max-w-6xl mx-auto space-y-8 pb-16">
-        
+
+        <!-- Customizable Character Stage -->
+        <section class="rpg-panel rpg-panel-gold rounded-3xl p-4 md:p-6" aria-labelledby="characterCreatorTitle">
+          <div class="flex flex-col lg:flex-row gap-5">
+            <div class="lg:w-1/2">
+              <h2 id="characterCreatorTitle" class="cinzel text-xl font-bold text-amber-200">Your Explorer</h2>
+              <p class="text-xs text-slate-400 mt-1 mb-3">Build your look, choose a companion, and set the scene.</p>
+              <div class="rounded-2xl overflow-hidden border border-slate-700 bg-slate-950">
+                <canvas id="characterStage" width="320" height="180" role="img"
+                  aria-label="Pixel-art explorer with selected companion and background"
+                  class="block w-full h-auto" style="image-rendering:pixelated"></canvas>
+              </div>
+              <div id="characterProgressSummary" class="grid grid-cols-2 gap-2 mt-3"></div>
+            </div>
+            <div id="characterCustomization" class="lg:w-1/2 min-w-0" aria-live="polite"></div>
+          </div>
+        </section>
+
         <!-- Hero Character Banner -->
         <div class="rpg-panel rpg-panel-gold rounded-3xl p-6 md:p-8 relative overflow-hidden">
           <div class="relative z-10 flex flex-col md:flex-row items-center md:items-start justify-between gap-6">
@@ -1127,14 +1144,15 @@
     </section>
   </div>
 
-  <script src="./nps-catalog.js?v=20261023-cartovella-cloud-autosave"></script>
-  <script src="./national-parks-scratch.js?v=20261023-cartovella-cloud-autosave"></script>
-  <script src="./international-parks.js?v=20261023-cartovella-cloud-autosave"></script>
-  <script src="./ecoregions.js?v=20261023-cartovella-cloud-autosave"></script>
-  <script src="./coordinate-lookups.js?v=20261023-cartovella-cloud-autosave"></script>
-  <script src="./micro-states.js?v=20261023-cartovella-cloud-autosave"></script>
-  <script src="./travel-ledger.js?v=20261023-cartovella-cloud-autosave"></script>
-  <script src="./rarity-config.js?v=20261023-cartovella-cloud-autosave"></script>
+  <script src="./nps-catalog.js?v=20261023-cartovella-character-creator"></script>
+  <script src="./national-parks-scratch.js?v=20261023-cartovella-character-creator"></script>
+  <script src="./international-parks.js?v=20261023-cartovella-character-creator"></script>
+  <script src="./ecoregions.js?v=20261023-cartovella-character-creator"></script>
+  <script src="./coordinate-lookups.js?v=20261023-cartovella-character-creator"></script>
+  <script src="./micro-states.js?v=20261023-cartovella-character-creator"></script>
+  <script src="./travel-ledger.js?v=20261023-cartovella-character-creator"></script>
+  <script src="./character-creator.js?v=20261023-cartovella-character-creator"></script>
+  <script src="./rarity-config.js?v=20261023-cartovella-character-creator"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -1616,6 +1634,7 @@
       expeditionPromotions: {},
       parkRarity: {},
       nationalParkScratch: {},
+      character: CharacterCreator.normalizeCharacter(),
       statusOverrides: { pins: {}, regions: {}, counties: {}, nationalParks: {} },
       extraPassportFields: {},
       currentTab: 'map',
@@ -1651,6 +1670,7 @@
       parkRarity: () => ({}),
       nationalParkScratch: () => ({}),
       statusOverrides: () => ({ pins: {}, regions: {}, counties: {}, nationalParks: {} }),
+      character: () => CharacterCreator.normalizeCharacter(),
       clearedPolygons: () => [],
       routes: () => [],
       mode: () => 'rpg'
@@ -1835,7 +1855,8 @@
 
     function migratePassport(parsed) {
       return TravelLedger.migrateState(
-        expandStoredPassport(restoreRecoveryBundle(parsed)), CoordinateLookups, NpsCatalog
+        expandStoredPassport(restoreRecoveryBundle(parsed)), CoordinateLookups, NpsCatalog,
+        CharacterCreator.normalizeCharacter
       );
     }
 
@@ -5251,6 +5272,28 @@
 
     function renderPassportView() {
       const stats = calculateStats();
+      CharacterCreator.render({
+        canvas: document.getElementById('characterStage'),
+        controls: document.getElementById('characterCustomization'),
+        summary: document.getElementById('characterProgressSummary'),
+        character: AppState.character,
+        stats,
+        achievements: ACHIEVEMENTS,
+        viewOnly: AppState.viewOnly,
+        onChange: character => {
+          const previous = AppState.character;
+          AppState.character = character;
+          try {
+            saveState();
+          } catch (error) {
+            AppState.character = previous;
+            renderPassportView();
+            showNotification('Character not saved', error.message, '⚠️');
+            throw error;
+          }
+          renderPassportView();
+        }
+      });
       renderProfileFlags(stats.visitedCountries);
       renderProfileStateFlags(stats.visitedStates);
 
@@ -6157,7 +6200,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261023-cartovella-cloud-autosave"></script>
+  <script src="./expedition-ui.js?v=20261023-cartovella-character-creator"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);
@@ -6421,7 +6464,8 @@
         return value !== null && value !== undefined && value !== '';
       };
       return Object.entries(passport).some(([field, value]) =>
-        field !== 'version' && field !== 'mode' && field !== 'extraPassportFields' && hasValue(value)
+        field !== 'version' && field !== 'mode' && field !== 'character' &&
+        field !== 'extraPassportFields' && hasValue(value)
       );
     }
 

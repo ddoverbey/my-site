@@ -109,6 +109,19 @@ Completionist class. The current hard-coded Explorer Classes are:
 | Globetrotter | Crosser of oceans and student of international cultures. |
 | Pioneer Wayfarer | Master of highways, state borders, and open skylines. |
 
+### Explorer character
+
+The Explorer Profile includes a pixel-art character stage with appearance, outfit, hat, accessory,
+companion, and background choices. Character selections are stored in the passport and included in
+normal local, cloud, export, and shared-passport saves. Appearance and item catalogs, unlock rules,
+and procedural canvas drawing live in `character-creator.js`; catalog entries can later use an
+`imageSrc` PNG instead of the procedural fallback.
+
+Level, worldwide-destination, and existing achievement milestones unlock cosmetics. Starter,
+achievement, and patron/Pro background choices are available in the catalog; the 63 National Park
+diorama backgrounds are intentionally deferred. Cartovella does not yet verify Pro purchases or
+donations, so client-side profile values do not establish paid entitlements.
+
 ### Location rarity
 
 Catalog parks use saved rarity data when available and otherwise derive a consistent badge from
