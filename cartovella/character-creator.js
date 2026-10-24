@@ -112,7 +112,7 @@
   const OUTLINED_WISP_SPRITE_SHEET = Object.freeze({
     ...WISP_SPRITE_SHEET, sourceX: 8, sourceY: 4, sourceWidth: 16, sourceHeight: 24
   });
-  const COMPANION_ASSET_PATH = './assets/GandalfHardcore%20Pet%20companion/GandalfHardcore%20Pet%20companion/';
+  const COMPANION_ASSET_PATH = './assets/gandalfhardcore/GandalfHardcore%20Pet%20companion/GandalfHardcore%20Pet%20companion/';
   const CAT_ASSET_PATH = './assets/cat-PACK/PACK/';
   const dogVariants = [
     ['pet_trail_dog', 'Golden Trail Dog', 'GandalfHardcore doggy sheet.png'],
@@ -156,7 +156,7 @@
     { id: 'bg_pro_celestial', name: 'Astral Horizon', unlock: { type: 'pro' }, palette: 'pro', imageSrc: null }
   ];
 
-  const CHARACTER_ASSET_ROOT = './assets/GandalfHardcore%20Character%20Asset%20Pack/GandalfHardcore%20Character%20Asset%20Pack/';
+  const CHARACTER_ASSET_ROOT = './assets/gandalfhardcore/GandalfHardcore%20Character%20Asset%20Pack/GandalfHardcore%20Character%20Asset%20Pack/';
   const CHARACTER_SPRITE_FRAME = Object.freeze({ x: 24, y: 16, width: 32, height: 48 });
   const CHARACTER_SPRITE_TARGET = Object.freeze({ x: 50, y: 10, width: 60, height: 72 });
   const OUTFIT_SPRITE_LAYERS = Object.freeze({

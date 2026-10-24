@@ -115,10 +115,12 @@ The Explorer Profile character stage composites the gendered base, skin tone, ha
 sprite layers from the bundled GandalfHardcore Character Asset Pack. Character sprite catalogs,
 layer composition, unlock rules, backgrounds, and companion rendering live in `character-creator.js`;
 character settings are stored in the passport and included in local, cloud, export, and shared saves.
+GandalfHardcore asset folders are grouped under `assets/gandalfhardcore/`; source ZIP archives remain
+in `assets/Zips/`.
 The character layers use the pack's aligned 800×448 sheets and a 32×48 crop around the first character
 frame. Companion catalog entries can use an `imageSrc` PNG or a cropped sprite-sheet animation. All five dog coat variants
 (golden, slate, sandy, cream, and shadow) use five 32×32 walking frames from the corresponding
-`assets/GandalfHardcore Pet companion/GandalfHardcore Pet companion/GandalfHardcore doggy sheet*.png`
+`assets/gandalfhardcore/GandalfHardcore Pet companion/GandalfHardcore Pet companion/GandalfHardcore doggy sheet*.png`
 spritesheets and render at 26×17 logical pixels. Black (Cat 1), ginger (Cat 2), and white (Cat 3)
 companions use the eight-frame “Lick paw lie front” sequence (row 13) from their respective
 `assets/cat-PACK/PACK/cat N (64х64).png` spritesheets. The Trail Fox keeps its 20×12 logical-pixel
