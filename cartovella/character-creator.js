@@ -9,11 +9,19 @@
     { id: 'deep', name: 'Deep', color: '#57372f', imageSrc: null }
   ];
   const HAIR_STYLES = [
-    { id: 'short', name: 'Style 1', sheet: 1, imageSrc: null },
-    { id: 'bob', name: 'Style 2', sheet: 2, imageSrc: null },
-    { id: 'long', name: 'Style 3', sheet: 3, imageSrc: null },
-    { id: 'curls', name: 'Style 4', sheet: 4, imageSrc: null },
-    { id: 'braided', name: 'Style 5', sheet: 5, imageSrc: null }
+    ...Array.from({ length: 30 }, (_, index) => {
+      const sheet = index + 6;
+      return {
+        id: `hair_${sheet}`,
+        name: `Hairstyle ${sheet}`,
+        sheet,
+        genders: sheet <= 30 ? ['male', 'female'] : ['female'],
+        imageSrc: null
+      };
+    }),
+    { id: 'hair_fancy', name: 'Fancy Hair', fileName: 'Fancy Hair.png', genders: ['male'], imageSrc: null },
+    { id: 'hair_queen', name: 'Queen Hair', fileName: 'Queen hair.png', genders: ['male'], imageSrc: null },
+    { id: 'hair_shield_maiden', name: 'Shield Maiden Hair', fileName: 'Shield Maiden hair.png', genders: ['male'], imageSrc: null }
   ];
   const HAIR_COLORS = [
     { id: 'brown', name: 'Chestnut', color: '#603c2e', imageSrc: null },
@@ -149,14 +157,20 @@
     ['pet_kitten_gray', 'pet_black_cat']
   ]);
   const BACKGROUND_CATALOG = [
-    { id: 'bg_campfire', name: 'Campfire Night', unlock: { type: 'starter' }, palette: 'campfire', imageSrc: './assets/backgrounds/campfire-night-320px.png' },
-    { id: 'bg_aurora', name: 'Aurora Borealis', unlock: { type: 'achievement', id: 'longDark' }, palette: 'aurora', imageSrc: null },
-    { id: 'bg_observatory', name: 'Celestial Observatory', unlock: { type: 'achievement', id: 'worldAtlas' }, palette: 'observatory', imageSrc: null },
-    { id: 'bg_sanctuary', name: 'Conservation Sanctuary', unlock: { type: 'donation', goal: 50 }, palette: 'sanctuary', imageSrc: null },
-    { id: 'bg_pro_celestial', name: 'Astral Horizon', unlock: { type: 'pro' }, palette: 'pro', imageSrc: null }
+    { id: 'bg_campfire', name: 'Campfire Night', unlock: { type: 'starter' }, imageSrc: './assets/backgrounds/campfire-night-320px.png' }
   ];
 
   const CHARACTER_ASSET_ROOT = './assets/gandalfhardcore/GandalfHardcore%20Character%20Asset%20Pack/GandalfHardcore%20Character%20Asset%20Pack/';
+  const HAIRSTYLE_ASSET_ROOT = './assets/gandalfhardcore/GandalfHardcore%2058x%20Hair/';
+  const LEGACY_HAIR_STYLE_IDS = new Set(['short', 'bob', 'long', 'curls', 'braided']);
+  const HAIR_COLOR_FILTERS = Object.freeze({
+    brown: 'none',
+    black: 'grayscale(1) brightness(.38)',
+    blonde: 'sepia(1) saturate(2.2) hue-rotate(350deg) brightness(1.18)',
+    red: 'sepia(1) saturate(3) hue-rotate(330deg)',
+    silver: 'grayscale(1) brightness(1.45)',
+    teal: 'sepia(1) saturate(2) hue-rotate(130deg)'
+  });
   const CHARACTER_SPRITE_FRAME = Object.freeze({ x: 24, y: 16, width: 32, height: 48 });
   const CHARACTER_SPRITE_TARGET = Object.freeze({ x: 60, y: 34, width: 40, height: 48 });
   const OUTFIT_SPRITE_LAYERS = Object.freeze({
@@ -170,7 +184,7 @@
   const DEFAULT_CHARACTER = Object.freeze({
     gender: 'male',
     skinTone: 'warm',
-    hairStyle: 'short',
+    hairStyle: 'hair_6',
     hairColor: 'brown',
     eyeColor: 'brown',
     bodyShape: 'straight',
@@ -192,6 +206,7 @@
     background: BACKGROUND_CATALOG
   };
   const imageCache = new Map();
+  const imageLoadRedraws = new Map();
   const stageRenderers = new WeakMap();
   const petAnimations = new WeakMap();
   const tabs = ['appearance', 'wardrobe', 'pets', 'backgrounds', 'patron'];
@@ -202,12 +217,19 @@
     const normalizeId = (raw, allowed, fallback) => allowed.has(raw) ? raw : fallback;
     const validColorId = (raw, catalog, fallback) =>
       normalizeId(raw, knownIds(catalog), fallback);
+    const gender = source.gender === 'female' ? 'female' : 'male';
     const bodyShape = BODY_SHAPE_ALIASES.get(source.bodyShape) || source.bodyShape;
     const pet = PET_ID_ALIASES.get(source.pet) || source.pet;
+    const legacyHairStyle = LEGACY_HAIR_STYLE_IDS.has(source.hairStyle);
+    const hairStylesForGender = new Set(HAIR_STYLES
+      .filter(style => style.genders.includes(gender))
+      .map(style => style.id));
     return {
-      gender: source.gender === 'female' ? 'female' : 'male',
+      gender,
       skinTone: validColorId(source.skinTone, SKIN_TONES, DEFAULT_CHARACTER.skinTone),
-      hairStyle: normalizeId(source.hairStyle, knownIds(HAIR_STYLES), DEFAULT_CHARACTER.hairStyle),
+      hairStyle: legacyHairStyle
+        ? DEFAULT_CHARACTER.hairStyle
+        : normalizeId(source.hairStyle, hairStylesForGender, DEFAULT_CHARACTER.hairStyle),
       hairColor: validColorId(source.hairColor, HAIR_COLORS, DEFAULT_CHARACTER.hairColor),
       eyeColor: validColorId(source.eyeColor, EYE_COLORS, DEFAULT_CHARACTER.eyeColor),
       bodyShape: normalizeId(bodyShape, knownIds(BODY_SHAPES), DEFAULT_CHARACTER.bodyShape),
@@ -293,15 +315,24 @@
     if (!item?.imageSrc || typeof Image === 'undefined') return null;
     if (!imageCache.has(item.imageSrc)) {
       const image = new Image();
-      image.onload = () => redraw();
+      const redraws = new Set();
+      if (redraw) redraws.add(redraw);
+      imageLoadRedraws.set(item.imageSrc, redraws);
+      image.onload = () => {
+        const callbacks = imageLoadRedraws.get(item.imageSrc) || [];
+        imageLoadRedraws.delete(item.imageSrc);
+        callbacks.forEach(callback => callback());
+      };
       image.onerror = () => {
         imageCache.set(item.imageSrc, null);
+        imageLoadRedraws.delete(item.imageSrc);
         console.error(`Cartovella character asset failed to load: ${item.imageSrc}`);
       };
       imageCache.set(item.imageSrc, image);
       image.src = item.imageSrc;
     }
     const image = imageCache.get(item.imageSrc);
+    if (image && !image.complete && redraw) imageLoadRedraws.get(item.imageSrc)?.add(redraw);
     return image && image.complete && image.naturalWidth ? image : null;
   }
 
@@ -309,18 +340,27 @@
     const character = normalizeCharacter(value);
     const genderName = character.gender === 'female' ? 'Female' : 'Male';
     const skinIndex = SKIN_TONES.findIndex(tone => tone.id === character.skinTone) + 1;
-    const hair = getItem(HAIR_STYLES, character.hairStyle);
+    const hairCatalog = HAIR_STYLES.filter(style => style.genders.includes(character.gender));
+    const hair = getItem(hairCatalog, character.hairStyle);
     const outfit = getItem(OUTFIT_CATALOG, character.outfit);
     const outfitLayers = OUTFIT_SPRITE_LAYERS[outfit.spriteStyle]?.[character.gender] ||
       OUTFIT_SPRITE_LAYERS.classic[character.gender];
     const footwear = character.gender === 'female' ? 'Female Clothing/Boots.png' : 'Male Clothing/Shoes.png';
+    const hairstyleFolder = character.gender === 'female' ? '30x%20Female%20Hair' : '28x%20Male%20Hair';
+    const hairstyleFilename = hair.fileName
+      ? hair.fileName.replaceAll(' ', '%20')
+      : `${character.gender === 'female' ? 'Female' : 'Male'}%20Hair${hair.sheet}.png`;
     return [
       `${CHARACTER_ASSET_ROOT}Character%20skin%20colors/${genderName}%20Skin${skinIndex}.png`,
       `${CHARACTER_ASSET_ROOT}${outfitLayers[1].replaceAll(' ', '%20')}`,
       `${CHARACTER_ASSET_ROOT}${outfitLayers[0].replaceAll(' ', '%20')}`,
       `${CHARACTER_ASSET_ROOT}${footwear.replaceAll(' ', '%20')}`,
-      `${CHARACTER_ASSET_ROOT}${genderName}%20Hair/${genderName}%20Hair${hair.sheet}.png`
+      `${HAIRSTYLE_ASSET_ROOT}${hairstyleFolder}/${hairstyleFilename}`
     ];
+  }
+
+  function hairColorFilter(colorId) {
+    return HAIR_COLOR_FILTERS[colorId] || 'none';
   }
 
   function pixel(ctx, x, y, width, height, color) {
@@ -334,50 +374,20 @@
       ctx.drawImage(image, 0, 0, 160, 90);
       return;
     }
-    const palettes = {
-      campfire: ['#101a35', '#26364d', '#406044'],
-      aurora: ['#091d3c', '#386b78', '#304c54'],
-      observatory: ['#111332', '#51426d', '#313b59'],
-      sanctuary: ['#1f3a35', '#52765a', '#405c42'],
-      pro: ['#171234', '#624d83', '#393956']
-    };
-    const colors = palettes[background.palette] || palettes.campfire;
-    pixel(ctx, 0, 0, 160, 90, colors[0]);
-    pixel(ctx, 0, 57, 160, 33, colors[1]);
-    pixel(ctx, 0, 72, 160, 18, colors[2]);
+    pixel(ctx, 0, 0, 160, 90, '#101a35');
+    pixel(ctx, 0, 57, 160, 33, '#26364d');
+    pixel(ctx, 0, 72, 160, 18, '#406044');
     for (let index = 0; index < 22; index++) {
       pixel(ctx, (index * 37 + 11) % 158, (index * 19 + 5) % 43, index % 4 === 0 ? 2 : 1, 1, '#e8dfae');
     }
-    if (background.palette === 'campfire') {
-      pixel(ctx, 12, 42, 36, 17, '#1d2b40');
-      pixel(ctx, 100, 38, 48, 21, '#1d2b40');
-      pixel(ctx, 25, 52, 20, 7, '#304057');
-      pixel(ctx, 112, 49, 30, 9, '#304057');
-      pixel(ctx, 18, 70, 20, 3, '#553b2f');
-      pixel(ctx, 22, 63, 4, 9, '#d78339');
-      pixel(ctx, 28, 60, 4, 12, '#f3bd59');
-      pixel(ctx, 32, 64, 3, 8, '#df6136');
-    } else if (background.palette === 'aurora') {
-      pixel(ctx, 0, 18, 67, 3, '#58c5a1');
-      pixel(ctx, 12, 22, 53, 2, '#58c5a1');
-      pixel(ctx, 87, 15, 73, 3, '#9a7fd0');
-      pixel(ctx, 95, 19, 57, 2, '#9a7fd0');
-      pixel(ctx, 0, 54, 59, 8, '#1b3448');
-      pixel(ctx, 111, 53, 49, 9, '#1b3448');
-    } else if (background.palette === 'observatory' || background.palette === 'pro') {
-      pixel(ctx, 113, 25, 28, 28, '#515273');
-      pixel(ctx, 119, 18, 16, 9, '#9d8a9d');
-      pixel(ctx, 121, 34, 4, 5, '#e8d78f');
-      pixel(ctx, 130, 34, 4, 5, '#e8d78f');
-      pixel(ctx, 16, 49, 28, 20, '#394058');
-      pixel(ctx, 22, 43, 16, 8, '#857d91');
-    } else {
-      pixel(ctx, 12, 54, 30, 16, '#29483f');
-      pixel(ctx, 19, 46, 16, 11, '#315641');
-      pixel(ctx, 115, 50, 34, 20, '#29483f');
-      pixel(ctx, 122, 42, 18, 12, '#315641');
-      pixel(ctx, 0, 67, 160, 3, '#779366');
-    }
+    pixel(ctx, 12, 42, 36, 17, '#1d2b40');
+    pixel(ctx, 100, 38, 48, 21, '#1d2b40');
+    pixel(ctx, 25, 52, 20, 7, '#304057');
+    pixel(ctx, 112, 49, 30, 9, '#304057');
+    pixel(ctx, 18, 70, 20, 3, '#553b2f');
+    pixel(ctx, 22, 63, 4, 9, '#d78339');
+    pixel(ctx, 28, 60, 4, 12, '#f3bd59');
+    pixel(ctx, 32, 64, 3, 8, '#df6136');
   }
 
   function drawHair(ctx, style, color, center, top) {
@@ -454,19 +464,47 @@
     }
   }
 
+  function drawCharacterAccessory(ctx, accessory) {
+    if (accessory.id === 'accessory_none') return;
+    if (accessory.id === 'accessory_stick') {
+      pixel(ctx, 91, 58, 1, 19, accessory.color);
+      pixel(ctx, 90, 57, 3, 2, '#c7ad7b');
+    } else if (accessory.id === 'accessory_lantern') {
+      pixel(ctx, 90, 61, 5, 7, '#7b5636');
+      pixel(ctx, 91, 62, 3, 4, '#f3cf76');
+      pixel(ctx, 91, 59, 3, 2, '#c1904d');
+    } else if (accessory.id === 'accessory_spyglass' || accessory.id === 'accessory_binoculars') {
+      pixel(ctx, 65, 59, 6, 3, accessory.color);
+      pixel(ctx, 64, 58, 2, 5, '#d5bd7b');
+    } else {
+      pixel(ctx, 88, 60, 6, 5, accessory.color);
+      pixel(ctx, 89, 61, 2, 2, '#d6bd81');
+    }
+  }
+
   function drawCharacterSprite(ctx, value, redraw = () => {}) {
     const target = CHARACTER_SPRITE_TARGET;
-    characterSpriteAssets(value).forEach(imageSrc => {
+    const character = normalizeCharacter(value);
+    characterSpriteAssets(character).forEach((imageSrc, index, assets) => {
       const image = getImage({ imageSrc }, redraw);
       if (image) {
+        const isHairLayer = index === assets.length - 1;
+        if (isHairLayer) {
+          ctx.save();
+          ctx.filter = hairColorFilter(character.hairColor);
+        }
         ctx.drawImage(
           image,
           CHARACTER_SPRITE_FRAME.x, CHARACTER_SPRITE_FRAME.y,
           CHARACTER_SPRITE_FRAME.width, CHARACTER_SPRITE_FRAME.height,
           target.x, target.y, target.width, target.height
         );
+        if (isHairLayer) ctx.restore();
       }
     });
+    const hat = getItem(HAT_CATALOG, character.hat);
+    if (hat.id !== 'hat_none') drawHat(ctx, hat, 80, 37);
+    drawCharacterAccessory(ctx, getItem(ACCESSORY_CATALOG, character.accessory));
   }
 
   function drawPerson(ctx, character, redraw) {
@@ -704,12 +742,27 @@
     </label>`;
   }
 
-  function characterThumbnailMarkup(character, gender) {
-    const assets = characterSpriteAssets({ ...character, gender });
+  function characterThumbnailMarkup(character) {
+    const assets = characterSpriteAssets(character);
+    const hairFilter = hairColorFilter(character.hairColor);
     return `<span aria-hidden="true" class="relative block h-[60px] w-[40px] shrink-0 overflow-hidden rounded bg-slate-900">
-      ${assets.map(src => `<img src="${escapeHtml(src)}" alt="" class="absolute max-w-none"
-        style="width:1000px;height:560px;left:-30px;top:-20px;image-rendering:pixelated">`).join('')}
+      ${assets.map((src, index) => `<img src="${escapeHtml(src)}" alt="" class="absolute max-w-none"
+        loading="lazy" style="width:1000px;height:560px;left:-30px;top:-20px;image-rendering:pixelated;${index === assets.length - 1 ? `filter:${hairFilter}` : ''}">`).join('')}
     </span>`;
+  }
+
+  function hairThumbnailMarkup(character) {
+    const assets = characterSpriteAssets(character);
+    const hairSrc = assets[assets.length - 1];
+    return `<span aria-hidden="true" class="relative block h-[60px] w-[40px] shrink-0 overflow-hidden rounded bg-slate-900">
+      <img src="${escapeHtml(hairSrc)}" alt="" loading="lazy" class="absolute max-w-none"
+        style="width:1000px;height:560px;left:-30px;top:-20px;image-rendering:pixelated;filter:${hairColorFilter(character.hairColor)}">
+    </span>`;
+  }
+
+  function wardrobeSwatchMarkup(item, symbol) {
+    return `<span aria-hidden="true" class="flex h-10 w-10 shrink-0 items-center justify-center rounded border border-slate-500 text-lg"
+      style="background-color:${escapeHtml(item.color || '#475569')}">${symbol}</span>`;
   }
 
   function visualDropdownMarkup(label, field, options, value, disabled, renderChoice) {
@@ -729,8 +782,8 @@
         <div class="absolute left-0 right-0 z-30 mt-1 max-h-64 overflow-y-auto rounded-lg border border-slate-700 bg-slate-950 p-1 shadow-xl">
           ${options.map(option => `<button type="button" data-character-field="${escapeHtml(field)}"
             data-character-id="${escapeHtml(option.id)}" aria-pressed="${option.id === value}"
-            ${disabled ? 'disabled' : ''}
-            class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm ${option.id === value ? 'bg-amber-950/60 text-amber-200' : 'text-slate-200 hover:bg-slate-800'} disabled:cursor-not-allowed">
+            ${disabled || option.disabled ? 'disabled' : ''}
+            class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm ${option.id === value ? 'bg-amber-950/60 text-amber-200' : 'text-slate-200 hover:bg-slate-800'} disabled:cursor-not-allowed disabled:opacity-50">
             ${renderChoice(option, false)}<span>${escapeHtml(option.name)}</span>
           </button>`).join('')}
         </div>
@@ -743,8 +796,54 @@
         const status = unlockStatus(item.unlock, stats, character, achievements);
         const selected = item.id === value;
         const description = status.unlocked ? selected ? ` — ${selectedLabel}` : '' : ` — 🔒 ${status.description}`;
-        return { id: item.id, name: item.name + description, disabled: !status.unlocked };
+        return { ...item, name: item.name + description, disabled: !status.unlocked };
       });
+  }
+
+  function petThumbnailMarkup(pet) {
+    return `<canvas data-pet-preview="${escapeHtml(pet.id)}" width="72" height="48"
+      aria-hidden="true" class="h-12 w-[72px] shrink-0 rounded bg-slate-900"></canvas>`;
+  }
+
+  function renderPetPreview(canvas, pet) {
+    if (!canvas || canvas.isConnected === false) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (pet.kind === 'none') {
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(36, 24, 12, 0, Math.PI * 2);
+      ctx.moveTo(27, 33);
+      ctx.lineTo(45, 15);
+      ctx.stroke();
+      return;
+    }
+    ctx.save();
+    ctx.scale(2, 2);
+    ctx.translate(-96, -55);
+    drawPet(ctx, pet, () => renderPetPreview(canvas, pet), 0);
+    ctx.restore();
+  }
+
+  function renderPetPreviews(container) {
+    if (typeof container.querySelectorAll !== 'function') return;
+    container.querySelectorAll('canvas[data-pet-preview]').forEach(canvas => {
+      const details = canvas.closest('details');
+      if (details && !details.open && !canvas.closest('summary')) return;
+      const pet = getItem(PET_CATALOG, canvas.dataset.petPreview);
+      renderPetPreview(canvas, pet);
+    });
+  }
+
+  function backgroundThumbnailMarkup(background) {
+    return `<span aria-hidden="true" class="block h-12 w-[72px] shrink-0 overflow-hidden rounded bg-slate-900">
+      ${background.imageSrc
+        ? `<img src="${escapeHtml(background.imageSrc)}" alt="" class="h-full w-full object-cover">`
+        : ''}
+    </span>`;
   }
 
   function renderControls(container, character, stats, achievements, disabled) {
@@ -754,28 +853,47 @@
       appearance: `<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         ${visualDropdownMarkup('Character sprite', 'gender', [
           { id: 'male', name: 'Male sprite' }, { id: 'female', name: 'Female sprite' }
-        ], character.gender, disabled, option => characterThumbnailMarkup(character, option.id))}
+        ], character.gender, disabled, option =>
+          characterThumbnailMarkup({ ...character, gender: option.id }))}
         ${visualDropdownMarkup('Skin tone', 'skinTone', SKIN_TONES, character.skinTone, disabled,
           option => `<span aria-hidden="true" class="block h-6 w-6 shrink-0 rounded-full border border-slate-500"
             style="background-color:${escapeHtml(option.color)}"></span>`)}
-        ${optionMarkup('Hair style', 'hairStyle', HAIR_STYLES, character.hairStyle, disabled)}
+        ${visualDropdownMarkup('Hair color', 'hairColor', HAIR_COLORS, character.hairColor, disabled,
+          option => hairThumbnailMarkup({ ...character, hairColor: option.id }))}
+        ${visualDropdownMarkup('Hairstyle', 'hairStyle',
+          HAIR_STYLES.filter(style => style.genders.includes(character.gender)),
+          character.hairStyle, disabled,
+          option => hairThumbnailMarkup({ ...character, hairStyle: option.id }))}
       </div>`,
       wardrobe: `<div class="space-y-5">
-        <p class="text-xs text-slate-400">Outfits use the matching layers from the character sprite pack.</p>
+        <p class="text-xs text-slate-400">Preview each look before equipping it.</p>
         <section><h4 class="text-sm font-bold text-amber-200 mb-2">Outfits</h4>
-          ${optionMarkup('Outfit', 'outfit',
+          ${visualDropdownMarkup('Outfit', 'outfit',
             catalogOptions(OUTFIT_CATALOG, character.outfit, stats, character, completedAchievements, 'Equipped'),
-            character.outfit, disabled, true)}
+            character.outfit, disabled,
+            option => characterThumbnailMarkup({ ...character, outfit: option.id }))}
+        </section>
+        <section><h4 class="text-sm font-bold text-amber-200 mb-2">Hats</h4>
+          ${visualDropdownMarkup('Hat', 'hat',
+            catalogOptions(HAT_CATALOG, character.hat, stats, character, completedAchievements, 'Equipped'),
+            character.hat, disabled,
+            option => wardrobeSwatchMarkup(option, '🎩'))}
+        </section>
+        <section><h4 class="text-sm font-bold text-amber-200 mb-2">Accessories</h4>
+          ${visualDropdownMarkup('Accessory', 'accessory',
+            catalogOptions(ACCESSORY_CATALOG, character.accessory, stats, character, completedAchievements, 'Equipped'),
+            character.accessory, disabled,
+            option => wardrobeSwatchMarkup(option, '🧭'))}
         </section>
       </div>`,
       pets: `<p class="text-xs text-slate-400 mb-3">Choose one companion to appear beside your explorer.</p>
-        ${optionMarkup('Companion', 'pet',
+        ${visualDropdownMarkup('Companion', 'pet',
           catalogOptions(PET_CATALOG, character.pet, stats, character, completedAchievements),
-          character.pet, disabled, true)}`,
-      backgrounds: `<p class="text-xs text-slate-400 mb-3">Choose a scene for your stage. National Park dioramas are deferred for now.</p>
-        ${optionMarkup('Scene', 'background',
+          character.pet, disabled, option => petThumbnailMarkup(option))}`,
+      backgrounds: `<p class="text-xs text-slate-400 mb-3">Campfire Night is the available scene.</p>
+        ${visualDropdownMarkup('Scene', 'background',
           catalogOptions(BACKGROUND_CATALOG, character.background, stats, character, completedAchievements),
-          character.background, disabled, true)}`,
+          character.background, disabled, option => backgroundThumbnailMarkup(option))}`,
       patron: `<div class="rounded-xl border border-amber-800/60 bg-amber-950/20 p-3 mb-4 text-xs text-amber-100">
           Pro and donation rewards are listed for the future catalog. Payment and donation verification are not connected yet, so these profile values do not grant verified purchase entitlements.
         </div>
@@ -800,6 +918,12 @@
           appearance: 'Appearance', wardrobe: 'Wardrobe', pets: 'Pets', backgrounds: 'Backgrounds', patron: 'Patron & Pro'
         }[tab]}</button>`).join('')}
       </div><div role="tabpanel">${sections[activeTab]}</div>`;
+    renderPetPreviews(container);
+    if (typeof container.querySelectorAll === 'function') {
+      container.querySelectorAll('details').forEach(details => {
+        details.addEventListener('toggle', () => renderPetPreviews(details));
+      });
+    }
   }
 
   function renderProgressSummary(container, stats, character, achievements) {
@@ -843,6 +967,7 @@
       customizeButton.onclick = () => {
         controls.hidden = !controls.hidden;
         customizeButton.setAttribute('aria-expanded', String(!controls.hidden));
+        if (!controls.hidden) renderPetPreviews(controls);
       };
     }
     if (!controls) return;

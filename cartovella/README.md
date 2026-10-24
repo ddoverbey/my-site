@@ -112,13 +112,16 @@ Completionist class. The current hard-coded Explorer Classes are:
 ### Explorer character
 
 The Explorer Profile character stage composites the gendered base, skin tone, hairstyle, and outfit
-sprite layers from the bundled GandalfHardcore Character Asset Pack. Character sprite catalogs,
+sprite layers from the bundled GandalfHardcore asset packs. The 58x Hair bundle supplies the
+58 gender-specific hairstyle options (28 male and 30 female); hair color is a separate appearance
+control. Character sprite catalogs,
 layer composition, unlock rules, backgrounds, and companion rendering live in `character-creator.js`;
 character settings are stored in the passport and included in local, cloud, export, and shared saves.
 GandalfHardcore asset folders are grouped under `assets/gandalfhardcore/`; source ZIP archives remain
 in `assets/Zips/`.
-The character layers use the pack's aligned 800×448 sheets and a 32×48 crop around the first character
-frame. Companion catalog entries can use an `imageSrc` PNG or a cropped sprite-sheet animation. All five dog coat variants
+The character layers use aligned 800×448 sheets and a 32×48 crop around the first character
+frame. Character, hairstyle, wardrobe, companion, and background selectors show visual previews.
+Companion catalog entries can use an `imageSrc` PNG or a cropped sprite-sheet animation. All five dog coat variants
 (golden, slate, sandy, cream, and shadow) use five 32×32 walking frames from the corresponding
 `assets/gandalfhardcore/GandalfHardcore Pet companion/GandalfHardcore Pet companion/GandalfHardcore doggy sheet*.png`
 spritesheets and render at 26×17 logical pixels. Black (Cat 1), ginger (Cat 2), and white (Cat 3)
@@ -128,13 +131,12 @@ size and uses its five populated 32×32 frames; Blue Wisp and Outlined Blue Wisp
 same pet bundle. Legacy puppy/kitten pet IDs migrate to the golden dog
 and black cat so saved characters continue to load. The bundled dog-asset readme permits use in
 projects but prohibits redistributing or repackaging the artwork.
-The Campfire Night character-stage background uses the supplied
+Campfire Night is the only available character-stage background and uses the supplied
 `assets/backgrounds/campfire-night-320px.png` 320×180 (16:9) image, scaled to the stage's
 160×90 logical size.
 
-Level, worldwide-destination, and existing achievement milestones unlock cosmetics. Starter,
-achievement, and patron/Pro background choices are available in the catalog; the 63 National Park
-diorama backgrounds are intentionally deferred. Cartovella does not yet verify Pro purchases or
+Level, worldwide-destination, and existing achievement milestones unlock wardrobe and companion
+cosmetics. Cartovella does not yet verify Pro purchases or
 donations, so client-side profile values do not establish paid entitlements.
 
 ### Location rarity

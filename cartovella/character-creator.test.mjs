@@ -23,17 +23,20 @@ check('every customization option supports a future image override', () => {
 check('character appearance, outfit, companion, and scene choices render as dropdowns', () => {
   const controls = { dataset: {}, innerHTML: '' };
   const expectedFields = {
-    appearance: ['gender', 'skinTone', 'hairStyle'],
-    wardrobe: ['outfit'],
+    appearance: ['gender', 'skinTone', 'hairColor', 'hairStyle'],
+    wardrobe: ['outfit', 'hat', 'accessory'],
     pets: ['pet'],
     backgrounds: ['background'],
     patron: ['proReward', 'donationReward']
   };
+  const visualFields = new Set([
+    'gender', 'skinTone', 'hairColor', 'hairStyle', 'outfit', 'hat', 'accessory', 'pet', 'background'
+  ]);
   for (const [tab, fields] of Object.entries(expectedFields)) {
     controls.dataset.activeTab = tab;
     characterCreator.render({ controls, character: characterCreator.DEFAULT_CHARACTER, stats: { level: 1 } });
     for (const field of fields) {
-      const controlTag = ['gender', 'skinTone'].includes(field) ? 'details' : 'select';
+      const controlTag = visualFields.has(field) ? 'details' : 'select';
       if (controlTag === 'details') {
         assert.match(controls.innerHTML, new RegExp(`<details[^>]*>[\\s\\S]*?data-character-field="${field}"`));
       } else {
@@ -45,9 +48,14 @@ check('character appearance, outfit, companion, and scene choices render as drop
   characterCreator.render({ controls, character: characterCreator.DEFAULT_CHARACTER });
   assert.match(controls.innerHTML, /Male%20Skin2\.png/);
   assert.match(controls.innerHTML, /Female%20Skin2\.png/);
+  assert.match(controls.innerHTML, /Male%20Hair6\.png/);
+  assert.match(controls.innerHTML, /Female%20Hair6\.png/);
   assert.match(controls.innerHTML, /background-color:#dba77e/);
+  assert.match(controls.innerHTML, /Hair color/);
+  assert.match(controls.innerHTML, /Hairstyle/);
   assert.match(controls.innerHTML, /Porcelain/);
   assert.match(controls.innerHTML, /Warm/);
+  assert.match(controls.innerHTML, /Hairstyle 6/);
   assert.match(controls.innerHTML, /No reward selected/);
 });
 check('dropdown changes update the selected character field', () => {
@@ -58,17 +66,22 @@ check('dropdown changes update the selected character field', () => {
     character: characterCreator.DEFAULT_CHARACTER,
     onChange: character => { changedCharacter = character; }
   });
-  controls.onclick({
+  const choose = (field, id) => controls.onclick({
     target: {
       closest(selector) {
         if (selector === '[data-character-tab]') return null;
         if (selector === 'button[data-character-field][data-character-id]') {
-          return { dataset: { characterField: 'gender', characterId: 'female' }, disabled: false };
+          return { dataset: { characterField: field, characterId: id }, disabled: false };
         }
         return null;
       }
     }
   });
+  choose('hairColor', 'teal');
+  assert.equal(changedCharacter.hairColor, 'teal');
+  choose('hairStyle', 'hair_10');
+  assert.equal(changedCharacter.hairStyle, 'hair_10');
+  choose('gender', 'female');
   assert.equal(changedCharacter.gender, 'female');
 });
 check('late character sprite loads redraw the most recently rendered stage', () => {
@@ -101,10 +114,43 @@ check('late character sprite loads redraw the most recently rendered stage', () 
     const character = { ...characterCreator.DEFAULT_CHARACTER, gender: 'female', pet: 'pet_none' };
     characterCreator.drawStage(canvas, { ...character, background: 'bg_aurora' });
     characterCreator.drawStage(canvas, { ...character, background: 'bg_observatory' });
-    assert.equal(pendingImages.length, 5);
+    assert.equal(pendingImages.length, 6);
     pendingImages.forEach(image => image.load());
-    assert.equal(drawCalls.length, 5);
-    assert.ok(drawCalls.every(src => src.includes('Female')));
+    assert.equal(drawCalls.length, 6);
+    assert.equal(drawCalls.filter(src => src.includes('Female')).length, 5);
+    assert.equal(drawCalls.filter(src => src.includes('campfire-night')).length, 1);
+  } finally {
+    if (originalImage === undefined) delete globalThis.Image;
+    else globalThis.Image = originalImage;
+  }
+});
+check('a shared sprite-sheet load redraws both the stage and its pet preview', () => {
+  const originalImage = globalThis.Image;
+  const pendingImages = [];
+  globalThis.Image = class {
+    constructor() {
+      this.complete = false;
+      this.naturalWidth = 0;
+      this.src = '';
+      pendingImages.push(this);
+    }
+    load() {
+      this.complete = true;
+      this.naturalWidth = 192;
+      this.onload();
+    }
+  };
+  try {
+    const pet = characterCreator.PET_CATALOG.find(item => item.id === 'pet_trail_dog');
+    let stageRedraws = 0;
+    let previewRedraws = 0;
+    const context = { drawImage() {} };
+    characterCreator.drawPet(context, pet, () => { stageRedraws++; }, 0);
+    characterCreator.drawPet(context, pet, () => { previewRedraws++; }, 0);
+    assert.equal(pendingImages.length, 1);
+    pendingImages[0].load();
+    assert.equal(stageRedraws, 1);
+    assert.equal(previewRedraws, 1);
   } finally {
     if (originalImage === undefined) delete globalThis.Image;
     else globalThis.Image = originalImage;
@@ -125,7 +171,7 @@ check('character migration clamps invalid values and preserves safe selections',
     proUnlocked: 'true', donationUsd: 100000000, unknown: 'discard'
   }), {
     ...characterCreator.DEFAULT_CHARACTER,
-    skinTone: 'deep', hairStyle: 'curls', outfit: 'outfit_parka',
+    skinTone: 'deep', hairStyle: 'hair_6', outfit: 'outfit_parka',
     pet: 'pet_black_cat', background: 'bg_campfire',
     proUnlocked: false, donationUsd: 1000000
   });
@@ -145,6 +191,18 @@ check('inclusive body frames migrate legacy selections', () => {
   assert.equal(characterCreator.normalizeCharacter({ bodyShape: 'broad' }).bodyShape, 'vTaper');
   assert.equal(characterCreator.normalizeCharacter({ bodyShape: 'sturdy' }).bodyShape, 'vTaper');
   assert.equal(characterCreator.normalizeCharacter({ bodyShape: 'hourglass' }).bodyShape, 'hourglass');
+});
+check('the 58 hairstyle assets are available for their matching character sprites', () => {
+  const maleStyles = characterCreator.HAIR_STYLES.filter(style => style.genders.includes('male'));
+  const femaleStyles = characterCreator.HAIR_STYLES.filter(style => style.genders.includes('female'));
+  assert.equal(maleStyles.length, 28);
+  assert.equal(femaleStyles.length, 30);
+  assert.ok(characterCreator.characterSpriteAssets({
+    ...characterCreator.DEFAULT_CHARACTER, hairStyle: 'hair_fancy'
+  })[4].endsWith('/Fancy%20Hair.png'));
+  assert.ok(characterCreator.characterSpriteAssets({
+    ...characterCreator.DEFAULT_CHARACTER, gender: 'female', hairStyle: 'hair_35'
+  })[4].endsWith('/Female%20Hair35.png'));
 });
 check('low-resolution frame profiles keep the V-taper broad at the shoulders and hourglass defined', () => {
   const { straight, vTaper, hourglass } = characterCreator.BODY_SHAPE_PROFILES;
@@ -241,17 +299,13 @@ check('existing achievement IDs drive character rewards', () => {
   const character = characterCreator.normalizeCharacter();
   for (const item of [
     characterCreator.HAT_CATALOG.find(entry => entry.id === 'hat_summit'),
-    characterCreator.BACKGROUND_CATALOG.find(entry => entry.id === 'bg_aurora'),
     characterCreator.OUTFIT_CATALOG.find(entry => entry.id === 'outfit_rain')
   ]) {
     assert.equal(characterCreator.unlockStatus(item.unlock, {}, character, progress).unlocked, true);
   }
 });
-check('national park dioramas are deferred while generic backgrounds remain selectable', () => {
-  assert.deepEqual(characterCreator.BACKGROUND_CATALOG.map(item => item.id), [
-    'bg_campfire', 'bg_aurora', 'bg_observatory', 'bg_sanctuary', 'bg_pro_celestial'
-  ]);
-  assert.ok(characterCreator.BACKGROUND_CATALOG.every(item => item.id.startsWith('bg_')));
+check('Campfire Night is the only available character background', () => {
+  assert.deepEqual(characterCreator.BACKGROUND_CATALOG.map(item => item.id), ['bg_campfire']);
 });
 check('Campfire Night uses the supplied 320x180 background art', () => {
   const background = characterCreator.BACKGROUND_CATALOG.find(item => item.id === 'bg_campfire');
@@ -276,20 +330,28 @@ check('sprite character selects matching gender, skin, hair, and outfit layers',
       ...characterCreator.DEFAULT_CHARACTER,
       gender: 'female',
       skinTone: 'deep',
-      hairStyle: 'braided',
+      hairStyle: 'hair_10',
+      hairColor: 'teal',
       outfit: 'outfit_vest'
     };
     const assets = characterCreator.characterSpriteAssets(character);
     assert.deepEqual(assets.map(path => decodeURIComponent(path.split('/').at(-1))), [
-      'Female Skin5.png', 'Skirt.png', 'Blue Corset v2.png', 'Boots.png', 'Female Hair5.png'
+      'Female Skin5.png', 'Skirt.png', 'Blue Corset v2.png', 'Boots.png', 'Female Hair10.png'
     ]);
     for (const asset of assets) {
       const png = readFileSync(new URL(asset, import.meta.url));
       assert.equal(png.toString('ascii', 1, 4), 'PNG');
       assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [800, 448]);
     }
-    characterCreator.drawCharacterSprite({ drawImage(...args) { drawCalls.push(args); } }, character);
+    let hairFilter = 'none';
+    characterCreator.drawCharacterSprite({
+      save() {},
+      restore() {},
+      set filter(value) { hairFilter = value; },
+      drawImage(...args) { drawCalls.push(args); }
+    }, character);
     assert.equal(drawCalls.length, 5);
+    assert.match(hairFilter, /hue-rotate\(130deg\)/);
     assert.ok(drawCalls.every(call =>
       call.length === 9 && call.slice(1).join(',') === '24,16,32,48,60,34,40,48'
     ));
