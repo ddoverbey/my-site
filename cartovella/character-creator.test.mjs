@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
 import characterCreator from './character-creator.js';
 
 let checks = 0;
@@ -34,11 +35,13 @@ check('character migration clamps invalid values and preserves safe selections',
   }), {
     ...characterCreator.DEFAULT_CHARACTER,
     skinTone: 'deep', hairStyle: 'curls', outfit: 'outfit_parka',
-    pet: 'pet_kitten_gray', background: 'bg_campfire',
+    pet: 'pet_black_cat', background: 'bg_campfire',
     proUnlocked: false, donationUsd: 1000000
   });
   assert.equal(characterCreator.normalizeCharacter({ hat: 'not-a-hat' }).hat, 'hat_none');
   assert.equal(characterCreator.normalizeCharacter({ background: 'bg_citadel' }).background, 'bg_campfire');
+  assert.equal(characterCreator.normalizeCharacter({ pet: 'pet_puppy_gold' }).pet, 'pet_trail_dog');
+  assert.equal(characterCreator.normalizeCharacter({ pet: 'pet_kitten_gray' }).pet, 'pet_black_cat');
 });
 check('inclusive body frames migrate legacy selections', () => {
   assert.deepEqual(characterCreator.BODY_SHAPES.map(frame => [frame.id, frame.name]), [
@@ -60,25 +63,40 @@ check('low-resolution frame profiles keep the V-taper broad at the shoulders and
   assert.ok(Math.min(...hourglass.slice(5, 11)) < hourglass[0]);
   assert.ok(Math.max(...hourglass.slice(12)) <= hourglass[0]);
 });
-check('low-resolution companion sprites include recognizable facial and species details', () => {
-  const context = {
-    fillStyle: '',
-    pixels: [],
-    fillRect(x, y, width, height) { this.pixels.push({ x, y, width, height, color: this.fillStyle }); }
-  };
-  const cases = [
-    ['pet_pufflin_blue', ['#fff6e6', '#203347']],
-    ['pet_puppy_gold', ['#f0d5a7', '#8c5b34']],
-    ['pet_kitten_gray', ['#d98d91', '#d9d6d0']]
-  ];
-  for (const [petId, details] of cases) {
-    context.pixels = [];
-    const pet = characterCreator.PET_CATALOG.find(item => item.id === petId);
-    characterCreator.drawPet(context, pet, () => {});
-    assert.ok(context.pixels.length >= 35, `${petId} should have a shaped sprite`);
-    for (const detail of details) {
-      assert.ok(context.pixels.some(pixel => pixel.color === detail), `${petId} should include ${detail}`);
+check('dog and cat companions use the bundled animated sprite sheets', () => {
+  const dog = characterCreator.PET_CATALOG.find(item => item.id === 'pet_trail_dog');
+  const cat = characterCreator.PET_CATALOG.find(item => item.id === 'pet_black_cat');
+  assert.equal(dog.name, 'Trail Dog');
+  assert.equal(cat.name, 'Black Cat Companion');
+  for (const pet of [dog, cat]) {
+    assert.equal(pet.kind, 'sprite');
+    assert.ok(existsSync(new URL(pet.imageSrc, import.meta.url)), `${pet.id} sprite sheet should exist`);
+  }
+  assert.equal(dog.spriteSheet.frameCount, 5);
+  assert.equal(cat.spriteSheet.frameCount, 3);
+  assert.equal(cat.spriteSheet.row, 14, 'cat frames use the labeled Meow sit front row');
+});
+check('companion sprite animations crop the requested frame and transparent art bounds', () => {
+  const originalImage = globalThis.Image;
+  const drawCalls = [];
+  globalThis.Image = class {
+    constructor() {
+      this.complete = true;
+      this.naturalWidth = 896;
+      this.src = '';
     }
+  };
+  try {
+    const context = { drawImage(...args) { drawCalls.push(args); } };
+    const dog = characterCreator.PET_CATALOG.find(item => item.id === 'pet_trail_dog');
+    const cat = characterCreator.PET_CATALOG.find(item => item.id === 'pet_black_cat');
+    characterCreator.drawPet(context, dog, () => {}, 2);
+    characterCreator.drawPet(context, cat, () => {}, 1);
+    assert.deepEqual(drawCalls[0].slice(1), [65, 13, 29, 19, 103, 67, 20, 13]);
+    assert.deepEqual(drawCalls[1].slice(1), [84, 912, 28, 32, 104, 60, 18, 20]);
+  } finally {
+    if (originalImage === undefined) delete globalThis.Image;
+    else globalThis.Image = originalImage;
   }
 });
 check('level and destination unlocks show exact current progress', () => {

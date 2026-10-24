@@ -31,7 +31,7 @@ check('character selections survive passport migration with safe catalog default
   }, lookups, catalog, characterCreator.normalizeCharacter);
   assert.equal(state.character.hairColor, 'teal');
   assert.equal(state.character.outfit, 'outfit_parka');
-  assert.equal(state.character.pet, 'pet_kitten_gray');
+  assert.equal(state.character.pet, 'pet_black_cat');
   assert.equal(Object.hasOwn(state.character, 'unsafe'), false);
   assert.equal(Object.hasOwn(state.extraPassportFields, 'character'), false);
 });

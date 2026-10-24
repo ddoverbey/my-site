@@ -117,7 +117,12 @@ Curved / Hourglass body frames keep the original 160×90 logical stage; older `b
 `broad`, and `sturdy` selections migrate to the closest frame. Character selections are stored in
 the passport and included in normal local, cloud, export, and shared-passport saves. Appearance and
 item catalogs, unlock rules, and procedural canvas drawing live in `character-creator.js`; catalog
-entries can later use an `imageSrc` PNG instead of the procedural fallback.
+entries can use an `imageSrc` PNG or a cropped sprite-sheet animation. The Trail Dog uses five
+32×32 walking frames from `assets/GandalfHardcore Pet companion/GandalfHardcore Pet companion/GandalfHardcore doggy sheet.png`;
+the Black Cat uses the three-frame “Meow sit front” sequence (row 14) from
+`assets/cat-PACK/PACK/cat 1 (64х64).png`. Legacy puppy/kitten pet IDs migrate to these asset-based
+companions so saved characters continue to load. The bundled dog-asset readme permits use in
+projects but prohibits redistributing or repackaging the artwork.
 
 Level, worldwide-destination, and existing achievement milestones unlock cosmetics. Starter,
 achievement, and patron/Pro background choices are available in the catalog; the 63 National Park

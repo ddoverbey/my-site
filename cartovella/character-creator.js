@@ -87,13 +87,33 @@
   const PET_CATALOG = [
     { id: 'pet_none', name: 'No Companion', unlock: { type: 'starter' }, kind: 'none', imageSrc: null },
     { id: 'pet_pufflin_blue', name: 'Blue Pufflin', unlock: { type: 'starter' }, kind: 'pufflin', color: '#59a9d7', imageSrc: null },
-    { id: 'pet_puppy_gold', name: 'Golden Retriever Puppy', unlock: { type: 'starter' }, kind: 'puppy', color: '#dca957', imageSrc: null },
-    { id: 'pet_kitten_gray', name: 'Gray Tabby Kitten', unlock: { type: 'starter' }, kind: 'kitten', color: '#8796a6', imageSrc: null },
+    {
+      id: 'pet_trail_dog', name: 'Trail Dog', unlock: { type: 'starter' }, kind: 'sprite',
+      imageSrc: './assets/GandalfHardcore%20Pet%20companion/GandalfHardcore%20Pet%20companion/GandalfHardcore%20doggy%20sheet.png',
+      spriteSheet: {
+        frameWidth: 32, frameHeight: 32, frameCount: 5, frameDuration: 320,
+        sourceX: 1, sourceY: 13, sourceWidth: 29, sourceHeight: 19,
+        targetX: 103, targetY: 67, targetWidth: 20, targetHeight: 13
+      }
+    },
+    {
+      id: 'pet_black_cat', name: 'Black Cat Companion', unlock: { type: 'starter' }, kind: 'sprite',
+      imageSrc: './assets/cat-PACK/PACK/cat%201%20(64%D1%8564).png',
+      spriteSheet: {
+        frameWidth: 64, frameHeight: 64, frameCount: 3, frameDuration: 600,
+        row: 14, sourceX: 20, sourceY: 16, sourceWidth: 28, sourceHeight: 32,
+        targetX: 104, targetY: 60, targetWidth: 18, targetHeight: 20
+      }
+    },
     { id: 'pet_pufflin_forest', name: 'Forest Pufflin', unlock: { type: 'achievement', id: 'whispers' }, kind: 'pufflin', color: '#63a978', imageSrc: null },
     { id: 'pet_pufflin_gold', name: 'Golden Pufflin', unlock: { type: 'achievement', id: 'masterRanger' }, kind: 'pufflin', color: '#e3b648', imageSrc: null },
     { id: 'pet_pufflin_gaia', name: 'Gaia Pufflin', unlock: { type: 'achievement', id: 'gaiaWanderer' }, kind: 'pufflin', color: '#ba8cd7', imageSrc: null },
     { id: 'pet_red_panda', name: 'Red Panda Companion', unlock: { type: 'pro' }, kind: 'redPanda', color: '#ca7047', imageSrc: null }
   ];
+  const PET_ID_ALIASES = new Map([
+    ['pet_puppy_gold', 'pet_trail_dog'],
+    ['pet_kitten_gray', 'pet_black_cat']
+  ]);
   const BACKGROUND_CATALOG = [
     { id: 'bg_campfire', name: 'Campfire Night', unlock: { type: 'starter' }, palette: 'campfire', imageSrc: null },
     { id: 'bg_aurora', name: 'Aurora Borealis', unlock: { type: 'achievement', id: 'longDark' }, palette: 'aurora', imageSrc: null },
@@ -127,6 +147,8 @@
   };
   const imageCache = new Map();
   const stages = new WeakMap();
+  const stageRenderers = new WeakMap();
+  const petAnimations = new WeakMap();
   const tabs = ['appearance', 'wardrobe', 'pets', 'backgrounds', 'patron'];
 
   function normalizeCharacter(value) {
@@ -136,6 +158,7 @@
     const validColorId = (raw, catalog, fallback) =>
       normalizeId(raw, knownIds(catalog), fallback);
     const bodyShape = BODY_SHAPE_ALIASES.get(source.bodyShape) || source.bodyShape;
+    const pet = PET_ID_ALIASES.get(source.pet) || source.pet;
     return {
       skinTone: validColorId(source.skinTone, SKIN_TONES, DEFAULT_CHARACTER.skinTone),
       hairStyle: normalizeId(source.hairStyle, knownIds(HAIR_STYLES), DEFAULT_CHARACTER.hairStyle),
@@ -146,7 +169,7 @@
       hat: normalizeId(source.hat, knownIds(HAT_CATALOG), DEFAULT_CHARACTER.hat),
       outfit: normalizeId(source.outfit, knownIds(OUTFIT_CATALOG), DEFAULT_CHARACTER.outfit),
       accessory: normalizeId(source.accessory, knownIds(ACCESSORY_CATALOG), DEFAULT_CHARACTER.accessory),
-      pet: normalizeId(source.pet, knownIds(PET_CATALOG), DEFAULT_CHARACTER.pet),
+      pet: normalizeId(pet, knownIds(PET_CATALOG), DEFAULT_CHARACTER.pet),
       background: normalizeId(source.background, knownIds(BACKGROUND_CATALOG), DEFAULT_CHARACTER.background),
       proUnlocked: source.proUnlocked === true,
       donationUsd: Number.isFinite(Number(source.donationUsd))
@@ -464,9 +487,51 @@
     }
   }
 
-  function drawPet(ctx, pet, redraw) {
+  function petAnimationFrame(canvas, pet) {
+    let animation = petAnimations.get(canvas);
+    if (!pet.spriteSheet) {
+      if (animation) clearInterval(animation.timerId);
+      petAnimations.delete(canvas);
+      return 0;
+    }
+    if (!animation || animation.petId !== pet.id) {
+      if (animation) clearInterval(animation.timerId);
+      animation = { petId: pet.id, frame: 0, timerId: 0 };
+      animation.timerId = setInterval(() => {
+        if (petAnimations.get(canvas) !== animation) return;
+        if (canvas.isConnected === false) {
+          clearInterval(animation.timerId);
+          petAnimations.delete(canvas);
+          return;
+        }
+        animation.frame = (animation.frame + 1) % pet.spriteSheet.frameCount;
+        stageRenderers.get(canvas)?.();
+      }, pet.spriteSheet.frameDuration);
+      petAnimations.set(canvas, animation);
+    }
+    return animation.frame;
+  }
+
+  function drawPet(ctx, pet, redraw, frameIndex = 0) {
     if (pet.id === 'pet_none') return;
     const image = getImage(pet, redraw);
+    if (pet.spriteSheet) {
+      if (!image) return;
+      const sprite = pet.spriteSheet;
+      const frame = Math.max(0, frameIndex) % sprite.frameCount;
+      ctx.drawImage(
+        image,
+        frame * sprite.frameWidth + (sprite.sourceX || 0),
+        (sprite.row || 0) * sprite.frameHeight + sprite.sourceY,
+        sprite.sourceWidth,
+        sprite.sourceHeight,
+        sprite.targetX,
+        sprite.targetY,
+        sprite.targetWidth,
+        sprite.targetHeight
+      );
+      return;
+    }
     if (image) {
       ctx.drawImage(image, 102, 64, 20, 16);
       return;
@@ -499,48 +564,6 @@
       pixel(ctx, x + 12, y + 11, 4, 2, outline);
       pixel(ctx, x + 5, y + 11, 3, 1, pet.color);
       pixel(ctx, x + 12, y + 11, 3, 1, pet.color);
-    } else if (pet.kind === 'puppy') {
-      const x = 103;
-      drawBody(x, 70, [8, 13, 16, 17, 17, 15, 12], pet.color);
-      pixel(ctx, x + 15, 70, 3, 3, '#a8753d');
-      pixel(ctx, x + 17, 68, 3, 3, '#a8753d');
-      pixel(ctx, x + 18, 66, 2, 3, '#a8753d');
-      pixel(ctx, x + 2, 64, 4, 8, '#8c5b34');
-      pixel(ctx, x + 13, 64, 4, 8, '#8c5b34');
-      drawBody(x + 3, 63, [5, 9, 12, 13, 13, 12, 10], pet.color);
-      pixel(ctx, x + 6, 67, 2, 2, '#fff0dc');
-      pixel(ctx, x + 12, 67, 2, 2, '#fff0dc');
-      pixel(ctx, x + 7, 68, 1, 1, '#3a3030');
-      pixel(ctx, x + 13, 68, 1, 1, '#3a3030');
-      pixel(ctx, x + 8, 70, 6, 3, '#f0d5a7');
-      pixel(ctx, x + 10, 70, 2, 2, '#302a2a');
-      pixel(ctx, x + 5, 76, 5, 3, '#f0d5a7');
-      pixel(ctx, x + 13, 76, 5, 3, '#f0d5a7');
-    } else if (pet.kind === 'kitten') {
-      const x = 103;
-      drawBody(x + 1, 70, [8, 12, 15, 16, 16, 14, 11], pet.color);
-      pixel(ctx, x + 14, 71, 3, 3, '#697789');
-      pixel(ctx, x + 16, 69, 3, 3, '#697789');
-      pixel(ctx, x + 15, 67, 3, 3, '#697789');
-      pixel(ctx, x + 4, 63, 3, 5, outline);
-      pixel(ctx, x + 3, 64, 5, 4, outline);
-      pixel(ctx, x + 14, 63, 3, 5, outline);
-      pixel(ctx, x + 13, 64, 5, 4, outline);
-      drawBody(x + 3, 65, [6, 10, 13, 14, 14, 12, 10], pet.color);
-      pixel(ctx, x + 5, 64, 1, 3, '#d98d91');
-      pixel(ctx, x + 15, 64, 1, 3, '#d98d91');
-      pixel(ctx, x + 6, 69, 2, 2, '#f5f1e7');
-      pixel(ctx, x + 12, 69, 2, 2, '#f5f1e7');
-      pixel(ctx, x + 7, 69, 1, 2, '#415d69');
-      pixel(ctx, x + 13, 69, 1, 2, '#415d69');
-      pixel(ctx, x + 9, 72, 3, 1, '#d98d91');
-      pixel(ctx, x + 10, 73, 1, 1, outline);
-      pixel(ctx, x + 2, 72, 5, 1, '#d9d6d0');
-      pixel(ctx, x + 15, 72, 5, 1, '#d9d6d0');
-      pixel(ctx, x + 8, 66, 2, 1, '#65717c');
-      pixel(ctx, x + 11, 66, 2, 1, '#65717c');
-      pixel(ctx, x + 6, 77, 4, 2, '#d8dbe0');
-      pixel(ctx, x + 13, 77, 4, 2, '#d8dbe0');
     } else {
       const x = 103;
       drawBody(x + 1, 70, [8, 12, 15, 16, 16, 14, 11], pet.color);
@@ -581,13 +604,15 @@
     stages.set(canvas, renderId);
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+    stageRenderers.set(canvas, () => drawStage(canvas, character, options));
+    const petFrame = petAnimationFrame(canvas, activePet);
     ctx.imageSmoothingEnabled = false;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();
     ctx.scale(canvas.width / 160, canvas.height / 90);
     drawBackground(ctx, activeBackground, redraw);
     drawPerson(ctx, character, redraw);
-    drawPet(ctx, activePet, redraw);
+    drawPet(ctx, activePet, redraw, petFrame);
     pixel(ctx, 0, 82, 160, 8, '#17212d');
     pixel(ctx, 0, 82, 160, 1, '#84946d');
     ctx.restore();
