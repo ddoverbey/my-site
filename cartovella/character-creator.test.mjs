@@ -156,6 +156,13 @@ check('national park dioramas are deferred while generic backgrounds remain sele
   ]);
   assert.ok(characterCreator.BACKGROUND_CATALOG.every(item => item.id.startsWith('bg_')));
 });
+check('Campfire Night uses the supplied 320x180 background art', () => {
+  const background = characterCreator.BACKGROUND_CATALOG.find(item => item.id === 'bg_campfire');
+  assert.equal(background.imageSrc, './assets/backgrounds/campfire-night-320px.png');
+  const png = readFileSync(new URL(background.imageSrc, import.meta.url));
+  assert.equal(png.toString('ascii', 1, 4), 'PNG');
+  assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [320, 180]);
+});
 check('procedural stage renderer paints a pixel character and companion', () => {
   let pixels = 0;
   let maxX = 0;

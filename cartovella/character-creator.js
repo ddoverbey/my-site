@@ -148,7 +148,7 @@
     ['pet_kitten_gray', 'pet_black_cat']
   ]);
   const BACKGROUND_CATALOG = [
-    { id: 'bg_campfire', name: 'Campfire Night', unlock: { type: 'starter' }, palette: 'campfire', imageSrc: null },
+    { id: 'bg_campfire', name: 'Campfire Night', unlock: { type: 'starter' }, palette: 'campfire', imageSrc: './assets/backgrounds/campfire-night-320px.png' },
     { id: 'bg_aurora', name: 'Aurora Borealis', unlock: { type: 'achievement', id: 'longDark' }, palette: 'aurora', imageSrc: null },
     { id: 'bg_observatory', name: 'Celestial Observatory', unlock: { type: 'achievement', id: 'worldAtlas' }, palette: 'observatory', imageSrc: null },
     { id: 'bg_sanctuary', name: 'Conservation Sanctuary', unlock: { type: 'donation', goal: 50 }, palette: 'sanctuary', imageSrc: null },

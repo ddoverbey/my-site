@@ -126,6 +126,9 @@ spritesheets. The Trail Fox uses six 32×32 frames; Blue Wisp and Outlined Blue 
 32×32 frames each from the same pet bundle. Legacy puppy/kitten pet IDs migrate to the golden dog
 and black cat so saved characters continue to load. The bundled dog-asset readme permits use in
 projects but prohibits redistributing or repackaging the artwork.
+The Campfire Night character-stage background uses the supplied
+`assets/backgrounds/campfire-night-320px.png` 320×180 (16:9) image, scaled to the stage's
+160×90 logical size.
 
 Level, worldwide-destination, and existing achievement milestones unlock cosmetics. Starter,
 achievement, and patron/Pro background choices are available in the catalog; the 63 National Park
