@@ -192,7 +192,6 @@
     background: BACKGROUND_CATALOG
   };
   const imageCache = new Map();
-  const stages = new WeakMap();
   const stageRenderers = new WeakMap();
   const petAnimations = new WeakMap();
   const tabs = ['appearance', 'wardrobe', 'pets', 'backgrounds', 'patron'];
@@ -299,8 +298,8 @@
         imageCache.set(item.imageSrc, null);
         console.error(`Cartovella character asset failed to load: ${item.imageSrc}`);
       };
-      image.src = item.imageSrc;
       imageCache.set(item.imageSrc, image);
+      image.src = item.imageSrc;
     }
     const image = imageCache.get(item.imageSrc);
     return image && image.complete && image.naturalWidth ? image : null;
@@ -676,10 +675,8 @@
     const activeBackground = getItem(BACKGROUND_CATALOG, character.background);
     const activePet = getItem(PET_CATALOG, character.pet);
     const redraw = () => {
-      if (stages.get(canvas) === renderId) drawStage(canvas, character, options);
+      if (canvas.isConnected !== false) stageRenderers.get(canvas)?.();
     };
-    const renderId = (stages.get(canvas) || 0) + 1;
-    stages.set(canvas, renderId);
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     stageRenderers.set(canvas, () => drawStage(canvas, character, options));

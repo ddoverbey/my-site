@@ -50,6 +50,45 @@ check('dropdown changes update the selected character field', () => {
   controls.onchange({ target: { dataset: { characterField: 'gender' }, value: 'female' } });
   assert.equal(changedCharacter.gender, 'female');
 });
+check('late character sprite loads redraw the most recently rendered stage', () => {
+  const originalImage = globalThis.Image;
+  const pendingImages = [];
+  const drawCalls = [];
+  globalThis.Image = class {
+    constructor() {
+      this.complete = false;
+      this.naturalWidth = 0;
+      this.src = '';
+      pendingImages.push(this);
+    }
+    load() {
+      this.complete = true;
+      this.naturalWidth = 800;
+      this.onload();
+    }
+  };
+  try {
+    const context = {
+      clearRect() { drawCalls.length = 0; },
+      save() {},
+      scale() {},
+      restore() {},
+      fillRect() {},
+      drawImage(image) { drawCalls.push(image.src); }
+    };
+    const canvas = { width: 320, height: 180, isConnected: true, getContext: () => context };
+    const character = { ...characterCreator.DEFAULT_CHARACTER, gender: 'female', pet: 'pet_none' };
+    characterCreator.drawStage(canvas, { ...character, background: 'bg_aurora' });
+    characterCreator.drawStage(canvas, { ...character, background: 'bg_observatory' });
+    assert.equal(pendingImages.length, 5);
+    pendingImages.forEach(image => image.load());
+    assert.equal(drawCalls.length, 5);
+    assert.ok(drawCalls.every(src => src.includes('Female')));
+  } finally {
+    if (originalImage === undefined) delete globalThis.Image;
+    else globalThis.Image = originalImage;
+  }
+});
 check('starter character uses a sprite-pack explorer and the original pixel companion', () => {
   assert.equal(characterCreator.normalizeCharacter().gender, 'male');
   assert.equal(characterCreator.normalizeCharacter().outfit, 'outfit_recruit');
