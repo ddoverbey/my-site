@@ -1428,6 +1428,14 @@
         tiers: [{ goal: 30, title: 'Grand Voyager', desc: 'Visit 30 park or heritage destinations' }]
       },
       {
+        id: 'americaTheBeautiful', title: 'America the Beautiful',
+        progress: s => npsCatalogLoaded ? s.usNationalParksCount : 0,
+        tiers: [{
+          goal: 64, title: 'America the Beautiful',
+          desc: 'Visit all 64 US National Parks'
+        }]
+      },
+      {
         id: 'nps', title: 'NPS Explorer',
         progress: s => npsCatalogLoaded && s.npsTotal > 0 ? s.usParksCount : 0,
         tiers: [{
@@ -1552,7 +1560,8 @@
       trailblazer: ['🏕️', '#14332c', ['uncommon']],
       masterRanger: ['🏕️', '#14332c', ['rare']],
       grandVoyager: ['🏕️', '#14332c', ['epic']],
-      nps: ['🏞️', '#422006', ['legendary']],
+      americaTheBeautiful: ['🏞️', '#422006', ['legendary']],
+      nps: ['🏞️', '#422006', ['mythic']],
       juniorEcologist: ['🌱', '#12352b', ['uncommon']],
       almostThere: ['🌱', '#12352b', ['legendary']],
       gaiaWanderer: ['🌱', '#12352b', ['mythic']],
@@ -2624,6 +2633,8 @@
         visitedParks,
         wishlistParks,
         usParksCount: visitedParks.filter(p => !p.intl).length,
+        usNationalParksCount: NationalParksScratch.parks(PARKS).filter(park =>
+          ['v', 'l'].includes(NationalParksScratch.status(park, AppState))).length,
         npsTotal: PARKS.filter(p => !p.intl).length,
         biomesSet,
         unlockedRare,
@@ -5497,6 +5508,7 @@
 
     const ACHIEVEMENT_IMAGES = {
       'Almost There!': 'almost-there.png',
+      'America the Beautiful': 'america-the-beautiful.png',
       'Anomaly Seeker': 'anomaly-seeker.png',
       'Beyond the Horizon': 'beyond-the-horizon.png',
       'Chasing Waterfalls': 'chasing-waterfalls.png',

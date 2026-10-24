@@ -1117,6 +1117,31 @@ check('international visits, retired saves and NPS-only US counts stay distinct'
   assert.ok(element('savedCatalogStatus').textContent.includes('1 saved destination'));
   assert.equal(vm.runInContext('AppState.pins.retired_destination', context), 'v');
 });
+check('national park achievement counts visits and lived statuses using the scratch map ledger', () => {
+  const result = vm.runInContext(`(() => {
+    const saved = { ...AppState };
+    try {
+      Object.assign(AppState, {
+        pins: { npsa: 'v', redw: 'l', yell: 'w', seki: 'v' },
+        expeditions: [], nationalParkScratch: { sequ: 'v', kica: 'w' },
+        statusOverrides: { pins: {}, nationalParks: {} }
+      });
+      const partial = computeStats().usNationalParksCount;
+      AppState.nationalParkScratch.kica = 'l';
+      const both = computeStats().usNationalParksCount;
+      AppState.statusOverrides.pins.redw = 'un';
+      const overridden = computeStats().usNationalParksCount;
+      AppState.pins = Object.fromEntries(PARKS.map(p => [p.id, 'v']));
+      AppState.nationalParkScratch = {};
+      AppState.statusOverrides = {};
+      const all = computeStats().usNationalParksCount;
+      return { partial, both, overridden, all };
+    } finally {
+      Object.assign(AppState, saved);
+    }
+  })()`, context);
+  assert.deepEqual({ ...result }, { partial: 3, both: 4, overridden: 3, all: 64 });
+});
 check('Terra Incognita unlocks at two visited countries without requiring a home base', () => {
   const progress = vm.runInContext(`(() => {
     const saved = {
@@ -4120,7 +4145,7 @@ for (const [title, filename] of achievementImages) {
 const unmetAchievementData = await readFile(new URL(`./assets/achievements/${unmetAchievementImage}`, import.meta.url));
 assert.equal(unmetAchievementData.subarray(1, 4).toString(), 'PNG', 'shared locked artwork exists and is PNG');
 check('achievement artwork maps all supplied images to real tiers and preserves emoji fallbacks', () => {
-  assert.equal(achievementImages.length, 31);
+  assert.equal(achievementImages.length, 32);
   for (const [title, filename] of achievementImages) {
     context.artworkTitle = title;
     const markup = vm.runInContext(`(()=>{
@@ -4189,7 +4214,7 @@ check('every achievement milestone has valid difficulty rarity and distinct artw
   assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='earthSandwich').icon", context), '🌍🥪');
   assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='earthSandwich').background", context), '#172554');
   assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='earthSandwich').tiers[0].rarity", context), 'mythic');
-  assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='nps').tiers[0].rarity", context), 'legendary');
+  assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='nps').tiers[0].rarity", context), 'mythic');
   assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='nps').tiers[0].desc", context),
     'Visit every non-international NPS catalog listing');
   assert.ok(html.includes('.achievement-icon[data-rarity="mythic"]'));
@@ -5074,6 +5099,26 @@ const expectedScratchParkRecords = actualSnapshot.data.filter(park =>
   ['npsa', 'redw'].includes(park.parkCode));
 const expectedScratchParkCount = expectedScratchParkRecords.length +
   Number(expectedScratchParkRecords.some(park => park.parkCode === 'seki'));
+check('America the Beautiful is legendary at 64 national parks and uses its supplied artwork', () => {
+  const achievement = vm.runInContext("ACHIEVEMENTS.find(a => a.id === 'americaTheBeautiful')", context);
+  assert.equal(achievement.tiers[0].goal, 64);
+  assert.equal(achievement.tiers[0].rarity, 'legendary');
+  assert.equal(achievement.tiers[0].desc, 'Visit all 64 US National Parks');
+  const catalogLoaded = vm.runInContext('npsCatalogLoaded', context);
+  try {
+    vm.runInContext('npsCatalogLoaded = true', context);
+    assert.equal(achievement.progress({ usNationalParksCount: 63, usParksCount: 400 }), 63);
+    assert.equal(achievement.progress({ usNationalParksCount: 64 }), 64);
+    vm.runInContext('npsCatalogLoaded = false', context);
+    assert.equal(achievement.progress({ usNationalParksCount: 64 }), 0);
+  } finally {
+    vm.runInContext(`npsCatalogLoaded = ${catalogLoaded}`, context);
+  }
+  assert.match(vm.runInContext(`achievementIconMarkup(
+    ACHIEVEMENTS.find(a => a.id === 'americaTheBeautiful'),
+    ACHIEVEMENTS.find(a => a.id === 'americaTheBeautiful').tiers[0])`, context),
+  /america-the-beautiful\.png/);
+});
 check('dedicated scratch page includes current National Parks and excludes monuments or other NPS units', () => {
   assert.equal(scratchParks.length, expectedScratchParkCount);
   assert.equal(new Set(scratchParks.map(p => p.id)).size, expectedScratchParkCount);

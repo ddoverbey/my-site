@@ -94,6 +94,12 @@ progress from the current level's threshold to the next one. Gaining a level dis
 level-up banner with a chime; newly earned achievements appear separately in a centered, dismissible
 notification with their artwork.
 
+**America the Beautiful** is a Legendary achievement for visiting all 64 US National Parks.
+It uses the National Parks scratch-map ledger, including separate Sequoia and Kings Canyon
+statuses; visited and lived locations count, but wishlist and transit locations do not.
+**Completionist Legend** is Mythic and requires every non-international NPS catalog listing,
+including other NPS designations such as monuments and historic sites.
+
 Numeric levels do not have individual hard-coded names or a maximum level. The Explorer Class shown
 alongside a level is a separate title based on travel progress; for example, **Level 9 · Park
 Completionist** means the explorer has reached the Level 9 XP threshold and currently has the Park
