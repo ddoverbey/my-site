@@ -33,10 +33,21 @@ check('character appearance, outfit, companion, and scene choices render as drop
     controls.dataset.activeTab = tab;
     characterCreator.render({ controls, character: characterCreator.DEFAULT_CHARACTER, stats: { level: 1 } });
     for (const field of fields) {
-      assert.match(controls.innerHTML, new RegExp(`<select[^>]*data-character-field="${field}"`));
+      const controlTag = ['gender', 'skinTone'].includes(field) ? 'details' : 'select';
+      if (controlTag === 'details') {
+        assert.match(controls.innerHTML, new RegExp(`<details[^>]*>[\\s\\S]*?data-character-field="${field}"`));
+      } else {
+        assert.match(controls.innerHTML, new RegExp(`<select[^>]*data-character-field="${field}"`));
+      }
     }
-    assert.doesNotMatch(controls.innerHTML, /<button[^>]*data-character-field=/);
   }
+  controls.dataset.activeTab = 'appearance';
+  characterCreator.render({ controls, character: characterCreator.DEFAULT_CHARACTER });
+  assert.match(controls.innerHTML, /Male%20Skin2\.png/);
+  assert.match(controls.innerHTML, /Female%20Skin2\.png/);
+  assert.match(controls.innerHTML, /background-color:#dba77e/);
+  assert.match(controls.innerHTML, /Porcelain/);
+  assert.match(controls.innerHTML, /Warm/);
   assert.match(controls.innerHTML, /No reward selected/);
 });
 check('dropdown changes update the selected character field', () => {
@@ -47,7 +58,17 @@ check('dropdown changes update the selected character field', () => {
     character: characterCreator.DEFAULT_CHARACTER,
     onChange: character => { changedCharacter = character; }
   });
-  controls.onchange({ target: { dataset: { characterField: 'gender' }, value: 'female' } });
+  controls.onclick({
+    target: {
+      closest(selector) {
+        if (selector === '[data-character-tab]') return null;
+        if (selector === 'button[data-character-field][data-character-id]') {
+          return { dataset: { characterField: 'gender', characterId: 'female' }, disabled: false };
+        }
+        return null;
+      }
+    }
+  });
   assert.equal(changedCharacter.gender, 'female');
 });
 check('late character sprite loads redraw the most recently rendered stage', () => {

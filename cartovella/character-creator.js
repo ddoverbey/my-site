@@ -704,6 +704,40 @@
     </label>`;
   }
 
+  function characterThumbnailMarkup(character, gender) {
+    const assets = characterSpriteAssets({ ...character, gender });
+    return `<span aria-hidden="true" class="relative block h-[60px] w-[40px] shrink-0 overflow-hidden rounded bg-slate-900">
+      ${assets.map(src => `<img src="${escapeHtml(src)}" alt="" class="absolute max-w-none"
+        style="width:1000px;height:560px;left:-30px;top:-20px;image-rendering:pixelated">`).join('')}
+    </span>`;
+  }
+
+  function visualDropdownMarkup(label, field, options, value, disabled, renderChoice) {
+    const selected = options.find(option => option.id === value) || options[0];
+    return `<div class="block text-xs text-slate-300">
+      <span class="block">${escapeHtml(label)}</span>
+      <details class="relative mt-1">
+        <summary ${disabled ? 'aria-disabled="true"' : ''}
+          class="flex cursor-pointer list-none items-center justify-between gap-2 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 ${disabled ? 'opacity-50' : 'hover:border-slate-500'}">
+          <span class="flex min-w-0 items-center gap-2">${renderChoice(selected, true)}
+            <span class="truncate">${escapeHtml(selected.name)}</span>
+          </span>
+          <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" class="h-4 w-4 shrink-0 text-slate-400">
+            <path d="m5 7.5 5 5 5-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </summary>
+        <div class="absolute left-0 right-0 z-30 mt-1 max-h-64 overflow-y-auto rounded-lg border border-slate-700 bg-slate-950 p-1 shadow-xl">
+          ${options.map(option => `<button type="button" data-character-field="${escapeHtml(field)}"
+            data-character-id="${escapeHtml(option.id)}" aria-pressed="${option.id === value}"
+            ${disabled ? 'disabled' : ''}
+            class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm ${option.id === value ? 'bg-amber-950/60 text-amber-200' : 'text-slate-200 hover:bg-slate-800'} disabled:cursor-not-allowed">
+            ${renderChoice(option, false)}<span>${escapeHtml(option.name)}</span>
+          </button>`).join('')}
+        </div>
+      </details>
+    </div>`;
+  }
+
   function catalogOptions(catalog, value, stats, character, achievements, selectedLabel = 'Selected') {
     return catalog.map(item => {
         const status = unlockStatus(item.unlock, stats, character, achievements);
@@ -718,10 +752,12 @@
     const completedAchievements = achievementProgress(stats, achievements);
     const sections = {
       appearance: `<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        ${optionMarkup('Character sprite', 'gender', [
+        ${visualDropdownMarkup('Character sprite', 'gender', [
           { id: 'male', name: 'Male sprite' }, { id: 'female', name: 'Female sprite' }
-        ], character.gender, disabled)}
-        ${optionMarkup('Skin tone', 'skinTone', SKIN_TONES, character.skinTone, disabled)}
+        ], character.gender, disabled, option => characterThumbnailMarkup(character, option.id))}
+        ${visualDropdownMarkup('Skin tone', 'skinTone', SKIN_TONES, character.skinTone, disabled,
+          option => `<span aria-hidden="true" class="block h-6 w-6 shrink-0 rounded-full border border-slate-500"
+            style="background-color:${escapeHtml(option.color)}"></span>`)}
         ${optionMarkup('Hair style', 'hairStyle', HAIR_STYLES, character.hairStyle, disabled)}
       </div>`,
       wardrobe: `<div class="space-y-5">
@@ -817,6 +853,13 @@
         controls.dataset.activeTab = tabButton.dataset.characterTab;
         renderControls(controls, character, stats, achievements, disabled);
         return;
+      }
+      const choiceButton = event.target.closest('button[data-character-field][data-character-id]');
+      if (choiceButton) {
+        if (disabled || choiceButton.disabled) return;
+        options.onChange?.(normalizeCharacter({
+          ...character, [choiceButton.dataset.characterField]: choiceButton.dataset.characterId
+        }));
       }
     };
     controls.onchange = event => {
