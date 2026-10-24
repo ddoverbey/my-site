@@ -111,13 +111,12 @@ Completionist class. The current hard-coded Explorer Classes are:
 
 ### Explorer character
 
-The Explorer Profile includes a low-resolution pixel-art character stage with appearance, outfit,
-hat, accessory, companion, and background choices. Its Classic / Straight, Broad / V-Taper, and
-Curved / Hourglass body frames keep the original 160×90 logical stage; older `balanced`, `slender`,
-`broad`, and `sturdy` selections migrate to the closest frame. Character selections are stored in
-the passport and included in normal local, cloud, export, and shared-passport saves. Appearance and
-item catalogs, unlock rules, and procedural canvas drawing live in `character-creator.js`; catalog
-entries can use an `imageSrc` PNG or a cropped sprite-sheet animation. All five dog coat variants
+The Explorer Profile character stage composites the gendered base, skin tone, hairstyle, and outfit
+sprite layers from the bundled GandalfHardcore Character Asset Pack. Character sprite catalogs,
+layer composition, unlock rules, backgrounds, and companion rendering live in `character-creator.js`;
+character settings are stored in the passport and included in local, cloud, export, and shared saves.
+The character layers use the pack's aligned 800×448 sheets and a 32×48 crop around the first character
+frame. Companion catalog entries can use an `imageSrc` PNG or a cropped sprite-sheet animation. All five dog coat variants
 (golden, slate, sandy, cream, and shadow) use five 32×32 walking frames from the corresponding
 `assets/GandalfHardcore Pet companion/GandalfHardcore Pet companion/GandalfHardcore doggy sheet*.png`
 spritesheets and render at 26×17 logical pixels. Black (Cat 1), ginger (Cat 2), and white (Cat 3)

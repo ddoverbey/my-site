@@ -9,10 +9,11 @@
     { id: 'deep', name: 'Deep', color: '#57372f', imageSrc: null }
   ];
   const HAIR_STYLES = [
-    { id: 'short', name: 'Short', imageSrc: null },
-    { id: 'bob', name: 'Bob', imageSrc: null },
-    { id: 'long', name: 'Long', imageSrc: null },
-    { id: 'curls', name: 'Curls', imageSrc: null }
+    { id: 'short', name: 'Style 1', sheet: 1, imageSrc: null },
+    { id: 'bob', name: 'Style 2', sheet: 2, imageSrc: null },
+    { id: 'long', name: 'Style 3', sheet: 3, imageSrc: null },
+    { id: 'curls', name: 'Style 4', sheet: 4, imageSrc: null },
+    { id: 'braided', name: 'Style 5', sheet: 5, imageSrc: null }
   ];
   const HAIR_COLORS = [
     { id: 'brown', name: 'Chestnut', color: '#603c2e', imageSrc: null },
@@ -51,16 +52,16 @@
   ];
 
   const OUTFIT_CATALOG = [
-    { id: 'outfit_recruit', name: 'Recruit Tee & Cargo Shorts', slot: 'outfit', unlock: { type: 'level', goal: 1 }, color: '#5d9d79', imageSrc: null },
-    { id: 'outfit_flannel', name: 'Trail Flannel', slot: 'outfit', unlock: { type: 'level', goal: 3 }, color: '#b95848', imageSrc: null },
-    { id: 'outfit_vest', name: 'Ranger Field Vest', slot: 'outfit', unlock: { type: 'level', goal: 5 }, color: '#a17b41', imageSrc: null },
-    { id: 'outfit_parka', name: 'Alpine Parka', slot: 'outfit', unlock: { type: 'level', goal: 7 }, color: '#4d829b', imageSrc: null },
-    { id: 'outfit_sovereign', name: 'Sovereign Cartographer Coat', slot: 'outfit', unlock: { type: 'level', goal: 10 }, color: '#594c83', imageSrc: null },
-    { id: 'outfit_naturalist', name: 'Naturalist Field Clothes', slot: 'outfit', unlock: { type: 'worldParks', goal: 25 }, color: '#658448', imageSrc: null },
-    { id: 'outfit_master_naturalist', name: 'Master Naturalist Cape', slot: 'outfit', unlock: { type: 'worldParks', goal: 75 }, color: '#397768', imageSrc: null },
-    { id: 'outfit_rain', name: 'Rain Poncho', slot: 'outfit', unlock: { type: 'achievement', id: 'waterfalls_1' }, color: '#6988aa', imageSrc: null },
-    { id: 'outfit_astral', name: 'Astral Explorer Set', slot: 'outfit', unlock: { type: 'pro' }, color: '#775ec4', imageSrc: null },
-    { id: 'outfit_sequoia', name: 'Golden Sequoia Cloak', slot: 'outfit', unlock: { type: 'donation', goal: 25 }, color: '#a98745', imageSrc: null }
+    { id: 'outfit_recruit', name: 'Classic Adventurer', spriteStyle: 'classic', slot: 'outfit', unlock: { type: 'starter' }, color: '#5d9d79', imageSrc: null },
+    { id: 'outfit_flannel', name: 'Forest Green', spriteStyle: 'green', slot: 'outfit', unlock: { type: 'level', goal: 3 }, color: '#658448', imageSrc: null },
+    { id: 'outfit_vest', name: 'River Blue', spriteStyle: 'blue', slot: 'outfit', unlock: { type: 'level', goal: 5 }, color: '#4d829b', imageSrc: null },
+    { id: 'outfit_parka', name: 'Ember Orange', spriteStyle: 'orange', slot: 'outfit', unlock: { type: 'level', goal: 7 }, color: '#b95848', imageSrc: null },
+    { id: 'outfit_sovereign', name: 'Royal Purple', spriteStyle: 'purple', slot: 'outfit', unlock: { type: 'level', goal: 10 }, color: '#775ec4', imageSrc: null },
+    { id: 'outfit_naturalist', name: 'Naturalist Green', spriteStyle: 'green', slot: 'outfit', unlock: { type: 'worldParks', goal: 25 }, color: '#658448', imageSrc: null },
+    { id: 'outfit_master_naturalist', name: 'Master Ranger Blue', spriteStyle: 'blue', slot: 'outfit', unlock: { type: 'worldParks', goal: 75 }, color: '#397768', imageSrc: null },
+    { id: 'outfit_rain', name: 'Rain Trail Orange', spriteStyle: 'orange', slot: 'outfit', unlock: { type: 'achievement', id: 'waterfalls_1' }, color: '#6988aa', imageSrc: null },
+    { id: 'outfit_astral', name: 'Astral Purple', spriteStyle: 'purple', slot: 'outfit', unlock: { type: 'pro' }, color: '#775ec4', imageSrc: null },
+    { id: 'outfit_sequoia', name: 'Sequoia Green', spriteStyle: 'green', slot: 'outfit', unlock: { type: 'donation', goal: 25 }, color: '#a98745', imageSrc: null }
   ];
   const HAT_CATALOG = [
     { id: 'hat_none', name: 'No Hat', slot: 'hat', unlock: { type: 'starter' }, color: '#b68655', imageSrc: null },
@@ -155,7 +156,19 @@
     { id: 'bg_pro_celestial', name: 'Astral Horizon', unlock: { type: 'pro' }, palette: 'pro', imageSrc: null }
   ];
 
+  const CHARACTER_ASSET_ROOT = './assets/GandalfHardcore%20Character%20Asset%20Pack/GandalfHardcore%20Character%20Asset%20Pack/';
+  const CHARACTER_SPRITE_FRAME = Object.freeze({ x: 24, y: 16, width: 32, height: 48 });
+  const CHARACTER_SPRITE_TARGET = Object.freeze({ x: 62, y: 10, width: 60, height: 72 });
+  const OUTFIT_SPRITE_LAYERS = Object.freeze({
+    classic: { male: ['Male Clothing/Shirt v2.png', 'Male Clothing/Pants.png'], female: ['Female Clothing/Corset v2.png', 'Female Clothing/Skirt.png'] },
+    green: { male: ['Male Clothing/Green Shirt v2.png', 'Male Clothing/Green Pants.png'], female: ['Female Clothing/Green Corset v2.png', 'Female Clothing/Skirt.png'] },
+    blue: { male: ['Male Clothing/Blue Shirt v2.png', 'Male Clothing/Blue Pants.png'], female: ['Female Clothing/Blue Corset v2.png', 'Female Clothing/Skirt.png'] },
+    orange: { male: ['Male Clothing/orange Shirt v2.png', 'Male Clothing/Orange Pants.png'], female: ['Female Clothing/Orange Corset v2.png', 'Female Clothing/Skirt.png'] },
+    purple: { male: ['Male Clothing/Purple Shirt v2.png', 'Male Clothing/Purple Pants.png'], female: ['Female Clothing/Purple Corset v2.png', 'Female Clothing/Skirt.png'] }
+  });
+
   const DEFAULT_CHARACTER = Object.freeze({
+    gender: 'male',
     skinTone: 'warm',
     hairStyle: 'short',
     hairColor: 'brown',
@@ -193,6 +206,7 @@
     const bodyShape = BODY_SHAPE_ALIASES.get(source.bodyShape) || source.bodyShape;
     const pet = PET_ID_ALIASES.get(source.pet) || source.pet;
     return {
+      gender: source.gender === 'female' ? 'female' : 'male',
       skinTone: validColorId(source.skinTone, SKIN_TONES, DEFAULT_CHARACTER.skinTone),
       hairStyle: normalizeId(source.hairStyle, knownIds(HAIR_STYLES), DEFAULT_CHARACTER.hairStyle),
       hairColor: validColorId(source.hairColor, HAIR_COLORS, DEFAULT_CHARACTER.hairColor),
@@ -281,12 +295,33 @@
     if (!imageCache.has(item.imageSrc)) {
       const image = new Image();
       image.onload = () => redraw();
-      image.onerror = () => imageCache.set(item.imageSrc, null);
+      image.onerror = () => {
+        imageCache.set(item.imageSrc, null);
+        console.error(`Cartovella character asset failed to load: ${item.imageSrc}`);
+      };
       image.src = item.imageSrc;
       imageCache.set(item.imageSrc, image);
     }
     const image = imageCache.get(item.imageSrc);
     return image && image.complete && image.naturalWidth ? image : null;
+  }
+
+  function characterSpriteAssets(value) {
+    const character = normalizeCharacter(value);
+    const genderName = character.gender === 'female' ? 'Female' : 'Male';
+    const skinIndex = SKIN_TONES.findIndex(tone => tone.id === character.skinTone) + 1;
+    const hair = getItem(HAIR_STYLES, character.hairStyle);
+    const outfit = getItem(OUTFIT_CATALOG, character.outfit);
+    const outfitLayers = OUTFIT_SPRITE_LAYERS[outfit.spriteStyle]?.[character.gender] ||
+      OUTFIT_SPRITE_LAYERS.classic[character.gender];
+    const footwear = character.gender === 'female' ? 'Female Clothing/Boots.png' : 'Male Clothing/Shoes.png';
+    return [
+      `${CHARACTER_ASSET_ROOT}Character%20skin%20colors/${genderName}%20Skin${skinIndex}.png`,
+      `${CHARACTER_ASSET_ROOT}${outfitLayers[1].replaceAll(' ', '%20')}`,
+      `${CHARACTER_ASSET_ROOT}${outfitLayers[0].replaceAll(' ', '%20')}`,
+      `${CHARACTER_ASSET_ROOT}${footwear.replaceAll(' ', '%20')}`,
+      `${CHARACTER_ASSET_ROOT}${genderName}%20Hair/${genderName}%20Hair${hair.sheet}.png`
+    ];
   }
 
   function pixel(ctx, x, y, width, height, color) {
@@ -418,6 +453,21 @@
       drawCrown([8, 12, 14], hatBase - 5);
       drawBrim(18);
     }
+  }
+
+  function drawCharacterSprite(ctx, value, redraw = () => {}) {
+    const target = CHARACTER_SPRITE_TARGET;
+    characterSpriteAssets(value).forEach(imageSrc => {
+      const image = getImage({ imageSrc }, redraw);
+      if (image) {
+        ctx.drawImage(
+          image,
+          CHARACTER_SPRITE_FRAME.x, CHARACTER_SPRITE_FRAME.y,
+          CHARACTER_SPRITE_FRAME.width, CHARACTER_SPRITE_FRAME.height,
+          target.x, target.y, target.width, target.height
+        );
+      }
+    });
   }
 
   function drawPerson(ctx, character, redraw) {
@@ -623,13 +673,8 @@
   function drawStage(canvas, value, options = {}) {
     if (!canvas || typeof canvas.getContext !== 'function') return;
     const character = normalizeCharacter(value);
-    const stats = options.stats || {};
-    const achievements = achievementProgress(stats, options.achievements || []);
     const activeBackground = getItem(BACKGROUND_CATALOG, character.background);
     const activePet = getItem(PET_CATALOG, character.pet);
-    const activeOutfit = getItem(OUTFIT_CATALOG, character.outfit);
-    const activeHat = getItem(HAT_CATALOG, character.hat);
-    const activeAccessory = getItem(ACCESSORY_CATALOG, character.accessory);
     const redraw = () => {
       if (stages.get(canvas) === renderId) drawStage(canvas, character, options);
     };
@@ -644,7 +689,7 @@
     ctx.save();
     ctx.scale(canvas.width / 160, canvas.height / 90);
     drawBackground(ctx, activeBackground, redraw);
-    drawPerson(ctx, character, redraw);
+    drawCharacterSprite(ctx, character, redraw);
     drawPet(ctx, activePet, redraw, petFrame);
     pixel(ctx, 0, 82, 160, 8, '#17212d');
     pixel(ctx, 0, 82, 160, 1, '#84946d');
@@ -691,18 +736,16 @@
     const activeTab = tabs.includes(container.dataset.activeTab) ? container.dataset.activeTab : 'appearance';
     const completedAchievements = achievementProgress(stats, achievements);
     const sections = {
-      appearance: `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      appearance: `<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        ${optionMarkup('Character sprite', 'gender', [
+          { id: 'male', name: 'Male sprite' }, { id: 'female', name: 'Female sprite' }
+        ], character.gender, disabled)}
         ${colorPickerMarkup('Skin tone', 'skinTone', SKIN_TONES, character.skinTone, disabled)}
         ${optionMarkup('Hair style', 'hairStyle', HAIR_STYLES, character.hairStyle, disabled)}
-        ${colorPickerMarkup('Hair color', 'hairColor', HAIR_COLORS, character.hairColor, disabled)}
-        ${colorPickerMarkup('Eye color', 'eyeColor', EYE_COLORS, character.eyeColor, disabled)}
-        ${optionMarkup('Body shape', 'bodyShape', BODY_SHAPES, character.bodyShape, disabled)}
-        ${optionMarkup('Height', 'height', HEIGHTS, character.height, disabled)}
       </div>`,
       wardrobe: `<div class="space-y-5">
+        <p class="text-xs text-slate-400">Outfits use the matching layers from the character sprite pack.</p>
         <section><h4 class="text-sm font-bold text-amber-200 mb-2">Outfits</h4>${itemCards(OUTFIT_CATALOG, 'outfit', character.outfit, stats, character, completedAchievements, disabled)}</section>
-        <section><h4 class="text-sm font-bold text-amber-200 mb-2">Hats</h4>${itemCards(HAT_CATALOG, 'hat', character.hat, stats, character, completedAchievements, disabled)}</section>
-        <section><h4 class="text-sm font-bold text-amber-200 mb-2">Accessories</h4>${itemCards(ACCESSORY_CATALOG, 'accessory', character.accessory, stats, character, completedAchievements, disabled)}</section>
       </div>`,
       pets: `<p class="text-xs text-slate-400 mb-3">Choose one companion to appear beside your explorer.</p>
         ${itemCards(PET_CATALOG, 'pet', character.pet, stats, character, completedAchievements, disabled)}`,
@@ -713,11 +756,11 @@
         </div>
         <div class="space-y-5">
           <section><h4 class="text-sm font-bold text-amber-200 mb-2">Cartovella Pro</h4>
-            ${itemCards([...OUTFIT_CATALOG, ...HAT_CATALOG, ...PET_CATALOG, ...BACKGROUND_CATALOG].filter(item =>
+            ${itemCards([...OUTFIT_CATALOG, ...PET_CATALOG, ...BACKGROUND_CATALOG].filter(item =>
               item.unlock.type === 'pro'), 'proReward', '', stats, character, completedAchievements, true)}
           </section>
           <section><h4 class="text-sm font-bold text-amber-200 mb-2">Park Foundation Patron</h4>
-            ${itemCards([...ACCESSORY_CATALOG, ...OUTFIT_CATALOG, ...BACKGROUND_CATALOG].filter(item =>
+            ${itemCards([...OUTFIT_CATALOG, ...BACKGROUND_CATALOG].filter(item =>
               item.unlock.type === 'donation'), 'donationReward', '', stats, character, completedAchievements, true)}
           </section>
         </div>`
@@ -737,9 +780,9 @@
     const nextReward = [...OUTFIT_CATALOG, ...HAT_CATALOG, ...ACCESSORY_CATALOG]
       .filter(item => item.unlock.type === 'worldParks' && item.unlock.goal > parks)
       .sort((left, right) => left.unlock.goal - right.unlock.goal)[0];
-    const unlockedWardrobe = [...OUTFIT_CATALOG, ...HAT_CATALOG, ...ACCESSORY_CATALOG]
+    const unlockedWardrobe = OUTFIT_CATALOG
       .filter(item => unlockStatus(item.unlock, stats, character, progress).unlocked).length;
-    const wardrobeTotal = OUTFIT_CATALOG.length + HAT_CATALOG.length + ACCESSORY_CATALOG.length;
+    const wardrobeTotal = OUTFIT_CATALOG.length;
     const parkProgress = nextReward
       ? `<span class="block text-[10px] text-slate-400 mt-1">Next: ${escapeHtml(nextReward.name)} at ${nextReward.unlock.goal}</span>
         <progress class="w-full h-1.5 mt-2 accent-amber-400" aria-label="Progress to next worldwide park reward"
@@ -789,7 +832,8 @@
   const api = {
     DEFAULT_CHARACTER, SKIN_TONES, HAIR_STYLES, HAIR_COLORS, EYE_COLORS, BODY_SHAPES, HEIGHTS,
     OUTFIT_CATALOG, HAT_CATALOG, ACCESSORY_CATALOG, PET_CATALOG, BACKGROUND_CATALOG,
-    BODY_SHAPE_PROFILES, normalizeCharacter, achievementProgress, unlockStatus, drawPet, drawStage, render
+    BODY_SHAPE_PROFILES, normalizeCharacter, characterSpriteAssets, achievementProgress,
+    unlockStatus, drawPet, drawCharacterSprite, drawStage, render
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CharacterCreator = api;

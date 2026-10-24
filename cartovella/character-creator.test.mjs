@@ -20,7 +20,8 @@ const allCatalogs = [
 check('every customization option supports a future image override', () => {
   allCatalogs.flat().forEach(item => assert.equal(Object.hasOwn(item, 'imageSrc'), true, item.id));
 });
-check('starter character is complete and defaults to the original pixel companion', () => {
+check('starter character uses a sprite-pack explorer and the original pixel companion', () => {
+  assert.equal(characterCreator.normalizeCharacter().gender, 'male');
   assert.equal(characterCreator.normalizeCharacter().outfit, 'outfit_recruit');
   assert.equal(characterCreator.normalizeCharacter().pet, 'pet_pufflin_blue');
   assert.equal(characterCreator.normalizeCharacter().background, 'bg_campfire');
@@ -167,77 +168,43 @@ check('Campfire Night uses the supplied 320x180 background art', () => {
   assert.equal(png.toString('ascii', 1, 4), 'PNG');
   assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [320, 180]);
 });
-check('procedural stage renderer paints a pixel character and companion', () => {
-  let pixels = 0;
-  let maxX = 0;
-  let scaleX = 0;
-  let scaleY = 0;
-  const context = {
-    clearRect() {}, save() {}, scale(x, y) { scaleX = x; scaleY = y; }, restore() {},
-    fillRect(x, y, width) { pixels++; maxX = Math.max(maxX, x + width); }
+check('sprite character selects matching gender, skin, hair, and outfit layers', () => {
+  const originalImage = globalThis.Image;
+  const drawCalls = [];
+  globalThis.Image = class {
+    constructor() {
+      this.complete = true;
+      this.naturalWidth = 800;
+      this.naturalHeight = 448;
+      this.src = '';
+    }
   };
-  characterCreator.drawStage({
-    width: 320, height: 180, getContext: () => context
-  }, characterCreator.DEFAULT_CHARACTER);
-  assert.equal(scaleX, 2);
-  assert.equal(scaleY, 2);
-  assert.equal(maxX, 160, 'drawing keeps the original 160×90 logical stage');
-  assert.ok(pixels > 100);
-});
-check('avatar proportions use longer legs and a ranger hat brim seated on the head', () => {
-  const fills = [];
-  const context = {
-    fillStyle: '',
-    clearRect() {}, save() {}, scale() {}, restore() {},
-    fillRect(x, y, width, height) { fills.push({ x, y, width, height, color: this.fillStyle }); }
-  };
-  characterCreator.drawStage({
-    width: 320, height: 180, getContext: () => context
-  }, { ...characterCreator.DEFAULT_CHARACTER, hat: 'hat_ranger_brown' });
-  const torsoRows = new Set(fills
-    .filter(fill => fill.color === '#5d9d79' && fill.height === 1 && fill.y >= 45 && fill.y <= 65)
-    .map(fill => fill.y));
-  assert.equal(torsoRows.size, 13);
-  assert.ok(fills.some(fill => fill.color === '#33475a' && fill.height === 17));
-  assert.ok(fills.some(fill =>
-    fill.color === '#3a2d29' && fill.x === 68 && fill.y === 41 && fill.width === 22 && fill.height === 2
-  ));
-});
-check('campfire flames stay clear of the explorer and legs', () => {
-  const fills = [];
-  const context = {
-    fillStyle: '',
-    clearRect() {}, save() {}, scale() {}, restore() {},
-    fillRect(x, y, width, height) { fills.push({ x, y, width, height, color: this.fillStyle }); }
-  };
-  characterCreator.drawStage({
-    width: 320, height: 180, getContext: () => context
-  }, characterCreator.DEFAULT_CHARACTER);
-  const flames = fills.filter(fill => ['#d78339', '#f3bd59', '#df6136'].includes(fill.color));
-  assert.equal(flames.length, 3);
-  assert.ok(flames.every(fill => fill.x + fill.width < 60));
-  assert.deepEqual(flames.map(({ x, y }) => [x, y]), [[22, 63], [28, 60], [32, 64]]);
-});
-check('arms remain visible while stray skin pixels stay off the shoulders', () => {
-  const fills = [];
-  const context = {
-    fillStyle: '',
-    clearRect() {}, save() {}, scale() {}, restore() {},
-    fillRect(x, y, width, height) { fills.push({ x, y, width, height, color: this.fillStyle }); }
-  };
-  characterCreator.drawStage({
-    width: 320, height: 180, getContext: () => context
-  }, characterCreator.DEFAULT_CHARACTER);
-  const skin = characterCreator.SKIN_TONES.find(tone => tone.id === 'warm').color;
-  assert.ok(fills.some(fill =>
-    fill.color === skin && fill.x === 69 && fill.y === 52 && fill.width === 3 && fill.height === 1
-  ));
-  assert.ok(fills.some(fill =>
-    fill.color === skin && fill.x === 86 && fill.y === 52 && fill.width === 3 && fill.height === 1
-  ));
-  assert.equal(fills.some(fill =>
-    fill.color === skin && fill.y === 50 && (fill.x < 73 || fill.x >= 85)
-  ), false);
+  try {
+    const character = {
+      ...characterCreator.DEFAULT_CHARACTER,
+      gender: 'female',
+      skinTone: 'deep',
+      hairStyle: 'braided',
+      outfit: 'outfit_vest'
+    };
+    const assets = characterCreator.characterSpriteAssets(character);
+    assert.deepEqual(assets.map(path => decodeURIComponent(path.split('/').at(-1))), [
+      'Female Skin5.png', 'Skirt.png', 'Blue Corset v2.png', 'Boots.png', 'Female Hair5.png'
+    ]);
+    for (const asset of assets) {
+      const png = readFileSync(new URL(asset, import.meta.url));
+      assert.equal(png.toString('ascii', 1, 4), 'PNG');
+      assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [800, 448]);
+    }
+    characterCreator.drawCharacterSprite({ drawImage(...args) { drawCalls.push(args); } }, character);
+    assert.equal(drawCalls.length, 5);
+    assert.ok(drawCalls.every(call =>
+      call.length === 9 && call.slice(1).join(',') === '24,16,32,48,62,10,60,72'
+    ));
+  } finally {
+    if (originalImage === undefined) delete globalThis.Image;
+    else globalThis.Image = originalImage;
+  }
 });
 
 console.log(`\n${checks} character creator checks passed.`);
