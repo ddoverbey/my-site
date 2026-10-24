@@ -120,11 +120,12 @@ item catalogs, unlock rules, and procedural canvas drawing live in `character-cr
 entries can use an `imageSrc` PNG or a cropped sprite-sheet animation. All five dog coat variants
 (golden, slate, sandy, cream, and shadow) use five 32×32 walking frames from the corresponding
 `assets/GandalfHardcore Pet companion/GandalfHardcore Pet companion/GandalfHardcore doggy sheet*.png`
-spritesheets. Black, ginger, and white cat companions use the eight-frame “Lick paw lie front”
-sequence (row 13) from their respective `assets/cat-PACK/PACK/cat N (64х64).png` spritesheets.
-Legacy puppy/kitten pet IDs migrate to the golden dog and black cat so saved characters continue to
-load. The bundled dog-asset readme permits use in projects but prohibits redistributing or
-repackaging the artwork.
+spritesheets. Black (Cat 1), ginger (Cat 2), and white (Cat 3) companions use the eight-frame
+“Lick paw lie front” sequence (row 13) from their respective `assets/cat-PACK/PACK/cat N (64х64).png`
+spritesheets. The Trail Fox uses six 32×32 frames; Blue Wisp and Outlined Blue Wisp use five
+32×32 frames each from the same pet bundle. Legacy puppy/kitten pet IDs migrate to the golden dog
+and black cat so saved characters continue to load. The bundled dog-asset readme permits use in
+projects but prohibits redistributing or repackaging the artwork.
 
 Level, worldwide-destination, and existing achievement milestones unlock cosmetics. Starter,
 achievement, and patron/Pro background choices are available in the catalog; the 63 National Park

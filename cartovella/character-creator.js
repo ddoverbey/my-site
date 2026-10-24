@@ -98,7 +98,20 @@
     row: 13, sourceX: 13, sourceY: 19, sourceWidth: 36, sourceHeight: 28,
     targetX: 102, targetY: 63, targetWidth: 22, targetHeight: 17
   });
-  const DOG_ASSET_PATH = './assets/GandalfHardcore%20Pet%20companion/GandalfHardcore%20Pet%20companion/';
+  const FOX_SPRITE_SHEET = Object.freeze({
+    frameWidth: 32, frameHeight: 32, frameCount: 6, frameDuration: 240,
+    sourceX: 1, sourceY: 14, sourceWidth: 29, sourceHeight: 18,
+    targetX: 103, targetY: 68, targetWidth: 20, targetHeight: 12
+  });
+  const WISP_SPRITE_SHEET = Object.freeze({
+    frameWidth: 32, frameHeight: 32, frameCount: 5, frameDuration: 180,
+    sourceX: 9, sourceY: 5, sourceWidth: 14, sourceHeight: 22,
+    targetX: 107, targetY: 60, targetWidth: 12, targetHeight: 18
+  });
+  const OUTLINED_WISP_SPRITE_SHEET = Object.freeze({
+    ...WISP_SPRITE_SHEET, sourceX: 8, sourceY: 4, sourceWidth: 16, sourceHeight: 24
+  });
+  const COMPANION_ASSET_PATH = './assets/GandalfHardcore%20Pet%20companion/GandalfHardcore%20Pet%20companion/';
   const CAT_ASSET_PATH = './assets/cat-PACK/PACK/';
   const dogVariants = [
     ['pet_trail_dog', 'Golden Trail Dog', 'GandalfHardcore doggy sheet.png'],
@@ -107,18 +120,24 @@
     ['pet_trail_dog_cream', 'Cream Trail Dog', 'GandalfHardcore doggy sheet 4.png'],
     ['pet_trail_dog_shadow', 'Shadow Trail Dog', 'GandalfHardcore doggy sheet 5.png']
   ].map(([id, name, file]) =>
-    spritePet(id, name, `${DOG_ASSET_PATH}${file.replaceAll(' ', '%20')}`, DOG_SPRITE_SHEET));
+    spritePet(id, name, `${COMPANION_ASSET_PATH}${file.replaceAll(' ', '%20')}`, DOG_SPRITE_SHEET));
   const catVariants = [
-    ['pet_black_cat', 'Black Cat Companion', 'cat%201%20(64%D1%8564).png'],
-    ['pet_ginger_cat', 'Ginger Cat Companion', 'cat%202%20(64%D1%8564).png'],
-    ['pet_white_cat', 'White Cat Companion', 'cat%203%20(64%D1%8564).png']
+    ['pet_black_cat', 'Black Cat (Cat 1)', 'cat%201%20(64%D1%8564).png'],
+    ['pet_ginger_cat', 'Ginger Cat (Cat 2)', 'cat%202%20(64%D1%8564).png'],
+    ['pet_white_cat', 'White Cat (Cat 3)', 'cat%203%20(64%D1%8564).png']
   ].map(([id, name, file]) =>
     spritePet(id, name, `${CAT_ASSET_PATH}${file}`, CAT_SPRITE_SHEET));
+  const foxAndWispPets = [
+    spritePet('pet_trail_fox', 'Trail Fox', `${COMPANION_ASSET_PATH}GandalfHardcore%20fox.png`, FOX_SPRITE_SHEET),
+    spritePet('pet_blue_wisp', 'Blue Wisp', `${COMPANION_ASSET_PATH}GandalfHardcore%20Wisp.png`, WISP_SPRITE_SHEET),
+    spritePet('pet_blue_wisp_outline', 'Outlined Blue Wisp', `${COMPANION_ASSET_PATH}Wisp%20with%20outline.png`, OUTLINED_WISP_SPRITE_SHEET)
+  ];
   const PET_CATALOG = [
     { id: 'pet_none', name: 'No Companion', unlock: { type: 'starter' }, kind: 'none', imageSrc: null },
     { id: 'pet_pufflin_blue', name: 'Blue Pufflin', unlock: { type: 'starter' }, kind: 'pufflin', color: '#59a9d7', imageSrc: null },
     ...dogVariants,
     ...catVariants,
+    ...foxAndWispPets,
     { id: 'pet_pufflin_forest', name: 'Forest Pufflin', unlock: { type: 'achievement', id: 'whispers' }, kind: 'pufflin', color: '#63a978', imageSrc: null },
     { id: 'pet_pufflin_gold', name: 'Golden Pufflin', unlock: { type: 'achievement', id: 'masterRanger' }, kind: 'pufflin', color: '#e3b648', imageSrc: null },
     { id: 'pet_pufflin_gaia', name: 'Gaia Pufflin', unlock: { type: 'achievement', id: 'gaiaWanderer' }, kind: 'pufflin', color: '#ba8cd7', imageSrc: null },

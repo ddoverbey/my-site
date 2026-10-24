@@ -63,27 +63,36 @@ check('low-resolution frame profiles keep the V-taper broad at the shoulders and
   assert.ok(Math.min(...hourglass.slice(5, 11)) < hourglass[0]);
   assert.ok(Math.max(...hourglass.slice(12)) <= hourglass[0]);
 });
-check('every bundled dog and cat coat variant has a valid animated sprite sheet', () => {
+check('every bundled dog, cat, fox, and wisp has a valid animated sprite sheet', () => {
   const dogs = characterCreator.PET_CATALOG.filter(item => item.id.startsWith('pet_trail_dog'));
   const cats = characterCreator.PET_CATALOG.filter(item => item.id.endsWith('_cat'));
+  const fox = characterCreator.PET_CATALOG.find(item => item.id === 'pet_trail_fox');
+  const wisps = characterCreator.PET_CATALOG.filter(item => item.id.startsWith('pet_blue_wisp'));
   assert.deepEqual(dogs.map(pet => pet.name), [
     'Golden Trail Dog', 'Slate Trail Dog', 'Sandy Trail Dog', 'Cream Trail Dog', 'Shadow Trail Dog'
   ]);
   assert.deepEqual(cats.map(pet => pet.name), [
-    'Black Cat Companion', 'Ginger Cat Companion', 'White Cat Companion'
+    'Black Cat (Cat 1)', 'Ginger Cat (Cat 2)', 'White Cat (Cat 3)'
   ]);
-  for (const pet of [...dogs, ...cats]) {
+  assert.equal(fox.name, 'Trail Fox');
+  assert.deepEqual(wisps.map(pet => pet.name), ['Blue Wisp', 'Outlined Blue Wisp']);
+  const spritePets = [...dogs, ...cats, fox, ...wisps];
+  for (const pet of spritePets) {
     assert.equal(pet.kind, 'sprite');
     const png = readFileSync(new URL(pet.imageSrc, import.meta.url));
     assert.equal(png.toString('ascii', 1, 4), 'PNG');
-    assert.equal(png.readUInt32BE(16), pet.id.startsWith('pet_trail_dog') ? 192 : 896);
-    assert.equal(png.readUInt32BE(20), pet.id.startsWith('pet_trail_dog') ? 64 : 4608);
+    const dimensions = pet.id.startsWith('pet_trail_dog') || pet === fox
+      ? [192, 64]
+      : pet.id.endsWith('_cat') ? [896, 4608] : [160, 32];
+    assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], dimensions);
   }
   assert.ok(dogs.every(pet => pet.spriteSheet.frameCount === 5));
   assert.ok(cats.every(pet => pet.spriteSheet.frameCount === 8));
   assert.ok(cats.every(pet => pet.spriteSheet.row === 13), 'cat frames use the labeled Lick paw lie front row');
+  assert.equal(fox.spriteSheet.frameCount, 6);
+  assert.ok(wisps.every(pet => pet.spriteSheet.frameCount === 5));
 });
-check('companion sprite animations crop the requested frame and transparent art bounds', () => {
+check('companion sprite animations crop requested dog, cat, fox, and wisp frames', () => {
   const originalImage = globalThis.Image;
   const drawCalls = [];
   globalThis.Image = class {
@@ -97,10 +106,19 @@ check('companion sprite animations crop the requested frame and transparent art 
     const context = { drawImage(...args) { drawCalls.push(args); } };
     const dog = characterCreator.PET_CATALOG.find(item => item.id === 'pet_trail_dog');
     const cat = characterCreator.PET_CATALOG.find(item => item.id === 'pet_black_cat');
+    const fox = characterCreator.PET_CATALOG.find(item => item.id === 'pet_trail_fox');
+    const wisp = characterCreator.PET_CATALOG.find(item => item.id === 'pet_blue_wisp');
+    const outlinedWisp = characterCreator.PET_CATALOG.find(item => item.id === 'pet_blue_wisp_outline');
     characterCreator.drawPet(context, dog, () => {}, 2);
     characterCreator.drawPet(context, cat, () => {}, 1);
+    characterCreator.drawPet(context, fox, () => {}, 2);
+    characterCreator.drawPet(context, wisp, () => {}, 4);
+    characterCreator.drawPet(context, outlinedWisp, () => {}, 1);
     assert.deepEqual(drawCalls[0].slice(1), [65, 13, 29, 19, 103, 67, 20, 13]);
     assert.deepEqual(drawCalls[1].slice(1), [77, 851, 36, 28, 102, 63, 22, 17]);
+    assert.deepEqual(drawCalls[2].slice(1), [65, 14, 29, 18, 103, 68, 20, 12]);
+    assert.deepEqual(drawCalls[3].slice(1), [137, 5, 14, 22, 107, 60, 12, 18]);
+    assert.deepEqual(drawCalls[4].slice(1), [40, 4, 16, 24, 107, 60, 12, 18]);
   } finally {
     if (originalImage === undefined) delete globalThis.Image;
     else globalThis.Image = originalImage;
