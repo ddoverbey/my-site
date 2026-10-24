@@ -24,12 +24,12 @@ check('every customization option supports a future image override', () => {
 check('character appearance, wardrobe, companions, and scene choices render as dropdowns', () => {
   const controls = { dataset: {}, innerHTML: '' };
   const expectedFields = {
-    appearance: ['gender', 'skinTone', 'hairPreset'],
+    appearance: ['gender', 'skinTone', 'hairPreset', 'specialSkin'],
     wardrobe: ['top', 'bottoms', 'shoes', 'headwear', 'handItem', 'backLayer',
-      'arms', 'face', 'ears', 'effect', 'specialSkin', 'pet', 'petHat', 'petBackpack'],
+      'arms', 'face', 'ears', 'effect'],
     pets: ['pet', 'petHat', 'petBackpack'],
     backgrounds: ['background'],
-    shop: ['pet'],
+    shop: ['top', 'bottoms', 'shoes'],
     patron: []
   };
   const visualFields = new Set([
@@ -48,6 +48,10 @@ check('character appearance, wardrobe, companions, and scene choices render as d
         assert.match(controls.innerHTML, new RegExp(`<select[^>]*data-character-field="${field}"`));
       }
     }
+    for (const field of ['pet', 'petHat', 'petBackpack']) {
+      if (tab !== 'pets') assert.doesNotMatch(controls.innerHTML, new RegExp(`data-character-field="${field}"`));
+    }
+    if (tab !== 'appearance') assert.doesNotMatch(controls.innerHTML, /data-character-field="specialSkin"/);
   }
   controls.dataset.activeTab = 'appearance';
   characterCreator.render({ controls, character: characterCreator.DEFAULT_CHARACTER });
@@ -67,13 +71,51 @@ check('character appearance, wardrobe, companions, and scene choices render as d
   assert.match(controls.innerHTML, /Hairstyle 1: Chestnut/);
   assert.match(controls.innerHTML, /Hairstyle 28: Teal/);
   assert.match(controls.innerHTML, /data-character-id="hair_shield_maiden::teal"/);
-  assert.equal((controls.innerHTML.match(/data-character-field="hairPreset"/g) || []).length, 168);
+  assert.equal((controls.innerHTML.match(/data-character-field="hairPreset"/g) || []).length, 170);
+  assert.match(controls.innerHTML, /aria-label="Previous hairstyle"/);
+  assert.match(controls.innerHTML, /aria-label="Next hairstyle"/);
+  assert.match(controls.innerHTML, /<details class="mt-2">\s*<summary[^>]*>Browse all hairstyles/);
   assert.match(controls.innerHTML, /h-16/);
   assert.match(controls.innerHTML, /h-10 w-10/);
   controls.dataset.activeTab = 'shop';
   characterCreator.render({ controls, character: characterCreator.DEFAULT_CHARACTER });
   assert.match(controls.innerHTML, /Wayfarer Coins/);
-  assert.match(controls.innerHTML, /150 coins/);
+  assert.match(controls.innerHTML, /\d+ coins/);
+});
+check('hairstyle arrows cycle unlocked options, wrap around, and respect view-only mode', () => {
+  for (const gender of ['male', 'female']) {
+    const controls = { dataset: {}, innerHTML: '' };
+    let character = characterCreator.normalizeCharacter({ gender });
+    let next;
+    const render = (viewOnly = false) => characterCreator.render({
+      controls, character, stats: { level: 1 }, viewOnly,
+      onChange: value => { next = value; }
+    });
+    const arrowId = label => controls.innerHTML.match(new RegExp(
+      `data-character-field="hairPreset"\\s+data-character-id="([^"]+)" aria-label="${label}"`
+    ))[1];
+    const choose = id => controls.onclick({ target: { closest(selector) {
+      return selector === 'button[data-character-field][data-character-id]'
+        ? { dataset: { characterField: 'hairPreset', characterId: id }, disabled: false } : null;
+    } } });
+    render();
+    const first = `${character.hairStyle}::${character.hairColor}`;
+    choose(arrowId('Previous hairstyle'));
+    assert.ok(next);
+    assert.notEqual(`${next.hairStyle}::${next.hairColor}`, first);
+    assert.doesNotMatch(next.hairStyle, /fancy|queen|shield_maiden/);
+    character = next;
+    render();
+    assert.equal(arrowId('Next hairstyle'), first);
+    choose(arrowId('Next hairstyle'));
+    assert.equal(`${next.hairStyle}::${next.hairColor}`, first);
+    character = next;
+    render(true);
+    assert.match(controls.innerHTML, /aria-label="Next hairstyle"\s+disabled/);
+    next = null;
+    choose(arrowId('Next hairstyle'));
+    assert.equal(next, null);
+  }
 });
 check('dropdown changes update the selected character field', () => {
   const controls = { dataset: {}, innerHTML: '' };

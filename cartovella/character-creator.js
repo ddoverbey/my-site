@@ -1178,18 +1178,49 @@
     );
     const petOptions = catalogOptions(PET_CATALOG, character.pet, stats, character,
       completedAchievements, 'Equipped', appState);
+    const hairValue = `${character.hairStyle}::${character.hairColor}`;
+    const hairOptions = catalogOptions(hairPresetOptions(character), hairValue,
+      stats, character, completedAchievements, 'Equipped', appState);
+    const availableHair = hairOptions.filter(option => !option.disabled);
+    const hairIndex = availableHair.findIndex(option => option.id === hairValue);
+    const hairArrow = (direction, label) => {
+      const index = (Math.max(0, hairIndex) + direction + availableHair.length) % availableHair.length;
+      const option = availableHair[index];
+      return `<button type="button" data-character-field="hairPreset"
+        data-character-id="${escapeHtml(option?.id || hairValue)}" aria-label="${label}"
+        ${disabled || availableHair.length < 2 ? 'disabled' : ''}
+        class="shrink-0 rounded-lg border border-slate-700 px-3 py-3 text-lg text-amber-200 hover:bg-slate-800 disabled:opacity-50">
+        ${direction < 0 ? '&larr;' : '&rarr;'}
+      </button>`;
+    };
+    const hairPicker = `<div class="min-w-0 text-xs text-slate-300">
+      <span class="block">Hairstyle</span>
+      <div class="mt-1 flex min-h-16 items-center gap-2 rounded-lg border border-slate-700 bg-slate-950 p-2"
+        role="group" aria-label="Hairstyle picker">
+        ${hairArrow(-1, 'Previous hairstyle')}
+        <span class="flex min-w-0 flex-1 items-center justify-center gap-2">
+          ${hairThumbnailMarkup(character)}
+          <span>${escapeHtml(hairOptions.find(option => option.id === hairValue)?.name || 'Hairstyle')}</span>
+        </span>
+        ${hairArrow(1, 'Next hairstyle')}
+      </div>
+      <details class="mt-2">
+        <summary class="cursor-pointer text-amber-200">Browse all hairstyles</summary>
+        ${dropdown('hairPreset', 'All hairstyles', hairValue, hairOptions,
+          option => hairThumbnailMarkup({
+            ...character, hairStyle: option.hairStyle, hairColor: option.hairColor
+          }))}
+      </details>
+    </div>`;
     const coinBalance = coinSummary(stats, appState);
     const wardrobeFields = [
       ['top', 'Shirts, Bodices & Dresses'], ['bottoms', 'Pants & Skirts'], ['shoes', 'Footwear'],
       ['headwear', 'Hats & Helmets'], ['handItem', 'Hand Items'], ['backLayer', 'Back Layers'],
       ['arms', 'Arm Layers'], ['face', 'Masks & Face Paint'], ['ears', 'Elven Ears'],
-      ['effect', 'Character Effects'], ['specialSkin', 'Special Skins']
+      ['effect', 'Character Effects']
     ];
     const purchaseControls = `<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
       ${wardrobeFields.map(([field, label]) => equipmentDropdown(field, label)).join('')}
-      ${dropdown('pet', 'Pets', character.pet, petOptions, option => petThumbnailMarkup(option))}
-      ${equipmentDropdown('petHat', 'Dog Hat', !character.pet.startsWith('pet_trail_dog'))}
-      ${equipmentDropdown('petBackpack', 'Dog Backpack', !character.pet.startsWith('pet_trail_dog'))}
     </div>`;
     const sections = {
       appearance: `<div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -1200,12 +1231,8 @@
           `<span aria-hidden="true" class="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-slate-900">
             <span class="h-6 w-6 rounded-full border border-slate-500" style="background-color:${escapeHtml(option.color)}"></span>
           </span>`)}
-        ${dropdown('hairPreset', 'Hairstyle', `${character.hairStyle}::${character.hairColor}`,
-          catalogOptions(hairPresetOptions(character), `${character.hairStyle}::${character.hairColor}`,
-            stats, character, completedAchievements, 'Equipped', appState),
-          option => hairThumbnailMarkup({
-            ...character, hairStyle: option.hairStyle, hairColor: option.hairColor
-          }))}
+        ${hairPicker}
+        ${equipmentDropdown('specialSkin', 'Special Skins')}
       </div>`,
       wardrobe: `<div class="space-y-4">
         <p class="text-xs text-slate-400">Earn progression gear or purchase additional sprite layers with Wayfarer Coins.</p>

@@ -172,10 +172,14 @@ check('home citadel setup can be dismissed by its close button, backdrop, or Esc
   assert.match(html, /event\.target === event\.currentTarget\) closeHomeModal\(\)/);
   assert.match(html, /event\.key === 'Escape'[\s\S]*?closeHomeModal\(\)/);
 });
+check('character customization appears above the stage and progress summary', () => {
+  assert.ok(html.indexOf('id="characterCustomization"') < html.indexOf('id="characterStage"'));
+  assert.ok(html.indexOf('id="characterStage"') < html.indexOf('id="characterProgressSummary"'));
+});
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 10);
-  assert.ok(sources.every(source => source.endsWith('?v=20261023-cartovella-sprite-pets-v11')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261024-cartovella-customization-v12')));
   assert.ok(sources.some(source => source.startsWith('./character-creator.js?')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
