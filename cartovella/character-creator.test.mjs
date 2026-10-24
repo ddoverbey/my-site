@@ -23,14 +23,14 @@ check('every customization option supports a future image override', () => {
 check('character appearance, outfit, companion, and scene choices render as dropdowns', () => {
   const controls = { dataset: {}, innerHTML: '' };
   const expectedFields = {
-    appearance: ['gender', 'skinTone', 'hairColor', 'hairStyle'],
+    appearance: ['gender', 'skinTone', 'hairPreset'],
     wardrobe: ['outfit', 'hat', 'accessory'],
     pets: ['pet'],
     backgrounds: ['background'],
     patron: ['proReward', 'donationReward']
   };
   const visualFields = new Set([
-    'gender', 'skinTone', 'hairColor', 'hairStyle', 'outfit', 'hat', 'accessory', 'pet', 'background'
+    'gender', 'skinTone', 'hairPreset', 'outfit', 'hat', 'accessory', 'pet', 'background'
   ]);
   for (const [tab, fields] of Object.entries(expectedFields)) {
     controls.dataset.activeTab = tab;
@@ -48,14 +48,23 @@ check('character appearance, outfit, companion, and scene choices render as drop
   characterCreator.render({ controls, character: characterCreator.DEFAULT_CHARACTER });
   assert.match(controls.innerHTML, /Male%20Skin2\.png/);
   assert.match(controls.innerHTML, /Female%20Skin2\.png/);
-  assert.match(controls.innerHTML, /Male%20Hair6\.png/);
-  assert.match(controls.innerHTML, /Female%20Hair6\.png/);
+  assert.match(controls.innerHTML, /data-hair-preview="true"/);
+  assert.match(controls.innerHTML, /data-hair-style="hair_6"/);
+  assert.match(controls.innerHTML, /data-hair-color="brown"/);
   assert.match(controls.innerHTML, /background-color:#dba77e/);
-  assert.match(controls.innerHTML, /Hair color/);
+  assert.match(controls.innerHTML, /Chestnut/);
+  assert.match(controls.innerHTML, /Black/);
+  assert.match(controls.innerHTML, /Blonde/);
   assert.match(controls.innerHTML, /Hairstyle/);
+  assert.doesNotMatch(controls.innerHTML, /Hair color/);
   assert.match(controls.innerHTML, /Porcelain/);
   assert.match(controls.innerHTML, /Warm/);
-  assert.match(controls.innerHTML, /Hairstyle 6/);
+  assert.match(controls.innerHTML, /Hairstyle 1: Chestnut/);
+  assert.match(controls.innerHTML, /Hairstyle 28: Teal/);
+  assert.match(controls.innerHTML, /data-character-id="hair_shield_maiden::teal"/);
+  assert.equal((controls.innerHTML.match(/data-character-field="hairPreset"/g) || []).length, 168);
+  assert.match(controls.innerHTML, /h-16/);
+  assert.match(controls.innerHTML, /h-10 w-10/);
   assert.match(controls.innerHTML, /No reward selected/);
 });
 check('dropdown changes update the selected character field', () => {
@@ -77,9 +86,8 @@ check('dropdown changes update the selected character field', () => {
       }
     }
   });
-  choose('hairColor', 'teal');
+  choose('hairPreset', 'hair_10::teal');
   assert.equal(changedCharacter.hairColor, 'teal');
-  choose('hairStyle', 'hair_10');
   assert.equal(changedCharacter.hairStyle, 'hair_10');
   choose('gender', 'female');
   assert.equal(changedCharacter.gender, 'female');
@@ -197,6 +205,8 @@ check('the 58 hairstyle assets are available for their matching character sprite
   const femaleStyles = characterCreator.HAIR_STYLES.filter(style => style.genders.includes('female'));
   assert.equal(maleStyles.length, 28);
   assert.equal(femaleStyles.length, 30);
+  assert.equal(maleStyles.length * characterCreator.HAIR_COLORS.length, 168);
+  assert.equal(femaleStyles.length * characterCreator.HAIR_COLORS.length, 180);
   assert.ok(characterCreator.characterSpriteAssets({
     ...characterCreator.DEFAULT_CHARACTER, hairStyle: 'hair_fancy'
   })[4].endsWith('/Fancy%20Hair.png'));

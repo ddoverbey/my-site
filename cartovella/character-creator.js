@@ -13,21 +13,21 @@
       const sheet = index + 6;
       return {
         id: `hair_${sheet}`,
-        name: `Hairstyle ${sheet}`,
+        name: `Hairstyle ${index + 1}`,
         sheet,
         genders: sheet <= 30 ? ['male', 'female'] : ['female'],
         imageSrc: null
       };
     }),
-    { id: 'hair_fancy', name: 'Fancy Hair', fileName: 'Fancy Hair.png', genders: ['male'], imageSrc: null },
-    { id: 'hair_queen', name: 'Queen Hair', fileName: 'Queen hair.png', genders: ['male'], imageSrc: null },
-    { id: 'hair_shield_maiden', name: 'Shield Maiden Hair', fileName: 'Shield Maiden hair.png', genders: ['male'], imageSrc: null }
+    { id: 'hair_fancy', name: 'Hairstyle 26', fileName: 'Fancy Hair.png', genders: ['male'], imageSrc: null },
+    { id: 'hair_queen', name: 'Hairstyle 27', fileName: 'Queen hair.png', genders: ['male'], imageSrc: null },
+    { id: 'hair_shield_maiden', name: 'Hairstyle 28', fileName: 'Shield Maiden hair.png', genders: ['male'], imageSrc: null }
   ];
   const HAIR_COLORS = [
-    { id: 'brown', name: 'Chestnut', color: '#603c2e', imageSrc: null },
     { id: 'black', name: 'Black', color: '#292b35', imageSrc: null },
+    { id: 'brown', name: 'Chestnut', color: '#603c2e', imageSrc: null },
     { id: 'blonde', name: 'Blonde', color: '#e4bd68', imageSrc: null },
-    { id: 'red', name: 'Copper', color: '#a84e36', imageSrc: null },
+    { id: 'red', name: 'Red', color: '#a84e36', imageSrc: null },
     { id: 'silver', name: 'Silver', color: '#b7c3cd', imageSrc: null },
     { id: 'teal', name: 'Teal', color: '#53b8aa', imageSrc: null }
   ];
@@ -745,19 +745,57 @@
   function characterThumbnailMarkup(character) {
     const assets = characterSpriteAssets(character);
     const hairFilter = hairColorFilter(character.hairColor);
-    return `<span aria-hidden="true" class="relative block h-[60px] w-[40px] shrink-0 overflow-hidden rounded bg-slate-900">
+    return `<span aria-hidden="true" class="relative block h-10 w-10 shrink-0 overflow-hidden rounded bg-slate-900">
       ${assets.map((src, index) => `<img src="${escapeHtml(src)}" alt="" class="absolute max-w-none"
         loading="lazy" style="width:1000px;height:560px;left:-30px;top:-20px;image-rendering:pixelated;${index === assets.length - 1 ? `filter:${hairFilter}` : ''}">`).join('')}
     </span>`;
   }
 
+  function hairPresetOptions(character) {
+    const styles = HAIR_STYLES.filter(style => style.genders.includes(character.gender));
+    return styles.flatMap((style, index) => HAIR_COLORS.map(color => ({
+      id: `${style.id}::${color.id}`,
+      name: `Hairstyle ${index + 1}: ${color.name}`,
+      hairStyle: style.id,
+      hairColor: color.id
+    })));
+  }
+
   function hairThumbnailMarkup(character) {
-    const assets = characterSpriteAssets(character);
-    const hairSrc = assets[assets.length - 1];
-    return `<span aria-hidden="true" class="relative block h-[60px] w-[40px] shrink-0 overflow-hidden rounded bg-slate-900">
-      <img src="${escapeHtml(hairSrc)}" alt="" loading="lazy" class="absolute max-w-none"
-        style="width:1000px;height:560px;left:-30px;top:-20px;image-rendering:pixelated;filter:${hairColorFilter(character.hairColor)}">
-    </span>`;
+    return `<canvas data-hair-preview="true" data-gender="${escapeHtml(character.gender)}"
+      data-skin-tone="${escapeHtml(character.skinTone)}" data-outfit="${escapeHtml(character.outfit)}"
+      data-hair-style="${escapeHtml(character.hairStyle)}" data-hair-color="${escapeHtml(character.hairColor)}"
+      width="40" height="40" aria-hidden="true"
+      class="block h-10 w-10 shrink-0 rounded bg-slate-900"></canvas>`;
+  }
+
+  function renderHairPreview(canvas) {
+    if (!canvas || canvas.isConnected === false) return;
+    const character = normalizeCharacter({
+      gender: canvas.dataset.gender,
+      skinTone: canvas.dataset.skinTone,
+      outfit: canvas.dataset.outfit,
+      hairStyle: canvas.dataset.hairStyle,
+      hairColor: canvas.dataset.hairColor
+    });
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.save();
+    ctx.scale(1.25, 1.25);
+    ctx.translate(-60, -34);
+    drawCharacterSprite(ctx, character, () => renderHairPreview(canvas));
+    ctx.restore();
+  }
+
+  function renderHairPreviews(container) {
+    if (typeof container.querySelectorAll !== 'function') return;
+    container.querySelectorAll('canvas[data-hair-preview]').forEach(canvas => {
+      const details = canvas.closest('details');
+      if (details && !details.open && !canvas.closest('summary')) return;
+      renderHairPreview(canvas);
+    });
   }
 
   function wardrobeSwatchMarkup(item, symbol) {
@@ -771,7 +809,7 @@
       <span class="block">${escapeHtml(label)}</span>
       <details class="relative mt-1">
         <summary ${disabled ? 'aria-disabled="true"' : ''}
-          class="flex cursor-pointer list-none items-center justify-between gap-2 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 ${disabled ? 'opacity-50' : 'hover:border-slate-500'}">
+          class="flex h-16 cursor-pointer list-none items-center justify-between gap-2 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 ${disabled ? 'opacity-50' : 'hover:border-slate-500'}">
           <span class="flex min-w-0 items-center gap-2">${renderChoice(selected, true)}
             <span class="truncate">${escapeHtml(selected.name)}</span>
           </span>
@@ -779,7 +817,7 @@
             <path d="m5 7.5 5 5 5-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </summary>
-        <div class="absolute left-0 right-0 z-30 mt-1 max-h-64 overflow-y-auto rounded-lg border border-slate-700 bg-slate-950 p-1 shadow-xl">
+        <div class="visual-dropdown-options absolute left-0 right-0 z-[70] mt-1 max-h-64 overflow-y-auto rounded-lg border border-slate-700 bg-slate-950 p-1 shadow-xl">
           ${options.map(option => `<button type="button" data-character-field="${escapeHtml(field)}"
             data-character-id="${escapeHtml(option.id)}" aria-pressed="${option.id === value}"
             ${disabled || option.disabled ? 'disabled' : ''}
@@ -838,6 +876,22 @@
     });
   }
 
+  function positionDropdown(details, container) {
+    if (!details.open) {
+      details.classList.remove('drop-up');
+      return;
+    }
+    const list = details.querySelector('.visual-dropdown-options');
+    const panel = container.closest('#tabContent-passport');
+    if (!list || !panel) return;
+    const dropdown = details.getBoundingClientRect();
+    const bounds = panel.getBoundingClientRect();
+    const menuHeight = Math.min(list.scrollHeight, 256);
+    const spaceBelow = Math.min(bounds.bottom, window.innerHeight) - dropdown.bottom;
+    const spaceAbove = dropdown.top - Math.max(bounds.top, 0);
+    details.classList.toggle('drop-up', spaceBelow < menuHeight + 8 && spaceAbove > spaceBelow);
+  }
+
   function backgroundThumbnailMarkup(background) {
     return `<span aria-hidden="true" class="block h-12 w-[72px] shrink-0 overflow-hidden rounded bg-slate-900">
       ${background.imageSrc
@@ -850,20 +904,20 @@
     const activeTab = tabs.includes(container.dataset.activeTab) ? container.dataset.activeTab : 'appearance';
     const completedAchievements = achievementProgress(stats, achievements);
     const sections = {
-      appearance: `<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      appearance: `<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
         ${visualDropdownMarkup('Character sprite', 'gender', [
           { id: 'male', name: 'Male sprite' }, { id: 'female', name: 'Female sprite' }
         ], character.gender, disabled, option =>
           characterThumbnailMarkup({ ...character, gender: option.id }))}
         ${visualDropdownMarkup('Skin tone', 'skinTone', SKIN_TONES, character.skinTone, disabled,
-          option => `<span aria-hidden="true" class="block h-6 w-6 shrink-0 rounded-full border border-slate-500"
-            style="background-color:${escapeHtml(option.color)}"></span>`)}
-        ${visualDropdownMarkup('Hair color', 'hairColor', HAIR_COLORS, character.hairColor, disabled,
-          option => hairThumbnailMarkup({ ...character, hairColor: option.id }))}
-        ${visualDropdownMarkup('Hairstyle', 'hairStyle',
-          HAIR_STYLES.filter(style => style.genders.includes(character.gender)),
-          character.hairStyle, disabled,
-          option => hairThumbnailMarkup({ ...character, hairStyle: option.id }))}
+          option => `<span aria-hidden="true" class="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-slate-900">
+            <span class="h-6 w-6 rounded-full border border-slate-500" style="background-color:${escapeHtml(option.color)}"></span>
+          </span>`)}
+        ${visualDropdownMarkup('Hairstyle', 'hairPreset', hairPresetOptions(character),
+          `${character.hairStyle}::${character.hairColor}`, disabled,
+          option => hairThumbnailMarkup({
+            ...character, hairStyle: option.hairStyle, hairColor: option.hairColor
+          }))}
       </div>`,
       wardrobe: `<div class="space-y-5">
         <p class="text-xs text-slate-400">Preview each look before equipping it.</p>
@@ -919,9 +973,14 @@
         }[tab]}</button>`).join('')}
       </div><div role="tabpanel">${sections[activeTab]}</div>`;
     renderPetPreviews(container);
+    renderHairPreviews(container);
     if (typeof container.querySelectorAll === 'function') {
       container.querySelectorAll('details').forEach(details => {
-        details.addEventListener('toggle', () => renderPetPreviews(details));
+        details.addEventListener('toggle', () => {
+          positionDropdown(details, container);
+          renderPetPreviews(details);
+          renderHairPreviews(details);
+        });
       });
     }
   }
@@ -967,7 +1026,10 @@
       customizeButton.onclick = () => {
         controls.hidden = !controls.hidden;
         customizeButton.setAttribute('aria-expanded', String(!controls.hidden));
-        if (!controls.hidden) renderPetPreviews(controls);
+        if (!controls.hidden) {
+          renderPetPreviews(controls);
+          renderHairPreviews(controls);
+        }
       };
     }
     if (!controls) return;
@@ -982,6 +1044,11 @@
       const choiceButton = event.target.closest('button[data-character-field][data-character-id]');
       if (choiceButton) {
         if (disabled || choiceButton.disabled) return;
+        if (choiceButton.dataset.characterField === 'hairPreset') {
+          const [hairStyle, hairColor] = choiceButton.dataset.characterId.split('::');
+          options.onChange?.(normalizeCharacter({ ...character, hairStyle, hairColor }));
+          return;
+        }
         options.onChange?.(normalizeCharacter({
           ...character, [choiceButton.dataset.characterField]: choiceButton.dataset.characterId
         }));

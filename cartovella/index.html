@@ -60,6 +60,13 @@
     }
     .cinzel { font-family: 'Cinzel', serif; }
     .cinzel-deco { font-family: 'Cinzel Decorative', serif; }
+    #characterCustomization { position: relative; z-index: 30; }
+    #characterCustomization details[open] { z-index: 60; }
+    #characterCustomization details.drop-up > .visual-dropdown-options {
+      top: auto;
+      bottom: calc(100% + 0.25rem);
+      margin-top: 0;
+    }
 
     /* Custom Scrollbar */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -609,7 +616,7 @@
       <div class="max-w-6xl mx-auto space-y-8 pb-16">
 
         <!-- Explorer Character Stage -->
-        <section class="rpg-panel rpg-panel-gold rounded-3xl p-4 md:p-6" aria-labelledby="characterCreatorTitle">
+        <section class="rpg-panel rpg-panel-gold relative z-20 rounded-3xl p-4 md:p-6" aria-labelledby="characterCreatorTitle">
           <div class="flex items-center justify-between gap-3 mb-3">
             <div>
               <h2 id="characterCreatorTitle" class="cinzel text-xl font-bold text-amber-200">Your Explorer</h2>
@@ -1159,7 +1166,7 @@
   <script src="./coordinate-lookups.js?v=20261023-cartovella-sprite-pets-v7"></script>
   <script src="./micro-states.js?v=20261023-cartovella-sprite-pets-v7"></script>
   <script src="./travel-ledger.js?v=20261023-cartovella-sprite-pets-v7"></script>
-  <script src="./character-creator.js?v=20261023-visual-all-customizers-v9"></script>
+  <script src="./character-creator.js?v=20261023-combined-hair-picker-v13"></script>
   <script src="./rarity-config.js?v=20261023-cartovella-sprite-pets-v7"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
