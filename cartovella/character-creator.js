@@ -158,7 +158,7 @@
 
   const CHARACTER_ASSET_ROOT = './assets/gandalfhardcore/GandalfHardcore%20Character%20Asset%20Pack/GandalfHardcore%20Character%20Asset%20Pack/';
   const CHARACTER_SPRITE_FRAME = Object.freeze({ x: 24, y: 16, width: 32, height: 48 });
-  const CHARACTER_SPRITE_TARGET = Object.freeze({ x: 50, y: 10, width: 60, height: 72 });
+  const CHARACTER_SPRITE_TARGET = Object.freeze({ x: 57, y: 28, width: 46, height: 54 });
   const OUTFIT_SPRITE_LAYERS = Object.freeze({
     classic: { male: ['Male Clothing/Shirt v2.png', 'Male Clothing/Pants.png'], female: ['Female Clothing/Corset v2.png', 'Female Clothing/Skirt.png'] },
     green: { male: ['Male Clothing/Green Shirt v2.png', 'Male Clothing/Green Pants.png'], female: ['Female Clothing/Green Corset v2.png', 'Female Clothing/Skirt.png'] },
