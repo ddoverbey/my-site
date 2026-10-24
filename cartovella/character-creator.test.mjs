@@ -100,6 +100,27 @@ check('dropdown changes update the selected character field', () => {
   choose('gender', 'female');
   assert.equal(changedCharacter.gender, 'female');
 });
+check('opening customization scrolls to and focuses the editor; closing does not scroll', () => {
+  const scrollCalls = [];
+  const focusCalls = [];
+  const controls = {
+    dataset: {}, innerHTML: '', hidden: true,
+    focus(options) { focusCalls.push(options); },
+    scrollIntoView(options) { scrollCalls.push(options); }
+  };
+  const attributes = {};
+  const customizeButton = { setAttribute(key, value) { attributes[key] = value; } };
+  characterCreator.render({ controls, customizeButton });
+  customizeButton.onclick();
+  assert.equal(controls.hidden, false);
+  assert.equal(attributes['aria-expanded'], 'true');
+  assert.deepEqual(focusCalls, [{ preventScroll: true }]);
+  assert.deepEqual(scrollCalls, [{ behavior: 'instant', block: 'start' }]);
+  customizeButton.onclick();
+  assert.equal(controls.hidden, true);
+  assert.equal(attributes['aria-expanded'], 'false');
+  assert.equal(scrollCalls.length, 1);
+});
 check('late character sprite loads redraw the most recently rendered stage', () => {
   const originalImage = globalThis.Image;
   const pendingImages = [];
@@ -518,6 +539,52 @@ check('sprite character selects matching gender, skin, hair, and outfit layers',
     assert.ok(drawCalls.every(call =>
       call.length === 9 && call.slice(1).join(',') === '24,16,32,48,62,39,36,43'
     ));
+  } finally {
+    if (originalImage === undefined) delete globalThis.Image;
+    else globalThis.Image = originalImage;
+  }
+});
+
+check('dog accessories share the dog frame origin and scale for every coat', () => {
+  const originalImage = globalThis.Image;
+  globalThis.Image = class {
+    constructor() { this.complete = true; this.naturalWidth = 192; this.src = ''; }
+  };
+  try {
+    const calls = [];
+    const context = {
+      clearRect() {}, save() {}, scale() {}, restore() {}, fillRect() {},
+      drawImage(...args) { calls.push(args); }
+    };
+    const canvas = { width: 320, height: 180, getContext: () => context };
+    for (const dog of characterCreator.PET_CATALOG.filter(pet => pet.id.startsWith('pet_trail_dog'))) {
+      calls.length = 0;
+      characterCreator.drawStage(canvas, {
+        ...characterCreator.DEFAULT_CHARACTER, background: 'bg_green_hills',
+        pet: dog.id, petHat: 'dog_hat', petBackpack: 'dog_backpack',
+        purchasedItems: [dog.id, 'dog_hat', 'dog_backpack']
+      });
+      const body = calls.find(call => call[0].src === dog.imageSrc);
+      const accessories = calls.filter(call => /doggy%20(hat|backpack)\.png$/.test(call[0].src));
+      assert.ok(body, dog.id);
+      assert.equal(accessories.length, 2, dog.id);
+      for (const accessory of accessories) {
+        const [, sx, sy, sw, sh, dx, dy, dw, dh] = accessory;
+        assert.deepEqual([sx, sy, sw, sh], [0, 0, 32, 32]);
+        const sprite = dog.spriteSheet;
+        assert.equal(dw / sw, sprite.targetWidth / sprite.sourceWidth);
+        assert.equal(dh / sh, sprite.targetHeight / sprite.sourceHeight);
+        assert.equal(dx + sprite.sourceX * dw / sw, sprite.targetX);
+        assert.equal(dy + sprite.sourceY * dh / sh, sprite.targetY);
+      }
+    }
+    const controls = { dataset: { activeTab: 'pets' }, innerHTML: '' };
+    characterCreator.render({ controls, character: characterCreator.DEFAULT_CHARACTER });
+    for (const field of ['petHat', 'petBackpack']) {
+      assert.match(controls.innerHTML,
+        new RegExp(`data-character-field="${field}"[\\s\\S]*?aria-pressed="true"\\s+disabled`));
+    }
+    assert.match(controls.innerHTML, /width:240px;height:80px/);
   } finally {
     if (originalImage === undefined) delete globalThis.Image;
     else globalThis.Image = originalImage;

@@ -121,6 +121,9 @@ GandalfHardcore asset folders are grouped under `assets/gandalfhardcore/`; sourc
 in `assets/Zips/`.
 The character layers use aligned 800×448 sheets and a 32×48 crop around the first character
 frame. Character, hairstyle, wardrobe, companion, and background selectors show visual previews.
+Opening the character editor focuses and jumps directly to the customization controls.
+Dog hats and backpacks use the same idle-frame
+origin and scale as the equipped dog; their selectors are disabled when no dog is equipped.
 Companion catalog entries can use an `imageSrc` PNG or a cropped sprite-sheet animation. All five dog coat variants
 (golden, slate, sandy, cream, and shadow) use five 32×32 walking frames from the corresponding
 `assets/gandalfhardcore/GandalfHardcore Pet companion/GandalfHardcore Pet companion/GandalfHardcore doggy sheet*.png`

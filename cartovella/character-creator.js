@@ -894,7 +894,14 @@
     if (!path) return;
     const image = getImage({ imageSrc: assetUrl(path) }, redraw);
     if (!image) return;
-    ctx.drawImage(image, 0, 0, 32, 32, 101, 64, 15, 10);
+    const sprite = getItem(PET_CATALOG, character.pet).spriteSheet;
+    const scaleX = sprite.targetWidth / sprite.sourceWidth;
+    const scaleY = sprite.targetHeight / sprite.sourceHeight;
+    // Preserve the sheet's shared origin, including hat pixels above the dog's crop.
+    ctx.drawImage(image, 0, 0, sprite.frameWidth, sprite.frameHeight,
+      sprite.targetX - sprite.sourceX * scaleX,
+      sprite.targetY - sprite.sourceY * scaleY,
+      sprite.frameWidth * scaleX, sprite.frameHeight * scaleY);
   }
 
   function drawStage(canvas, value, options = {}, campfireFrame = 0) {
@@ -1083,9 +1090,10 @@
 
   function equipmentThumbnailMarkup(item, gender) {
     const path = item.paths?.[gender];
+    const isPetAccessory = item.field === 'petHat' || item.field === 'petBackpack';
     return `<span aria-hidden="true" class="relative block h-10 w-10 shrink-0 overflow-hidden rounded bg-slate-900">
       ${path ? `<img src="${escapeHtml(assetUrl(path))}" alt="" class="absolute left-0 top-0 max-w-none"
-        style="width:400px;height:224px;image-rendering:pixelated">` : ''}
+        style="width:${isPetAccessory ? 240 : 400}px;height:${isPetAccessory ? 80 : 224}px;image-rendering:pixelated">` : ''}
     </span>`;
   }
 
@@ -1160,8 +1168,8 @@
   function renderControls(container, character, stats, achievements, disabled, appState) {
     const activeTab = tabs.includes(container.dataset.activeTab) ? container.dataset.activeTab : 'appearance';
     const completedAchievements = achievementProgress(stats, achievements);
-    const dropdown = (field, label, current, choices, renderChoice) =>
-      visualDropdownMarkup(label, field, choices, current, disabled, renderChoice);
+    const dropdown = (field, label, current, choices, renderChoice, fieldDisabled = false) =>
+      visualDropdownMarkup(label, field, choices, current, disabled || fieldDisabled, renderChoice);
     const equipmentDropdown = (field, label, fieldDisabled = false) => dropdown(
       field, label, character[field],
       equipmentOptions(field, character, stats, completedAchievements, appState),
@@ -1291,6 +1299,11 @@
         if (!controls.hidden) {
           renderPetPreviews(controls);
           renderHairPreviews(controls);
+          controls.focus?.({ preventScroll: true });
+          controls.scrollIntoView?.({
+            behavior: 'instant',
+            block: 'start'
+          });
         }
       };
     }
