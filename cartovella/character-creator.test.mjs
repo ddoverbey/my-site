@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { existsSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import characterCreator from './character-creator.js';
 
 let checks = 0;
@@ -63,18 +63,25 @@ check('low-resolution frame profiles keep the V-taper broad at the shoulders and
   assert.ok(Math.min(...hourglass.slice(5, 11)) < hourglass[0]);
   assert.ok(Math.max(...hourglass.slice(12)) <= hourglass[0]);
 });
-check('dog and cat companions use the bundled animated sprite sheets', () => {
-  const dog = characterCreator.PET_CATALOG.find(item => item.id === 'pet_trail_dog');
-  const cat = characterCreator.PET_CATALOG.find(item => item.id === 'pet_black_cat');
-  assert.equal(dog.name, 'Trail Dog');
-  assert.equal(cat.name, 'Black Cat Companion');
-  for (const pet of [dog, cat]) {
+check('every bundled dog and cat coat variant has a valid animated sprite sheet', () => {
+  const dogs = characterCreator.PET_CATALOG.filter(item => item.id.startsWith('pet_trail_dog'));
+  const cats = characterCreator.PET_CATALOG.filter(item => item.id.endsWith('_cat'));
+  assert.deepEqual(dogs.map(pet => pet.name), [
+    'Golden Trail Dog', 'Slate Trail Dog', 'Sandy Trail Dog', 'Cream Trail Dog', 'Shadow Trail Dog'
+  ]);
+  assert.deepEqual(cats.map(pet => pet.name), [
+    'Black Cat Companion', 'Ginger Cat Companion', 'White Cat Companion'
+  ]);
+  for (const pet of [...dogs, ...cats]) {
     assert.equal(pet.kind, 'sprite');
-    assert.ok(existsSync(new URL(pet.imageSrc, import.meta.url)), `${pet.id} sprite sheet should exist`);
+    const png = readFileSync(new URL(pet.imageSrc, import.meta.url));
+    assert.equal(png.toString('ascii', 1, 4), 'PNG');
+    assert.equal(png.readUInt32BE(16), pet.id.startsWith('pet_trail_dog') ? 192 : 896);
+    assert.equal(png.readUInt32BE(20), pet.id.startsWith('pet_trail_dog') ? 64 : 4608);
   }
-  assert.equal(dog.spriteSheet.frameCount, 5);
-  assert.equal(cat.spriteSheet.frameCount, 3);
-  assert.equal(cat.spriteSheet.row, 14, 'cat frames use the labeled Meow sit front row');
+  assert.ok(dogs.every(pet => pet.spriteSheet.frameCount === 5));
+  assert.ok(cats.every(pet => pet.spriteSheet.frameCount === 8));
+  assert.ok(cats.every(pet => pet.spriteSheet.row === 13), 'cat frames use the labeled Lick paw lie front row');
 });
 check('companion sprite animations crop the requested frame and transparent art bounds', () => {
   const originalImage = globalThis.Image;
@@ -93,7 +100,7 @@ check('companion sprite animations crop the requested frame and transparent art 
     characterCreator.drawPet(context, dog, () => {}, 2);
     characterCreator.drawPet(context, cat, () => {}, 1);
     assert.deepEqual(drawCalls[0].slice(1), [65, 13, 29, 19, 103, 67, 20, 13]);
-    assert.deepEqual(drawCalls[1].slice(1), [84, 912, 28, 32, 104, 60, 18, 20]);
+    assert.deepEqual(drawCalls[1].slice(1), [77, 851, 36, 28, 102, 63, 22, 17]);
   } finally {
     if (originalImage === undefined) delete globalThis.Image;
     else globalThis.Image = originalImage;
