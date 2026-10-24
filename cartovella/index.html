@@ -1943,6 +1943,27 @@
     }
     let countyRegionCache = null;
 
+    async function preparePassportGeography(passport, onProgress = null) {
+      if (!coordinateIndexes) return;
+      const parkIds = new Set([
+        ...Object.keys(passport.pins),
+        ...passport.expeditions.flatMap(expedition => expedition.parkIds)
+      ]);
+      const points = PARKS.filter(park => parkIds.has(park.id) &&
+        Number.isFinite(park.lat) && Number.isFinite(park.lng));
+      if (passport.homeBase) points.push(passport.homeBase);
+      let batchStarted = Date.now();
+      for (let offset = 0; offset < points.length; offset++) {
+        if (offset % 160 === 0) onProgress?.(offset, points.length);
+        if (offset % 16 === 0 || Date.now() - batchStarted >= 8) {
+          await yieldToMain();
+          batchStarted = Date.now();
+        }
+        const point = points[offset];
+        cachedPoliticalAt(point.lat, point.lng);
+      }
+    }
+
     function commitLedger(change, { notifyProgress = true } = {}) {
       const previous = JSON.stringify(passportPayload());
       const previousStats = notifyProgress ? calculateStats() : null;
@@ -2466,11 +2487,13 @@
       });
       
       const biomesSet = metadataProgress.collectedBiomes;
-      Object.entries(AppState.counties).forEach(([fips, status]) => {
-        if (!TravelLedger.isVisited(status)) return;
+      const biomeIds = Object.keys(BIOMES);
+      for (const [fips, status] of Object.entries(AppState.counties)) {
+        if (biomeIds.every(id => biomesSet.has(id))) break;
+        if (!TravelLedger.isVisited(status)) continue;
         const biome = countyBiome(fips);
         if (biome) biomesSet.add(biome);
-      });
+      }
 
       const rareBiomesList = Object.keys(BIOMES).filter(b => RARE_OR_HIGHER_RARITIES.has(BIOMES[b].rarity));
       const unlockedRare = rareBiomesList.filter(b => biomesSet.has(b));
@@ -4110,6 +4133,8 @@
           topology.metadata.sourceSha256, mangroveTopology.metadata.version, features.length,
           mangroveFeatures.length, countyGeoJson.length, worldSubdivisionGeoJson.length, worldAdmin2GeoJson.length]));
         status.textContent = 'Custom-coordinate geography ready. Mangroves use detailed coastlines; other biomes use simplified polygons.';
+        await preparePassportGeography(AppState);
+        if (loadId !== coordinateLoadId) return;
         backfillSavedGeography();
         if (AppState.currentTab === 'travel') renderExpeditionHistory();
       } catch (error) {
@@ -6165,6 +6190,7 @@
     document.getElementById('btnStorageExport').addEventListener('click', downloadPassportBackup);
 
     // Import JSON
+    let passportImportInProgress = false;
     document.getElementById('btnImportTrigger').addEventListener('click', () => {
       document.getElementById('fileInput').click();
     });
@@ -6173,6 +6199,11 @@
       const file = e.target.files[0];
       e.target.value = '';
       if (!file) return;
+      if (passportImportInProgress) {
+        showNotification('Import in progress', 'Wait for the current passport import to finish.', '📂');
+        return;
+      }
+      passportImportInProgress = true;
       const reader = new FileReader();
       reader.onload = async (event) => {
         try {
@@ -6181,6 +6212,11 @@
           const includesRecoveryDraft = !!source?._unsavedExpeditionDraft;
           const parsed = migratePassport(source);
           await appReady;
+          await preparePassportGeography(parsed, (current, total) =>
+            showNotification('Importing passport',
+              `Preparing location geography (${current.toLocaleString()} / ${total.toLocaleString()})...`, '📂'));
+          showNotification('Importing passport', 'Saving records and updating your atlas...', '📂');
+          await yieldToMain();
           commitLedger(() => applyPassport(parsed), { notifyProgress: false });
           let recoveryCleanupWarning = '';
           if (includesRecoveryDraft) {
@@ -6205,7 +6241,14 @@
         } catch(err) {
           console.error('Failed to import passport', err);
           showNotification('Error', `Passport import failed: ${err.message}`, '⚠️');
+        } finally {
+          passportImportInProgress = false;
         }
+      };
+      reader.onerror = () => {
+        passportImportInProgress = false;
+        console.error('Failed to read passport file', reader.error);
+        showNotification('Error', `Passport file could not be read: ${reader.error?.message || 'Unknown file read error'}`, '⚠️');
       };
       reader.readAsText(file);
     });

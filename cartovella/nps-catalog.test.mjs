@@ -311,6 +311,82 @@ check('character stage is above the hero and uses only existing achievement unlo
   vm.runInContext('applyPassport(migratePassport({version:2}))', context);
   assert.equal(vm.runInContext('hasPassportData(passportPayload())', context), false);
 });
+await checkAsync('bulk passport geography preparation yields without modifying current travel data', async () => {
+  await vm.runInContext(`(async () => {
+    const savedParks = PARKS;
+    const savedIndexes = coordinateIndexes;
+    const savedLookup = cachedPoliticalAt;
+    const savedYield = yieldToMain;
+    const previousPassport = JSON.stringify(passportPayload());
+    try {
+      PARKS = Array.from({ length: 40 }, (_, i) => ({id: 'batch-' + i, lat: i, lng: i}));
+      coordinateIndexes = {};
+      const points = [];
+      let yields = 0;
+      let lastBatch = 0;
+      cachedPoliticalAt = (lat, lng) => { points.push([lat, lng]); };
+      yieldToMain = async () => {
+        if (points.length - lastBatch > 16) throw new Error('Geography batch blocked too long.');
+        lastBatch = points.length;
+        yields++;
+      };
+      const incoming = {
+        pins: Object.fromEntries(PARKS.slice(0, 39).map(park => [park.id, 'v'])),
+        expeditions: [{ parkIds: ['batch-0', 'batch-39'] }],
+        homeBase: { lat: 45, lng: 45 }
+      };
+      await preparePassportGeography(incoming);
+      if (yields !== 3 || points.length !== 41) throw new Error('Expected three geography batches with deduplicated parks.');
+      if (JSON.stringify(passportPayload()) !== previousPassport) throw new Error('Preparation changed existing travel records.');
+      coordinateIndexes = null;
+      await preparePassportGeography(incoming);
+      if (points.length !== 41) throw new Error('Geography must not run before indexes are loaded.');
+    } finally {
+      PARKS = savedParks;
+      coordinateIndexes = savedIndexes;
+      cachedPoliticalAt = savedLookup;
+      yieldToMain = savedYield;
+    }
+  })()`, context);
+});
+check('stats stop county biome lookups once all catalog biomes are collected', () => {
+  vm.runInContext(`{
+    const savedPassport = passportPayload();
+    const savedCountyBiome = countyBiome;
+    const savedBiomes = BIOMES;
+    try {
+      BIOMES = Object.fromEntries(Array.from({ length: 14 }, (_, i) =>
+        [String(i + 1), { rarity: 'common', xp: 0 }]));
+      applyPassport(migratePassport({ version: 2 }));
+      AppState.customPois = [{
+        id: 'test-all-biomes', status: 'v', lat: 0, lng: 0,
+        biomes: Object.keys(BIOMES), purposeTags: [],
+        political: { countries: [], states: [], counties: [] }
+      }];
+      AppState.counties = Object.fromEntries(Array.from({ length: 3231 }, (_, i) =>
+        [String(i).padStart(5, '0'), 'v']));
+      let lookups = 0;
+      countyBiome = () => { lookups++; return '14'; };
+      if (computeStats().biomesSet.size !== 14 || lookups !== 0) {
+        throw new Error('Completed biome collection must not resolve thousands of county polygons.');
+      }
+      AppState.customPois[0].biomes = Object.keys(BIOMES).slice(0, 13);
+      if (computeStats().biomesSet.size !== 14 || lookups !== 1) {
+        throw new Error('County lookups must stop immediately after finding the last missing biome.');
+      }
+      AppState.counties = { '00001': 'w', '00002': 't', '00003': 'v', '00004': 'l' };
+      lookups = 0;
+      countyBiome = () => { lookups++; return null; };
+      if (computeStats().biomesSet.size !== 13 || lookups !== 2) {
+        throw new Error('Incomplete biome collections must still resolve all visited/lived counties.');
+      }
+    } finally {
+      countyBiome = savedCountyBiome;
+      BIOMES = savedBiomes;
+      applyPassport(savedPassport);
+    }
+  }`, context);
+});
 check('every saved expedition earns base XP and route distance adds capped XP in every mode', () => {
   const degreeMiles = travelLedger.distanceMiles({ lat: 0, lng: 0 }, { lat: 0, lng: 1 });
   context.expeditionXpFixture = {
