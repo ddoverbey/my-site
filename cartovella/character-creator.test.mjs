@@ -249,7 +249,7 @@ check('every bundled dog, cat, fox, and wisp has a valid idle sprite-sheet crop'
     'Golden Trail Dog', 'Slate Trail Dog', 'Sandy Trail Dog', 'Cream Trail Dog', 'Shadow Trail Dog'
   ]);
   assert.deepEqual(cats.map(pet => pet.name), [
-    'Black Cat (Cat 1)', 'Ginger Cat (Cat 2)', 'White Cat (Cat 3)'
+    'Black Cat', 'Ginger Cat', 'White Cat'
   ]);
   assert.equal(fox.name, 'Trail Fox');
   assert.deepEqual(wisps.map(pet => pet.name), ['Blue Wisp', 'Outlined Blue Wisp']);
@@ -273,8 +273,15 @@ check('every bundled dog, cat, fox, and wisp has a valid idle sprite-sheet crop'
   assert.equal(fox.cost, 300);
   assert.ok(wisps.every(pet => pet.cost === 500));
   assert.ok(dogs.every(pet =>
-    pet.spriteSheet.targetWidth === 15 && pet.spriteSheet.targetHeight === 10
+    pet.spriteSheet.targetWidth === 24 && pet.spriteSheet.targetHeight === 16
   ));
+  for (const pet of [...dogs, ...cats, fox]) {
+    assert.equal(
+      pet.spriteSheet.targetY + pet.spriteSheet.targetHeight,
+      82,
+      `${pet.name} should meet the stage floor`
+    );
+  }
   assert.deepEqual([fox.spriteSheet.targetWidth, fox.spriteSheet.targetHeight], [15, 10]);
   assert.ok(spritePets.every(pet => pet.spriteSheet.sourceWidth > 0 && pet.spriteSheet.sourceHeight > 0));
   assert.ok(wisps.every(pet => pet.spriteSheet.frameCount === 5));
@@ -302,9 +309,9 @@ check('companion sprites consistently crop one clean idle frame', () => {
     characterCreator.drawPet(context, fox, () => {}, 5);
     characterCreator.drawPet(context, wisp, () => {}, 4);
     characterCreator.drawPet(context, outlinedWisp, () => {}, 1);
-    assert.deepEqual(drawCalls[0].slice(1), [1, 13, 29, 19, 101, 64, 15, 10]);
-    assert.deepEqual(drawCalls[1].slice(1), [13, 851, 36, 28, 102, 64, 18, 14]);
-    assert.deepEqual(drawCalls[2].slice(1), [1, 14, 29, 18, 103, 66, 15, 10]);
+    assert.deepEqual(drawCalls[0].slice(1), [1, 13, 29, 19, 101, 66, 24, 16]);
+    assert.deepEqual(drawCalls[1].slice(1), [13, 851, 36, 28, 102, 68, 18, 14]);
+    assert.deepEqual(drawCalls[2].slice(1), [1, 14, 29, 18, 103, 72, 15, 10]);
     assert.deepEqual(drawCalls[2].slice(1), drawCalls[3].slice(1));
     assert.deepEqual(drawCalls[4].slice(1), [9, 5, 14, 22, 107, 62, 7, 11]);
     assert.deepEqual(drawCalls[5].slice(1), [8, 4, 16, 24, 107, 62, 7, 11]);
@@ -468,7 +475,7 @@ check('sprite character selects matching gender, skin, hair, and outfit layers',
     assert.equal(drawCalls.length, 5);
     assert.match(hairFilter, /hue-rotate\(130deg\)/);
     assert.ok(drawCalls.every(call =>
-      call.length === 9 && call.slice(1).join(',') === '24,16,32,48,60,34,40,48'
+      call.length === 9 && call.slice(1).join(',') === '24,16,32,48,62,39,36,43'
     ));
   } finally {
     if (originalImage === undefined) delete globalThis.Image;

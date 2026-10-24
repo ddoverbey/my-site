@@ -100,17 +100,17 @@
   const DOG_SPRITE_SHEET = Object.freeze({
     frameWidth: 32, frameHeight: 32, frameCount: 5,
     sourceX: 1, sourceY: 13, sourceWidth: 29, sourceHeight: 19,
-    targetX: 101, targetY: 64, targetWidth: 15, targetHeight: 10
+    targetX: 101, targetY: 66, targetWidth: 24, targetHeight: 16
   });
   const CAT_SPRITE_SHEET = Object.freeze({
     frameWidth: 64, frameHeight: 64, frameCount: 8,
     row: 13, sourceX: 13, sourceY: 19, sourceWidth: 36, sourceHeight: 28,
-    targetX: 102, targetY: 64, targetWidth: 18, targetHeight: 14
+    targetX: 102, targetY: 68, targetWidth: 18, targetHeight: 14
   });
   const FOX_SPRITE_SHEET = Object.freeze({
     frameWidth: 32, frameHeight: 32, frameCount: 5,
     sourceX: 1, sourceY: 14, sourceWidth: 29, sourceHeight: 18,
-    targetX: 103, targetY: 66, targetWidth: 15, targetHeight: 10
+    targetX: 103, targetY: 72, targetWidth: 15, targetHeight: 10
   });
   const WISP_SPRITE_SHEET = Object.freeze({
     frameWidth: 32, frameHeight: 32, frameCount: 5,
@@ -442,7 +442,7 @@
   const CHARACTER_SPRITE_FRAME = Object.freeze({
     x: 24, y: 16, width: 32, height: 48, sheetWidth: 80
   });
-  const CHARACTER_SPRITE_TARGET = Object.freeze({ x: 60, y: 34, width: 40, height: 48 });
+  const CHARACTER_SPRITE_TARGET = Object.freeze({ x: 62, y: 39, width: 36, height: 43 });
 
   const DEFAULT_CHARACTER = Object.freeze({
     gender: 'male',
