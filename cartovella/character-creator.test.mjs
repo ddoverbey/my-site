@@ -128,13 +128,14 @@ check('late character sprite loads redraw the most recently rendered stage', () 
     };
     const canvas = { width: 320, height: 180, isConnected: true, getContext: () => context };
     const character = { ...characterCreator.DEFAULT_CHARACTER, gender: 'female', pet: 'pet_none' };
-    characterCreator.drawStage(canvas, { ...character, background: 'bg_aurora' });
-    characterCreator.drawStage(canvas, { ...character, background: 'bg_observatory' });
-    assert.equal(pendingImages.length, 6);
+    characterCreator.drawStage(canvas, { ...character, background: 'bg_green_hills' });
+    characterCreator.drawStage(canvas, { ...character, background: 'bg_yosemite' });
+    assert.equal(pendingImages.length, 7);
     pendingImages.forEach(image => image.load());
     assert.equal(drawCalls.length, 6);
     assert.equal(drawCalls.filter(src => src.includes('Female')).length, 5);
-    assert.equal(drawCalls.filter(src => src.includes('campfire-night')).length, 1);
+    assert.equal(drawCalls.filter(src => src.includes('yosemite-bg')).length, 1);
+    assert.equal(drawCalls.some(src => src.includes('/campfire/')), false);
   } finally {
     if (originalImage === undefined) delete globalThis.Image;
     else globalThis.Image = originalImage;
@@ -423,15 +424,55 @@ check('existing achievement IDs drive character rewards', () => {
     assert.equal(characterCreator.unlockStatus(item.unlock, {}, character, progress).unlocked, true);
   }
 });
-check('Campfire Night is the only available character background', () => {
-  assert.deepEqual(characterCreator.BACKGROUND_CATALOG.map(item => item.id), ['bg_campfire']);
+check('backgrounds include a free Green Hills scene and park-visit gated scenes', () => {
+  assert.deepEqual(characterCreator.BACKGROUND_CATALOG.map(item => item.id), [
+    'bg_campfire', 'bg_green_hills', 'bg_yellowstone', 'bg_grand_canyon',
+    'bg_redwood', 'bg_arches', 'bg_yosemite'
+  ]);
+  assert.equal(characterCreator.BACKGROUND_CATALOG[1].unlock.type, 'starter');
+  const expectedParkCodes = ['yell', 'grca', 'redw', 'arch', 'yose'];
+  assert.deepEqual(characterCreator.BACKGROUND_CATALOG.slice(2)
+    .map(item => item.unlock.parkId), expectedParkCodes);
+  for (const background of characterCreator.BACKGROUND_CATALOG.slice(2)) {
+    const code = background.unlock.parkId;
+    assert.equal(characterCreator.unlockStatus(
+      background.unlock, { visitedParks: [] }, characterCreator.DEFAULT_CHARACTER, new Map()
+    ).unlocked, false);
+    assert.equal(characterCreator.unlockStatus(
+      background.unlock, { visitedParks: [{ id: code }] },
+      characterCreator.DEFAULT_CHARACTER, new Map()
+    ).unlocked, true);
+    assert.equal(characterCreator.unlockStatus(
+      background.unlock, { visitedParks: [code] },
+      characterCreator.DEFAULT_CHARACTER, new Map()
+    ).unlocked, true);
+  }
 });
-check('Campfire Night uses the supplied 320x180 background art', () => {
+check('all supplied stage backgrounds use valid 3200x1800 PNG art', () => {
+  for (const background of characterCreator.BACKGROUND_CATALOG) {
+    const png = readFileSync(new URL(background.imageSrc, import.meta.url));
+    assert.equal(png.toString('ascii', 1, 4), 'PNG');
+    assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [3200, 1800]);
+  }
+});
+check('Campfire Night slices its eight-frame sprite over the background glow', () => {
   const background = characterCreator.BACKGROUND_CATALOG.find(item => item.id === 'bg_campfire');
-  assert.equal(background.imageSrc, './assets/backgrounds/campfire-night-320px.png');
-  const png = readFileSync(new URL(background.imageSrc, import.meta.url));
-  assert.equal(png.toString('ascii', 1, 4), 'PNG');
-  assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [320, 180]);
+  assert.equal(background.imageSrc, './assets/backgrounds/campfire-night.png');
+  const sprite = readFileSync(new URL('./assets/campfire/Small_sheet.png', import.meta.url));
+  assert.equal(sprite.toString('ascii', 1, 4), 'PNG');
+  assert.deepEqual([sprite.readUInt32BE(16), sprite.readUInt32BE(20)], [256, 32]);
+  const originalImage = globalThis.Image;
+  globalThis.Image = class {
+    constructor() { this.complete = true; this.naturalWidth = 256; this.src = ''; }
+  };
+  try {
+    const drawCalls = [];
+    characterCreator.drawCampfire({ drawImage(...args) { drawCalls.push(args); } }, () => {}, 5);
+    assert.deepEqual(drawCalls[0].slice(1), [160, 0, 32, 32, 38, 59, 20, 20]);
+  } finally {
+    if (originalImage === undefined) delete globalThis.Image;
+    else globalThis.Image = originalImage;
+  }
 });
 check('sprite character selects matching gender, skin, hair, and outfit layers', () => {
   const originalImage = globalThis.Image;

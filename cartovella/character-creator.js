@@ -154,8 +154,25 @@
     ['pet_kitten_gray', 'pet_black_cat']
   ]);
   const BACKGROUND_CATALOG = [
-    { id: 'bg_campfire', name: 'Campfire Night', unlock: { type: 'starter' }, imageSrc: './assets/backgrounds/campfire-night-320px.png' }
+    { id: 'bg_campfire', name: 'Campfire Night', unlock: { type: 'starter' }, imageSrc: './assets/backgrounds/campfire-night.png' },
+    { id: 'bg_green_hills', name: 'Green Hills', unlock: { type: 'starter' }, imageSrc: './assets/backgrounds/green-hills-bg.png' },
+    { id: 'bg_yellowstone', name: 'Yellowstone National Park', unlock: { type: 'park', parkId: 'yell' }, imageSrc: './assets/backgrounds/yellowstone-bg.png' },
+    { id: 'bg_grand_canyon', name: 'Grand Canyon National Park', unlock: { type: 'park', parkId: 'grca' }, imageSrc: './assets/backgrounds/grand-canyon-bg.png' },
+    { id: 'bg_redwood', name: 'Redwood National Park', unlock: { type: 'park', parkId: 'redw' }, imageSrc: './assets/backgrounds/redwood-bg.png' },
+    { id: 'bg_arches', name: 'Arches National Park', unlock: { type: 'park', parkId: 'arch' }, imageSrc: './assets/backgrounds/arches-bg.png' },
+    { id: 'bg_yosemite', name: 'Yosemite National Park', unlock: { type: 'park', parkId: 'yose' }, imageSrc: './assets/backgrounds/yosemite-bg.png' }
   ];
+  const CAMPFIRE_SPRITE = Object.freeze({
+    imageSrc: './assets/campfire/Small_sheet.png',
+    frameWidth: 32,
+    frameHeight: 32,
+    frameCount: 8,
+    frameDurationMs: 110,
+    targetX: 38,
+    targetY: 59,
+    targetWidth: 20,
+    targetHeight: 20
+  });
 
   const CHARACTER_ASSET_ROOT = `${ASSET_ROOT}GandalfHardcore Character Asset Pack/GandalfHardcore Character Asset Pack/`;
   const HAIRSTYLE_ASSET_ROOT = `${ASSET_ROOT}GandalfHardcore 58x Hair/`;
@@ -473,6 +490,7 @@
   const imageCache = new Map();
   const imageLoadRedraws = new Map();
   const stageRenderers = new WeakMap();
+  const campfireAnimations = new WeakMap();
   const tabs = ['appearance', 'wardrobe', 'pets', 'backgrounds', 'shop', 'patron'];
 
   function normalizeCharacter(value) {
@@ -641,6 +659,16 @@
         description: `Visit ${unlock.goal} worldwide parks (${Math.min(current, unlock.goal)}/${unlock.goal}).`
       };
     }
+    if (unlock.type === 'park') {
+      const visited = Array.isArray(stats.visitedParks) && stats.visitedParks.some(park =>
+        (typeof park === 'string' ? park : park?.id) === unlock.parkId);
+      const parkName = BACKGROUND_CATALOG.find(item => item.unlock?.parkId === unlock.parkId)?.name
+        .replace(/ National Park$/, '') || 'the linked national park';
+      return {
+        unlocked: visited,
+        description: visited ? `Visit recorded for ${parkName}.` : `Visit ${parkName} to unlock this scene.`
+      };
+    }
     if (unlock.type === 'achievement') {
       const result = achievements.get(unlock.id);
       return {
@@ -754,6 +782,46 @@
     ctx.fillRect(Math.round(x), Math.round(y), Math.round(width), Math.round(height));
   }
 
+  function drawCampfire(ctx, redraw, frameIndex = 0) {
+    const image = getImage(CAMPFIRE_SPRITE, redraw);
+    if (!image) return;
+    const frame = Math.max(0, frameIndex) % CAMPFIRE_SPRITE.frameCount;
+    ctx.drawImage(
+      image,
+      frame * CAMPFIRE_SPRITE.frameWidth, 0,
+      CAMPFIRE_SPRITE.frameWidth, CAMPFIRE_SPRITE.frameHeight,
+      CAMPFIRE_SPRITE.targetX, CAMPFIRE_SPRITE.targetY,
+      CAMPFIRE_SPRITE.targetWidth, CAMPFIRE_SPRITE.targetHeight
+    );
+  }
+
+  function stopCampfireAnimation(canvas) {
+    const animation = campfireAnimations.get(canvas);
+    if (animation && typeof window !== 'undefined') window.clearInterval(animation.intervalId);
+    campfireAnimations.delete(canvas);
+  }
+
+  function isStageVisible(canvas) {
+    return canvas.isConnected !== false &&
+      (typeof canvas.getClientRects !== 'function' || canvas.getClientRects().length > 0);
+  }
+
+  function startCampfireAnimation(canvas) {
+    if (typeof window === 'undefined' || campfireAnimations.has(canvas) || !isStageVisible(canvas)) return;
+    const animation = { frame: 0, intervalId: 0 };
+    const tick = () => {
+      if (!isStageVisible(canvas) || !stageRenderers.has(canvas)) {
+        window.clearInterval(animation.intervalId);
+        campfireAnimations.delete(canvas);
+        return;
+      }
+      animation.frame = (animation.frame + 1) % CAMPFIRE_SPRITE.frameCount;
+      stageRenderers.get(canvas)?.();
+    };
+    campfireAnimations.set(canvas, animation);
+    animation.intervalId = window.setInterval(tick, CAMPFIRE_SPRITE.frameDurationMs);
+  }
+
   function drawBackground(ctx, background, redraw) {
     const image = getImage(background, redraw);
     if (image) {
@@ -829,22 +897,25 @@
     ctx.drawImage(image, 0, 0, 32, 32, 101, 64, 15, 10);
   }
 
-  function drawStage(canvas, value, options = {}) {
+  function drawStage(canvas, value, options = {}, campfireFrame = 0) {
     if (!canvas || typeof canvas.getContext !== 'function') return;
     const character = normalizeCharacter(value);
     const activeBackground = getItem(BACKGROUND_CATALOG, character.background);
     const activePet = getItem(PET_CATALOG, character.pet);
+    if (activeBackground.id !== 'bg_campfire') stopCampfireAnimation(canvas);
     const redraw = () => {
       if (canvas.isConnected !== false) stageRenderers.get(canvas)?.();
     };
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    stageRenderers.set(canvas, () => drawStage(canvas, character, options));
+    stageRenderers.set(canvas, () => drawStage(canvas, character, options,
+      campfireAnimations.get(canvas)?.frame ?? 0));
     ctx.imageSmoothingEnabled = false;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();
     ctx.scale(canvas.width / 160, canvas.height / 90);
     drawBackground(ctx, activeBackground, redraw);
+    if (activeBackground.id === 'bg_campfire') drawCampfire(ctx, redraw, campfireFrame);
     drawCharacterSprite(ctx, character, redraw);
     drawPet(ctx, activePet, redraw);
     drawPetAccessory(ctx, character, 'petBackpack', redraw);
@@ -852,6 +923,7 @@
     pixel(ctx, 0, 82, 160, 8, '#17212d');
     pixel(ctx, 0, 82, 160, 1, '#84946d');
     ctx.restore();
+    if (activeBackground.id === 'bg_campfire') startCampfireAnimation(canvas);
   }
 
   function renderAvatar(canvas, value) {
@@ -1279,7 +1351,7 @@
     OUTFIT_CATALOG, HAT_CATALOG, ACCESSORY_CATALOG, PET_CATALOG, BACKGROUND_CATALOG,
     LEVEL_ITEMS, SHOP_WARDROBE, PET_ACCESSORY_CATALOG, EQUIPMENT_CATALOG, LEVEL_TRACK,
     BODY_SHAPE_PROFILES, normalizeCharacter, characterSpriteAssets, achievementProgress,
-    unlockStatus, coinSummary, drawPet, drawCharacterSprite, drawStage, renderAvatar, render
+    unlockStatus, coinSummary, drawPet, drawCharacterSprite, drawCampfire, drawStage, renderAvatar, render
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CharacterCreator = api;

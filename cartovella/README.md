@@ -131,9 +131,12 @@ size and uses its five populated 32×32 frames; Blue Wisp and Outlined Blue Wisp
 same pet bundle. Legacy puppy/kitten pet IDs migrate to the golden dog
 and black cat so saved characters continue to load. The bundled dog-asset readme permits use in
 projects but prohibits redistributing or repackaging the artwork.
-Campfire Night is the only available character-stage background and uses the supplied
-`assets/backgrounds/campfire-night-320px.png` 320×180 (16:9) image, scaled to the stage's
-160×90 logical size.
+Character-stage backgrounds use the supplied 3200×1800 artwork in
+`assets/backgrounds/`, scaled to the stage's 160×90 logical size. Campfire Night includes
+the eight-frame `assets/campfire/Small_sheet.png` animation, positioned over the background's
+glowing ground area; the animation runs only while Campfire Night is equipped. Green Hills is
+available from the start. Yellowstone, Grand Canyon, Redwood, Arches, and Yosemite scenes
+unlock individually when their corresponding national park has been visited.
 
 Level, worldwide-destination, and existing achievement milestones unlock wardrobe and companion
 cosmetics. Cartovella does not yet verify Pro purchases or
