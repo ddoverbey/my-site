@@ -175,7 +175,7 @@ check('home citadel setup can be dismissed by its close button, backdrop, or Esc
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 10);
-  assert.ok(sources.every(source => source.endsWith('?v=20261023-cartovella-sprite-pets-v6')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261023-cartovella-sprite-pets-v7')));
   assert.ok(sources.some(source => source.startsWith('./character-creator.js?')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });

@@ -91,7 +91,7 @@
   const DOG_SPRITE_SHEET = Object.freeze({
     frameWidth: 32, frameHeight: 32, frameCount: 5, frameDuration: 320,
     sourceX: 1, sourceY: 13, sourceWidth: 29, sourceHeight: 19,
-    targetX: 103, targetY: 67, targetWidth: 20, targetHeight: 13
+    targetX: 100, targetY: 63, targetWidth: 26, targetHeight: 17
   });
   const CAT_SPRITE_SHEET = Object.freeze({
     frameWidth: 64, frameHeight: 64, frameCount: 8, frameDuration: 180,

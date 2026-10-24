@@ -90,6 +90,10 @@ check('every bundled dog, cat, fox, and wisp has a valid animated sprite sheet',
   assert.ok(cats.every(pet => pet.spriteSheet.frameCount === 8));
   assert.ok(cats.every(pet => pet.spriteSheet.row === 13), 'cat frames use the labeled Lick paw lie front row');
   assert.equal(fox.spriteSheet.frameCount, 6);
+  assert.ok(dogs.every(pet =>
+    pet.spriteSheet.targetWidth === 26 && pet.spriteSheet.targetHeight === 17
+  ));
+  assert.deepEqual([fox.spriteSheet.targetWidth, fox.spriteSheet.targetHeight], [20, 12]);
   assert.ok(wisps.every(pet => pet.spriteSheet.frameCount === 5));
 });
 check('companion sprite animations crop requested dog, cat, fox, and wisp frames', () => {
@@ -114,7 +118,7 @@ check('companion sprite animations crop requested dog, cat, fox, and wisp frames
     characterCreator.drawPet(context, fox, () => {}, 2);
     characterCreator.drawPet(context, wisp, () => {}, 4);
     characterCreator.drawPet(context, outlinedWisp, () => {}, 1);
-    assert.deepEqual(drawCalls[0].slice(1), [65, 13, 29, 19, 103, 67, 20, 13]);
+    assert.deepEqual(drawCalls[0].slice(1), [65, 13, 29, 19, 100, 63, 26, 17]);
     assert.deepEqual(drawCalls[1].slice(1), [77, 851, 36, 28, 102, 63, 22, 17]);
     assert.deepEqual(drawCalls[2].slice(1), [65, 14, 29, 18, 103, 68, 20, 12]);
     assert.deepEqual(drawCalls[3].slice(1), [137, 5, 14, 22, 107, 60, 12, 18]);
