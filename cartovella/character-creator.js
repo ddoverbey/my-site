@@ -100,7 +100,7 @@
     targetX: 102, targetY: 63, targetWidth: 22, targetHeight: 17
   });
   const FOX_SPRITE_SHEET = Object.freeze({
-    frameWidth: 32, frameHeight: 32, frameCount: 6, frameDuration: 240,
+    frameWidth: 32, frameHeight: 32, frameCount: 5, frameDuration: 240,
     sourceX: 1, sourceY: 14, sourceWidth: 29, sourceHeight: 18,
     targetX: 103, targetY: 68, targetWidth: 20, targetHeight: 12
   });

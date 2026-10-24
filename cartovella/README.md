@@ -122,7 +122,7 @@ frame. Companion catalog entries can use an `imageSrc` PNG or a cropped sprite-s
 spritesheets and render at 26×17 logical pixels. Black (Cat 1), ginger (Cat 2), and white (Cat 3)
 companions use the eight-frame “Lick paw lie front” sequence (row 13) from their respective
 `assets/cat-PACK/PACK/cat N (64х64).png` spritesheets. The Trail Fox keeps its 20×12 logical-pixel
-size and uses six 32×32 frames; Blue Wisp and Outlined Blue Wisp use five 32×32 frames each from the
+size and uses its five populated 32×32 frames; Blue Wisp and Outlined Blue Wisp use five 32×32 frames each from the
 same pet bundle. Legacy puppy/kitten pet IDs migrate to the golden dog
 and black cat so saved characters continue to load. The bundled dog-asset readme permits use in
 projects but prohibits redistributing or repackaging the artwork.
