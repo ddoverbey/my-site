@@ -1165,6 +1165,39 @@
     </span>`;
   }
 
+  function cyclePickerMarkup(label, field, value, options, disabled, renderChoice, browseLabel) {
+    const available = options.filter(option => !option.disabled);
+    const currentIndex = available.findIndex(option => option.id === value);
+    const selected = options.find(option => option.id === value);
+    const arrow = direction => {
+      const index = (Math.max(0, currentIndex) + direction + available.length) % available.length;
+      const option = available[index];
+      return `<button type="button" data-character-field="${escapeHtml(field)}"
+        data-character-id="${escapeHtml(option?.id || value)}" aria-label="${direction < 0 ? 'Previous' : 'Next'} ${escapeHtml(label.toLowerCase())}"
+        ${disabled || available.length < 2 ? 'disabled' : ''}
+        title="${escapeHtml(option?.name || label)}"
+        class="shrink-0 rounded-lg border border-slate-700 px-3 py-3 text-lg text-amber-200 hover:bg-slate-800 disabled:opacity-50">
+        ${direction < 0 ? '&larr;' : '&rarr;'}
+      </button>`;
+    };
+    return `<div class="min-w-0 text-xs text-slate-300">
+      <span class="block">${escapeHtml(label)}</span>
+      <div class="mt-1 flex min-h-16 items-center gap-2 rounded-lg border border-slate-700 bg-slate-950 p-2"
+        role="group" aria-label="${escapeHtml(label)} picker">
+        ${arrow(-1)}
+        <span class="flex min-w-0 flex-1 items-center justify-center gap-2">
+          ${selected ? renderChoice(selected) : ''}
+          <span>${escapeHtml(selected?.name || label)}</span>
+        </span>
+        ${arrow(1)}
+      </div>
+      <details class="mt-2">
+        <summary class="cursor-pointer text-amber-200">${escapeHtml(browseLabel)}</summary>
+        ${visualDropdownMarkup(label, field, options, value, disabled, renderChoice)}
+      </details>
+    </div>`;
+  }
+
   function renderControls(container, character, stats, achievements, disabled, appState) {
     const activeTab = tabs.includes(container.dataset.activeTab) ? container.dataset.activeTab : 'appearance';
     const completedAchievements = achievementProgress(stats, achievements);
@@ -1181,37 +1214,10 @@
     const hairValue = `${character.hairStyle}::${character.hairColor}`;
     const hairOptions = catalogOptions(hairPresetOptions(character), hairValue,
       stats, character, completedAchievements, 'Equipped', appState);
-    const availableHair = hairOptions.filter(option => !option.disabled);
-    const hairIndex = availableHair.findIndex(option => option.id === hairValue);
-    const hairArrow = (direction, label) => {
-      const index = (Math.max(0, hairIndex) + direction + availableHair.length) % availableHair.length;
-      const option = availableHair[index];
-      return `<button type="button" data-character-field="hairPreset"
-        data-character-id="${escapeHtml(option?.id || hairValue)}" aria-label="${label}"
-        ${disabled || availableHair.length < 2 ? 'disabled' : ''}
-        class="shrink-0 rounded-lg border border-slate-700 px-3 py-3 text-lg text-amber-200 hover:bg-slate-800 disabled:opacity-50">
-        ${direction < 0 ? '&larr;' : '&rarr;'}
-      </button>`;
-    };
-    const hairPicker = `<div class="min-w-0 text-xs text-slate-300">
-      <span class="block">Hairstyle</span>
-      <div class="mt-1 flex min-h-16 items-center gap-2 rounded-lg border border-slate-700 bg-slate-950 p-2"
-        role="group" aria-label="Hairstyle picker">
-        ${hairArrow(-1, 'Previous hairstyle')}
-        <span class="flex min-w-0 flex-1 items-center justify-center gap-2">
-          ${hairThumbnailMarkup(character)}
-          <span>${escapeHtml(hairOptions.find(option => option.id === hairValue)?.name || 'Hairstyle')}</span>
-        </span>
-        ${hairArrow(1, 'Next hairstyle')}
-      </div>
-      <details class="mt-2">
-        <summary class="cursor-pointer text-amber-200">Browse all hairstyles</summary>
-        ${dropdown('hairPreset', 'All hairstyles', hairValue, hairOptions,
-          option => hairThumbnailMarkup({
-            ...character, hairStyle: option.hairStyle, hairColor: option.hairColor
-          }))}
-      </details>
-    </div>`;
+    const hairPicker = cyclePickerMarkup('Hairstyle', 'hairPreset', hairValue, hairOptions, disabled,
+      option => hairThumbnailMarkup({
+        ...character, hairStyle: option.hairStyle, hairColor: option.hairColor
+      }), 'Browse all hairstyles');
     const coinBalance = coinSummary(stats, appState);
     const wardrobeFields = [
       ['top', 'Shirts, Bodices & Dresses'], ['bottoms', 'Pants & Skirts'], ['shoes', 'Footwear'],
@@ -1220,7 +1226,12 @@
       ['effect', 'Character Effects']
     ];
     const purchaseControls = `<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-      ${wardrobeFields.map(([field, label]) => equipmentDropdown(field, label)).join('')}
+      ${wardrobeFields.map(([field, label]) => cyclePickerMarkup(
+        label, field, character[field],
+        equipmentOptions(field, character, stats, completedAchievements, appState), disabled,
+        option => equipmentThumbnailMarkup(option, character.gender),
+        `Browse all ${label.toLowerCase()}`
+      )).join('')}
     </div>`;
     const sections = {
       appearance: `<div class="grid grid-cols-1 gap-3 sm:grid-cols-3">

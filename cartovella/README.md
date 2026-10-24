@@ -125,6 +125,9 @@ Opening the character editor focuses and jumps directly to the customization con
 character stage. Appearance contains skin tones and special skins; pets and their accessories
 are available only in Pets. Hairstyles default to previous/next arrows that cycle through unlocked
 style/color choices; expand "Browse all hairstyles" for the optional visual dropdown.
+Every Wardrobe category uses the same previous/next picker with an optional "Browse all"
+dropdown, including the wardrobe controls in Coin Shop. Locked or unaffordable items are
+skipped by the arrows and remain visible in the dropdown with their unlock requirements/prices.
 Dog hats and backpacks use the same idle-frame
 origin and scale as the equipped dog; their selectors are disabled when no dog is equipped.
 Companion catalog entries can use an `imageSrc` PNG or a cropped sprite-sheet animation. All five dog coat variants

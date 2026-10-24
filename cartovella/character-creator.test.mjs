@@ -91,6 +91,35 @@ check('hairstyle arrows cycle unlocked options, wrap around, and respect view-on
       controls, character, stats: { level: 1 }, viewOnly,
       onChange: value => { next = value; }
     });
+    check('all wardrobe categories offer arrows and browse-all pickers in wardrobe and shop', () => {
+      const fields = ['top', 'bottoms', 'shoes', 'headwear', 'handItem', 'backLayer',
+        'arms', 'face', 'ears', 'effect'];
+      for (const tab of ['wardrobe', 'shop']) {
+        const controls = { dataset: { activeTab: tab }, innerHTML: '' };
+        let changed;
+        characterCreator.render({
+          controls, stats: { level: 10 }, character: characterCreator.DEFAULT_CHARACTER,
+          onChange: next => { changed = next; }
+        });
+        for (const field of fields) {
+          const arrows = [...controls.innerHTML.matchAll(new RegExp(
+            `data-character-field="${field}"\\s+data-character-id="([^"]*)" aria-label="(Previous|Next) [^"]+"`, 'g'
+          ))];
+          assert.equal(arrows.length, 2, `${tab}: ${field}`);
+        }
+        assert.equal((controls.innerHTML.match(/>Browse all /g) || []).length, fields.length);
+        const nextId = controls.innerHTML.match(
+          /data-character-field="headwear"\s+data-character-id="([^"]*)" aria-label="Next /
+        )[1];
+        controls.onclick({ target: { closest(selector) {
+          return selector === 'button[data-character-field][data-character-id]'
+            ? { dataset: { characterField: 'headwear', characterId: nextId }, disabled: false } : null;
+        } } });
+        assert.equal(changed.headwear, nextId);
+        characterCreator.render({ controls, viewOnly: true });
+        assert.match(controls.innerHTML, /aria-label="Next hats &amp; helmets"\s+disabled/);
+      }
+    });
     const arrowId = label => controls.innerHTML.match(new RegExp(
       `data-character-field="hairPreset"\\s+data-character-id="([^"]+)" aria-label="${label}"`
     ))[1];
