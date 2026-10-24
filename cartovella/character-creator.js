@@ -803,12 +803,19 @@
   function render(options = {}) {
     const canvas = options.canvas;
     const controls = options.controls;
+    const customizeButton = options.customizeButton;
     const character = normalizeCharacter(options.character);
     const stats = options.stats || {};
     const achievements = options.achievements || [];
     const disabled = !!options.viewOnly;
     drawStage(canvas, character, { stats, achievements });
     renderProgressSummary(options.summary, stats, character, achievements);
+    if (customizeButton && controls) {
+      customizeButton.onclick = () => {
+        controls.hidden = !controls.hidden;
+        customizeButton.setAttribute('aria-expanded', String(!controls.hidden));
+      };
+    }
     if (!controls) return;
     renderControls(controls, character, stats, achievements, disabled);
     controls.onclick = event => {

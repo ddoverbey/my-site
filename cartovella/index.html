@@ -608,21 +608,29 @@
     <div id="tabContent-passport" class="w-full h-full p-4 md:p-8 overflow-y-auto hidden">
       <div class="max-w-6xl mx-auto space-y-8 pb-16">
 
-        <!-- Customizable Character Stage -->
+        <!-- Explorer Character Stage -->
         <section class="rpg-panel rpg-panel-gold rounded-3xl p-4 md:p-6" aria-labelledby="characterCreatorTitle">
-          <div class="flex flex-col lg:flex-row gap-5">
-            <div class="lg:w-1/2">
+          <div class="flex items-center justify-between gap-3 mb-3">
+            <div>
               <h2 id="characterCreatorTitle" class="cinzel text-xl font-bold text-amber-200">Your Explorer</h2>
-              <p class="text-xs text-slate-400 mt-1 mb-3">Choose a sprite character, outfit, companion, and scene.</p>
-              <div class="rounded-2xl overflow-hidden border border-slate-700 bg-slate-950">
-                <canvas id="characterStage" width="320" height="180" role="img"
-                  aria-label="Pixel-art explorer with selected companion and background"
-                  class="block w-full h-auto" style="image-rendering:pixelated"></canvas>
-              </div>
-              <div id="characterProgressSummary" class="grid grid-cols-2 gap-2 mt-3"></div>
+              <p class="text-xs text-slate-400 mt-1">Your character and current scene.</p>
             </div>
-            <div id="characterCustomization" class="lg:w-1/2 min-w-0" aria-live="polite"></div>
+            <button id="characterCustomizationToggle" type="button" aria-controls="characterCustomization"
+              aria-expanded="false" aria-label="Customize your character" title="Customize your character"
+              class="shrink-0 rounded-lg border border-slate-700 bg-slate-900/80 p-2 text-slate-300 hover:border-amber-300 hover:text-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-300">
+              <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" class="h-5 w-5">
+                <path d="m12.5 3.5 4 4M3 17l3.8-.8L16.4 6.6a2.12 2.12 0 0 0-3-3L3.8 13.2 3 17Z"
+                  stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
           </div>
+          <div class="rounded-2xl overflow-hidden border border-slate-700 bg-slate-950">
+            <canvas id="characterStage" width="320" height="180" role="img"
+              aria-label="Pixel-art explorer with selected companion and background"
+              class="block w-full h-auto" style="image-rendering:pixelated"></canvas>
+          </div>
+          <div id="characterProgressSummary" class="grid grid-cols-2 gap-2 mt-3"></div>
+          <div id="characterCustomization" hidden class="mt-5 min-w-0" aria-live="polite"></div>
         </section>
 
         <!-- Hero Character Banner -->
@@ -5275,6 +5283,7 @@
       CharacterCreator.render({
         canvas: document.getElementById('characterStage'),
         controls: document.getElementById('characterCustomization'),
+        customizeButton: document.getElementById('characterCustomizationToggle'),
         summary: document.getElementById('characterProgressSummary'),
         character: AppState.character,
         stats,

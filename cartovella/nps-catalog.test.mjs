@@ -294,7 +294,10 @@ check('passport field registry round-trips defaults and unknown future fields', 
 });
 check('character stage is above the hero and uses only existing achievement unlock IDs', () => {
   assert.ok(html.indexOf('id="characterStage"') < html.indexOf('<!-- Hero Character Banner -->'));
+  assert.match(html, /id="characterCustomizationToggle"[^>]*aria-controls="characterCustomization"[^>]*aria-expanded="false"[^>]*title="Customize your character"/);
+  assert.match(html, /id="characterCustomization" hidden/);
   assert.match(html, /CharacterCreator\.render\(\{[\s\S]*?achievements: ACHIEVEMENTS/);
+  assert.match(html, /customizeButton: document\.getElementById\('characterCustomizationToggle'\)/);
   assert.match(html, /character: \(\) => CharacterCreator\.normalizeCharacter\(\)/);
   const achievementIds = new Set(JSON.parse(vm.runInContext(
     'JSON.stringify(ACHIEVEMENTS.map(achievement => achievement.id))', context
