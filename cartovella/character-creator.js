@@ -1228,13 +1228,30 @@
       ['arms', 'Arm Layers'], ['face', 'Masks & Face Paint'], ['ears', 'Elven Ears'],
       ['effect', 'Character Effects']
     ];
-    const purchaseControls = `<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-      ${wardrobeFields.map(([field, label]) => cyclePickerMarkup(
-        label, field, character[field],
-        equipmentOptions(field, character, stats, completedAchievements, appState), disabled,
+    const selectedWardrobeField = wardrobeFields.some(([field]) =>
+      field === container.dataset.activeWardrobeField)
+      ? container.dataset.activeWardrobeField : 'top';
+    container.dataset.activeWardrobeField = selectedWardrobeField;
+    const selectedWardrobeLabel = wardrobeFields.find(([field]) =>
+      field === selectedWardrobeField)[1];
+    const selectedWardrobeOptions = equipmentOptions(
+      selectedWardrobeField, character, stats, completedAchievements, appState);
+    const purchaseControls = `<div class="space-y-3">
+      <label class="block text-xs font-medium text-slate-300">
+        Outfit layer
+        <select data-character-wardrobe-category="true" ${disabled ? 'disabled' : ''}
+          class="mt-1 block w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-slate-100 focus:border-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-300">
+          ${wardrobeFields.map(([field, label]) =>
+            `<option value="${field}" ${field === selectedWardrobeField ? 'selected' : ''}>${escapeHtml(label)}</option>`
+          ).join('')}
+        </select>
+      </label>
+      ${cyclePickerMarkup(
+        selectedWardrobeLabel, selectedWardrobeField, character[selectedWardrobeField],
+        selectedWardrobeOptions, disabled,
         option => equipmentThumbnailMarkup(option, character.gender),
-        `Browse all ${label.toLowerCase()}`
-      )).join('')}
+        `Browse all ${selectedWardrobeLabel.toLowerCase()}`
+      )}
     </div>`;
     const sections = {
       appearance: `<div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -1248,8 +1265,8 @@
         ${hairPicker}
         ${equipmentDropdown('specialSkin', 'Special Skins')}
       </div>`,
-      wardrobe: `<div class="space-y-4">
-        <p class="text-xs text-slate-400">Earn progression gear or purchase additional sprite layers with Wayfarer Coins.</p>
+      wardrobe: `<div class="space-y-3">
+        <p class="text-xs text-slate-400">Choose a layer to preview and cycle through your unlocked gear. Browse all to shop.</p>
         ${purchaseControls}
       </div>`,
       pets: `<p class="mb-3 text-xs text-slate-400">Companions are purchased with Wayfarer Coins. Choose one clean idle frame to follow your explorer.</p>
@@ -1268,7 +1285,7 @@
           <span class="text-sm font-semibold text-amber-100">Wayfarer Coins</span>
           <strong class="flex items-center gap-2 font-mono text-lg text-amber-200">${coinIconMarkup()}${coinBalance.availableCoins.toLocaleString('en')}</strong>
         </div>
-        <p class="text-xs text-slate-400">Choose an item to buy and equip it. Purchased items remain yours; new purchases are disabled until you have enough coins.</p>
+        <p class="text-xs text-slate-400">Choose a layer to preview owned gear. Use Browse all to purchase and equip a new item.</p>
         ${purchaseControls}
       </div>`,
       patron: `<div class="rounded-xl border border-amber-800/60 bg-amber-950/20 p-3 mb-4 text-xs text-amber-100">
@@ -1395,6 +1412,11 @@
       }
     };
     controls.onchange = event => {
+      if (event.target.dataset.characterWardrobeCategory === 'true') {
+        controls.dataset.activeWardrobeField = event.target.value;
+        renderControls(controls, character, stats, achievements, disabled, appState);
+        return;
+      }
       const field = event.target.dataset.characterField;
       if (!field || disabled) return;
       options.onChange?.(normalizeCharacter({ ...character, [field]: event.target.value }));

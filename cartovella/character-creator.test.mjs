@@ -25,11 +25,10 @@ check('character appearance, wardrobe, companions, and scene choices render as d
   const controls = { dataset: {}, innerHTML: '' };
   const expectedFields = {
     appearance: ['gender', 'skinTone', 'hairPreset', 'specialSkin'],
-    wardrobe: ['top', 'bottoms', 'shoes', 'headwear', 'handItem', 'backLayer',
-      'arms', 'face', 'ears', 'effect'],
+    wardrobe: ['top'],
     pets: ['pet', 'petHat', 'petBackpack'],
     backgrounds: ['background'],
-    shop: ['top', 'bottoms', 'shoes'],
+    shop: ['top'],
     patron: []
   };
   const visualFields = new Set([
@@ -46,6 +45,13 @@ check('character appearance, wardrobe, companions, and scene choices render as d
         assert.match(controls.innerHTML, new RegExp(`<details[^>]*>[\\s\\S]*?data-character-field="${field}"`));
       } else {
         assert.match(controls.innerHTML, new RegExp(`<select[^>]*data-character-field="${field}"`));
+      }
+      if (tab === 'wardrobe' || tab === 'shop') {
+        for (const field of ['top', 'bottoms', 'shoes', 'headwear', 'handItem',
+          'backLayer', 'arms', 'face', 'ears', 'effect']) {
+          assert.match(controls.innerHTML, new RegExp(`<option value="${field}"`));
+        }
+        assert.equal((controls.innerHTML.match(/data-character-cycle="true"/g) || []).length, 2);
       }
     }
     for (const field of ['pet', 'petHat', 'petBackpack']) {
@@ -91,35 +97,6 @@ check('hairstyle arrows cycle unlocked options, wrap around, and respect view-on
       controls, character, stats: { level: 1 }, viewOnly,
       onChange: value => { next = value; }
     });
-    check('all wardrobe categories offer arrows and browse-all pickers in wardrobe and shop', () => {
-      const fields = ['top', 'bottoms', 'shoes', 'headwear', 'handItem', 'backLayer',
-        'arms', 'face', 'ears', 'effect'];
-      for (const tab of ['wardrobe', 'shop']) {
-        const controls = { dataset: { activeTab: tab }, innerHTML: '' };
-        let changed;
-        characterCreator.render({
-          controls, stats: { level: 10 }, character: characterCreator.DEFAULT_CHARACTER,
-          onChange: next => { changed = next; }
-        });
-        for (const field of fields) {
-          const arrows = [...controls.innerHTML.matchAll(new RegExp(
-            `data-character-field="${field}"\\s+data-character-id="([^"]*)" aria-label="(Previous|Next) [^"]+"`, 'g'
-          ))];
-          assert.equal(arrows.length, 2, `${tab}: ${field}`);
-        }
-        assert.equal((controls.innerHTML.match(/>Browse all /g) || []).length, fields.length);
-        const nextId = controls.innerHTML.match(
-          /data-character-field="headwear"\s+data-character-id="([^"]*)" aria-label="Next /
-        )[1];
-        controls.onclick({ target: { closest(selector) {
-          return selector === 'button[data-character-field][data-character-id]'
-            ? { dataset: { characterField: 'headwear', characterId: nextId }, disabled: false } : null;
-        } } });
-        assert.equal(changed.headwear, nextId);
-        characterCreator.render({ controls, viewOnly: true });
-        assert.match(controls.innerHTML, /aria-label="Next hats &amp; helmets"\s+disabled/);
-      }
-    });
     const arrowId = label => controls.innerHTML.match(new RegExp(
       `data-character-field="hairPreset"\\s+data-character-id="([^"]+)" aria-label="${label}"`
     ))[1];
@@ -146,6 +123,34 @@ check('hairstyle arrows cycle unlocked options, wrap around, and respect view-on
     assert.equal(next, null);
   }
 });
+check('wardrobe and shop expose one compact layer picker at a time', () => {
+  const fields = ['top', 'bottoms', 'shoes', 'headwear', 'handItem', 'backLayer',
+    'arms', 'face', 'ears', 'effect'];
+  for (const tab of ['wardrobe', 'shop']) {
+    const controls = { dataset: { activeTab: tab }, innerHTML: '' };
+    let changed;
+    characterCreator.render({
+      controls, stats: { level: 10 }, character: characterCreator.DEFAULT_CHARACTER,
+      onChange: next => { changed = next; }
+    });
+    assert.equal((controls.innerHTML.match(/data-character-cycle="true"/g) || []).length, 2);
+    assert.equal((controls.innerHTML.match(/>Browse all /g) || []).length, 1);
+    for (const field of fields) assert.match(controls.innerHTML, new RegExp(`<option value="${field}"`));
+    controls.onchange({ target: { dataset: { characterWardrobeCategory: 'true' }, value: 'headwear' } });
+    assert.equal(controls.dataset.activeWardrobeField, 'headwear');
+    assert.match(controls.innerHTML, /data-character-field="headwear"[^>]*aria-label="Next hats/);
+    const nextId = controls.innerHTML.match(
+      /data-character-field="headwear"[^>]*data-character-id="([^"]*)"[^>]*aria-label="Next/
+    )[1];
+    controls.onclick({ target: { closest(selector) {
+      return selector === 'button[data-character-field][data-character-id]'
+        ? { dataset: { characterField: 'headwear', characterId: nextId }, disabled: false } : null;
+    } } });
+    assert.equal(changed.headwear, nextId);
+    characterCreator.render({ controls, viewOnly: true });
+    assert.match(controls.innerHTML, /aria-label="Next hats &amp; helmets"\s+disabled/);
+  }
+});
 check('wardrobe arrows never purchase, cycle owned gear and None, and leave purchases to browse-all', () => {
   const fields = ['top', 'bottoms', 'shoes', 'headwear', 'handItem', 'backLayer',
     'arms', 'face', 'ears', 'effect'];
@@ -162,6 +167,9 @@ check('wardrobe arrows never purchase, cycle owned gear and None, and leave purc
           controls, character, stats: { level: 100 },
           onChange: next => { changed = next; }
         });
+        const selectField = () => controls.onchange({
+          target: { dataset: { characterWardrobeCategory: 'true' }, value: field }
+        });
         const choose = (id, cycle) => controls.onclick({ target: { closest(selector) {
           return selector === 'button[data-character-field][data-character-id]'
             ? { dataset: { characterField: field, characterId: id, characterCycle: cycle ? 'true' : undefined },
@@ -170,6 +178,7 @@ check('wardrobe arrows never purchase, cycle owned gear and None, and leave purc
         const seen = new Set();
         for (let step = 0; step < characterCreator.EQUIPMENT_CATALOG.length + 1; step++) {
           render();
+          selectField();
           const arrows = [...controls.innerHTML.matchAll(new RegExp(
             `data-character-cycle="true" data-character-field="${field}"\\s+data-character-id="([^"]*)" aria-label="(Previous|Next) [^"]+"\\s*(disabled)?`, 'g'
           ))];
@@ -192,6 +201,7 @@ check('wardrobe arrows never purchase, cycle owned gear and None, and leave purc
         const unowned = shopItems[1];
         if (unowned) {
           render();
+          selectField();
           assert.ok(controls.innerHTML.includes(`data-character-id="${unowned.id}"`));
           changed = null;
           choose(unowned.id, true);
