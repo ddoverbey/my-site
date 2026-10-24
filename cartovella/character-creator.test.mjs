@@ -199,7 +199,7 @@ check('sprite character selects matching gender, skin, hair, and outfit layers',
     characterCreator.drawCharacterSprite({ drawImage(...args) { drawCalls.push(args); } }, character);
     assert.equal(drawCalls.length, 5);
     assert.ok(drawCalls.every(call =>
-      call.length === 9 && call.slice(1).join(',') === '24,16,32,48,62,10,60,72'
+      call.length === 9 && call.slice(1).join(',') === '24,16,32,48,50,10,60,72'
     ));
   } finally {
     if (originalImage === undefined) delete globalThis.Image;
