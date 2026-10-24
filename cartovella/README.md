@@ -128,9 +128,10 @@ in `assets/Zips/`.
 The character layers use aligned 800×448 sheets and a 32×48 crop around the first character
 frame. Character, hairstyle, wardrobe, companion, and background selectors show visual previews.
 Opening the character editor focuses and jumps directly to the customization controls above the
-character stage. Appearance contains skin tones and special skins; pets and their accessories
-are available only in Pets. Hairstyles default to previous/next arrows that cycle through unlocked
-style/color choices; expand "Browse all hairstyles" for the optional visual dropdown.
+character stage. Appearance contains skin tones and special skins, plus a compact full-width
+hairstyle picker that keeps its preview, name, and arrows separate. Hairstyle arrows cycle through
+unlocked style/color choices; expand "Browse all hairstyles" for the optional visual dropdown.
+Pets and their accessories are available only in Pets.
 Wardrobe and Coin Shop use one compact outfit-layer selector at a time, with previous/next
 arrows and an optional "Browse all" list. The live character preview stays beside the editor
 on wide screens and stacks above it on smaller screens. Arrows only equip owned items or

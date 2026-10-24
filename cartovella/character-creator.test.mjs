@@ -81,6 +81,8 @@ check('character appearance, wardrobe, companions, and scene choices render as d
   assert.match(controls.innerHTML, /aria-label="Previous hairstyle"/);
   assert.match(controls.innerHTML, /aria-label="Next hairstyle"/);
   assert.match(controls.innerHTML, /<details class="mt-2">\s*<summary[^>]*>Browse all hairstyles/);
+  assert.match(controls.innerHTML, /class="sm:col-span-2">[\s\S]*?aria-label="Hairstyle picker"/);
+  assert.match(controls.innerHTML, /class="min-w-0 truncate text-center" title="Hairstyle 1: Chestnut"/);
   assert.match(controls.innerHTML, /h-16/);
   assert.match(controls.innerHTML, /h-10 w-10/);
   controls.dataset.activeTab = 'shop';
@@ -136,6 +138,8 @@ check('wardrobe and shop expose one compact layer picker at a time', () => {
     assert.equal((controls.innerHTML.match(/data-character-cycle="true"/g) || []).length, 2);
     assert.equal((controls.innerHTML.match(/>Browse all /g) || []).length, 1);
     for (const field of fields) assert.match(controls.innerHTML, new RegExp(`<option value="${field}"`));
+    assert.match(controls.innerHTML, /appearance-none[^"]*pr-10/);
+    assert.match(controls.innerHTML, /absolute right-3 top-1\/2/);
     controls.onchange({ target: { dataset: { characterWardrobeCategory: 'true' }, value: 'headwear' } });
     assert.equal(controls.dataset.activeWardrobeField, 'headwear');
     assert.match(controls.innerHTML, /data-character-field="headwear"[^>]*aria-label="Next hats/);

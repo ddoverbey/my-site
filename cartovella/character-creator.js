@@ -1172,6 +1172,7 @@
     const available = options.filter(option => option.canCycle);
     const currentIndex = available.findIndex(option => option.id === value);
     const selected = options.find(option => option.id === value);
+    const selectedName = selected?.name.replace(/ — Equipped$/, '') || label;
     const arrow = direction => {
       const index = (Math.max(0, currentIndex) + direction + available.length) % available.length;
       const option = available[index];
@@ -1190,7 +1191,7 @@
         ${arrow(-1)}
         <span class="flex min-w-0 flex-1 items-center justify-center gap-2">
           ${selected ? renderChoice(selected) : ''}
-          <span>${escapeHtml(selected?.name || label)}</span>
+          <span class="min-w-0 truncate text-center" title="${escapeHtml(selectedName)}">${escapeHtml(selectedName)}</span>
         </span>
         ${arrow(1)}
       </div>
@@ -1239,12 +1240,18 @@
     const purchaseControls = `<div class="space-y-3">
       <label class="block text-xs font-medium text-slate-300">
         Outfit layer
-        <select data-character-wardrobe-category="true" ${disabled ? 'disabled' : ''}
-          class="mt-1 block w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-slate-100 focus:border-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-300">
-          ${wardrobeFields.map(([field, label]) =>
-            `<option value="${field}" ${field === selectedWardrobeField ? 'selected' : ''}>${escapeHtml(label)}</option>`
-          ).join('')}
-        </select>
+        <span class="relative mt-1 block">
+          <select data-character-wardrobe-category="true" ${disabled ? 'disabled' : ''}
+            class="block w-full appearance-none rounded-lg border border-slate-700 bg-slate-950 py-2.5 pl-3 pr-10 text-sm text-slate-100 focus:border-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-300">
+            ${wardrobeFields.map(([field, label]) =>
+              `<option value="${field}" ${field === selectedWardrobeField ? 'selected' : ''}>${escapeHtml(label)}</option>`
+            ).join('')}
+          </select>
+          <svg aria-hidden="true" viewBox="0 0 20 20" fill="none"
+            class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400">
+            <path d="m5 7.5 5 5 5-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
       </label>
       ${cyclePickerMarkup(
         selectedWardrobeLabel, selectedWardrobeField, character[selectedWardrobeField],
@@ -1254,7 +1261,7 @@
       )}
     </div>`;
     const sections = {
-      appearance: `<div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      appearance: `<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
         ${dropdown('gender', 'Character sprite', character.gender, [
           { id: 'male', name: 'Male sprite' }, { id: 'female', name: 'Female sprite' }
         ], option => characterThumbnailMarkup({ ...character, gender: option.id }))}
@@ -1262,8 +1269,8 @@
           `<span aria-hidden="true" class="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-slate-900">
             <span class="h-6 w-6 rounded-full border border-slate-500" style="background-color:${escapeHtml(option.color)}"></span>
           </span>`)}
-        ${hairPicker}
-        ${equipmentDropdown('specialSkin', 'Special Skins')}
+        <div class="sm:col-span-2">${hairPicker}</div>
+        <div class="sm:col-span-2">${equipmentDropdown('specialSkin', 'Special Skins')}</div>
       </div>`,
       wardrobe: `<div class="space-y-3">
         <p class="text-xs text-slate-400">Choose a layer to preview and cycle through your unlocked gear. Browse all to shop.</p>
