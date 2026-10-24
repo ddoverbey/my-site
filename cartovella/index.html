@@ -636,7 +636,7 @@
               aria-label="Pixel-art explorer with selected companion and background"
               class="block w-full h-auto" style="image-rendering:pixelated"></canvas>
           </div>
-          <div id="characterProgressSummary" class="grid grid-cols-2 gap-2 mt-3"></div>
+          <div id="characterProgressSummary" class="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-3"></div>
           <div id="characterCustomization" hidden class="mt-5 min-w-0" aria-live="polite"></div>
         </section>
 
@@ -645,9 +645,9 @@
           <div class="relative z-10 flex flex-col md:flex-row items-center md:items-start justify-between gap-6">
             <div class="flex flex-col md:flex-row items-center gap-5 text-center md:text-left">
               <div class="w-24 h-24 rounded-2xl bg-gradient-to-tr from-amber-600 via-amber-400 to-amber-200 p-1 shadow-2xl">
-                <div class="w-full h-full bg-slate-950 rounded-xl flex items-center justify-center text-4xl" id="passportAvatar">
-                  🧭
-                </div>
+                <canvas id="passportAvatar" width="80" height="64" role="img"
+                  aria-label="Explorer character portrait"
+                  class="block w-full h-full bg-slate-950 rounded-xl" style="image-rendering:pixelated"></canvas>
               </div>
               <div>
                 <div class="flex items-center justify-center md:justify-start gap-3">
@@ -658,6 +658,11 @@
                 <div class="flex flex-wrap items-center justify-center md:justify-start gap-4 mt-3 text-xs text-slate-400">
                   <span>🏰 Home: <b class="text-slate-200" id="passportHomeText">Not Assigned</b></span>
                   <span>⚡ Total XP: <b class="text-emerald-400 font-mono" id="passportTotalXp">0</b></span>
+                  <span class="inline-flex items-center gap-1.5">
+                    <span aria-hidden="true" class="inline-block h-4 w-4 bg-no-repeat"
+                      style="background-image:url('./assets/gandalfhardcore/GandalfHardcore%20Emojis%20and%20Icons/Coin.png');background-size:192px 16px;background-position:0 0"></span>
+                    Wayfarer Coins: <b class="text-amber-300 font-mono" id="passportCoins">0</b>
+                  </span>
                   <span title="Share of global land covered by visited or lived country, state, county, and district boundaries. Area is estimated from the loaded atlas.">🗺️ Global Land Explored: <b class="text-amber-300 font-mono" id="passportExploredPct">—</b></span>
                 </div>
               </div>
@@ -5287,13 +5292,20 @@
 
     function renderPassportView() {
       const stats = calculateStats();
+      const characterStats = {
+        ...stats,
+        completedAchievementTiers: completedAchievementTiers(stats)
+      };
+      const coins = CharacterCreator.coinSummary(characterStats, AppState);
       CharacterCreator.render({
         canvas: document.getElementById('characterStage'),
+        avatarCanvas: document.getElementById('passportAvatar'),
         controls: document.getElementById('characterCustomization'),
         customizeButton: document.getElementById('characterCustomizationToggle'),
         summary: document.getElementById('characterProgressSummary'),
         character: AppState.character,
-        stats,
+        stats: characterStats,
+        appState: AppState,
         achievements: ACHIEVEMENTS,
         viewOnly: AppState.viewOnly,
         onChange: character => {
@@ -5316,10 +5328,10 @@
       // Hero banner
       document.getElementById('passportClassName').textContent = stats.cls;
       document.getElementById('passportTitleDesc').textContent = stats.titleDesc;
-      document.getElementById('passportAvatar').textContent = stats.avatar;
       document.getElementById('passportLevelBadge').textContent = `Level ${stats.level}`;
       document.getElementById('passportHomeText').textContent = AppState.homeBase ? AppState.homeBase.name : 'Unknown Hearth';
       document.getElementById('passportTotalXp').textContent = `${stats.xp} XP`;
+      document.getElementById('passportCoins').textContent = coins.availableCoins.toLocaleString('en');
       document.getElementById('passportExploredPct').textContent = Number.isFinite(stats.exploredPct)
         ? `${stats.exploredPct.toFixed(4)}%` : '—';
 
@@ -5433,7 +5445,7 @@
         return achievement.tiers.flatMap((tier, index) => {
           const goal = typeof tier.goal === 'function' ? tier.goal(stats) : tier.goal;
           return goal > 0 && progress >= goal
-            ? [{ key: `${achievement.id}:${index}`, title: tier.title }]
+            ? [{ key: `${achievement.id}:${index}`, title: tier.title, rarity: tier.rarity }]
             : [];
         });
       });

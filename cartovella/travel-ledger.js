@@ -834,7 +834,17 @@
     const mountains = visitedPark('blri') || visitedPark('grsm') || categoryVisited('blue ridge mountains');
     const river = categoryVisited('shenandoah river');
     const countryRoadsDestination = visitedPark('shen') ? 1 : (Number(mountains) + Number(river)) / 2;
+    const visitedSubdivisionIds = Object.entries(state.regions)
+      .filter(([key, status]) => key.startsWith('s:') && isVisited(status))
+      .map(([key]) => key.slice(2)).sort();
     return {
+      rarityEntities: [...rarityEntities].map(([key, entity]) => ({
+        key,
+        kind: key.split(':', 1)[0],
+        tier: entity.tier
+      })).sort((left, right) => left.key.localeCompare(right.key)),
+      visitedCountyIds: [...visitedCountyIds].sort(),
+      visitedSubdivisionIds,
       countryRoads: Number(westVirginia) + countryRoadsDestination,
       rockyMountainHigh: [...visitedCountyIds].filter(id => coloradoCounties.has(id) && !coloradoPlainsCounties.has(id)).length,
       subterranean: pois.filter(poi => poi.biomes.length && poi.elevationFt < 0).length +

@@ -19,9 +19,9 @@
         imageSrc: null
       };
     }),
-    { id: 'hair_fancy', name: 'Hairstyle 26', fileName: 'Fancy Hair.png', genders: ['male'], imageSrc: null },
-    { id: 'hair_queen', name: 'Hairstyle 27', fileName: 'Queen hair.png', genders: ['male'], imageSrc: null },
-    { id: 'hair_shield_maiden', name: 'Hairstyle 28', fileName: 'Shield Maiden hair.png', genders: ['male'], imageSrc: null }
+    { id: 'hair_fancy', name: 'Hairstyle 26', fileName: 'Fancy Hair.png', genders: ['male', 'female'], imageSrc: null },
+    { id: 'hair_queen', name: 'Hairstyle 27', fileName: 'Queen hair.png', genders: ['male', 'female'], imageSrc: null },
+    { id: 'hair_shield_maiden', name: 'Hairstyle 28', fileName: 'Shield Maiden hair.png', genders: ['male', 'female'], imageSrc: null }
   ];
   const HAIR_COLORS = [
     { id: 'black', name: 'Black', color: '#292b35', imageSrc: null },
@@ -93,34 +93,36 @@
     { id: 'accessory_patron_pin', name: 'Park Patron Ranger Pin', slot: 'accessory', unlock: { type: 'donation', goal: 5 }, color: '#dcaa4a', imageSrc: null },
     { id: 'accessory_compass', name: 'Conservation Compass', slot: 'accessory', unlock: { type: 'donation', goal: 50 }, color: '#d6bd81', imageSrc: null }
   ];
-  const spritePet = (id, name, imageSrc, spriteSheet) => ({
-    id, name, unlock: { type: 'starter' }, kind: 'sprite', imageSrc,
+  const spritePet = (id, name, imageSrc, spriteSheet, cost) => ({
+    id, name, unlock: { type: 'coin', cost, itemId: id }, cost, kind: 'sprite', imageSrc,
     spriteSheet: { ...spriteSheet }
   });
   const DOG_SPRITE_SHEET = Object.freeze({
-    frameWidth: 32, frameHeight: 32, frameCount: 5, frameDuration: 320,
+    frameWidth: 32, frameHeight: 32, frameCount: 5,
     sourceX: 1, sourceY: 13, sourceWidth: 29, sourceHeight: 19,
-    targetX: 100, targetY: 63, targetWidth: 26, targetHeight: 17
+    targetX: 101, targetY: 64, targetWidth: 15, targetHeight: 10
   });
   const CAT_SPRITE_SHEET = Object.freeze({
-    frameWidth: 64, frameHeight: 64, frameCount: 8, frameDuration: 180,
+    frameWidth: 64, frameHeight: 64, frameCount: 8,
     row: 13, sourceX: 13, sourceY: 19, sourceWidth: 36, sourceHeight: 28,
-    targetX: 102, targetY: 63, targetWidth: 22, targetHeight: 17
+    targetX: 102, targetY: 64, targetWidth: 18, targetHeight: 14
   });
   const FOX_SPRITE_SHEET = Object.freeze({
-    frameWidth: 32, frameHeight: 32, frameCount: 5, frameDuration: 240,
+    frameWidth: 32, frameHeight: 32, frameCount: 5,
     sourceX: 1, sourceY: 14, sourceWidth: 29, sourceHeight: 18,
-    targetX: 103, targetY: 68, targetWidth: 20, targetHeight: 12
+    targetX: 103, targetY: 66, targetWidth: 15, targetHeight: 10
   });
   const WISP_SPRITE_SHEET = Object.freeze({
-    frameWidth: 32, frameHeight: 32, frameCount: 5, frameDuration: 180,
+    frameWidth: 32, frameHeight: 32, frameCount: 5,
     sourceX: 9, sourceY: 5, sourceWidth: 14, sourceHeight: 22,
-    targetX: 107, targetY: 60, targetWidth: 12, targetHeight: 18
+    targetX: 107, targetY: 62, targetWidth: 7, targetHeight: 11
   });
   const OUTLINED_WISP_SPRITE_SHEET = Object.freeze({
     ...WISP_SPRITE_SHEET, sourceX: 8, sourceY: 4, sourceWidth: 16, sourceHeight: 24
   });
-  const COMPANION_ASSET_PATH = './assets/gandalfhardcore/GandalfHardcore%20Pet%20companion/GandalfHardcore%20Pet%20companion/';
+  const ASSET_ROOT = './assets/gandalfhardcore/';
+  const assetUrl = path => encodeURI(path);
+  const COMPANION_ASSET_PATH = `${ASSET_ROOT}GandalfHardcore Pet companion/GandalfHardcore Pet companion/`;
   const CAT_ASSET_PATH = './assets/cat-PACK/PACK/';
   const dogVariants = [
     ['pet_trail_dog', 'Golden Trail Dog', 'GandalfHardcore doggy sheet.png'],
@@ -129,28 +131,23 @@
     ['pet_trail_dog_cream', 'Cream Trail Dog', 'GandalfHardcore doggy sheet 4.png'],
     ['pet_trail_dog_shadow', 'Shadow Trail Dog', 'GandalfHardcore doggy sheet 5.png']
   ].map(([id, name, file]) =>
-    spritePet(id, name, `${COMPANION_ASSET_PATH}${file.replaceAll(' ', '%20')}`, DOG_SPRITE_SHEET));
+    spritePet(id, name, assetUrl(`${COMPANION_ASSET_PATH}${file}`), DOG_SPRITE_SHEET, 150));
   const catVariants = [
-    ['pet_black_cat', 'Black Cat (Cat 1)', 'cat%201%20(64%D1%8564).png'],
-    ['pet_ginger_cat', 'Ginger Cat (Cat 2)', 'cat%202%20(64%D1%8564).png'],
-    ['pet_white_cat', 'White Cat (Cat 3)', 'cat%203%20(64%D1%8564).png']
+    ['pet_black_cat', 'Black Cat', 'cat 1 (64х64).png'],
+    ['pet_ginger_cat', 'Ginger Cat', 'cat 2 (64х64).png'],
+    ['pet_white_cat', 'White Cat', 'cat 3 (64х64).png']
   ].map(([id, name, file]) =>
-    spritePet(id, name, `${CAT_ASSET_PATH}${file}`, CAT_SPRITE_SHEET));
+    spritePet(id, name, assetUrl(`${CAT_ASSET_PATH}${file}`), CAT_SPRITE_SHEET, 150));
   const foxAndWispPets = [
-    spritePet('pet_trail_fox', 'Trail Fox', `${COMPANION_ASSET_PATH}GandalfHardcore%20fox.png`, FOX_SPRITE_SHEET),
-    spritePet('pet_blue_wisp', 'Blue Wisp', `${COMPANION_ASSET_PATH}GandalfHardcore%20Wisp.png`, WISP_SPRITE_SHEET),
-    spritePet('pet_blue_wisp_outline', 'Outlined Blue Wisp', `${COMPANION_ASSET_PATH}Wisp%20with%20outline.png`, OUTLINED_WISP_SPRITE_SHEET)
+    spritePet('pet_trail_fox', 'Trail Fox', assetUrl(`${COMPANION_ASSET_PATH}GandalfHardcore fox.png`), FOX_SPRITE_SHEET, 300),
+    spritePet('pet_blue_wisp', 'Blue Wisp', assetUrl(`${COMPANION_ASSET_PATH}GandalfHardcore Wisp.png`), WISP_SPRITE_SHEET, 500),
+    spritePet('pet_blue_wisp_outline', 'Outlined Blue Wisp', assetUrl(`${COMPANION_ASSET_PATH}Wisp with outline.png`), OUTLINED_WISP_SPRITE_SHEET, 500)
   ];
   const PET_CATALOG = [
     { id: 'pet_none', name: 'No Companion', unlock: { type: 'starter' }, kind: 'none', imageSrc: null },
-    { id: 'pet_pufflin_blue', name: 'Blue Pufflin', unlock: { type: 'starter' }, kind: 'pufflin', color: '#59a9d7', imageSrc: null },
     ...dogVariants,
     ...catVariants,
-    ...foxAndWispPets,
-    { id: 'pet_pufflin_forest', name: 'Forest Pufflin', unlock: { type: 'achievement', id: 'whispers' }, kind: 'pufflin', color: '#63a978', imageSrc: null },
-    { id: 'pet_pufflin_gold', name: 'Golden Pufflin', unlock: { type: 'achievement', id: 'masterRanger' }, kind: 'pufflin', color: '#e3b648', imageSrc: null },
-    { id: 'pet_pufflin_gaia', name: 'Gaia Pufflin', unlock: { type: 'achievement', id: 'gaiaWanderer' }, kind: 'pufflin', color: '#ba8cd7', imageSrc: null },
-    { id: 'pet_red_panda', name: 'Red Panda Companion', unlock: { type: 'pro' }, kind: 'redPanda', color: '#ca7047', imageSrc: null }
+    ...foxAndWispPets
   ];
   const PET_ID_ALIASES = new Map([
     ['pet_puppy_gold', 'pet_trail_dog'],
@@ -160,8 +157,279 @@
     { id: 'bg_campfire', name: 'Campfire Night', unlock: { type: 'starter' }, imageSrc: './assets/backgrounds/campfire-night-320px.png' }
   ];
 
-  const CHARACTER_ASSET_ROOT = './assets/gandalfhardcore/GandalfHardcore%20Character%20Asset%20Pack/GandalfHardcore%20Character%20Asset%20Pack/';
-  const HAIRSTYLE_ASSET_ROOT = './assets/gandalfhardcore/GandalfHardcore%2058x%20Hair/';
+  const CHARACTER_ASSET_ROOT = `${ASSET_ROOT}GandalfHardcore Character Asset Pack/GandalfHardcore Character Asset Pack/`;
+  const HAIRSTYLE_ASSET_ROOT = `${ASSET_ROOT}GandalfHardcore 58x Hair/`;
+  const spritePath = (folder, file) => `${folder}${file}`;
+  const pairedPaths = (folder, maleFile, femaleFile = maleFile) => ({
+    male: spritePath(folder, maleFile),
+    female: spritePath(folder, femaleFile)
+  });
+  const oneGenderPath = (gender, path) => ({ [gender]: path });
+  const equipmentItem = (id, name, field, paths, unlock = { type: 'coin', cost: 100 }) => ({
+    id, name, field, paths, genders: Object.keys(paths),
+    unlock: unlock.type === 'coin' ? { ...unlock, itemId: id } : unlock,
+    imageSrc: null,
+    ...(unlock.type === 'coin' ? { cost: unlock.cost } : {})
+  });
+  const levelItem = (id, name, field, paths, goal) =>
+    equipmentItem(id, name, field, paths, { type: 'level', goal });
+  const PACK = CHARACTER_ASSET_ROOT;
+  const LEVEL_ITEMS = [
+    levelItem('starter_shirt', 'Starter Shirt', 'top',
+      pairedPaths(PACK, 'Male Clothing/Shirt v2.png', 'Female Clothing/Corset v2.png'), 1),
+    levelItem('starter_pants', 'Starter Pants', 'bottoms',
+      pairedPaths(PACK, 'Male Clothing/Pants.png', 'Female Clothing/Skirt.png'), 1),
+    levelItem('simple_shoes', 'Simple Shoes', 'shoes',
+      pairedPaths(PACK, 'Male Clothing/Shoes.png', 'Female Clothing/Boots.png'), 1),
+    levelItem('walking_stick', 'Walking Stick', 'handItem',
+      pairedPaths(`${ASSET_ROOT}GandalfHardcore 35x Hand Items/`,
+        'Male Hand/Stick.png', 'Female Hand/Stick.png'), 2),
+    levelItem('trail_boots', 'Trail Boots', 'shoes',
+      pairedPaths(PACK, 'Male Clothing/Boots.png', 'Female Clothing/Boots.png'), 2),
+    levelItem('explorer_backpack', 'Explorer Backpack', 'backLayer',
+      pairedPaths(`${ASSET_ROOT}GandalfHardcore Back layers s/`, 'Backpack.png'), 3),
+    levelItem('traveler_cap', 'Traveler Cap', 'headwear',
+      pairedPaths(`${ASSET_ROOT}GandalfHardcore 41x Hats/`, 'Male Hat/Male Blue cap.png',
+        'Female Hat/Female Blue cap.png'), 3),
+    levelItem('farming_hat', 'Forager Sun Hat', 'headwear',
+      pairedPaths(`${ASSET_ROOT}GandalfHardcore 41x Hats/`, 'Male Hat/Farming Hat M.png',
+        'Female Hat/Farming Hat F.png'), 4),
+    levelItem('basket', 'Forager Basket', 'handItem',
+      pairedPaths(`${ASSET_ROOT}GandalfHardcore 35x Hand Items/Female Hand/`, 'Basket.png'), 4),
+    levelItem('flower', 'Forager Flower', 'handItem',
+      pairedPaths(`${ASSET_ROOT}GandalfHardcore 35x Hand Items/Female Hand/`, 'Flower.png'), 4),
+    levelItem('wayfarer_lantern', 'Back Lantern', 'backLayer',
+      pairedPaths(`${ASSET_ROOT}GandalfHardcore Back layers s/`, 'Male Lantern.png',
+        'Female Lantern.png'), 5),
+    levelItem('wayfarer_gloves', 'Wayfarer Gloves', 'arms',
+      pairedPaths(`${ASSET_ROOT}GandalfHardcore Arm Layers/Male/`, 'Gloves.png',
+        '../Female/Opera Gloves.png'), 5),
+    levelItem('mining_helmet', 'Mining Helmet', 'headwear',
+      pairedPaths(`${ASSET_ROOT}GandalfHardcore 41x Hats/`, 'Male Hat/Male Mining Helmet.png',
+        'Female Hat/Female Mining Helmet.png'), 6),
+    levelItem('iron_pickaxe', 'Iron Pickaxe', 'handItem',
+      pairedPaths(`${ASSET_ROOT}GandalfHardcore 35x Hand Items/Male Hand/`, 'Iron Pickaxe.png',
+        '../Female Hand/Iron Pickaxe.png'), 6),
+    levelItem('iron_axe', 'Iron Axe', 'handItem',
+      pairedPaths(`${ASSET_ROOT}GandalfHardcore 35x Hand Items/Male Hand/`, 'Iron Axe.png',
+        '../Female Hand/Iron Axe.png'), 6),
+    levelItem('traveler_cape', 'Traveler Cape', 'backLayer',
+      pairedPaths(`${ASSET_ROOT}GandalfHardcore Back layers s/`, 'Cape green.png'), 7),
+    levelItem('bandit_scarf', 'Bandit Scarf', 'face',
+      pairedPaths(`${ASSET_ROOT}GandalfHardcore Masks/`, 'Male Bandit Scarf.png',
+        'Female Mask.png'), 7),
+    levelItem('guard_helmet', 'Guard Helmet', 'headwear',
+      pairedPaths(`${ASSET_ROOT}GandalfHardcore 41x Hats/Male Hat/`, 'Guard Helmet.png',
+        '../Female Hat/Female Hat5.png'), 8),
+    levelItem('circle_shield', 'Circle Shield', 'backLayer',
+      pairedPaths(`${ASSET_ROOT}GandalfHardcore Back layers s/`, 'Male Circle Shield.png',
+        'Female Circle Shield.png'), 8),
+    levelItem('iron_sword', 'Iron Sword', 'handItem',
+      pairedPaths(`${ASSET_ROOT}GandalfHardcore 35x Hand Items/Male Hand/`, 'Iron Sword.png',
+        '../Female Hand/Iron Sword.png'), 8),
+    levelItem('chainmail_tunic', 'Chainmail Tunic', 'top',
+      pairedPaths(`${ASSET_ROOT}GandalfHardcore 7x Male Clothing/`, 'Chainmail.png',
+        '../GandalfHardcore 43x Female Clothing/Armored Corset.png'), 9),
+    levelItem('viking_helmet', 'Viking Helmet', 'headwear',
+      pairedPaths(`${ASSET_ROOT}GandalfHardcore 41x Hats/Male Hat/`, 'Viking Helmet.png',
+        '../Female Hat/Headdress.png'), 9),
+    levelItem('golden_pickaxe', 'Golden Pickaxe', 'handItem',
+      pairedPaths(`${ASSET_ROOT}GandalfHardcore 35x Hand Items/Male Hand/`, 'Golden Pickaxe.png',
+        '../Female Hand/Golden Pickaxe.png'), 9),
+    levelItem('golden_sword', 'Golden Sword', 'handItem',
+      pairedPaths(`${ASSET_ROOT}GandalfHardcore 35x Hand Items/Male Hand/`, 'Golden Sword.png',
+        '../Female Hand/Golden Sword.png'), 9),
+    levelItem('royal_headwear', 'Royal Chaperon / Headdress', 'headwear',
+      pairedPaths(`${ASSET_ROOT}GandalfHardcore 41x Hats/Male Hat/`, 'Chaperon.png',
+        '../Female Hat/Headdress.png'), 10),
+    levelItem('diamond_sword', 'Diamond Sword', 'handItem',
+      pairedPaths(`${ASSET_ROOT}GandalfHardcore 35x Hand Items/Male Hand/`, 'Diamond Sword.png',
+        '../Female Hand/Diamond Sword.png'), 10),
+    levelItem('diamond_pickaxe', 'Diamond Pickaxe', 'handItem',
+      pairedPaths(`${ASSET_ROOT}GandalfHardcore 35x Hand Items/Male Hand/`, 'Diamond Pickaxe.png',
+        '../Female Hand/Diamond Pickaxe.png'), 10)
+  ];
+
+  const SHOP_WARDROBE = [];
+  const addShopItem = (id, name, field, paths, cost = 100) =>
+    SHOP_WARDROBE.push(equipmentItem(id, name, field, paths, { type: 'coin', cost }));
+  [
+    ['green_shirt', 'Forest Shirt', 'Green Shirt v2.png', 'Green Corset v2.png'],
+    ['blue_shirt', 'River Shirt', 'Blue Shirt v2.png', 'Blue Corset v2.png'],
+    ['orange_shirt', 'Ember Shirt', 'orange Shirt v2.png', 'Orange Corset v2.png'],
+    ['purple_shirt', 'Violet Shirt', 'Purple Shirt v2.png', 'Purple Corset v2.png']
+  ].forEach(([id, name, male, female]) =>
+    addShopItem(id, name, 'top', pairedPaths(PACK, `Male Clothing/${male}`,
+      `Female Clothing/${female}`), 100));
+  [
+    ['green_pants', 'Forest Pants', 'Green Pants.png'],
+    ['blue_pants', 'River Pants', 'Blue Pants.png'],
+    ['orange_pants', 'Ember Pants', 'Orange Pants.png'],
+    ['purple_pants', 'Violet Pants', 'Purple Pants.png']
+  ].forEach(([id, name, file]) =>
+    addShopItem(id, name, 'bottoms',
+      oneGenderPath('male', `${PACK}Male Clothing/${file}`), 100));
+  [
+    ['blue_bodice', 'Blue Bodice', 'Blue Bodice.png'],
+    ['green_bodice', 'Green Bodice', 'Green Bodice.png'],
+    ['orange_bodice', 'Orange Bodice', 'Orange Bodice.png'],
+    ['purple_bodice', 'Purple Bodice', 'Purple Bodice.png'],
+    ['red_bodice', 'Red Bodice', 'Red Bodice.png'],
+    ['blue_bodice_long_sleeves', 'Blue Bodice (Long Sleeves)', 'Blue Bodice Long Sleeves.png'],
+    ['blue_bodice_mid_sleeves', 'Blue Bodice (Mid Sleeves)', 'Blue Bodice Mid Sleeves.png'],
+    ['green_bodice_long_sleeves', 'Green Bodice (Long Sleeves)', 'Green Bodice Long Sleeves.png'],
+    ['green_bodice_mid_sleeves', 'Green Bodice (Mid Sleeves)', 'Green Bodice Mid Sleeves.png'],
+    ['orange_bodice_long_sleeves', 'Orange Bodice (Long Sleeves)', 'Orange Bodice Long Sleeves.png'],
+    ['orange_bodice_mid_sleeves', 'Orange Bodice (Mid Sleeves)', 'Orange Bodice Mid Sleeves.png'],
+    ['purple_bodice_long_sleeves', 'Purple Bodice (Long Sleeves)', 'Purple Bodice Long Sleeves.png'],
+    ['purple_bodice_mid_sleeves', 'Purple Bodice (Mid Sleeves)', 'Purple Bodice Mid Sleeves.png'],
+    ['red_bodice_long_sleeves', 'Red Bodice (Long Sleeves)', 'Red Bodice Long Sleeves.png'],
+    ['red_bodice_mid_sleeves', 'Red Bodice (Mid Sleeves)', 'Red Bodice Mid Sleeves.png'],
+    ['blue_corset_long_sleeves', 'Blue Corset (Long Sleeves)', 'Blue Corset Long Sleeves.png'],
+    ['blue_corset_v2_long_sleeves', 'Blue Corset v2 (Long Sleeves)', 'Blue Corset v2 Long Sleeves.png'],
+    ['green_corset_long_sleeves', 'Green Corset (Long Sleeves)', 'Green Corset Long Sleeves.png'],
+    ['green_corset_v2_long_sleeves', 'Green Corset v2 (Long Sleeves)', 'Green Corset v2 Long Sleeves.png'],
+    ['orange_corset_long_sleeves', 'Orange Corset (Long Sleeves)', 'Orange Corset Long Sleeves.png'],
+    ['orange_corset_v2_long_sleeves', 'Orange Corset v2 (Long Sleeves)', 'Orange Corset v2 Long Sleeves.png'],
+    ['purple_corset_long_sleeves', 'Purple Corset (Long Sleeves)', 'Purple Corset Long Sleeves.png'],
+    ['purple_corset_v2_long_sleeves', 'Purple Corset v2 (Long Sleeves)', 'Purple Corset v2 Long Sleeves.png'],
+    ['blue_bikini', 'Blue Bikini', 'Blue bikini.png'],
+    ['green_bikini', 'Green Bikini', 'Green bikini.png'],
+    ['orange_bikini', 'Orange Bikini', 'Orange bikini.png'],
+    ['purple_bikini', 'Purple Bikini', 'Purple bikini.png'],
+    ['red_bikini', 'Red Bikini', 'Red bikini.png'],
+    ['blue_dress', 'Blue Dress', 'Blue dress.png'],
+    ['fancy_blue_dress', 'Fancy Blue Dress', 'Fancy Blue Dress.png'],
+    ['long_dress_blue', 'Long Blue Dress', 'Long dress blue.png'],
+    ['long_dress_green', 'Long Green Dress', 'Long dress green.png'],
+    ['long_dress_orange', 'Long Orange Dress', 'Long dress orange.png'],
+    ['long_dress_purple', 'Long Purple Dress', 'Long dress purple.png'],
+    ['long_dress_red', 'Long Red Dress', 'Long dress red.png'],
+    ['queen_dress', 'Queen Dress', 'Queen Dress.png'],
+    ['armored_corset', 'Armored Corset', 'Armored Corset.png']
+  ].forEach(([id, name, file]) =>
+    addShopItem(id, name, 'top', oneGenderPath('female',
+      `${ASSET_ROOT}GandalfHardcore 43x Female Clothing/${file}`), 125));
+  [
+    ['short_skirt', 'Short Skirt', 'Short Skirt.png']
+  ].forEach(([id, name, file]) =>
+    addShopItem(id, name, 'bottoms', oneGenderPath('female',
+      `${ASSET_ROOT}GandalfHardcore 43x Female Clothing/${file}`), 100));
+  [
+    ['black_thigh_high_boots', 'Black Thigh-High Boots', 'Black Thigh-High Boots.png'],
+    ['brown_thigh_high_boots', 'Brown Thigh-High Boots', 'Brown Thigh-High Boots.png'],
+    ['pink_thigh_high_boots', 'Pink Thigh-High Boots', 'Pink Thigh-High Boots.png'],
+    ['red_thigh_high_boots', 'Red Thigh-High Boots', 'Red Thigh-High Boots.png']
+  ].forEach(([id, name, file]) =>
+    addShopItem(id, name, 'shoes', oneGenderPath('female',
+      `${ASSET_ROOT}GandalfHardcore 43x Female Clothing/${file}`), 100));
+
+  const hatFolder = `${ASSET_ROOT}GandalfHardcore 41x Hats/`;
+  const addHat = (id, name, male, female, cost = 100) => addShopItem(id, name, 'headwear', {
+    ...(male ? { male: `${hatFolder}${male}` } : {}),
+    ...(female ? { female: `${hatFolder}${female}` } : {})
+  }, cost);
+  addHat('witch_hat', 'Witch Hat', null, 'Female Hat/Witch hat.png');
+  addHat('santa_hat', 'Santa Hat', 'Male Hat/Male Santa hat.png', 'Female Hat/Female Santa hat.png');
+  addHat('pumpkin_hat', 'Pumpkin Hat', 'Male Hat/Pumpkin hat.png', null);
+  addHat('viking_horns', 'Viking Helmet with Horns',
+    'Male Hat/Viking Helmet with horns.png', 'Female Hat/Headdress.png', 125);
+  [
+    ['green_cap', 'Green Cap', 'Green'],
+    ['orange_cap', 'Orange Cap', 'Orange'],
+    ['purple_cap', 'Purple Cap', 'Purple'],
+    ['red_cap', 'Red Cap', 'Red']
+  ].forEach(([id, name, color]) =>
+    addHat(id, name, `Male Hat/Male ${color} cap.png`, `Female Hat/Female ${color} cap.png`));
+  for (let index = 1; index <= 10; index++) {
+    addHat(`male_hat_${index}`, `Wayfarer Hat ${index}`,
+      `Male Hat/Male Hat${index}.png`, null);
+  }
+  for (let index = 1; index <= 5; index++) {
+    addHat(`female_hat_${index}`, `Wayfarer Headdress ${index}`,
+      null, `Female Hat/Female Hat${index}.png`);
+    addHat(`bunny_ears_${index}`, `Bunny Ears ${index}`,
+      null, `Female Hat/Bunny ears${index}.png`);
+  }
+  [
+    ['plague_mask', 'Plague Mask', 'Male Plague Mask.png', 'Female Plague Mask.png'],
+    ['face_mask', 'Face Mask', 'Male Mask.png', 'Female Mask.png'],
+    ['face_paint', 'Blue Face Paint', 'Male Mask.png', 'Female Blue Face paint.png']
+  ].forEach(([id, name, male, female]) =>
+    addShopItem(id, name, 'face', pairedPaths(`${ASSET_ROOT}GandalfHardcore Masks/`, male, female), 125));
+
+  for (let index = 1; index <= 5; index++) {
+    addShopItem(`elven_ears_${index}`, `Elven Ears ${index}`, 'ears', pairedPaths(
+      `${ASSET_ROOT}GandalfHardcore 10x Elven ears/`,
+      `Male Ears/Elven Ears${index}.png`, `Female Ears/Elven Ears${index}.png`), 150);
+  }
+  [
+    'Character effects blood.png', 'Character effects blood blue.png', 'Character effects blood green.png',
+    'Character effects buff.png', 'Character effects buff blue.png', 'Character effects buff red.png',
+    'Character effects curved blue.png', 'Character effects curved lines.png', 'Character effects curved orange.png',
+    'Character effects debuff black.png', 'Character effects debuff gray brown.png', 'Character effects debuff.png',
+    'Character effects hearts blue.png', 'Character effects hearts pink.png', 'Character effects hearts.png',
+    'Character effects lines green.png', 'Character effects lines yellow.png', 'Character effects lines.png',
+    'Character effects stars blue.png', 'Character effects stars pink.png', 'Character effects stars teal.png',
+    'Character effects stars v2.png', 'Character effects stars white.png', 'Character effects stars.png'
+  ].forEach((file, index) => addShopItem(`effect_${index + 1}`,
+    file.replace(/^Character effects /, '').replace(/\.png$/, '').replace(/\b\w/g, letter => letter.toUpperCase()),
+    'effect', pairedPaths(`${ASSET_ROOT}GandalfHardcore character effects/`, file), 125));
+  [
+    ['ghost', 'Ghost', 'Male Ghost skin.png', 'Female Ghost skin.png'],
+    ['orc', 'Orc', 'Male Orc skin.png', 'Female Orc skin.png'],
+    ['zombie', 'Zombie', 'Male Zombie skin.png', 'Female Zombie skin.png'],
+    ['demon', 'Demon', 'Male Demon skin.png', 'Female Demon skin.png'],
+    ['devil', 'Devil', 'Male Devil skin.png', 'Female Devil skin.png']
+  ].forEach(([id, name, male, female]) =>
+    addShopItem(`special_${id}`, `${name} Skin`, 'specialSkin',
+      pairedPaths(`${ASSET_ROOT}GandalfHardcore Special skin/`, male, female), 300));
+  addShopItem('small_backpack', 'Small Backpack', 'backLayer',
+    pairedPaths(`${ASSET_ROOT}GandalfHardcore Back layers s/`, 'Small Backpack.png'), 100);
+  [
+    ['cape_blue', 'Blue Cape', 'Cape blue.png'],
+    ['cape_orange', 'Orange Cape', 'Cape orange.png'],
+    ['cape_purple', 'Purple Cape', 'Cape purple.png'],
+    ['cape_red', 'Red Cape', 'Cape red.png']
+  ].forEach(([id, name, file]) =>
+    addShopItem(id, name, 'backLayer',
+      pairedPaths(`${ASSET_ROOT}GandalfHardcore Back layers s/`, file), 125));
+
+  const PET_ACCESSORY_CATALOG = [
+    equipmentItem('dog_hat', 'Dog Hat', 'petHat', pairedPaths(
+      COMPANION_ASSET_PATH, 'GandalfHardcore doggy hat.png'), { type: 'coin', cost: 75 }),
+    equipmentItem('dog_backpack', 'Dog Backpack', 'petBackpack', pairedPaths(
+      COMPANION_ASSET_PATH, 'GandalfHardcore doggy backpack.png'), { type: 'coin', cost: 75 })
+  ];
+  const EQUIPMENT_CATALOG = [...LEVEL_ITEMS, ...SHOP_WARDROBE, ...PET_ACCESSORY_CATALOG];
+  const EQUIPMENT_BY_FIELD = Object.freeze(Object.fromEntries(
+    [...new Set(EQUIPMENT_CATALOG.map(item => item.field))].map(field =>
+      [field, EQUIPMENT_CATALOG.filter(item => item.field === field)])));
+  const EQUIPMENT_DEFAULTS = Object.freeze({
+    top: 'starter_shirt', bottoms: 'starter_pants', shoes: 'simple_shoes',
+    backLayer: '', effect: '', specialSkin: '', ears: '', arms: '', face: '',
+    headwear: '', handItem: '', petHat: '', petBackpack: ''
+  });
+  const LEVEL_TRACK = Object.freeze([
+    { level: 1, title: 'Fresh Recruit', itemIds: ['starter_shirt', 'starter_pants', 'simple_shoes'] },
+    { level: 2, title: 'Trailwalker', itemIds: ['walking_stick', 'trail_boots'] },
+    { level: 3, title: 'Scout', itemIds: ['explorer_backpack', 'traveler_cap'] },
+    { level: 4, title: 'Forager', itemIds: ['farming_hat', 'basket', 'flower'] },
+    { level: 5, title: 'Wayfarer', itemIds: ['wayfarer_lantern', 'wayfarer_gloves'] },
+    { level: 6, title: 'Prospector', itemIds: ['mining_helmet', 'iron_pickaxe', 'iron_axe'] },
+    { level: 7, title: 'Ranger', itemIds: ['traveler_cape', 'bandit_scarf'] },
+    { level: 8, title: 'Vanguard', itemIds: ['guard_helmet', 'circle_shield', 'iron_sword'] },
+    { level: 9, title: 'Highlander', itemIds: ['chainmail_tunic', 'viking_helmet', 'golden_pickaxe', 'golden_sword'] },
+    { level: 10, title: 'Cartographer Royal', itemIds: [
+      'royal_headwear', 'diamond_sword', 'diamond_pickaxe', 'hair_fancy', 'hair_queen', 'hair_shield_maiden'
+    ] }
+  ]);
+  const LEVEL_HAIR_REWARDS = Object.freeze([
+    { id: 'hair_fancy', name: 'Fancy Hair', level: 10 },
+    { id: 'hair_queen', name: 'Queen Hair', level: 10 },
+    { id: 'hair_shield_maiden', name: 'Shield Maiden Hair', level: 10 }
+  ]);
+
   const LEGACY_HAIR_STYLE_IDS = new Set(['short', 'bob', 'long', 'curls', 'braided']);
   const HAIR_COLOR_FILTERS = Object.freeze({
     brown: 'none',
@@ -171,15 +439,10 @@
     silver: 'grayscale(1) brightness(1.45)',
     teal: 'sepia(1) saturate(2) hue-rotate(130deg)'
   });
-  const CHARACTER_SPRITE_FRAME = Object.freeze({ x: 24, y: 16, width: 32, height: 48 });
-  const CHARACTER_SPRITE_TARGET = Object.freeze({ x: 60, y: 34, width: 40, height: 48 });
-  const OUTFIT_SPRITE_LAYERS = Object.freeze({
-    classic: { male: ['Male Clothing/Shirt v2.png', 'Male Clothing/Pants.png'], female: ['Female Clothing/Corset v2.png', 'Female Clothing/Skirt.png'] },
-    green: { male: ['Male Clothing/Green Shirt v2.png', 'Male Clothing/Green Pants.png'], female: ['Female Clothing/Green Corset v2.png', 'Female Clothing/Skirt.png'] },
-    blue: { male: ['Male Clothing/Blue Shirt v2.png', 'Male Clothing/Blue Pants.png'], female: ['Female Clothing/Blue Corset v2.png', 'Female Clothing/Skirt.png'] },
-    orange: { male: ['Male Clothing/orange Shirt v2.png', 'Male Clothing/Orange Pants.png'], female: ['Female Clothing/Orange Corset v2.png', 'Female Clothing/Skirt.png'] },
-    purple: { male: ['Male Clothing/Purple Shirt v2.png', 'Male Clothing/Purple Pants.png'], female: ['Female Clothing/Purple Corset v2.png', 'Female Clothing/Skirt.png'] }
+  const CHARACTER_SPRITE_FRAME = Object.freeze({
+    x: 24, y: 16, width: 32, height: 48, sheetWidth: 80
   });
+  const CHARACTER_SPRITE_TARGET = Object.freeze({ x: 60, y: 34, width: 40, height: 48 });
 
   const DEFAULT_CHARACTER = Object.freeze({
     gender: 'male',
@@ -192,8 +455,10 @@
     hat: 'hat_none',
     outfit: 'outfit_recruit',
     accessory: 'accessory_none',
-    pet: 'pet_pufflin_blue',
+    pet: 'pet_none',
     background: 'bg_campfire',
+    ...EQUIPMENT_DEFAULTS,
+    purchasedItems: [],
     proUnlocked: false,
     donationUsd: 0
   });
@@ -208,8 +473,7 @@
   const imageCache = new Map();
   const imageLoadRedraws = new Map();
   const stageRenderers = new WeakMap();
-  const petAnimations = new WeakMap();
-  const tabs = ['appearance', 'wardrobe', 'pets', 'backgrounds', 'patron'];
+  const tabs = ['appearance', 'wardrobe', 'pets', 'backgrounds', 'shop', 'patron'];
 
   function normalizeCharacter(value) {
     const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
@@ -224,6 +488,34 @@
     const hairStylesForGender = new Set(HAIR_STYLES
       .filter(style => style.genders.includes(gender))
       .map(style => style.id));
+    const legacyOutfit = {
+      outfit_recruit: ['starter_shirt', 'starter_pants'],
+      outfit_flannel: ['green_shirt', 'green_pants'],
+      outfit_vest: ['blue_shirt', 'blue_pants'],
+      outfit_parka: ['orange_shirt', 'orange_pants'],
+      outfit_sovereign: ['purple_shirt', 'purple_pants'],
+      outfit_naturalist: ['green_shirt', 'green_pants'],
+      outfit_master_naturalist: ['blue_shirt', 'blue_pants']
+    }[source.outfit] || ['starter_shirt', 'starter_pants'];
+    const availablePurchasedIds = new Set(EQUIPMENT_CATALOG
+      .filter(item => item.unlock.type === 'coin').map(item => item.id)
+      .concat(PET_CATALOG.filter(item => item.unlock.type === 'coin').map(item => item.id)));
+    const purchasedItems = Array.isArray(source.purchasedItems)
+      ? [...new Set(source.purchasedItems.filter(id => availablePurchasedIds.has(id)))]
+      : [];
+    const equipment = Object.fromEntries(Object.entries(EQUIPMENT_DEFAULTS).map(([field, fallback]) => {
+      const legacyValue = field === 'top' ? legacyOutfit[0] :
+        field === 'bottoms' ? legacyOutfit[1] : fallback;
+      const allowed = EQUIPMENT_BY_FIELD[field] || [];
+      const isOwned = candidate => candidate.unlock.type !== 'coin' ||
+        purchasedItems.includes(candidate.id);
+      const item = allowed.find(candidate =>
+        candidate.id === source[field] && candidate.paths[gender] && isOwned(candidate));
+      const defaultItem = allowed.find(candidate =>
+        candidate.id === (source[field] == null ? legacyValue : source[field]) &&
+        candidate.paths[gender] && isOwned(candidate));
+      return [field, item?.id || defaultItem?.id || fallback];
+    }));
     return {
       gender,
       skinTone: validColorId(source.skinTone, SKIN_TONES, DEFAULT_CHARACTER.skinTone),
@@ -237,8 +529,15 @@
       hat: normalizeId(source.hat, knownIds(HAT_CATALOG), DEFAULT_CHARACTER.hat),
       outfit: normalizeId(source.outfit, knownIds(OUTFIT_CATALOG), DEFAULT_CHARACTER.outfit),
       accessory: normalizeId(source.accessory, knownIds(ACCESSORY_CATALOG), DEFAULT_CHARACTER.accessory),
-      pet: normalizeId(pet, knownIds(PET_CATALOG), DEFAULT_CHARACTER.pet),
+      pet: (() => {
+        const selectedPet = PET_CATALOG.find(item => item.id === pet);
+        return selectedPet && (selectedPet.unlock.type !== 'coin' ||
+          purchasedItems.includes(selectedPet.id))
+          ? selectedPet.id : DEFAULT_CHARACTER.pet;
+      })(),
       background: normalizeId(source.background, knownIds(BACKGROUND_CATALOG), DEFAULT_CHARACTER.background),
+      ...equipment,
+      purchasedItems,
       proUnlocked: source.proUnlocked === true,
       donationUsd: Number.isFinite(Number(source.donationUsd))
         ? Math.max(0, Math.min(1000000, Number(source.donationUsd))) : 0
@@ -263,7 +562,70 @@
     return progress;
   }
 
-  function unlockStatus(unlock, stats, character, achievements) {
+  const COINS_PER_RARITY = Object.freeze({
+    'Tourist Trap': 10,
+    'Beaten Path': 15,
+    'Regional Staple': 20,
+    'Deep Cut': 25,
+    'Hidden Gem': 30,
+    Uncharted: 35
+  });
+  const COINS_PER_ACHIEVEMENT_RARITY = Object.freeze({
+    common: 25, uncommon: 50, rare: 100, epic: 200, legendary: 350, mythic: 500
+  });
+  const SHOP_ITEMS_BY_ID = new Map([
+    ...EQUIPMENT_CATALOG.filter(item => item.unlock.type === 'coin'),
+    ...PET_CATALOG.filter(item => item.unlock.type === 'coin')
+  ].map(item => [item.id, item]));
+
+  function coinSummary(stats = {}, appState = {}) {
+    const expeditions = Array.isArray(appState.expeditions) ? appState.expeditions : [];
+    const expeditionCoins = expeditions.reduce((total, expedition) => {
+      const multiDay = typeof expedition.startDate === 'string' &&
+        typeof expedition.endDate === 'string' && expedition.endDate > expedition.startDate;
+      return total + 25 + (multiDay ? 10 : 0);
+    }, 0);
+    const parks = Array.isArray(stats.visitedParks) ? stats.visitedParks.length : 0;
+    const rarityPlaces = stats.metadataProgress?.rarityEntities || [];
+    const placeCoins = rarityPlaces.reduce((total, entity) => {
+      if (!['poi', 'photon', 'place'].includes(entity.kind)) return total;
+      return total + (COINS_PER_RARITY[entity.tier] || 0);
+    }, 0);
+    const countries = new Set(stats.visitedCountries || []);
+    Object.entries(appState.regions || {}).forEach(([key, status]) => {
+      if (key.startsWith('c:') && (status === 'v' || status === 'l')) countries.add(key.slice(2));
+    });
+    const visitedStates = new Set(stats.visitedStates || []);
+    const subdivisions = new Set();
+    Object.entries(appState.regions || {}).forEach(([key, status]) => {
+      if (!key.startsWith('s:') || (status !== 'v' && status !== 'l')) return;
+      const name = key.slice(2);
+      if (!visitedStates.has(name)) subdivisions.add(name);
+    });
+    (stats.metadataProgress?.visitedSubdivisionIds || []).forEach(id => {
+      if (typeof id === 'string' && id && !visitedStates.has(id)) subdivisions.add(id);
+    });
+    const counties = new Set(stats.metadataProgress?.visitedCountyIds || []);
+    const directCounties = Object.entries(appState.counties || {})
+      .filter(([, status]) => status === 'v' || status === 'l').map(([id]) => id);
+    directCounties.forEach(id => counties.add(id));
+    const levelCoins = Math.max(0, (Number(stats.level) || 1) - 1) * 50;
+    const achievementCoins = (stats.completedAchievementTiers || []).reduce((total, achievement) =>
+      total + (COINS_PER_ACHIEVEMENT_RARITY[String(achievement.rarity || '').toLowerCase()] || 0), 0);
+    const earnedCoins = expeditionCoins + parks * 15 + placeCoins + countries.size * 15 +
+      visitedStates.size * 5 + subdivisions.size * 5 + counties.size * 2 +
+      levelCoins + achievementCoins;
+    const purchasedItems = [...new Set(normalizeCharacter(appState.character).purchasedItems)];
+    const spentCoins = purchasedItems.reduce((total, id) =>
+      total + (SHOP_ITEMS_BY_ID.get(id)?.cost || 0), 0);
+    return {
+      earnedCoins,
+      spentCoins,
+      availableCoins: Math.max(0, earnedCoins - spentCoins)
+    };
+  }
+
+  function unlockStatus(unlock, stats, character, achievements, appState = { character }) {
     if (!unlock || unlock.type === 'starter') return { unlocked: true, description: 'Available from the start.' };
     if (unlock.type === 'level') {
       const current = Number(stats.level) || 1;
@@ -296,6 +658,14 @@
       return {
         unlocked: current >= unlock.goal,
         description: `Requires $${unlock.goal} in recorded donations ($${Math.min(current, unlock.goal)}/$${unlock.goal}).`
+      };
+    }
+    if (unlock.type === 'coin') {
+      const owned = character.purchasedItems.includes(unlock.itemId);
+      const available = coinSummary(stats, appState).availableCoins;
+      return {
+        unlocked: owned || available >= unlock.cost,
+        description: owned ? 'Purchased.' : `${unlock.cost} Wayfarer Coins.`
       };
     }
     return { unlocked: false, description: 'Unlock requirement unavailable.' };
@@ -342,21 +712,37 @@
     const skinIndex = SKIN_TONES.findIndex(tone => tone.id === character.skinTone) + 1;
     const hairCatalog = HAIR_STYLES.filter(style => style.genders.includes(character.gender));
     const hair = getItem(hairCatalog, character.hairStyle);
-    const outfit = getItem(OUTFIT_CATALOG, character.outfit);
-    const outfitLayers = OUTFIT_SPRITE_LAYERS[outfit.spriteStyle]?.[character.gender] ||
-      OUTFIT_SPRITE_LAYERS.classic[character.gender];
-    const footwear = character.gender === 'female' ? 'Female Clothing/Boots.png' : 'Male Clothing/Shoes.png';
-    const hairstyleFolder = character.gender === 'female' ? '30x%20Female%20Hair' : '28x%20Male%20Hair';
-    const hairstyleFilename = hair.fileName
-      ? hair.fileName.replaceAll(' ', '%20')
-      : `${character.gender === 'female' ? 'Female' : 'Male'}%20Hair${hair.sheet}.png`;
-    return [
-      `${CHARACTER_ASSET_ROOT}Character%20skin%20colors/${genderName}%20Skin${skinIndex}.png`,
-      `${CHARACTER_ASSET_ROOT}${outfitLayers[1].replaceAll(' ', '%20')}`,
-      `${CHARACTER_ASSET_ROOT}${outfitLayers[0].replaceAll(' ', '%20')}`,
-      `${CHARACTER_ASSET_ROOT}${footwear.replaceAll(' ', '%20')}`,
-      `${HAIRSTYLE_ASSET_ROOT}${hairstyleFolder}/${hairstyleFilename}`
-    ];
+    const hairFolder = hair.fileName
+      ? '28x Male Hair' : character.gender === 'female' ? '30x Female Hair' : '28x Male Hair';
+    const hairFile = hair.fileName || `${genderName} Hair${hair.sheet}.png`;
+    const equipmentLayer = (field, layer) => {
+      const item = (EQUIPMENT_BY_FIELD[field] || []).find(candidate => candidate.id === character[field]);
+      const path = item?.paths[character.gender];
+      return path ? { layer, imageSrc: assetUrl(path) } : null;
+    };
+    const specialSkin = equipmentLayer('specialSkin', 'base');
+    const layers = [
+      equipmentLayer('backLayer', 'back'),
+      equipmentLayer('effect', 'effect'),
+      specialSkin || {
+        layer: 'base',
+        imageSrc: assetUrl(`${CHARACTER_ASSET_ROOT}Character skin colors/${genderName} Skin${skinIndex}.png`)
+      },
+      equipmentLayer('ears', 'ears'),
+      equipmentLayer('bottoms', 'bottoms'),
+      equipmentLayer('shoes', 'shoes'),
+      equipmentLayer('top', 'top'),
+      equipmentLayer('arms', 'arms'),
+      {
+        layer: 'hair',
+        imageSrc: assetUrl(`${HAIRSTYLE_ASSET_ROOT}${hairFolder}/${hairFile}`),
+        filter: hairColorFilter(character.hairColor)
+      },
+      equipmentLayer('face', 'face'),
+      equipmentLayer('headwear', 'headwear'),
+      equipmentLayer('handItem', 'hand')
+    ].filter(Boolean);
+    return layers;
   }
 
   function hairColorFilter(colorId) {
@@ -390,255 +776,35 @@
     pixel(ctx, 32, 64, 3, 8, '#df6136');
   }
 
-  function drawHair(ctx, style, color, center, top) {
-    if (style === 'short') {
-      pixel(ctx, center - 5, top, 10, 3, color);
-      pixel(ctx, center - 6, top + 2, 3, 5, color);
-    } else if (style === 'bob') {
-      pixel(ctx, center - 6, top, 12, 4, color);
-      pixel(ctx, center - 6, top + 3, 3, 8, color);
-      pixel(ctx, center + 3, top + 3, 3, 8, color);
-    } else if (style === 'long') {
-      pixel(ctx, center - 6, top, 12, 4, color);
-      pixel(ctx, center - 6, top + 3, 3, 14, color);
-      pixel(ctx, center + 3, top + 3, 3, 14, color);
-    } else {
-      pixel(ctx, center - 6, top, 4, 4, color);
-      pixel(ctx, center - 2, top - 2, 5, 5, color);
-      pixel(ctx, center + 2, top, 4, 4, color);
-      pixel(ctx, center - 6, top + 3, 3, 8, color);
-      pixel(ctx, center + 3, top + 3, 3, 8, color);
-    }
-  }
-
-  function drawHat(ctx, hat, center, headTop) {
-    const outline = '#3a2d29';
-    const hatBase = headTop + 3;
-    const drawCrown = (widths, top) => {
-      widths.forEach((width, row) => {
-        const left = center - Math.floor(width / 2);
-        pixel(ctx, left - 1, top + row, width + 2, 1, outline);
-        pixel(ctx, left, top + row, width, 1, hat.color);
-      });
-    };
-    const drawBrim = (width, color = hat.color) => {
-      pixel(ctx, center - Math.floor(width / 2), hatBase - 2, width, 2, outline);
-      pixel(ctx, center - Math.floor(width / 2) + 1, hatBase - 2, width - 2, 1, color);
-    };
-
-    if (hat.id.includes('ranger')) {
-      drawCrown([4, 8, 10, 12, 14, 16], hatBase - 9);
-      pixel(ctx, center - 2, hatBase - 8, 2, 4, '#d4b477');
-      pixel(ctx, center - 7, hatBase - 3, 14, 1, '#765036');
-      drawBrim(22);
-      pixel(ctx, center - 1, hatBase - 3, 3, 2,
-        hat.id.includes('silver') ? '#d7dce1' :
-          hat.id.includes('gold') ? '#f5d96e' :
-            hat.id.includes('diamond') ? '#b5f0ee' : '#e6d194');
-    } else if (hat.id === 'hat_volunteer' || hat.id === 'hat_captain') {
-      drawCrown([8, 12, 14, 14], hatBase - 6);
-      drawBrim(19);
-      pixel(ctx, center + 2, hatBase - 1, 7, 1, '#4f443e');
-      if (hat.id === 'hat_captain') pixel(ctx, center - 2, hatBase - 4, 4, 2, '#e4d8b5');
-    } else if (hat.id === 'hat_pith') {
-      drawCrown([8, 12, 16, 18], hatBase - 6);
-      drawBrim(22, '#e4d09b');
-      pixel(ctx, center - 6, hatBase - 4, 12, 1, '#f2e2b6');
-    } else if (hat.id === 'hat_summit') {
-      drawCrown([8, 12, 14, 16], hatBase - 6);
-      drawBrim(18, '#8bb9c8');
-      pixel(ctx, center - 7, hatBase - 1, 14, 2, '#d1e9e7');
-      pixel(ctx, center - 6, hatBase - 1, 4, 2, '#3f6e80');
-      pixel(ctx, center + 2, hatBase - 1, 4, 2, '#3f6e80');
-    } else if (hat.id === 'hat_bandana') {
-      pixel(ctx, center - 7, hatBase - 2, 14, 2, outline);
-      pixel(ctx, center - 6, hatBase - 2, 12, 1, hat.color);
-      pixel(ctx, center + 6, hatBase - 3, 3, 3, hat.color);
-    } else if (hat.id === 'hat_golden_halo') {
-      pixel(ctx, center - 4, hatBase - 8, 8, 2, '#f3ca63');
-      pixel(ctx, center - 7, hatBase - 6, 2, 4, '#f3ca63');
-      pixel(ctx, center + 5, hatBase - 6, 2, 4, '#f3ca63');
-    } else {
-      drawCrown([8, 12, 14], hatBase - 5);
-      drawBrim(18);
-    }
-  }
-
-  function drawCharacterAccessory(ctx, accessory) {
-    if (accessory.id === 'accessory_none') return;
-    if (accessory.id === 'accessory_stick') {
-      pixel(ctx, 91, 58, 1, 19, accessory.color);
-      pixel(ctx, 90, 57, 3, 2, '#c7ad7b');
-    } else if (accessory.id === 'accessory_lantern') {
-      pixel(ctx, 90, 61, 5, 7, '#7b5636');
-      pixel(ctx, 91, 62, 3, 4, '#f3cf76');
-      pixel(ctx, 91, 59, 3, 2, '#c1904d');
-    } else if (accessory.id === 'accessory_spyglass' || accessory.id === 'accessory_binoculars') {
-      pixel(ctx, 65, 59, 6, 3, accessory.color);
-      pixel(ctx, 64, 58, 2, 5, '#d5bd7b');
-    } else {
-      pixel(ctx, 88, 60, 6, 5, accessory.color);
-      pixel(ctx, 89, 61, 2, 2, '#d6bd81');
-    }
-  }
-
-  function drawCharacterSprite(ctx, value, redraw = () => {}) {
+  function drawCharacterSprite(ctx, value, redraw = () => {}, frameIndex = 0) {
     const target = CHARACTER_SPRITE_TARGET;
     const character = normalizeCharacter(value);
-    characterSpriteAssets(character).forEach((imageSrc, index, assets) => {
-      const image = getImage({ imageSrc }, redraw);
+    characterSpriteAssets(character).forEach(layer => {
+      const image = getImage(layer, redraw);
       if (image) {
-        const isHairLayer = index === assets.length - 1;
-        if (isHairLayer) {
+        if (layer.filter) {
           ctx.save();
-          ctx.filter = hairColorFilter(character.hairColor);
+          ctx.filter = layer.filter;
         }
         ctx.drawImage(
           image,
-          CHARACTER_SPRITE_FRAME.x, CHARACTER_SPRITE_FRAME.y,
+          Math.max(0, frameIndex) * CHARACTER_SPRITE_FRAME.sheetWidth + CHARACTER_SPRITE_FRAME.x,
+          CHARACTER_SPRITE_FRAME.y,
           CHARACTER_SPRITE_FRAME.width, CHARACTER_SPRITE_FRAME.height,
           target.x, target.y, target.width, target.height
         );
-        if (isHairLayer) ctx.restore();
+        if (layer.filter) ctx.restore();
       }
     });
-    const hat = getItem(HAT_CATALOG, character.hat);
-    if (hat.id !== 'hat_none') drawHat(ctx, hat, 80, 37);
-    drawCharacterAccessory(ctx, getItem(ACCESSORY_CATALOG, character.accessory));
   }
 
-  function drawPerson(ctx, character, redraw) {
-    const skin = getItem(SKIN_TONES, character.skinTone).color;
-    const hair = getItem(HAIR_COLORS, character.hairColor).color;
-    const eyes = getItem(EYE_COLORS, character.eyeColor).color;
-    const outfit = getItem(OUTFIT_CATALOG, character.outfit);
-    const hat = getItem(HAT_CATALOG, character.hat);
-    const accessory = getItem(ACCESSORY_CATALOG, character.accessory);
-    const center = 79;
-    const ground = 80;
-    const legScale = character.height === 'compact' ? 0.85 : character.height === 'tall' ? 1.15 : 1;
-    const torsoScale = character.height === 'compact' ? 0.92 : character.height === 'tall' ? 1.08 : 1;
-    const bodyProfile = BODY_SHAPE_PROFILES[character.bodyShape] || BODY_SHAPE_PROFILES.straight;
-    const legHeight = Math.round(17 * legScale);
-    const torsoHeight = Math.round(13 * torsoScale);
-    const headHeight = 10;
-    const headTop = ground - legHeight - torsoHeight - headHeight;
-    const torsoTop = ground - legHeight - torsoHeight;
-    const torsoWidthAt = row => {
-      const index = Math.round(row * (bodyProfile.length - 1) / Math.max(1, torsoHeight - 1));
-      return bodyProfile[index];
-    };
-    const shoulderWidth = torsoWidthAt(0);
-    const hipWidth = torsoWidthAt(torsoHeight - 1);
-    const shoulderLeft = center - Math.floor(shoulderWidth / 2);
-    const shoulderRight = center + Math.floor(shoulderWidth / 2);
-    const imageFor = (item, x, y, w, h) => {
-      const image = getImage(item, redraw);
-      if (!image) return false;
-      ctx.drawImage(image, x, y, w, h);
-      return true;
-    };
-    pixel(ctx, center - Math.ceil(hipWidth / 2) - 2, ground - 2, hipWidth + 4, 2, '#253444');
-    pixel(ctx, center - 4, ground - legHeight, 3, legHeight, '#33475a');
-    pixel(ctx, center + 1, ground - legHeight, 3, legHeight, '#33475a');
-    pixel(ctx, center - 5, ground - 2, 4, 2, '#4d3c35');
-    pixel(ctx, center + 1, ground - 2, 4, 2, '#4d3c35');
-    for (let row = 0; row < torsoHeight; row++) {
-      const rowWidth = torsoWidthAt(row);
-      const left = center - Math.floor(rowWidth / 2);
-      pixel(ctx, left - 1, torsoTop + row, rowWidth + 2, 1, '#253444');
-      pixel(ctx, left, torsoTop + row, rowWidth, 1, outfit.color);
-    }
-    for (let row = 2; row < torsoHeight - 2; row++) {
-      const rowWidth = torsoWidthAt(row);
-      const left = center - Math.floor(rowWidth / 2);
-      pixel(ctx, left - 4, torsoTop + row, 3, 1, skin);
-      pixel(ctx, left + rowWidth + 1, torsoTop + row, 3, 1, skin);
-    }
-    pixel(ctx, center - Math.ceil(shoulderWidth / 2) - 1, torsoTop, shoulderWidth + 2, 1, '#253444');
-    pixel(ctx, center - Math.ceil(hipWidth / 2) - 1, torsoTop + torsoHeight - 1, hipWidth + 2, 1, '#384c42');
-    pixel(ctx, center - 7, headTop + 5, 2, 2, skin);
-    pixel(ctx, center + 5, headTop + 5, 2, 2, skin);
-    pixel(ctx, center - 5, headTop, 10, headHeight, skin);
-    pixel(ctx, center - 3, headTop + 5, 2, 2, eyes);
-    pixel(ctx, center + 2, headTop + 5, 2, 2, eyes);
-    pixel(ctx, center - 1, headTop + 9, 2, 1, '#9c5a56');
-    const hairStyle = getItem(HAIR_STYLES, character.hairStyle);
-    if (!imageFor(hairStyle, center - 8, headTop - 4, 16, 18)) {
-      drawHair(ctx, character.hairStyle, hair, center, headTop - 1);
-    }
-    if (hat.id !== 'hat_none' && !imageFor(hat, center - 11, headTop - 6, 22, 10)) {
-      drawHat(ctx, hat, center, headTop);
-    }
-    if (outfit.id === 'outfit_flannel') {
-      pixel(ctx, center - 1, torsoTop + 1, 2, Math.max(3, torsoHeight - 7), '#e6c484');
-      const beltWidth = torsoWidthAt(Math.min(7, torsoHeight - 1));
-      pixel(ctx, center - Math.floor(beltWidth / 2), torsoTop + 7, beltWidth, 2, '#754944');
-    } else if (outfit.id === 'outfit_vest' || outfit.id === 'outfit_naturalist') {
-      pixel(ctx, center - 1, torsoTop + 3, 2, Math.max(3, torsoHeight - 8), '#d7b66d');
-      const pocketWidth = torsoWidthAt(Math.min(5, torsoHeight - 1));
-      pixel(ctx, center - Math.floor(pocketWidth / 2) + 1, torsoTop + 5, 2, 3, '#594e37');
-      pixel(ctx, center + Math.floor(pocketWidth / 2) - 3, torsoTop + 5, 2, 3, '#594e37');
-    } else if (outfit.id === 'outfit_parka') {
-      const trimWidth = torsoWidthAt(Math.min(2, torsoHeight - 1));
-      pixel(ctx, center - Math.floor(trimWidth / 2), torsoTop + 2, trimWidth, 2, '#d7e1df');
-    } else if (outfit.id === 'outfit_rain') {
-      const trimWidth = torsoWidthAt(Math.min(1, torsoHeight - 1));
-      pixel(ctx, center - Math.floor(trimWidth / 2), torsoTop + 1, trimWidth, 3, '#9bbbd0');
-    } else if (outfit.id === 'outfit_astral' || outfit.id === 'outfit_sovereign') {
-      pixel(ctx, center - 1, torsoTop + 3, 2, Math.max(3, torsoHeight - 8), '#e1c779');
-    }
-    imageFor(outfit, center - 12, torsoTop, 24, torsoHeight + legHeight / 2);
-    if (accessory.id !== 'accessory_none' && !imageFor(accessory, center - 14, torsoTop + 5, 24, torsoHeight)) {
-      if (accessory.id === 'accessory_stick') {
-        pixel(ctx, center + 11, torsoTop + 3, 1, torsoHeight + legHeight, accessory.color);
-        pixel(ctx, center + 10, torsoTop + 2, 3, 2, '#c7ad7b');
-      } else if (accessory.id === 'accessory_lantern') {
-        pixel(ctx, center + 10, torsoTop + 7, 5, 7, '#7b5636');
-        pixel(ctx, center + 11, torsoTop + 8, 3, 4, '#f3cf76');
-        pixel(ctx, center + 11, torsoTop + 5, 3, 2, '#c1904d');
-      } else if (accessory.id === 'accessory_spyglass' || accessory.id === 'accessory_binoculars') {
-        pixel(ctx, center - 13, torsoTop + 4, 6, 3, accessory.color);
-        pixel(ctx, center - 14, torsoTop + 3, 2, 5, '#d5bd7b');
-      } else {
-        pixel(ctx, center + 9, torsoTop + 5, 6, 5, accessory.color);
-        pixel(ctx, center + 10, torsoTop + 6, 2, 2, '#d6bd81');
-      }
-    }
-  }
-
-  function petAnimationFrame(canvas, pet) {
-    let animation = petAnimations.get(canvas);
-    if (!pet.spriteSheet) {
-      if (animation) clearInterval(animation.timerId);
-      petAnimations.delete(canvas);
-      return 0;
-    }
-    if (!animation || animation.petId !== pet.id) {
-      if (animation) clearInterval(animation.timerId);
-      animation = { petId: pet.id, frame: 0, timerId: 0 };
-      animation.timerId = setInterval(() => {
-        if (petAnimations.get(canvas) !== animation) return;
-        if (canvas.isConnected === false) {
-          clearInterval(animation.timerId);
-          petAnimations.delete(canvas);
-          return;
-        }
-        animation.frame = (animation.frame + 1) % pet.spriteSheet.frameCount;
-        stageRenderers.get(canvas)?.();
-      }, pet.spriteSheet.frameDuration);
-      petAnimations.set(canvas, animation);
-    }
-    return animation.frame;
-  }
-
-  function drawPet(ctx, pet, redraw, frameIndex = 0) {
+  function drawPet(ctx, pet, redraw) {
     if (pet.id === 'pet_none') return;
     const image = getImage(pet, redraw);
     if (pet.spriteSheet) {
       if (!image) return;
       const sprite = pet.spriteSheet;
-      const frame = Math.max(0, frameIndex) % sprite.frameCount;
+      const frame = 0;
       ctx.drawImage(
         image,
         frame * sprite.frameWidth + (sprite.sourceX || 0),
@@ -650,61 +816,17 @@
         sprite.targetWidth,
         sprite.targetHeight
       );
-      return;
     }
-    if (image) {
-      ctx.drawImage(image, 102, 64, 20, 16);
-      return;
-    }
-    const outline = '#263442';
-    const drawBody = (x, y, widths, color) => {
-      const maxWidth = Math.max(...widths);
-      pixel(ctx, x + Math.floor((maxWidth - widths[0]) / 2) - 1, y - 1, widths[0] + 2, 1, outline);
-      widths.forEach((width, row) => {
-        const left = x + Math.floor((maxWidth - width) / 2);
-        pixel(ctx, left - 1, y + row, width + 2, 1, outline);
-        pixel(ctx, left, y + row, width, 1, color);
-      });
-      const lastWidth = widths[widths.length - 1];
-      pixel(ctx, x + Math.floor((maxWidth - lastWidth) / 2) - 1, y + widths.length, lastWidth + 2, 1, outline);
-    };
-    if (pet.kind === 'pufflin') {
-      const x = 102;
-      const y = 67;
-      drawBody(x, y, [8, 12, 16, 18, 18, 18, 18, 18, 16, 14, 10], pet.color);
-      pixel(ctx, x + 7, y - 3, 5, 3, outline);
-      pixel(ctx, x + 8, y - 5, 4, 3, pet.color);
-      pixel(ctx, x + 10, y - 6, 3, 2, pet.color);
-      pixel(ctx, x + 4, y + 4, 3, 3, '#fff6e6');
-      pixel(ctx, x + 12, y + 4, 3, 3, '#fff6e6');
-      pixel(ctx, x + 5, y + 5, 1, 2, '#203347');
-      pixel(ctx, x + 13, y + 5, 1, 2, '#203347');
-      pixel(ctx, x + 8, y + 8, 3, 1, '#522f46');
-      pixel(ctx, x + 4, y + 11, 4, 2, outline);
-      pixel(ctx, x + 12, y + 11, 4, 2, outline);
-      pixel(ctx, x + 5, y + 11, 3, 1, pet.color);
-      pixel(ctx, x + 12, y + 11, 3, 1, pet.color);
-    } else {
-      const x = 103;
-      drawBody(x + 1, 70, [8, 12, 15, 16, 16, 14, 11], pet.color);
-      pixel(ctx, x + 14, 71, 3, 3, '#613a2c');
-      pixel(ctx, x + 16, 69, 3, 3, '#613a2c');
-      pixel(ctx, x + 15, 67, 3, 3, '#613a2c');
-      pixel(ctx, x + 4, 63, 4, 5, '#7a4932');
-      pixel(ctx, x + 14, 63, 4, 5, '#7a4932');
-      drawBody(x + 3, 65, [6, 10, 13, 14, 14, 12, 10], pet.color);
-      pixel(ctx, x + 6, 69, 2, 2, '#fff0dc');
-      pixel(ctx, x + 12, 69, 2, 2, '#fff0dc');
-      pixel(ctx, x + 7, 69, 1, 2, '#382e2d');
-      pixel(ctx, x + 13, 69, 1, 2, '#382e2d');
-      pixel(ctx, x + 9, 72, 3, 1, '#ead4b7');
-      pixel(ctx, x + 2, 72, 5, 1, '#ead4b7');
-      pixel(ctx, x + 15, 72, 5, 1, '#ead4b7');
-      pixel(ctx, x + 6, 77, 4, 2, '#ead4b7');
-      pixel(ctx, x + 13, 77, 4, 2, '#ead4b7');
-      pixel(ctx, x + 17, 71, 2, 1, '#513a34');
-      pixel(ctx, x + 18, 73, 2, 1, '#ead4b7');
-    }
+  }
+
+  function drawPetAccessory(ctx, character, field, redraw) {
+    if (!character.pet.startsWith('pet_trail_dog')) return;
+    const item = PET_ACCESSORY_CATALOG.find(candidate => candidate.id === character[field]);
+    const path = item?.paths[character.gender];
+    if (!path) return;
+    const image = getImage({ imageSrc: assetUrl(path) }, redraw);
+    if (!image) return;
+    ctx.drawImage(image, 0, 0, 32, 32, 101, 64, 15, 10);
   }
 
   function drawStage(canvas, value, options = {}) {
@@ -718,16 +840,44 @@
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     stageRenderers.set(canvas, () => drawStage(canvas, character, options));
-    const petFrame = petAnimationFrame(canvas, activePet);
     ctx.imageSmoothingEnabled = false;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();
     ctx.scale(canvas.width / 160, canvas.height / 90);
     drawBackground(ctx, activeBackground, redraw);
     drawCharacterSprite(ctx, character, redraw);
-    drawPet(ctx, activePet, redraw, petFrame);
+    drawPet(ctx, activePet, redraw);
+    drawPetAccessory(ctx, character, 'petBackpack', redraw);
+    drawPetAccessory(ctx, character, 'petHat', redraw);
     pixel(ctx, 0, 82, 160, 8, '#17212d');
     pixel(ctx, 0, 82, 160, 1, '#84946d');
+    ctx.restore();
+  }
+
+  function renderAvatar(canvas, value) {
+    if (!canvas || typeof canvas.getContext !== 'function') return;
+    const character = normalizeCharacter(value);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const redraw = () => {
+      if (canvas.isConnected !== false) renderAvatar(canvas, character);
+    };
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.save();
+    const scale = Math.min(canvas.width / 80, canvas.height / 48);
+    ctx.translate((canvas.width - 80 * scale) / 2, (canvas.height - 48 * scale) / 2);
+    ctx.scale(scale, scale);
+    characterSpriteAssets(character).forEach(layer => {
+      const image = getImage(layer, redraw);
+      if (!image) return;
+      if (layer.filter) {
+        ctx.save();
+        ctx.filter = layer.filter;
+      }
+      ctx.drawImage(image, 0, 0, 80, 48, 0, 0, 80, 48);
+      if (layer.filter) ctx.restore();
+    });
     ctx.restore();
   }
 
@@ -744,21 +894,24 @@
 
   function characterThumbnailMarkup(character) {
     const assets = characterSpriteAssets(character);
-    const hairFilter = hairColorFilter(character.hairColor);
     return `<span aria-hidden="true" class="relative block h-10 w-10 shrink-0 overflow-hidden rounded bg-slate-900">
-      ${assets.map((src, index) => `<img src="${escapeHtml(src)}" alt="" class="absolute max-w-none"
-        loading="lazy" style="width:1000px;height:560px;left:-30px;top:-20px;image-rendering:pixelated;${index === assets.length - 1 ? `filter:${hairFilter}` : ''}">`).join('')}
+      ${assets.map(layer => `<img src="${escapeHtml(layer.imageSrc)}" alt="" class="absolute left-0 top-0 max-w-none"
+        loading="lazy" style="width:400px;height:224px;image-rendering:pixelated;${layer.filter ? `filter:${layer.filter}` : ''}">`).join('')}
     </span>`;
   }
 
   function hairPresetOptions(character) {
     const styles = HAIR_STYLES.filter(style => style.genders.includes(character.gender));
-    return styles.flatMap((style, index) => HAIR_COLORS.map(color => ({
-      id: `${style.id}::${color.id}`,
-      name: `Hairstyle ${index + 1}: ${color.name}`,
-      hairStyle: style.id,
-      hairColor: color.id
-    })));
+    return styles.flatMap((style, index) => HAIR_COLORS.map(color => {
+      const levelReward = LEVEL_HAIR_REWARDS.find(reward => reward.id === style.id);
+      return {
+        id: `${style.id}::${color.id}`,
+        name: `Hairstyle ${index + 1}: ${color.name}`,
+        hairStyle: style.id,
+        hairColor: color.id,
+        unlock: levelReward ? { type: 'level', goal: levelReward.level } : { type: 'starter' }
+      };
+    }));
   }
 
   function hairThumbnailMarkup(character) {
@@ -804,7 +957,8 @@
   }
 
   function visualDropdownMarkup(label, field, options, value, disabled, renderChoice) {
-    const selected = options.find(option => option.id === value) || options[0];
+    const selected = options.find(option => option.id === value) || options[0] ||
+      { id: '', name: 'None' };
     return `<div class="block text-xs text-slate-300">
       <span class="block">${escapeHtml(label)}</span>
       <details class="relative mt-1">
@@ -829,13 +983,44 @@
     </div>`;
   }
 
-  function catalogOptions(catalog, value, stats, character, achievements, selectedLabel = 'Selected') {
+  function catalogOptions(catalog, value, stats, character, achievements,
+    selectedLabel = 'Selected', appState = { character }) {
     return catalog.map(item => {
-        const status = unlockStatus(item.unlock, stats, character, achievements);
+        const status = unlockStatus(item.unlock, stats, character, achievements, appState);
         const selected = item.id === value;
-        const description = status.unlocked ? selected ? ` — ${selectedLabel}` : '' : ` — 🔒 ${status.description}`;
+        const isCoinItem = item.unlock?.type === 'coin';
+        const owned = isCoinItem && character.purchasedItems.includes(item.id);
+        const description = isCoinItem
+          ? owned ? selected ? ` — ${selectedLabel}` : ' — Owned'
+            : status.unlocked ? ` — ${item.cost} coins` : ` — 🔒 ${item.cost} coins`
+          : status.unlocked ? selected ? ` — ${selectedLabel}` : ''
+            : ` — 🔒 ${status.description}`;
         return { ...item, name: item.name + description, disabled: !status.unlocked };
       });
+  }
+
+  function equipmentOptions(field, character, stats, achievements, appState) {
+    const choices = (EQUIPMENT_BY_FIELD[field] || [])
+      .filter(item => item.paths[character.gender]);
+    const canClear = !['top', 'bottoms', 'shoes'].includes(field);
+    if (canClear) choices.unshift({
+      id: '', name: 'None', field, paths: {}, unlock: { type: 'starter' }, imageSrc: null
+    });
+    return catalogOptions(choices, character[field], stats, character, achievements, 'Equipped', appState);
+  }
+
+  function equipmentThumbnailMarkup(item, gender) {
+    const path = item.paths?.[gender];
+    return `<span aria-hidden="true" class="relative block h-10 w-10 shrink-0 overflow-hidden rounded bg-slate-900">
+      ${path ? `<img src="${escapeHtml(assetUrl(path))}" alt="" class="absolute left-0 top-0 max-w-none"
+        style="width:400px;height:224px;image-rendering:pixelated">` : ''}
+    </span>`;
+  }
+
+  function coinIconMarkup() {
+    const path = assetUrl(`${ASSET_ROOT}GandalfHardcore Emojis and Icons/Coin.png`);
+    return `<span aria-hidden="true" class="inline-block h-4 w-4 shrink-0 bg-no-repeat"
+      style="background-image:url('${path}');background-size:192px 16px;background-position:0 0"></span>`;
   }
 
   function petThumbnailMarkup(pet) {
@@ -862,7 +1047,7 @@
     ctx.save();
     ctx.scale(2, 2);
     ctx.translate(-96, -55);
-    drawPet(ctx, pet, () => renderPetPreview(canvas, pet), 0);
+    drawPet(ctx, pet, () => renderPetPreview(canvas, pet));
     ctx.restore();
   }
 
@@ -900,77 +1085,82 @@
     </span>`;
   }
 
-  function renderControls(container, character, stats, achievements, disabled) {
+  function renderControls(container, character, stats, achievements, disabled, appState) {
     const activeTab = tabs.includes(container.dataset.activeTab) ? container.dataset.activeTab : 'appearance';
     const completedAchievements = achievementProgress(stats, achievements);
+    const dropdown = (field, label, current, choices, renderChoice) =>
+      visualDropdownMarkup(label, field, choices, current, disabled, renderChoice);
+    const equipmentDropdown = (field, label, fieldDisabled = false) => dropdown(
+      field, label, character[field],
+      equipmentOptions(field, character, stats, completedAchievements, appState),
+      option => equipmentThumbnailMarkup(option, character.gender),
+      disabled || fieldDisabled
+    );
+    const petOptions = catalogOptions(PET_CATALOG, character.pet, stats, character,
+      completedAchievements, 'Equipped', appState);
+    const coinBalance = coinSummary(stats, appState);
+    const wardrobeFields = [
+      ['top', 'Shirts, Bodices & Dresses'], ['bottoms', 'Pants & Skirts'], ['shoes', 'Footwear'],
+      ['headwear', 'Hats & Helmets'], ['handItem', 'Hand Items'], ['backLayer', 'Back Layers'],
+      ['arms', 'Arm Layers'], ['face', 'Masks & Face Paint'], ['ears', 'Elven Ears'],
+      ['effect', 'Character Effects'], ['specialSkin', 'Special Skins']
+    ];
+    const purchaseControls = `<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+      ${wardrobeFields.map(([field, label]) => equipmentDropdown(field, label)).join('')}
+      ${dropdown('pet', 'Pets', character.pet, petOptions, option => petThumbnailMarkup(option))}
+      ${equipmentDropdown('petHat', 'Dog Hat', !character.pet.startsWith('pet_trail_dog'))}
+      ${equipmentDropdown('petBackpack', 'Dog Backpack', !character.pet.startsWith('pet_trail_dog'))}
+    </div>`;
     const sections = {
-      appearance: `<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        ${visualDropdownMarkup('Character sprite', 'gender', [
+      appearance: `<div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        ${dropdown('gender', 'Character sprite', character.gender, [
           { id: 'male', name: 'Male sprite' }, { id: 'female', name: 'Female sprite' }
-        ], character.gender, disabled, option =>
-          characterThumbnailMarkup({ ...character, gender: option.id }))}
-        ${visualDropdownMarkup('Skin tone', 'skinTone', SKIN_TONES, character.skinTone, disabled,
-          option => `<span aria-hidden="true" class="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-slate-900">
+        ], option => characterThumbnailMarkup({ ...character, gender: option.id }))}
+        ${dropdown('skinTone', 'Skin tone', character.skinTone, SKIN_TONES, option =>
+          `<span aria-hidden="true" class="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-slate-900">
             <span class="h-6 w-6 rounded-full border border-slate-500" style="background-color:${escapeHtml(option.color)}"></span>
           </span>`)}
-        ${visualDropdownMarkup('Hairstyle', 'hairPreset', hairPresetOptions(character),
-          `${character.hairStyle}::${character.hairColor}`, disabled,
+        ${dropdown('hairPreset', 'Hairstyle', `${character.hairStyle}::${character.hairColor}`,
+          catalogOptions(hairPresetOptions(character), `${character.hairStyle}::${character.hairColor}`,
+            stats, character, completedAchievements, 'Equipped', appState),
           option => hairThumbnailMarkup({
             ...character, hairStyle: option.hairStyle, hairColor: option.hairColor
           }))}
       </div>`,
-      wardrobe: `<div class="space-y-5">
-        <p class="text-xs text-slate-400">Preview each look before equipping it.</p>
-        <section><h4 class="text-sm font-bold text-amber-200 mb-2">Outfits</h4>
-          ${visualDropdownMarkup('Outfit', 'outfit',
-            catalogOptions(OUTFIT_CATALOG, character.outfit, stats, character, completedAchievements, 'Equipped'),
-            character.outfit, disabled,
-            option => characterThumbnailMarkup({ ...character, outfit: option.id }))}
-        </section>
-        <section><h4 class="text-sm font-bold text-amber-200 mb-2">Hats</h4>
-          ${visualDropdownMarkup('Hat', 'hat',
-            catalogOptions(HAT_CATALOG, character.hat, stats, character, completedAchievements, 'Equipped'),
-            character.hat, disabled,
-            option => wardrobeSwatchMarkup(option, '🎩'))}
-        </section>
-        <section><h4 class="text-sm font-bold text-amber-200 mb-2">Accessories</h4>
-          ${visualDropdownMarkup('Accessory', 'accessory',
-            catalogOptions(ACCESSORY_CATALOG, character.accessory, stats, character, completedAchievements, 'Equipped'),
-            character.accessory, disabled,
-            option => wardrobeSwatchMarkup(option, '🧭'))}
-        </section>
+      wardrobe: `<div class="space-y-4">
+        <p class="text-xs text-slate-400">Earn progression gear or purchase additional sprite layers with Wayfarer Coins.</p>
+        ${purchaseControls}
       </div>`,
-      pets: `<p class="text-xs text-slate-400 mb-3">Choose one companion to appear beside your explorer.</p>
-        ${visualDropdownMarkup('Companion', 'pet',
-          catalogOptions(PET_CATALOG, character.pet, stats, character, completedAchievements),
-          character.pet, disabled, option => petThumbnailMarkup(option))}`,
-      backgrounds: `<p class="text-xs text-slate-400 mb-3">Campfire Night is the available scene.</p>
-        ${visualDropdownMarkup('Scene', 'background',
-          catalogOptions(BACKGROUND_CATALOG, character.background, stats, character, completedAchievements),
-          character.background, disabled, option => backgroundThumbnailMarkup(option))}`,
-      patron: `<div class="rounded-xl border border-amber-800/60 bg-amber-950/20 p-3 mb-4 text-xs text-amber-100">
-          Pro and donation rewards are listed for the future catalog. Payment and donation verification are not connected yet, so these profile values do not grant verified purchase entitlements.
+      pets: `<p class="mb-3 text-xs text-slate-400">Companions are purchased with Wayfarer Coins. Choose one clean idle frame to follow your explorer.</p>
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+          ${dropdown('pet', 'Companion', character.pet, petOptions, option => petThumbnailMarkup(option))}
+          ${equipmentDropdown('petHat', 'Dog Hat', !character.pet.startsWith('pet_trail_dog'))}
+          ${equipmentDropdown('petBackpack', 'Dog Backpack', !character.pet.startsWith('pet_trail_dog'))}
+        </div>`,
+      backgrounds: `<p class="mb-3 text-xs text-slate-400">Campfire Night is your current scene.</p>
+        ${dropdown('background', 'Scene', character.background,
+          catalogOptions(BACKGROUND_CATALOG, character.background, stats, character,
+            completedAchievements, 'Equipped', appState),
+          option => backgroundThumbnailMarkup(option))}`,
+      shop: `<div class="space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-400/30 bg-amber-950/20 p-4">
+          <span class="text-sm font-semibold text-amber-100">Wayfarer Coins</span>
+          <strong class="flex items-center gap-2 font-mono text-lg text-amber-200">${coinIconMarkup()}${coinBalance.availableCoins.toLocaleString('en')}</strong>
         </div>
-        <div class="space-y-5">
-          <section><h4 class="text-sm font-bold text-amber-200 mb-2">Cartovella Pro</h4>
-          ${optionMarkup('Pro reward', 'proReward',
-            catalogOptions([...OUTFIT_CATALOG, ...PET_CATALOG, ...BACKGROUND_CATALOG].filter(item =>
-              item.unlock.type === 'pro'), '', stats, character, completedAchievements),
-            '', true, true, 'No reward selected')}
-        </section>
-        <section><h4 class="text-sm font-bold text-amber-200 mb-2">Park Foundation Patron</h4>
-          ${optionMarkup('Donation reward', 'donationReward',
-            catalogOptions([...OUTFIT_CATALOG, ...BACKGROUND_CATALOG].filter(item =>
-              item.unlock.type === 'donation'), '', stats, character, completedAchievements),
-            '', true, true, 'No reward selected')}
-        </section>
+        <p class="text-xs text-slate-400">Choose an item to buy and equip it. Purchased items remain yours; new purchases are disabled until you have enough coins.</p>
+        ${purchaseControls}
+      </div>`,
+      patron: `<div class="rounded-xl border border-amber-800/60 bg-amber-950/20 p-3 mb-4 text-xs text-amber-100">
+          Pro and donation rewards are not connected to verified purchases; Wayfarer Coin items are available in the Shop.
         </div>`
+    };
+    const tabLabels = {
+      appearance: 'Appearance', wardrobe: 'Wardrobe', pets: 'Pets',
+      backgrounds: 'Backgrounds', shop: 'Coin Shop', patron: 'Patron & Pro'
     };
     container.innerHTML = `<div class="flex flex-wrap gap-2 mb-4" role="tablist" aria-label="Character customization">
       ${tabs.map(tab => `<button type="button" role="tab" data-character-tab="${tab}" aria-selected="${tab === activeTab}"
-        class="rounded-lg px-3 py-2 text-xs font-semibold ${tab === activeTab ? 'bg-amber-400 text-slate-950' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}">${{
-          appearance: 'Appearance', wardrobe: 'Wardrobe', pets: 'Pets', backgrounds: 'Backgrounds', patron: 'Patron & Pro'
-        }[tab]}</button>`).join('')}
+        class="rounded-lg px-3 py-2 text-xs font-semibold ${tab === activeTab ? 'bg-amber-400 text-slate-950' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}">${tabLabels[tab]}</button>`).join('')}
       </div><div role="tabpanel">${sections[activeTab]}</div>`;
     renderPetPreviews(container);
     renderHairPreviews(container);
@@ -985,30 +1175,28 @@
     }
   }
 
-  function renderProgressSummary(container, stats, character, achievements) {
+  function renderProgressSummary(container, stats, character, achievements, appState) {
     if (!container) return;
-    const progress = achievementProgress(stats, achievements);
+    const balance = coinSummary(stats, appState);
     const parks = Array.isArray(stats.visitedParks) ? stats.visitedParks.length : 0;
-    const nextReward = [...OUTFIT_CATALOG, ...HAT_CATALOG, ...ACCESSORY_CATALOG]
-      .filter(item => item.unlock.type === 'worldParks' && item.unlock.goal > parks)
-      .sort((left, right) => left.unlock.goal - right.unlock.goal)[0];
-    const unlockedWardrobe = OUTFIT_CATALOG
-      .filter(item => unlockStatus(item.unlock, stats, character, progress).unlocked).length;
-    const wardrobeTotal = OUTFIT_CATALOG.length;
-    const parkProgress = nextReward
-      ? `<span class="block text-[10px] text-slate-400 mt-1">Next: ${escapeHtml(nextReward.name)} at ${nextReward.unlock.goal}</span>
-        <progress class="w-full h-1.5 mt-2 accent-amber-400" aria-label="Progress to next worldwide park reward"
-          value="${Math.min(parks, nextReward.unlock.goal)}" max="${nextReward.unlock.goal}"></progress>`
-      : '<span class="block text-[10px] text-slate-400 mt-1">All catalog milestones reached</span>';
+    const level = Math.max(1, Number(stats.level) || 1);
+    const currentLevel = [...LEVEL_TRACK].reverse().find(reward => reward.level <= level) || LEVEL_TRACK[0];
+    const nextLevel = LEVEL_TRACK.find(reward => reward.level > level);
+    const nextLabel = nextLevel ? `Next: Level ${nextLevel.level} · ${nextLevel.title}` : 'All ten levels reached';
     container.innerHTML = `<div class="rounded-xl bg-slate-950/70 border border-slate-800 p-3">
         <span class="block text-[10px] uppercase tracking-wide text-slate-400">Worldwide parks</span>
-        <strong class="block text-lg font-mono text-amber-200">${parks}</strong>${parkProgress}
+        <strong class="block text-lg font-mono text-amber-200">${parks}</strong>
+        <span class="block text-[10px] text-slate-400 mt-1">${escapeHtml(nextLabel)}</span>
       </div>
       <div class="rounded-xl bg-slate-950/70 border border-slate-800 p-3">
-        <span class="block text-[10px] uppercase tracking-wide text-slate-400">Wardrobe unlocked</span>
-        <strong class="block text-lg font-mono text-emerald-300">${unlockedWardrobe} / ${wardrobeTotal}</strong>
-        <span class="block text-[10px] text-slate-400 mt-1">Level ${Number(stats.level) || 1} · ${PET_CATALOG.filter(item =>
-          unlockStatus(item.unlock, stats, character, progress).unlocked).length} companions available</span>
+        <span class="block text-[10px] uppercase tracking-wide text-slate-400">Explorer track</span>
+        <strong class="block text-lg font-mono text-emerald-300">Level ${level} · ${escapeHtml(currentLevel.title)}</strong>
+        <span class="block text-[10px] text-slate-400 mt-1">${escapeHtml(nextLabel)}</span>
+      </div>
+      <div class="rounded-xl bg-slate-950/70 border border-slate-800 p-3">
+        <span class="block text-[10px] uppercase tracking-wide text-slate-400">Wayfarer Coins</span>
+        <strong class="flex items-center gap-2 text-lg font-mono text-amber-200">${coinIconMarkup()}${balance.availableCoins.toLocaleString('en')}</strong>
+        <span class="block text-[10px] text-slate-400 mt-1">${balance.earnedCoins.toLocaleString('en')} earned · ${balance.spentCoins.toLocaleString('en')} spent</span>
       </div>`;
   }
 
@@ -1019,9 +1207,11 @@
     const character = normalizeCharacter(options.character);
     const stats = options.stats || {};
     const achievements = options.achievements || [];
+    const appState = options.appState || { character };
     const disabled = !!options.viewOnly;
     drawStage(canvas, character, { stats, achievements });
-    renderProgressSummary(options.summary, stats, character, achievements);
+    renderAvatar(options.avatarCanvas, character);
+    renderProgressSummary(options.summary, stats, character, achievements, appState);
     if (customizeButton && controls) {
       customizeButton.onclick = () => {
         controls.hidden = !controls.hidden;
@@ -1033,25 +1223,48 @@
       };
     }
     if (!controls) return;
-    renderControls(controls, character, stats, achievements, disabled);
+    renderControls(controls, character, stats, achievements, disabled, appState);
+    const completedAchievements = achievementProgress(stats, achievements);
     controls.onclick = event => {
       const tabButton = event.target.closest('[data-character-tab]');
       if (tabButton) {
         controls.dataset.activeTab = tabButton.dataset.characterTab;
-        renderControls(controls, character, stats, achievements, disabled);
+        renderControls(controls, character, stats, achievements, disabled, appState);
         return;
       }
       const choiceButton = event.target.closest('button[data-character-field][data-character-id]');
       if (choiceButton) {
         if (disabled || choiceButton.disabled) return;
-        if (choiceButton.dataset.characterField === 'hairPreset') {
-          const [hairStyle, hairColor] = choiceButton.dataset.characterId.split('::');
+        const field = choiceButton.dataset.characterField;
+        const id = choiceButton.dataset.characterId;
+        if (field === 'hairPreset') {
+          const option = hairPresetOptions(character).find(item => item.id === id);
+          if (!option || !unlockStatus(option.unlock, stats, character,
+            completedAchievements, appState).unlocked) return;
+          const [hairStyle, hairColor] = id.split('::');
           options.onChange?.(normalizeCharacter({ ...character, hairStyle, hairColor }));
           return;
         }
-        options.onChange?.(normalizeCharacter({
-          ...character, [choiceButton.dataset.characterField]: choiceButton.dataset.characterId
-        }));
+        if (field === 'gender' || field === 'skinTone') {
+          options.onChange?.(normalizeCharacter({ ...character, [field]: id }));
+          return;
+        }
+        const catalog = field === 'pet' ? PET_CATALOG :
+          field === 'background' ? BACKGROUND_CATALOG : EQUIPMENT_BY_FIELD[field] || [];
+        const selected = catalog.find(item => item.id === id);
+        if (id && (!selected || !unlockStatus(selected.unlock, stats, character,
+          completedAchievements, appState).unlocked)) return;
+        const next = { ...character, [field]: id };
+        if (selected?.unlock.type === 'coin' && !character.purchasedItems.includes(selected.id)) {
+          const balance = coinSummary(stats, appState);
+          if (balance.availableCoins < selected.cost) return;
+          next.purchasedItems = [...character.purchasedItems, selected.id];
+        }
+        if (field === 'pet' && !id.startsWith('pet_trail_dog')) {
+          next.petHat = '';
+          next.petBackpack = '';
+        }
+        options.onChange?.(normalizeCharacter(next));
       }
     };
     controls.onchange = event => {
@@ -1064,8 +1277,9 @@
   const api = {
     DEFAULT_CHARACTER, SKIN_TONES, HAIR_STYLES, HAIR_COLORS, EYE_COLORS, BODY_SHAPES, HEIGHTS,
     OUTFIT_CATALOG, HAT_CATALOG, ACCESSORY_CATALOG, PET_CATALOG, BACKGROUND_CATALOG,
+    LEVEL_ITEMS, SHOP_WARDROBE, PET_ACCESSORY_CATALOG, EQUIPMENT_CATALOG, LEVEL_TRACK,
     BODY_SHAPE_PROFILES, normalizeCharacter, characterSpriteAssets, achievementProgress,
-    unlockStatus, drawPet, drawCharacterSprite, drawStage, render
+    unlockStatus, coinSummary, drawPet, drawCharacterSprite, drawStage, renderAvatar, render
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CharacterCreator = api;

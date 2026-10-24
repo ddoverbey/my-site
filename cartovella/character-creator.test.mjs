@@ -14,23 +14,28 @@ const allCatalogs = [
   characterCreator.EYE_COLORS, characterCreator.BODY_SHAPES, characterCreator.HEIGHTS,
   characterCreator.OUTFIT_CATALOG, characterCreator.HAT_CATALOG,
   characterCreator.ACCESSORY_CATALOG, characterCreator.PET_CATALOG,
-  characterCreator.BACKGROUND_CATALOG
+  characterCreator.BACKGROUND_CATALOG, characterCreator.LEVEL_ITEMS,
+  characterCreator.SHOP_WARDROBE, characterCreator.PET_ACCESSORY_CATALOG
 ];
 
 check('every customization option supports a future image override', () => {
   allCatalogs.flat().forEach(item => assert.equal(Object.hasOwn(item, 'imageSrc'), true, item.id));
 });
-check('character appearance, outfit, companion, and scene choices render as dropdowns', () => {
+check('character appearance, wardrobe, companions, and scene choices render as dropdowns', () => {
   const controls = { dataset: {}, innerHTML: '' };
   const expectedFields = {
     appearance: ['gender', 'skinTone', 'hairPreset'],
-    wardrobe: ['outfit', 'hat', 'accessory'],
-    pets: ['pet'],
+    wardrobe: ['top', 'bottoms', 'shoes', 'headwear', 'handItem', 'backLayer',
+      'arms', 'face', 'ears', 'effect', 'specialSkin', 'pet', 'petHat', 'petBackpack'],
+    pets: ['pet', 'petHat', 'petBackpack'],
     backgrounds: ['background'],
-    patron: ['proReward', 'donationReward']
+    shop: ['pet'],
+    patron: []
   };
   const visualFields = new Set([
-    'gender', 'skinTone', 'hairPreset', 'outfit', 'hat', 'accessory', 'pet', 'background'
+    'gender', 'skinTone', 'hairPreset', 'top', 'bottoms', 'shoes', 'headwear',
+    'handItem', 'backLayer', 'arms', 'face', 'ears', 'effect', 'specialSkin',
+    'pet', 'petHat', 'petBackpack', 'background'
   ]);
   for (const [tab, fields] of Object.entries(expectedFields)) {
     controls.dataset.activeTab = tab;
@@ -65,7 +70,10 @@ check('character appearance, outfit, companion, and scene choices render as drop
   assert.equal((controls.innerHTML.match(/data-character-field="hairPreset"/g) || []).length, 168);
   assert.match(controls.innerHTML, /h-16/);
   assert.match(controls.innerHTML, /h-10 w-10/);
-  assert.match(controls.innerHTML, /No reward selected/);
+  controls.dataset.activeTab = 'shop';
+  characterCreator.render({ controls, character: characterCreator.DEFAULT_CHARACTER });
+  assert.match(controls.innerHTML, /Wayfarer Coins/);
+  assert.match(controls.innerHTML, /150 coins/);
 });
 check('dropdown changes update the selected character field', () => {
   const controls = { dataset: {}, innerHTML: '' };
@@ -164,10 +172,13 @@ check('a shared sprite-sheet load redraws both the stage and its pet preview', (
     else globalThis.Image = originalImage;
   }
 });
-check('starter character uses a sprite-pack explorer and the original pixel companion', () => {
+check('starter character uses sprite-pack gear and starts without a companion', () => {
   assert.equal(characterCreator.normalizeCharacter().gender, 'male');
   assert.equal(characterCreator.normalizeCharacter().outfit, 'outfit_recruit');
-  assert.equal(characterCreator.normalizeCharacter().pet, 'pet_pufflin_blue');
+  assert.equal(characterCreator.normalizeCharacter().top, 'starter_shirt');
+  assert.equal(characterCreator.normalizeCharacter().bottoms, 'starter_pants');
+  assert.equal(characterCreator.normalizeCharacter().shoes, 'simple_shoes');
+  assert.equal(characterCreator.normalizeCharacter().pet, 'pet_none');
   assert.equal(characterCreator.normalizeCharacter().background, 'bg_campfire');
   assert.equal(characterCreator.normalizeCharacter().bodyShape, 'straight');
   assert.equal(characterCreator.normalizeCharacter().proUnlocked, false);
@@ -176,17 +187,24 @@ check('character migration clamps invalid values and preserves safe selections',
   assert.deepEqual(characterCreator.normalizeCharacter({
     skinTone: 'deep', hairStyle: 'curls', outfit: 'outfit_parka',
     pet: 'pet_kitten_gray', background: 'bg_citadel',
+    purchasedItems: ['orange_shirt', 'orange_pants', 'pet_black_cat'],
     proUnlocked: 'true', donationUsd: 100000000, unknown: 'discard'
   }), {
     ...characterCreator.DEFAULT_CHARACTER,
     skinTone: 'deep', hairStyle: 'hair_6', outfit: 'outfit_parka',
-    pet: 'pet_black_cat', background: 'bg_campfire',
+    top: 'orange_shirt', bottoms: 'orange_pants', pet: 'pet_black_cat',
+    purchasedItems: ['orange_shirt', 'orange_pants', 'pet_black_cat'],
+    background: 'bg_campfire',
     proUnlocked: false, donationUsd: 1000000
   });
   assert.equal(characterCreator.normalizeCharacter({ hat: 'not-a-hat' }).hat, 'hat_none');
   assert.equal(characterCreator.normalizeCharacter({ background: 'bg_citadel' }).background, 'bg_campfire');
-  assert.equal(characterCreator.normalizeCharacter({ pet: 'pet_puppy_gold' }).pet, 'pet_trail_dog');
-  assert.equal(characterCreator.normalizeCharacter({ pet: 'pet_kitten_gray' }).pet, 'pet_black_cat');
+  assert.equal(characterCreator.normalizeCharacter({
+    pet: 'pet_puppy_gold', purchasedItems: ['pet_trail_dog']
+  }).pet, 'pet_trail_dog');
+  assert.equal(characterCreator.normalizeCharacter({
+    pet: 'pet_kitten_gray', purchasedItems: ['pet_black_cat']
+  }).pet, 'pet_black_cat');
 });
 check('inclusive body frames migrate legacy selections', () => {
   assert.deepEqual(characterCreator.BODY_SHAPES.map(frame => [frame.id, frame.name]), [
@@ -200,19 +218,19 @@ check('inclusive body frames migrate legacy selections', () => {
   assert.equal(characterCreator.normalizeCharacter({ bodyShape: 'sturdy' }).bodyShape, 'vTaper');
   assert.equal(characterCreator.normalizeCharacter({ bodyShape: 'hourglass' }).bodyShape, 'hourglass');
 });
-check('the 58 hairstyle assets are available for their matching character sprites', () => {
+check('sprite hairstyle assets are available for their matching character sprites', () => {
   const maleStyles = characterCreator.HAIR_STYLES.filter(style => style.genders.includes('male'));
   const femaleStyles = characterCreator.HAIR_STYLES.filter(style => style.genders.includes('female'));
   assert.equal(maleStyles.length, 28);
-  assert.equal(femaleStyles.length, 30);
+  assert.equal(femaleStyles.length, 33);
   assert.equal(maleStyles.length * characterCreator.HAIR_COLORS.length, 168);
-  assert.equal(femaleStyles.length * characterCreator.HAIR_COLORS.length, 180);
+  assert.equal(femaleStyles.length * characterCreator.HAIR_COLORS.length, 198);
   assert.ok(characterCreator.characterSpriteAssets({
     ...characterCreator.DEFAULT_CHARACTER, hairStyle: 'hair_fancy'
-  })[4].endsWith('/Fancy%20Hair.png'));
+  })[4].imageSrc.endsWith('/Fancy%20Hair.png'));
   assert.ok(characterCreator.characterSpriteAssets({
     ...characterCreator.DEFAULT_CHARACTER, gender: 'female', hairStyle: 'hair_35'
-  })[4].endsWith('/Female%20Hair35.png'));
+  })[4].imageSrc.endsWith('/Female%20Hair35.png'));
 });
 check('low-resolution frame profiles keep the V-taper broad at the shoulders and hourglass defined', () => {
   const { straight, vTaper, hourglass } = characterCreator.BODY_SHAPE_PROFILES;
@@ -222,7 +240,7 @@ check('low-resolution frame profiles keep the V-taper broad at the shoulders and
   assert.ok(Math.min(...hourglass.slice(5, 11)) < hourglass[0]);
   assert.ok(Math.max(...hourglass.slice(12)) <= hourglass[0]);
 });
-check('every bundled dog, cat, fox, and wisp has a valid animated sprite sheet', () => {
+check('every bundled dog, cat, fox, and wisp has a valid idle sprite-sheet crop', () => {
   const dogs = characterCreator.PET_CATALOG.filter(item => item.id.startsWith('pet_trail_dog'));
   const cats = characterCreator.PET_CATALOG.filter(item => item.id.endsWith('_cat'));
   const fox = characterCreator.PET_CATALOG.find(item => item.id === 'pet_trail_fox');
@@ -249,13 +267,19 @@ check('every bundled dog, cat, fox, and wisp has a valid animated sprite sheet',
   assert.ok(cats.every(pet => pet.spriteSheet.frameCount === 8));
   assert.ok(cats.every(pet => pet.spriteSheet.row === 13), 'cat frames use the labeled Lick paw lie front row');
   assert.equal(fox.spriteSheet.frameCount, 5);
+  assert.ok(spritePets.every(pet => pet.unlock.type === 'coin'));
+  assert.ok(dogs.every(pet => pet.cost === 150));
+  assert.ok(cats.every(pet => pet.cost === 150));
+  assert.equal(fox.cost, 300);
+  assert.ok(wisps.every(pet => pet.cost === 500));
   assert.ok(dogs.every(pet =>
-    pet.spriteSheet.targetWidth === 26 && pet.spriteSheet.targetHeight === 17
+    pet.spriteSheet.targetWidth === 15 && pet.spriteSheet.targetHeight === 10
   ));
-  assert.deepEqual([fox.spriteSheet.targetWidth, fox.spriteSheet.targetHeight], [20, 12]);
+  assert.deepEqual([fox.spriteSheet.targetWidth, fox.spriteSheet.targetHeight], [15, 10]);
+  assert.ok(spritePets.every(pet => pet.spriteSheet.sourceWidth > 0 && pet.spriteSheet.sourceHeight > 0));
   assert.ok(wisps.every(pet => pet.spriteSheet.frameCount === 5));
 });
-check('companion sprite animations crop requested dog, cat, fox, and wisp frames', () => {
+check('companion sprites consistently crop one clean idle frame', () => {
   const originalImage = globalThis.Image;
   const drawCalls = [];
   globalThis.Image = class {
@@ -278,12 +302,12 @@ check('companion sprite animations crop requested dog, cat, fox, and wisp frames
     characterCreator.drawPet(context, fox, () => {}, 5);
     characterCreator.drawPet(context, wisp, () => {}, 4);
     characterCreator.drawPet(context, outlinedWisp, () => {}, 1);
-    assert.deepEqual(drawCalls[0].slice(1), [65, 13, 29, 19, 100, 63, 26, 17]);
-    assert.deepEqual(drawCalls[1].slice(1), [77, 851, 36, 28, 102, 63, 22, 17]);
-    assert.deepEqual(drawCalls[2].slice(1), [65, 14, 29, 18, 103, 68, 20, 12]);
-    assert.deepEqual(drawCalls[3].slice(1), [1, 14, 29, 18, 103, 68, 20, 12]);
-    assert.deepEqual(drawCalls[4].slice(1), [137, 5, 14, 22, 107, 60, 12, 18]);
-    assert.deepEqual(drawCalls[5].slice(1), [40, 4, 16, 24, 107, 60, 12, 18]);
+    assert.deepEqual(drawCalls[0].slice(1), [1, 13, 29, 19, 101, 64, 15, 10]);
+    assert.deepEqual(drawCalls[1].slice(1), [13, 851, 36, 28, 102, 64, 18, 14]);
+    assert.deepEqual(drawCalls[2].slice(1), [1, 14, 29, 18, 103, 66, 15, 10]);
+    assert.deepEqual(drawCalls[2].slice(1), drawCalls[3].slice(1));
+    assert.deepEqual(drawCalls[4].slice(1), [9, 5, 14, 22, 107, 62, 7, 11]);
+    assert.deepEqual(drawCalls[5].slice(1), [8, 4, 16, 24, 107, 62, 7, 11]);
   } finally {
     if (originalImage === undefined) delete globalThis.Image;
     else globalThis.Image = originalImage;
@@ -298,6 +322,84 @@ check('level and destination unlocks show exact current progress', () => {
   assert.deepEqual(characterCreator.unlockStatus(
     { type: 'worldParks', goal: 50 }, { visitedParks: Array(12).fill('park') }, character, achievements
   ), { unlocked: false, description: 'Visit 50 worldwide parks (12/50).' });
+});
+check('the explorer track contains paired gender gear for all ten levels', () => {
+  assert.deepEqual(characterCreator.LEVEL_TRACK.map(reward => reward.level),
+    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+  assert.ok(characterCreator.LEVEL_ITEMS.every(item =>
+    item.unlock.type === 'level' && item.paths.male && item.paths.female));
+  assert.deepEqual(characterCreator.LEVEL_TRACK[0].itemIds,
+    ['starter_shirt', 'starter_pants', 'simple_shoes']);
+  assert.ok(characterCreator.LEVEL_TRACK[9].itemIds.includes('diamond_sword'));
+  assert.ok(characterCreator.LEVEL_TRACK[9].itemIds.includes('hair_shield_maiden'));
+});
+check('Wayfarer Coins deterministically sum travel, rarity, regions, levels, achievements, and purchases', () => {
+  const summary = characterCreator.coinSummary({
+    level: 4,
+    visitedParks: ['park_1', 'park_2'],
+    visitedCountries: ['United States'],
+    visitedStates: ['California'],
+    metadataProgress: {
+      rarityEntities: [
+        { kind: 'poi', tier: 'Tourist Trap' },
+        { kind: 'photon', tier: 'Uncharted' },
+        { kind: 'park', tier: 'Hidden Gem' }
+      ],
+      visitedSubdivisionIds: ['California', 'New South Wales'],
+      visitedCountyIds: ['06001']
+    },
+    completedAchievementTiers: [{ rarity: 'common' }, { rarity: 'rare' }]
+  }, {
+    expeditions: [
+      { startDate: '2024-01-01', endDate: '2024-01-03' },
+      {}
+    ],
+    regions: {
+      'c:United States': 'v',
+      'c:Canada': 'v',
+      's:California': 'v',
+      's:New South Wales': 'l'
+    },
+    counties: { '06003': 'l' },
+    character: {
+      ...characterCreator.DEFAULT_CHARACTER,
+      purchasedItems: ['dog_hat', 'pet_trail_fox', 'blue_bodice']
+    }
+  });
+  assert.deepEqual(summary, { earnedCoins: 454, spentCoins: 500, availableCoins: 0 });
+});
+check('coin purchases require enough coins, equip on purchase, and charge only once', () => {
+  const choosePet = (level, character = characterCreator.DEFAULT_CHARACTER) => {
+    const controls = { dataset: { activeTab: 'shop' }, innerHTML: '' };
+    let changedCharacter;
+    characterCreator.render({
+      controls, character, stats: { level },
+      appState: { character },
+      onChange: next => { changedCharacter = next; }
+    });
+    controls.onclick({
+      target: {
+        closest(selector) {
+          if (selector === '[data-character-tab]') return null;
+          if (selector === 'button[data-character-field][data-character-id]') {
+            return { dataset: { characterField: 'pet', characterId: 'pet_trail_dog' }, disabled: false };
+          }
+          return null;
+        }
+      }
+    });
+    return changedCharacter;
+  };
+  assert.equal(choosePet(3), undefined);
+  const purchased = choosePet(4);
+  assert.equal(purchased.pet, 'pet_trail_dog');
+  assert.deepEqual(purchased.purchasedItems, ['pet_trail_dog']);
+  assert.deepEqual(characterCreator.coinSummary({ level: 4 }, { character: purchased }), {
+    earnedCoins: 150, spentCoins: 150, availableCoins: 0
+  });
+  assert.equal(characterCreator.normalizeCharacter({
+    top: 'blue_shirt'
+  }).top, 'starter_shirt');
 });
 check('existing achievement IDs drive character rewards', () => {
   const definitions = [
@@ -342,14 +444,17 @@ check('sprite character selects matching gender, skin, hair, and outfit layers',
       skinTone: 'deep',
       hairStyle: 'hair_10',
       hairColor: 'teal',
-      outfit: 'outfit_vest'
+      outfit: 'outfit_vest',
+      top: 'blue_shirt',
+      purchasedItems: ['blue_shirt']
     };
     const assets = characterCreator.characterSpriteAssets(character);
-    assert.deepEqual(assets.map(path => decodeURIComponent(path.split('/').at(-1))), [
-      'Female Skin5.png', 'Skirt.png', 'Blue Corset v2.png', 'Boots.png', 'Female Hair10.png'
+    assert.deepEqual(assets.map(layer =>
+      decodeURIComponent(layer.imageSrc.split('/').at(-1))), [
+      'Female Skin5.png', 'Skirt.png', 'Boots.png', 'Blue Corset v2.png', 'Female Hair10.png'
     ]);
     for (const asset of assets) {
-      const png = readFileSync(new URL(asset, import.meta.url));
+      const png = readFileSync(new URL(asset.imageSrc, import.meta.url));
       assert.equal(png.toString('ascii', 1, 4), 'PNG');
       assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [800, 448]);
     }

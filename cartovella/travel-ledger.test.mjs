@@ -27,11 +27,15 @@ const exp = {
 const migrate = state => ledger.migrateState(state, lookups, catalog);
 check('character selections survive passport migration with safe catalog defaults', () => {
   const state = ledger.migrateState({
-    character: { hairColor: 'teal', outfit: 'outfit_parka', pet: 'pet_kitten_gray', unsafe: true }
+    character: {
+      hairColor: 'teal', outfit: 'outfit_parka', pet: 'pet_kitten_gray',
+      purchasedItems: ['pet_black_cat'], unsafe: true
+    }
   }, lookups, catalog, characterCreator.normalizeCharacter);
   assert.equal(state.character.hairColor, 'teal');
   assert.equal(state.character.outfit, 'outfit_parka');
   assert.equal(state.character.pet, 'pet_black_cat');
+  assert.deepEqual(state.character.purchasedItems, ['pet_black_cat']);
   assert.equal(Object.hasOwn(state.character, 'unsafe'), false);
   assert.equal(Object.hasOwn(state.extraPassportFields, 'character'), false);
 });
@@ -350,6 +354,21 @@ check('achievement metadata uses inclusive high-altitude and strict below-sea th
   assert.equal(progress.thinAir, 2);
   assert.equal(progress.whispers, 6);
   assert.equal(progress.focal, 6);
+});
+check('coin metadata includes visited custom-place rarity and region/county IDs', () => {
+  const state = migrate({
+    customPois: [{ ...poi, id: 'coin-poi', status: 'l' }],
+    regions: { 's:Washington': 'l' },
+    counties: { '01001': 'v' },
+    expeditions: [{ ...exp, countyIds: ['08065'] }]
+  });
+  const progress = ledger.metadataProgress(state);
+  assert.deepEqual(progress.rarityEntities, [
+    { key: 'poi:coin-poi', kind: 'poi', tier: 'Hidden Gem' }
+  ]);
+  assert.ok(progress.visitedSubdivisionIds.includes('Washington'));
+  assert.ok(progress.visitedCountyIds.includes('01001'));
+  assert.ok(progress.visitedCountyIds.includes('08065'));
 });
 check('expedition biome credit samples route geometry between stops with a bounded lookup count', () => {
   const state = migrate({ expeditions: [{
