@@ -1074,7 +1074,10 @@
             : status.unlocked ? ` — ${item.cost} coins` : ` — 🔒 ${item.cost} coins`
           : status.unlocked ? selected ? ` — ${selectedLabel}` : ''
             : ` — 🔒 ${status.description}`;
-        return { ...item, name: item.name + description, disabled: !status.unlocked };
+        return {
+          ...item, name: item.name + description, disabled: !status.unlocked,
+          canCycle: status.unlocked && (!isCoinItem || owned)
+        };
       });
   }
 
@@ -1166,14 +1169,14 @@
   }
 
   function cyclePickerMarkup(label, field, value, options, disabled, renderChoice, browseLabel) {
-    const available = options.filter(option => !option.disabled);
+    const available = options.filter(option => option.canCycle);
     const currentIndex = available.findIndex(option => option.id === value);
     const selected = options.find(option => option.id === value);
     const arrow = direction => {
       const index = (Math.max(0, currentIndex) + direction + available.length) % available.length;
       const option = available[index];
-      return `<button type="button" data-character-field="${escapeHtml(field)}"
-        data-character-id="${escapeHtml(option?.id || value)}" aria-label="${direction < 0 ? 'Previous' : 'Next'} ${escapeHtml(label.toLowerCase())}"
+      return `<button type="button" data-character-cycle="true" data-character-field="${escapeHtml(field)}"
+        data-character-id="${escapeHtml(option?.id ?? value)}" aria-label="${direction < 0 ? 'Previous' : 'Next'} ${escapeHtml(label.toLowerCase())}"
         ${disabled || available.length < 2 ? 'disabled' : ''}
         title="${escapeHtml(option?.name || label)}"
         class="shrink-0 rounded-lg border border-slate-700 px-3 py-3 text-lg text-amber-200 hover:bg-slate-800 disabled:opacity-50">
@@ -1379,6 +1382,7 @@
           completedAchievements, appState).unlocked)) return;
         const next = { ...character, [field]: id };
         if (selected?.unlock.type === 'coin' && !character.purchasedItems.includes(selected.id)) {
+          if (choiceButton.dataset.characterCycle === 'true') return;
           const balance = coinSummary(stats, appState);
           if (balance.availableCoins < selected.cost) return;
           next.purchasedItems = [...character.purchasedItems, selected.id];

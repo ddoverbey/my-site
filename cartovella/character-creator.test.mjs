@@ -146,6 +146,64 @@ check('hairstyle arrows cycle unlocked options, wrap around, and respect view-on
     assert.equal(next, null);
   }
 });
+check('wardrobe arrows never purchase, cycle owned gear and None, and leave purchases to browse-all', () => {
+  const fields = ['top', 'bottoms', 'shoes', 'headwear', 'handItem', 'backLayer',
+    'arms', 'face', 'ears', 'effect'];
+  for (const gender of ['male', 'female']) {
+    for (const tab of ['wardrobe', 'shop']) {
+      for (const field of fields) {
+        const shopItems = characterCreator.SHOP_WARDROBE.filter(item =>
+          item.field === field && item.paths[gender]);
+        const purchasedItems = shopItems.slice(0, 1).map(item => item.id);
+        let character = characterCreator.normalizeCharacter({ gender, purchasedItems });
+        const controls = { dataset: { activeTab: tab }, innerHTML: '' };
+        let changed;
+        const render = () => characterCreator.render({
+          controls, character, stats: { level: 100 },
+          onChange: next => { changed = next; }
+        });
+        const choose = (id, cycle) => controls.onclick({ target: { closest(selector) {
+          return selector === 'button[data-character-field][data-character-id]'
+            ? { dataset: { characterField: field, characterId: id, characterCycle: cycle ? 'true' : undefined },
+              disabled: false } : null;
+        } } });
+        const seen = new Set();
+        for (let step = 0; step < characterCreator.EQUIPMENT_CATALOG.length + 1; step++) {
+          render();
+          const arrows = [...controls.innerHTML.matchAll(new RegExp(
+            `data-character-cycle="true" data-character-field="${field}"\\s+data-character-id="([^"]*)" aria-label="(Previous|Next) [^"]+"\\s*(disabled)?`, 'g'
+          ))];
+          assert.equal(arrows.length, 2);
+          for (const arrow of arrows) {
+            const item = characterCreator.EQUIPMENT_CATALOG.find(item => item.id === arrow[1]);
+            assert.ok(!item || item.unlock.type !== 'coin' || purchasedItems.includes(item.id));
+          }
+          const next = arrows.find(arrow => arrow[2] === 'Next');
+          if (next[3] || seen.has(next[1])) break;
+          seen.add(next[1]);
+          choose(next[1], true);
+          assert.ok(changed);
+          assert.deepEqual(changed.purchasedItems, purchasedItems);
+          assert.equal(changed[field], next[1]);
+          character = changed;
+        }
+        if (shopItems.length) assert.ok(seen.has(shopItems[0].id), `${gender} ${tab} ${field}: owned gear`);
+        if (!['top', 'bottoms', 'shoes'].includes(field)) assert.ok(seen.has(''), `${field}: None`);
+        const unowned = shopItems[1];
+        if (unowned) {
+          render();
+          assert.ok(controls.innerHTML.includes(`data-character-id="${unowned.id}"`));
+          changed = null;
+          choose(unowned.id, true);
+          assert.equal(changed, null);
+          choose(unowned.id, false);
+          assert.equal(changed[field], unowned.id);
+          assert.deepEqual(changed.purchasedItems, [...purchasedItems, unowned.id]);
+        }
+      }
+    }
+  }
+});
 check('dropdown changes update the selected character field', () => {
   const controls = { dataset: {}, innerHTML: '' };
   let changedCharacter;
