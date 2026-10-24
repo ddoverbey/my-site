@@ -20,6 +20,36 @@ const allCatalogs = [
 check('every customization option supports a future image override', () => {
   allCatalogs.flat().forEach(item => assert.equal(Object.hasOwn(item, 'imageSrc'), true, item.id));
 });
+check('character appearance, outfit, companion, and scene choices render as dropdowns', () => {
+  const controls = { dataset: {}, innerHTML: '' };
+  const expectedFields = {
+    appearance: ['gender', 'skinTone', 'hairStyle'],
+    wardrobe: ['outfit'],
+    pets: ['pet'],
+    backgrounds: ['background'],
+    patron: ['proReward', 'donationReward']
+  };
+  for (const [tab, fields] of Object.entries(expectedFields)) {
+    controls.dataset.activeTab = tab;
+    characterCreator.render({ controls, character: characterCreator.DEFAULT_CHARACTER, stats: { level: 1 } });
+    for (const field of fields) {
+      assert.match(controls.innerHTML, new RegExp(`<select[^>]*data-character-field="${field}"`));
+    }
+    assert.doesNotMatch(controls.innerHTML, /<button[^>]*data-character-field=/);
+  }
+  assert.match(controls.innerHTML, /No reward selected/);
+});
+check('dropdown changes update the selected character field', () => {
+  const controls = { dataset: {}, innerHTML: '' };
+  let changedCharacter;
+  characterCreator.render({
+    controls,
+    character: characterCreator.DEFAULT_CHARACTER,
+    onChange: character => { changedCharacter = character; }
+  });
+  controls.onchange({ target: { dataset: { characterField: 'gender' }, value: 'female' } });
+  assert.equal(changedCharacter.gender, 'female');
+});
 check('starter character uses a sprite-pack explorer and the original pixel companion', () => {
   assert.equal(characterCreator.normalizeCharacter().gender, 'male');
   assert.equal(characterCreator.normalizeCharacter().outfit, 'outfit_recruit');

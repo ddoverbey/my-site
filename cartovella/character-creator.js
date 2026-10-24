@@ -696,40 +696,24 @@
     ctx.restore();
   }
 
-  function optionMarkup(label, field, options, value, disabled) {
+  function optionMarkup(label, field, options, value, disabled, includeLockedOptions = false, placeholder = '') {
     return `<label class="block text-xs text-slate-300">${escapeHtml(label)}
       <select data-character-field="${escapeHtml(field)}" ${disabled ? 'disabled' : ''}
         class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 disabled:opacity-50">
-        ${options.map(option => `<option value="${escapeHtml(option.id)}" ${option.id === value ? 'selected' : ''}>${escapeHtml(option.name)}</option>`).join('')}
+        ${placeholder ? `<option value="" selected disabled>${escapeHtml(placeholder)}</option>` : ''}
+        ${options.map(option => `<option value="${escapeHtml(option.id)}" ${option.id === value ? 'selected' : ''}
+          ${includeLockedOptions && option.disabled ? 'disabled' : ''}>${escapeHtml(option.name)}</option>`).join('')}
       </select>
     </label>`;
   }
 
-  function colorPickerMarkup(label, field, options, value, disabled) {
-    return `<div role="group" aria-label="${escapeHtml(label)}">
-      <span class="block text-xs text-slate-300 mb-1">${escapeHtml(label)}</span>
-      <div class="flex flex-wrap gap-2">${options.map(option => `<button type="button"
-        data-character-field="${escapeHtml(field)}" data-character-id="${escapeHtml(option.id)}"
-        aria-label="${escapeHtml(`${label}: ${option.name}`)}" aria-pressed="${option.id === value}"
-        ${disabled ? 'disabled' : ''}
-        class="h-9 w-9 rounded-full border-2 ${option.id === value ? 'border-amber-300 ring-2 ring-amber-300/40' : 'border-slate-600'} disabled:opacity-50"
-        style="background-color:${option.color}" title="${escapeHtml(option.name)}"></button>`).join('')}</div>
-    </div>`;
-  }
-
-  function itemCards(catalog, field, value, stats, character, achievements, disabled) {
-    return `<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">${catalog.map(item => {
-      const status = unlockStatus(item.unlock, stats, character, achievements);
-      const selected = item.id === value;
-      return `<button type="button" data-character-field="${escapeHtml(field)}" data-character-id="${escapeHtml(item.id)}"
-        aria-pressed="${selected}" ${!status.unlocked || disabled ? 'disabled' : ''}
-        class="rounded-xl border p-3 text-left transition ${status.unlocked
-          ? selected ? 'border-amber-300 bg-amber-950/60' : 'border-slate-700 bg-slate-950/60 hover:border-slate-500'
-          : 'border-slate-800 bg-slate-950/40 opacity-60'} disabled:cursor-not-allowed">
-        <span class="block text-sm font-semibold text-slate-100">${status.unlocked ? '' : '🔒 '}${escapeHtml(item.name)}</span>
-        <span class="block mt-1 text-[11px] ${status.unlocked ? 'text-slate-400' : 'text-amber-200/80'}">${escapeHtml(status.unlocked ? selected ? 'Equipped' : 'Unlocked' : status.description)}</span>
-      </button>`;
-    }).join('')}</div>`;
+  function catalogOptions(catalog, value, stats, character, achievements, selectedLabel = 'Selected') {
+    return catalog.map(item => {
+        const status = unlockStatus(item.unlock, stats, character, achievements);
+        const selected = item.id === value;
+        const description = status.unlocked ? selected ? ` — ${selectedLabel}` : '' : ` — 🔒 ${status.description}`;
+        return { id: item.id, name: item.name + description, disabled: !status.unlocked };
+      });
   }
 
   function renderControls(container, character, stats, achievements, disabled) {
@@ -740,29 +724,41 @@
         ${optionMarkup('Character sprite', 'gender', [
           { id: 'male', name: 'Male sprite' }, { id: 'female', name: 'Female sprite' }
         ], character.gender, disabled)}
-        ${colorPickerMarkup('Skin tone', 'skinTone', SKIN_TONES, character.skinTone, disabled)}
+        ${optionMarkup('Skin tone', 'skinTone', SKIN_TONES, character.skinTone, disabled)}
         ${optionMarkup('Hair style', 'hairStyle', HAIR_STYLES, character.hairStyle, disabled)}
       </div>`,
       wardrobe: `<div class="space-y-5">
         <p class="text-xs text-slate-400">Outfits use the matching layers from the character sprite pack.</p>
-        <section><h4 class="text-sm font-bold text-amber-200 mb-2">Outfits</h4>${itemCards(OUTFIT_CATALOG, 'outfit', character.outfit, stats, character, completedAchievements, disabled)}</section>
+        <section><h4 class="text-sm font-bold text-amber-200 mb-2">Outfits</h4>
+          ${optionMarkup('Outfit', 'outfit',
+            catalogOptions(OUTFIT_CATALOG, character.outfit, stats, character, completedAchievements, 'Equipped'),
+            character.outfit, disabled, true)}
+        </section>
       </div>`,
       pets: `<p class="text-xs text-slate-400 mb-3">Choose one companion to appear beside your explorer.</p>
-        ${itemCards(PET_CATALOG, 'pet', character.pet, stats, character, completedAchievements, disabled)}`,
+        ${optionMarkup('Companion', 'pet',
+          catalogOptions(PET_CATALOG, character.pet, stats, character, completedAchievements),
+          character.pet, disabled, true)}`,
       backgrounds: `<p class="text-xs text-slate-400 mb-3">Choose a scene for your stage. National Park dioramas are deferred for now.</p>
-        ${itemCards(BACKGROUND_CATALOG, 'background', character.background, stats, character, completedAchievements, disabled)}`,
+        ${optionMarkup('Scene', 'background',
+          catalogOptions(BACKGROUND_CATALOG, character.background, stats, character, completedAchievements),
+          character.background, disabled, true)}`,
       patron: `<div class="rounded-xl border border-amber-800/60 bg-amber-950/20 p-3 mb-4 text-xs text-amber-100">
           Pro and donation rewards are listed for the future catalog. Payment and donation verification are not connected yet, so these profile values do not grant verified purchase entitlements.
         </div>
         <div class="space-y-5">
           <section><h4 class="text-sm font-bold text-amber-200 mb-2">Cartovella Pro</h4>
-            ${itemCards([...OUTFIT_CATALOG, ...PET_CATALOG, ...BACKGROUND_CATALOG].filter(item =>
-              item.unlock.type === 'pro'), 'proReward', '', stats, character, completedAchievements, true)}
-          </section>
-          <section><h4 class="text-sm font-bold text-amber-200 mb-2">Park Foundation Patron</h4>
-            ${itemCards([...OUTFIT_CATALOG, ...BACKGROUND_CATALOG].filter(item =>
-              item.unlock.type === 'donation'), 'donationReward', '', stats, character, completedAchievements, true)}
-          </section>
+          ${optionMarkup('Pro reward', 'proReward',
+            catalogOptions([...OUTFIT_CATALOG, ...PET_CATALOG, ...BACKGROUND_CATALOG].filter(item =>
+              item.unlock.type === 'pro'), '', stats, character, completedAchievements),
+            '', true, true, 'No reward selected')}
+        </section>
+        <section><h4 class="text-sm font-bold text-amber-200 mb-2">Park Foundation Patron</h4>
+          ${optionMarkup('Donation reward', 'donationReward',
+            catalogOptions([...OUTFIT_CATALOG, ...BACKGROUND_CATALOG].filter(item =>
+              item.unlock.type === 'donation'), '', stats, character, completedAchievements),
+            '', true, true, 'No reward selected')}
+        </section>
         </div>`
     };
     container.innerHTML = `<div class="flex flex-wrap gap-2 mb-4" role="tablist" aria-label="Character customization">
@@ -825,9 +821,6 @@
         renderControls(controls, character, stats, achievements, disabled);
         return;
       }
-      const itemButton = event.target.closest('button[data-character-field][data-character-id]');
-      if (!itemButton || disabled || itemButton.disabled) return;
-      options.onChange?.(normalizeCharacter({ ...character, [itemButton.dataset.characterField]: itemButton.dataset.characterId }));
     };
     controls.onchange = event => {
       const field = event.target.dataset.characterField;
