@@ -1169,15 +1169,15 @@
     </section>
   </div>
 
-  <script src="./nps-catalog.js?v=20261024-cartovella-customization-v16"></script>
-  <script src="./national-parks-scratch.js?v=20261024-cartovella-customization-v16"></script>
-  <script src="./international-parks.js?v=20261024-cartovella-customization-v16"></script>
-  <script src="./ecoregions.js?v=20261024-cartovella-customization-v16"></script>
-  <script src="./coordinate-lookups.js?v=20261024-cartovella-customization-v16"></script>
-  <script src="./micro-states.js?v=20261024-cartovella-customization-v16"></script>
-  <script src="./travel-ledger.js?v=20261024-cartovella-customization-v16"></script>
-  <script src="./character-creator.js?v=20261024-cartovella-customization-v16"></script>
-  <script src="./rarity-config.js?v=20261024-cartovella-customization-v16"></script>
+  <script src="./nps-catalog.js?v=20261024-cartovella-customization-v17"></script>
+  <script src="./national-parks-scratch.js?v=20261024-cartovella-customization-v17"></script>
+  <script src="./international-parks.js?v=20261024-cartovella-customization-v17"></script>
+  <script src="./ecoregions.js?v=20261024-cartovella-customization-v17"></script>
+  <script src="./coordinate-lookups.js?v=20261024-cartovella-customization-v17"></script>
+  <script src="./micro-states.js?v=20261024-cartovella-customization-v17"></script>
+  <script src="./travel-ledger.js?v=20261024-cartovella-customization-v17"></script>
+  <script src="./character-creator.js?v=20261024-cartovella-customization-v17"></script>
+  <script src="./rarity-config.js?v=20261024-cartovella-customization-v17"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -5403,15 +5403,18 @@
         card.className = `p-3 rounded-2xl border transition-all duration-300 ${
           isUnlocked 
             ? 'bg-slate-900/90 border-amber-500/40 shadow-lg shadow-amber-500/10' 
-            : 'bg-slate-950/60 border-slate-800 opacity-40 grayscale'
+            : 'bg-slate-950/60 border-slate-800'
         }`;
         card.innerHTML = `
-          <div class="flex items-center justify-between">
-            <span class="text-2xl">${info.icon}</span>
-            <span class="achievement-rarity text-[9px] uppercase px-1.5 py-0.5 rounded font-mono font-bold border"
+          <div class="relative mb-3 overflow-hidden rounded-xl border border-slate-700/60">
+            <img data-biome-badge="${key}" data-biome-unlocked="${isUnlocked}"
+              src="${escapeHtml(encodeURI(`./assets/biome-badges/${BIOME_BADGE_IMAGES[key]}`))}"
+              alt="" class="block w-full aspect-video object-cover"
+              ${isUnlocked ? '' : 'style="filter:grayscale(1) brightness(.35);opacity:.65"'}>
+            <span class="achievement-rarity absolute bottom-1.5 right-1.5 text-[9px] uppercase px-1.5 py-0.5 rounded font-mono font-bold border"
               data-rarity="${escapeHtml(info.rarity)}"
-              style="--rarity-color:${rarityColor};border-color:var(--rarity-color);background-color:color-mix(in srgb,var(--rarity-color) 12%,transparent)">
-              ${rarity?.label || 'Unavailable'}
+              style="--rarity-color:${rarityColor};border-color:var(--rarity-color);background-color:rgba(2,6,23,.85)"
+              >${rarity?.label || 'Unavailable'}
             </span>
           </div>
           <h4 class="font-bold text-xs text-slate-200 mt-2">${info.name}</h4>
@@ -5544,6 +5547,23 @@
       'Under Pressure': 'under-pressure.png',
       'Whisper in the Woods': 'whisper-in-the-woods.png',
       'Zero Meridian': 'zero-meridian.png'
+    };
+
+    const BIOME_BADGE_IMAGES = {
+      '1': 'tropical-moist-broadleaf.png',
+      '2': 'dry-tropical-broadleaf-forest.png',
+      '3': 'tropical-coniferous-forest.png',
+      '4': 'temperate-broadleaf-and-mixed-forests.png',
+      '5': 'temperate-coniferous-forest.png',
+      '6': 'taiga - 128.png',
+      '7': 'tropical-grasslands.png',
+      '8': 'temperate-grasslands.png',
+      '9': 'flooded-grasslands.png',
+      '10': 'montane-grasslands.png',
+      '11': 'tundra.png',
+      '12': 'mediterranean.png',
+      '13': 'desert.png',
+      '14': 'mangrove.png'
     };
 
     const UNMET_ACHIEVEMENT_IMAGE = 'unmet.png';
@@ -6288,7 +6308,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261024-cartovella-customization-v16"></script>
+  <script src="./expedition-ui.js?v=20261024-cartovella-customization-v17"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);

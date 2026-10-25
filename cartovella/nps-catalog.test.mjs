@@ -179,7 +179,7 @@ check('character customization appears above the stage and progress summary', ()
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 10);
-  assert.ok(sources.every(source => source.endsWith('?v=20261024-cartovella-customization-v16')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261024-cartovella-customization-v17')));
   assert.ok(sources.some(source => source.startsWith('./character-creator.js?')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
@@ -1093,6 +1093,25 @@ check('pokedex and rare totals use the 14 real biome types', () => {
   assert.ok(pokedex.includes('--rarity-color:#c084fc'));
   assert.ok(pokedex.includes('--rarity-color:#fbbf24'));
   assert.ok(!pokedex.includes('Subterranean Cavern'));
+});
+const biomeBadgeImages = vm.runInContext('BIOME_BADGE_IMAGES', context);
+assert.equal(Object.keys(biomeBadgeImages).length, 14);
+for (const [biomeId, filename] of Object.entries(biomeBadgeImages)) {
+  const data = await readFile(new URL(`./assets/biome-badges/${filename}`, import.meta.url));
+  assert.equal(data.subarray(1, 4).toString(), 'PNG', `Biome ${biomeId} badge exists and is PNG`);
+  assert.equal(data.readUInt32BE(16), 128, `Biome ${biomeId} badge width`);
+  assert.equal(data.readUInt32BE(20), 72, `Biome ${biomeId} badge height`);
+}
+check('Biome Pokédex shows all mapped badge art and dims unreached badges', () => {
+  const pokedex = element('biomePokedexContainer').innerHTML;
+  for (const [id, filename] of Object.entries(biomeBadgeImages)) {
+    const source = `./assets/biome-badges/${encodeURI(filename)}`;
+    assert.ok(pokedex.includes(`data-biome-badge="${id}"`), `Biome ${id} card`);
+    assert.ok(pokedex.includes(`src="${source}"`), `Biome ${id} image`);
+  }
+  assert.equal((pokedex.match(/data-biome-unlocked="true"/g) || []).length, 2);
+  assert.equal((pokedex.match(/data-biome-unlocked="false"/g) || []).length, 12);
+  assert.equal((pokedex.match(/filter:grayscale\(1\) brightness\(\.35\);opacity:\.65/g) || []).length, 12);
 });
 check('Rare biome rarity uses a consistent cyan accent', () => {
   assert.ok(html.includes('text-cyan-400'));

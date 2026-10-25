@@ -10,6 +10,9 @@ expeditions, track parks and regions, and earn achievements from your travel his
 - KML and GeoJSON route imports, a Global Route Map, and PNG route-poster export.
 - Progress for parks, regions, elevations, rarity, and terrestrial biomes.
 
+The Biome Pokédex uses the matching badge art from `assets/biome-badges/`; uncollected biomes
+show their badges in grayscale and dimmed, while collected badges retain their full color.
+
 Biome credit comes from logged stops and sampled land routes. Road, AWD, rail, and walking route
 geometry can count; flight and ferry transit geometry does not. Flight and ferry stops can still count.
 
