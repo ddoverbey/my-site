@@ -452,7 +452,7 @@ check('every bundled dog, cat, fox, and wisp has a valid idle sprite-sheet crop'
   assert.ok(spritePets.every(pet => pet.spriteSheet.sourceWidth > 0 && pet.spriteSheet.sourceHeight > 0));
   assert.ok(wisps.every(pet => pet.spriteSheet.frameCount === 5));
 });
-check('companion sprites consistently crop one clean idle frame', () => {
+check('companion sprite sheets crop the selected animation frame', () => {
   const originalImage = globalThis.Image;
   const drawCalls = [];
   globalThis.Image = class {
@@ -475,12 +475,45 @@ check('companion sprites consistently crop one clean idle frame', () => {
     characterCreator.drawPet(context, fox, () => {}, 5);
     characterCreator.drawPet(context, wisp, () => {}, 4);
     characterCreator.drawPet(context, outlinedWisp, () => {}, 1);
-    assert.deepEqual(drawCalls[0].slice(1), [1, 13, 29, 19, 101, 66, 24, 16]);
-    assert.deepEqual(drawCalls[1].slice(1), [13, 851, 36, 28, 102, 68, 18, 14]);
-    assert.deepEqual(drawCalls[2].slice(1), [1, 14, 29, 18, 103, 72, 15, 10]);
-    assert.deepEqual(drawCalls[2].slice(1), drawCalls[3].slice(1));
-    assert.deepEqual(drawCalls[4].slice(1), [9, 5, 14, 22, 107, 62, 7, 11]);
-    assert.deepEqual(drawCalls[5].slice(1), [8, 4, 16, 24, 107, 62, 7, 11]);
+    assert.deepEqual(drawCalls[0].slice(1), [65, 13, 29, 19, 101, 66, 24, 16]);
+    assert.deepEqual(drawCalls[1].slice(1), [77, 851, 36, 28, 102, 68, 18, 14]);
+    assert.deepEqual(drawCalls[2].slice(1), [65, 14, 29, 18, 103, 72, 15, 10]);
+    assert.deepEqual(drawCalls[3].slice(1), [1, 14, 29, 18, 103, 72, 15, 10]);
+    assert.deepEqual(drawCalls[4].slice(1), [137, 5, 14, 22, 107, 62, 7, 11]);
+    assert.deepEqual(drawCalls[5].slice(1), [40, 4, 16, 24, 107, 62, 7, 11]);
+  } finally {
+    if (originalImage === undefined) delete globalThis.Image;
+    else globalThis.Image = originalImage;
+  }
+});
+check('character effects use their own animation frames while the explorer gently bobs', () => {
+  const originalImage = globalThis.Image;
+  globalThis.Image = class {
+    constructor() {
+      this.complete = true;
+      this.naturalWidth = 896;
+      this.src = '';
+    }
+  };
+  try {
+    const effect = characterCreator.SHOP_WARDROBE.find(item => item.field === 'effect');
+    const character = characterCreator.normalizeCharacter({
+      ...characterCreator.DEFAULT_CHARACTER, effect: effect.id, purchasedItems: [effect.id]
+    });
+    const effectLayer = characterCreator.characterSpriteAssets(character)
+      .find(layer => layer.layer === 'effect');
+    const drawCalls = [];
+    const context = {
+      save() {},
+      restore() {},
+      set filter(_) {},
+      drawImage(...args) { drawCalls.push(args); }
+    };
+    characterCreator.drawCharacterSprite(context, character, () => {}, 2, 1);
+    const effectCall = drawCalls.find(call => call[0].src === effectLayer.imageSrc);
+    assert.ok(effectCall);
+    assert.deepEqual(effectCall.slice(1), [184, 16, 32, 48, 62, 40, 36, 43]);
+    assert.ok(drawCalls.every(call => call[6] === 40));
   } finally {
     if (originalImage === undefined) delete globalThis.Image;
     else globalThis.Image = originalImage;
@@ -866,6 +899,94 @@ check('Campfire Night slices its eight-frame sprite over the background glow', (
   } finally {
     if (originalImage === undefined) delete globalThis.Image;
     else globalThis.Image = originalImage;
+  }
+});
+check('the shared stage animation loop advances pets, effects, and character bob on resume', () => {
+  const originalImage = globalThis.Image;
+  const originalWindow = globalThis.window;
+  const originalDocument = globalThis.document;
+  const intervalCallbacks = [];
+  const clearedIntervals = [];
+  let reducedMotion = true;
+  globalThis.Image = class {
+    constructor() {
+      this.complete = true;
+      this.naturalWidth = 896;
+      this.src = '';
+    }
+  };
+  globalThis.window = {
+    setInterval(callback, delay) {
+      assert.equal(delay, 110);
+      intervalCallbacks.push(callback);
+      return intervalCallbacks.length;
+    },
+    clearInterval(id) { clearedIntervals.push(id); },
+    matchMedia: () => ({ matches: reducedMotion })
+  };
+  globalThis.document = { visibilityState: 'hidden' };
+  try {
+    const dog = characterCreator.PET_CATALOG.find(item => item.id === 'pet_trail_dog');
+    const effect = characterCreator.SHOP_WARDROBE.find(item => item.field === 'effect');
+    const character = characterCreator.normalizeCharacter({
+      ...characterCreator.DEFAULT_CHARACTER,
+      background: 'bg_green_hills',
+      pet: dog.id,
+      effect: effect.id,
+      petHat: 'dog_hat',
+      petBackpack: 'dog_backpack',
+      purchasedItems: [dog.id, effect.id, 'dog_hat', 'dog_backpack']
+    });
+    const drawCalls = [];
+    const context = {
+      clearRect() {},
+      save() {},
+      scale() {},
+      restore() {},
+      fillRect() {},
+      drawImage(...args) { drawCalls.push(args); }
+    };
+    const canvas = {
+      width: 320, height: 180, isConnected: true,
+      getClientRects: () => [{}],
+      getContext: () => context
+    };
+    characterCreator.drawStage(canvas, character);
+    assert.equal(intervalCallbacks.length, 1);
+    const dogCall = () => drawCalls.findLast(call => call[0].src === dog.imageSrc);
+    const effectPath = characterCreator.characterSpriteAssets(character)
+      .find(layer => layer.layer === 'effect').imageSrc;
+    const effectCall = () => drawCalls.findLast(call => call[0].src === effectPath);
+    const petAccessoryCalls = () => drawCalls.filter(call =>
+      /doggy%20(?:hat|backpack)\.png$/.test(call[0].src));
+    const currentPetAccessoryCalls = () => petAccessoryCalls().slice(-2);
+    assert.deepEqual(dogCall().slice(1, 5), [1, 13, 29, 19]);
+    assert.deepEqual(effectCall().slice(1, 5), [24, 16, 32, 48]);
+    const hiddenDrawCount = drawCalls.length;
+    intervalCallbacks[0]();
+    assert.equal(drawCalls.length, hiddenDrawCount);
+    globalThis.document.visibilityState = 'visible';
+    intervalCallbacks[0]();
+    assert.equal(drawCalls.length, hiddenDrawCount);
+    reducedMotion = false;
+    intervalCallbacks[0]();
+    intervalCallbacks[0]();
+    intervalCallbacks[0]();
+    assert.deepEqual(dogCall().slice(1, 5), [33, 13, 29, 19]);
+    assert.deepEqual(effectCall().slice(1, 5), [104, 16, 32, 48]);
+    assert.equal(effectCall()[6], 40);
+    assert.equal(currentPetAccessoryCalls().length, 2);
+    assert.ok(currentPetAccessoryCalls().every(call => call[1] === 32));
+    canvas.isConnected = false;
+    intervalCallbacks[0]();
+    assert.deepEqual(clearedIntervals, [1]);
+  } finally {
+    if (originalImage === undefined) delete globalThis.Image;
+    else globalThis.Image = originalImage;
+    if (originalWindow === undefined) delete globalThis.window;
+    else globalThis.window = originalWindow;
+    if (originalDocument === undefined) delete globalThis.document;
+    else globalThis.document = originalDocument;
   }
 });
 check('sprite character selects matching gender, skin, hair, and outfit layers', () => {

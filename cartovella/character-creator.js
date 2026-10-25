@@ -120,6 +120,7 @@
   const OUTLINED_WISP_SPRITE_SHEET = Object.freeze({
     ...WISP_SPRITE_SHEET, sourceX: 8, sourceY: 4, sourceWidth: 16, sourceHeight: 24
   });
+  const CHARACTER_EFFECT_FRAME_COUNT = 5;
   const ASSET_ROOT = './assets/gandalfhardcore/';
   const assetUrl = path => encodeURI(path);
   const COMPANION_ASSET_PATH = `${ASSET_ROOT}GandalfHardcore Pet companion/GandalfHardcore Pet companion/`;
@@ -173,6 +174,7 @@
     targetWidth: 20,
     targetHeight: 20
   });
+  const STAGE_ANIMATION_INTERVAL_MS = CAMPFIRE_SPRITE.frameDurationMs;
 
   const CHARACTER_ASSET_ROOT = `${ASSET_ROOT}GandalfHardcore Character Asset Pack/GandalfHardcore Character Asset Pack/`;
   const HAIRSTYLE_ASSET_ROOT = `${ASSET_ROOT}GandalfHardcore 58x Hair/`;
@@ -616,7 +618,7 @@
   const imageLoadRedraws = new Map();
   const spriteVariantCache = new Map();
   const stageRenderers = new WeakMap();
-  const campfireAnimations = new WeakMap();
+  const stageAnimations = new WeakMap();
   const tabs = ['appearance', 'wardrobe', 'pets', 'backgrounds', 'shop', 'patron'];
 
   function normalizeCharacter(value) {
@@ -1041,10 +1043,10 @@
     );
   }
 
-  function stopCampfireAnimation(canvas) {
-    const animation = campfireAnimations.get(canvas);
+  function stopStageAnimation(canvas) {
+    const animation = stageAnimations.get(canvas);
     if (animation && typeof window !== 'undefined') window.clearInterval(animation.intervalId);
-    campfireAnimations.delete(canvas);
+    stageAnimations.delete(canvas);
   }
 
   function isStageVisible(canvas) {
@@ -1052,20 +1054,22 @@
       (typeof canvas.getClientRects !== 'function' || canvas.getClientRects().length > 0);
   }
 
-  function startCampfireAnimation(canvas) {
-    if (typeof window === 'undefined' || campfireAnimations.has(canvas) || !isStageVisible(canvas)) return;
-    const animation = { frame: 0, intervalId: 0 };
+  function startStageAnimation(canvas) {
+    if (typeof window === 'undefined' || stageAnimations.has(canvas) || canvas.isConnected === false) return;
+    const animation = { tick: 0, intervalId: 0 };
     const tick = () => {
-      if (!isStageVisible(canvas) || !stageRenderers.has(canvas)) {
-        window.clearInterval(animation.intervalId);
-        campfireAnimations.delete(canvas);
+      if (canvas.isConnected === false || !stageRenderers.has(canvas)) {
+        stopStageAnimation(canvas);
         return;
       }
-      animation.frame = (animation.frame + 1) % CAMPFIRE_SPRITE.frameCount;
+      if (!isStageVisible(canvas) ||
+        (typeof document !== 'undefined' && document.visibilityState === 'hidden') ||
+        window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+      animation.tick++;
       stageRenderers.get(canvas)?.();
     };
-    campfireAnimations.set(canvas, animation);
-    animation.intervalId = window.setInterval(tick, CAMPFIRE_SPRITE.frameDurationMs);
+    stageAnimations.set(canvas, animation);
+    animation.intervalId = window.setInterval(tick, STAGE_ANIMATION_INTERVAL_MS);
   }
 
   function drawBackground(ctx, background, redraw) {
@@ -1090,7 +1094,7 @@
     pixel(ctx, 32, 64, 3, 8, '#df6136');
   }
 
-  function drawCharacterSprite(ctx, value, redraw = () => {}, frameIndex = 0) {
+  function drawCharacterSprite(ctx, value, redraw = () => {}, effectFrame = 0, bobOffset = 0) {
     const target = CHARACTER_SPRITE_TARGET;
     const character = normalizeCharacter(value);
     characterSpriteAssets(character).forEach(layer => {
@@ -1102,25 +1106,28 @@
           ctx.save();
           ctx.filter = layer.filter;
         }
+        const layerFrame = layer.layer === 'effect'
+          ? ((Math.max(0, effectFrame) % CHARACTER_EFFECT_FRAME_COUNT) * CHARACTER_SPRITE_FRAME.sheetWidth)
+          : 0;
         ctx.drawImage(
           image,
-          Math.max(0, frameIndex) * CHARACTER_SPRITE_FRAME.sheetWidth + CHARACTER_SPRITE_FRAME.x,
+          layerFrame + CHARACTER_SPRITE_FRAME.x,
           CHARACTER_SPRITE_FRAME.y,
           CHARACTER_SPRITE_FRAME.width, CHARACTER_SPRITE_FRAME.height,
-          target.x, target.y, target.width, target.height
+          target.x, target.y + bobOffset, target.width, target.height
         );
         if (layer.filter) ctx.restore();
       }
     });
   }
 
-  function drawPet(ctx, pet, redraw) {
+  function drawPet(ctx, pet, redraw, frameIndex = 0) {
     if (pet.id === 'pet_none') return;
     const image = getImage(pet, redraw);
     if (pet.spriteSheet) {
       if (!image) return;
       const sprite = pet.spriteSheet;
-      const frame = 0;
+      const frame = Math.max(0, frameIndex) % sprite.frameCount;
       ctx.drawImage(
         image,
         frame * sprite.frameWidth + (sprite.sourceX || 0),
@@ -1135,7 +1142,7 @@
     }
   }
 
-  function drawPetAccessory(ctx, character, field, redraw) {
+  function drawPetAccessory(ctx, character, field, redraw, frameIndex = 0) {
     if (!character.pet.startsWith('pet_trail_dog')) return;
     const item = PET_ACCESSORY_CATALOG.find(candidate => candidate.id === character[field]);
     const path = item?.paths[character.gender];
@@ -1146,39 +1153,44 @@
     const scaleX = sprite.targetWidth / sprite.sourceWidth;
     const scaleY = sprite.targetHeight / sprite.sourceHeight;
     // Preserve the sheet's shared origin, including hat pixels above the dog's crop.
-    ctx.drawImage(image, 0, 0, sprite.frameWidth, sprite.frameHeight,
+    const frame = Math.max(0, frameIndex) % sprite.frameCount;
+    ctx.drawImage(image, frame * sprite.frameWidth, 0, sprite.frameWidth, sprite.frameHeight,
       sprite.targetX - sprite.sourceX * scaleX,
       sprite.targetY - sprite.sourceY * scaleY,
       sprite.frameWidth * scaleX, sprite.frameHeight * scaleY);
   }
 
-  function drawStage(canvas, value, options = {}, campfireFrame = 0) {
+  function drawStage(canvas, value, options = {}, animationTick = 0) {
     if (!canvas || typeof canvas.getContext !== 'function') return;
     const character = normalizeCharacter(value);
     const activeBackground = getItem(BACKGROUND_CATALOG, character.background);
     const activePet = getItem(PET_CATALOG, character.pet);
-    if (activeBackground.id !== 'bg_campfire') stopCampfireAnimation(canvas);
     const redraw = () => {
       if (canvas.isConnected !== false) stageRenderers.get(canvas)?.();
     };
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     stageRenderers.set(canvas, () => drawStage(canvas, character, options,
-      campfireAnimations.get(canvas)?.frame ?? 0));
+      stageAnimations.get(canvas)?.tick ?? 0));
+    const tick = Math.max(0, animationTick);
+    const petFrame = Math.floor(tick / 2);
+    const bobOffset = Math.round(Math.sin((tick % 24) * Math.PI / 12) * 0.75);
     ctx.imageSmoothingEnabled = false;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();
     ctx.scale(canvas.width / 160, canvas.height / 90);
     drawBackground(ctx, activeBackground, redraw);
-    if (activeBackground.id === 'bg_campfire') drawCampfire(ctx, redraw, campfireFrame);
-    drawCharacterSprite(ctx, character, redraw);
-    drawPet(ctx, activePet, redraw);
-    drawPetAccessory(ctx, character, 'petBackpack', redraw);
-    drawPetAccessory(ctx, character, 'petHat', redraw);
+    if (activeBackground.id === 'bg_campfire') {
+      drawCampfire(ctx, redraw, tick % CAMPFIRE_SPRITE.frameCount);
+    }
+    drawCharacterSprite(ctx, character, redraw, petFrame % CHARACTER_EFFECT_FRAME_COUNT, bobOffset);
+    drawPet(ctx, activePet, redraw, petFrame);
+    drawPetAccessory(ctx, character, 'petBackpack', redraw, petFrame);
+    drawPetAccessory(ctx, character, 'petHat', redraw, petFrame);
     pixel(ctx, 0, 82, 160, 8, '#17212d');
     pixel(ctx, 0, 82, 160, 1, '#84946d');
     ctx.restore();
-    if (activeBackground.id === 'bg_campfire') startCampfireAnimation(canvas);
+    startStageAnimation(canvas);
   }
 
   function renderAvatar(canvas, value) {
@@ -1552,7 +1564,7 @@
         <p class="text-xs text-slate-400">Choose a layer to preview and cycle through your unlocked gear. Browse all to shop.</p>
         ${purchaseControls}
       </div>`,
-      pets: `<p class="mb-3 text-xs text-slate-400">Companions are purchased with Wayfarer Coins. Choose one clean idle frame to follow your explorer.</p>
+      pets: `<p class="mb-3 text-xs text-slate-400">Companions are purchased with Wayfarer Coins and animate alongside your explorer.</p>
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
           ${dropdown('pet', 'Companion', character.pet, petOptions, option => petThumbnailMarkup(option))}
           ${equipmentDropdown('petHat', 'Dog Hat', !character.pet.startsWith('pet_trail_dog'))}
