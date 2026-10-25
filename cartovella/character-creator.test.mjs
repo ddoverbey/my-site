@@ -15,6 +15,7 @@ const allCatalogs = [
   characterCreator.OUTFIT_CATALOG, characterCreator.HAT_CATALOG,
   characterCreator.ACCESSORY_CATALOG, characterCreator.PET_CATALOG,
   characterCreator.BACKGROUND_CATALOG, characterCreator.LEVEL_ITEMS,
+  characterCreator.PARK_MILESTONE_ITEMS, characterCreator.ACHIEVEMENT_ITEMS,
   characterCreator.SHOP_WARDROBE, characterCreator.PET_ACCESSORY_CATALOG
 ];
 
@@ -493,7 +494,7 @@ check('level and destination unlocks show exact current progress', () => {
   ), { unlocked: false, description: 'Reach level 7 (4/7).' });
   assert.deepEqual(characterCreator.unlockStatus(
     { type: 'worldParks', goal: 50 }, { visitedParks: Array(12).fill('park') }, character, achievements
-  ), { unlocked: false, description: 'Visit 50 worldwide parks (12/50).' });
+  ), { unlocked: false, description: 'Visit 50 Global Parks (12/50).' });
 });
 check('the explorer track contains paired gender gear for all ten levels', () => {
   assert.deepEqual(characterCreator.LEVEL_TRACK.map(reward => reward.level),
@@ -504,6 +505,200 @@ check('the explorer track contains paired gender gear for all ten levels', () =>
     ['starter_shirt', 'starter_pants', 'simple_shoes']);
   assert.ok(characterCreator.LEVEL_TRACK[9].itemIds.includes('diamond_sword'));
   assert.ok(characterCreator.LEVEL_TRACK[9].itemIds.includes('hair_shield_maiden'));
+  for (const reward of characterCreator.LEVEL_TRACK.slice(1)) {
+    assert.ok(reward.itemIds.some(id => characterCreator.LEVEL_ITEMS.some(item =>
+      item.id === id && item.variantSpec && item.unlock.goal === reward.level)),
+    `level ${reward.level} includes a generated clothing reward`);
+  }
+});
+check('variant clothing includes all requested rewards and valid paired sprite-sheet paths', () => {
+  const levelIds = [
+    'pine_trail_flannel', 'scout_cargo_pants', 'meadow_forager_tunic',
+    'wayfarer_field_vest', 'canyon_work_denim', 'redwood_flannel_jacket',
+    'vanguard_tabard', 'highlander_gilded_pants', 'sovereign_cartographer_coat'
+  ];
+  const parkIds = [
+    'volunteer_park_tee', 'ranger_hat_brown', 'park_ranger_uniform', 'ranger_trail_pants',
+    'ranger_hat_silver', 'ranger_hat_gold', 'grand_warden_cloak', 'ranger_hat_diamond'
+  ];
+  const achievementIds = [
+    'khaki_trail_pants', 'mist_rain_poncho', 'cavern_miner_suit', 'summit_down_parka',
+    'overland_canvas_jacket', 'mariner_pea_coat', 'photographer_vest', 'arctic_aurora_cloak',
+    'blue_ridge_flannel', 'alpine_timberline_jacket', 'continental_cape',
+    'centennial_ranger_coat', 'gaia_druid_mantle'
+  ];
+  assert.deepEqual(characterCreator.LEVEL_ITEMS.filter(item => item.variantSpec)
+    .map(item => item.id), levelIds);
+  assert.deepEqual(characterCreator.PARK_MILESTONE_ITEMS.map(item => item.id), parkIds);
+  assert.deepEqual(characterCreator.ACHIEVEMENT_ITEMS.map(item => item.id), achievementIds);
+  const rangerHats = characterCreator.PARK_MILESTONE_ITEMS.filter(item =>
+    item.variantSpec.pattern === 'hatBand');
+  assert.equal(rangerHats.length, 4);
+  assert.ok(rangerHats.every(item =>
+    item.variantSpec.bandRowsByGender.male.join(',') === '21' &&
+    item.variantSpec.bandRowsByGender.female.join(',') === '22' &&
+    item.variantSpec.bandXRange.join(',') === '39,46'));
+  const allVariantItems = [
+    ...characterCreator.LEVEL_ITEMS.filter(item => item.variantSpec),
+    ...characterCreator.PARK_MILESTONE_ITEMS, ...characterCreator.ACHIEVEMENT_ITEMS
+  ];
+  const checkedPaths = new Set();
+  for (const item of allVariantItems) {
+    assert.deepEqual(item.genders, ['male', 'female'], item.id);
+    for (const gender of item.genders) {
+      const path = item.paths[gender];
+      assert.ok(path, `${item.id} has a ${gender} sprite path`);
+      const png = readFileSync(new URL(path, import.meta.url));
+      assert.equal(png.toString('ascii', 1, 4), 'PNG', `${item.id} ${gender} image`);
+      const dimensions = [png.readUInt32BE(16), png.readUInt32BE(20)];
+      assert.equal(dimensions[0] % 80, 0, `${item.id} ${gender} frame width`);
+      assert.equal(dimensions[1] % 64, 0, `${item.id} ${gender} frame height`);
+      checkedPaths.add(path);
+      const layer = characterCreator.characterSpriteAssets({
+        ...characterCreator.DEFAULT_CHARACTER, gender, [item.field]: item.id
+      }).find(candidate => candidate.variantSpec?.palette === item.variantSpec.palette);
+      assert.ok(layer, `${item.id} reaches the ${gender} character sprite layers`);
+    }
+  }
+  assert.ok([...checkedPaths].some(path => path.endsWith('Cape green.png')),
+    'cape template is included');
+});
+check('park and achievement clothing unlock at their exact requirements', () => {
+  const character = characterCreator.normalizeCharacter();
+  const parkGoals = [5, 10, 15, 25, 35, 50, 75, 100];
+  characterCreator.PARK_MILESTONE_ITEMS.forEach((item, index) => {
+    assert.equal(item.unlock.goal, parkGoals[index], item.id);
+    assert.equal(characterCreator.unlockStatus(item.unlock, {
+      visitedParks: Array(parkGoals[index] - 1).fill('park')
+    }, character, new Map()).unlocked, false, item.id);
+    assert.equal(characterCreator.unlockStatus(item.unlock, {
+      visitedParks: Array(parkGoals[index]).fill('park')
+    }, character, new Map()).unlocked, true, item.id);
+  });
+  const titles = new Map([
+    ['firstSteps', 'First Steps'], ['waterfalls_1', 'Chasing Waterfalls'],
+    ['subterranean', 'Subterranean'], ['thinAir', 'Thin Air'],
+    ['overlander', 'Overlander'], ['mariner', 'Mariner'],
+    ['focal', 'Focal Point'], ['longDark', 'The Long Dark'],
+    ['countryRoads', 'Country Roads'], ['rockyMountainHigh', 'Rocky Mountain High'],
+    ['fiftyNifty', 'Fifty Nifty'], ['americaTheBeautiful', 'America the Beautiful'],
+    ['gaiaWanderer', 'Gaia Wanderer']
+  ]);
+  const definitions = [...titles].map(([id, title]) => ({
+    id, title, progress: stats => stats.achievementsDone ? 1 : 0, tiers: [{ goal: 1 }]
+  }));
+  const incomplete = characterCreator.achievementProgress({}, definitions);
+  const complete = characterCreator.achievementProgress({ achievementsDone: true }, definitions);
+  const recorded = characterCreator.achievementProgress({
+    completedAchievementTiers: [...titles.keys()].map(id => ({ key: `${id}:0` }))
+  }, definitions);
+  for (const item of characterCreator.ACHIEVEMENT_ITEMS) {
+    assert.equal(characterCreator.unlockStatus(item.unlock, {}, character, incomplete).unlocked,
+      false, item.id);
+    assert.equal(characterCreator.unlockStatus(item.unlock, {}, character, complete).unlocked,
+      true, item.id);
+    assert.equal(characterCreator.unlockStatus(item.unlock, {}, character, recorded).unlocked,
+      true, `${item.id} unlocks from recorded achievement tier`);
+  }
+  assert.equal(characterCreator.unlockStatus(
+    { type: 'achievement', id: 'thinAir' }, {}, character, incomplete
+  ).description, 'Unlock Achievement: Thin Air (0/1).');
+  const controls = { dataset: { activeTab: 'wardrobe' }, innerHTML: '' };
+  characterCreator.render({
+    controls, character, stats: { level: 1, visitedParks: [] }, achievements: definitions
+  });
+  assert.match(controls.innerHTML, /Unlock Achievement: Thin Air \(0\/1\)/);
+  controls.dataset.activeWardrobeField = 'headwear';
+  characterCreator.render({
+    controls, character, stats: { level: 1, visitedParks: [] }, achievements: definitions
+  });
+  assert.match(controls.innerHTML, /Visit 10 Global Parks \(0\/10\)/);
+});
+check('sprite palette shader recolors frames, preserves outlines and transparency, and caches variants', () => {
+  const originalOffscreenCanvas = globalThis.OffscreenCanvas;
+  class FakeOffscreenCanvas {
+    constructor(width, height) {
+      this.width = width;
+      this.height = height;
+      this.data = new Uint8ClampedArray(width * height * 4);
+      this.context = {
+        drawImage: image => { this.data.set(image.data); },
+        getImageData: () => ({ data: this.data }),
+        putImageData: imageData => { this.data.set(imageData.data); },
+        clearRect() {}
+      };
+    }
+    getContext() { return this.context; }
+  }
+  globalThis.OffscreenCanvas = FakeOffscreenCanvas;
+  const source = {
+    src: 'fixture-sheet.png', naturalWidth: 160, naturalHeight: 64,
+    data: new Uint8ClampedArray(160 * 64 * 4)
+  };
+  const setPixel = (x, y, rgba) => source.data.set(rgba, (y * source.naturalWidth + x) * 4);
+  const pixelAt = (canvas, x, y) =>
+    [...canvas.data.slice((y * canvas.width + x) * 4, (y * canvas.width + x) * 4 + 4)];
+  setPixel(0, 0, [240, 240, 240, 0]);
+  setPixel(1, 0, [0, 0, 0, 255]);
+  setPixel(2, 2, [150, 150, 150, 255]);
+  setPixel(4, 1, [150, 150, 150, 255]);
+  setPixel(3, 3, [230, 230, 230, 255]);
+  setPixel(7, 2, [90, 90, 90, 255]);
+  setPixel(84, 2, [150, 150, 150, 255]);
+  setPixel(30, 2, [150, 150, 150, 255]);
+  setPixel(31, 2, [150, 150, 150, 255]);
+  setPixel(36, 2, [150, 150, 150, 255]);
+  setPixel(39, 5, [150, 150, 150, 255]);
+  setPixel(40, 21, [150, 150, 150, 255]);
+  setPixel(40, 22, [150, 150, 150, 255]);
+  try {
+    const plaid = {
+      palette: { shadow: '#112233', base: '#445566', highlight: '#aabbcc', accent: '#deadde' },
+      pattern: 'plaid'
+    };
+    const processed = characterCreator.processSpriteVariant(source, plaid);
+    assert.deepEqual(pixelAt(processed, 0, 0), [240, 240, 240, 0]);
+    assert.deepEqual(pixelAt(processed, 1, 0), [0, 0, 0, 255]);
+    assert.deepEqual(pixelAt(processed, 2, 2), [0x44, 0x55, 0x66, 255]);
+    assert.deepEqual(pixelAt(processed, 4, 1), [0xde, 0xad, 0xde, 255]);
+    assert.deepEqual(pixelAt(processed, 3, 3), [0xaa, 0xbb, 0xcc, 255]);
+    assert.deepEqual(pixelAt(processed, 7, 2), [0x11, 0x22, 0x33, 255]);
+    assert.deepEqual(pixelAt(processed, 84, 2), [0xde, 0xad, 0xde, 255]);
+    assert.strictEqual(characterCreator.processSpriteVariant(source, plaid), processed);
+    const vest = characterCreator.processSpriteVariant(source, {
+      palette: { shadow: '#112233', base: '#445566', highlight: '#aabbcc', sleeve: '#123456' },
+      pattern: 'vest'
+    });
+    assert.deepEqual(pixelAt(vest, 2, 2), [0x12, 0x34, 0x56, 255]);
+    assert.deepEqual(pixelAt(vest, 36, 2), [0x44, 0x55, 0x66, 255]);
+    const jacket = characterCreator.processSpriteVariant(source, {
+      palette: { shadow: '#112233', base: '#445566', highlight: '#aabbcc', accent: '#deadde' },
+      pattern: 'jacket'
+    });
+    assert.deepEqual(pixelAt(jacket, 39, 5), [0xde, 0xad, 0xde, 255]);
+    const hat = characterCreator.processSpriteVariant(source, {
+      palette: { shadow: '#112233', base: '#445566', highlight: '#aabbcc', band: ['#00ffff', '#ffffff'] },
+      pattern: 'hatBand', bandRows: [2], bandXRange: [29, 50]
+    });
+    assert.deepEqual(pixelAt(hat, 30, 2), [0x00, 0xff, 0xff, 255]);
+    assert.deepEqual(pixelAt(hat, 31, 2), [0xff, 0xff, 0xff, 255]);
+    const rangerHat = characterCreator.PARK_MILESTONE_ITEMS.find(item =>
+      item.id === 'ranger_hat_gold').variantSpec;
+    const maleHat = characterCreator.processSpriteVariant(source, { ...rangerHat, gender: 'male' });
+    const femaleHat = characterCreator.processSpriteVariant(source, { ...rangerHat, gender: 'female' });
+    assert.deepEqual(pixelAt(maleHat, 40, 21), [0xed, 0xc0, 0x4d, 255]);
+    assert.deepEqual(pixelAt(maleHat, 40, 22), [0xb7, 0x95, 0x61, 255]);
+    assert.deepEqual(pixelAt(femaleHat, 40, 21), [0xb7, 0x95, 0x61, 255]);
+    assert.deepEqual(pixelAt(femaleHat, 40, 22), [0xed, 0xc0, 0x4d, 255]);
+    const cape = characterCreator.processSpriteVariant({
+      src: 'cape-sheet.png', naturalWidth: 720, naturalHeight: 448,
+      data: new Uint8ClampedArray(720 * 448 * 4)
+    }, { palette: { shadow: '#112233', base: '#445566', highlight: '#aabbcc' } });
+    assert.deepEqual([cape.width, cape.height], [720, 448]);
+  } finally {
+    if (originalOffscreenCanvas === undefined) delete globalThis.OffscreenCanvas;
+    else globalThis.OffscreenCanvas = originalOffscreenCanvas;
+  }
 });
 check('Wayfarer Coins deterministically sum travel, rarity, regions, levels, achievements, and purchases', () => {
   const summary = characterCreator.coinSummary({

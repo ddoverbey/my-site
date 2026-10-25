@@ -191,6 +191,32 @@
   const levelItem = (id, name, field, paths, goal) =>
     equipmentItem(id, name, field, paths, { type: 'level', goal });
   const PACK = CHARACTER_ASSET_ROOT;
+  const VARIANT_ASSET_ROOTS = {
+    hats: `${ASSET_ROOT}GandalfHardcore 41x Hats/`,
+    backLayers: `${ASSET_ROOT}GandalfHardcore Back layers s/`
+  };
+  const VARIANT_BASE_PATHS = Object.freeze({
+    top: Object.freeze(pairedPaths(PACK, 'Male Clothing/Shirt v2.png',
+      'Female Clothing/Corset v2.png')),
+    bottoms: Object.freeze(pairedPaths(PACK, 'Male Clothing/Green Pants.png',
+      'Female Clothing/Skirt.png')),
+    backLayer: Object.freeze(pairedPaths(VARIANT_ASSET_ROOTS.backLayers, 'Cape green.png')),
+    headwear: Object.freeze(pairedPaths(VARIANT_ASSET_ROOTS.hats,
+      'Male Hat/Farming Hat M.png', 'Female Hat/Farming Hat F.png'))
+  });
+  const makeVariantItem = (id, name, field, unlock, palette, pattern = null) => ({
+    ...equipmentItem(id, name, field, VARIANT_BASE_PATHS[field], unlock),
+    variantSpec: { palette, ...(pattern ? { pattern } : {}),
+      ...(pattern === 'hatBand' ? {
+        bandRowsByGender: { male: [21], female: [22] },
+        bandXRange: [39, 46]
+      } : {}) }
+  });
+  const variantSpecForGender = (item, gender) => item.variantSpec?.bandRowsByGender
+    ? { ...item.variantSpec, gender } : item.variantSpec;
+  const palette = (shadow, base, highlight, extra = {}) => ({
+    shadow, base, highlight, ...extra
+  });
   const LEVEL_ITEMS = [
     levelItem('starter_shirt', 'Starter Shirt', 'top',
       pairedPaths(PACK, 'Male Clothing/Shirt v2.png', 'Female Clothing/Corset v2.png'), 1),
@@ -265,6 +291,95 @@
     levelItem('diamond_pickaxe', 'Diamond Pickaxe', 'handItem',
       pairedPaths(`${ASSET_ROOT}GandalfHardcore 35x Hand Items/Male Hand/`, 'Diamond Pickaxe.png',
         '../Female Hand/Diamond Pickaxe.png'), 10)
+  ];
+  const VARIANT_LEVEL_ITEMS = [
+    makeVariantItem('pine_trail_flannel', 'Pine Trail Flannel', 'top', { type: 'level', goal: 2 },
+      palette('#1d2921', '#4d704e', '#a5b694', { accent: '#29372d' }), 'plaid'),
+    makeVariantItem('scout_cargo_pants', 'Scout Cargo Pants', 'bottoms', { type: 'level', goal: 3 },
+      palette('#26291d', '#687249', '#b1ae80')),
+    makeVariantItem('meadow_forager_tunic', 'Meadow Forager Tunic', 'top', { type: 'level', goal: 4 },
+      palette('#30382d', '#849a73', '#d6ddbd', { accent: '#ede8cf' }), 'jacket'),
+    makeVariantItem('wayfarer_field_vest', 'Wayfarer Field Vest', 'top', { type: 'level', goal: 5 },
+      palette('#252b31', '#a39469', '#ded0a1', { sleeve: '#34475f' }), 'vest'),
+    makeVariantItem('canyon_work_denim', 'Canyon Work Denim', 'bottoms', { type: 'level', goal: 6 },
+      palette('#20283a', '#4c6388', '#9aaec9')),
+    makeVariantItem('redwood_flannel_jacket', 'Redwood Flannel Jacket', 'top', { type: 'level', goal: 7 },
+      palette('#321e23', '#8d454b', '#c7867d', { accent: '#36292d' }), 'plaid'),
+    makeVariantItem('vanguard_tabard', 'Vanguard Tabard', 'top', { type: 'level', goal: 8 },
+      palette('#323945', '#71849c', '#d4dbe4', { accent: '#3b5ba8' }), 'jacket'),
+    makeVariantItem('highlander_gilded_pants', 'Highlander Breeches', 'bottoms', { type: 'level', goal: 9 },
+      palette('#29241f', '#675642', '#b49a70')),
+    makeVariantItem('sovereign_cartographer_coat', 'Sovereign Cartographer Coat', 'top',
+      { type: 'level', goal: 10 },
+      palette('#1d202b', '#41475c', '#c6b987', { accent: '#e1b94f' }), 'jacket')
+  ];
+  LEVEL_ITEMS.push(...VARIANT_LEVEL_ITEMS);
+  const PARK_MILESTONE_ITEMS = [
+    makeVariantItem('volunteer_park_tee', 'Volunteer Park Tee', 'top',
+      { type: 'worldParks', goal: 5 },
+      palette('#1c3429', '#365e45', '#88a36c', { accent: '#dfc05b' }), 'jacket'),
+    makeVariantItem('ranger_hat_brown', 'Brown-Band Ranger Hat', 'headwear',
+      { type: 'worldParks', goal: 10 },
+      palette('#51402d', '#b79561', '#e0c88f', { band: '#684529' }), 'hatBand'),
+    makeVariantItem('park_ranger_uniform', 'Park Ranger Uniform', 'top',
+      { type: 'worldParks', goal: 15 },
+      palette('#32372c', '#a49260', '#ded0a0', { sleeve: '#34573f' }), 'vest'),
+    makeVariantItem('ranger_trail_pants', 'Ranger Trail Breeches', 'bottoms',
+      { type: 'worldParks', goal: 25 },
+      palette('#1e2a24', '#355b43', '#77926c')),
+    makeVariantItem('ranger_hat_silver', 'Silver-Band Ranger Hat', 'headwear',
+      { type: 'worldParks', goal: 35 },
+      palette('#51402d', '#b79561', '#e0c88f', { band: '#c6d1dc' }), 'hatBand'),
+    makeVariantItem('ranger_hat_gold', 'Golden Ranger Hat', 'headwear',
+      { type: 'worldParks', goal: 50 },
+      palette('#51402d', '#b79561', '#e0c88f', { band: '#edc04d' }), 'hatBand'),
+    makeVariantItem('grand_warden_cloak', 'Grand Warden Cloak', 'backLayer',
+      { type: 'worldParks', goal: 75 },
+      palette('#172a21', '#315841', '#9d9b54', { accent: '#d0ae48' })),
+    makeVariantItem('ranger_hat_diamond', 'Diamond Ranger Hat', 'headwear',
+      { type: 'worldParks', goal: 100 },
+      palette('#51402d', '#b79561', '#e0c88f', { band: ['#48d8e8', '#f5ffff'] }), 'hatBand')
+  ];
+  const ACHIEVEMENT_ITEMS = [
+    makeVariantItem('khaki_trail_pants', 'Khaki Trail Pants', 'bottoms',
+      { type: 'achievement', id: 'firstSteps' },
+      palette('#363126', '#9d8a5d', '#d6c79b')),
+    makeVariantItem('mist_rain_poncho', 'Mist Rain Poncho', 'top',
+      { type: 'achievement', id: 'waterfalls_1' },
+      palette('#39362a', '#bd9942', '#e8d181', { accent: '#43a5a1' }), 'jacket'),
+    makeVariantItem('cavern_miner_suit', 'Deep Cavern Suit', 'top',
+      { type: 'achievement', id: 'subterranean' },
+      palette('#292e36', '#59616d', '#c89b49', { accent: '#d29d3e' }), 'jacket'),
+    makeVariantItem('summit_down_parka', 'Summit Down Parka', 'top',
+      { type: 'achievement', id: 'thinAir' },
+      palette('#33424a', '#9ac6cf', '#f1f6f5', { sleeve: '#e4f1f2' }), 'vest'),
+    makeVariantItem('overland_canvas_jacket', 'Overland Canvas Jacket', 'top',
+      { type: 'achievement', id: 'overlander' },
+      palette('#382621', '#9b6042', '#d4aa74', { accent: '#cba46f' }), 'jacket'),
+    makeVariantItem('mariner_pea_coat', 'Mariner Pea Coat', 'top',
+      { type: 'achievement', id: 'mariner' },
+      palette('#202b3a', '#344866', '#8395aa', { accent: '#d5b64e' }), 'jacket'),
+    makeVariantItem('photographer_vest', "Photographer's Utility Vest", 'top',
+      { type: 'achievement', id: 'focal' },
+      palette('#292b2c', '#55594d', '#a5a58a', { sleeve: '#777552' }), 'vest'),
+    makeVariantItem('arctic_aurora_cloak', 'Arctic Aurora Cloak', 'backLayer',
+      { type: 'achievement', id: 'longDark' },
+      palette('#22263d', '#397d83', '#b694d0', { accent: '#6dd5cf' })),
+    makeVariantItem('blue_ridge_flannel', 'Blue Ridge Flannel', 'top',
+      { type: 'achievement', id: 'countryRoads' },
+      palette('#25313b', '#4d6c91', '#a9bad0', { accent: '#d5b857' }), 'plaid'),
+    makeVariantItem('alpine_timberline_jacket', 'Alpine Timberline Jacket', 'top',
+      { type: 'achievement', id: 'rockyMountainHigh' },
+      palette('#3a3020', '#b08a3e', '#e0c879', { accent: '#385641' }), 'jacket'),
+    makeVariantItem('continental_cape', 'Continental Voyager Cape', 'backLayer',
+      { type: 'achievement', id: 'fiftyNifty' },
+      palette('#252636', '#35466e', '#a35a61', { accent: '#b34854' })),
+    makeVariantItem('centennial_ranger_coat', 'Centennial Ranger Coat', 'top',
+      { type: 'achievement', id: 'americaTheBeautiful' },
+      palette('#191b20', '#383a3b', '#b49a53', { accent: '#e4c55a' }), 'jacket'),
+    makeVariantItem('gaia_druid_mantle', 'Gaia Druid Mantle', 'backLayer',
+      { type: 'achievement', id: 'gaiaWanderer' },
+      palette('#1b3026', '#28734e', '#c7b34e', { accent: '#78b967' }))
   ];
 
   const SHOP_WARDROBE = [];
@@ -418,7 +533,10 @@
     equipmentItem('dog_backpack', 'Dog Backpack', 'petBackpack', pairedPaths(
       COMPANION_ASSET_PATH, 'GandalfHardcore doggy backpack.png'), { type: 'coin', cost: 75 })
   ];
-  const EQUIPMENT_CATALOG = [...LEVEL_ITEMS, ...SHOP_WARDROBE, ...PET_ACCESSORY_CATALOG];
+  const EQUIPMENT_CATALOG = [
+    ...LEVEL_ITEMS, ...PARK_MILESTONE_ITEMS, ...ACHIEVEMENT_ITEMS,
+    ...SHOP_WARDROBE, ...PET_ACCESSORY_CATALOG
+  ];
   const EQUIPMENT_BY_FIELD = Object.freeze(Object.fromEntries(
     [...new Set(EQUIPMENT_CATALOG.map(item => item.field))].map(field =>
       [field, EQUIPMENT_CATALOG.filter(item => item.field === field)])));
@@ -429,16 +547,17 @@
   });
   const LEVEL_TRACK = Object.freeze([
     { level: 1, title: 'Fresh Recruit', itemIds: ['starter_shirt', 'starter_pants', 'simple_shoes'] },
-    { level: 2, title: 'Trailwalker', itemIds: ['walking_stick', 'trail_boots'] },
-    { level: 3, title: 'Scout', itemIds: ['explorer_backpack', 'traveler_cap'] },
-    { level: 4, title: 'Forager', itemIds: ['farming_hat', 'basket', 'flower'] },
-    { level: 5, title: 'Wayfarer', itemIds: ['wayfarer_lantern', 'wayfarer_gloves'] },
-    { level: 6, title: 'Prospector', itemIds: ['mining_helmet', 'iron_pickaxe', 'iron_axe'] },
-    { level: 7, title: 'Ranger', itemIds: ['traveler_cape', 'bandit_scarf'] },
-    { level: 8, title: 'Vanguard', itemIds: ['guard_helmet', 'circle_shield', 'iron_sword'] },
-    { level: 9, title: 'Highlander', itemIds: ['chainmail_tunic', 'viking_helmet', 'golden_pickaxe', 'golden_sword'] },
+    { level: 2, title: 'Trailwalker', itemIds: ['walking_stick', 'trail_boots', 'pine_trail_flannel'] },
+    { level: 3, title: 'Scout', itemIds: ['explorer_backpack', 'traveler_cap', 'scout_cargo_pants'] },
+    { level: 4, title: 'Forager', itemIds: ['farming_hat', 'basket', 'flower', 'meadow_forager_tunic'] },
+    { level: 5, title: 'Wayfarer', itemIds: ['wayfarer_lantern', 'wayfarer_gloves', 'wayfarer_field_vest'] },
+    { level: 6, title: 'Prospector', itemIds: ['mining_helmet', 'iron_pickaxe', 'iron_axe', 'canyon_work_denim'] },
+    { level: 7, title: 'Ranger', itemIds: ['traveler_cape', 'bandit_scarf', 'redwood_flannel_jacket'] },
+    { level: 8, title: 'Vanguard', itemIds: ['guard_helmet', 'circle_shield', 'iron_sword', 'vanguard_tabard'] },
+    { level: 9, title: 'Highlander', itemIds: ['chainmail_tunic', 'viking_helmet', 'golden_pickaxe', 'golden_sword', 'highlander_gilded_pants'] },
     { level: 10, title: 'Cartographer Royal', itemIds: [
-      'royal_headwear', 'diamond_sword', 'diamond_pickaxe', 'hair_fancy', 'hair_queen', 'hair_shield_maiden'
+      'royal_headwear', 'diamond_sword', 'diamond_pickaxe', 'sovereign_cartographer_coat',
+      'hair_fancy', 'hair_queen', 'hair_shield_maiden'
     ] }
   ]);
   const LEVEL_HAIR_REWARDS = Object.freeze([
@@ -489,6 +608,7 @@
   };
   const imageCache = new Map();
   const imageLoadRedraws = new Map();
+  const spriteVariantCache = new Map();
   const stageRenderers = new WeakMap();
   const campfireAnimations = new WeakMap();
   const tabs = ['appearance', 'wardrobe', 'pets', 'backgrounds', 'shop', 'patron'];
@@ -564,13 +684,16 @@
 
   function achievementProgress(stats = {}, achievements = []) {
     const progress = new Map();
+    const completedTiers = new Set(Array.isArray(stats.completedAchievementTiers)
+      ? stats.completedAchievementTiers.map(tier => tier?.key).filter(Boolean) : []);
     achievements.forEach(achievement => {
       const amount = Number(achievement.progress(stats));
-      (achievement.tiers || []).forEach(tier => {
+      (achievement.tiers || []).forEach((tier, index) => {
         const goal = Number(typeof tier.goal === 'function' ? tier.goal(stats) : tier.goal);
-        if (Number.isFinite(amount) && Number.isFinite(goal)) {
+        const completed = completedTiers.has(`${achievement.id}:${index}`);
+        if ((Number.isFinite(amount) || completed) && Number.isFinite(goal)) {
           progress.set(achievement.id, {
-            progress: Math.max(0, amount),
+            progress: Math.max(0, completed ? Math.max(Number.isFinite(amount) ? amount : 0, goal) : amount),
             goal: Math.max(0, goal),
             name: tier.title || achievement.title
           });
@@ -656,7 +779,7 @@
       const current = Array.isArray(stats.visitedParks) ? stats.visitedParks.length : 0;
       return {
         unlocked: current >= unlock.goal,
-        description: `Visit ${unlock.goal} worldwide parks (${Math.min(current, unlock.goal)}/${unlock.goal}).`
+        description: `Visit ${unlock.goal} Global Parks (${Math.min(current, unlock.goal)}/${unlock.goal}).`
       };
     }
     if (unlock.type === 'park') {
@@ -674,8 +797,8 @@
       return {
         unlocked: !!result && result.progress >= result.goal,
         description: result
-          ? `Earn ${result.name} (${Math.min(result.progress, result.goal)}/${result.goal}).`
-          : 'Earn the linked achievement.'
+          ? `Unlock Achievement: ${result.name} (${Math.min(result.progress, result.goal)}/${result.goal}).`
+          : 'Unlock the linked achievement.'
       };
     }
     if (unlock.type === 'pro') {
@@ -734,6 +857,101 @@
     return image && image.complete && image.naturalWidth ? image : null;
   }
 
+  function parsePaletteColor(color) {
+    const match = /^#([0-9a-f]{6})$/i.exec(color || '');
+    if (!match) throw new Error(`Invalid sprite palette color: ${color}`);
+    const value = Number.parseInt(match[1], 16);
+    return [(value >> 16) & 255, (value >> 8) & 255, value & 255];
+  }
+
+  function processSpriteVariant(baseImage, variantSpec) {
+    const sourcePath = baseImage?.currentSrc || baseImage?.src;
+    const cacheKey = `${sourcePath}|${JSON.stringify(variantSpec)}`;
+    if (spriteVariantCache.has(cacheKey)) return spriteVariantCache.get(cacheKey);
+    const width = baseImage?.naturalWidth || baseImage?.width || 0;
+    const height = baseImage?.naturalHeight || baseImage?.height || 0;
+    if (!sourcePath || width < 80 || height < 64 || width % 80 !== 0 || height % 64 !== 0) {
+      throw new Error(`Sprite variant source must be an aligned 80x64 sheet: ${sourcePath || 'unknown source'}`);
+    }
+    if (!variantSpec?.palette) throw new Error(`Sprite variant palette missing: ${sourcePath}`);
+    const colors = Object.fromEntries(['shadow', 'base', 'highlight', 'accent', 'sleeve', 'band']
+      .filter(key => variantSpec.palette[key] &&
+        !(key === 'band' && Array.isArray(variantSpec.palette[key])))
+      .map(key => [key, parsePaletteColor(variantSpec.palette[key])]));
+    const bandColors = Array.isArray(variantSpec.palette.band)
+      ? variantSpec.palette.band.map(parsePaletteColor)
+      : colors.band ? [colors.band] : [];
+    if (!colors.shadow || !colors.base || !colors.highlight) {
+      throw new Error(`Sprite variant requires shadow, base, and highlight colors: ${sourcePath}`);
+    }
+    const canvas = typeof OffscreenCanvas === 'function'
+      ? new OffscreenCanvas(width, height)
+      : typeof document !== 'undefined' && typeof document.createElement === 'function'
+        ? document.createElement('canvas') : null;
+    if (!canvas) throw new Error('Canvas support is required to render sprite variants.');
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    if (!context) throw new Error(`2D canvas context unavailable for sprite variant: ${sourcePath}`);
+    context.drawImage(baseImage, 0, 0);
+    const imageData = context.getImageData(0, 0, width, height);
+    const { data } = imageData;
+    const selectedBandRows = variantSpec.bandRowsByGender?.[variantSpec.gender] ||
+      variantSpec.bandRows || [];
+    const bandRows = new Set(selectedBandRows);
+    const [bandLeft, bandRight] = variantSpec.bandXRange || [0, 79];
+    for (let y = 0; y < height; y++) {
+      const localY = y % 64;
+      for (let x = 0; x < width; x++) {
+        const localX = x % 80;
+        const index = (y * width + x) * 4;
+        const alpha = data[index + 3];
+        if (alpha === 0) continue;
+        const luminance = (0.2126 * data[index] + 0.7152 * data[index + 1] +
+          0.0722 * data[index + 2]) / 255;
+        if (luminance < 0.20) continue;
+        const mapped = luminance < 0.42 ? colors.shadow
+          : luminance < 0.74 ? colors.base : colors.highlight;
+        let output = mapped;
+        const isMidtone = luminance >= 0.20 && luminance < 0.74;
+        switch (variantSpec.pattern) {
+          case 'plaid':
+            if (isMidtone && (localX % 4 === 0 || localY % 4 === 0)) output = colors.accent;
+            break;
+          case 'vest':
+            output = localX >= 33 && localX <= 46 ? colors.base : colors.sleeve;
+            break;
+          case 'jacket':
+            if (localX === 39 || localX === 40 ||
+                (localY >= 20 && localY <= 22) || (localY >= 44 && localY <= 47)) {
+              output = colors.accent;
+            }
+            break;
+          case 'hatBand':
+            if (bandRows.has(localY) && localX >= bandLeft && localX <= bandRight) {
+              if (!bandColors.length) throw new Error(`Sprite hat-band color missing: ${sourcePath}`);
+              output = bandColors[localX % bandColors.length];
+            }
+            break;
+          case undefined:
+          case null:
+          case 'solid':
+            break;
+          default:
+            throw new Error(`Unsupported sprite pattern "${variantSpec.pattern}" for ${sourcePath}`);
+        }
+        if (!output) throw new Error(`Sprite variant palette incomplete for pattern "${variantSpec.pattern}".`);
+        data[index] = output[0];
+        data[index + 1] = output[1];
+        data[index + 2] = output[2];
+        data[index + 3] = alpha;
+      }
+    }
+    context.putImageData(imageData, 0, 0);
+    spriteVariantCache.set(cacheKey, canvas);
+    return canvas;
+  }
+
   function characterSpriteAssets(value) {
     const character = normalizeCharacter(value);
     const genderName = character.gender === 'female' ? 'Female' : 'Male';
@@ -746,7 +964,12 @@
     const equipmentLayer = (field, layer) => {
       const item = (EQUIPMENT_BY_FIELD[field] || []).find(candidate => candidate.id === character[field]);
       const path = item?.paths[character.gender];
-      return path ? { layer, imageSrc: assetUrl(path) } : null;
+      return path ? {
+        layer, imageSrc: assetUrl(path),
+        ...(item.variantSpec ? {
+          variantSpec: variantSpecForGender(item, character.gender)
+        } : {})
+      } : null;
     };
     const specialSkin = equipmentLayer('specialSkin', 'base');
     const layers = [
@@ -848,7 +1071,9 @@
     const target = CHARACTER_SPRITE_TARGET;
     const character = normalizeCharacter(value);
     characterSpriteAssets(character).forEach(layer => {
-      const image = getImage(layer, redraw);
+      const baseImage = getImage(layer, redraw);
+      const image = baseImage && layer.variantSpec
+        ? processSpriteVariant(baseImage, layer.variantSpec) : baseImage;
       if (image) {
         if (layer.filter) {
           ctx.save();
@@ -948,7 +1173,9 @@
     ctx.translate((canvas.width - 80 * scale) / 2, (canvas.height - 48 * scale) / 2);
     ctx.scale(scale, scale);
     characterSpriteAssets(character).forEach(layer => {
-      const image = getImage(layer, redraw);
+      const baseImage = getImage(layer, redraw);
+      const image = baseImage && layer.variantSpec
+        ? processSpriteVariant(baseImage, layer.variantSpec) : baseImage;
       if (!image) return;
       if (layer.filter) {
         ctx.save();
@@ -1094,10 +1321,36 @@
   function equipmentThumbnailMarkup(item, gender) {
     const path = item.paths?.[gender];
     const isPetAccessory = item.field === 'petHat' || item.field === 'petBackpack';
+    if (path && item.variantSpec) {
+      return `<canvas data-sprite-variant-preview="${escapeHtml(item.id)}"
+        data-gender="${escapeHtml(gender)}" width="40" height="40" aria-hidden="true"
+        class="block h-10 w-10 shrink-0 rounded bg-slate-900"></canvas>`;
+    }
     return `<span aria-hidden="true" class="relative block h-10 w-10 shrink-0 overflow-hidden rounded bg-slate-900">
       ${path ? `<img src="${escapeHtml(assetUrl(path))}" alt="" class="absolute left-0 top-0 max-w-none"
         style="width:${isPetAccessory ? 240 : 400}px;height:${isPetAccessory ? 80 : 224}px;image-rendering:pixelated">` : ''}
     </span>`;
+  }
+
+  function renderSpriteVariantPreviews(container) {
+    if (typeof container.querySelectorAll !== 'function') return;
+    container.querySelectorAll('canvas[data-sprite-variant-preview]').forEach(canvas => {
+      const details = canvas.closest('details');
+      if (details && !details.open && !canvas.closest('summary')) return;
+      const item = EQUIPMENT_CATALOG.find(candidate =>
+        candidate.id === canvas.dataset.spriteVariantPreview);
+      const path = item?.paths?.[canvas.dataset.gender];
+      if (!item?.variantSpec || !path) return;
+      const baseImage = getImage({ imageSrc: assetUrl(path) },
+        () => renderSpriteVariantPreviews(container));
+      if (!baseImage) return;
+      const image = processSpriteVariant(baseImage, variantSpecForGender(item, canvas.dataset.gender));
+      const context = canvas.getContext('2d');
+      if (!context) return;
+      context.imageSmoothingEnabled = false;
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(image, 0, 0, 80, 64, 0, 4, 40, 32);
+    });
   }
 
   function coinIconMarkup() {
@@ -1309,12 +1562,14 @@
       </div><div role="tabpanel">${sections[activeTab]}</div>`;
     renderPetPreviews(container);
     renderHairPreviews(container);
+    renderSpriteVariantPreviews(container);
     if (typeof container.querySelectorAll === 'function') {
       container.querySelectorAll('details').forEach(details => {
         details.addEventListener('toggle', () => {
           positionDropdown(details, container);
           renderPetPreviews(details);
           renderHairPreviews(details);
+          renderSpriteVariantPreviews(details);
         });
       });
     }
@@ -1364,6 +1619,7 @@
         if (!controls.hidden) {
           renderPetPreviews(controls);
           renderHairPreviews(controls);
+          renderSpriteVariantPreviews(controls);
           controls.focus?.({ preventScroll: true });
           controls.scrollIntoView?.({
             behavior: 'instant',
@@ -1433,9 +1689,11 @@
   const api = {
     DEFAULT_CHARACTER, SKIN_TONES, HAIR_STYLES, HAIR_COLORS, EYE_COLORS, BODY_SHAPES, HEIGHTS,
     OUTFIT_CATALOG, HAT_CATALOG, ACCESSORY_CATALOG, PET_CATALOG, BACKGROUND_CATALOG,
-    LEVEL_ITEMS, SHOP_WARDROBE, PET_ACCESSORY_CATALOG, EQUIPMENT_CATALOG, LEVEL_TRACK,
+    LEVEL_ITEMS, PARK_MILESTONE_ITEMS, ACHIEVEMENT_ITEMS,
+    SHOP_WARDROBE, PET_ACCESSORY_CATALOG, EQUIPMENT_CATALOG, LEVEL_TRACK,
     BODY_SHAPE_PROFILES, normalizeCharacter, characterSpriteAssets, achievementProgress,
-    unlockStatus, coinSummary, drawPet, drawCharacterSprite, drawCampfire, drawStage, renderAvatar, render
+    unlockStatus, coinSummary, processSpriteVariant, drawPet, drawCharacterSprite, drawCampfire,
+    drawStage, renderAvatar, render
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CharacterCreator = api;
