@@ -27,7 +27,7 @@ check('character appearance, wardrobe, companions, and scene choices render as d
   const expectedFields = {
     appearance: ['gender', 'skinTone', 'hairPreset', 'specialSkin'],
     wardrobe: ['top'],
-    pets: ['pet', 'petHat', 'petBackpack'],
+    pets: ['pet', 'petAnimation', 'petHat', 'petBackpack'],
     backgrounds: ['background'],
     shop: ['top'],
     patron: []
@@ -244,6 +244,34 @@ check('dropdown changes update the selected character field', () => {
   choose('gender', 'female');
   assert.equal(changedCharacter.gender, 'female');
 });
+check('pet animation selection is validated, persisted, and resets to the new pet default', () => {
+  const dog = characterCreator.PET_CATALOG.find(item => item.id === 'pet_trail_dog');
+  const cat = characterCreator.PET_CATALOG.find(item => item.id === 'pet_black_cat');
+  const dogWithLeap = characterCreator.normalizeCharacter({
+    ...characterCreator.DEFAULT_CHARACTER,
+    pet: dog.id, purchasedItems: [dog.id], petAnimation: 'leap'
+  });
+  assert.equal(dogWithLeap.petAnimation, 'leap');
+  assert.equal(characterCreator.normalizeCharacter({
+    ...dogWithLeap, pet: cat.id, purchasedItems: [dog.id, cat.id]
+  }).petAnimation, 'cat-13');
+  assert.equal(characterCreator.normalizeCharacter({
+    ...dogWithLeap, pet: 'pet_none'
+  }).petAnimation, '');
+
+  const controls = { dataset: { activeTab: 'pets' }, innerHTML: '' };
+  let changedCharacter;
+  characterCreator.render({
+    controls, character: dogWithLeap,
+    onChange: character => { changedCharacter = character; }
+  });
+  assert.match(controls.innerHTML, /data-character-field="petAnimation"/);
+  assert.match(controls.innerHTML, /<option value="leap" selected>Leap<\/option>/);
+  controls.onchange({
+    target: { dataset: { characterField: 'petAnimation' }, value: 'walk' }
+  });
+  assert.equal(changedCharacter.petAnimation, 'walk');
+});
 check('opening customization scrolls to and focuses the editor; closing does not scroll', () => {
   const scrollCalls = [];
   const focusCalls = [];
@@ -359,6 +387,7 @@ check('character migration clamps invalid values and preserves safe selections',
     ...characterCreator.DEFAULT_CHARACTER,
     skinTone: 'deep', hairStyle: 'hair_6', outfit: 'outfit_parka',
     top: 'orange_shirt', bottoms: 'orange_pants', pet: 'pet_black_cat',
+    petAnimation: 'cat-13',
     purchasedItems: ['orange_shirt', 'orange_pants', 'pet_black_cat'],
     background: 'bg_campfire',
     proUnlocked: false, donationUsd: 1000000
@@ -435,11 +464,16 @@ check('every bundled dog, cat, bunny, fox, and wisp has a valid animated sprite-
   assert.ok(dogs.every(pet => pet.spriteSheet.frameCount === 5));
   assert.ok(cats.every(pet => pet.spriteSheet.frameCount === 8));
   assert.ok(cats.every(pet => pet.spriteSheet.row === 13), 'cat frames use the labeled Lick paw lie front row');
-  assert.deepEqual(bunny.spriteSheet, {
-    frameWidth: 32, frameHeight: 16, frameCount: 9,
-    row: 33, sourceX: 8, sourceY: 0, sourceWidth: 16, sourceHeight: 10,
-    targetX: 101, targetY: 72, targetWidth: 16, targetHeight: 10
-  });
+  assert.deepEqual(
+    Object.fromEntries(['frameWidth', 'frameHeight', 'frameCount', 'row', 'sourceX',
+      'sourceY', 'sourceWidth', 'sourceHeight', 'targetX', 'targetY', 'targetWidth',
+      'targetHeight'].map(key => [key, bunny.spriteSheet[key]])),
+    {
+      frameWidth: 32, frameHeight: 16, frameCount: 9,
+      row: 33, sourceX: 8, sourceY: 0, sourceWidth: 16, sourceHeight: 10,
+      targetX: 101, targetY: 72, targetWidth: 16, targetHeight: 10
+    }
+  );
   assert.equal(fox.spriteSheet.frameCount, 5);
   assert.ok(spritePets.every(pet => pet.unlock.type === 'coin'));
   assert.ok(dogs.every(pet => pet.cost === 150));
@@ -449,16 +483,53 @@ check('every bundled dog, cat, bunny, fox, and wisp has a valid animated sprite-
   assert.ok(dogs.every(pet =>
     pet.spriteSheet.targetWidth === 24 && pet.spriteSheet.targetHeight === 16
   ));
-  for (const pet of [...dogs, ...cats, bunny, fox]) {
+  for (const pet of [...dogs, bunny, fox]) {
     assert.equal(
       pet.spriteSheet.targetY + pet.spriteSheet.targetHeight,
       82,
       `${pet.name} should meet the stage floor`
     );
   }
+  assert.equal(cats[0].spriteSheet.targetY +
+    47 * cats[0].spriteSheet.targetHeight / cats[0].spriteSheet.frameHeight, 81.5);
   assert.deepEqual([fox.spriteSheet.targetWidth, fox.spriteSheet.targetHeight], [15, 10]);
   assert.ok(spritePets.every(pet => pet.spriteSheet.sourceWidth > 0 && pet.spriteSheet.sourceHeight > 0));
   assert.ok(wisps.every(pet => pet.spriteSheet.frameCount === 5));
+});
+check('each pet exposes every configured atlas animation sequence and a valid default', () => {
+  const dogs = characterCreator.PET_CATALOG.filter(item => item.id.startsWith('pet_trail_dog'));
+  const cats = characterCreator.PET_CATALOG.filter(item => item.id.endsWith('_cat'));
+  const bunny = characterCreator.PET_CATALOG.find(item => item.id === 'pet_bunny');
+  const fox = characterCreator.PET_CATALOG.find(item => item.id === 'pet_trail_fox');
+  const wisps = characterCreator.PET_CATALOG.filter(item => item.id.startsWith('pet_blue_wisp'));
+  assert.deepEqual(dogs[0].spriteSheet.animations.map(({ id, row, frameColumns }) =>
+    [id, row, frameColumns.length]), [
+    ['walk', 0, 5], ['leap', 1, 6]
+  ]);
+  assert.ok(dogs.every(pet =>
+    JSON.stringify(pet.spriteSheet.animations) === JSON.stringify(dogs[0].spriteSheet.animations)));
+  assert.equal(cats[0].spriteSheet.animations.length, 66);
+  assert.deepEqual(cats[0].spriteSheet.animations.find(animation => animation.id === 'cat-13'), {
+    id: 'cat-13', name: 'Lick Paw · Front', row: 13,
+    frameColumns: [0, 1, 2, 3, 4, 5, 6, 7]
+  });
+  assert.ok(cats.every(pet =>
+    JSON.stringify(pet.spriteSheet.animations) === JSON.stringify(cats[0].spriteSheet.animations)));
+  assert.equal(bunny.spriteSheet.animations.length, 68);
+  assert.deepEqual(bunny.spriteSheet.animations.find(animation => animation.id === 'bunny-33'), {
+    id: 'bunny-33', name: 'Sequence 34 (row 33)', row: 33,
+    frameColumns: [0, 1, 2, 3, 4, 5, 6, 7, 8]
+  });
+  assert.deepEqual(fox.spriteSheet.animations.map(({ id, row, frameColumns }) =>
+    [id, row, frameColumns.length]), [['walk', 0, 5], ['leap', 1, 6]]);
+  assert.ok(wisps.every(pet => pet.spriteSheet.animations.map(animation => animation.id)
+    .join(',') === 'float'));
+  for (const pet of [...dogs, ...cats, bunny, fox, ...wisps]) {
+    const animation = pet.spriteSheet.animations.find(
+      item => item.id === pet.spriteSheet.defaultAnimationId);
+    assert.ok(animation, `${pet.id} has a default animation`);
+    assert.ok(animation.frameColumns.length > 1, `${pet.id} default animates multiple frames`);
+  }
 });
 check('companion sprite sheets crop the selected animation frame', () => {
   const originalImage = globalThis.Image;
@@ -485,13 +556,25 @@ check('companion sprite sheets crop the selected animation frame', () => {
     characterCreator.drawPet(context, fox, () => {}, 5);
     characterCreator.drawPet(context, wisp, () => {}, 4);
     characterCreator.drawPet(context, outlinedWisp, () => {}, 1);
+    characterCreator.drawPet(context, dog, () => {}, 5, 'leap');
+    characterCreator.drawPet(context, cat, () => {}, 5, 'cat-2');
+    characterCreator.drawPet(context, bunny, () => {}, 4, 'bunny-8');
+    characterCreator.drawPet(context, fox, () => {}, 5, 'leap');
+    characterCreator.drawPet(context, bunny, () => {}, 4, 'bunny-36');
+    characterCreator.drawPet(context, bunny, () => {}, 8, 'bunny-38');
     assert.deepEqual(drawCalls[0].slice(1), [65, 13, 29, 19, 101, 66, 24, 16]);
-    assert.deepEqual(drawCalls[1].slice(1), [77, 851, 36, 28, 102, 68, 18, 14]);
+    assert.deepEqual(drawCalls[1].slice(1), [64, 832, 64, 64, 96, 58, 32, 32]);
     assert.deepEqual(drawCalls[2].slice(1), [264, 528, 16, 10, 101, 72, 16, 10]);
     assert.deepEqual(drawCalls[3].slice(1), [65, 14, 29, 18, 103, 72, 15, 10]);
     assert.deepEqual(drawCalls[4].slice(1), [1, 14, 29, 18, 103, 72, 15, 10]);
     assert.deepEqual(drawCalls[5].slice(1), [137, 5, 14, 22, 107, 62, 7, 11]);
     assert.deepEqual(drawCalls[6].slice(1), [40, 4, 16, 24, 107, 62, 7, 11]);
+    assert.deepEqual(drawCalls[7].slice(1), [161, 45, 29, 19, 101, 66, 24, 16]);
+    assert.deepEqual(drawCalls[8].slice(1), [320, 128, 64, 64, 96, 58, 32, 32]);
+    assert.deepEqual(drawCalls[9].slice(1), [168, 128, 16, 10, 101, 72, 16, 10]);
+    assert.deepEqual(drawCalls[10].slice(1), [161, 46, 29, 18, 103, 72, 15, 10]);
+    assert.deepEqual(drawCalls[11].slice(1), [128, 576, 16, 16, 94, 66, 16, 16]);
+    assert.deepEqual(drawCalls[12].slice(1), [272, 608, 16, 16, 107, 66, 16, 16]);
   } finally {
     if (originalImage === undefined) delete globalThis.Image;
     else globalThis.Image = originalImage;
@@ -1083,6 +1166,19 @@ check('dog accessories share the dog frame origin and scale for every coat', () 
         assert.equal(dy + sprite.sourceY * dh / sh, sprite.targetY);
       }
     }
+    const dog = characterCreator.PET_CATALOG.find(pet => pet.id === 'pet_trail_dog');
+    calls.length = 0;
+    characterCreator.drawStage(canvas, {
+      ...characterCreator.DEFAULT_CHARACTER, background: 'bg_green_hills',
+      pet: dog.id, petAnimation: 'leap', petHat: 'dog_hat', petBackpack: 'dog_backpack',
+      purchasedItems: [dog.id, 'dog_hat', 'dog_backpack']
+    }, {}, 10);
+    const leapBody = calls.find(call => call[0].src === dog.imageSrc);
+    const leapAccessories = calls.filter(call =>
+      /doggy%20(hat|backpack)\.png$/.test(call[0].src));
+    assert.deepEqual(leapBody.slice(1, 5), [161, 45, 29, 19]);
+    assert.equal(leapAccessories.length, 2);
+    assert.ok(leapAccessories.every(call => call[1] === 160 && call[2] === 32));
     const controls = { dataset: { activeTab: 'pets' }, innerHTML: '' };
     characterCreator.render({ controls, character: characterCreator.DEFAULT_CHARACTER });
     for (const field of ['petHat', 'petBackpack']) {

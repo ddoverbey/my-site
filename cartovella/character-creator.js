@@ -97,30 +97,90 @@
     id, name, unlock: { type: 'coin', cost, itemId: id }, cost, kind: 'sprite', imageSrc,
     spriteSheet: { ...spriteSheet }
   });
+  const frameSequence = (id, name, row, frameColumns, geometry = {}) => ({
+    id, name, row, frameColumns, ...geometry
+  });
+  const createAtlasSequences = (prefix, label, frameCounts, labels = {}, specialColumns = {}) =>
+    frameCounts.flatMap((frameCount, row) => {
+      if (!frameCount) return [];
+      const frameColumns = specialColumns[row] ||
+        Array.from({ length: frameCount }, (_, column) => column);
+      return [frameSequence(`${prefix}-${row}`, labels[row] || `${label} ${row + 1} (row ${row})`,
+        row, frameColumns)];
+    });
+  const DOG_ANIMATIONS = [
+    frameSequence('walk', 'Walk', 0, [0, 1, 2, 3, 4]),
+    frameSequence('leap', 'Leap', 1, [0, 1, 2, 3, 4, 5])
+  ];
   const DOG_SPRITE_SHEET = Object.freeze({
     frameWidth: 32, frameHeight: 32, frameCount: 5,
-    sourceX: 1, sourceY: 13, sourceWidth: 29, sourceHeight: 19,
-    targetX: 101, targetY: 66, targetWidth: 24, targetHeight: 16
+    row: 0, sourceX: 1, sourceY: 13, sourceWidth: 29, sourceHeight: 19,
+    targetX: 101, targetY: 66, targetWidth: 24, targetHeight: 16,
+    defaultAnimationId: 'walk', animations: DOG_ANIMATIONS
   });
+  const CAT_ANIMATION_FRAME_COUNTS = [
+    4, 4, ...Array(4).fill(6), 14, 3, 4, 4, 5, 5, 8, 8, 3, 3, 3, 8, 8,
+    ...Array(8).fill(5), 3, 3, 11, 11, 5, ...Array(6).fill(11), 5,
+    ...Array(4).fill(11), 7, ...Array(12).fill(2), 10, 8, 10, 10, 3, 2, 3, 5, 5, 4
+  ];
+  const CAT_ANIMATIONS = createAtlasSequences('cat', 'Sequence',
+    CAT_ANIMATION_FRAME_COUNTS,
+    {
+      2: 'Walk · Front', 3: 'Walk · Back',
+      4: 'Walk · Right', 5: 'Walk · Left',
+      13: 'Lick Paw · Front'
+    },
+    { 60: [0, 1, 5] });
   const CAT_SPRITE_SHEET = Object.freeze({
     frameWidth: 64, frameHeight: 64, frameCount: 8,
-    row: 13, sourceX: 13, sourceY: 19, sourceWidth: 36, sourceHeight: 28,
-    targetX: 102, targetY: 68, targetWidth: 18, targetHeight: 14
+    row: 13, sourceX: 0, sourceY: 0, sourceWidth: 64, sourceHeight: 64,
+    targetX: 96, targetY: 58, targetWidth: 32, targetHeight: 32,
+    defaultAnimationId: 'cat-13', animations: CAT_ANIMATIONS
   });
+  const BUNNY_ANIMATION_ROWS = [
+    8, 8, 6, 6, 6, 6, 6, 6, 5, 6, 5, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 9, 9, 9, 9, 0, 9, 0, 9,
+    9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 4, 4, 8, 8, 5, 5, 6, 6, 8, 8,
+    5, 5, 6, 6, 11, 11, 11, 11
+  ];
+  const BUNNY_ANIMATIONS = [
+    ...createAtlasSequences('bunny', 'Sequence', BUNNY_ANIMATION_ROWS, {}, {
+      8: [0, 1, 2, 3, 5],
+      10: [0, 1, 2, 3, 5]
+    }),
+    frameSequence('bunny-36', 'Sequence 37 (row 36)', 36,
+      Array.from({ length: 9 }, (_, index) => index), {
+        frameStride: 32, sourceX: 0, sourceY: 0, sourceWidth: 16, sourceHeight: 16,
+        targetX: 94, targetY: 66, targetWidth: 16, targetHeight: 16
+      }),
+    frameSequence('bunny-38', 'Sequence 39 (row 38)', 38,
+      Array.from({ length: 9 }, (_, index) => index), {
+        frameStride: 32, sourceX: 16, sourceY: 0, sourceWidth: 16, sourceHeight: 16,
+        targetX: 107, targetY: 66, targetWidth: 16, targetHeight: 16
+      })
+  ].sort((left, right) => left.row - right.row);
   const BUNNY_SPRITE_SHEET = Object.freeze({
     frameWidth: 32, frameHeight: 16, frameCount: 9,
     row: 33, sourceX: 8, sourceY: 0, sourceWidth: 16, sourceHeight: 10,
-    targetX: 101, targetY: 72, targetWidth: 16, targetHeight: 10
+    targetX: 101, targetY: 72, targetWidth: 16, targetHeight: 10,
+    defaultAnimationId: 'bunny-33', animations: BUNNY_ANIMATIONS
   });
+  const FOX_ANIMATIONS = [
+    frameSequence('walk', 'Walk', 0, [0, 1, 2, 3, 4]),
+    frameSequence('leap', 'Leap', 1, [0, 1, 2, 3, 4, 5])
+  ];
   const FOX_SPRITE_SHEET = Object.freeze({
     frameWidth: 32, frameHeight: 32, frameCount: 5,
-    sourceX: 1, sourceY: 14, sourceWidth: 29, sourceHeight: 18,
-    targetX: 103, targetY: 72, targetWidth: 15, targetHeight: 10
+    row: 0, sourceX: 1, sourceY: 14, sourceWidth: 29, sourceHeight: 18,
+    targetX: 103, targetY: 72, targetWidth: 15, targetHeight: 10,
+    defaultAnimationId: 'walk', animations: FOX_ANIMATIONS
   });
+  const WISP_ANIMATIONS = [frameSequence('float', 'Float', 0, [0, 1, 2, 3, 4])];
   const WISP_SPRITE_SHEET = Object.freeze({
     frameWidth: 32, frameHeight: 32, frameCount: 5,
-    sourceX: 9, sourceY: 5, sourceWidth: 14, sourceHeight: 22,
-    targetX: 107, targetY: 62, targetWidth: 7, targetHeight: 11
+    row: 0, sourceX: 9, sourceY: 5, sourceWidth: 14, sourceHeight: 22,
+    targetX: 107, targetY: 62, targetWidth: 7, targetHeight: 11,
+    defaultAnimationId: 'float', animations: WISP_ANIMATIONS
   });
   const OUTLINED_WISP_SPRITE_SHEET = Object.freeze({
     ...WISP_SPRITE_SHEET, sourceX: 8, sourceY: 4, sourceWidth: 16, sourceHeight: 24
@@ -608,6 +668,7 @@
     outfit: 'outfit_recruit',
     accessory: 'accessory_none',
     pet: 'pet_none',
+    petAnimation: '',
     background: 'bg_campfire',
     ...EQUIPMENT_DEFAULTS,
     purchasedItems: [],
@@ -670,6 +731,12 @@
         candidate.paths[gender] && isOwned(candidate));
       return [field, item?.id || defaultItem?.id || fallback];
     }));
+    const selectedPet = PET_CATALOG.find(item => item.id === pet);
+    const petAnimations = selectedPet?.spriteSheet?.animations || [];
+    const defaultPetAnimation = petAnimations.find(animation =>
+      animation.id === selectedPet.spriteSheet.defaultAnimationId) || petAnimations[0];
+    const petAnimation = petAnimations.some(animation => animation.id === source.petAnimation)
+      ? source.petAnimation : defaultPetAnimation?.id || '';
     return {
       gender,
       skinTone: validColorId(source.skinTone, SKIN_TONES, DEFAULT_CHARACTER.skinTone),
@@ -684,11 +751,11 @@
       outfit: normalizeId(source.outfit, knownIds(OUTFIT_CATALOG), DEFAULT_CHARACTER.outfit),
       accessory: normalizeId(source.accessory, knownIds(ACCESSORY_CATALOG), DEFAULT_CHARACTER.accessory),
       pet: (() => {
-        const selectedPet = PET_CATALOG.find(item => item.id === pet);
         return selectedPet && (selectedPet.unlock.type !== 'coin' ||
           purchasedItems.includes(selectedPet.id))
           ? selectedPet.id : DEFAULT_CHARACTER.pet;
       })(),
+      petAnimation,
       background: normalizeId(source.background, knownIds(BACKGROUND_CATALOG), DEFAULT_CHARACTER.background),
       ...equipment,
       purchasedItems,
@@ -1129,28 +1196,43 @@
     });
   }
 
-  function drawPet(ctx, pet, redraw, frameIndex = 0) {
+  function petAnimationFor(pet, animationId = '') {
+    const sprite = pet?.spriteSheet;
+    if (!sprite) return null;
+    return sprite.animations?.find(animation => animation.id === animationId) ||
+      sprite.animations?.find(animation => animation.id === sprite.defaultAnimationId) ||
+      sprite.animations?.[0] ||
+      frameSequence('default', 'Default', sprite.row || 0,
+        Array.from({ length: sprite.frameCount }, (_, index) => index));
+  }
+
+  function drawPet(ctx, pet, redraw, frameIndex = 0, animationId = '') {
     if (pet.id === 'pet_none') return;
     const image = getImage(pet, redraw);
     if (pet.spriteSheet) {
       if (!image) return;
       const sprite = pet.spriteSheet;
-      const frame = Math.max(0, frameIndex) % sprite.frameCount;
+      const animation = petAnimationFor(pet, animationId);
+      const frameColumns = animation?.frameColumns ||
+        Array.from({ length: sprite.frameCount }, (_, index) => index);
+      const frame = frameColumns[Math.max(0, frameIndex) % frameColumns.length];
       ctx.drawImage(
         image,
-        frame * sprite.frameWidth + (sprite.sourceX || 0),
-        (sprite.row || 0) * sprite.frameHeight + sprite.sourceY,
-        sprite.sourceWidth,
-        sprite.sourceHeight,
-        sprite.targetX,
-        sprite.targetY,
-        sprite.targetWidth,
-        sprite.targetHeight
+        frame * (animation?.frameStride ?? sprite.frameWidth) +
+          (animation?.sourceX ?? sprite.sourceX ?? 0),
+        (animation?.row ?? sprite.row ?? 0) * sprite.frameHeight +
+          (animation?.sourceY ?? sprite.sourceY),
+        animation?.sourceWidth ?? sprite.sourceWidth,
+        animation?.sourceHeight ?? sprite.sourceHeight,
+        animation?.targetX ?? sprite.targetX,
+        animation?.targetY ?? sprite.targetY,
+        animation?.targetWidth ?? sprite.targetWidth,
+        animation?.targetHeight ?? sprite.targetHeight
       );
     }
   }
 
-  function drawPetAccessory(ctx, character, field, redraw, frameIndex = 0) {
+  function drawPetAccessory(ctx, character, field, redraw, frameIndex = 0, animationId = '') {
     if (!character.pet.startsWith('pet_trail_dog')) return;
     const item = PET_ACCESSORY_CATALOG.find(candidate => candidate.id === character[field]);
     const path = item?.paths[character.gender];
@@ -1161,8 +1243,13 @@
     const scaleX = sprite.targetWidth / sprite.sourceWidth;
     const scaleY = sprite.targetHeight / sprite.sourceHeight;
     // Preserve the sheet's shared origin, including hat pixels above the dog's crop.
-    const frame = Math.max(0, frameIndex) % sprite.frameCount;
-    ctx.drawImage(image, frame * sprite.frameWidth, 0, sprite.frameWidth, sprite.frameHeight,
+    const animation = petAnimationFor(getItem(PET_CATALOG, character.pet), animationId);
+    const frameColumns = animation?.frameColumns ||
+      Array.from({ length: sprite.frameCount }, (_, index) => index);
+    const frame = frameColumns[Math.max(0, frameIndex) % frameColumns.length];
+    ctx.drawImage(image, frame * sprite.frameWidth,
+      (animation?.row ?? sprite.row ?? 0) * sprite.frameHeight,
+      sprite.frameWidth, sprite.frameHeight,
       sprite.targetX - sprite.sourceX * scaleX,
       sprite.targetY - sprite.sourceY * scaleY,
       sprite.frameWidth * scaleX, sprite.frameHeight * scaleY);
@@ -1192,9 +1279,9 @@
       drawCampfire(ctx, redraw, tick % CAMPFIRE_SPRITE.frameCount);
     }
     drawCharacterSprite(ctx, character, redraw, petFrame % CHARACTER_EFFECT_FRAME_COUNT, bobOffset);
-    drawPet(ctx, activePet, redraw, petFrame);
-    drawPetAccessory(ctx, character, 'petBackpack', redraw, petFrame);
-    drawPetAccessory(ctx, character, 'petHat', redraw, petFrame);
+    drawPet(ctx, activePet, redraw, petFrame, character.petAnimation);
+    drawPetAccessory(ctx, character, 'petBackpack', redraw, petFrame, character.petAnimation);
+    drawPetAccessory(ctx, character, 'petHat', redraw, petFrame, character.petAnimation);
     pixel(ctx, 0, 82, 160, 8, '#17212d');
     pixel(ctx, 0, 82, 160, 1, '#84946d');
     ctx.restore();
@@ -1511,6 +1598,24 @@
     );
     const petOptions = catalogOptions(PET_CATALOG, character.pet, stats, character,
       completedAchievements, 'Equipped', appState);
+    const selectedPet = getItem(PET_CATALOG, character.pet);
+    const petAnimations = selectedPet.spriteSheet?.animations || [];
+    const petAnimationOptions = petAnimations.map(animation =>
+      `<option value="${escapeHtml(animation.id)}" ${animation.id === character.petAnimation ? 'selected' : ''}>${escapeHtml(animation.name)}</option>`
+    ).join('');
+    const petAnimationControl = `<label class="block text-xs font-medium text-slate-300">
+        Animation style
+        <span class="relative mt-1 block">
+          <select data-character-field="petAnimation" ${disabled || !petAnimations.length ? 'disabled' : ''}
+            class="block w-full appearance-none rounded-lg border border-slate-700 bg-slate-950 py-2.5 pl-3 pr-10 text-sm text-slate-100 focus:border-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-300">
+            ${petAnimationOptions || '<option value="">Choose a companion to see its animations</option>'}
+          </select>
+          <svg aria-hidden="true" viewBox="0 0 20 20" fill="none"
+            class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400">
+            <path d="m5 7.5 5 5 5-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+      </label>`;
     const hairValue = `${character.hairStyle}::${character.hairColor}`;
     const hairOptions = catalogOptions(hairPresetOptions(character), hairValue,
       stats, character, completedAchievements, 'Equipped', appState);
@@ -1575,6 +1680,7 @@
       pets: `<p class="mb-3 text-xs text-slate-400">Companions are purchased with Wayfarer Coins and animate alongside your explorer.</p>
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
           ${dropdown('pet', 'Companion', character.pet, petOptions, option => petThumbnailMarkup(option))}
+          ${petAnimationControl}
           ${equipmentDropdown('petHat', 'Dog Hat', !character.pet.startsWith('pet_trail_dog'))}
           ${equipmentDropdown('petBackpack', 'Dog Backpack', !character.pet.startsWith('pet_trail_dog'))}
         </div>`,

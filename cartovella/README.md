@@ -140,16 +140,23 @@ arrows and an optional "Browse all" list. The live character preview stays besid
 on wide screens and stacks above it on smaller screens. Arrows only equip owned items or
 unlocked progression gear; they never purchase items. Unowned shop items remain in "Browse all"
 with their coin prices, where selecting an affordable item explicitly purchases and equips it.
-Dog hats and backpacks use the same animation-frame origin and scale as the equipped dog; their selectors are disabled when no dog is equipped.
-Companion catalog entries can use an `imageSrc` PNG or a cropped sprite-sheet animation. All five dog coat variants
-(golden, slate, sandy, cream, and shadow) use five 32×32 walking frames from the corresponding
-`assets/gandalfhardcore/GandalfHardcore Pet companion/GandalfHardcore Pet companion/GandalfHardcore doggy sheet*.png`
-spritesheets and render at 26×17 logical pixels. Black (Cat 1), ginger (Cat 2), and white (Cat 3)
-companions use the eight-frame “Lick paw lie front” sequence (row 13) from their respective
-`assets/cat-PACK/PACK/cat N (64х64).png` spritesheets. The Trail Fox keeps its 20×12 logical-pixel
-size and uses its five populated 32×32 frames; Blue Wisp and Outlined Blue Wisp use five 32×32 frames each from the
-same pet bundle. Bunny uses nine 32×16 frames from row 33 of
-`assets/Bunny/Bunny 1 16x16 animation.png`, cropping a 16×10 area from each paired 16×16 source cell.
+The Pets panel includes a pet-specific Animation style selector; changing it previews the selected
+sequence on the live stage and stores the choice with the character. Dog coats share the five-frame
+Walk and six-frame Leap sequences from rows 0 and 1 of
+`assets/gandalfhardcore/GandalfHardcore Pet companion/GandalfHardcore Pet companion/GandalfHardcore doggy sheet*.png`.
+Dog hats and backpacks follow the selected dog frame and row; their selectors are disabled when no
+dog is equipped. The Trail Fox has matching five-frame Walk and six-frame Leap sequences. Both Wisp
+companions use their five-frame Float sequence.
+
+Black (Cat 1), ginger (Cat 2), and white (Cat 3) companions expose every occupied animation row from
+their respective `assets/cat-PACK/PACK/cat N (64х64).png` sprite atlases. The existing Lick Paw ·
+Front animation (row 13) remains the default. Bunny exposes every populated paired-frame and
+single-tile sequence row from
+`assets/Bunny/Bunny 1 16x16 animation.png`, including the existing default sequence from row 33
+and single-tile sequences from rows 36 and 38.
+These atlas files contain no animation tags or action labels; choices use an inferred name where the
+motion is recognizable and otherwise include the sequence number and source row so it can be selected
+and previewed without guessing at its meaning.
 Legacy puppy/kitten pet IDs migrate to the golden dog
 and black cat so saved characters continue to load. The bundled dog-asset readme permits use in
 projects but prohibits redistributing or repackaging the artwork.
