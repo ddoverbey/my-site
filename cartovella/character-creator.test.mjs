@@ -406,9 +406,10 @@ check('low-resolution frame profiles keep the V-taper broad at the shoulders and
   assert.ok(Math.min(...hourglass.slice(5, 11)) < hourglass[0]);
   assert.ok(Math.max(...hourglass.slice(12)) <= hourglass[0]);
 });
-check('every bundled dog, cat, fox, and wisp has a valid idle sprite-sheet crop', () => {
+check('every bundled dog, cat, bunny, fox, and wisp has a valid animated sprite-sheet crop', () => {
   const dogs = characterCreator.PET_CATALOG.filter(item => item.id.startsWith('pet_trail_dog'));
   const cats = characterCreator.PET_CATALOG.filter(item => item.id.endsWith('_cat'));
+  const bunny = characterCreator.PET_CATALOG.find(item => item.id === 'pet_bunny');
   const fox = characterCreator.PET_CATALOG.find(item => item.id === 'pet_trail_fox');
   const wisps = characterCreator.PET_CATALOG.filter(item => item.id.startsWith('pet_blue_wisp'));
   assert.deepEqual(dogs.map(pet => pet.name), [
@@ -417,21 +418,28 @@ check('every bundled dog, cat, fox, and wisp has a valid idle sprite-sheet crop'
   assert.deepEqual(cats.map(pet => pet.name), [
     'Black Cat', 'Ginger Cat', 'White Cat'
   ]);
+  assert.equal(bunny.name, 'Bunny');
   assert.equal(fox.name, 'Trail Fox');
   assert.deepEqual(wisps.map(pet => pet.name), ['Blue Wisp', 'Outlined Blue Wisp']);
-  const spritePets = [...dogs, ...cats, fox, ...wisps];
+  const spritePets = [...dogs, ...cats, bunny, fox, ...wisps];
   for (const pet of spritePets) {
     assert.equal(pet.kind, 'sprite');
     const png = readFileSync(new URL(pet.imageSrc, import.meta.url));
     assert.equal(png.toString('ascii', 1, 4), 'PNG');
     const dimensions = pet.id.startsWith('pet_trail_dog') || pet === fox
       ? [192, 64]
+      : pet === bunny ? [352, 1088]
       : pet.id.endsWith('_cat') ? [896, 4608] : [160, 32];
     assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], dimensions);
   }
   assert.ok(dogs.every(pet => pet.spriteSheet.frameCount === 5));
   assert.ok(cats.every(pet => pet.spriteSheet.frameCount === 8));
   assert.ok(cats.every(pet => pet.spriteSheet.row === 13), 'cat frames use the labeled Lick paw lie front row');
+  assert.deepEqual(bunny.spriteSheet, {
+    frameWidth: 32, frameHeight: 16, frameCount: 9,
+    row: 33, sourceX: 8, sourceY: 0, sourceWidth: 16, sourceHeight: 10,
+    targetX: 101, targetY: 72, targetWidth: 16, targetHeight: 10
+  });
   assert.equal(fox.spriteSheet.frameCount, 5);
   assert.ok(spritePets.every(pet => pet.unlock.type === 'coin'));
   assert.ok(dogs.every(pet => pet.cost === 150));
@@ -441,7 +449,7 @@ check('every bundled dog, cat, fox, and wisp has a valid idle sprite-sheet crop'
   assert.ok(dogs.every(pet =>
     pet.spriteSheet.targetWidth === 24 && pet.spriteSheet.targetHeight === 16
   ));
-  for (const pet of [...dogs, ...cats, fox]) {
+  for (const pet of [...dogs, ...cats, bunny, fox]) {
     assert.equal(
       pet.spriteSheet.targetY + pet.spriteSheet.targetHeight,
       82,
@@ -466,21 +474,24 @@ check('companion sprite sheets crop the selected animation frame', () => {
     const context = { drawImage(...args) { drawCalls.push(args); } };
     const dog = characterCreator.PET_CATALOG.find(item => item.id === 'pet_trail_dog');
     const cat = characterCreator.PET_CATALOG.find(item => item.id === 'pet_black_cat');
+    const bunny = characterCreator.PET_CATALOG.find(item => item.id === 'pet_bunny');
     const fox = characterCreator.PET_CATALOG.find(item => item.id === 'pet_trail_fox');
     const wisp = characterCreator.PET_CATALOG.find(item => item.id === 'pet_blue_wisp');
     const outlinedWisp = characterCreator.PET_CATALOG.find(item => item.id === 'pet_blue_wisp_outline');
     characterCreator.drawPet(context, dog, () => {}, 2);
     characterCreator.drawPet(context, cat, () => {}, 1);
+    characterCreator.drawPet(context, bunny, () => {}, 8);
     characterCreator.drawPet(context, fox, () => {}, 2);
     characterCreator.drawPet(context, fox, () => {}, 5);
     characterCreator.drawPet(context, wisp, () => {}, 4);
     characterCreator.drawPet(context, outlinedWisp, () => {}, 1);
     assert.deepEqual(drawCalls[0].slice(1), [65, 13, 29, 19, 101, 66, 24, 16]);
     assert.deepEqual(drawCalls[1].slice(1), [77, 851, 36, 28, 102, 68, 18, 14]);
-    assert.deepEqual(drawCalls[2].slice(1), [65, 14, 29, 18, 103, 72, 15, 10]);
-    assert.deepEqual(drawCalls[3].slice(1), [1, 14, 29, 18, 103, 72, 15, 10]);
-    assert.deepEqual(drawCalls[4].slice(1), [137, 5, 14, 22, 107, 62, 7, 11]);
-    assert.deepEqual(drawCalls[5].slice(1), [40, 4, 16, 24, 107, 62, 7, 11]);
+    assert.deepEqual(drawCalls[2].slice(1), [264, 528, 16, 10, 101, 72, 16, 10]);
+    assert.deepEqual(drawCalls[3].slice(1), [65, 14, 29, 18, 103, 72, 15, 10]);
+    assert.deepEqual(drawCalls[4].slice(1), [1, 14, 29, 18, 103, 72, 15, 10]);
+    assert.deepEqual(drawCalls[5].slice(1), [137, 5, 14, 22, 107, 62, 7, 11]);
+    assert.deepEqual(drawCalls[6].slice(1), [40, 4, 16, 24, 107, 62, 7, 11]);
   } finally {
     if (originalImage === undefined) delete globalThis.Image;
     else globalThis.Image = originalImage;

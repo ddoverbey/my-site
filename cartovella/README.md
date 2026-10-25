@@ -140,8 +140,7 @@ arrows and an optional "Browse all" list. The live character preview stays besid
 on wide screens and stacks above it on smaller screens. Arrows only equip owned items or
 unlocked progression gear; they never purchase items. Unowned shop items remain in "Browse all"
 with their coin prices, where selecting an affordable item explicitly purchases and equips it.
-Dog hats and backpacks use the same idle-frame
-origin and scale as the equipped dog; their selectors are disabled when no dog is equipped.
+Dog hats and backpacks use the same animation-frame origin and scale as the equipped dog; their selectors are disabled when no dog is equipped.
 Companion catalog entries can use an `imageSrc` PNG or a cropped sprite-sheet animation. All five dog coat variants
 (golden, slate, sandy, cream, and shadow) use five 32×32 walking frames from the corresponding
 `assets/gandalfhardcore/GandalfHardcore Pet companion/GandalfHardcore Pet companion/GandalfHardcore doggy sheet*.png`
@@ -149,7 +148,9 @@ spritesheets and render at 26×17 logical pixels. Black (Cat 1), ginger (Cat 2),
 companions use the eight-frame “Lick paw lie front” sequence (row 13) from their respective
 `assets/cat-PACK/PACK/cat N (64х64).png` spritesheets. The Trail Fox keeps its 20×12 logical-pixel
 size and uses its five populated 32×32 frames; Blue Wisp and Outlined Blue Wisp use five 32×32 frames each from the
-same pet bundle. Legacy puppy/kitten pet IDs migrate to the golden dog
+same pet bundle. Bunny uses nine 32×16 frames from row 33 of
+`assets/Bunny/Bunny 1 16x16 animation.png`, cropping a 16×10 area from each paired 16×16 source cell.
+Legacy puppy/kitten pet IDs migrate to the golden dog
 and black cat so saved characters continue to load. The bundled dog-asset readme permits use in
 projects but prohibits redistributing or repackaging the artwork.
 Character-stage backgrounds use the supplied 3200×1800 artwork in

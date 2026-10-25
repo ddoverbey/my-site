@@ -107,6 +107,11 @@
     row: 13, sourceX: 13, sourceY: 19, sourceWidth: 36, sourceHeight: 28,
     targetX: 102, targetY: 68, targetWidth: 18, targetHeight: 14
   });
+  const BUNNY_SPRITE_SHEET = Object.freeze({
+    frameWidth: 32, frameHeight: 16, frameCount: 9,
+    row: 33, sourceX: 8, sourceY: 0, sourceWidth: 16, sourceHeight: 10,
+    targetX: 101, targetY: 72, targetWidth: 16, targetHeight: 10
+  });
   const FOX_SPRITE_SHEET = Object.freeze({
     frameWidth: 32, frameHeight: 32, frameCount: 5,
     sourceX: 1, sourceY: 14, sourceWidth: 29, sourceHeight: 18,
@@ -139,6 +144,8 @@
     ['pet_white_cat', 'White Cat', 'cat 3 (64х64).png']
   ].map(([id, name, file]) =>
     spritePet(id, name, assetUrl(`${CAT_ASSET_PATH}${file}`), CAT_SPRITE_SHEET, 150));
+  const bunny = spritePet('pet_bunny', 'Bunny',
+    assetUrl('./assets/Bunny/Bunny 1 16x16 animation.png'), BUNNY_SPRITE_SHEET, 150);
   const foxAndWispPets = [
     spritePet('pet_trail_fox', 'Trail Fox', assetUrl(`${COMPANION_ASSET_PATH}GandalfHardcore fox.png`), FOX_SPRITE_SHEET, 300),
     spritePet('pet_blue_wisp', 'Blue Wisp', assetUrl(`${COMPANION_ASSET_PATH}GandalfHardcore Wisp.png`), WISP_SPRITE_SHEET, 500),
@@ -148,6 +155,7 @@
     { id: 'pet_none', name: 'No Companion', unlock: { type: 'starter' }, kind: 'none', imageSrc: null },
     ...dogVariants,
     ...catVariants,
+    bunny,
     ...foxAndWispPets
   ];
   const PET_ID_ALIASES = new Map([
