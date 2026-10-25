@@ -470,10 +470,14 @@ check('every bundled dog, cat, bunny, fox, and wisp has a valid animated sprite-
       'targetHeight'].map(key => [key, bunny.spriteSheet[key]])),
     {
       frameWidth: 32, frameHeight: 16, frameCount: 9,
-      row: 33, sourceX: 8, sourceY: 0, sourceWidth: 16, sourceHeight: 10,
-      targetX: 101, targetY: 72, targetWidth: 16, targetHeight: 10
+      row: 33, sourceX: 0, sourceY: 0, sourceWidth: 32, sourceHeight: 16,
+      targetX: 96, targetY: 66, targetWidth: 32, targetHeight: 16
     }
   );
+  assert.equal(bunny.spriteSheet.animations.find(animation => animation.id === 'bunny-0').name,
+    'Turn Around');
+  assert.equal(bunny.spriteSheet.animations.find(animation => animation.id === 'bunny-9').name,
+    'Run · Side View');
   assert.equal(fox.spriteSheet.frameCount, 5);
   assert.ok(spritePets.every(pet => pet.unlock.type === 'coin'));
   assert.ok(dogs.every(pet => pet.cost === 150));
@@ -515,9 +519,31 @@ check('each pet exposes every configured atlas animation sequence and a valid de
   });
   assert.ok(cats.every(pet =>
     JSON.stringify(pet.spriteSheet.animations) === JSON.stringify(cats[0].spriteSheet.animations)));
-  assert.equal(bunny.spriteSheet.animations.length, 68);
+  assert.equal(bunny.spriteSheet.animations.length, 66);
+  assert.equal(bunny.spriteSheet.animations.some(animation => animation.id === 'bunny-37'), false);
+  assert.equal(bunny.spriteSheet.animations.some(animation => animation.id === 'bunny-39'), false);
+  for (const row of [36, 38]) {
+    const animation = bunny.spriteSheet.animations.find(item => item.id === `bunny-${row}`);
+    assert.deepEqual({
+      row: animation.row,
+      frameHeight: animation.frameHeight,
+      rowStride: animation.rowStride,
+      sourceWidth: animation.sourceWidth,
+      sourceHeight: animation.sourceHeight,
+      targetWidth: animation.targetWidth,
+      targetHeight: animation.targetHeight
+    }, {
+      row,
+      frameHeight: 32,
+      rowStride: 16,
+      sourceWidth: 32,
+      sourceHeight: 32,
+      targetWidth: 32,
+      targetHeight: 32
+    });
+  }
   assert.deepEqual(bunny.spriteSheet.animations.find(animation => animation.id === 'bunny-33'), {
-    id: 'bunny-33', name: 'Sequence 34 (row 33)', row: 33,
+    id: 'bunny-33', name: 'Idle · Front View', row: 33,
     frameColumns: [0, 1, 2, 3, 4, 5, 6, 7, 8]
   });
   assert.deepEqual(fox.spriteSheet.animations.map(({ id, row, frameColumns }) =>
@@ -562,19 +588,21 @@ check('companion sprite sheets crop the selected animation frame', () => {
     characterCreator.drawPet(context, fox, () => {}, 5, 'leap');
     characterCreator.drawPet(context, bunny, () => {}, 4, 'bunny-36');
     characterCreator.drawPet(context, bunny, () => {}, 8, 'bunny-38');
+    characterCreator.drawPet(context, bunny, () => {}, 0, 'bunny-18');
     assert.deepEqual(drawCalls[0].slice(1), [65, 13, 29, 19, 101, 66, 24, 16]);
     assert.deepEqual(drawCalls[1].slice(1), [64, 832, 64, 64, 96, 58, 32, 32]);
-    assert.deepEqual(drawCalls[2].slice(1), [264, 528, 16, 10, 101, 72, 16, 10]);
+    assert.deepEqual(drawCalls[2].slice(1), [256, 528, 32, 16, 96, 66, 32, 16]);
     assert.deepEqual(drawCalls[3].slice(1), [65, 14, 29, 18, 103, 72, 15, 10]);
     assert.deepEqual(drawCalls[4].slice(1), [1, 14, 29, 18, 103, 72, 15, 10]);
     assert.deepEqual(drawCalls[5].slice(1), [137, 5, 14, 22, 107, 62, 7, 11]);
     assert.deepEqual(drawCalls[6].slice(1), [40, 4, 16, 24, 107, 62, 7, 11]);
     assert.deepEqual(drawCalls[7].slice(1), [161, 45, 29, 19, 101, 66, 24, 16]);
     assert.deepEqual(drawCalls[8].slice(1), [320, 128, 64, 64, 96, 58, 32, 32]);
-    assert.deepEqual(drawCalls[9].slice(1), [168, 128, 16, 10, 101, 72, 16, 10]);
+    assert.deepEqual(drawCalls[9].slice(1), [160, 128, 32, 16, 96, 66, 32, 16]);
     assert.deepEqual(drawCalls[10].slice(1), [161, 46, 29, 18, 103, 72, 15, 10]);
-    assert.deepEqual(drawCalls[11].slice(1), [128, 576, 16, 16, 94, 66, 16, 16]);
-    assert.deepEqual(drawCalls[12].slice(1), [272, 608, 16, 16, 107, 66, 16, 16]);
+    assert.deepEqual(drawCalls[11].slice(1), [128, 576, 32, 32, 96, 58, 32, 32]);
+    assert.deepEqual(drawCalls[12].slice(1), [256, 608, 32, 32, 96, 58, 32, 32]);
+    assert.deepEqual(drawCalls[13].slice(1), [0, 288, 32, 16, 96, 66, 32, 16]);
   } finally {
     if (originalImage === undefined) delete globalThis.Image;
     else globalThis.Image = originalImage;

@@ -150,13 +150,13 @@ companions use their five-frame Float sequence.
 
 Black (Cat 1), ginger (Cat 2), and white (Cat 3) companions expose every occupied animation row from
 their respective `assets/cat-PACK/PACK/cat N (64х64).png` sprite atlases. The existing Lick Paw ·
-Front animation (row 13) remains the default. Bunny exposes every populated paired-frame and
-single-tile sequence row from
-`assets/Bunny/Bunny 1 16x16 animation.png`, including the existing default sequence from row 33
-and single-tile sequences from rows 36 and 38.
+Front animation (row 13) remains the default. Bunny exposes every populated sequence from
+`assets/Bunny/Bunny 1 16x16 animation.png`; standard rows use the full 32×16 frame so the crop does
+not clip ears, feet, or wide poses. The two tall sequences combine atlas row pairs 36–37 and 38–39
+into full 32×32 frames. Recognizable bunny motions such as turning, scurrying, sitting, running, and
+hopping use inferred names; unclear sequences keep their row labels. The default remains row 33.
 These atlas files contain no animation tags or action labels; choices use an inferred name where the
-motion is recognizable and otherwise include the sequence number and source row so it can be selected
-and previewed without guessing at its meaning.
+motion is recognizable and otherwise include the sequence number and source row.
 Legacy puppy/kitten pet IDs migrate to the golden dog
 and black cat so saved characters continue to load. The bundled dog-asset readme permits use in
 projects but prohibits redistributing or repackaging the artwork.

@@ -139,30 +139,43 @@
   });
   const BUNNY_ANIMATION_ROWS = [
     8, 8, 6, 6, 6, 6, 6, 6, 5, 6, 5, 6, 6, 6, 6, 6, 6, 6, 6, 6,
-    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 9, 9, 9, 9, 0, 9, 0, 9,
+    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 9, 9, 9, 9, 0, 0, 0, 0,
     9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 4, 4, 8, 8, 5, 5, 6, 6, 8, 8,
     5, 5, 6, 6, 11, 11, 11, 11
   ];
+  const BUNNY_ANIMATION_LABELS = {
+    0: 'Turn Around',
+    2: 'Scurry',
+    3: 'Scurry · Alternate',
+    8: 'Sit · Side View',
+    9: 'Run · Side View',
+    10: 'Sit · Side View · Alternate',
+    11: 'Run · Side View · Alternate',
+    32: 'Hop · Front View',
+    33: 'Idle · Front View'
+  };
   const BUNNY_ANIMATIONS = [
-    ...createAtlasSequences('bunny', 'Sequence', BUNNY_ANIMATION_ROWS, {}, {
+    ...createAtlasSequences('bunny', 'Sequence', BUNNY_ANIMATION_ROWS, BUNNY_ANIMATION_LABELS, {
       8: [0, 1, 2, 3, 5],
       10: [0, 1, 2, 3, 5]
     }),
     frameSequence('bunny-36', 'Sequence 37 (row 36)', 36,
       Array.from({ length: 9 }, (_, index) => index), {
-        frameStride: 32, sourceX: 0, sourceY: 0, sourceWidth: 16, sourceHeight: 16,
-        targetX: 94, targetY: 66, targetWidth: 16, targetHeight: 16
+        frameStride: 32, frameHeight: 32, rowStride: 16,
+        sourceX: 0, sourceY: 0, sourceWidth: 32, sourceHeight: 32,
+        targetX: 96, targetY: 58, targetWidth: 32, targetHeight: 32
       }),
     frameSequence('bunny-38', 'Sequence 39 (row 38)', 38,
       Array.from({ length: 9 }, (_, index) => index), {
-        frameStride: 32, sourceX: 16, sourceY: 0, sourceWidth: 16, sourceHeight: 16,
-        targetX: 107, targetY: 66, targetWidth: 16, targetHeight: 16
+        frameStride: 32, frameHeight: 32, rowStride: 16,
+        sourceX: 0, sourceY: 0, sourceWidth: 32, sourceHeight: 32,
+        targetX: 96, targetY: 58, targetWidth: 32, targetHeight: 32
       })
   ].sort((left, right) => left.row - right.row);
   const BUNNY_SPRITE_SHEET = Object.freeze({
     frameWidth: 32, frameHeight: 16, frameCount: 9,
-    row: 33, sourceX: 8, sourceY: 0, sourceWidth: 16, sourceHeight: 10,
-    targetX: 101, targetY: 72, targetWidth: 16, targetHeight: 10,
+    row: 33, sourceX: 0, sourceY: 0, sourceWidth: 32, sourceHeight: 16,
+    targetX: 96, targetY: 66, targetWidth: 32, targetHeight: 16,
     defaultAnimationId: 'bunny-33', animations: BUNNY_ANIMATIONS
   });
   const FOX_ANIMATIONS = [
@@ -1220,7 +1233,7 @@
         image,
         frame * (animation?.frameStride ?? sprite.frameWidth) +
           (animation?.sourceX ?? sprite.sourceX ?? 0),
-        (animation?.row ?? sprite.row ?? 0) * sprite.frameHeight +
+        (animation?.row ?? sprite.row ?? 0) * (animation?.rowStride ?? sprite.frameHeight) +
           (animation?.sourceY ?? sprite.sourceY),
         animation?.sourceWidth ?? sprite.sourceWidth,
         animation?.sourceHeight ?? sprite.sourceHeight,
