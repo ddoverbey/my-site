@@ -1,29 +1,16 @@
 {
   "friends": [
-    {
-      "id": "example-fall",
-      "name": "Casey",
-      "category": "Family",
-      "tier": "wider",
-      "avatar_seed": "cultivate-example-fall",
-      "photo": null,
-      "touches": [
-        {
-          "type": "Hangout",
-          "timestamp": 1787784519677,
-          "note": "Caught up during a visit earlier in the year."
-        }
-      ]
-    }
+    { "id": "1", "name": "Jacob (Example)", "category": "Friends", "tier": "close", "avatar_seed": "sample-jacob", "photo": null, "touches": [{ "type": "Hangout", "timestamp": 1791156392331, "note": "Played minecraft for a few hours" }, { "type": "Hangout", "timestamp": 1791242792331, "note": "Caught up recently" }] },
+    { "id": "2", "name": "Mom (Example)", "category": "Family", "tier": "inner", "avatar_seed": "sample-mom", "photo": null, "touches": [{ "type": "Hangout", "timestamp": 1792106792331, "note": "Sunday family dinner" }, { "type": "Hangout", "timestamp": 1792193192331, "note": "Caught up recently" }] },
+    { "id": "3", "name": "Delilah (Example)", "category": "Friends", "tier": "wider", "avatar_seed": "sample-delilah", "photo": null, "touches": [{ "type": "Hangout", "timestamp": 1787700392331, "note": "Attended housewarming party" }, { "type": "Hangout", "timestamp": 1787786792331, "note": "Caught up recently" }] },
+    { "id": "4", "name": "Prof. Milton (Example)", "category": "Professional", "tier": "annual", "avatar_seed": "sample-milton", "photo": null, "touches": [{ "type": "Text", "timestamp": 1771716392331, "note": "Work and networking check-in email" }, { "type": "Hangout", "timestamp": 1771802792331, "note": "Caught up recently" }] },
+    { "id": "5", "name": "Avery (Example)", "category": "Friends", "tier": "extended", "avatar_seed": "sample-avery", "photo": null, "touches": [{ "type": "Hangout", "timestamp": 1782516392331, "note": "Caught up after moving away" }, { "type": "Hangout", "timestamp": 1782602792331, "note": "Caught up recently" }] },
+    { "id": "6", "name": "Pookie (Example)", "category": "Romantic", "tier": "inner", "avatar_seed": "sample-pookie", "photo": null, "touches": [{ "type": "Hangout", "timestamp": 1792106792331, "note": "Date night at the new Italian place" }, { "type": "Hangout", "timestamp": 1792193192331, "note": "Caught up recently" }] },
+    { "id": "7", "name": "Cousin Chris (Example)", "category": "Family", "tier": "close", "avatar_seed": "sample-chris", "photo": null, "touches": [{ "type": "Quick Call", "timestamp": 1791156392331, "note": "Checking in about mom's birthday gift" }, { "type": "Hangout", "timestamp": 1791242792331, "note": "Caught up recently" }] },
+    { "id": "8", "name": "Sarah from Design (Example)", "category": "Professional", "tier": "wider", "avatar_seed": "sample-sarah", "photo": null, "touches": [{ "type": "Virtual Hangout", "timestamp": 1787700392331, "note": "Weekly cross-department sync" }, { "type": "Hangout", "timestamp": 1787786792331, "note": "Caught up recently" }] },
+    { "id": "9", "name": "Aunt Carol (Example)", "category": "Family", "tier": "extended", "avatar_seed": "sample-carol", "photo": null, "touches": [{ "type": "Long Call", "timestamp": 1782516392331, "note": "Caught up on family news and holiday plans" }, { "type": "Hangout", "timestamp": 1782602792331, "note": "Caught up recently" }] },
+    { "id": "10", "name": "Old Roommate Mark (Example)", "category": "Friends", "tier": "annual", "avatar_seed": "sample-mark", "photo": null, "touches": [{ "type": "Text", "timestamp": 1771716392331, "note": "Sent a meme about our old apartment" }, { "type": "Hangout", "timestamp": 1771802792331, "note": "Caught up recently" }] }
   ],
-  "cadenceSettings": {
-    "inner": 14,
-    "close": 30,
-    "wider": 90,
-    "extended": 180,
-    "annual": 365
-  },
-  "displaySettings": {
-    "showTierBadge": true
-  }
+  "cadenceSettings": { "inner": 14, "close": 30, "wider": 90, "extended": 180, "annual": 365 },
+  "displaySettings": { "showTierBadge": true }
 }

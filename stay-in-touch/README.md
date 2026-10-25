@@ -38,7 +38,7 @@ The game replays a connection's interactions in date order, applying decay betwe
 
 Connections and cadence settings are saved in this browser's local storage. vCard files are parsed in the browser; only contacts you select are added. Data is not automatically shared between browsers or devices. Use **Account & Cloud Sync** to sign in and sync through the Supabase service configured in the page, or use **Export JSON** and **Import JSON** for a portable backup.
 
-The [`example-spring.json`](example-spring.json), [`example-summer.json`](example-summer.json), [`example-fall.json`](example-fall.json), and [`example-winter.json`](example-winter.json) files are importable one-connection backups illustrating each vitality stage. Importing one replaces the current garden connections and settings. Their sample touch dates are calibrated for October 25, 2026; vitality naturally changes as time passes.
+The [`example-spring.json`](example-spring.json), [`example-summer.json`](example-summer.json), [`example-fall.json`](example-fall.json), and [`example-winter.json`](example-winter.json) files are importable backups containing all 10 standard example connections, with every connection calibrated to the named vitality stage. Importing one replaces the current garden connections and settings. Their sample touch dates are calibrated for October 25, 2026; vitality naturally changes as time passes.
 
 Generated pixel portraits use DiceBear's Pixel Art API. Each connection gets a random opaque seed that is saved with its garden data so the portrait stays consistent; the contact's name is not sent to DiceBear. Uploaded photos are used instead of generated portraits.
 
