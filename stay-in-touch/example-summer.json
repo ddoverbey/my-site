@@ -1,0 +1,29 @@
+{
+  "friends": [
+    {
+      "id": "example-summer",
+      "name": "Riley",
+      "category": "Friends",
+      "tier": "close",
+      "avatar_seed": "cultivate-example-summer",
+      "photo": null,
+      "touches": [
+        {
+          "type": "Hangout",
+          "timestamp": 1792018119677,
+          "note": "Met for coffee and talked about the week."
+        }
+      ]
+    }
+  ],
+  "cadenceSettings": {
+    "inner": 14,
+    "close": 30,
+    "wider": 90,
+    "extended": 180,
+    "annual": 365
+  },
+  "displaySettings": {
+    "showTierBadge": true
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "friends": [
+    {
+      "id": "example-winter",
+      "name": "Morgan",
+      "category": "Friends",
+      "tier": "annual",
+      "avatar_seed": "cultivate-example-winter",
+      "photo": null,
+      "touches": [
+        {
+          "type": "Hangout",
+          "timestamp": 1763938119677,
+          "note": "Last got together around this time last year."
+        }
+      ]
+    }
+  ],
+  "cadenceSettings": {
+    "inner": 14,
+    "close": 30,
+    "wider": 90,
+    "extended": 180,
+    "annual": 365
+  },
+  "displaySettings": {
+    "showTierBadge": true
+  }
+}
