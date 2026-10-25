@@ -197,7 +197,7 @@
   };
   const VARIANT_BASE_PATHS = Object.freeze({
     top: Object.freeze(pairedPaths(PACK, 'Male Clothing/Shirt v2.png',
-      'Female Clothing/Corset v2.png')),
+      'Female Clothing/Green Corset v2.png')),
     bottoms: Object.freeze(pairedPaths(PACK, 'Male Clothing/Green Pants.png',
       'Female Clothing/Skirt.png')),
     backLayer: Object.freeze(pairedPaths(VARIANT_ASSET_ROOTS.backLayers, 'Cape green.png')),
@@ -300,7 +300,9 @@
     makeVariantItem('meadow_forager_tunic', 'Meadow Forager Tunic', 'top', { type: 'level', goal: 4 },
       palette('#30382d', '#849a73', '#d6ddbd', { accent: '#ede8cf' }), 'jacket'),
     makeVariantItem('wayfarer_field_vest', 'Wayfarer Field Vest', 'top', { type: 'level', goal: 5 },
-      palette('#252b31', '#a39469', '#ded0a1', { sleeve: '#34475f' }), 'vest'),
+      palette('#252b31', '#a39469', '#ded0a1', {
+        sleeve: '#34475f', accent: '#665536'
+      }), 'vest'),
     makeVariantItem('canyon_work_denim', 'Canyon Work Denim', 'bottoms', { type: 'level', goal: 6 },
       palette('#20283a', '#4c6388', '#9aaec9')),
     makeVariantItem('redwood_flannel_jacket', 'Redwood Flannel Jacket', 'top', { type: 'level', goal: 7 },
@@ -323,7 +325,7 @@
       palette('#51402d', '#b79561', '#e0c88f', { band: '#684529' }), 'hatBand'),
     makeVariantItem('park_ranger_uniform', 'Park Ranger Uniform', 'top',
       { type: 'worldParks', goal: 15 },
-      palette('#32372c', '#a49260', '#ded0a0', { sleeve: '#34573f' }), 'vest'),
+      palette('#32372c', '#a49260', '#ded0a0', { accent: '#435238' }), 'buttons'),
     makeVariantItem('ranger_trail_pants', 'Ranger Trail Breeches', 'bottoms',
       { type: 'worldParks', goal: 25 },
       palette('#1e2a24', '#355b43', '#77926c')),
@@ -352,7 +354,9 @@
       palette('#292e36', '#59616d', '#c89b49', { accent: '#d29d3e' }), 'jacket'),
     makeVariantItem('summit_down_parka', 'Summit Down Parka', 'top',
       { type: 'achievement', id: 'thinAir' },
-      palette('#33424a', '#9ac6cf', '#f1f6f5', { sleeve: '#e4f1f2' }), 'vest'),
+      palette('#33424a', '#9ac6cf', '#f1f6f5', {
+        sleeve: '#e4f1f2', accent: '#58777d'
+      }), 'vest'),
     makeVariantItem('overland_canvas_jacket', 'Overland Canvas Jacket', 'top',
       { type: 'achievement', id: 'overlander' },
       palette('#382621', '#9b6042', '#d4aa74', { accent: '#cba46f' }), 'jacket'),
@@ -361,7 +365,9 @@
       palette('#202b3a', '#344866', '#8395aa', { accent: '#d5b64e' }), 'jacket'),
     makeVariantItem('photographer_vest', "Photographer's Utility Vest", 'top',
       { type: 'achievement', id: 'focal' },
-      palette('#292b2c', '#55594d', '#a5a58a', { sleeve: '#777552' }), 'vest'),
+      palette('#292b2c', '#55594d', '#a5a58a', {
+        sleeve: '#777552', accent: '#393c34'
+      }), 'vest'),
     makeVariantItem('arctic_aurora_cloak', 'Arctic Aurora Cloak', 'backLayer',
       { type: 'achievement', id: 'longDark' },
       palette('#22263d', '#397d83', '#b694d0', { accent: '#6dd5cf' })),
@@ -919,13 +925,30 @@
             if (isMidtone && (localX % 4 === 0 || localY % 4 === 0)) output = colors.accent;
             break;
           case 'vest':
-            output = localX >= 33 && localX <= 46 ? colors.base : colors.sleeve;
+            {
+              const vestPanel = localY === 36
+                ? localX === 38 || localX === 42
+                : localY === 37
+                  ? (localX >= 37 && localX <= 38) || (localX >= 42 && localX <= 43)
+                  : localY === 46
+                    ? localX >= 37 && localX <= 43
+                    : localY >= 38 && localY <= 45 && localX >= 35 && localX <= 45;
+              output = vestPanel ? mapped : colors.sleeve;
+              const pocket = (localY === 39 &&
+                  (localX === 37 || localX === 38 || localX === 42 || localX === 43)) ||
+                (localY === 40 && (localX === 37 || localX === 43));
+              if (vestPanel && pocket && colors.accent) {
+                output = colors.accent;
+              }
+            }
             break;
-          case 'jacket':
-            if (localX === 39 || localX === 40 ||
-                (localY >= 20 && localY <= 22) || (localY >= 44 && localY <= 47)) {
+          case 'buttons':
+            if (localX === (variantSpec.buttonX ?? 40) &&
+                (variantSpec.buttonRows || [37, 40, 43, 46]).includes(localY)) {
               output = colors.accent;
             }
+            break;
+          case 'jacket':
             break;
           case 'hatBand':
             if (bandRows.has(localY) && localX >= bandLeft && localX <= bandRight) {

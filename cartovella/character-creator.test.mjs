@@ -651,6 +651,21 @@ check('sprite palette shader recolors frames, preserves outlines and transparenc
   setPixel(39, 5, [150, 150, 150, 255]);
   setPixel(40, 21, [150, 150, 150, 255]);
   setPixel(40, 22, [150, 150, 150, 255]);
+  setPixel(39, 44, [150, 150, 150, 255]);
+  setPixel(34, 40, [150, 150, 150, 255]);
+  setPixel(38, 40, [150, 150, 150, 255]);
+  setPixel(40, 40, [150, 150, 150, 255]);
+  setPixel(42, 40, [150, 150, 150, 255]);
+  setPixel(38, 38, [150, 150, 150, 255]);
+  setPixel(40, 38, [150, 150, 150, 255]);
+  setPixel(42, 38, [150, 150, 150, 255]);
+  setPixel(39, 39, [150, 150, 150, 255]);
+  setPixel(40, 39, [150, 150, 150, 255]);
+  setPixel(39, 40, [150, 150, 150, 255]);
+  setPixel(37, 39, [150, 150, 150, 255]);
+  setPixel(43, 39, [150, 150, 150, 255]);
+  setPixel(38, 36, [150, 150, 150, 255]);
+  setPixel(40, 36, [150, 150, 150, 255]);
   try {
     const plaid = {
       palette: { shadow: '#112233', base: '#445566', highlight: '#aabbcc', accent: '#deadde' },
@@ -666,16 +681,36 @@ check('sprite palette shader recolors frames, preserves outlines and transparenc
     assert.deepEqual(pixelAt(processed, 84, 2), [0xde, 0xad, 0xde, 255]);
     assert.strictEqual(characterCreator.processSpriteVariant(source, plaid), processed);
     const vest = characterCreator.processSpriteVariant(source, {
-      palette: { shadow: '#112233', base: '#445566', highlight: '#aabbcc', sleeve: '#123456' },
+      palette: {
+        shadow: '#112233', base: '#445566', highlight: '#aabbcc',
+        sleeve: '#123456', accent: '#654321'
+      },
       pattern: 'vest'
     });
     assert.deepEqual(pixelAt(vest, 2, 2), [0x12, 0x34, 0x56, 255]);
-    assert.deepEqual(pixelAt(vest, 36, 2), [0x44, 0x55, 0x66, 255]);
+    assert.deepEqual(pixelAt(vest, 38, 38), [0x44, 0x55, 0x66, 255]);
+    assert.deepEqual(pixelAt(vest, 42, 38), [0x44, 0x55, 0x66, 255]);
+    assert.deepEqual(pixelAt(vest, 40, 38), [0x44, 0x55, 0x66, 255]);
+    assert.deepEqual(pixelAt(vest, 40, 40), [0x44, 0x55, 0x66, 255]);
+    assert.deepEqual(pixelAt(vest, 38, 40), [0x44, 0x55, 0x66, 255]);
+    assert.deepEqual(pixelAt(vest, 42, 40), [0x44, 0x55, 0x66, 255]);
+    assert.deepEqual(pixelAt(vest, 37, 39), [0x65, 0x43, 0x21, 255]);
+    assert.deepEqual(pixelAt(vest, 43, 39), [0x65, 0x43, 0x21, 255]);
+    assert.deepEqual(pixelAt(vest, 38, 36), [0x44, 0x55, 0x66, 255]);
+    assert.deepEqual(pixelAt(vest, 40, 36), [0x12, 0x34, 0x56, 255]);
+    assert.deepEqual(pixelAt(vest, 34, 40), [0x12, 0x34, 0x56, 255]);
     const jacket = characterCreator.processSpriteVariant(source, {
       palette: { shadow: '#112233', base: '#445566', highlight: '#aabbcc', accent: '#deadde' },
       pattern: 'jacket'
     });
-    assert.deepEqual(pixelAt(jacket, 39, 5), [0xde, 0xad, 0xde, 255]);
+    assert.deepEqual(pixelAt(jacket, 39, 5), [0x44, 0x55, 0x66, 255]);
+    assert.deepEqual(pixelAt(jacket, 39, 44), [0x44, 0x55, 0x66, 255]);
+    const buttoned = characterCreator.processSpriteVariant(source, {
+      palette: { shadow: '#112233', base: '#445566', highlight: '#aabbcc', accent: '#435238' },
+      pattern: 'buttons'
+    });
+    assert.deepEqual(pixelAt(buttoned, 40, 40), [0x43, 0x52, 0x38, 255]);
+    assert.deepEqual(pixelAt(buttoned, 39, 40), [0x44, 0x55, 0x66, 255]);
     const hat = characterCreator.processSpriteVariant(source, {
       palette: { shadow: '#112233', base: '#445566', highlight: '#aabbcc', band: ['#00ffff', '#ffffff'] },
       pattern: 'hatBand', bandRows: [2], bandXRange: [29, 50]
