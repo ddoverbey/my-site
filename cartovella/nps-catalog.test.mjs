@@ -1201,6 +1201,10 @@ check('Biome Pokédex shows all mapped badge art and dims unreached badges', () 
     assert.ok(pokedex.includes(`data-biome-badge="${id}"`), `Biome ${id} card`);
     assert.ok(pokedex.includes(`src="${source}"`), `Biome ${id} image`);
   }
+  assert.equal((pokedex.match(/class="relative mb-3 rounded-xl border biome-badge-frame"/g) || []).length, 14);
+  assert.equal((pokedex.match(/data-biome-rarity="/g) || []).length, 14);
+  assert.match(pokedex, /data-biome-rarity="epic" style="--rarity-color:#c084fc"/);
+  assert.match(pokedex, /data-biome-rarity="legendary" style="--rarity-color:#fbbf24"/);
   assert.equal((pokedex.match(/data-biome-unlocked="true"/g) || []).length, 2);
   assert.equal((pokedex.match(/data-biome-unlocked="false"/g) || []).length, 12);
   assert.equal((pokedex.match(/filter:grayscale\(1\) brightness\(\.35\);opacity:\.65/g) || []).length, 12);
@@ -1217,6 +1221,7 @@ check('rare-and-higher rarity text and achievement borders receive glow styling'
     assert.ok(html.includes(`.achievement-icon[data-rarity="${rarity}"]`));
     assert.ok(html.includes(`.achievement-rarity[data-rarity="${rarity}"]`));
   }
+  assert.match(html, /\.biome-badge-frame\s*\{[\s\S]*?border-color:\s*var\(--rarity-color\);[\s\S]*?box-shadow:/);
   assert.ok(html.includes('#biomePokedexContainer .achievement-rarity[data-rarity="rare"]'));
   assert.ok(html.includes('.rarity-glow-text[data-rarity="rare"]'));
 });
@@ -4249,6 +4254,8 @@ check('achievement modal shows rounded artwork cards and level-up banner stays a
 });
 const achievementImages = vm.runInContext('Object.entries(ACHIEVEMENT_IMAGES)', context);
 const unmetAchievementImage = vm.runInContext('UNMET_ACHIEVEMENT_IMAGE', context);
+assert.equal(vm.runInContext("ACHIEVEMENT_IMAGES['Gaia Wanderer']", context), 'gaia-wanderer.png');
+assert.equal(vm.runInContext("ACHIEVEMENT_IMAGES['How????']", context), 'how.png');
 for (const [title, filename] of achievementImages) {
   const data = await readFile(new URL(`./assets/achievements/${filename}`, import.meta.url));
   assert.equal(data.subarray(1, 4).toString(), 'PNG', `${title} artwork exists and is PNG`);
@@ -4256,7 +4263,7 @@ for (const [title, filename] of achievementImages) {
 const unmetAchievementData = await readFile(new URL(`./assets/achievements/${unmetAchievementImage}`, import.meta.url));
 assert.equal(unmetAchievementData.subarray(1, 4).toString(), 'PNG', 'shared locked artwork exists and is PNG');
 check('achievement artwork maps all supplied images to real tiers and preserves emoji fallbacks', () => {
-  assert.equal(achievementImages.length, 32);
+  assert.equal(achievementImages.length, 34);
   for (const [title, filename] of achievementImages) {
     context.artworkTitle = title;
     const markup = vm.runInContext(`(()=>{

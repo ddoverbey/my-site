@@ -302,6 +302,12 @@
     button.achievement-icon:hover { transform: translateY(-2px); }
     button.achievement-icon:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
     .achievement-rarity { color: var(--rarity-color); }
+    .biome-badge-frame {
+      border-color: var(--rarity-color);
+      box-shadow:
+        0 0 10px color-mix(in srgb, var(--rarity-color) 48%, transparent),
+        inset 0 0 6px color-mix(in srgb, var(--rarity-color) 24%, transparent);
+    }
     .rarity-glow-text[data-rarity="rare"],
     .rarity-glow-text[data-rarity="epic"],
     .rarity-glow-text[data-rarity="legendary"],
@@ -5625,11 +5631,14 @@
             : 'bg-slate-950/60 border-slate-800'
         }`;
         card.innerHTML = `
-          <div class="relative mb-3 overflow-hidden rounded-xl border border-slate-700/60">
-            <img data-biome-badge="${key}" data-biome-unlocked="${isUnlocked}"
-              src="${escapeHtml(encodeURI(`./assets/biome-badges/${BIOME_BADGE_IMAGES[key]}`))}"
-              alt="" class="block w-full aspect-video object-cover"
-              ${isUnlocked ? '' : 'style="filter:grayscale(1) brightness(.35);opacity:.65"'}>
+          <div class="relative mb-3 rounded-xl border biome-badge-frame"
+            data-biome-rarity="${escapeHtml(info.rarity)}" style="--rarity-color:${rarityColor}">
+            <div class="overflow-hidden rounded-xl">
+              <img data-biome-badge="${key}" data-biome-unlocked="${isUnlocked}"
+                src="${escapeHtml(encodeURI(`./assets/biome-badges/${BIOME_BADGE_IMAGES[key]}`))}"
+                alt="" class="block w-full aspect-video object-cover"
+                ${isUnlocked ? '' : 'style="filter:grayscale(1) brightness(.35);opacity:.65"'}>
+            </div>
             <span class="achievement-rarity absolute bottom-1.5 right-1.5 text-[9px] uppercase px-1.5 py-0.5 rounded font-mono font-bold border"
               data-rarity="${escapeHtml(info.rarity)}"
               style="--rarity-color:${rarityColor};border-color:var(--rarity-color);background-color:rgba(2,6,23,.85)"
@@ -5714,8 +5723,10 @@
       'Fifty-Nifty': 'fifty-nifty.png',
       'First Steps': 'first-steps.png',
       'Focal Length': 'focal-length.png',
+      'Gaia Wanderer': 'gaia-wanderer.png',
       'Globetrotter': 'globetrotter.png',
       'Grand Voyager': 'grand-voyager.png',
+      'How????': 'how.png',
       'Junior Ecologist': 'junior-ecologist.png',
       'Local Lore': 'local-lore.png',
       'Master Ranger': 'master-ranger.png',
