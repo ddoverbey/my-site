@@ -1224,15 +1224,15 @@
     </section>
   </div>
 
-  <script src="./nps-catalog.js?v=20261026-rarity-name-match-v1"></script>
-  <script src="./national-parks-scratch.js?v=20261026-rarity-name-match-v1"></script>
-  <script src="./international-parks.js?v=20261026-rarity-name-match-v1"></script>
-  <script src="./ecoregions.js?v=20261026-rarity-name-match-v1"></script>
-  <script src="./coordinate-lookups.js?v=20261026-rarity-name-match-v1"></script>
-  <script src="./micro-states.js?v=20261026-rarity-name-match-v1"></script>
-  <script src="./travel-ledger.js?v=20261026-rarity-name-match-v1"></script>
-  <script src="./character-creator.js?v=20261026-rarity-name-match-v1"></script>
-  <script src="./rarity-config.js?v=20261026-rarity-name-match-v1"></script>
+  <script src="./nps-catalog.js?v=20261026-rarity-name-match-v2"></script>
+  <script src="./national-parks-scratch.js?v=20261026-rarity-name-match-v2"></script>
+  <script src="./international-parks.js?v=20261026-rarity-name-match-v2"></script>
+  <script src="./ecoregions.js?v=20261026-rarity-name-match-v2"></script>
+  <script src="./coordinate-lookups.js?v=20261026-rarity-name-match-v2"></script>
+  <script src="./micro-states.js?v=20261026-rarity-name-match-v2"></script>
+  <script src="./travel-ledger.js?v=20261026-rarity-name-match-v2"></script>
+  <script src="./character-creator.js?v=20261026-rarity-name-match-v2"></script>
+  <script src="./rarity-config.js?v=20261026-rarity-name-match-v2"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -4157,7 +4157,9 @@
       const operation = (async () => {
         const storage = coordinateRarityStorage();
         const local = CoordinateLookups.cachedRarity(lat, lng, storage, Date.now(), placeName);
-        if (local) {
+        const localMatchesPlace = local &&
+          (!placeName || CoordinateLookups.isNameMatchedRarity(local, placeName));
+        if (localMatchesPlace) {
           try {
             await saveSupabaseRarityCache(lat, lng, local, placeName);
           } catch (error) {
@@ -4167,7 +4169,7 @@
         }
         try {
           const shared = await fetchSupabaseRarityCache(lat, lng, placeName);
-          if (shared) {
+          if (shared && (!placeName || CoordinateLookups.isNameMatchedRarity(shared, placeName))) {
             CoordinateLookups.cacheRarity(lat, lng, shared, storage, Date.now(), placeName);
             return shared;
           }
@@ -4177,6 +4179,8 @@
         const rarity = await CoordinateLookups.lookupRarityWithFallback(lat, lng, {
           storage, rarityEndpoint: CartovellaConfig.rarityEndpoint, placeName
         });
+        const nameMatched = !placeName || CoordinateLookups.isNameMatchedRarity(rarity, placeName);
+        if (!nameMatched) return rarity;
         try {
           CoordinateLookups.cacheRarity(lat, lng, rarity, storage, Date.now(), placeName);
         } catch (error) {
@@ -4201,10 +4205,8 @@
       if (AppState.viewOnly) return null;
       const poi = AppState.customPois.find(item => item.id === poiId);
       if (!poi) return null;
-      const raritySearchedForPlace = poi.rarity?.searchedName &&
-        CoordinateLookups.normalizePlaceName(poi.rarity.searchedName) ===
-          CoordinateLookups.normalizePlaceName(poi.name);
-      if (poi.rarity && CoordinateLookups.RARITY_TIERS[poi.rarityTier] && raritySearchedForPlace) {
+      if (poi.rarity && CoordinateLookups.RARITY_TIERS[poi.rarityTier] &&
+          CoordinateLookups.isNameMatchedRarity(poi.rarity, poi.name)) {
         showFieldAppraisal(poi, poi.rarity);
         return poi.rarity;
       }
@@ -4947,9 +4949,7 @@
       if (!p.custom) return '';
       const category = p.category
         ? `<p class="text-[11px] text-amber-300">${escapeHtml(p.category)}</p>` : '';
-      const namedAppraisal = typeof p.rarity?.searchedName === 'string' &&
-        CoordinateLookups.normalizePlaceName(p.rarity.searchedName) ===
-          CoordinateLookups.normalizePlaceName(p.name);
+      const namedAppraisal = CoordinateLookups.isNameMatchedRarity(p.rarity, p.name);
       const appraisalButton = !AppState.viewOnly && !namedAppraisal
         ? `<button type="button" data-rarity-appraise-id="${escapeHtml(p.id)}"
             class="text-[11px] text-sky-300 underline hover:text-sky-200">Retry name-and-location appraisal</button>`
@@ -7118,7 +7118,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261026-rarity-name-match-v1"></script>
+  <script src="./expedition-ui.js?v=20261026-rarity-name-match-v2"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);

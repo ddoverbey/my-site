@@ -165,7 +165,9 @@ export function createWorker(fetcher = fetch) {
               cached.matchedLat !== grid.matchedLat || cached.matchedLng !== grid.matchedLng) {
             throw new Error('Invalid cached rarity entry.');
           }
-          return reply(200, { ...cached, cached: true });
+          if (!placeName || cached.source === 'Google Places API (New) + OpenStreetMap contributors (ODbL)') {
+            return reply(200, { ...cached, cached: true });
+          }
         }
         let operation = inflight.get(cacheKey);
         if (!operation) {
@@ -208,7 +210,7 @@ export function createWorker(fetcher = fetch) {
               osmDataTimestamp: openData?.timestamp || null
             };
             lookups.validateProviderRarity(result);
-            await env.RARITY_CACHE.put(cacheKey, JSON.stringify(result));
+            if (!placeName || googlePlace) await env.RARITY_CACHE.put(cacheKey, JSON.stringify(result));
             return result;
           })();
           inflight.set(cacheKey, operation);

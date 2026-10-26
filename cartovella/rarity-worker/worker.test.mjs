@@ -214,6 +214,36 @@ await check('named Google searches require a close name match and cache each pla
     request(`lat=41.89&lng=12.49&name=${'x'.repeat(151)}`), namedEnv
   )).status, 400);
 });
+await check('named open-data fallbacks are not cached and retry Google Places', async () => {
+  let googleQueries = 0;
+  const unmatchedEntries = new Map();
+  const unmatchedWorker = createWorker(async url => {
+    if (url === 'https://places.googleapis.com/v1/places:searchText') {
+      googleQueries++;
+      return new Response(JSON.stringify({ places: [{
+        displayName: { text: 'Unrelated Overlook' }, userRatingCount: 100,
+        location: { latitude: 41.89, longitude: 12.49 }
+      }] }));
+    }
+    return new Response(JSON.stringify({
+      elements: [{ type: 'node', id: 2, tags: { tourism: 'viewpoint' } }]
+    }));
+  });
+  const unmatchedEnv = {
+    ...env, GOOGLE_PLACES_API_KEY: 'test-google-key',
+    RARITY_CACHE: {
+      get: async key => unmatchedEntries.has(key) ? JSON.parse(unmatchedEntries.get(key)) : null,
+      put: async (key, value) => unmatchedEntries.set(key, value)
+    }
+  };
+  const unmatchedRequest = () => request('lat=41.89&lng=12.49&name=Spirit%20Falls');
+  const first = await unmatchedWorker.fetch(unmatchedRequest(), unmatchedEnv);
+  assert.equal((await first.json()).source, 'OpenStreetMap contributors (ODbL)');
+  const second = await unmatchedWorker.fetch(unmatchedRequest(), unmatchedEnv);
+  assert.equal((await second.json()).source, 'OpenStreetMap contributors (ODbL)');
+  assert.equal(googleQueries, 2);
+  assert.equal(unmatchedEntries.size, 0);
+});
 await check('Google failures fall back to open-data density and highway isolation; no key keeps OSM-only operation', async () => {
   const isolatedWorker = createWorker(async url => {
     if (url === 'https://places.googleapis.com/v1/places:searchText') {

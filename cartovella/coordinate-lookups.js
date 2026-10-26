@@ -542,7 +542,7 @@
     validateCoordinates(lat, lng);
     const queryName = cleanPlaceName(placeName);
     const cached = cachedRarity(lat, lng, storage, Date.now(), queryName);
-    if (cached) return cached;
+    if (cached && (!queryName || isNameMatchedRarity(cached, queryName))) return cached;
     if (rarityEndpoint) {
       try {
         const url = new URL(rarityEndpoint);
@@ -558,21 +558,26 @@
         if (coordinateDistanceKm(lat, lng, data.matchedLat, data.matchedLng) > 1) {
           throw new Error('Rarity endpoint matched a location more than 1 km from the requested point.');
         }
-        return cacheRarity(lat, lng, {
+        const result = {
           ...data,
           ...(queryName ? { searchedName: queryName } : {}),
           method: data.reviewCount === null ? 'provider-popularity' : 'provider-review-count'
-        }, storage, Date.now(), queryName);
+        };
+        if (!queryName || isNameMatchedRarity(result, queryName)) {
+          return cacheRarity(lat, lng, result, storage, Date.now(), queryName);
+        }
+        return result;
       } catch (error) {
         console.warn('Rarity endpoint unavailable; using the direct OSM density lookup.', error);
         onFallback(error);
       }
     }
     const fallback = await lookupRarity(lat, lng, fetcher, storage);
-    return cacheRarity(lat, lng, {
+    const result = {
       ...fallback,
       ...(queryName ? { searchedName: queryName } : {})
-    }, storage, Date.now(), queryName);
+    };
+    return queryName ? result : cacheRarity(lat, lng, result, storage);
   }
 
   function segmentDistanceKm(lat, lng, a, b) {
@@ -714,6 +719,13 @@
     return normalized;
   }
 
+  function isNameMatchedRarity(rarity, placeName) {
+    const normalizedName = normalizePlaceName(placeName);
+    return Boolean(normalizedName && rarity?.source ===
+      'Google Places API (New) + OpenStreetMap contributors (ODbL)' &&
+      normalizePlaceName(rarity.searchedName) === normalizedName);
+  }
+
   function rarityCacheKey(lat, lng, placeName = '') {
     const coordinateKey = coordinateCacheKey(lat, lng);
     const normalizedName = normalizePlaceName(placeName);
@@ -814,7 +826,7 @@
     validCountyId, validSubdivisionId, subdivisionFeatures,
     firstBoundaryIntersection, lookupRoadRoute, routeCountyIds,
     lookupElevation, categoryForPoiCount, categoryForOpenData, segmentDistanceKm, summarizeOsm, lookupRarity, cachedRarity,
-    coordinateCacheKey, rarityCacheKey, normalizePlaceName, cacheRarity, RARITY_ORDER,
+    coordinateCacheKey, rarityCacheKey, normalizePlaceName, isNameMatchedRarity, cacheRarity, RARITY_ORDER,
     lookupCoordinate, catalogParkRarity, RARITY_TIERS,
     validateCustomLocations, migrateState, normalizeRarity, validateProviderRarity, coordinateDistanceKm,
     lookupRarityWithFallback, ELEVATION_URL, OVERPASS_URL, CACHE_TTL, NPS_SOURCE,

@@ -179,7 +179,7 @@ check('character customization appears above the stage and progress summary', ()
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 10);
-  assert.ok(sources.every(source => source.endsWith('?v=20261026-rarity-name-match-v1')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261026-rarity-name-match-v2')));
   assert.ok(sources.some(source => source.startsWith('./character-creator.js?')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
@@ -1955,6 +1955,17 @@ check('unappraised custom locations expose a name-and-location appraisal retry',
   assert.ok(markup.includes('data-rarity-appraise-id="poi_spirit_falls"'));
   assert.ok(markup.includes('Retry name-and-location appraisal'));
   assert.ok(markup.includes('Uncharted · no matched place appraisal.'));
+  const fallbackTier = vm.runInContext('CoordinateLookups.categoryForOpenData(3, null)', context);
+  context.rarityRetryFixture.elevation = { meters: 129, feet: 423 };
+  context.rarityRetryFixture.rarity = {
+    placeName: 'OSM vicinity (not a matched place)', searchedName: 'Spirit Falls',
+    reviewCount: null, popularityScore: 3, rarityTier: fallbackTier,
+    matchedLat: 47.8, matchedLng: -123.4,
+    nearestHighwayKm: null, cached: false, source: 'OpenStreetMap contributors (ODbL)'
+  };
+  context.rarityRetryFixture.rarityTier = fallbackTier;
+  const fallbackMarkup = vm.runInContext('customLocationMetadata(rarityRetryFixture)', context);
+  assert.ok(fallbackMarkup.includes('Retry name-and-location appraisal'));
   delete context.rarityRetryFixture;
 });
 check('Cabinet of Curiosities sorts appraised visits by rarity and its chips filter tiers', () => {

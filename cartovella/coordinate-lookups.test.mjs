@@ -344,7 +344,8 @@ await check('missing offline geography blocks saving because political and biome
 });
 const provider = {
   placeName: 'Matched POI', reviewCount: 30, popularityScore: 30, rarityTier: 'Deep Cut',
-  matchedLat: 1, matchedLng: 1, cached: true, source: 'Licensed provider'
+  matchedLat: 1, matchedLng: 1, cached: true,
+  source: 'Google Places API (New) + OpenStreetMap contributors (ODbL)'
 };
 await check('rounded-coordinate rarity keys cache validated provider responses across lookups', async () => {
   const cache = storage();
@@ -388,6 +389,29 @@ await check('named rarity lookups send the name and keep local cache entries iso
     lookups.rarityCacheKey(1, 1, '  SPIRIT   FALLS '));
   assert.notEqual(lookups.rarityCacheKey(1, 1, 'Spirit Falls'),
     lookups.rarityCacheKey(1, 1, 'Other Falls'));
+});
+await check('named open-data fallbacks are not cached as successful place matches', async () => {
+  const cache = storage();
+  const urls = [];
+  const fetcher = async url => {
+    urls.push(new URL(url));
+    return response({
+      placeName: 'OSM vicinity (not a matched place)', reviewCount: null, popularityScore: 3,
+      rarityTier: lookups.categoryForOpenData(3), matchedLat: 1, matchedLng: 1,
+      cached: false, source: 'OpenStreetMap contributors (ODbL)'
+    });
+  };
+  const options = {
+    rarityEndpoint: 'https://api.example.test/rarity', storage: cache,
+    placeName: 'Spirit Falls', fetcher
+  };
+  const first = await lookups.lookupRarityWithFallback(1, 1, options);
+  const second = await lookups.lookupRarityWithFallback(1, 1, options);
+  assert.equal(first.searchedName, 'Spirit Falls');
+  assert.equal(lookups.isNameMatchedRarity(first, 'Spirit Falls'), false);
+  assert.equal(second.cached, false);
+  assert.equal(urls.length, 2);
+  assert.equal(lookups.cachedRarity(1, 1, cache, Date.now(), 'Spirit Falls'), null);
 });
 await check('elevation and rarity requests use separate bounded abort timeouts', async () => {
   const originalTimeout = AbortSignal.timeout;

@@ -221,9 +221,12 @@ Worker uses open-data classification. Named custom places, Photon places, and ex
 include their name and coordinates in the lookup. The Worker only accepts a nearby Google result
 whose name matches the query; otherwise, it falls back to an open-data density estimate. Named
 lookup cache entries are separate from coordinate-only entries so a nearby attraction's reviews
-aren't reused for a different place. Saved custom places without an appraisal can be retried from
-the Travel Ledger. Deploy the updated rarity Worker as well as the browser app to enable named
-Google searches. The optional Esri imagery token can be set as `CartovellaConfig.esriApiKey` in
+aren't reused for a different place. Open-data fallbacks for named lookups are not treated as
+confirmed name matches or cached as named appraisals, so saved custom places keep their retry
+control until Google confirms the place. Failed coordinate-entry appraisals leave the location
+saved and report that the rarity lookup needs a retry. Deploy the updated rarity Worker as well as
+the browser app to enable named Google searches. The optional Esri imagery token can be set as
+`CartovellaConfig.esriApiKey` in
 `rarity-config.js`.
 
 ## Run locally
