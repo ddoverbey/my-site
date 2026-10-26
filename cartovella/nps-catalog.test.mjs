@@ -1836,15 +1836,19 @@ vm.runInContext(`
   PARKS = [{id:'test',name:'Test park',lat:37,lng:-120,biomes:[],states:['California']}];
   coordinateIndexes=null;
 `, context);
-check('zero-progress achievements are entirely absent and started achievements show exact progress', () => {
+check('zero-progress achievements appear in the unmet section and started classes show exact progress', () => {
   vm.runInContext('renderPassportView()', context);
-  assert.equal(element('achievementsContainer').innerHTML,
-    '<p class="col-span-full text-xs italic text-slate-400">Venture out into the fog to uncover hidden achievements.</p>');
+  const initial = element('achievementsContainer').innerHTML;
+  assert.ok(initial.includes('data-achievement-section="unmet"'));
+  assert.ok(initial.includes('data-achievement-class="parkVisits"'));
+  assert.ok(initial.includes('The Overlander'));
+  assert.ok(!initial.includes('Venture out'));
   vm.runInContext("AppState.pins.test='v'; renderPassportView()", context);
-  assert.ok(element('achievementsContainer').innerHTML.includes('Trailblazer'));
-  assert.ok(element('achievementsContainer').innerHTML.includes('value="1" max="5"'));
-  assert.ok(!element('achievementsContainer').innerHTML.includes('The Overlander'));
-  assert.ok(!element('achievementsContainer').innerHTML.includes('Under Pressure'));
+  const started = element('achievementsContainer').innerHTML;
+  assert.ok(started.includes('Trailblazer'));
+  assert.ok(started.includes('value="1" max="5"'));
+  assert.ok(started.includes('The Overlander'));
+  assert.ok(started.includes('Under Pressure'));
   assert.ok(!element('achievementsContainer').innerHTML.includes('Venture out'));
 });
 check('transited destinations clear exactly 60 percent of visited aura radius without visited stats', () => {
@@ -2919,20 +2923,27 @@ check('read-only passports cannot add expeditions or POIs', () => {
   assert.throws(() => vm.runInContext('addExpedition({...testExpedition,id:"readonly"})', context), /read-only/);
   assert.throws(() => vm.runInContext('addCustomPoi(customLocation)', context), /read-only/);
 });
-check('each park milestone is a separate achievement and independently appears after travel starts', () => {
+check('park milestones form one class whose summary shows the highest achieved tier', () => {
   vm.runInContext(`
     AppState.viewOnly=false; applyPassport(migratePassport({}));
     coordinateIndexes=null; npsCatalogLoaded=true;
     PARKS=Array.from({length:30},(_,i)=>({id:'tier'+i,name:'Park '+i,lat:37,lng:-120,biomes:[],states:[]}));
   `, context);
-  for (const count of [1, 4, 5, 15, 30]) {
+  for (const [count, title] of [
+    [0, 'First Steps'], [1, 'First Steps'], [4, 'First Steps'],
+    [5, 'Trailblazer'], [15, 'Master Ranger'], [30, 'Grand Voyager']
+  ]) {
     vm.runInContext(`AppState.pins=Object.fromEntries(PARKS.slice(0,${count}).map(p=>[p.id,'v']));renderPassportView()`, context);
     const cards = element('achievementsContainer').innerHTML;
-    for (const name of ['First Steps', 'Trailblazer', 'Master Ranger', 'Grand Voyager']) {
-      assert.equal((cards.match(new RegExp(`<h5[^>]*>${name}<\\/h5>`, 'g')) || []).length, 1, `${count}: ${name}`);
-    }
+    const parkClass = cards.match(/<details[^>]*data-achievement-class="parkVisits"[\s\S]*?<\/details>/)?.[0] || '';
+    const summary = parkClass.match(/<summary[\s\S]*?<\/summary>/)?.[0] || '';
+    assert.ok(parkClass, `${count}: park class is present`);
+    assert.equal((cards.match(/data-achievement-class="parkVisits"/g) || []).length, 1, `${count}: one park class`);
+    assert.ok(summary.includes(`<h5 class="text-sm font-bold text-slate-100">${title}</h5>`), `${count}: ${title} is current`);
+    assert.equal((parkClass.match(/data-achievement-tier="/g) || []).length, 4, `${count}: all tiers are listed`);
+    assert.ok(!parkClass.match(/<details[^>]*\sopen(?:\s|>)/), `${count}: class starts collapsed`);
     assert.ok(!cards.includes('Park Ranger'));
-    assert.ok(!cards.includes('Class title unlocked'));
+    assert.ok(cards.includes('data-achievement-section="unmet"'));
   }
   vm.runInContext('npsCatalogLoaded=false;renderPassportView()', context);
   assert.ok(!element('achievementsContainer').innerHTML.includes('Completionist Legend'));
@@ -3401,7 +3412,7 @@ check('missing county data clears prior statistics and displays explicit retry g
   assert.equal(element('scratchStatsLabel').textContent, 'Dataset unavailable');
   assert.ok(scratchNodes.some(n => String(n.text).includes('Retry datasets')));
 });
-check('waterfall milestone achievements disclose their independent 1, 5 and 10 goals', () => {
+check('waterfall milestone classes show every 1, 5 and 10 goal, including when unmet', () => {
   for (const count of [0, 1, 4, 5, 9, 10]) {
     context.fallsCount = count;
     vm.runInContext(`
@@ -3413,18 +3424,16 @@ check('waterfall milestone achievements disclose their independent 1, 5 and 10 g
     `, context);
     const cards = element('achievementsContainer').innerHTML;
     assert.equal(vm.runInContext('calculateStats().metadataProgress.waterfalls', context), count);
-    if (!count) assert.ok(!cards.includes('Chasing Waterfalls'));
-    else {
-      assert.ok(cards.includes('Chasing Waterfalls'));
-      for (const goal of [1, 5, 10]) {
-        assert.ok(cards.includes(
-          `aria-label="Chasing Waterfalls completion" value="${Math.min(count, goal)}" max="${goal}"`
-        ));
-        assert.equal(
-          cards.includes(`Visit ${goal} custom waterfall location`),
-          count >= goal * 0.85
-        );
-      }
+    assert.ok(cards.includes('Chasing Waterfalls'));
+    assert.ok(cards.includes('data-achievement-class="waterfalls"'));
+    for (const goal of [1, 5, 10]) {
+      assert.ok(cards.includes(
+        `aria-label="Chasing Waterfalls completion" value="${Math.min(count, goal)}" max="${goal}"`
+      ));
+      assert.equal(
+        cards.includes(`Visit ${goal} custom waterfall location`),
+        count >= goal * 0.85
+      );
     }
   }
 });
@@ -3969,16 +3978,16 @@ check('travel anywhere grows the starting home circle into its county without ch
   assert.equal(vm.runInContext('loggedCountyStatuses(false)["06073"]', context), undefined);
   vm.runInContext('map=null', context);
 });
-check('dedicated achievement page hides untouched badges and does not duplicate cards in the profile', () => {
+check('dedicated achievement page shows unmet classes without duplicating profile badges', () => {
   assert.equal((html.match(/id="achievementsContainer"/g) || []).length, 1);
   assert.ok(html.indexOf('id="achievementsContainer"') > html.indexOf('id="tabContent-achievements"'));
   assert.ok(html.includes('data-tab="achievements"'));
   vm.runInContext('applyPassport(migratePassport({}));PARKS=[];coordinateIndexes=null;map=null', context);
   vm.runInContext("switchTab('achievements')", context);
   assert.equal(vm.runInContext('AppState.currentTab', context), 'achievements');
-  assert.ok(element('achievementsContainer').innerHTML.includes('Venture out'));
+  assert.ok(element('achievementsContainer').innerHTML.includes('data-achievement-section="unmet"'));
   for (const title of ['Chasing Waterfalls', 'Southern Cross', 'Local Lore', 'Zero Meridian', 'Thin Air', 'Earth Sandwich']) {
-    assert.ok(!element('achievementsContainer').innerHTML.includes(title), title);
+    assert.ok(element('achievementsContainer').innerHTML.includes(title), title);
   }
   vm.runInContext(`
     AppState.customPois=[{...customLocation,id:'poi_first_fall',category:'waterfall',status:'v'}];
@@ -3990,14 +3999,8 @@ check('dedicated achievement page hides untouched badges and does not duplicate 
     assert.equal(vm.runInContext(`ACHIEVEMENTS.some(achievement=>achievement.id==='${id}')`, context), false);
   }
 });
-check('biome milestone achievements independently use 3, total minus one and total', () => {
-  for (const [count, visible, hidden] of [
-    [0, [], ['Junior Ecologist', 'Almost There!', 'Gaia Wanderer']],
-    [1, ['Junior Ecologist', 'Almost There!', 'Gaia Wanderer'], []],
-    [3, ['Junior Ecologist', 'Almost There!', 'Gaia Wanderer'], []],
-    [13, ['Junior Ecologist', 'Almost There!', 'Gaia Wanderer'], []],
-    [14, ['Junior Ecologist', 'Almost There!', 'Gaia Wanderer'], []]
-  ]) {
+check('biome milestone classes list 3, total minus one and total tiers at every progress level', () => {
+  for (const count of [0, 1, 3, 13, 14]) {
     context.biomeCount = count;
     vm.runInContext(`
       applyPassport(migratePassport({}));PARKS=[];coordinateIndexes=null;
@@ -4006,8 +4009,10 @@ check('biome milestone achievements independently use 3, total minus one and tot
       renderAchievementsView();
     `, context);
     const cards = element('achievementsContainer').innerHTML;
-    visible.forEach(title => assert.ok(cards.includes(title), `${count}: ${title}`));
-    hidden.forEach(title => assert.ok(!cards.includes(title), `${count}: hidden ${title}`));
+    for (const title of ['Junior Ecologist', 'Almost There!', 'Gaia Wanderer']) {
+      assert.ok(cards.includes(title), `${count}: ${title}`);
+    }
+    assert.ok(cards.includes('data-achievement-class="biomeCoverage"'));
   }
   vm.runInContext("BIOMES={...BIOMES,'15':{}}", context);
   assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='almostThere').tiers[0].goal()", context), 14);
@@ -4043,14 +4048,11 @@ check('atlas goals exclude unknown countries and withhold hints below the reveal
   assert.ok(!element('achievementsContainer').innerHTML.includes('Manifest Destiny'));
 });
 check('achievement hints appear at 85 percent, remain blurred until earned, and preserve numbers and rarity art', () => {
-  const cards = [];
   const badges = [];
   const cardContainer = element('achievementsContainer');
   const badgeContainer = element('earnedAchievementBadges');
-  const originalCardAppend = cardContainer.appendChild;
   const originalBadgeAppend = badgeContainer.appendChild;
   const originalCreate = context.document.createElement;
-  cardContainer.appendChild = card => cards.push(card);
   badgeContainer.appendChild = badge => badges.push(badge);
   context.document.createElement = () => ({
     attributes: {},
@@ -4064,6 +4066,8 @@ check('achievement hints appear at 85 percent, remain blurred until earned, and 
   })))`, context);
   vm.runInContext(`
     var disclosureTestAchievements = ACHIEVEMENTS.slice();
+    var disclosureTestGroups = ACHIEVEMENT_CLASS_GROUPS.slice();
+    ACHIEVEMENT_CLASS_GROUPS.splice(0, ACHIEVEMENT_CLASS_GROUPS.length);
   `, context);
   try {
     for (const testCase of cases) {
@@ -4078,43 +4082,47 @@ check('achievement hints appear at 85 percent, remain blurred until earned, and 
       for (const progress of [
         0, testCase.goal / 2, testCase.goal * 0.849, testCase.goal * 0.85, testCase.goal
       ]) {
-        cards.length = 0;
         badges.length = 0;
         context.disclosureTestProgress = progress;
         vm.runInContext(`
           renderAchievementsView({testProgress:disclosureTestProgress});
           renderEarnedAchievementBadges({testProgress:disclosureTestProgress});
         `, context);
+        const cardPosition = cardContainer.innerHTML.indexOf(
+          `data-achievement-class="${testCase.id}"`
+        );
+        const cardStart = cardContainer.innerHTML.lastIndexOf('<details', cardPosition);
+        const cardEndPosition = cardContainer.innerHTML.indexOf('</details>', cardPosition);
+        const card = cardPosition >= 0 && cardEndPosition >= 0
+          ? cardContainer.innerHTML.slice(cardStart, cardEndPosition + '</details>'.length) : '';
+        assert.ok(card, testCase.title);
         if (progress === 0) {
-          assert.equal(cards.length, 0, testCase.title);
+          assert.ok(cardContainer.innerHTML.includes('data-achievement-section="unmet"'), testCase.title);
           assert.equal(badges.length, 0, testCase.title);
           continue;
         }
-        assert.equal(cards.length, 1, testCase.title);
-        const card = cards[0];
-        assert.ok(card.innerHTML.includes(testCase.title), testCase.title);
+        assert.ok(card.includes(testCase.title), testCase.title);
         const unmet = progress < testCase.goal;
         const hintVisible = progress >= testCase.goal * 0.85;
-        assert.equal(card.innerHTML.includes(testCase.desc), !unmet || hintVisible, testCase.title);
-        assert.equal(card.innerHTML.includes('class="text-[10px] achievement-hint'), unmet && hintVisible, testCase.title);
-        assert.equal(card.innerHTML.includes('Achievement hint, blurred until earned'), unmet && hintVisible, testCase.title);
-        assert.ok(!card.innerHTML.includes('achievement-redacted'), testCase.title);
-        assert.equal(card.innerHTML.includes('achievement-icon-hidden'), false, testCase.title);
+        assert.equal(card.includes(testCase.desc), !unmet || hintVisible, testCase.title);
+        assert.equal(card.includes('class="text-xs achievement-hint'), unmet && hintVisible, testCase.title);
+        assert.equal(card.includes('Achievement hint, blurred until earned'), unmet && hintVisible, testCase.title);
+        assert.ok(!card.includes('achievement-redacted'), testCase.title);
+        assert.equal(card.includes('achievement-icon-hidden'), false, testCase.title);
         const unmetImage = vm.runInContext('UNMET_ACHIEVEMENT_IMAGE', context);
-        assert.equal(card.innerHTML.includes(`./assets/achievements/${unmetImage}`), unmet, testCase.title);
-        assert.ok(!card.innerHTML.includes('Progress:'), testCase.title);
+        assert.equal(card.includes(`./assets/achievements/${unmetImage}`), unmet, testCase.title);
+        assert.ok(!card.includes('Progress:'), testCase.title);
         if (unmet && hintVisible) assert.ok(html.includes('.achievement-hint {\n      filter: blur(0.7px);'));
-        assert.equal(card.innerHTML.includes('<progress '), !secret || !unmet, testCase.title);
-        assert.equal(card.className.includes('achievement-complete'), secret && !unmet, testCase.title);
+        assert.equal(card.includes('<progress '), !secret || !unmet, testCase.title);
+        assert.equal(card.match(/<details[^>]*class="[^"]*achievement-complete/) !== null, secret && !unmet, testCase.title);
         if (unmet) {
           const count = (Math.floor(Math.min(progress, testCase.goal) * 10) / 10).toLocaleString('en');
-          assert.ok(card.innerHTML.includes(`${count} / ${testCase.goal}`), testCase.title);
-          if (!hintVisible) assert.ok(!card.innerHTML.includes(testCase.desc), testCase.title);
-          assert.equal((card.innerHTML.match(new RegExp(` / ${testCase.goal}`, 'g')) || []).length, 1);
+          assert.ok(card.includes(`${count} / ${testCase.goal}`), testCase.title);
+          if (!hintVisible) assert.ok(!card.includes(testCase.desc), testCase.title);
           assert.equal(badges.length, 0, testCase.title);
         } else if (progress >= testCase.goal) {
-          assert.ok(card.innerHTML.includes(' • Complete'), testCase.title);
-          assert.ok(!card.innerHTML.includes('Class title unlocked'), testCase.title);
+          assert.ok(card.includes('>Complete</span>'), testCase.title);
+          assert.ok(!card.includes('Class title unlocked'), testCase.title);
           assert.equal(badges.length, 1, testCase.title);
           assert.ok(badges[0].attributes.title.includes(testCase.desc), testCase.title);
         } else {
@@ -4125,8 +4133,8 @@ check('achievement hints appear at 85 percent, remain blurred until earned, and 
   } finally {
     vm.runInContext(`
       ACHIEVEMENTS.splice(0, ACHIEVEMENTS.length, ...disclosureTestAchievements);
+      ACHIEVEMENT_CLASS_GROUPS.splice(0, ACHIEVEMENT_CLASS_GROUPS.length, ...disclosureTestGroups);
     `, context);
-    cardContainer.appendChild = originalCardAppend;
     badgeContainer.appendChild = originalBadgeAppend;
     context.document.createElement = originalCreate;
   }
@@ -4294,12 +4302,7 @@ check('unmet achievements use the shared supplied placeholder artwork', () => {
   assert.ok(markup.includes('alt=""'));
 });
 check('a grouped achievement uses its highest completed tier artwork instead of the next tier placeholder', () => {
-  const cards = [];
   const container = element('achievementsContainer');
-  const originalAppend = container.appendChild;
-  const originalCreate = context.document.createElement;
-  container.appendChild = card => cards.push(card);
-  context.document.createElement = () => ({ innerHTML: '', className: '' });
   try {
     vm.runInContext(`
       const originalAchievements = ACHIEVEMENTS.slice();
@@ -4317,14 +4320,43 @@ check('a grouped achievement uses its highest completed tier artwork instead of 
         ACHIEVEMENTS.splice(0, ACHIEVEMENTS.length, ...originalAchievements);
       }
     `, context);
-    assert.equal(cards.length, 1);
-    assert.ok(cards[0].innerHTML.includes('./assets/achievements/first-steps.png'));
-    assert.ok(!cards[0].innerHTML.includes('./assets/achievements/unmet.png'));
-    assert.ok(!cards[0].innerHTML.includes('./assets/achievements/trailblazer.png'));
+    const card = container.innerHTML.match(/<details[^>]*data-achievement-class="groupedArtworkTest"[\s\S]*?<\/details>/)?.[0] || '';
+    const summary = card.match(/<summary[\s\S]*?<\/summary>/)?.[0] || '';
+    assert.ok(card);
+    assert.ok(summary.includes('./assets/achievements/first-steps.png'));
+    assert.ok(!summary.includes('./assets/achievements/unmet.png'));
+    assert.ok(!summary.includes('./assets/achievements/trailblazer.png'));
   } finally {
-    container.appendChild = originalAppend;
-    context.document.createElement = originalCreate;
+    vm.runInContext('renderPassportView()', context);
   }
+});
+check('achievement page sorts rarity sections high to low and keeps unmet classes last', () => {
+  vm.runInContext(`
+    (() => {
+      const originalAchievements = ACHIEVEMENTS.slice();
+      try {
+        ACHIEVEMENTS.splice(0, ACHIEVEMENTS.length,
+          {id:'commonSortTest',title:'Common test',icon:'C',background:'#172554',
+            progress:()=>1,tiers:[{goal:1,title:'Common test',desc:'',rarity:'common'}]},
+          {id:'mythicSortTest',title:'Mythic test',icon:'M',background:'#172554',
+            progress:()=>1,tiers:[{goal:1,title:'Mythic test',desc:'',rarity:'mythic'}]},
+          {id:'unmetSortTest',title:'Unmet test',icon:'U',background:'#172554',
+            progress:()=>0,tiers:[{goal:1,title:'Unmet test',desc:'',rarity:'rare'}]}
+        );
+        renderAchievementsView({});
+      } finally {
+        ACHIEVEMENTS.splice(0, ACHIEVEMENTS.length, ...originalAchievements);
+      }
+    })();
+  `, context);
+  const cards = element('achievementsContainer').innerHTML;
+  const mythic = cards.indexOf('data-achievement-section="mythic"');
+  const common = cards.indexOf('data-achievement-section="common"');
+  const unmet = cards.indexOf('data-achievement-section="unmet"');
+  assert.ok(mythic >= 0 && common > mythic && unmet > common);
+  assert.ok(cards.includes('class="achievement-class w-full'));
+  assert.ok(!cards.includes('role="tab"'));
+  vm.runInContext('renderPassportView()', context);
 });
 check('every achievement milestone has valid difficulty rarity and distinct artwork', () => {
   assert.equal(vm.runInContext('ACHIEVEMENTS.every(a=>a.icon && /^#[0-9a-f]{6}$/i.test(a.background) && a.tiers.every(t=>ACHIEVEMENT_RARITIES[t.rarity]))', context), true);
@@ -4436,7 +4468,7 @@ check('state milestone badges are awarded independently at their own thresholds'
     context.document.createElement = originalCreate;
   }
 });
-check('separate achievement cards show their own artwork and rarity without revealing untouched achievements', () => {
+check('achievement classes show rarity artwork and retain untouched milestones in Unmet', () => {
   vm.runInContext(`
     applyPassport(migratePassport({}));PARKS=[];coordinateIndexes=null;
     AppState.customPois=[{...customLocation,id:'poi_rarity_fall',category:'waterfall',status:'v'}];
@@ -4446,18 +4478,19 @@ check('separate achievement cards show their own artwork and rarity without reve
   assert.ok(cards.includes('assets/achievements/unmet.png'));
   assert.ok(cards.includes('data-rarity="common"'));
   assert.ok(cards.includes('data-rarity="uncommon"'));
-  assert.ok(cards.includes('>Common</p>'));
-  assert.ok(cards.includes('>Uncommon</p>'));
-  assert.ok(!cards.includes('Southern Cross'));
-  assert.ok(!cards.includes('Zero Meridian'));
+  assert.ok(cards.includes('>Common</h3>'));
+  assert.match(cards, /class="achievement-rarity[^>]*>Uncommon<\/span>/);
+  assert.ok(cards.includes('data-achievement-section="unmet"'));
+  assert.ok(cards.includes('Southern Cross'));
+  assert.ok(cards.includes('Zero Meridian'));
 });
 check('regional music achievements disclose partial prerequisites and award colored badges only on completion', () => {
   vm.runInContext(`
     applyPassport(migratePassport({}));PARKS=[];coordinateIndexes=null;map=null;
     renderPassportView();
   `, context);
-  assert.ok(!element('achievementsContainer').innerHTML.includes('Country Roads, Take Me Home'));
-  assert.ok(!element('achievementsContainer').innerHTML.includes('Rocky Mountain High'));
+  assert.ok(element('achievementsContainer').innerHTML.includes('data-achievement-class="countryRoads"'));
+  assert.ok(element('achievementsContainer').innerHTML.includes('data-achievement-class="rockyMountainHigh"'));
   vm.runInContext(`
     AppState.regions={'s:West Virginia':'v'};
     AppState.counties={'08075':'v'};
@@ -4466,7 +4499,7 @@ check('regional music achievements disclose partial prerequisites and award colo
   assert.ok(element('achievementsContainer').innerHTML.includes('Country Roads, Take Me Home'));
   assert.ok(element('achievementsContainer').innerHTML.includes('value="1" max="2"'));
   assert.ok(!element('earnedAchievementBadges').innerHTML.includes('🛣️🏡'));
-  assert.ok(!element('achievementsContainer').innerHTML.includes('Rocky Mountain High'));
+  assert.ok(element('achievementsContainer').innerHTML.includes('data-achievement-class="rockyMountainHigh"'));
   vm.runInContext("AppState.pins.shen='v';AppState.counties['08065']='l';renderPassportView()", context);
   const badges = element('earnedAchievementBadges').innerHTML;
   assert.ok(badges.includes('assets/achievements/country-roads.png'));
