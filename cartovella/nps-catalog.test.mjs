@@ -1900,6 +1900,51 @@ check('single-tier achievement cards show unlocked descriptions and internationa
     delete context.achievementTestStats;
   }
 });
+check('expanded achievement tiers omit the summary tier, rank downward, and keep an unearned capstone last', () => {
+  const container = element('achievementsContainer');
+  const previousMarkup = container.innerHTML;
+  const previousCatalogLoaded = vm.runInContext('npsCatalogLoaded', context);
+  const npsAchievement = vm.runInContext("ACHIEVEMENTS.find(achievement => achievement.id === 'nps')", context);
+  const originalNpsProgress = npsAchievement.progress;
+  context.achievementOrderTestStats = vm.runInContext(`({
+    ...calculateStats(),
+    visitedParks: Array.from({ length: 5 }, (_, index) => ({ id: 'tier' + index })),
+    npsTotal: 100,
+    usParksCount: 5
+  })`, context);
+  const getParkTierTitles = () => {
+    const parkClass = container.innerHTML.match(
+      /<details[^>]*data-achievement-class="parkVisits"[\s\S]*?<\/details>/
+    )?.[0] || '';
+    return {
+      parkClass,
+      titles: [...parkClass.matchAll(/data-achievement-tier="([^"]+)"/g)].map(([, title]) => title)
+    };
+  };
+  try {
+    vm.runInContext('npsCatalogLoaded=true; renderAchievementsView(achievementOrderTestStats)', context);
+    const unearnedCapstone = getParkTierTitles();
+    assert.deepEqual(unearnedCapstone.titles, [
+      'America the Beautiful', 'Grand Voyager', 'Master Ranger', 'First Steps', 'Completionist Legend'
+    ]);
+    assert.ok(unearnedCapstone.parkClass.includes('>Trailblazer</h5>'));
+    assert.ok(!unearnedCapstone.titles.includes('Trailblazer'));
+
+    npsAchievement.progress = () => 10000;
+    vm.runInContext('renderAchievementsView(achievementOrderTestStats)', context);
+    const earnedCapstone = getParkTierTitles();
+    assert.deepEqual(earnedCapstone.titles, [
+      'America the Beautiful', 'Grand Voyager', 'Master Ranger', 'Trailblazer', 'First Steps'
+    ]);
+    assert.ok(earnedCapstone.parkClass.includes('>Completionist Legend</h5>'));
+    assert.ok(!earnedCapstone.titles.includes('Completionist Legend'));
+  } finally {
+    npsAchievement.progress = originalNpsProgress;
+    vm.runInContext(`npsCatalogLoaded=${previousCatalogLoaded}; renderAchievementsView()`, context);
+    container.innerHTML = previousMarkup;
+    delete context.achievementOrderTestStats;
+  }
+});
 check('transited destinations clear exactly 60 percent of visited aura radius without visited stats', () => {
   vm.runInContext("AppState.pins={test:'t'};AppState.regions={};AppState.counties={}", context);
   context.fogOperations.length = 0;
@@ -2989,13 +3034,40 @@ check('park milestones form one class whose summary shows the highest achieved t
     assert.ok(parkClass, `${count}: park class is present`);
     assert.equal((cards.match(/data-achievement-class="parkVisits"/g) || []).length, 1, `${count}: one park class`);
     assert.ok(summary.includes(`<h5 class="text-sm font-bold text-slate-100">${title}</h5>`), `${count}: ${title} is current`);
-    assert.equal((parkClass.match(/data-achievement-tier="/g) || []).length, 6, `${count}: all connected tiers are listed`);
+    const tierTitles = [...parkClass.matchAll(/data-achievement-tier="([^"]+)"/g)].map(([, title]) => title);
+    const completedTitle = new Map([
+      [1, 'First Steps'], [4, 'First Steps'], [5, 'Trailblazer'],
+      [15, 'Master Ranger'], [30, 'Grand Voyager']
+    ]).get(count);
+    const expectedTierTitles = [
+      'Completionist Legend', 'America the Beautiful', 'Grand Voyager',
+      'Master Ranger', 'Trailblazer', 'First Steps'
+    ].filter(title => title !== completedTitle);
+    if (completedTitle !== 'Completionist Legend') {
+      expectedTierTitles.splice(expectedTierTitles.indexOf('Completionist Legend'), 1);
+      expectedTierTitles.push('Completionist Legend');
+    }
+    assert.deepEqual(tierTitles, expectedTierTitles, `${count}: tiers are ranked highest to lowest, omit the summary tier, and put an unearned capstone last`);
     for (const pathTitle of ['Grand Voyager', 'America the Beautiful', 'Completionist Legend']) {
       assert.ok(parkClass.includes(pathTitle), `${count}: ${pathTitle} is in the park progression`);
     }
     assert.ok(!parkClass.match(/<details[^>]*\sopen(?:\s|>)/), `${count}: class starts collapsed`);
     assert.ok(!cards.includes('Park Ranger'));
     assert.ok(cards.includes('data-achievement-section="unmet"'));
+  }
+  const npsAchievement = vm.runInContext("ACHIEVEMENTS.find(achievement => achievement.id === 'nps')", context);
+  const originalNpsProgress = npsAchievement.progress;
+  try {
+    npsAchievement.progress = () => 10000;
+    vm.runInContext('renderPassportView()', context);
+    const parkClass = element('achievementsContainer').innerHTML.match(
+      /<details[^>]*data-achievement-class="parkVisits"[\s\S]*?<\/details>/
+    )?.[0] || '';
+    const tierTitles = [...parkClass.matchAll(/data-achievement-tier="([^"]+)"/g)].map(([, title]) => title);
+    assert.ok(parkClass.includes('<h5 class="text-sm font-bold text-slate-100">Completionist Legend</h5>'));
+    assert.ok(!tierTitles.includes('Completionist Legend'), 'earned capstone is not repeated in the expanded list');
+  } finally {
+    npsAchievement.progress = originalNpsProgress;
   }
   vm.runInContext('npsCatalogLoaded=false;renderPassportView()', context);
   assert.ok(!element('achievementsContainer').innerHTML.includes('Completionist Legend'));

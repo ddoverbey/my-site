@@ -12,9 +12,11 @@ expeditions, track parks and regions, and earn achievements from your travel his
 - Progress for parks, regions, elevations, rarity, and terrestrial biomes.
 - Clickable biome and destination pins show the trips, stops, and saved places contributing to them.
 - Achievements are grouped into expandable milestone classes and sorted by rarity, with unmet classes
-  at the bottom. Single-tier achievements show their descriptions without a dropdown; rarity colors
-  style labels and borders, while each achievement has its own background art palette. International
-  country milestones, including Terra Incognita, Globetrotter, and How????, share one class.
+  at the bottom. Expanded tiers run highest to lowest, omit the highest earned tier already shown in
+  the class summary, and keep an unearned capstone at the bottom. Single-tier achievements show their
+  descriptions without a dropdown; rarity colors style labels and borders, while each achievement
+  has its own background art palette. International country milestones, including Terra Incognita,
+  Globetrotter, and How????, share one class.
 - Waterfall achievements automatically recognize visited locations whose names or categories include
   “waterfall”; Focal Length counts photos saved to trip journals.
 
