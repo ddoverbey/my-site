@@ -385,7 +385,7 @@ check('stats stop county biome lookups once all catalog biomes are collected', (
       applyPassport(migratePassport({ version: 2 }));
       AppState.customPois = [{
         id: 'test-all-biomes', status: 'v', lat: 0, lng: 0,
-        biomes: Object.keys(BIOMES), purposeTags: [],
+        biomes: Object.keys(BIOMES),
         political: { countries: [], states: [], counties: [] }
       }];
       AppState.counties = Object.fromEntries(Array.from({ length: 3231 }, (_, i) =>
@@ -435,7 +435,7 @@ check('total passport XP includes each logged expedition', () => {
       id, name: id, startDate: null, endDate: null, dayTrip: false, reason: '',
       countyIds: [], parkIds: [], customPoiIds: [],
       routeCoords: miles === null ? [] : [[0, 0], [0, miles / milesPerLongitudeDegree]],
-      transitTags: ['flight'], purposeTags: [], minElevationFt: null, maxElevationFt: null
+      transitTags: ['flight'], minElevationFt: null, maxElevationFt: null
     });
     context.expeditionXpFixture = makeTrip('short-flight', milesPerLongitudeDegree);
     vm.runInContext('AppState.expeditions = [expeditionXpFixture]', context);
@@ -2208,7 +2208,7 @@ check('expedition history escapes names, shows date/elevation/tags and starts me
   assert.ok(history.includes('2026-09-01'));
   assert.ok(history.includes('-100 to 11,000 ft'));
   assert.ok(history.includes('AWD/Off-Road'));
-  assert.ok(history.includes('Photography'));
+  assert.ok(!history.includes('Photography'));
   assert.ok(history.includes('data-trip-biomes'));
   assert.ok(history.includes('🌲 Temperate Conifer Forests'));
   assert.ok(history.includes('🌱 Mangroves'));
@@ -3455,19 +3455,19 @@ check('radar includes full custom visits and their biomes, loaded counties and e
   assert.equal(before.Remoteness, 1 / 6);
   assert.equal(before.Worldly, 1 / 15);
   assert.equal(before.Roadtrip, 2 / 100);
-  vm.runInContext(`AppState.expeditions=[{...testExpedition,transitTags:['awd','foot','ferry','flight'],purposeTags:['photography']}];`, context);
+  vm.runInContext(`AppState.expeditions=[{...testExpedition,transitTags:['awd','foot','ferry','flight']}];`, context);
   const after = vm.runInContext('calculateStats().archetypes', context);
-  assert.equal(after.Nature, 3 / 25);
+  assert.equal(after.Nature, 2 / 25);
   assert.equal(after.Adventure, 2 / 10);
   assert.equal(after.Remoteness, 2 / 6);
   assert.equal(after.Worldly, 2 / 15);
   assert.equal(after.Roadtrip, 2 / 100 + 1 / 30);
   for (const [tag, axis] of [['awd','Adventure'],['awd','Roadtrip'],['foot','Adventure'],
     ['foot','Remoteness'],['ferry','Worldly'],['flight','Worldly'],['rail','Worldly']]) {
-    vm.runInContext(`AppState.expeditions=[{...testExpedition,transitTags:['${tag}'],purposeTags:[]}];`, context);
+    vm.runInContext(`AppState.expeditions=[{...testExpedition,transitTags:['${tag}']}];`, context);
     assert.ok(vm.runInContext(`calculateStats().archetypes.${axis}`, context) > before[axis], tag);
   }
-  vm.runInContext(`AppState.expeditions=Array.from({length:200},()=>({...testExpedition,transitTags:['awd','foot','ferry','flight'],purposeTags:['photography']}));`, context);
+  vm.runInContext(`AppState.expeditions=Array.from({length:200},()=>({...testExpedition,transitTags:['awd','foot','ferry','flight']}));`, context);
   assert.deepEqual(Object.values(vm.runInContext('calculateStats().archetypes', context)), [1,1,1,1,1]);
 });
 vm.runInContext(`
@@ -5094,7 +5094,7 @@ check('mixed-mode trips save with blank dates, endpoint and road county credit, 
   assert.equal(saved.endDate,null);
   assert.equal(saved.reason,'<friends> & photography');
   assert.deepEqual(saved.transitTags,['flight','road','ferry']);
-  assert.deepEqual(saved.purposeTags,[]);
+  assert.equal(Object.hasOwn(saved,'purposeTags'),false);
   assert.deepEqual(Array.from(vm.runInContext('Object.keys(AppState.counties).sort()',context)),['06073','08001','08031','08059','08097']);
   assert.equal(vm.runInContext('TravelLedger.fogRoutes(AppState.expeditions[0]).length',context),1);
   vm.runInContext('renderExpeditionHistory()',context);
@@ -5950,7 +5950,7 @@ check('Global Route Map renders country and expedition paths and toggles indepen
     AppState.homeBase = { name: 'Test Base', lat: 40.7, lng: -74 };
     AppState.expeditions = [{
       id: 'global-route-test', name: 'Atlantic Flight', startDate: '2026-06-01',
-      endDate: '2026-06-02', transitTags: ['flight'], purposeTags: [],
+      endDate: '2026-06-02', transitTags: ['flight'],
       countyIds: [], parkIds: [], customPoiIds: [],
       routeStops: [
         { kind: 'place', name: 'New York', coords: [40.7,-74] },
@@ -5963,7 +5963,7 @@ check('Global Route Map renders country and expedition paths and toggles indepen
       }]
     }, {
       id: 'europe-route-test', name: 'European Weekend', startDate: '2025-06-03',
-      endDate: '2025-06-04', transitTags: ['train'], purposeTags: [],
+      endDate: '2025-06-04', transitTags: ['train'],
       countyIds: [], parkIds: [], customPoiIds: [],
       routeStops: [
         { kind: 'place', name: 'Paris', coords: [48.9,2.3] },
@@ -5976,7 +5976,7 @@ check('Global Route Map renders country and expedition paths and toggles indepen
       }]
     }, {
       id: 'water-route-test', name: 'Water Transit', startDate: '2025-06-05',
-      endDate: '2025-06-06', transitTags: ['ferry'], purposeTags: [],
+      endDate: '2025-06-06', transitTags: ['ferry'],
       countyIds: [], parkIds: [], customPoiIds: [],
       routeStops: [
         { kind: 'place', name: 'New York', coords: [40.7,-74] },

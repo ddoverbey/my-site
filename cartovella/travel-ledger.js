@@ -8,9 +8,6 @@
   const rarityTierNames = Object.freeze([
     'Tourist Trap', 'Beaten Path', 'Regional Staple', 'Deep Cut', 'Hidden Gem', 'Uncharted'
   ]);
-  const purposeTags = Object.freeze({
-    photography: 'Photography', anniversary: 'Anniversary', family: 'Friends/Family', solo: 'Solo', work: 'Work'
-  });
   const isVisited = status => status === 'v' || status === 'l';
   const validCountyId = id => typeof id === 'string' &&
     (/^\d{5}$/.test(id) || /^[A-Z]{3}:[A-Za-z0-9_.-]+$/.test(id));
@@ -204,10 +201,11 @@
         }
       }
       const journal = validateJournal(exp.journal, exp.photos);
+      const normalized = { ...exp };
+      delete normalized.purposeTags;
       return {
-        ...exp, ...(exp.journal !== undefined || exp.photos !== undefined ? journal : {}),
+        ...normalized, ...(exp.journal !== undefined || exp.photos !== undefined ? journal : {}),
         transitTags: validateTags(exp.transitTags, transitTags),
-        purposeTags: validateTags(exp.purposeTags, purposeTags),
         routeCoords: exp.routeCoords.map(point => [...point]),
         ...(exp.routeStops ? { routeStops: exp.routeStops.map(stop => {
           if (stop.rarity === undefined || stop.rarity === null) {
@@ -267,13 +265,14 @@
     if (reviewCount !== null && rarityTier !== undefined && rarityTier !== lookups.categoryForPoiCount(reviewCount)) {
       throw new Error('POI review count does not match its rarity tier.');
     }
-    return {
+    const normalized = {
       ...poi, political, elevationFt: elevationFt ?? null, country: political.countries[0] || '',
       state: political.states[0] || '', countyId: political.counties[0]?.id || null,
       rarity, rarityTier, reviewCount,
-      category: typeof poi.category === 'string' ? poi.category : '',
-      purposeTags: validateTags(poi.purposeTags ?? [], purposeTags)
+      category: typeof poi.category === 'string' ? poi.category : ''
     };
+    delete normalized.purposeTags;
+    return normalized;
   }
 
   function migrateState(parsed, lookups, catalog, normalizeCharacter = null) {
@@ -893,6 +892,35 @@
     const mountains = visitedPark('blri') || visitedPark('grsm') || categoryVisited('blue ridge mountains');
     const river = categoryVisited('shenandoah river');
     const countryRoadsDestination = visitedPark('shen') ? 1 : (Number(mountains) + Number(river)) / 2;
+    const waterfallLocations = new Set();
+    const addWaterfallLocation = (key, ...descriptors) => {
+      if (key && descriptors.some(value => typeof value === 'string' && /\bwaterfalls?\b/i.test(value))) {
+        waterfallLocations.add(key);
+      }
+    };
+    visitedParks.forEach(park => addWaterfallLocation(`park:${park.id}`, park.name));
+    pois.forEach(poi => addWaterfallLocation(`poi:${poi.id}`, poi.name, poi.category));
+    trips.forEach(trip => {
+      trip.parkIds.forEach(id => {
+        const park = parkById.get(id);
+        if (park) addWaterfallLocation(`park:${id}`, park.name);
+      });
+      trip.customPoiIds.forEach(id => {
+        const poi = poiById.get(id);
+        if (poi) addWaterfallLocation(`poi:${id}`, poi.name, poi.category);
+      });
+      (trip.routeStops || []).forEach(stop => {
+        if (stop.kind === 'county') return;
+        const linked = stop.kind === 'park' ? parkById.get(stop.id) :
+          stop.kind === 'poi' ? poiById.get(stop.id) : null;
+        const placeKey = stop.photonId ? `photon:${stop.photonId}` :
+          Array.isArray(stop.coords) ? `place:${stop.coords.map(value => Number(value.toFixed(5))).join(',')}` :
+            stop.id ? `place:${stop.id}` : null;
+        const key = stop.kind === 'park' ? `park:${stop.id}` :
+          stop.kind === 'poi' ? `poi:${stop.id}` : placeKey;
+        addWaterfallLocation(key, linked?.name || stop.name, linked?.category || '');
+      });
+    });
     const visitedSubdivisionIds = Object.entries(state.regions)
       .filter(([key, status]) => key.startsWith('s:') && isVisited(status))
       .map(([key]) => key.slice(2)).sort();
@@ -911,11 +939,10 @@
       thinAir: pois.filter(poi => poi.elevationFt >= 10000).length +
         trips.filter(exp => exp.maxElevationFt !== null && exp.maxElevationFt >= 10000).length,
       whispers,
-      waterfalls: pois.filter(poi => poi.category?.trim().toLowerCase() === 'waterfall').length,
+      waterfalls: waterfallLocations.size,
       overlander: awdLocations.size,
       mariner: trips.filter(exp => exp.transitTags.includes('ferry')).length,
-      focal: pois.filter(poi => poi.purposeTags.includes('photography')).length +
-        trips.filter(exp => exp.purposeTags.includes('photography') || /\bphotography\b/i.test(exp.reason || '')).length,
+      focal: trips.reduce((total, exp) => total + (exp.photos?.length || 0), 0),
       southernCross: trips.filter(trip => overnightNights(trip) >= 1 &&
         trip.routeCoords.some(([lat]) => lat < 0)).length,
       localLore,
@@ -940,7 +967,7 @@
   }
 
   const api = {
-    ranks, labels, colors, transitTags, transitIcons, purposeTags, isVisited, clearsFog, promote,
+    ranks, labels, colors, transitTags, transitIcons, isVisited, clearsFog, promote,
     homeRadiusKm, hasLoggedTravel, overnightNights, distanceMiles, fogRoutes, waterFogRoutes, flightStops, restoreExpeditionPromotions,
     journalLimits, validateJournal,
     validateStatuses, validateTags, validateExpeditions, normalizePoi, migrateState, syncDerivedState, loggedCountyStatuses, metadataProgress

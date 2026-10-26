@@ -13,6 +13,8 @@ expeditions, track parks and regions, and earn achievements from your travel his
 - Clickable biome and destination pins show the trips, stops, and saved places contributing to them.
 - Achievements are grouped into expandable milestone classes and sorted by rarity, with unmet classes
   at the bottom.
+- Waterfall achievements automatically recognize visited locations whose names or categories include
+  “waterfall”; Focal Length counts photos saved to trip journals.
 
 The Biome Pokédex uses the matching badge art from `assets/biome-badges/`; uncollected biomes
 show their badges in grayscale and dimmed, while collected badges retain their full color.

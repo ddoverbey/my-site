@@ -16,11 +16,11 @@ function check(name, action) {
 const poi = {
   id: 'poi_test', name: 'Spirit Falls', lat: 45.7279, lng: -121.6358, status: 'v',
   elevationFt: 630, biomes: ['5'], country: 'United States of America', state: 'Washington',
-  countyId: '53059', rarityTier: 'Hidden Gem', reviewCount: null, purposeTags: ['photography']
+  countyId: '53059', rarityTier: 'Hidden Gem', reviewCount: null
 };
 const exp = {
   id: 'exp_test', name: 'Aspen Anniversary Drive', startDate: '2026-09-10', endDate: '2026-09-15',
-  transitTags: ['awd', 'flight'], purposeTags: ['photography', 'anniversary'],
+  transitTags: ['awd', 'flight'],
   countyIds: ['08065', '08097'], parkIds: ['romo'], customPoiIds: [],
   routeCoords: [[39.24, -106.29], [39.19, -106.81]], minElevationFt: 5280, maxElevationFt: 12095
 };
@@ -38,6 +38,14 @@ check('character selections survive passport migration with safe catalog default
   assert.deepEqual(state.character.purchasedItems, ['pet_black_cat']);
   assert.equal(Object.hasOwn(state.character, 'unsafe'), false);
   assert.equal(Object.hasOwn(state.extraPassportFields, 'character'), false);
+});
+check('legacy purpose tags are discarded while location categories remain', () => {
+  const state = migrate({
+    customPois: [{ ...poi, purposeTags: ['photography'] }],
+    expeditions: [{ ...exp, purposeTags: ['photography', 'anniversary'] }]
+  });
+  assert.equal(Object.hasOwn(state.customPois[0], 'purposeTags'), false);
+  assert.equal(Object.hasOwn(state.expeditions[0], 'purposeTags'), false);
 });
 check('journals and embedded photos survive Passport round-trips without changing legacy trips', () => {
   const photo = 'data:image/jpeg;base64,YWJjZA==';
@@ -157,7 +165,6 @@ check('malformed and future saves reject before mutating input', () => {
     { regions: { 's:California': 'toString' } }, { clearedCounties: { '06073': 'yes' } },
     { customPois: [poi, poi] }, { customPois: [{ ...poi, lat: 91 }] },
     { customPois: [{ ...poi, elevationFt: '630' }] },
-    { customPois: [{ ...poi, purposeTags: ['bad'] }] },
     { customPois: [{ ...poi, rarityTier: 'fake' }] }, { homeBase: { name: 'Home', lat: 91, lng: 0 } }
   ]) {
     const before = JSON.stringify(state);
@@ -171,7 +178,7 @@ check('date validation handles day trips, leap days, invalid days and reversed r
   for (const change of [
     { startDate: '2026-02-29' }, { endDate: '2026-09-09' }, { startDate: 'not-a-date' }, { name: '' },
     { routeCoords: [[91, 0]] }, { minElevationFt: 12000, maxElevationFt: 10000 },
-    { transitTags: ['awd', 'awd'] }, { purposeTags: ['unknown'] },
+    { transitTags: ['awd', 'awd'] },
     { countyIds: [], parkIds: [], customPoiIds: [] }, { countyIds: ['08065', '08065'] }
   ]) assert.throws(() => ledger.validateExpeditions([{ ...exp, ...change }], lookups));
 });
@@ -353,7 +360,7 @@ check('achievement metadata uses inclusive high-altitude and strict below-sea th
   assert.equal(progress.subterranean, 2);
   assert.equal(progress.thinAir, 2);
   assert.equal(progress.whispers, 6);
-  assert.equal(progress.focal, 6);
+  assert.equal(progress.focal, 0);
 });
 check('coin metadata includes visited custom-place rarity and region/county IDs', () => {
   const state = migrate({
@@ -433,6 +440,7 @@ check('flight and ferry routes do not credit transit biomes while land stops and
       { mode: 'road', routeSource: 'uploaded', routeCoords: [[0, 1], [0, 1.5], [0, 2]], countyIds: [] }
     ]
   }] });
+  state.pins.falls_park = 'v';
   const progress = ledger.metadataProgress(state, {
     biomeAt: (lat, lng) => {
       if (lat !== 0) return [];
@@ -498,40 +506,55 @@ check('adding a long expedition does not change biome samples or credit on an ex
   assert.ok(collect([shortTrip]).includes('short-route-biome'));
   assert.ok(collect([shortTrip, longTrip]).includes('short-route-biome'));
 });
-check('tag achievements reach exact counts without collapsing expeditions into separate trips', () => {
+check('trip achievements count logged expeditions and uploaded photos', () => {
   const state = migrate({
     customPois: [poi],
     expeditions: Array.from({ length: 5 }, (_, index) => ({
       ...exp, id: `exp_${index}`, transitTags: index < 3 ? ['awd', 'ferry'] : ['awd'],
+      photos: index === 0 ? [photo, photo] : [],
       countyIds: index === 0 ? ['08065', '08097', '08001', '08003', '08005'] : exp.countyIds
     }))
-  });
-  check('waterfalls count only visited/lived POIs with an exact normalized category', () => {
-    const state = migrate({ customPois: [
-      { ...poi, id: 'poi_falls_visit', category: 'waterfall' },
-      { ...poi, id: 'poi_falls_home', category: ' WaterFall ', status: 'l' },
-      { ...poi, id: 'poi_falls_transit', category: 'waterfall', status: 't' },
-      { ...poi, id: 'poi_falls_wish', category: 'waterfall', status: 'w' },
-      { ...poi, id: 'poi_falls_other', category: 'waterfall viewpoint' },
-      { ...poi, id: 'poi_falls_none' }
-    ] });
-    assert.equal(ledger.metadataProgress(state).waterfalls, 2);
-    for (const count of [1, 5, 10]) {
-      const progress = ledger.metadataProgress(migrate({
-        customPois: Array.from({ length: count }, (_, i) => ({ ...poi, id: `poi_waterfall_${i}`, category: 'waterfall' }))
-      }));
-      assert.equal(progress.waterfalls, count);
-    }
   });
   let progress = ledger.metadataProgress(state);
   assert.equal(progress.overlander, 6);
   assert.equal(progress.mariner, 3);
-  assert.equal(progress.focal, 6);
+  assert.equal(progress.focal, 2);
   assert.equal(progress.borderlands, undefined);
-  state.expeditions.push(...Array.from({ length: 4 }, (_, index) => ({ ...exp, id: `exp_extra_${index}` })));
+  state.expeditions.push(...Array.from({ length: 4 }, (_, index) => ({
+    ...exp, id: `exp_extra_${index}`, photos: [photo]
+  })));
   progress = ledger.metadataProgress(state);
-  assert.equal(progress.focal, 10);
+  assert.equal(progress.focal, 6);
   assert.equal(progress.overlander, 6);
+});
+check('waterfall progress passively classifies visited locations and deduplicates trip stops', () => {
+  const state = migrate({ customPois: [
+    { ...poi, id: 'poi_falls_visit', category: 'waterfall' },
+    { ...poi, id: 'poi_falls_home', category: ' WaterFall ', status: 'l' },
+    { ...poi, id: 'poi_falls_transit', category: 'waterfall', status: 't' },
+    { ...poi, id: 'poi_falls_wish', category: 'waterfall', status: 'w' },
+    { ...poi, id: 'poi_falls_other', category: 'waterfall viewpoint' },
+    { ...poi, id: 'poi_falls_name', name: 'Hidden Waterfall' },
+    { ...poi, id: 'poi_falls_none' }
+  ], expeditions: [{
+    ...exp, id: 'exp_falls', parkIds: ['falls_park'], customPoiIds: ['poi_falls_visit'],
+    routeCoords: [[45.7, -121.6], [45.8, -121.7], [45.8, -121.7]],
+    routeStops: [
+      { kind: 'park', id: 'falls_park', name: 'Waterfall National Park', coords: [45.7, -121.6] },
+      { kind: 'poi', id: 'poi_falls_visit', name: 'Waterfall POI', coords: [45.8, -121.7] },
+      { kind: 'place', id: 'place_falls', name: 'Waterfall Overlook', coords: [45.8, -121.7] }
+    ]
+  }] });
+  const progress = ledger.metadataProgress(state, {
+    parks: [{ id: 'falls_park', name: 'Waterfall National Park', biomes: [] }]
+  });
+  assert.equal(progress.waterfalls, 6);
+  for (const count of [1, 5, 10]) {
+    const countProgress = ledger.metadataProgress(migrate({
+      customPois: Array.from({ length: count }, (_, i) => ({ ...poi, id: `poi_waterfall_${i}`, category: 'waterfall' }))
+    }));
+    assert.equal(countProgress.waterfalls, count);
+  }
 });
 check('AWD locations deduplicate across trips while Water Transit counts individual trips at exact goals', () => {
   const trip = {
@@ -808,7 +831,7 @@ const mixedStops = [
 ];
 const mixedExpedition = {
   ...exp, id:'mixed', name:'Fly then drive', reason:'Visiting friends', startDate:null, endDate:null, dayTrip:false,
-  transitTags:['flight','road'], purposeTags:[], countyIds:[], parkIds:[], customPoiIds:[],
+  transitTags:['flight','road'], countyIds:[], parkIds:[], customPoiIds:[],
   routeStops:mixedStops, routeCoords:mixedStops.map(stop=>stop.coords),
   routeLegs:[
     {mode:'flight',routeSource:'none',routeCoords:[],countyIds:[]},
@@ -1096,13 +1119,16 @@ check('malformed map status overrides are rejected', () => {
     { nationalParks: { yell: 'v' } }
   ]) assert.throws(() => migrate({statusOverrides}), /map status overrides/i);
 });
-check('AWD achievement counts only the endpoints of AWD legs and photography reason preserves existing badge logic', () => {
-  const trip={...mixedExpedition,reason:'Landscape photography',transitTags:['flight','awd','road'],
+check('AWD counts only its endpoints and Focal Length counts uploaded photos, not purpose or reason text', () => {
+  const trip={...mixedExpedition,reason:'Landscape photography',purposeTags:['photography'],
+    photos:[photo],transitTags:['flight','awd','road'],
     routeLegs:[mixedExpedition.routeLegs[0],{...mixedExpedition.routeLegs[1],mode:'awd'},mixedExpedition.routeLegs[2]]};
   const stats=ledger.metadataProgress(migrate({expeditions:[trip]}));
   assert.equal(stats.overlander,2);
   assert.equal(stats.focal,1);
   const repeated={...trip,id:'repeat',routeStops:trip.routeStops.map(stop=>({...stop,id:'other_'+stop.id}))};
-  assert.equal(ledger.metadataProgress(migrate({expeditions:[trip,repeated]})).overlander,2);
+  const repeatedStats=ledger.metadataProgress(migrate({expeditions:[trip,repeated]}));
+  assert.equal(repeatedStats.overlander,2);
+  assert.equal(repeatedStats.focal,2);
 });
 console.log(`${checks} travel ledger checks passed.`);

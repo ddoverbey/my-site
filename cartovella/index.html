@@ -1110,7 +1110,6 @@
         <input id="customLocationCategory" maxlength="60" placeholder="e.g. waterfall" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2">
       </label>
       <p class="text-[11px] text-slate-400">Country Roads recognizes visited/lived locations categorized exactly as Blue Ridge Mountains or Shenandoah River (case-insensitive).</p>
-      <fieldset class="text-xs text-slate-300"><legend>Purpose tags</legend><div id="customPurposeTags" class="flex flex-wrap gap-3 mt-2"></div></fieldset>
       <p class="text-[11px] text-slate-400">Simplified boundaries give approximate classifications. Rarity uses the configured provider, with a direct OSM fallback. Open-data scores estimate density, not review counts or verified popularity.</p>
       <p id="customLocationLookupStatus" role="status" aria-live="polite" class="text-xs text-amber-200"></p>
       <div class="flex justify-end gap-2">
@@ -1740,7 +1739,7 @@
         id: `waterfalls_${goal}`, title: 'Chasing Waterfalls', progress: s => s.metadataProgress.waterfalls,
         tiers: [{
           goal, title: 'Chasing Waterfalls',
-          desc: `Visit ${goal} custom waterfall location${goal === 1 ? '' : 's'}`
+          desc: `Visit ${goal} location${goal === 1 ? '' : 's'} with "waterfall" in the name or category`
         }]
       });
     }
@@ -1750,7 +1749,7 @@
       ['whispers', 'Whisper in the Woods', 'Visit an Uncharted or Hidden Gem custom location', 1],
       ['overlander', 'The Overlander', 'Log 5 distinct locations in AWD/Off-Road expeditions', 5],
       ['mariner', 'The Mariner', 'Log 3 Water Transit expeditions', 3],
-      ['focal', 'Focal Length', 'Log 10 locations/expeditions with Photography', 10],
+      ['focal', 'Focal Length', 'Upload 10 photos to trip journals', 10],
       ['southernCross', 'Southern Cross', 'Log a multi-day expedition with a southern-hemisphere stop (overnight inferred from dates)', 1],
       ['localLore', 'Local Lore', 'Uncover 5 distinct Hidden Gems within your home county', 5],
       ['zeroMeridian', 'Zero Meridian', 'Set your home base', 1],
@@ -2126,7 +2125,6 @@
         endDate: draft.endDate || null,
         dayTrip: !!draft.dayTrip,
         transitTags: [...new Set(routeLegs.map(leg => leg.mode))],
-        purposeTags: Array.isArray(draft.purposeTags) ? draft.purposeTags : [],
         countyIds: [...new Set(routeStops.filter(stop => stop.kind === 'county').map(stop => stop.id))],
         parkIds: [...new Set(routeStops.filter(stop => stop.kind === 'park').map(stop => stop.id))],
         customPoiIds: [...new Set(routeStops.filter(stop => stop.kind === 'poi').map(stop => stop.id))],
@@ -2846,8 +2844,7 @@
       const tripsWith = (tags, field = 'transitTags') => AppState.expeditions.filter(exp =>
         tags.some(tag => exp[field].includes(tag))).length;
       const archetypes = {
-        Nature: Math.min(1, (visitedLocations.length + AppState.expeditions.filter(exp =>
-          exp.purposeTags.includes('photography') || /\bphotography\b/i.test(exp.reason || '')).length) / 25),
+        Nature: Math.min(1, visitedLocations.length / 25),
         Adventure: Math.min(1, (visitedLocations.filter(p => p.biomes.some(b => ['5','10','13'].includes(String(b)))).length +
           tripsWith(['awd', 'foot'])) / 10),
         Remoteness: Math.min(1, (visitedLocations.filter(p => p.biomes.some(b => ['6','11'].includes(String(b)))).length +
@@ -4635,9 +4632,8 @@
 
     function customLocationMetadata(p) {
       if (!p.custom) return '';
-      const tags = `<p class="text-[11px] text-amber-300">${[
-        p.category || '', ...(p.purposeTags || []).map(tag => TravelLedger.purposeTags[tag])
-      ].filter(Boolean).map(escapeHtml).join(' · ')}</p>`;
+      const category = p.category
+        ? `<p class="text-[11px] text-amber-300">${escapeHtml(p.category)}</p>` : '';
       if (!p.rarity) {
         const elevation = Number.isFinite(p.elevationFt)
           ? `Elevation: ${Math.round(p.elevationFt).toLocaleString('en')} ft.`
@@ -4650,7 +4646,7 @@
             ...p.political.counties.map(county => `${county.name} (${county.id})`)].filter(Boolean).join(' / ')
           : '';
         return `<p class="text-[11px] text-slate-400">${elevation} ${rarity}</p>
-          ${cityRegions ? `<p class="text-[11px] text-slate-400">${escapeHtml(cityRegions)}</p>` : ''}${tags}`;
+          ${cityRegions ? `<p class="text-[11px] text-slate-400">${escapeHtml(cityRegions)}</p>` : ''}${category}`;
       }
       const rarity = CoordinateLookups.normalizeRarity(p.rarity, p.lat, p.lng);
       const rarityDescription = rarity.method === 'osm-poi-density'
@@ -4670,7 +4666,7 @@
         ${rarity.reviewCount === null ? '<p>Density/popularity estimate, not review-count popularity.</p>' : ''}
         ${rarity.source === 'OpenStreetMap contributors (ODbL)' ? '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" class="text-sky-300 underline">&copy; OpenStreetMap contributors (ODbL)</a>' : ''}
         ${rarity.osmDataTimestamp ? `<p>OSM data timestamp: ${escapeHtml(rarity.osmDataTimestamp)}.</p>` : ''}
-      </div>${tags}`;
+      </div>${category}`;
     }
 
     let customLookupPending = false;
@@ -4680,7 +4676,6 @@
       document.getElementById('customLocationLng').value = lng ?? '';
       document.getElementById('customLocationName').value = '';
       document.getElementById('customLocationCategory').value = '';
-      document.querySelectorAll('#customPurposeTags input').forEach(input => { input.checked = false; });
       document.getElementById('customLocationStatus').value = 'v';
       document.getElementById('customLocationLookupStatus').textContent = '';
       document.getElementById('customLocationModal').classList.remove('hidden');
@@ -4733,8 +4728,7 @@
         const { lookupWarnings = [], ...locationMetadata } = metadata;
         const location = {
           ...locationMetadata, id: `poi_${crypto.randomUUID()}`, name, status: pinStatus,
-          category: document.getElementById('customLocationCategory').value.trim(),
-          purposeTags: [...document.querySelectorAll('#customPurposeTags input:checked')].map(input => input.value)
+          category: document.getElementById('customLocationCategory').value.trim()
         };
         CoordinateLookups.validateCustomLocations([location]);
         addCustomPoi(location);

@@ -681,8 +681,7 @@ function openExpedition(id = null) {
   document.getElementById('expeditionForm').reset();
   document.getElementById('expeditionFileInput').value = '';
   document.getElementById('expeditionName').value = existing?.name || '';
-  document.getElementById('expeditionReason').value = existing?.reason ??
-    (existing?.purposeTags || []).map(tag => TravelLedger.purposeTags[tag]).join(', ');
+  document.getElementById('expeditionReason').value = existing?.reason || '';
   document.getElementById('expeditionStart').value = existing?.startDate || '';
   document.getElementById('expeditionEnd').value = existing?.endDate || '';
   document.getElementById('expeditionDayTrip').checked = existing?.dayTrip ||
@@ -905,7 +904,7 @@ function draftExpedition(legs) {
     startDate: document.getElementById('expeditionStart').value || null,
     endDate: document.getElementById('expeditionEnd').value || null,
     dayTrip: !!document.getElementById('expeditionDayTrip').checked,
-    transitTags: [...new Set(legs.map(leg => leg.mode))], purposeTags: [],
+    transitTags: [...new Set(legs.map(leg => leg.mode))],
     countyIds: [...new Set(stops.filter(stop => stop.kind === 'county').map(stop => stop.id))],
     parkIds: [...new Set(stops.filter(stop => stop.kind === 'park').map(stop => stop.id))],
     customPoiIds: [...new Set(stops.filter(stop => stop.kind === 'poi').map(stop => stop.id))],
@@ -1239,9 +1238,6 @@ function travelLogBadges(exp) {
       label: TravelLedger.transitTags[tag],
       tone: TRAVEL_TRANSIT_BADGE_TONES[tag] || 'bg-slate-800 text-slate-300 border-slate-500/40'
     });
-  });
-  exp.purposeTags.forEach(tag => {
-    badges.push({ icon: '✨', label: TravelLedger.purposeTags[tag], tone: 'bg-amber-950 text-amber-300 border-amber-500/40' });
   });
   return badges.filter(badge => badge.label);
 }
@@ -2216,10 +2212,4 @@ window.addEventListener('DOMContentLoaded', () => {
         `Saved-trip recovery could not be checked: ${error.message}`;
     }
   });
-  for (const [id, tags] of [
-    ['customPurposeTags', TravelLedger.purposeTags]
-  ]) {
-    document.getElementById(id).innerHTML = Object.entries(tags).map(([value, label]) =>
-      `<label class="flex items-center gap-1"><input type="checkbox" value="${value}">${label}</label>`).join('');
-  }
 });
