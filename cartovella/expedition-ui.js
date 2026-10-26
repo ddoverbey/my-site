@@ -1018,10 +1018,11 @@ async function enrichExpeditionStopRarities(expeditionId) {
       }
       try {
       const rarity = window.lookupCachedOrSharedRarity
-        ? await window.lookupCachedOrSharedRarity(...stop.coords)
-        : CoordinateLookups.cachedRarity(...stop.coords, rarityStorage) ||
+        ? await window.lookupCachedOrSharedRarity(stop.coords[0], stop.coords[1], stop.name)
+        : CoordinateLookups.cachedRarity(stop.coords[0], stop.coords[1], rarityStorage, Date.now(), stop.name) ||
           await CoordinateLookups.lookupRarityWithFallback(...stop.coords, {
-            storage: rarityStorage, rarityEndpoint: CartovellaConfig.rarityEndpoint
+            storage: rarityStorage, rarityEndpoint: CartovellaConfig.rarityEndpoint,
+            placeName: stop.name
           });
       if (!rarity?.rarityTier || !CoordinateLookups.RARITY_TIERS[rarity.rarityTier]) return stop;
       updated = true;

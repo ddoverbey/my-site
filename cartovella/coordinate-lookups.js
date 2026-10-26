@@ -494,6 +494,9 @@
           nearestHighwayKm >= 0 && nearestHighwayKm <= HIGHWAY_SEARCH_RADIUS_KM)) ||
         typeof data.cached !== 'boolean' || typeof data.source !== 'string' || !data.source.trim() ||
         data.source.length > 500 || data.placeName.length > 300 ||
+        !(data.searchedName === undefined || data.searchedName === null ||
+          (typeof data.searchedName === 'string' && data.searchedName.trim() &&
+            data.searchedName.length <= 150 && !/[\u0000-\u001f\u007f]/.test(data.searchedName))) ||
         data.rarityTier !== expectedTier) {
       throw new Error('Rarity endpoint returned invalid provider metadata.');
     }
@@ -534,10 +537,11 @@
   }
 
   async function lookupRarityWithFallback(lat, lng, {
-    fetcher = root.fetch, storage, rarityEndpoint = '', onFallback = () => {}
+    fetcher = root.fetch, storage, rarityEndpoint = '', placeName = '', onFallback = () => {}
   } = {}) {
     validateCoordinates(lat, lng);
-    const cached = cachedRarity(lat, lng, storage);
+    const queryName = cleanPlaceName(placeName);
+    const cached = cachedRarity(lat, lng, storage, Date.now(), queryName);
     if (cached) return cached;
     if (rarityEndpoint) {
       try {
@@ -547,6 +551,7 @@
         }
         url.searchParams.set('lat', lat);
         url.searchParams.set('lng', lng);
+        if (queryName) url.searchParams.set('name', queryName);
         const response = await fetcher(url.toString(), { signal: AbortSignal.timeout(RARITY_TIMEOUT_MS) });
         if (!response.ok) throw new Error(`Rarity endpoint failed (HTTP ${response.status}).`);
         const data = validateProviderRarity(await response.json());
@@ -554,14 +559,20 @@
           throw new Error('Rarity endpoint matched a location more than 1 km from the requested point.');
         }
         return cacheRarity(lat, lng, {
-          ...data, method: data.reviewCount === null ? 'provider-popularity' : 'provider-review-count'
-        }, storage);
+          ...data,
+          ...(queryName ? { searchedName: queryName } : {}),
+          method: data.reviewCount === null ? 'provider-popularity' : 'provider-review-count'
+        }, storage, Date.now(), queryName);
       } catch (error) {
         console.warn('Rarity endpoint unavailable; using the direct OSM density lookup.', error);
         onFallback(error);
       }
     }
-    return cacheRarity(lat, lng, await lookupRarity(lat, lng, fetcher, storage), storage);
+    const fallback = await lookupRarity(lat, lng, fetcher, storage);
+    return cacheRarity(lat, lng, {
+      ...fallback,
+      ...(queryName ? { searchedName: queryName } : {})
+    }, storage, Date.now(), queryName);
   }
 
   function segmentDistanceKm(lat, lng, a, b) {
@@ -622,10 +633,10 @@
     return { ...data, cached: false };
   }
 
-  function cachedRarity(lat, lng, storage, now = Date.now()) {
+  function cachedRarity(lat, lng, storage, now = Date.now(), placeName = '') {
     validateCoordinates(lat, lng);
     if (!storage) return null;
-    const sharedKey = `${RARITY_CACHE_PREFIX}${coordinateCacheKey(lat, lng)}`;
+    const sharedKey = `${RARITY_CACHE_PREFIX}${rarityCacheKey(lat, lng, placeName)}`;
     const sharedRaw = storage.getItem(sharedKey);
     if (sharedRaw) {
       try {
@@ -684,10 +695,35 @@
     return `${lat.toFixed(2)},${lng.toFixed(2)}`;
   }
 
-  function cacheRarity(lat, lng, rarity, storage, now = Date.now()) {
+  function cleanPlaceName(value) {
+    if (value === undefined || value === null || value === '') return '';
+    if (typeof value !== 'string') throw new Error('Place name must be text.');
+    const name = value.trim().replace(/\s+/g, ' ');
+    if (!name) return '';
+    if (name.length > 150 || /[\u0000-\u001f\u007f]/.test(name)) {
+      throw new Error('Place name must be 150 characters or fewer and contain no control characters.');
+    }
+    return name;
+  }
+
+  function normalizePlaceName(value) {
+    const name = cleanPlaceName(value);
+    const normalized = name.normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+    if (name && !normalized) throw new Error('Place name must contain searchable letters or numbers.');
+    return normalized;
+  }
+
+  function rarityCacheKey(lat, lng, placeName = '') {
+    const coordinateKey = coordinateCacheKey(lat, lng);
+    const normalizedName = normalizePlaceName(placeName);
+    return normalizedName ? `${coordinateKey}|name:${encodeURIComponent(normalizedName)}` : coordinateKey;
+  }
+
+  function cacheRarity(lat, lng, rarity, storage, now = Date.now(), placeName = '') {
     const normalized = normalizeRarity(rarity, lat, lng);
     if (storage) {
-      const key = `${RARITY_CACHE_PREFIX}${coordinateCacheKey(lat, lng)}`;
+      const key = `${RARITY_CACHE_PREFIX}${rarityCacheKey(lat, lng, placeName)}`;
       storage.setItem(key, JSON.stringify({ version: 1, savedAt: now, data: normalized }));
     }
     return normalized;
@@ -695,7 +731,7 @@
 
   async function lookupCoordinate(lat, lng, {
     indexes, geoContains, fetcher = root.fetch, storage, rarityEndpoint = '', onFallback,
-    skipRarityLookup = false
+    skipRarityLookup = false, placeName = ''
   }) {
     validateCoordinates(lat, lng);
     if (!indexes?.countries?.length || !indexes?.states?.length || !indexes?.counties?.length || !indexes?.ecoregions?.length) {
@@ -704,8 +740,8 @@
     const political = politicalRegion(lat, lng, indexes, geoContains);
     const biome = biomeRegion(lat, lng, indexes.ecoregions, geoContains, indexes.mangroves);
     const rarityLookup = skipRarityLookup
-      ? Promise.resolve().then(() => cachedRarity(lat, lng, storage))
-      : lookupRarityWithFallback(lat, lng, { fetcher, storage, rarityEndpoint, onFallback });
+      ? Promise.resolve().then(() => cachedRarity(lat, lng, storage, Date.now(), placeName))
+      : lookupRarityWithFallback(lat, lng, { fetcher, storage, rarityEndpoint, placeName, onFallback });
     const [elevationResult, rarityResult] = await Promise.allSettled([
       lookupElevation(lat, lng, fetcher),
       rarityLookup
@@ -778,7 +814,8 @@
     validCountyId, validSubdivisionId, subdivisionFeatures,
     firstBoundaryIntersection, lookupRoadRoute, routeCountyIds,
     lookupElevation, categoryForPoiCount, categoryForOpenData, segmentDistanceKm, summarizeOsm, lookupRarity, cachedRarity,
-    coordinateCacheKey, cacheRarity, RARITY_ORDER, lookupCoordinate, catalogParkRarity, RARITY_TIERS,
+    coordinateCacheKey, rarityCacheKey, normalizePlaceName, cacheRarity, RARITY_ORDER,
+    lookupCoordinate, catalogParkRarity, RARITY_TIERS,
     validateCustomLocations, migrateState, normalizeRarity, validateProviderRarity, coordinateDistanceKm,
     lookupRarityWithFallback, ELEVATION_URL, OVERPASS_URL, CACHE_TTL, NPS_SOURCE,
     SUBDIVISION_SOURCE, ADMIN2_COUNTRIES, ADMIN2_SOURCE, npsBoundaryIndex, admin2Features,

@@ -360,6 +360,35 @@ await check('rounded-coordinate rarity keys cache validated provider responses a
   assert.equal(rarity.rarityTier, 'Deep Cut');
   assert.equal(rarity.cached, true);
 });
+await check('named rarity lookups send the name and keep local cache entries isolated by place', async () => {
+  const cache = storage();
+  lookups.cacheRarity(1, 1, { ...provider, placeName: 'Nearby Landmark' }, cache);
+  const urls = [];
+  const fetcher = async url => {
+    urls.push(new URL(url));
+    return response({ ...provider, placeName: 'Spirit Falls' });
+  };
+  const first = await lookups.lookupRarityWithFallback(1, 1, {
+    rarityEndpoint: 'https://api.example.test/rarity', storage: cache,
+    placeName: 'Spirit Falls', fetcher
+  });
+  const samePlace = await lookups.lookupRarityWithFallback(1, 1, {
+    rarityEndpoint: 'https://api.example.test/rarity', storage: cache,
+    placeName: '  SPIRIT   FALLS ', fetcher
+  });
+  await lookups.lookupRarityWithFallback(1, 1, {
+    rarityEndpoint: 'https://api.example.test/rarity', storage: cache,
+    placeName: 'Other Falls', fetcher
+  });
+  assert.equal(urls.length, 2);
+  assert.deepEqual(urls.map(url => url.searchParams.get('name')), ['Spirit Falls', 'Other Falls']);
+  assert.equal(first.searchedName, 'Spirit Falls');
+  assert.equal(samePlace.cached, true);
+  assert.equal(lookups.rarityCacheKey(1, 1, 'Spirit Falls'),
+    lookups.rarityCacheKey(1, 1, '  SPIRIT   FALLS '));
+  assert.notEqual(lookups.rarityCacheKey(1, 1, 'Spirit Falls'),
+    lookups.rarityCacheKey(1, 1, 'Other Falls'));
+});
 await check('elevation and rarity requests use separate bounded abort timeouts', async () => {
   const originalTimeout = AbortSignal.timeout;
   const timeouts = [];

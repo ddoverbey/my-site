@@ -179,7 +179,7 @@ check('character customization appears above the stage and progress summary', ()
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 10);
-  assert.ok(sources.every(source => source.endsWith('?v=20261026-rarity-overhaul-v1')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261026-rarity-name-match-v1')));
   assert.ok(sources.some(source => source.startsWith('./character-creator.js?')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
@@ -1945,6 +1945,18 @@ check('expanded achievement tiers omit the summary tier, rank downward, and keep
     delete context.achievementOrderTestStats;
   }
 });
+check('unappraised custom locations expose a name-and-location appraisal retry', () => {
+  context.rarityRetryFixture = {
+    id: 'poi_spirit_falls', name: 'Spirit Falls', custom: true, status: 'v',
+    lat: 47.8, lng: -123.4, elevationFt: 423, rarity: null, rarityTier: 'Uncharted',
+    political: { countries: [], states: [], counties: [] }
+  };
+  const markup = vm.runInContext('customLocationMetadata(rarityRetryFixture)', context);
+  assert.ok(markup.includes('data-rarity-appraise-id="poi_spirit_falls"'));
+  assert.ok(markup.includes('Retry name-and-location appraisal'));
+  assert.ok(markup.includes('Uncharted · no matched place appraisal.'));
+  delete context.rarityRetryFixture;
+});
 check('Cabinet of Curiosities sorts appraised visits by rarity and its chips filter tiers', () => {
   const savedState = vm.runInContext(
     '({parks:PARKS,pins:AppState.pins,customPois:AppState.customPois,parkRarity:AppState.parkRarity})',
@@ -2098,11 +2110,13 @@ check('rarity resolution uses shared cache fallback and announces the Field Appr
   const rarity = {
     placeName: "Devil's Punchbowl", reviewCount: 19, popularityScore: 19,
     rarityTier: 'Hidden Gem', matchedLat: 41.89, matchedLng: 12.49,
-    nearestHighwayKm: 29.6, cached: false, source: 'Google Places API (New)'
+    nearestHighwayKm: 29.6, cached: false, source: 'Google Places API (New)',
+    searchedName: "Devil's Punchbowl"
   };
   const requests = [];
   let sharedRow = null;
   context.appraisalProviderLookupCount = 0;
+  context.appraisalSearchName = '';
   context.appraisalTestPoi = {
     id: 'poi_appraisal', name: "Devil's Punchbowl", status: 'v', lat: 41.89, lng: 12.49,
     rarity: null, rarityTier: 'Uncharted'
@@ -2120,8 +2134,8 @@ check('rarity resolution uses shared cache fallback and announces the Field Appr
     vm.runInContext(`
       AppState.customPois=[appraisalTestPoi];
       CoordinateLookups.cachedRarity=()=>null;
-      CoordinateLookups.lookupRarityWithFallback=async()=>{
-        appraisalProviderLookupCount++; return appraisalRarity;
+      CoordinateLookups.lookupRarityWithFallback=async(_lat,_lng,options)=>{
+        appraisalProviderLookupCount++; appraisalSearchName=options.placeName; return appraisalRarity;
       };
       CoordinateLookups.cacheRarity=(_lat,_lng,value)=>value;
       commitLedger=operation=>operation();
@@ -2134,6 +2148,9 @@ check('rarity resolution uses shared cache fallback and announces the Field Appr
     assert.equal(shared.rarityTier, 'Hidden Gem');
     assert.equal(shared.cached, true);
     assert.equal(context.appraisalProviderLookupCount, 1);
+    assert.equal(context.appraisalSearchName, "Devil's Punchbowl");
+    assert.equal(sharedRow.coord_key,
+      vm.runInContext(`CoordinateLookups.rarityCacheKey(41.89,12.49,"Devil's Punchbowl")`, context));
     assert.equal(element('toastTitle').textContent, "🔮 Field Appraisal: Devil's Punchbowl");
     assert.ok(element('toastMsg').textContent.includes('Hidden Gem'));
     assert.ok(element('toastMsg').textContent.includes('19 reviews'));
@@ -2158,6 +2175,7 @@ check('rarity resolution uses shared cache fallback and announces the Field Appr
     delete context.appraisalTestPoi;
     delete context.appraisalRarity;
     delete context.appraisalProviderLookupCount;
+    delete context.appraisalSearchName;
   }
 });
 check('transited destinations clear exactly 60 percent of visited aura radius without visited stats', () => {

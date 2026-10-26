@@ -161,6 +161,59 @@ await check('Google Places review counts classify at exact thresholds and cache 
   assert.equal((await cached.json()).cached, true);
   assert.equal(googleRequests.length, 2);
 });
+await check('named Google searches require a close name match and cache each place separately', async () => {
+  const namedEntries = new Map();
+  const googleQueries = [];
+  const matchedGrid = coordinateGrid(41.89, 12.49);
+  const namedWorker = createWorker(async (url, options) => {
+    if (url === 'https://places.googleapis.com/v1/places:searchText') {
+      const body = JSON.parse(options.body);
+      googleQueries.push(body.textQuery);
+      const exactPlace = {
+        displayName: { text: 'Spirit Falls' }, userRatingCount: 150,
+        location: { latitude: matchedGrid.matchedLat + 0.002, longitude: matchedGrid.matchedLng }
+      };
+      const trailhead = {
+        displayName: { text: 'Spirit Falls Trailhead' }, userRatingCount: 17,
+        location: { latitude: matchedGrid.matchedLat + 0.001, longitude: matchedGrid.matchedLng }
+      };
+      const unrelated = {
+        displayName: { text: 'Waterfall Overlook' }, userRatingCount: 9000,
+        location: { latitude: matchedGrid.matchedLat, longitude: matchedGrid.matchedLng }
+      };
+      return new Response(JSON.stringify({ places: [unrelated, trailhead, exactPlace] }));
+    }
+    return new Response(JSON.stringify({ elements: [] }));
+  });
+  const namedEnv = {
+    ...env, GOOGLE_PLACES_API_KEY: 'test-google-key',
+    RARITY_CACHE: {
+      get: async key => namedEntries.has(key) ? JSON.parse(namedEntries.get(key)) : null,
+      put: async (key, value) => namedEntries.set(key, value)
+    }
+  };
+  const spiritFallsRequest = () => request('lat=41.89&lng=12.49&name=Spirit%20Falls');
+  const first = await namedWorker.fetch(spiritFallsRequest(), namedEnv);
+  const result = await first.json();
+  assert.equal(first.status, 200);
+  assert.equal(result.placeName, 'Spirit Falls');
+  assert.equal(result.reviewCount, 150);
+  assert.equal(result.searchedName, 'Spirit Falls');
+  assert.deepEqual(googleQueries, ['Spirit Falls']);
+  const cached = await namedWorker.fetch(spiritFallsRequest(), namedEnv);
+  assert.equal((await cached.json()).cached, true);
+  assert.equal(googleQueries.length, 1);
+  const trailRequest = await namedWorker.fetch(
+    request('lat=41.89&lng=12.49&name=Spirit%20Falls%20Trail'), namedEnv
+  );
+  assert.equal((await trailRequest.json()).placeName, 'Spirit Falls Trailhead');
+  assert.deepEqual(googleQueries, ['Spirit Falls', 'Spirit Falls Trail']);
+  assert.equal(namedEntries.size, 2);
+  assert.equal((await namedWorker.fetch(request('lat=41.89&lng=12.49&name='), namedEnv)).status, 400);
+  assert.equal((await namedWorker.fetch(
+    request(`lat=41.89&lng=12.49&name=${'x'.repeat(151)}`), namedEnv
+  )).status, 400);
+});
 await check('Google failures fall back to open-data density and highway isolation; no key keeps OSM-only operation', async () => {
   const isolatedWorker = createWorker(async url => {
     if (url === 'https://places.googleapis.com/v1/places:searchText') {

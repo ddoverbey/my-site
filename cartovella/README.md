@@ -217,8 +217,14 @@ must be provisioned with the coordinate key, rounded latitude/longitude, rarity 
 and update timestamp fields, with the public app role allowed to read and upsert cache rows. Cache
 read/write failures are logged and do not prevent provider lookups. The Worker can optionally use
 Google Places review counts when its `GOOGLE_PLACES_API_KEY` secret is configured; without it, the
-Worker uses open-data classification. The optional Esri imagery token can be set as
-`CartovellaConfig.esriApiKey` in `rarity-config.js`.
+Worker uses open-data classification. Named custom places, Photon places, and expedition stops
+include their name and coordinates in the lookup. The Worker only accepts a nearby Google result
+whose name matches the query; otherwise, it falls back to an open-data density estimate. Named
+lookup cache entries are separate from coordinate-only entries so a nearby attraction's reviews
+aren't reused for a different place. Saved custom places without an appraisal can be retried from
+the Travel Ledger. Deploy the updated rarity Worker as well as the browser app to enable named
+Google searches. The optional Esri imagery token can be set as `CartovellaConfig.esriApiKey` in
+`rarity-config.js`.
 
 ## Run locally
 

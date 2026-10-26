@@ -35,7 +35,29 @@ async function fetchOpenDataSummary(fetcher, grid) {
   };
 }
 
-async function fetchGooglePlace(fetcher, apiKey, grid) {
+function googlePlaceNameScore(placeName, candidateName) {
+  const expected = lookups.normalizePlaceName(placeName);
+  const candidate = lookups.normalizePlaceName(candidateName);
+  if (!expected || !candidate) return 0;
+  if (expected === candidate) return 1;
+  const expectedTokens = new Set(expected.split(' '));
+  const candidateTokens = new Set(candidate.split(' '));
+  const matched = [...expectedTokens].filter(token => [...candidateTokens].some(candidateToken =>
+    candidateToken === token || (token.length >= 4 && candidateToken.startsWith(token)))).length;
+  const expectedCoverage = matched / expectedTokens.size;
+  const candidateCoverage = matched / candidateTokens.size;
+  return expectedCoverage === 1 && candidateCoverage >= 0.6 ? candidateCoverage : 0;
+}
+
+async function rarityCacheKey(grid, placeName) {
+  if (!placeName) return grid.key;
+  const normalizedName = lookups.normalizePlaceName(placeName);
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(normalizedName));
+  const hash = [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('');
+  return `${grid.key}:name:${hash}`;
+}
+
+async function fetchGooglePlace(fetcher, apiKey, grid, placeName = '') {
   const response = await fetcher(GOOGLE_PLACES_URL, {
     method: 'POST',
     headers: {
@@ -44,14 +66,14 @@ async function fetchGooglePlace(fetcher, apiKey, grid) {
       'X-Goog-FieldMask': GOOGLE_PLACES_FIELD_MASK
     },
     body: JSON.stringify({
-      textQuery: 'points of interest',
+      textQuery: placeName || 'points of interest',
       locationBias: {
         circle: {
           center: { latitude: grid.matchedLat, longitude: grid.matchedLng },
           radius: GOOGLE_PLACE_MATCH_RADIUS_KM * 1000
         }
       },
-      maxResultCount: 20
+      maxResultCount: placeName ? 10 : 20
     }),
     signal: AbortSignal.timeout(10000)
   });
@@ -67,11 +89,15 @@ async function fetchGooglePlace(fetcher, apiKey, grid) {
       reviewCount: place.userRatingCount === undefined ? null : place.userRatingCount,
       matchedLat: lat,
       matchedLng: lng,
-      distanceKm: lookups.coordinateDistanceKm(grid.matchedLat, grid.matchedLng, lat, lng)
+      distanceKm: lookups.coordinateDistanceKm(grid.matchedLat, grid.matchedLng, lat, lng),
+      nameScore: placeName
+        ? googlePlaceNameScore(placeName, place.displayName?.text)
+        : 1
     };
   }).filter(place => place?.placeName && place.distanceKm <= GOOGLE_PLACE_MATCH_RADIUS_KM &&
+    place.nameScore > 0 &&
     (place.reviewCount === null || (Number.isSafeInteger(place.reviewCount) && place.reviewCount >= 0)))
-    .sort((a, b) => a.distanceKm - b.distanceKm)[0];
+    .sort((a, b) => b.nameScore - a.nameScore || a.distanceKm - b.distanceKm)[0];
   return closest || null;
 }
 
@@ -97,25 +123,37 @@ export function createWorker(fetcher = fetch) {
       }
       if (request.method !== 'GET') return reply(405, { error: 'Use GET.' }, { Allow: 'GET, OPTIONS' });
       let grid;
+      let placeName = '';
       try {
-        if ([...url.searchParams.keys()].some(key => !['lat', 'lng'].includes(key)) ||
-            url.searchParams.getAll('lat').length !== 1 || url.searchParams.getAll('lng').length !== 1) {
-          throw new Error('Specify lat and lng exactly once.');
+        if ([...url.searchParams.keys()].some(key => !['lat', 'lng', 'name'].includes(key)) ||
+            url.searchParams.getAll('lat').length !== 1 || url.searchParams.getAll('lng').length !== 1 ||
+            url.searchParams.getAll('name').length > 1) {
+          throw new Error('Specify lat and lng exactly once, with at most one name.');
         }
         const latText = url.searchParams.get('lat').trim();
         const lngText = url.searchParams.get('lng').trim();
         if (!latText || !lngText) throw new Error('Coordinates cannot be empty.');
+        if (url.searchParams.has('name')) {
+          placeName = url.searchParams.get('name').trim().replace(/\s+/g, ' ');
+          if (!placeName || !lookups.normalizePlaceName(placeName)) {
+            throw new Error('Name must contain searchable letters or numbers.');
+          }
+          if (placeName.length > 150 || /[\u0000-\u001f\u007f]/.test(placeName)) {
+            throw new Error('Name must be 150 characters or fewer and contain no control characters.');
+          }
+        }
         grid = coordinateGrid(Number(latText), Number(lngText));
       } catch (error) {
         return reply(400, { error: error.message });
       }
       try {
         if (!env.RARITY_CACHE || !env.RARITY_RATE_LIMITER) throw new Error('Required Worker bindings are not configured.');
+        const cacheKey = await rarityCacheKey(grid, placeName);
         const { success } = await env.RARITY_RATE_LIMITER.limit({
           key: request.headers.get('CF-Connecting-IP') || 'unidentified-client'
         });
         if (!success) return reply(429, { error: 'Too many rarity requests. Retry later.' }, { 'Retry-After': '60' });
-        const cached = await env.RARITY_CACHE.get(grid.key, 'json');
+        const cached = await env.RARITY_CACHE.get(cacheKey, 'json');
         if (cached) {
           lookups.validateProviderRarity(cached);
           const validSource = [
@@ -129,13 +167,13 @@ export function createWorker(fetcher = fetch) {
           }
           return reply(200, { ...cached, cached: true });
         }
-        let operation = inflight.get(grid.key);
+        let operation = inflight.get(cacheKey);
         if (!operation) {
           operation = (async () => {
             const [openDataResult, googleResult] = await Promise.allSettled([
               fetchOpenDataSummary(fetcher, grid),
               env.GOOGLE_PLACES_API_KEY
-                ? fetchGooglePlace(fetcher, env.GOOGLE_PLACES_API_KEY, grid)
+                ? fetchGooglePlace(fetcher, env.GOOGLE_PLACES_API_KEY, grid, placeName)
                 : Promise.resolve(null)
             ]);
             const openData = openDataResult.status === 'fulfilled' ? openDataResult.value : null;
@@ -160,6 +198,7 @@ export function createWorker(fetcher = fetch) {
                 ? lookups.categoryForOpenData(popularityScore, nearestHighwayKm)
                 : lookups.categoryForPoiCount(reviewCount),
               matchedLat: grid.matchedLat, matchedLng: grid.matchedLng,
+              searchedName: placeName || null,
               cached: false,
               source: googlePlace
                 ? 'Google Places API (New) + OpenStreetMap contributors (ODbL)'
@@ -169,11 +208,11 @@ export function createWorker(fetcher = fetch) {
               osmDataTimestamp: openData?.timestamp || null
             };
             lookups.validateProviderRarity(result);
-            await env.RARITY_CACHE.put(grid.key, JSON.stringify(result));
+            await env.RARITY_CACHE.put(cacheKey, JSON.stringify(result));
             return result;
           })();
-          inflight.set(grid.key, operation);
-          operation.then(() => inflight.delete(grid.key), () => inflight.delete(grid.key));
+          inflight.set(cacheKey, operation);
+          operation.then(() => inflight.delete(cacheKey), () => inflight.delete(cacheKey));
         }
         return reply(200, await operation);
       } catch (error) {

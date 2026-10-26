@@ -1224,15 +1224,15 @@
     </section>
   </div>
 
-  <script src="./nps-catalog.js?v=20261026-rarity-overhaul-v1"></script>
-  <script src="./national-parks-scratch.js?v=20261026-rarity-overhaul-v1"></script>
-  <script src="./international-parks.js?v=20261026-rarity-overhaul-v1"></script>
-  <script src="./ecoregions.js?v=20261026-rarity-overhaul-v1"></script>
-  <script src="./coordinate-lookups.js?v=20261026-rarity-overhaul-v1"></script>
-  <script src="./micro-states.js?v=20261026-rarity-overhaul-v1"></script>
-  <script src="./travel-ledger.js?v=20261026-rarity-overhaul-v1"></script>
-  <script src="./character-creator.js?v=20261026-rarity-overhaul-v1"></script>
-  <script src="./rarity-config.js?v=20261026-rarity-overhaul-v1"></script>
+  <script src="./nps-catalog.js?v=20261026-rarity-name-match-v1"></script>
+  <script src="./national-parks-scratch.js?v=20261026-rarity-name-match-v1"></script>
+  <script src="./international-parks.js?v=20261026-rarity-name-match-v1"></script>
+  <script src="./ecoregions.js?v=20261026-rarity-name-match-v1"></script>
+  <script src="./coordinate-lookups.js?v=20261026-rarity-name-match-v1"></script>
+  <script src="./micro-states.js?v=20261026-rarity-name-match-v1"></script>
+  <script src="./travel-ledger.js?v=20261026-rarity-name-match-v1"></script>
+  <script src="./character-creator.js?v=20261026-rarity-name-match-v1"></script>
+  <script src="./rarity-config.js?v=20261026-rarity-name-match-v1"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -4096,8 +4096,8 @@
         '🔮');
     }
 
-    async function fetchSupabaseRarityCache(lat, lng) {
-      const coordKey = CoordinateLookups.coordinateCacheKey(lat, lng);
+    async function fetchSupabaseRarityCache(lat, lng, placeName = '') {
+      const coordKey = CoordinateLookups.rarityCacheKey(lat, lng, placeName);
       const url = `${SUPABASE_URL}/rest/v1/cartovella_rarity_cache?coord_key=eq.${encodeURIComponent(coordKey)}&select=coord_key,lat,lng,rarity_tier,rarity_data&limit=1`;
       const response = await fetch(url, {
         headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
@@ -4122,9 +4122,9 @@
       return { ...rarity, cached: true };
     }
 
-    async function saveSupabaseRarityCache(lat, lng, rarity) {
+    async function saveSupabaseRarityCache(lat, lng, rarity, placeName = '') {
       const normalized = CoordinateLookups.normalizeRarity(rarity, lat, lng);
-      const coordKey = CoordinateLookups.coordinateCacheKey(lat, lng);
+      const coordKey = CoordinateLookups.rarityCacheKey(lat, lng, placeName);
       const response = await fetch(
         `${SUPABASE_URL}/rest/v1/cartovella_rarity_cache?on_conflict=coord_key`,
         {
@@ -4151,39 +4151,39 @@
     }
 
     const rarityLookupOperations = new Map();
-    async function lookupCachedOrSharedRarity(lat, lng) {
-      const key = CoordinateLookups.coordinateCacheKey(lat, lng);
+    async function lookupCachedOrSharedRarity(lat, lng, placeName = '') {
+      const key = CoordinateLookups.rarityCacheKey(lat, lng, placeName);
       if (rarityLookupOperations.has(key)) return rarityLookupOperations.get(key);
       const operation = (async () => {
         const storage = coordinateRarityStorage();
-        const local = CoordinateLookups.cachedRarity(lat, lng, storage);
+        const local = CoordinateLookups.cachedRarity(lat, lng, storage, Date.now(), placeName);
         if (local) {
           try {
-            await saveSupabaseRarityCache(lat, lng, local);
+            await saveSupabaseRarityCache(lat, lng, local, placeName);
           } catch (error) {
             console.warn('Could not seed the shared rarity cache from local data.', error);
           }
           return local;
         }
         try {
-          const shared = await fetchSupabaseRarityCache(lat, lng);
+          const shared = await fetchSupabaseRarityCache(lat, lng, placeName);
           if (shared) {
-            CoordinateLookups.cacheRarity(lat, lng, shared, storage);
+            CoordinateLookups.cacheRarity(lat, lng, shared, storage, Date.now(), placeName);
             return shared;
           }
         } catch (error) {
           console.warn('Shared rarity cache unavailable; continuing with the rarity provider.', error);
         }
         const rarity = await CoordinateLookups.lookupRarityWithFallback(lat, lng, {
-          storage, rarityEndpoint: CartovellaConfig.rarityEndpoint
+          storage, rarityEndpoint: CartovellaConfig.rarityEndpoint, placeName
         });
         try {
-          CoordinateLookups.cacheRarity(lat, lng, rarity, storage);
+          CoordinateLookups.cacheRarity(lat, lng, rarity, storage, Date.now(), placeName);
         } catch (error) {
           console.warn('Resolved rarity could not be saved to local storage.', error);
         }
         try {
-          await saveSupabaseRarityCache(lat, lng, rarity);
+          await saveSupabaseRarityCache(lat, lng, rarity, placeName);
         } catch (error) {
           console.warn('Resolved rarity could not be saved to the shared cache.', error);
         }
@@ -4197,22 +4197,37 @@
       }
     }
 
-    async function enrichCustomPoiRarity(poiId) {
+    async function enrichCustomPoiRarity(poiId, { notifyOnFailure = false } = {}) {
       if (AppState.viewOnly) return null;
       const poi = AppState.customPois.find(item => item.id === poiId);
       if (!poi) return null;
-      if (poi.rarity && CoordinateLookups.RARITY_TIERS[poi.rarityTier]) {
+      const raritySearchedForPlace = poi.rarity?.searchedName &&
+        CoordinateLookups.normalizePlaceName(poi.rarity.searchedName) ===
+          CoordinateLookups.normalizePlaceName(poi.name);
+      if (poi.rarity && CoordinateLookups.RARITY_TIERS[poi.rarityTier] && raritySearchedForPlace) {
         showFieldAppraisal(poi, poi.rarity);
         return poi.rarity;
       }
       let rarity;
       try {
-        rarity = await lookupCachedOrSharedRarity(poi.lat, poi.lng);
+        rarity = await lookupCachedOrSharedRarity(poi.lat, poi.lng, poi.name);
       } catch (error) {
         console.error('Saved place rarity lookup unavailable', poiId, error);
+        if (notifyOnFailure) {
+          showNotification('Rarity appraisal unavailable',
+            `${poi.name} remains saved. You can retry the name-and-location lookup from the Travel Ledger.`,
+            '⚠️');
+        }
         return null;
       }
-      if (!rarity?.rarityTier || !CoordinateLookups.RARITY_TIERS[rarity.rarityTier]) return null;
+      if (!rarity?.rarityTier || !CoordinateLookups.RARITY_TIERS[rarity.rarityTier]) {
+        if (notifyOnFailure) {
+          showNotification('Rarity appraisal unavailable',
+            `${poi.name} remains saved, but no valid rarity result was returned.`,
+            '⚠️');
+        }
+        return null;
+      }
       const current = AppState.customPois.find(item => item.id === poiId);
       if (!current) return null;
       try {
@@ -4932,19 +4947,30 @@
       if (!p.custom) return '';
       const category = p.category
         ? `<p class="text-[11px] text-amber-300">${escapeHtml(p.category)}</p>` : '';
+      const namedAppraisal = typeof p.rarity?.searchedName === 'string' &&
+        CoordinateLookups.normalizePlaceName(p.rarity.searchedName) ===
+          CoordinateLookups.normalizePlaceName(p.name);
+      const appraisalButton = !AppState.viewOnly && !namedAppraisal
+        ? `<button type="button" data-rarity-appraise-id="${escapeHtml(p.id)}"
+            class="text-[11px] text-sky-300 underline hover:text-sky-200">Retry name-and-location appraisal</button>`
+        : '';
       if (!p.rarity) {
         const elevation = Number.isFinite(p.elevationFt)
           ? `Elevation: ${Math.round(p.elevationFt).toLocaleString('en')} ft.`
           : 'Elevation not queried.';
-        const rarity = p.source === 'Photon'
-          ? 'Rarity not calculated for city entries. Source: Photon by Komoot; © OpenStreetMap contributors.'
-          : `${escapeHtml(p.rarityTier || 'Rarity unavailable')}. Imported POI; no provider provenance supplied.`;
+        const rarity = p.rarityTier
+          ? `${escapeHtml(p.rarityTier)} · no matched place appraisal.`
+          : 'No matched place appraisal.';
         const cityRegions = p.source === 'Photon'
           ? [...p.political.countries, ...p.political.states,
             ...p.political.counties.map(county => `${county.name} (${county.id})`)].filter(Boolean).join(' / ')
           : '';
-        return `<p class="text-[11px] text-slate-400">${elevation} ${rarity}</p>
-          ${cityRegions ? `<p class="text-[11px] text-slate-400">${escapeHtml(cityRegions)}</p>` : ''}${category}`;
+        const source = p.source === 'Photon'
+          ? 'Source: Photon by Komoot; © OpenStreetMap contributors.'
+          : 'No matching provider record has been saved yet.';
+        return `<p class="text-[11px] text-slate-400">${elevation} ${rarity} ${source}</p>
+          ${cityRegions ? `<p class="text-[11px] text-slate-400">${escapeHtml(cityRegions)}</p>` : ''}
+          ${appraisalButton}${category}`;
       }
       const rarity = CoordinateLookups.normalizeRarity(p.rarity, p.lat, p.lng);
       const rarityDescription = rarity.method === 'osm-poi-density'
@@ -4964,7 +4990,7 @@
         ${rarity.reviewCount === null ? '<p>Density/popularity estimate, not review-count popularity.</p>' : ''}
         ${rarity.source === 'OpenStreetMap contributors (ODbL)' ? '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" class="text-sky-300 underline">&copy; OpenStreetMap contributors (ODbL)</a>' : ''}
         ${rarity.osmDataTimestamp ? `<p>OSM data timestamp: ${escapeHtml(rarity.osmDataTimestamp)}.</p>` : ''}
-      </div>${category}`;
+      </div>${appraisalButton}${category}`;
     }
 
     let customLookupPending = false;
@@ -5021,7 +5047,7 @@
         const metadata = await CoordinateLookups.lookupCoordinate(Number(latText), Number(lngText), {
           indexes: coordinateIndexes, geoContains: d3.geoContains, storage: coordinateRarityStorage(),
           rarityEndpoint: CartovellaConfig.rarityEndpoint,
-          skipRarityLookup: true
+          skipRarityLookup: true, placeName: name
         });
         const { lookupWarnings = [], ...locationMetadata } = metadata;
         const location = {
@@ -6621,7 +6647,7 @@
         const resolved = await CoordinateLookups.lookupCoordinate(place.lat, place.lng, {
           indexes: coordinateIndexes, geoContains: d3.geoContains, storage: coordinateRarityStorage(),
           rarityEndpoint: CartovellaConfig.rarityEndpoint,
-          skipRarityLookup: true
+          skipRarityLookup: true, placeName: place.name
         });
         lookupWarnings = resolved.lookupWarnings || [];
         const savedPoi = AppState.customPois.find(poi => poi.id === poiId);
@@ -6940,6 +6966,10 @@
     document.getElementById('bucketFilterStatus').addEventListener('change', renderBucketListView);
     document.getElementById('bucketFilterType').addEventListener('change', renderBucketListView);
     document.getElementById('bucketFilterRarity').addEventListener('change', renderBucketListView);
+    document.getElementById('bucketListGrid').addEventListener('click', event => {
+      const button = event.target.closest('button[data-rarity-appraise-id]');
+      if (button) void enrichCustomPoiRarity(button.dataset.rarityAppraiseId, { notifyOnFailure: true });
+    });
     document.getElementById('rareDiscoveryFilters').addEventListener('click', event => {
       const button = event.target.closest('button[data-cabinet-rarity]');
       if (!button) return;
@@ -7088,7 +7118,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261026-rarity-overhaul-v1"></script>
+  <script src="./expedition-ui.js?v=20261026-rarity-name-match-v1"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);
