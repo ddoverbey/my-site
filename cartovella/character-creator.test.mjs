@@ -602,10 +602,10 @@ check('companion sprite sheets crop the selected animation frame', () => {
     assert.deepEqual(drawCalls[4].slice(1), [1, 14, 29, 18, 103, 72, 15, 10]);
     assert.deepEqual(drawCalls[5].slice(1), [137, 5, 14, 22, 107, 62, 7, 11]);
     assert.deepEqual(drawCalls[6].slice(1), [40, 4, 16, 24, 107, 62, 7, 11]);
-    assert.deepEqual(drawCalls[7].slice(1), [161, 45, 29, 19, 101, 66, 24, 16]);
+    assert.deepEqual(drawCalls[7].slice(1), [160, 32, 32, 32, 100, 55, 26, 27]);
     assert.deepEqual(drawCalls[8].slice(1), [320, 128, 64, 64, 96, 58, 32, 32]);
     assert.deepEqual(drawCalls[9].slice(1), [128, 128, 32, 32, 96, 58, 32, 32]);
-    assert.deepEqual(drawCalls[10].slice(1), [161, 46, 29, 18, 103, 72, 15, 10]);
+    assert.deepEqual(drawCalls[10].slice(1), [160, 32, 32, 32, 102, 64, 17, 18]);
     assert.deepEqual(drawCalls[11].slice(1), [128, 576, 32, 32, 96, 58, 32, 32]);
     assert.deepEqual(drawCalls[12].slice(1), [256, 608, 32, 32, 96, 58, 32, 32]);
     assert.deepEqual(drawCalls[13].slice(1), [0, 288, 32, 32, 96, 58, 32, 32]);
@@ -1210,9 +1210,19 @@ check('dog accessories share the dog frame origin and scale for every coat', () 
     const leapBody = calls.find(call => call[0].src === dog.imageSrc);
     const leapAccessories = calls.filter(call =>
       /doggy%20(hat|backpack)\.png$/.test(call[0].src));
-    assert.deepEqual(leapBody.slice(1, 5), [161, 45, 29, 19]);
+    assert.deepEqual(leapBody.slice(1, 5), [160, 32, 32, 32]);
+    assert.deepEqual(leapBody.slice(5, 9), [100, 55, 26, 27]);
     assert.equal(leapAccessories.length, 2);
     assert.ok(leapAccessories.every(call => call[1] === 160 && call[2] === 32));
+    const fox = characterCreator.PET_CATALOG.find(pet => pet.id === 'pet_trail_fox');
+    calls.length = 0;
+    characterCreator.drawStage(canvas, {
+      ...characterCreator.DEFAULT_CHARACTER, background: 'bg_green_hills',
+      pet: fox.id, petAnimation: 'leap', purchasedItems: [fox.id]
+    }, {}, 10);
+    const leapFox = calls.find(call => call[0].src === fox.imageSrc);
+    assert.deepEqual(leapFox.slice(1, 5), [160, 32, 32, 32]);
+    assert.deepEqual(leapFox.slice(5, 9), [102, 64, 17, 18]);
     const controls = { dataset: { activeTab: 'pets' }, innerHTML: '' };
     characterCreator.render({ controls, character: characterCreator.DEFAULT_CHARACTER });
     for (const field of ['petHat', 'petBackpack']) {

@@ -108,15 +108,28 @@
       return [frameSequence(`${prefix}-${row}`, labels[row] || `${label} ${row + 1} (row ${row})`,
         row, frameColumns)];
     });
-  const DOG_ANIMATIONS = [
-    frameSequence('walk', 'Walk', 0, [0, 1, 2, 3, 4]),
-    frameSequence('leap', 'Leap', 1, [0, 1, 2, 3, 4, 5])
-  ];
-  const DOG_SPRITE_SHEET = Object.freeze({
+  const fullFramePetSequence = (id, name, row, frameColumns, sprite) => {
+    const scaleX = sprite.targetWidth / sprite.sourceWidth;
+    const scaleY = sprite.targetHeight / sprite.sourceHeight;
+    return frameSequence(id, name, row, frameColumns, {
+      sourceX: 0, sourceY: 0, sourceWidth: sprite.frameWidth, sourceHeight: sprite.frameHeight,
+      targetX: Math.round(sprite.targetX - sprite.sourceX * scaleX),
+      targetY: Math.round(sprite.targetY - sprite.sourceY * scaleY),
+      targetWidth: Math.round(sprite.frameWidth * scaleX),
+      targetHeight: Math.round(sprite.frameHeight * scaleY)
+    });
+  };
+  const DOG_SPRITE_GEOMETRY = Object.freeze({
     frameWidth: 32, frameHeight: 32, frameCount: 5,
     row: 0, sourceX: 1, sourceY: 13, sourceWidth: 29, sourceHeight: 19,
-    targetX: 101, targetY: 66, targetWidth: 24, targetHeight: 16,
-    defaultAnimationId: 'walk', animations: DOG_ANIMATIONS
+    targetX: 101, targetY: 66, targetWidth: 24, targetHeight: 16
+  });
+  const DOG_ANIMATIONS = [
+    frameSequence('walk', 'Walk', 0, [0, 1, 2, 3, 4]),
+    fullFramePetSequence('leap', 'Leap', 1, [0, 1, 2, 3, 4, 5], DOG_SPRITE_GEOMETRY)
+  ];
+  const DOG_SPRITE_SHEET = Object.freeze({
+    ...DOG_SPRITE_GEOMETRY, defaultAnimationId: 'walk', animations: DOG_ANIMATIONS
   });
   const CAT_ANIMATION_FRAME_COUNTS = [
     4, 4, ...Array(4).fill(6), 14, 3, 4, 4, 5, 5, 8, 8, 3, 3, 3, 8, 8,
@@ -172,15 +185,17 @@
     targetX: 96, targetY: 58, targetWidth: 32, targetHeight: 32,
     defaultAnimationId: 'bunny-32', animations: BUNNY_ANIMATIONS
   });
-  const FOX_ANIMATIONS = [
-    frameSequence('walk', 'Walk', 0, [0, 1, 2, 3, 4]),
-    frameSequence('leap', 'Leap', 1, [0, 1, 2, 3, 4, 5])
-  ];
-  const FOX_SPRITE_SHEET = Object.freeze({
+  const FOX_SPRITE_GEOMETRY = Object.freeze({
     frameWidth: 32, frameHeight: 32, frameCount: 5,
     row: 0, sourceX: 1, sourceY: 14, sourceWidth: 29, sourceHeight: 18,
-    targetX: 103, targetY: 72, targetWidth: 15, targetHeight: 10,
-    defaultAnimationId: 'walk', animations: FOX_ANIMATIONS
+    targetX: 103, targetY: 72, targetWidth: 15, targetHeight: 10
+  });
+  const FOX_ANIMATIONS = [
+    frameSequence('walk', 'Walk', 0, [0, 1, 2, 3, 4]),
+    fullFramePetSequence('leap', 'Leap', 1, [0, 1, 2, 3, 4, 5], FOX_SPRITE_GEOMETRY)
+  ];
+  const FOX_SPRITE_SHEET = Object.freeze({
+    ...FOX_SPRITE_GEOMETRY, defaultAnimationId: 'walk', animations: FOX_ANIMATIONS
   });
   const WISP_ANIMATIONS = [frameSequence('float', 'Float', 0, [0, 1, 2, 3, 4])];
   const WISP_SPRITE_SHEET = Object.freeze({
