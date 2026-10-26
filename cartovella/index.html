@@ -1174,6 +1174,19 @@
     </section>
   </div>
 
+  <div id="atlasPinModal" role="dialog" aria-modal="true" aria-labelledby="atlasPinTitle" class="hidden fixed inset-0 z-[1150] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
+    <section class="rpg-panel rpg-panel-gold relative w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl p-5 sm:p-6">
+      <div class="flex items-start justify-between gap-3 border-b border-slate-700 pb-3">
+        <div>
+          <h2 id="atlasPinTitle" class="cinzel text-xl font-bold text-amber-200"></h2>
+          <p id="atlasPinSubtitle" class="mt-1 text-xs text-slate-400"></p>
+        </div>
+        <button id="btnCloseAtlasPin" type="button" aria-label="Close details" class="rounded-lg px-2 py-1 text-xl leading-none text-slate-400 hover:text-white">×</button>
+      </div>
+      <div id="atlasPinContent" class="mt-4 space-y-4"></div>
+    </section>
+  </div>
+
   <script src="./nps-catalog.js?v=20261025-character-profile-v18"></script>
   <script src="./national-parks-scratch.js?v=20261025-character-profile-v18"></script>
   <script src="./international-parks.js?v=20261025-character-profile-v18"></script>
@@ -2736,7 +2749,15 @@
         if (biomeIds.every(id => biomesSet.has(id))) break;
         if (!TravelLedger.isVisited(status)) continue;
         const biome = countyBiome(fips);
-        if (biome) biomesSet.add(biome);
+        if (biome) {
+          biomesSet.add(biome);
+          const sources = metadataProgress.biomePins[biome] ||
+            (metadataProgress.biomePins[biome] = { locations: [], trips: [] });
+          const county = countyFeaturesById[fips];
+          sources.locations.push({
+            kind: 'county', id: fips, name: county?.properties?.name || `County ${fips}`
+          });
+        }
       }
 
       const rareBiomesList = Object.keys(BIOMES).filter(b => RARE_OR_HIGHER_RARITIES.has(BIOMES[b].rarity));
@@ -5624,11 +5645,15 @@
         const isUnlocked = stats.biomesSet.has(key);
         const rarity = ACHIEVEMENT_RARITIES[info.rarity];
         const rarityColor = rarity?.color || '#94a3b8';
-        const card = document.createElement('div');
-        card.className = `p-3 rounded-2xl border transition-all duration-300 ${
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.dataset.atlasPinKind = 'biome';
+        card.dataset.atlasPinId = key;
+        card.setAttribute('aria-label', `View trips and locations for ${info.name}`);
+        card.className = `p-3 rounded-2xl border text-left transition-all duration-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400 ${
           isUnlocked 
             ? 'bg-slate-900/90 border-amber-500/40 shadow-lg shadow-amber-500/10' 
-            : 'bg-slate-950/60 border-slate-800'
+            : 'bg-slate-950/60 border-slate-800 hover:border-slate-600'
         }`;
         card.innerHTML = `
           <div class="relative mb-3 rounded-xl border biome-badge-frame"
@@ -5659,6 +5684,100 @@
       renderQuestlineViews(stats);
       renderEarnedAchievementBadges(stats);
       renderAchievementsView(stats);
+    }
+
+    let atlasPinReturnFocus = null;
+
+    function atlasPinTripMarkup(trips) {
+      if (!trips.length) return '<p class="text-xs text-slate-500">No logged trips are linked to this record.</p>';
+      return `<ul class="max-h-64 space-y-2 overflow-y-auto pr-1">${trips.map(trip => `
+        <li><button type="button" data-atlas-pin-kind="trip" data-atlas-pin-id="${escapeHtml(trip.id)}" class="w-full rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-left hover:border-sky-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400">
+          <span class="block text-sm font-semibold text-sky-200">${escapeHtml(trip.name)}</span>
+          <span class="mt-0.5 block text-[11px] text-slate-400">${escapeHtml(travelLogDateRange(trip))}</span>
+        </button></li>`).join('')}</ul>`;
+    }
+
+    function atlasPinLocationMarkup(locations) {
+      if (!locations.length) return '<p class="text-xs text-slate-500">No saved locations or logged stops are linked to this record.</p>';
+      return `<ul class="max-h-64 space-y-1.5 overflow-y-auto pr-1">${locations.map(location => {
+        const clickable = ['park', 'poi', 'county'].includes(location.kind);
+        const label = `${location.kind === 'county' ? '🗺️' : location.kind === 'park' ? '🏞️' : location.kind === 'poi' ? '📌' : '📍'} ${escapeHtml(location.name)}`;
+        const button = clickable
+          ? `<button type="button" data-atlas-pin-kind="${location.kind === 'county' ? 'county' : 'destination'}" data-atlas-pin-id="${escapeHtml(location.id)}" class="text-left text-sm text-slate-200 hover:text-amber-200 underline decoration-slate-600 underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400">${label}</button>`
+          : `<span class="text-sm text-slate-200">${label}</span>`;
+        const tripLink = location.tripId
+          ? ` <button type="button" data-atlas-pin-kind="trip" data-atlas-pin-id="${escapeHtml(location.tripId)}" class="text-xs text-sky-300 underline underline-offset-2">Open trip</button>`
+          : '';
+        return `<li class="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-slate-800 px-3 py-2">${button}${tripLink}</li>`;
+      }).join('')}</ul>`;
+    }
+
+    function openAtlasPinDetail(kind, id) {
+      if (kind === 'trip') {
+        const trip = AppState.expeditions.find(item => item.id === id);
+        if (!trip) return;
+        document.getElementById('atlasPinModal').classList.add('hidden');
+        switchTab('travel');
+        requestAnimationFrame(() => {
+          const card = [...document.querySelectorAll('#travelLogFeed [data-trip]')]
+            .find(item => item.dataset.trip === id);
+          if (card) {
+            card.open = true;
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        });
+        return;
+      }
+
+      let title = '';
+      let subtitle = '';
+      let locations = [];
+      let trips = [];
+      let extraMarkup = '';
+      if (kind === 'biome') {
+        const biome = BIOMES[id];
+        if (!biome) return;
+        const source = calculateStats().metadataProgress.biomePins[id] || { locations: [], trips: [] };
+        title = `${biome.icon} ${biome.name}`;
+        subtitle = `${source.trips.length} contributing trip${source.trips.length === 1 ? '' : 's'} · ${source.locations.length} contributing location${source.locations.length === 1 ? '' : 's'}`;
+        locations = source.locations;
+        trips = source.trips.map(tripId => AppState.expeditions.find(item => item.id === tripId)).filter(Boolean);
+      } else if (kind === 'destination') {
+        const destination = PARKS.find(item => item.id === id) ||
+          AppState.customPois.find(item => item.id === id);
+        if (!destination) return;
+        const park = PARKS.some(item => item.id === id);
+        title = `${park ? '🏞️' : '📌'} ${destination.name}`;
+        const status = park ? AppState.pins[id] : destination.status;
+        subtitle = `${TravelLedger.labels[status] || 'Unexplored'}${destination.state || destination.country ? ` · ${destination.state || destination.country}` : ''}`;
+        locations = [{ kind: park ? 'park' : 'poi', id, name: destination.name }];
+        trips = AppState.expeditions.filter(trip =>
+          (park ? trip.parkIds.includes(id) : trip.customPoiIds.includes(id)) ||
+          (trip.routeStops || []).some(stop => stop.kind === (park ? 'park' : 'poi') && stop.id === id));
+        extraMarkup = destination.biomes?.length
+          ? `<section><h3 class="mb-2 text-xs font-bold uppercase tracking-wide text-emerald-300">Biomes</h3><div class="flex flex-wrap gap-1.5">${destination.biomes.map(biomeId => BIOMES[biomeId]
+            ? `<button type="button" data-atlas-pin-kind="biome" data-atlas-pin-id="${escapeHtml(biomeId)}" class="rounded-full border border-emerald-500/30 bg-emerald-950/40 px-2 py-1 text-xs text-emerald-200 hover:border-emerald-300">${escapeHtml(BIOMES[biomeId].icon)} ${escapeHtml(BIOMES[biomeId].name)}</button>`
+            : '').join('')}</div></section>` : '';
+      } else if (kind === 'county') {
+        const county = countyFeaturesById[id];
+        title = `🗺️ ${county?.properties?.name || `County ${id}`}`;
+        subtitle = `County ${id}`;
+        locations = [{ kind: 'county', id, name: county?.properties?.name || `County ${id}` }];
+        trips = AppState.expeditions.filter(trip => trip.countyIds.includes(id) ||
+          (trip.routeStops || []).some(stop => stop.kind === 'county' && stop.id === id));
+      } else {
+        return;
+      }
+
+      document.getElementById('atlasPinTitle').textContent = title;
+      document.getElementById('atlasPinSubtitle').textContent = subtitle;
+      document.getElementById('atlasPinContent').innerHTML = `
+        ${extraMarkup}
+        <section><h3 class="mb-2 text-xs font-bold uppercase tracking-wide text-amber-300">Locations &amp; stops</h3>${atlasPinLocationMarkup(locations)}</section>
+        <section><h3 class="mb-2 text-xs font-bold uppercase tracking-wide text-sky-300">Trips</h3>${atlasPinTripMarkup(trips)}</section>`;
+      atlasPinReturnFocus = document.activeElement;
+      document.getElementById('atlasPinModal').classList.remove('hidden');
+      document.getElementById('btnCloseAtlasPin').focus();
     }
 
     function achievementDisclosure(achievement, stats) {
@@ -6148,7 +6267,7 @@
 
         card.innerHTML = `
           <div class="min-w-0 w-full sm:w-auto">
-            <div class="flex flex-wrap items-center gap-2"><h4 class="font-bold text-sm text-slate-200">${escapeHtml(p.name)}</h4>${rarityBadgeMarkup(p.rarityTier || p.rarity?.rarityTier)}</div>
+            <div class="flex flex-wrap items-center gap-2"><h4 class="font-bold text-sm text-slate-200"><button type="button" data-atlas-pin-kind="destination" data-atlas-pin-id="${escapeHtml(p.id)}" aria-label="View trips and details for ${escapeHtml(p.name)}" class="text-left hover:text-amber-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400">${escapeHtml(p.name)}</button></h4>${rarityBadgeMarkup(p.rarityTier || p.rarity?.rarityTier)}</div>
             <p class="text-xs" style="color:${TravelLedger.colors[cur] || '#94a3b8'}">${TravelLedger.labels[cur] || 'Unexplored'}${cur === 'l' ? ' 🏰' : ''}</p>
             ${p.designation ? `<p class="text-[11px] text-amber-300">${escapeHtml(p.designation)}</p>` : ''}
             ${p.url ? `<a href="${escapeHtml(p.url)}" target="_blank" rel="noopener noreferrer" class="text-[11px] text-sky-300 underline">${p.intl ? 'Park information source' : 'Official NPS site'}</a>` : ''}
@@ -7144,6 +7263,22 @@
     document.getElementById('authModal').addEventListener('click', event => {
       if (event.target === event.currentTarget) toggleAuthModal(false);
     });
+    const atlasPinModal = document.getElementById('atlasPinModal');
+    const closeAtlasPinModal = () => {
+      atlasPinModal.classList.add('hidden');
+      if (atlasPinReturnFocus?.isConnected) atlasPinReturnFocus.focus();
+    };
+    document.getElementById('btnCloseAtlasPin').addEventListener('click', closeAtlasPinModal);
+    atlasPinModal.addEventListener('click', event => {
+      if (event.target === event.currentTarget) closeAtlasPinModal();
+    });
+    document.addEventListener('click', event => {
+      const button = event.target.closest('[data-atlas-pin-kind][data-atlas-pin-id]');
+      if (!button) return;
+      event.preventDefault();
+      event.stopPropagation();
+      openAtlasPinDetail(button.dataset.atlasPinKind, button.dataset.atlasPinId);
+    });
     document.getElementById('btnAuthLogin').addEventListener('click', handleLogin);
     document.getElementById('btnAuthSignUp').addEventListener('click', handleSignUp);
     document.getElementById('btnAuthLogout').addEventListener('click', handleLogout);
@@ -7163,6 +7298,7 @@
     window.addEventListener('keydown', event => {
       const modal = document.getElementById('authModal');
       if (event.key === 'Escape' && !modal.classList.contains('hidden')) toggleAuthModal(false);
+      if (event.key === 'Escape' && !atlasPinModal.classList.contains('hidden')) closeAtlasPinModal();
     });
 
     window.addEventListener('DOMContentLoaded', () => {

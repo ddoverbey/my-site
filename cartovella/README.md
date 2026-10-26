@@ -9,6 +9,7 @@ expeditions, track parks and regions, and earn achievements from your travel his
 - Custom places and expedition logs with ordered stops, travel modes, route previews, and journal entries.
 - KML and GeoJSON route imports, a Global Route Map, and PNG route-poster export.
 - Progress for parks, regions, elevations, rarity, and terrestrial biomes.
+- Clickable biome and destination pins show the trips, stops, and saved places contributing to them.
 
 The Biome Pokédex uses the matching badge art from `assets/biome-badges/`; uncollected biomes
 show their badges in grayscale and dimmed, while collected badges retain their full color.

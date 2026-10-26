@@ -1213,11 +1213,17 @@ function travelLogRegions(exp) {
 function travelLogBadges(exp) {
   const badges = exp.parkIds.map(id => {
     const park = PARKS.find(p => p.id === id);
-    return { icon: '🏞️', label: park?.name || `Park ${id}`, tone: 'bg-emerald-950 text-emerald-300 border-emerald-500/40' };
+    return {
+      icon: '🏞️', label: park?.name || `Park ${id}`, kind: 'destination', id,
+      tone: 'bg-emerald-950 text-emerald-300 border-emerald-500/40'
+    };
   });
   exp.customPoiIds.forEach(id => {
     const poi = AppState.customPois.find(p => p.id === id);
-    badges.push({ icon: '📌', label: poi?.name || `POI ${id}`, tone: 'bg-violet-950 text-violet-300 border-violet-500/40' });
+    badges.push({
+      icon: '📌', label: poi?.name || `POI ${id}`, kind: 'destination', id,
+      tone: 'bg-violet-950 text-violet-300 border-violet-500/40'
+    });
   });
   exp.transitTags.forEach(tag => {
     badges.push({ icon: TravelLedger.transitIcons[tag], label: TravelLedger.transitTags[tag], tone: 'bg-sky-950 text-sky-300 border-sky-500/40' });
@@ -1741,10 +1747,11 @@ function renderExpeditionHistory() {
       .filter(id => BIOMES[id])
       .map(id => {
         const biome = BIOMES[id];
-        return `<span class="px-2 py-0.5 rounded-full text-[11px] border border-emerald-500/30 bg-emerald-950/40 text-emerald-200" title="${escapeHtml(biome.name)}">${escapeHtml(biome.icon)} ${escapeHtml(biome.name)}</span>`;
+        return `<button type="button" data-atlas-pin-kind="biome" data-atlas-pin-id="${escapeHtml(id)}" aria-label="View trips and locations for ${escapeHtml(biome.name)}" class="px-2 py-0.5 rounded-full text-[11px] border border-emerald-500/30 bg-emerald-950/40 text-emerald-200 hover:border-emerald-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400" title="${escapeHtml(biome.name)}">${escapeHtml(biome.icon)} ${escapeHtml(biome.name)}</button>`;
       }).join('');
-    const badgeMarkup = badges.map(badge =>
-      `<span class="px-2 py-0.5 rounded-full text-[11px] border ${badge.tone}">${badge.icon} ${escapeHtml(badge.label)}</span>`);
+    const badgeMarkup = badges.map(badge => badge.kind
+      ? `<button type="button" data-atlas-pin-kind="${badge.kind}" data-atlas-pin-id="${escapeHtml(badge.id)}" aria-label="View trips and locations for ${escapeHtml(badge.label)}" class="px-2 py-0.5 rounded-full text-[11px] border ${badge.tone} hover:brightness-125 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400">${badge.icon} ${escapeHtml(badge.label)}</button>`
+      : `<span class="px-2 py-0.5 rounded-full text-[11px] border ${badge.tone}">${badge.icon} ${escapeHtml(badge.label)}</span>`);
     let divider = '';
     const current = travelLogPeriod(exp);
     if (current !== period) {

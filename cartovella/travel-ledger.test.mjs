@@ -395,6 +395,29 @@ check('expedition biome credit samples route geometry between stops with a bound
   assert.ok(biomeLookups > 400, 'densely samples this long route within the configured ceiling');
   assert.ok(biomeLookups <= 502, 'caps expensive route lookups plus the two stops');
 });
+check('biome pins connect logged locations, trip stops, and their contributing expeditions', () => {
+  const state = migrate({
+    pins: { yose: 'v' },
+    customPois: [{ ...poi, id: 'poi_pin', name: 'Falls Viewpoint', status: 'v', biomes: ['5'] }],
+    expeditions: [{
+      ...exp, id: 'pin_trip', name: 'Forest Weekend', parkIds: ['yose'], customPoiIds: ['poi_pin'],
+      routeCoords: [[0, 0], [0, 1]], transitTags: ['road'],
+      routeStops: [{ kind: 'place', id: 'trailhead', name: 'Forest Trailhead', coords: [0, 0] }]
+    }]
+  });
+  const progress = ledger.metadataProgress(state, {
+    parks: [{ id: 'yose', name: 'Yosemite', lat: 37, lng: -119, biomes: ['5'] }],
+    biomeAt: lat => lat === 0 ? ['5'] : []
+  });
+  assert.deepEqual(progress.biomePins['5'], {
+    locations: [
+      { kind: 'park', id: 'yose', name: 'Yosemite' },
+      { kind: 'poi', id: 'poi_pin', name: 'Falls Viewpoint' },
+      { kind: 'place', id: 'pin_trip:trailhead', name: 'Forest Trailhead', tripId: 'pin_trip' }
+    ],
+    trips: ['pin_trip']
+  });
+});
 check('flight and ferry routes do not credit transit biomes while land stops and roads do', () => {
   const state = migrate({ expeditions: [{
     ...exp,

@@ -727,11 +727,70 @@
       })));
     collectRouteBiomes(trips, (lat, lng) => sample(lat, lng, 'biomes'),
       collectedBiomes, biomesByExpedition);
+    const parkById = new Map(rarityAwareParks.map(park => [park.id, park]));
+    const poiById = new Map(state.customPois.map(poi => [poi.id, poi]));
+    const biomePins = new Map();
+    const biomePinFor = biomeId => {
+      const id = String(biomeId);
+      if (!biomePins.has(id)) biomePins.set(id, { locations: new Map(), trips: new Set() });
+      return biomePins.get(id);
+    };
+    const addBiomeLocation = (biomeId, location) => {
+      const source = biomePinFor(biomeId);
+      const key = `${location.kind}:${location.id}`;
+      if (!source.locations.has(key)) source.locations.set(key, location);
+    };
+    locations.forEach(location => {
+      const kind = parkById.has(location.id) ? 'park' : 'poi';
+      location.biomes.forEach(biomeId => addBiomeLocation(biomeId, {
+        kind, id: location.id, name: location.name
+      }));
+    });
+    if (state.homeBase) {
+      sample(state.homeBase.lat, state.homeBase.lng, 'biomes').forEach(biomeId =>
+        addBiomeLocation(biomeId, { kind: 'home', id: 'home-base', name: state.homeBase.name }));
+    }
+    trips.forEach(trip => {
+      const linkedLocations = new Map();
+      trip.parkIds.forEach(id => {
+        const park = parkById.get(id);
+        if (park) linkedLocations.set(`park:${id}`, { kind: 'park', id, name: park.name });
+      });
+      trip.customPoiIds.forEach(id => {
+        const poi = poiById.get(id);
+        if (poi) linkedLocations.set(`poi:${id}`, { kind: 'poi', id, name: poi.name });
+      });
+      (trip.routeStops || []).forEach(stop => {
+        const linked = stop.kind === 'park' ? parkById.get(stop.id) :
+          stop.kind === 'poi' ? poiById.get(stop.id) : null;
+        const location = linked
+          ? { kind: stop.kind, id: stop.id, name: linked.name }
+          : { kind: 'place', id: `${trip.id}:${stop.id || stop.coords.join(',')}`, name: stop.name, tripId: trip.id };
+        linkedLocations.set(`${location.kind}:${location.id}`, location);
+        const stopBiomes = sample(stop.coords[0], stop.coords[1], 'biomes');
+        stopBiomes.forEach(biomeId => addBiomeLocation(biomeId, location));
+      });
+      const tripBiomeIds = new Set(biomesByExpedition.get(trip.id) || []);
+      linkedLocations.forEach(location => {
+        const linked = location.kind === 'park' ? parkById.get(location.id) :
+          location.kind === 'poi' ? poiById.get(location.id) : null;
+        (linked?.biomes || []).forEach(biomeId => tripBiomeIds.add(String(biomeId)));
+      });
+      tripBiomeIds.forEach(biomeId => {
+        const source = biomePinFor(biomeId);
+        source.trips.add(trip.id);
+        linkedLocations.forEach(location => {
+          const linked = location.kind === 'park' ? parkById.get(location.id) :
+            location.kind === 'poi' ? poiById.get(location.id) : null;
+          if (linked?.biomes.map(String).includes(String(biomeId))) {
+            addBiomeLocation(biomeId, location);
+          }
+        });
+      });
+    });
     const homeCounties = new Set(state.homeBase
       ? (sample(state.homeBase.lat, state.homeBase.lng, 'political')?.counties?.map(county => county.id) ||
         (state.homeBase.countyId ? [state.homeBase.countyId] : [])) : []);
-    const parkById = new Map(rarityAwareParks.map(park => [park.id, park]));
-    const poiById = new Map(state.customPois.map(poi => [poi.id, poi]));
     const rarityEntities = new Map();
     const addRarityEntity = (key, tier, location) => {
       const knownTier = rarityTiers ? Object.hasOwn(rarityTiers, tier) : rarityTierNames.includes(tier);
@@ -872,7 +931,11 @@
         ? Math.max(...coordinates.map(point => point.lat)) - Math.min(...coordinates.map(point => point.lat)) : 0,
       collectedBiomes,
       biomesByExpedition: Object.fromEntries([...biomesByExpedition]
-        .map(([id, biomes]) => [id, [...biomes]]))
+        .map(([id, biomes]) => [id, [...biomes]])),
+      biomePins: Object.fromEntries([...biomePins].map(([id, source]) => [id, {
+        locations: [...source.locations.values()],
+        trips: [...source.trips]
+      }]))
     };
   }
 
