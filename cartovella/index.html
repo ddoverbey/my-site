@@ -802,8 +802,8 @@
           <div class="flex flex-wrap items-center justify-between gap-3">
             <div class="flex flex-wrap items-center gap-2 text-[11px]">
               <span class="rounded-full border border-amber-400/30 bg-amber-400/10 px-2 py-1 text-amber-300">● Drive/AWD</span>
-              <span class="rounded-full border border-sky-400/30 bg-sky-400/10 px-2 py-1 text-sky-300">● Flight</span>
-              <span class="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-1 text-emerald-300">● Ferry</span>
+              <span class="rounded-full border border-slate-400/30 bg-slate-400/10 px-2 py-1 text-slate-300">● Flight</span>
+              <span class="rounded-full border border-sky-400/30 bg-sky-400/10 px-2 py-1 text-sky-300">● Water Transit</span>
               <span class="rounded-full border border-purple-400/30 bg-purple-400/10 px-2 py-1 text-purple-300">● Rail</span>
               <span class="rounded-full border border-pink-400/30 bg-pink-400/10 px-2 py-1 text-pink-300">● Walk</span>
             </div>
@@ -1039,7 +1039,7 @@
         <div id="expeditionRoutePreview" class="hidden h-52 w-full rounded-lg overflow-hidden" aria-label="Expedition route preview"></div>
         <p id="expeditionRouteSummary" class="text-xs text-slate-400"></p>
       </div>
-      <details class="text-[11px] text-slate-400"><summary>Map services &amp; privacy</summary>City and airport suggestions use Photon by Komoot; search text is sent as you type. Only driving and AWD endpoints are sent to the FOSSGIS routing service (OSRM). Imported GeoJSON/KML tracks are processed locally and are not sent to OSRM. Imported driving/AWD tracks clear land fog and award route counties. Each Ferry / Boat expedition reduces ocean fog by 10 percentage points, down to 50% opacity (99% before the first trip). Ferry and flight routes fully clear water within 100 miles (160.934 km) on either side of the logged route when the world atlas is loaded; unvisited land stays shrouded, and flight paths never clear land—only a small area around each flight's departure and arrival points. Ferry, flight, rail, and walking routes award no intermediate counties; rail and walking clear no route fog. Without an imported track, these routes are dashed direct approximations. Elevations use Open-Meteo. © OpenStreetMap contributors.</details>
+      <details class="text-[11px] text-slate-400"><summary>Map services &amp; privacy</summary>City and airport suggestions use Photon by Komoot; search text is sent as you type. Only driving and AWD endpoints are sent to the FOSSGIS routing service (OSRM). Imported GeoJSON/KML tracks are processed locally and are not sent to OSRM. Imported driving/AWD tracks clear land fog and award route counties. Each Water Transit expedition reduces ocean fog by 10 percentage points, down to 50% opacity (99% before the first trip). Water Transit and flight routes fully clear water within 100 miles (160.934 km) on either side of the logged route when the world atlas is loaded; unvisited land stays shrouded, and flight paths never clear land—only a small area around each flight's departure and arrival points. Water Transit, flight, rail, and walking routes award no intermediate counties; rail and walking clear no route fog. Without an imported track, these routes are dashed direct approximations. Elevations use Open-Meteo. © OpenStreetMap contributors.</details>
       <p id="expeditionStatus" role="status" aria-live="polite" class="text-xs text-amber-200"></p>
       <div class="flex justify-end gap-2">
         <button id="btnCancelExpedition" type="button" class="rounded-lg bg-slate-800 px-4 py-2 text-sm">Cancel</button>
@@ -1747,7 +1747,7 @@
       ['thinAir', 'Thin Air', 'Log a stop at 10,000 ft or higher', 1],
       ['whispers', 'Whisper in the Woods', 'Visit an Uncharted or Hidden Gem custom location', 1],
       ['overlander', 'The Overlander', 'Log 5 distinct locations in AWD/Off-Road expeditions', 5],
-      ['mariner', 'The Mariner', 'Log 3 Ferry / Boat expeditions', 3],
+      ['mariner', 'The Mariner', 'Log 3 Water Transit expeditions', 3],
       ['focal', 'Focal Length', 'Log 10 locations/expeditions with Photography', 10],
       ['southernCross', 'Southern Cross', 'Log a multi-day expedition with a southern-hemisphere stop (overnight inferred from dates)', 1],
       ['localLore', 'Local Lore', 'Uncover 5 distinct Hidden Gems within your home county', 5],

@@ -1103,11 +1103,19 @@ let travelLogResizeObserver = null;
 const openTravelLogs = new Set();
 const travelJournalDrafts = new Map();
 const TRAVEL_ROUTE_COLORS = { road: '#22d3ee', awd: '#22d3ee', ferry: '#38bdf8',
-  flight: '#e879f9', rail: '#a78bfa', foot: '#4ade80' };
+  flight: '#94a3b8', rail: '#a78bfa', foot: '#4ade80' };
 const GLOBAL_ROUTE_COLORS = {
-  road: '#f59e0b', awd: '#f59e0b', flight: '#38bdf8',
-  ferry: '#10b981', rail: '#c084fc', foot: '#f472b6'
+  road: '#f59e0b', awd: '#f59e0b', flight: '#94a3b8',
+  ferry: '#38bdf8', rail: '#c084fc', foot: '#f472b6'
 };
+const TRAVEL_TRANSIT_BADGE_TONES = Object.freeze({
+  road: 'bg-amber-950 text-amber-300 border-amber-500/40',
+  awd: 'bg-amber-950 text-amber-300 border-amber-500/40',
+  ferry: 'bg-sky-950 text-sky-300 border-sky-500/40',
+  flight: 'bg-slate-800 text-slate-300 border-slate-500/40',
+  rail: 'bg-purple-950 text-purple-300 border-purple-500/40',
+  foot: 'bg-pink-950 text-pink-300 border-pink-500/40'
+});
 const GLOBAL_ROUTE_MAP_STYLES = Object.freeze({
   midnight: {
     ocean: '#040814', land: '#0f172a', visited: '#13233f',
@@ -1117,14 +1125,14 @@ const GLOBAL_ROUTE_MAP_STYLES = Object.freeze({
   classic: {
     ocean: '#dceaf2', land: '#f5f1e6', visited: '#c6dfc4',
     border: '#82919c', graticule: '#afbdc4', text: '#1e293b',
-    routes: { road: '#b45309', awd: '#b45309', flight: '#0369a1',
-      ferry: '#047857', rail: '#7e22ce', foot: '#be185d' }
+    routes: { road: '#b45309', awd: '#b45309', flight: '#64748b',
+      ferry: '#0369a1', rail: '#7e22ce', foot: '#be185d' }
   },
   parchment: {
     ocean: '#e9dec5', land: '#d3c19d', visited: '#a7bd91',
     border: '#907d5a', graticule: '#bcac8c', text: '#3b3428',
-    routes: { road: '#92400e', awd: '#92400e', flight: '#075985',
-      ferry: '#166534', rail: '#6b21a8', foot: '#9d174d' }
+    routes: { road: '#92400e', awd: '#92400e', flight: '#475569',
+      ferry: '#1d4ed8', rail: '#6b21a8', foot: '#9d174d' }
   }
 });
 // Continent membership follows Annexare Countries (MIT): https://github.com/annexare/Countries.
@@ -1226,7 +1234,11 @@ function travelLogBadges(exp) {
     });
   });
   exp.transitTags.forEach(tag => {
-    badges.push({ icon: TravelLedger.transitIcons[tag], label: TravelLedger.transitTags[tag], tone: 'bg-sky-950 text-sky-300 border-sky-500/40' });
+    badges.push({
+      icon: TravelLedger.transitIcons[tag],
+      label: TravelLedger.transitTags[tag],
+      tone: TRAVEL_TRANSIT_BADGE_TONES[tag] || 'bg-slate-800 text-slate-300 border-slate-500/40'
+    });
   });
   exp.purposeTags.forEach(tag => {
     badges.push({ icon: '✨', label: TravelLedger.purposeTags[tag], tone: 'bg-amber-950 text-amber-300 border-amber-500/40' });

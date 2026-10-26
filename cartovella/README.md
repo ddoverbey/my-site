@@ -7,7 +7,8 @@ expeditions, track parks and regions, and earn achievements from your travel his
 
 - An RPG world map with visit statuses, a travel ledger, and country, state, province, and county views.
 - Custom places and expedition logs with ordered stops, travel modes, route previews, and journal entries.
-- KML and GeoJSON route imports, a Global Route Map, and PNG route-poster export.
+- KML and GeoJSON route imports, a Global Route Map, and PNG route-poster export. Water Transit
+  routes are blue, while flights use a neutral gray in the map and trip logs.
 - Progress for parks, regions, elevations, rarity, and terrestrial biomes.
 - Clickable biome and destination pins show the trips, stops, and saved places contributing to them.
 
@@ -15,7 +16,7 @@ The Biome Pokédex uses the matching badge art from `assets/biome-badges/`; unco
 show their badges in grayscale and dimmed, while collected badges retain their full color.
 
 Biome credit comes from logged stops and sampled land routes. Road, AWD, rail, and walking route
-geometry can count; flight and ferry transit geometry does not. Flight and ferry stops can still count.
+geometry can count; flight and Water Transit geometry does not. Flight and Water Transit stops can still count.
 
 ### Biome rarity
 

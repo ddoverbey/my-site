@@ -533,12 +533,13 @@ check('tag achievements reach exact counts without collapsing expeditions into s
   assert.equal(progress.focal, 10);
   assert.equal(progress.overlander, 6);
 });
-check('AWD locations deduplicate across trips while Ferry / Boat counts individual trips at exact goals', () => {
+check('AWD locations deduplicate across trips while Water Transit counts individual trips at exact goals', () => {
   const trip = {
     ...exp, countyIds: ['08001', '08003', '08005', '08007'], parkIds: ['romo'],
     transitTags: ['awd', 'ferry']
   };
   const state = migrate({ expeditions: [{ ...trip, id: 'trip_one' }, { ...trip, id: 'trip_two' }] });
+  assert.equal(ledger.transitTags.ferry, 'Water Transit');
   let progress = ledger.metadataProgress(state);
   assert.equal(progress.overlander, 5);
   assert.equal(progress.mariner, 2);

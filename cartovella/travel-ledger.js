@@ -3,7 +3,7 @@
   const ranks = Object.freeze({ w: 1, t: 2, v: 3, l: 4 });
   const labels = Object.freeze({ w: 'Wishlist', t: 'Transited', v: 'Visited', l: 'Lived / Home Base' });
   const colors = Object.freeze({ w: '#ec4899', t: '#64748b', v: '#10b981', l: '#3b82f6' });
-  const transitTags = Object.freeze({ road: 'Drive / Road Trip', awd: 'AWD/Off-Road', ferry: 'Ferry / Boat', flight: 'Flight', rail: 'Rail / Train', foot: 'Walk / Hike' });
+  const transitTags = Object.freeze({ road: 'Drive / Road Trip', awd: 'AWD/Off-Road', ferry: 'Water Transit', flight: 'Flight', rail: 'Rail / Train', foot: 'Walk / Hike' });
   const transitIcons = Object.freeze({ road: '🚙', awd: '🚙', ferry: '⛴️', flight: '✈️', rail: '🚆', foot: '🥾' });
   const rarityTierNames = Object.freeze([
     'Tourist Trap', 'Beaten Path', 'Regional Staple', 'Deep Cut', 'Hidden Gem', 'Uncharted'

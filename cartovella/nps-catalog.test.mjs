@@ -2368,6 +2368,14 @@ check('mini-maps plot every route stop and frame multi-stop trips that have no p
     assert.deepEqual(plain(line.coords),[[48.75,-122.48],[57.05,-135.33]]);
     assert.equal(line.options.color,'#38bdf8');
     assert.equal(line.options.dashArray,'8, 8');
+    assert.equal(vm.runInContext(
+      "travelLogBadges(testFerryExpedition).find(badge => badge.label === 'Water Transit').tone",
+      context
+    ),'bg-sky-950 text-sky-300 border-sky-500/40');
+    assert.equal(vm.runInContext(
+      "travelLogBadges({...testFerryExpedition, transitTags:['flight']}).find(badge => badge.label === 'Flight').tone",
+      context
+    ),'bg-slate-800 text-slate-300 border-slate-500/40');
     assert.deepEqual(plain(drawn.fitBounds.at(-1)[0]),[[48.75,-122.48],[57.05,-135.33],
       [48.75,-122.48],[57.05,-135.33]]);
   });
@@ -5933,6 +5941,19 @@ check('Global Route Map renders country and expedition paths and toggles indepen
         mode: 'train', routeSource: 'direct',
         routeCoords: [[48.9,2.3],[51.5,-0.1]]
       }]
+    }, {
+      id: 'water-route-test', name: 'Water Transit', startDate: '2025-06-05',
+      endDate: '2025-06-06', transitTags: ['ferry'], purposeTags: [],
+      countyIds: [], parkIds: [], customPoiIds: [],
+      routeStops: [
+        { kind: 'place', name: 'New York', coords: [40.7,-74] },
+        { kind: 'place', name: 'Bermuda', coords: [32.3,-64.8] }
+      ],
+      routeCoords: [[40.7,-74],[32.3,-64.8]],
+      routeLegs: [{
+        mode: 'ferry', routeSource: 'direct',
+        routeCoords: [[40.7,-74],[32.3,-64.8]]
+      }]
     }];
     globalRoutesOpen = false;
     globalRoutesScope = 'global';
@@ -5946,6 +5967,7 @@ check('Global Route Map renders country and expedition paths and toggles indepen
     const svg = element('svgGlobalRoutesMap').innerHTML;
     assert.match(svg, /class="global-country"/);
     assert.match(svg, /class="global-route"/);
+    assert.match(svg, /stroke="#94a3b8"/);
     assert.match(svg, /stroke="#38bdf8"/);
     assert.match(svg, /stroke-dasharray="6 5"/);
     assert.equal(classLists.get('travelGlobalRoutesPanel').state.hidden, false);
@@ -5957,6 +5979,7 @@ check('Global Route Map renders country and expedition paths and toggles indepen
     assert.match(routeYear.innerHTML, /value="2026">2026/);
     assert.match(routeYear.innerHTML, /value="2025">2025/);
     assert.match(html, /Atlas styles recolor the built-in vector map; no external basemap tiles are loaded/);
+    assert.match(html, /● Water Transit/);
     assert.match(html, /<footer[^>]*>[\s\S]*?Cartovella<\/span>/);
 
     routeYear.value = '2025';
