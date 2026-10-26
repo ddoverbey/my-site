@@ -7,7 +7,7 @@
     { "pattern": "api.devonoverbey.com", "custom_domain": true }
   ],
   "vars": {
-    "ALLOWED_ORIGINS": "https://devonoverbey.com,https://www.devonoverbey.com"
+    "ALLOWED_ORIGINS": "https://devonoverbey.com,https://www.devonoverbey.com,http://127.0.0.1:8766,http://localhost:8766"
   },
   "kv_namespaces": [
     { "binding": "RARITY_CACHE", "id": "f4fa118727df444babd27f3205a0fdc9" }

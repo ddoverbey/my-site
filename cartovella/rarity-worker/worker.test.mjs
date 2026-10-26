@@ -79,6 +79,17 @@ await check('invalid coordinates, methods, origins, and preflights cannot reach 
   assert.equal(preflight.status, 200);
   assert.equal(calls, 1);
 });
+await check('configured local Cartovella preview origins receive CORS headers', async () => {
+  const localEnv = {
+    ...env,
+    ALLOWED_ORIGINS: `${env.ALLOWED_ORIGINS},http://127.0.0.1:8766,http://localhost:8766`
+  };
+  for (const origin of ['http://127.0.0.1:8766', 'http://localhost:8766']) {
+    const response = await worker.fetch(request('lat=bad&lng=0', { headers: { Origin: origin } }), localEnv);
+    assert.equal(response.status, 400);
+    assert.equal(response.headers.get('Access-Control-Allow-Origin'), origin);
+  }
+});
 await check('missing bindings and rate limits fail explicitly, including cache hits', async () => {
   assert.equal((await worker.fetch(request(), { ALLOWED_ORIGINS: env.ALLOWED_ORIGINS })).status, 503);
   const response = await worker.fetch(request(), {

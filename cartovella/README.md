@@ -225,7 +225,8 @@ aren't reused for a different place. Open-data fallbacks for named lookups are n
 confirmed name matches or cached as named appraisals, so saved custom places keep their retry
 control until Google confirms the place. Failed coordinate-entry appraisals leave the location
 saved and report that the rarity lookup needs a retry. Deploy the updated rarity Worker as well as
-the browser app to enable named Google searches. The optional Esri imagery token can be set as
+the browser app to enable named Google searches. The Worker also allows the Cartovella preview
+origins `http://127.0.0.1:8766` and `http://localhost:8766`. The optional Esri imagery token can be set as
 `CartovellaConfig.esriApiKey` in
 `rarity-config.js`.
 
