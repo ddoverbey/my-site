@@ -1309,7 +1309,7 @@
     drawPet(ctx, activePet, redraw, petFrame, character.petAnimation);
     drawPetAccessory(ctx, character, 'petBackpack', redraw, petFrame, character.petAnimation);
     drawPetAccessory(ctx, character, 'petHat', redraw, petFrame, character.petAnimation);
-    pixel(ctx, 0, 82, 160, 1, '#84946d');
+    pixel(ctx, 0, 89, 160, 1, '#84946d');
     ctx.restore();
     startStageAnimation(canvas);
   }

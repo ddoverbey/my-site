@@ -340,7 +340,7 @@ check('late character sprite loads redraw the most recently rendered stage', () 
       fillRect() {},
       drawImage(image) { drawCalls.push(image.src); }
     };
-    const canvas = { width: 320, height: 166, isConnected: true, getContext: () => context };
+    const canvas = { width: 320, height: 180, isConnected: true, getContext: () => context };
     const character = { ...characterCreator.DEFAULT_CHARACTER, gender: 'female', pet: 'pet_none' };
     characterCreator.drawStage(canvas, { ...character, background: 'bg_green_hills' });
     characterCreator.drawStage(canvas, { ...character, background: 'bg_yosemite' });
