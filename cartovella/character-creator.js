@@ -1296,7 +1296,6 @@
       stageAnimations.get(canvas)?.tick ?? 0));
     const tick = Math.max(0, animationTick);
     const petFrame = Math.floor(tick / 2);
-    const bobOffset = Math.round(Math.sin((tick % 24) * Math.PI / 12) * 0.75);
     ctx.imageSmoothingEnabled = false;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();
@@ -1305,7 +1304,7 @@
     if (activeBackground.id === 'bg_campfire') {
       drawCampfire(ctx, redraw, tick % CAMPFIRE_SPRITE.frameCount);
     }
-    drawCharacterSprite(ctx, character, redraw, petFrame % CHARACTER_EFFECT_FRAME_COUNT, bobOffset);
+    drawCharacterSprite(ctx, character, redraw, petFrame % CHARACTER_EFFECT_FRAME_COUNT);
     drawPet(ctx, activePet, redraw, petFrame, character.petAnimation);
     drawPetAccessory(ctx, character, 'petBackpack', redraw, petFrame, character.petAnimation);
     drawPetAccessory(ctx, character, 'petHat', redraw, petFrame, character.petAnimation);
