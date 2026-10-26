@@ -351,11 +351,6 @@
       filter: blur(0.7px);
       user-select: none;
     }
-    .achievement-complete {
-      background: linear-gradient(135deg, rgba(120, 53, 15, .55), rgba(69, 26, 3, .72));
-      border-color: rgba(251, 191, 36, .8);
-      box-shadow: 0 0 24px rgba(251, 191, 36, .2), inset 0 0 18px rgba(253, 230, 138, .06);
-    }
     #rpgMapHud {
       width: 18rem;
       max-width: calc(100% - 2rem);
@@ -1200,15 +1195,15 @@
     </section>
   </div>
 
-  <script src="./nps-catalog.js?v=20261025-character-profile-v18"></script>
-  <script src="./national-parks-scratch.js?v=20261025-character-profile-v18"></script>
-  <script src="./international-parks.js?v=20261025-character-profile-v18"></script>
-  <script src="./ecoregions.js?v=20261025-character-profile-v18"></script>
-  <script src="./coordinate-lookups.js?v=20261025-character-profile-v18"></script>
-  <script src="./micro-states.js?v=20261025-character-profile-v18"></script>
-  <script src="./travel-ledger.js?v=20261025-character-profile-v18"></script>
-  <script src="./character-creator.js?v=20261026-character-effects-v19"></script>
-  <script src="./rarity-config.js?v=20261025-character-profile-v18"></script>
+  <script src="./nps-catalog.js?v=20261026-achievements-v1"></script>
+  <script src="./national-parks-scratch.js?v=20261026-achievements-v1"></script>
+  <script src="./international-parks.js?v=20261026-achievements-v1"></script>
+  <script src="./ecoregions.js?v=20261026-achievements-v1"></script>
+  <script src="./coordinate-lookups.js?v=20261026-achievements-v1"></script>
+  <script src="./micro-states.js?v=20261026-achievements-v1"></script>
+  <script src="./travel-ledger.js?v=20261026-achievements-v1"></script>
+  <script src="./character-creator.js?v=20261026-achievements-v1"></script>
+  <script src="./rarity-config.js?v=20261026-achievements-v1"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -1817,34 +1812,34 @@
     ));
     const ACHIEVEMENT_HINT_THRESHOLD = 0.85;
     const ACHIEVEMENT_ART = {
-      firstSteps: ['🏕️', '#14332c', ['common']],
-      trailblazer: ['🏕️', '#14332c', ['uncommon']],
-      masterRanger: ['🏕️', '#14332c', ['rare']],
-      grandVoyager: ['🏕️', '#14332c', ['epic']],
+      firstSteps: ['🏕️', '#334155', ['common']],
+      trailblazer: ['🏕️', '#064e3b', ['uncommon']],
+      masterRanger: ['🏕️', '#1e3a8a', ['rare']],
+      grandVoyager: ['🏕️', '#4c1d95', ['epic']],
       americaTheBeautiful: ['🏞️', '#422006', ['legendary']],
       nps: ['🏞️', '#422006', ['mythic']],
       juniorEcologist: ['🌱', '#12352b', ['uncommon']],
-      almostThere: ['🌱', '#12352b', ['legendary']],
-      gaiaWanderer: ['🌱', '#12352b', ['mythic']],
-      rare_biomes: ['🔮', '#2e1065', ['rare']],
-      statehopper: ['🇺🇸', '#172554', ['uncommon']],
-      semiCentennial: ['🇺🇸', '#172554', ['rare']],
-      fiftyNifty: ['🇺🇸', '#172554', ['legendary']],
-      countries: ['🛂', '#172554', ['rare']],
-      waterfalls_1: ['💧', '#0c4a6e', ['common']],
-      waterfalls_5: ['💧', '#0c4a6e', ['uncommon']],
-      waterfalls_10: ['💧', '#0c4a6e', ['rare']],
-      subterranean: ['🌊⬇️', '#082f49', ['uncommon']],
+      almostThere: ['🌱', '#713f12', ['legendary']],
+      gaiaWanderer: ['🌱', '#2e1065', ['mythic']],
+      rare_biomes: ['🔮', '#164e63', ['rare']],
+      statehopper: ['🇺🇸', '#064e3b', ['uncommon']],
+      semiCentennial: ['🇺🇸', '#155e75', ['rare']],
+      fiftyNifty: ['🇺🇸', '#78350f', ['legendary']],
+      countries: ['🛂', '#164e63', ['rare']],
+      waterfalls_1: ['💧', '#334155', ['common']],
+      waterfalls_5: ['💧', '#14532d', ['uncommon']],
+      waterfalls_10: ['💧', '#155e75', ['rare']],
+      subterranean: ['🌊⬇️', '#064e3b', ['uncommon']],
       thinAir: ['🏔️', '#1e3a5f', ['rare']],
       whispers: ['🌲✨', '#14332c', ['uncommon']],
       overlander: ['🚙', '#365314', ['uncommon']],
-      mariner: ['⛴️', '#0c4a6e', ['uncommon']],
+      mariner: ['⛴️', '#14532d', ['uncommon']],
       focal: ['📷', '#3b0764', ['rare']],
       southernCross: ['🌌', '#172554', ['rare']],
-      localLore: ['🏰💎', '#14532d', ['rare']],
+      localLore: ['🏰💎', '#134e4a', ['rare']],
       zeroMeridian: ['🏰', '#334155', ['common']],
-      beyondHorizon: ['🌅', '#431407', ['rare']],
-      international: ['🌍✈️', '#164e63', ['uncommon']],
+      beyondHorizon: ['🌅', '#0e4f5c', ['rare']],
+      international: ['🌍✈️', '#14532d', ['uncommon']],
       touchGrass: ['🌿', '#14532d', ['common']],
       fastTravel: ['⚡', '#312e81', ['epic']],
       earthSandwich: ['🌍🥪', '#172554', ['mythic']],
@@ -1852,8 +1847,8 @@
       latitudeSpan: ['🌐↕️', '#1e3a5f', ['epic']],
       counties: ['🗺️', '#422006', ['mythic']],
       worldAtlas: ['🌍👑', '#2e1065', ['mythic']],
-      countryRoads: ['🛣️🏡', '#14532d', ['rare']],
-      rockyMountainHigh: ['🏔️🎵', '#1e3a5f', ['uncommon']]
+      countryRoads: ['🛣️🏡', '#155e75', ['rare']],
+      rockyMountainHigh: ['🏔️🎵', '#365314', ['uncommon']]
     };
     const ACHIEVEMENT_CLASS_GROUPS = [
       {
@@ -1862,7 +1857,7 @@
       },
       { id: 'biomeCoverage', title: 'Biome Explorer', achievementIds: ['juniorEcologist', 'almostThere', 'gaiaWanderer'] },
       { id: 'stateVisits', title: 'State Explorer', achievementIds: ['statehopper', 'semiCentennial', 'fiftyNifty'] },
-      { id: 'countryVisits', title: 'Country Explorer', achievementIds: ['international', 'countries'] },
+      { id: 'countryVisits', title: 'International Explorer', achievementIds: ['international', 'countries', 'worldAtlas'] },
       { id: 'waterfalls', title: 'Waterfall Hunter', achievementIds: ['waterfalls_1', 'waterfalls_5', 'waterfalls_10'] }
     ];
     ACHIEVEMENTS.forEach(achievement => {
@@ -5849,16 +5844,13 @@
 
     function achievementCardStyle(achievement, tier) {
       const color = ACHIEVEMENT_RARITIES[tier.rarity].color;
-      if (tier.rarity === 'common') return `background:transparent;border-color:${color};box-shadow:none`;
       const glow = {
         uncommon: [8, 16], rare: [14, 24], epic: [20, 34], legendary: [28, 46], mythic: [36, 62]
-      }[tier.rarity];
-      const shadow = `0 0 ${glow[0]}px color-mix(in srgb, ${color} ${glow[1]}%, transparent), inset 0 0 ${Math.round(glow[0] / 2)}px color-mix(in srgb, ${color} ${Math.round(glow[1] / 3)}%, transparent)`;
+      }[tier.rarity] || [0, 0];
+      const shadow = tier.rarity === 'common' ? 'none'
+        : `0 0 ${glow[0]}px color-mix(in srgb, ${color} ${glow[1]}%, transparent), inset 0 0 ${Math.round(glow[0] / 2)}px color-mix(in srgb, ${color} ${Math.round(glow[1] / 3)}%, transparent)`;
       if (tier.rarity === 'mythic') {
         return `background:linear-gradient(135deg,#7f1d4e,#713f12,#14532d,#164e63,#4c1d95) padding-box,linear-gradient(135deg,#fb7185,#fbbf24,#4ade80,#38bdf8,#c084fc) border-box;border-color:transparent;box-shadow:${shadow}`;
-      }
-      if (tier.rarity === 'legendary') {
-        return `background:linear-gradient(135deg,#78350f,#422006);border-color:${color};box-shadow:${shadow}`;
       }
       return `background:${achievement.background};border-color:${color};box-shadow:${shadow}`;
     }
@@ -6028,7 +6020,7 @@
               : '';
           const progressText = `${(Math.floor(cappedProgress * 10) / 10).toLocaleString('en')} / ${goal}`;
           return `
-            <li class="flex items-start gap-3 py-3" data-achievement-tier="${escapeHtml(tier.title)}" data-earned="${earned}">
+            <li class="flex items-start gap-3 rounded-xl border p-3" data-achievement-tier="${escapeHtml(tier.title)}" data-earned="${earned}" style="${achievementCardStyle(achievement, tier)}">
               <div class="achievement-icon shrink-0" data-rarity="${tier.rarity}" style="${achievementBadgeStyle(achievement, tier)}" aria-hidden="true">
                 ${achievementIconMarkup(achievement, tier, !earned)}
               </div>
@@ -6056,17 +6048,21 @@
         const nextTierLabel = model.next && model.completed
           ? `<span class="text-xs text-slate-400">Next: ${escapeHtml(model.next.tier.title)}</span>`
           : '';
+        const summaryDescription = completedClass
+          ? `<p class="mt-1 text-xs leading-relaxed text-slate-300">${escapeHtml(currentTier.desc)}</p>`
+          : current.progress >= current.goal * ACHIEVEMENT_HINT_THRESHOLD
+            ? `<p class="achievement-hint mt-1 text-xs leading-relaxed" aria-label="Achievement hint, blurred until earned">${escapeHtml(currentTier.desc)}</p>`
+            : '';
+        if (model.milestones.length === 1) {
+          return `
+            <article class="achievement-class w-full" data-achievement-class="${escapeHtml(model.id)}" data-rarity="${currentTier.rarity}">
+              <ol class="space-y-2">${milestones}</ol>
+            </article>
+          `;
+        }
         return `
-          <details class="achievement-class w-full rounded-2xl border ${
-            completedClass && isSecretAchievementTier(model.completed.tier)
-              ? 'achievement-complete'
-              : completedClass
-                ? 'bg-amber-950/20 border-amber-500/40 shadow-md shadow-amber-500/5'
-                : 'bg-slate-950/50 border-slate-700'
-          }" data-achievement-class="${escapeHtml(model.id)}" data-rarity="${completedClass ? model.completed.tier.rarity : 'unmet'}"${
-            completedClass ? ` style="${achievementCardStyle(model.completed.achievement, model.completed.tier)}"` : ''
-          }>
-            <summary class="flex w-full cursor-pointer list-none items-center gap-4 p-4 sm:p-5">
+          <details class="achievement-class w-full" data-achievement-class="${escapeHtml(model.id)}" data-rarity="${completedClass ? model.completed.tier.rarity : 'unmet'}">
+            <summary class="flex w-full cursor-pointer list-none items-center gap-4 rounded-2xl border p-4 sm:p-5" style="${achievementCardStyle(currentAchievement, currentTier)}">
               <div class="achievement-icon shrink-0" data-rarity="${currentTier.rarity}" style="${achievementBadgeStyle(currentAchievement, currentTier)}" aria-hidden="true">
                 ${achievementIconMarkup(currentAchievement, currentTier, !completedClass)}
               </div>
@@ -6080,11 +6076,12 @@
                   <span class="text-xs text-slate-400">${summaryStatus}</span>
                   ${nextTierLabel}
                 </div>
+                ${summaryDescription}
                 ${currentProgressMarkup}
               </div>
               <span class="text-slate-400 transition-transform" aria-hidden="true">⌄</span>
             </summary>
-            <ol class="divide-y divide-slate-700/70 px-4 pb-2 sm:px-5">${milestones}</ol>
+            <ol class="space-y-2 px-2 pt-2 sm:px-3">${milestones}</ol>
           </details>
         `;
       };
@@ -6770,7 +6767,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261025-character-profile-v18"></script>
+  <script src="./expedition-ui.js?v=20261026-achievements-v1"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);

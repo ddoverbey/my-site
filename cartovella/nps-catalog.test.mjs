@@ -179,7 +179,7 @@ check('character customization appears above the stage and progress summary', ()
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 10);
-  assert.ok(sources.every(source => source.endsWith('?v=20261025-character-profile-v18')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261026-achievements-v1')));
   assert.ok(sources.some(source => source.startsWith('./character-creator.js?')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
@@ -271,7 +271,7 @@ const context = vm.createContext({
   tailwind: {}, console, Intl, URL, URLSearchParams, AbortController, setTimeout() {}, clearTimeout() {},
   localStorage, Headers,
   DOMParser: TestDOMParser,
-  document: { body: { classList: { toggle() {}, add() {}, remove() {} } }, getElementById: element, querySelectorAll: () => [], createElement: tag => tag === 'canvas' ? { width: 0, height: 0, getContext: () => null } : element(`created-${elements.size}`) },
+  document: { body: { classList: { toggle() {}, add() {}, remove() {} } }, getElementById: element, querySelectorAll: () => [], addEventListener() {}, createElement: tag => tag === 'canvas' ? { width: 0, height: 0, getContext: () => null } : element(`created-${elements.size}`) },
   window: { addEventListener() {}, matchMedia: () => ({ matches: true }) },
   fetch: async url => ({ ok: true, json: async () => url.includes('wikidata') ? wikidata : url.includes('worldwide') ? worldwide : snapshot })
 });
@@ -1850,6 +1850,55 @@ check('zero-progress achievements appear in the unmet section and started classe
   assert.ok(started.includes('The Overlander'));
   assert.ok(started.includes('Under Pressure'));
   assert.ok(!element('achievementsContainer').innerHTML.includes('Venture out'));
+});
+check('single-tier achievement cards show unlocked descriptions and international milestones share a class', () => {
+  const container = element('achievementsContainer');
+  const previousMarkup = container.innerHTML;
+  context.achievementTestStats = {
+    visitedParks: [], biomesSet: new Set(), rareBiomesCount: 0, statesCount: 0,
+    countriesCount: 5, usNationalParksCount: 0, npsTotal: 0, usParksCount: 0,
+    countyTotal: 0, countiesCount: 0, atlasCountriesCount: 10, atlasCountriesTotal: 10,
+    metadataProgress: new Proxy({ subterranean: 1 }, {
+      get: (target, key) => key in target ? target[key] : 0
+    })
+  };
+  try {
+    vm.runInContext('renderAchievementsView(achievementTestStats)', context);
+    const markup = container.innerHTML;
+    const singlePosition = markup.indexOf('data-achievement-class="subterranean"');
+    const singleStart = markup.lastIndexOf('<article', singlePosition);
+    const singleEnd = markup.indexOf('</article>', singlePosition);
+    const singleTierCard = markup.slice(singleStart, singleEnd + '</article>'.length);
+    assert.ok(singleTierCard.startsWith('<article'));
+    assert.ok(!singleTierCard.includes('<details'));
+    assert.ok(singleTierCard.includes('Log a land-based stop below sea level'));
+    const countryClass = markup.match(
+      /<details[^>]*data-achievement-class="countryVisits"[\s\S]*?<\/details>/
+    )?.[0] || '';
+    const countrySummary = countryClass.match(/<summary[\s\S]*?<\/summary>/)?.[0] || '';
+    assert.ok(countrySummary.includes('How????'));
+    assert.ok(countrySummary.includes('Visit every country/territory represented in the World Nations atlas'));
+    for (const description of [
+      'Visit 2 different countries', 'Log 5 different nations',
+      'Visit every country/territory represented in the World Nations atlas'
+    ]) assert.ok(countryClass.includes(description));
+    assert.deepEqual(Array.from(vm.runInContext(
+      "ACHIEVEMENT_CLASS_GROUPS.find(group=>group.id==='countryVisits').achievementIds", context
+    )), ['international', 'countries', 'worldAtlas']);
+    const styledClasses = vm.runInContext(`Object.fromEntries(
+      ACHIEVEMENT_CLASS_GROUPS.map(group => [group.id, group.achievementIds.map(id => {
+        const achievement = ACHIEVEMENTS.find(item => item.id === id);
+        return achievementCardStyle(achievement, achievement.tiers[0]);
+      })])
+    )`, context);
+    for (const classId of ['parkVisits', 'biomeCoverage', 'stateVisits', 'countryVisits', 'waterfalls']) {
+      assert.equal(new Set(styledClasses[classId]).size, styledClasses[classId].length,
+        `${classId} achievements have individual background styles`);
+    }
+  } finally {
+    container.innerHTML = previousMarkup;
+    delete context.achievementTestStats;
+  }
 });
 check('transited destinations clear exactly 60 percent of visited aura radius without visited stats', () => {
   vm.runInContext("AppState.pins={test:'t'};AppState.regions={};AppState.counties={}", context);
@@ -4097,11 +4146,12 @@ check('achievement hints appear at 85 percent, remain blurred until earned, and 
         const cardPosition = cardContainer.innerHTML.indexOf(
           `data-achievement-class="${testCase.id}"`
         );
-        const cardStart = cardContainer.innerHTML.lastIndexOf('<details', cardPosition);
-        const cardEndPosition = cardContainer.innerHTML.indexOf('</details>', cardPosition);
+        const cardStart = cardContainer.innerHTML.lastIndexOf('<article', cardPosition);
+        const cardEndPosition = cardContainer.innerHTML.indexOf('</article>', cardPosition);
         const card = cardPosition >= 0 && cardEndPosition >= 0
-          ? cardContainer.innerHTML.slice(cardStart, cardEndPosition + '</details>'.length) : '';
+          ? cardContainer.innerHTML.slice(cardStart, cardEndPosition + '</article>'.length) : '';
         assert.ok(card, testCase.title);
+        assert.ok(card.startsWith('<article'), `${testCase.title} has no dropdown when it has one tier`);
         if (progress === 0) {
           assert.ok(cardContainer.innerHTML.includes('data-achievement-section="unmet"'), testCase.title);
           assert.equal(badges.length, 0, testCase.title);
@@ -4122,7 +4172,7 @@ check('achievement hints appear at 85 percent, remain blurred until earned, and 
         assert.ok(!card.includes('Progress:'), testCase.title);
         if (unmet && hintVisible) assert.ok(html.includes('.achievement-hint {\n      filter: blur(0.7px);'));
         assert.equal(card.includes('<progress '), !secret || !unmet, testCase.title);
-        assert.equal(card.match(/<details[^>]*class="[^"]*achievement-complete/) !== null, secret && !unmet, testCase.title);
+        assert.ok(!card.includes('<details'), `${testCase.title} has no dropdown when it has one tier`);
         if (unmet) {
           const count = (Math.floor(Math.min(progress, testCase.goal) * 10) / 10).toLocaleString('en');
           assert.ok(card.includes(`${count} / ${testCase.goal}`), testCase.title);
@@ -4401,29 +4451,32 @@ check('every achievement milestone has valid difficulty rarity and distinct artw
     legendary: achievementCardStyle({background:'#123456'},{rarity:'legendary'}),
     mythic: achievementCardStyle({background:'#123456'},{rarity:'mythic'})
   })`, context);
-  assert.ok(cardStyles.common.includes('background:transparent;border-color:#cbd5e1;box-shadow:none'));
+  assert.ok(cardStyles.common.includes('background:#123456;border-color:#cbd5e1;box-shadow:none'));
   assert.ok(cardStyles.uncommon.includes('background:#123456'));
-  assert.ok(cardStyles.legendary.includes('linear-gradient(135deg,#78350f,#422006)'));
+  assert.ok(cardStyles.legendary.includes('background:#123456'));
   assert.ok(cardStyles.mythic.includes('linear-gradient(135deg,#7f1d4e,#713f12,#14532d,#164e63,#4c1d95)'));
   assert.ok(cardStyles.mythic.includes('linear-gradient(135deg,#fb7185,#fbbf24,#4ade80,#38bdf8,#c084fc)'));
   const glowSizes = ['uncommon', 'rare', 'epic', 'legendary', 'mythic'].map(rarity =>
     Number(cardStyles[rarity].match(/box-shadow:0 0 (\d+)px/)[1]));
   assert.deepEqual(glowSizes, [8, 14, 20, 28, 36]);
-  const cardStyles = vm.runInContext(`({
-    common: achievementCardStyle({background:'#123456'},{rarity:'common'}),
-    uncommon: achievementCardStyle({background:'#123456'},{rarity:'uncommon'}),
-    rare: achievementCardStyle({background:'#123456'},{rarity:'rare'}),
-    epic: achievementCardStyle({background:'#123456'},{rarity:'epic'}),
-    legendary: achievementCardStyle({background:'#123456'},{rarity:'legendary'}),
-    mythic: achievementCardStyle({background:'#123456'},{rarity:'mythic'})
-  })`, context);
-  assert.ok(cardStyles.common.includes('background:transparent;border-color:#cbd5e1;box-shadow:none'));
-  assert.ok(cardStyles.uncommon.includes('background:#123456'));
-  assert.ok(cardStyles.legendary.includes('linear-gradient(135deg,#78350f,#422006)'));
-  assert.ok(cardStyles.mythic.includes('linear-gradient(135deg,#fb7185,#fbbf24,#4ade80,#38bdf8,#c084fc)'));
-  const glowSizes = ['uncommon', 'rare', 'epic', 'legendary', 'mythic'].map(rarity =>
-    Number(cardStyles[rarity].match(/box-shadow:0 0 (\d+)px/)[1]));
-  assert.deepEqual(glowSizes, [8, 14, 20, 28, 36]);
+  assert.deepEqual(Array.from(vm.runInContext(
+    "ACHIEVEMENT_CLASS_GROUPS.find(group=>group.id==='countryVisits').achievementIds", context
+  )), ['international', 'countries', 'worldAtlas']);
+  assert.deepEqual(JSON.parse(vm.runInContext(`JSON.stringify(
+    ['firstSteps','trailblazer','masterRanger','grandVoyager','americaTheBeautiful','nps']
+      .map(id => ACHIEVEMENTS.find(achievement => achievement.id === id).background)
+  )`, context)), ['#334155', '#064e3b', '#1e3a8a', '#4c1d95', '#422006', '#422006']);
+  const classCardStyles = vm.runInContext(`Object.fromEntries(
+    ACHIEVEMENT_CLASS_GROUPS.map(group => [group.id, group.achievementIds.map(id => {
+      const achievement = ACHIEVEMENTS.find(item => item.id === id);
+      return achievementCardStyle(achievement, achievement.tiers[0]);
+    })])
+  )`, context);
+  for (const classId of ['parkVisits', 'biomeCoverage', 'stateVisits', 'countryVisits', 'waterfalls']) {
+    assert.equal(new Set(classCardStyles[classId]).size, classCardStyles[classId].length,
+      `${classId} achievements have individual backgrounds`);
+  }
+  assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='worldAtlas').tiers[0].title", context), 'How????');
 });
 check('character badges include every earned milestone without duplication or stale awards', () => {
   const captured = [];
