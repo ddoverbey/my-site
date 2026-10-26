@@ -1697,6 +1697,10 @@
           </span>`)}
         <div class="sm:col-span-2">${hairPicker}</div>
         <div class="sm:col-span-2">${equipmentDropdown('specialSkin', 'Special Skins')}</div>
+          <div class="sm:col-span-2">
+            <p class="mb-2 text-xs text-slate-400">Equipped effects animate automatically. Unlock more in the Coin Shop.</p>
+            ${equipmentDropdown('effect', 'Character Effects')}
+          </div>
       </div>`,
       wardrobe: `<div class="space-y-3">
         <p class="text-xs text-slate-400">Choose a layer to preview and cycle through your unlocked gear. Browse all to shop.</p>

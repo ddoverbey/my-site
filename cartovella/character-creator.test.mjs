@@ -25,7 +25,7 @@ check('every customization option supports a future image override', () => {
 check('character appearance, wardrobe, companions, and scene choices render as dropdowns', () => {
   const controls = { dataset: {}, innerHTML: '' };
   const expectedFields = {
-    appearance: ['gender', 'skinTone', 'hairPreset', 'specialSkin'],
+    appearance: ['gender', 'skinTone', 'hairPreset', 'specialSkin', 'effect'],
     wardrobe: ['top'],
     pets: ['pet', 'petAnimation', 'petHat', 'petBackpack'],
     backgrounds: ['background'],
@@ -616,7 +616,7 @@ check('companion sprite sheets crop the selected animation frame', () => {
     else globalThis.Image = originalImage;
   }
 });
-check('character effects use their own animation frames while the explorer gently bobs', () => {
+check('character effects use their own animation frames without shifting the explorer', () => {
   const originalImage = globalThis.Image;
   globalThis.Image = class {
     constructor() {
@@ -639,11 +639,11 @@ check('character effects use their own animation frames while the explorer gentl
       set filter(_) {},
       drawImage(...args) { drawCalls.push(args); }
     };
-    characterCreator.drawCharacterSprite(context, character, () => {}, 2, 1);
+    characterCreator.drawCharacterSprite(context, character, () => {}, 2);
     const effectCall = drawCalls.find(call => call[0].src === effectLayer.imageSrc);
     assert.ok(effectCall);
-    assert.deepEqual(effectCall.slice(1), [184, 16, 32, 48, 62, 40, 36, 43]);
-    assert.ok(drawCalls.every(call => call[6] === 40));
+    assert.deepEqual(effectCall.slice(1), [184, 16, 32, 48, 62, 39, 36, 43]);
+    assert.ok(drawCalls.every(call => call[6] === 39));
   } finally {
     if (originalImage === undefined) delete globalThis.Image;
     else globalThis.Image = originalImage;
@@ -1031,7 +1031,7 @@ check('Campfire Night slices its eight-frame sprite over the background glow', (
     else globalThis.Image = originalImage;
   }
 });
-check('the shared stage animation loop advances pets, effects, and character bob on resume', () => {
+check('the shared stage animation loop advances pets and effects without moving the character', () => {
   const originalImage = globalThis.Image;
   const originalWindow = globalThis.window;
   const originalDocument = globalThis.document;
@@ -1087,11 +1087,15 @@ check('the shared stage animation loop advances pets, effects, and character bob
     const effectPath = characterCreator.characterSpriteAssets(character)
       .find(layer => layer.layer === 'effect').imageSrc;
     const effectCall = () => drawCalls.findLast(call => call[0].src === effectPath);
+    const avatarPath = characterCreator.characterSpriteAssets(character)
+      .find(layer => layer.layer === 'base').imageSrc;
+    const avatarCall = () => drawCalls.findLast(call => call[0].src === avatarPath);
     const petAccessoryCalls = () => drawCalls.filter(call =>
       /doggy%20(?:hat|backpack)\.png$/.test(call[0].src));
     const currentPetAccessoryCalls = () => petAccessoryCalls().slice(-2);
     assert.deepEqual(dogCall().slice(1, 5), [1, 13, 29, 19]);
     assert.deepEqual(effectCall().slice(1, 5), [24, 16, 32, 48]);
+    assert.equal(avatarCall()[6], 39);
     const hiddenDrawCount = drawCalls.length;
     intervalCallbacks[0]();
     assert.equal(drawCalls.length, hiddenDrawCount);
@@ -1104,7 +1108,8 @@ check('the shared stage animation loop advances pets, effects, and character bob
     intervalCallbacks[0]();
     assert.deepEqual(dogCall().slice(1, 5), [33, 13, 29, 19]);
     assert.deepEqual(effectCall().slice(1, 5), [104, 16, 32, 48]);
-    assert.equal(effectCall()[6], 40);
+    assert.equal(effectCall()[6], 39);
+    assert.equal(avatarCall()[6], 39);
     assert.equal(currentPetAccessoryCalls().length, 2);
     assert.ok(currentPetAccessoryCalls().every(call => call[1] === 32));
     canvas.isConnected = false;

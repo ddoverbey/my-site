@@ -139,6 +139,8 @@ Opening the character editor focuses and jumps directly to the customization con
 character stage. Appearance contains skin tones and special skins, plus a compact full-width
 hairstyle picker that keeps its preview, name, and arrows separate. Hairstyle arrows cycle through
 unlocked style/color choices; expand "Browse all hairstyles" for the optional visual dropdown.
+Character Effects are selectable in Appearance and animate automatically when equipped; they remain
+available in Wardrobe and the Coin Shop for browsing and purchase.
 Pets and their accessories are available only in Pets.
 Wardrobe and Coin Shop use one compact outfit-layer selector at a time, with previous/next
 arrows and an optional "Browse all" list. The live character preview stays beside the editor
