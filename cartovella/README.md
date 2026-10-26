@@ -61,6 +61,10 @@ included while a home base is set; changing the home location does not award ano
 bonuses are calculated once from the current passport. Park questlines complete when every listed
 destination is visited; expedition questlines use distinct saved trip records:
 
+Questlines are available both on the Explorer Profile and on their own Main Questlines page. Open a
+quest card to see its exact requirement, park visit statuses, and the saved expedition logs that
+qualify or are closest to qualifying.
+
 | Questline | Bonus XP |
 | --- | ---: |
 | The Mighty 5 | 150 |

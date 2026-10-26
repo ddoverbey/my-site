@@ -315,6 +315,15 @@ check('character stage is above the hero and uses only existing achievement unlo
   vm.runInContext('applyPassport(migratePassport({version:2}))', context);
   assert.equal(vm.runInContext('hasPassportData(passportPayload())', context), false);
 });
+check('questlines have a dedicated page and remain available from the Explorer Profile', () => {
+  assert.match(html, /data-tab="questlines"[^>]*aria-controls="tabContent-questlines"/);
+  assert.match(html, /id="tabContent-questlines"/);
+  assert.match(html, /id="mainQuestlinesContainer"/);
+  assert.match(html, /id="btnOpenQuestlines"[^>]*aria-controls="tabContent-questlines"/);
+  assert.match(html, /function questEvidence\(/);
+  assert.match(html, /function questEvidenceMarkup\(/);
+  assert.match(html, /function renderQuestlineViews\(/);
+});
 await checkAsync('bulk passport geography preparation yields without modifying current travel data', async () => {
   await vm.runInContext(`(async () => {
     const savedParks = PARKS;
@@ -492,6 +501,77 @@ check('trip questlines count distinct saved trips and require regional stops wit
     context.cachedPoliticalAt = originalPoliticalAt;
     vm.runInContext(`AppState.expeditions = ${originalExpeditions}`, context);
     delete context.questExpeditionFixture;
+  }
+});
+check('questline evidence identifies the park statuses and trip logs that contribute', () => {
+  const originalExpeditions = vm.runInContext('JSON.stringify(AppState.expeditions)', context);
+  const originalPins = vm.runInContext('JSON.stringify(AppState.pins)', context);
+  const originalPoliticalAt = context.cachedPoliticalAt;
+  try {
+    context.questEvidenceFixture = [
+      {
+        id: 'park-log', name: 'Utah parks loop', startDate: '2026-10-01',
+        parkIds: ['zion'], customPoiIds: [], routeCoords: [[0, 0], [0, 1]],
+        routeStops: [{ kind: 'park', id: 'zion', name: 'Zion', coords: [0, 0] }]
+      },
+      { id: 'local-a', name: 'Neighborhood walk', parkIds: [], customPoiIds: [], routeCoords: [[0, 0], [0, 1]] },
+      { id: 'local-b', name: 'Short road trip', parkIds: [], customPoiIds: [], routeCoords: [[0, 0], [0, 1]] },
+      { id: 'local-too-long', name: 'Longer local trip', parkIds: [], customPoiIds: [], routeCoords: [[0, 0], [0, 1]] },
+      { id: 'long-haul', name: 'Coast to coast', parkIds: [], customPoiIds: [], routeCoords: [[0, 0], [0, 1]] },
+      {
+        id: 'regional-trip', name: 'Three-state crossing', parkIds: [], customPoiIds: [],
+        routeCoords: [[0, 0], [0, 1]],
+        routeStops: [1, 2, 3].map(lat => ({ kind: 'custom', id: `stop-${lat}`, coords: [lat, 0] }))
+      }
+    ];
+    context.questEvidenceDistances = new Map([
+      ['park-log', 120], ['local-a', 60], ['local-b', 95],
+      ['local-too-long', 150], ['long-haul', 550], ['regional-trip', 400]
+    ]);
+    context.questMightyFiveParkIds = JSON.parse(vm.runInContext(
+      "JSON.stringify(QUESTLINES.find(quest => quest.id === 'mighty5').parkIds)", context
+    ));
+    context.cachedPoliticalAt = lat => ({
+      states: ({ 1: ['Colorado'], 2: ['Utah'], 3: ['Wyoming'] })[lat] || [],
+      countries: ['United States of America']
+    });
+    vm.runInContext(
+      'AppState.expeditions = questEvidenceFixture; AppState.pins = { [questMightyFiveParkIds[0]]: "v", [questMightyFiveParkIds[1]]: "l" }',
+      context
+    );
+
+    const parkEvidence = JSON.parse(vm.runInContext(
+      `JSON.stringify(questEvidence(QUESTLINES.find(quest => quest.id === 'mighty5'), questEvidenceDistances))`,
+      context
+    ));
+    assert.equal(parkEvidence.entries.find(entry => entry.id === 'zion').visited, true);
+    assert.equal(parkEvidence.entries.find(entry => entry.id === 'zion').expeditions[0].id, 'park-log');
+    assert.equal(parkEvidence.entries[1].status, 'l');
+
+    const localEvidence = JSON.parse(vm.runInContext(
+      `JSON.stringify(questEvidence(QUESTLINES.find(quest => quest.id === 'localRambler'), questEvidenceDistances))`,
+      context
+    ));
+    assert.deepEqual(localEvidence.entries.map(entry => entry.expedition.id), ['local-a', 'local-b']);
+
+    const distanceEvidence = JSON.parse(vm.runInContext(
+      `JSON.stringify(questEvidence(QUESTLINES.find(quest => quest.id === 'longHaul'), questEvidenceDistances))`,
+      context
+    ));
+    assert.deepEqual(distanceEvidence.entries.map(entry => entry.expedition.id), ['long-haul']);
+
+    const regionalEvidence = JSON.parse(vm.runInContext(
+      `JSON.stringify(questEvidence(QUESTLINES.find(quest => quest.id === 'crossingPaths'), questEvidenceDistances))`,
+      context
+    ));
+    assert.deepEqual(regionalEvidence.entries.map(entry => entry.expedition.id), ['regional-trip']);
+    assert.deepEqual(regionalEvidence.entries[0].states, ['Colorado', 'Utah', 'Wyoming']);
+  } finally {
+    context.cachedPoliticalAt = originalPoliticalAt;
+    vm.runInContext(`AppState.expeditions = ${originalExpeditions}; AppState.pins = ${originalPins}`, context);
+    delete context.questEvidenceFixture;
+    delete context.questEvidenceDistances;
+    delete context.questMightyFiveParkIds;
   }
 });
 const cloudTestPassport = vm.runInContext('JSON.stringify(passportPayload())', context);

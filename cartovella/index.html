@@ -385,6 +385,7 @@
         <button data-tab="scratch" type="button" class="header-icon" title="Scratch Map" aria-label="Scratch Map" aria-pressed="false" aria-controls="tabContent-scratch"><span aria-hidden="true">🗺️</span></button>
         <button data-tab="travel" type="button" class="header-icon" title="Travel Log" aria-label="Travel Log" aria-pressed="false" aria-controls="tabContent-travel"><span aria-hidden="true">📖</span></button>
         <button data-tab="passport" type="button" class="header-icon" title="Explorer Profile — Character & Stats" aria-label="Explorer Profile — Character & Stats" aria-pressed="false" aria-controls="tabContent-passport"><span aria-hidden="true">👤</span></button>
+        <button data-tab="questlines" type="button" class="header-icon" title="Main Questlines" aria-label="Main Questlines" aria-pressed="false" aria-controls="tabContent-questlines"><span aria-hidden="true">📜</span></button>
         <button data-tab="achievements" type="button" class="header-icon" title="Achievements" aria-label="Achievements" aria-pressed="false" aria-controls="tabContent-achievements"><span aria-hidden="true">🏆</span></button>
       </nav>
     </div>
@@ -756,13 +757,34 @@
         <div>
           <div class="mb-4">
             <h3 class="cinzel text-xl font-bold text-amber-200">Active Questlines & Expeditions</h3>
-            <p class="text-xs text-slate-400">Complete geographic milestones and famous park circuits</p>
+            <p class="text-xs text-slate-400">Open a questline to see its requirements and the visits or trip logs that count.</p>
           </div>
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="questsContainer">
             <!-- Dynamically populated -->
           </div>
+          <button id="btnOpenQuestlines" type="button" aria-controls="tabContent-questlines"
+            class="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-200 hover:bg-amber-500/20">
+            View all questlines
+          </button>
         </div>
 
+      </div>
+    </div>
+
+    <div id="tabContent-questlines" class="w-full h-full p-4 md:p-8 overflow-y-auto hidden">
+      <div class="max-w-6xl mx-auto space-y-6 pb-20">
+        <div class="rpg-panel rpg-panel-gold rounded-2xl p-5 md:p-6">
+          <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+            <div>
+              <h2 class="cinzel text-2xl font-bold text-amber-200">Main Questlines</h2>
+              <p class="text-sm text-slate-300 mt-2">Open any quest to see exactly what completes it and which park visits or trip logs are contributing.</p>
+            </div>
+            <span id="questlineCompletionSummary" class="shrink-0 rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-xs font-mono text-amber-200"></span>
+          </div>
+        </div>
+        <div id="mainQuestlinesContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Dynamically populated -->
+        </div>
       </div>
     </div>
 
@@ -1411,6 +1433,231 @@
         return { progress: bestProgress, total: 1, complete, label: bestLabel };
       }
       throw new Error(`Unsupported questline type: ${quest.type}`);
+    }
+
+    function questRequirementText(quest) {
+      if (quest.parkIds) return `Visit all ${quest.parkIds.length} parks listed below.`;
+      if (quest.type === 'tripCount') {
+        return `Log ${quest.tripCount} distinct trips, each with a mapped route of ${quest.maxDistanceMiles} miles or less.`;
+      }
+      if (quest.type === 'distance') {
+        return `Log one trip with a route of at least ${quest.minDistanceMiles} miles.`;
+      }
+      if (quest.type === 'regionalCrossing') {
+        return `Log one trip with stops in at least ${quest.minUsStates} US states or ${quest.minCountries} countries.`;
+      }
+      throw new Error(`Unsupported questline type: ${quest.type}`);
+    }
+
+    function questParkName(parkId) {
+      return PARKS.find(park => park.id === parkId)?.name ||
+        parkId.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/(^|-)([a-z])/g, (_, separator, letter) =>
+          `${separator === '-' ? ' ' : ''}${letter.toUpperCase()}`);
+    }
+
+    function expeditionIncludesQuestPark(expedition, parkId) {
+      const canonicalId = id => NpsCatalog.aliases[id] || id;
+      return (expedition.parkIds || []).some(id => canonicalId(id) === parkId) ||
+        (expedition.routeStops || []).some(stop =>
+          stop.kind === 'park' && canonicalId(stop.id) === parkId);
+    }
+
+    function questEvidence(quest, distancesByExpedition = null) {
+      const distanceFor = expedition => distancesByExpedition?.get(expedition.id) ??
+        expeditionDistanceMiles(expedition);
+      if (quest.parkIds) {
+        return {
+          type: 'parks',
+          entries: quest.parkIds.map(parkId => ({
+            id: parkId,
+            name: questParkName(parkId),
+            status: AppState.pins[parkId] || 'un',
+            visited: TravelLedger.isVisited(AppState.pins[parkId]),
+            expeditions: AppState.expeditions.filter(expedition =>
+              expeditionIncludesQuestPark(expedition, parkId))
+          }))
+        };
+      }
+      if (quest.type === 'tripCount') {
+        return {
+          type: 'trips',
+          entries: AppState.expeditions.filter(expedition =>
+            expeditionHasDistance(expedition) &&
+            distanceFor(expedition) <= quest.maxDistanceMiles)
+            .map(expedition => ({ expedition, distanceMiles: distanceFor(expedition) }))
+        };
+      }
+      if (quest.type === 'distance') {
+        const trips = AppState.expeditions.filter(expedition => expeditionHasDistance(expedition))
+          .map(expedition => ({ expedition, distanceMiles: distanceFor(expedition) }));
+        const qualifying = trips.filter(entry => entry.distanceMiles >= quest.minDistanceMiles);
+        const entries = qualifying.length
+          ? qualifying
+          : trips.sort((a, b) => b.distanceMiles - a.distanceMiles).slice(0, 1);
+        return { type: 'trips', entries, qualifying: qualifying.length > 0 };
+      }
+      if (quest.type === 'regionalCrossing') {
+        const trips = AppState.expeditions.map(expedition => {
+          const { states, countries } = expeditionRegionCounts(expedition);
+          const progress = Math.max(
+            Math.min(states.size / quest.minUsStates, 1),
+            Math.min(countries.size / quest.minCountries, 1)
+          );
+          return {
+            expedition,
+            distanceMiles: distanceFor(expedition),
+            states: [...states].sort(),
+            countries: [...countries].sort(),
+            progress,
+            qualifies: states.size >= quest.minUsStates || countries.size >= quest.minCountries
+          };
+        });
+        const qualifying = trips.filter(entry => entry.qualifies);
+        const bestProgress = trips.reduce((best, entry) => Math.max(best, entry.progress), 0);
+        const entries = qualifying.length ? qualifying :
+          trips.filter(entry => entry.progress > 0 && entry.progress === bestProgress);
+        return { type: 'regionalTrips', entries, qualifying: qualifying.length > 0 };
+      }
+      throw new Error(`Unsupported questline type: ${quest.type}`);
+    }
+
+    function questTripDate(expedition) {
+      const dates = [expedition.startDate, expedition.endDate].filter(Boolean);
+      return dates.length > 1 && dates[0] !== dates[1] ? `${dates[0]} – ${dates[1]}` :
+        dates[0] || 'Date not set';
+    }
+
+    function questTripMarkup(entry, label, extraDetails = '') {
+      const expedition = entry.expedition;
+      const tripName = escapeHtml(expedition.name || 'Untitled trip');
+      const date = escapeHtml(questTripDate(expedition));
+      const distance = `${entry.distanceMiles.toLocaleString('en', { maximumFractionDigits: 1 })} mi`;
+      return `
+        <li class="rounded-lg border border-slate-700/70 bg-slate-950/60 p-2.5">
+          <div class="flex flex-wrap items-start justify-between gap-2">
+            <span class="font-medium text-slate-200">${tripName}</span>
+            <span class="text-[10px] font-semibold text-emerald-300">${escapeHtml(label)}</span>
+          </div>
+          <p class="mt-1 text-[10px] text-slate-400">${date} · ${distance} route</p>
+          ${extraDetails}
+        </li>`;
+    }
+
+    function questEvidenceMarkup(quest, distancesByExpedition = null) {
+      const evidence = questEvidence(quest, distancesByExpedition);
+      if (evidence.type === 'parks') {
+        return `<p class="mt-2 text-[10px] text-slate-500">A park counts when it is marked Visited or Lived. Trip logs below are linked records, not a substitute for that status.</p>
+          <ul class="mt-3 space-y-2">${evidence.entries.map(entry => {
+          const statusLabel = entry.status === 'l' ? 'Lived' :
+            entry.visited ? 'Visited' : 'Not yet visited';
+          const trips = entry.expeditions.length
+            ? `<ul class="mt-2 space-y-1.5">${entry.expeditions.map(expedition =>
+                questTripMarkup({ expedition, distanceMiles: expeditionDistanceMiles(expedition) },
+                  'Associated trip log')).join('')}</ul>`
+            : `<p class="mt-1 text-[10px] text-slate-500">${entry.visited
+              ? 'Marked visited directly; no saved trip is linked to this park.'
+              : 'No saved trip log includes this park yet.'}</p>`;
+          const note = !entry.visited && entry.expeditions.length
+            ? '<p class="mt-1 text-[10px] text-amber-300">This trip mentions the park, but it counts only after the park is marked Visited or Lived.</p>'
+            : '';
+          return `
+            <li class="rounded-lg border ${entry.visited ? 'border-emerald-500/30 bg-emerald-950/20' : 'border-slate-700/70 bg-slate-950/60'} p-2.5">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <span class="font-medium text-slate-200">${escapeHtml(entry.name)}</span>
+                <span class="text-[10px] font-semibold ${entry.visited ? 'text-emerald-300' : 'text-slate-400'}">${statusLabel}</span>
+              </div>
+              ${note}${trips}
+            </li>`;
+        }).join('')}</ul>`;
+      }
+      if (evidence.type === 'trips' || evidence.type === 'regionalTrips') {
+        if (!evidence.entries.length) {
+          const message = evidence.type === 'regionalTrips'
+            ? 'No saved trip has route stops with mapped state or country details yet.'
+            : 'No saved trip currently has a measurable route for this requirement.';
+          return `<p class="mt-3 text-xs text-slate-400">${message}</p>`;
+        }
+        const entries = evidence.entries.map(entry => {
+          let label = evidence.qualifying === false
+            ? 'Closest saved trip so far' : 'Qualifying trip log';
+          let extraDetails = '';
+          if (evidence.type === 'regionalTrips') {
+            label = entry.qualifies ? 'Meets this requirement' : 'Closest saved trip so far';
+            const regions = [
+              entry.states.length ? `US states: ${entry.states.map(escapeHtml).join(', ')}` : null,
+              entry.countries.length ? `Countries: ${entry.countries.map(escapeHtml).join(', ')}` : null
+            ].filter(Boolean);
+            extraDetails = `<p class="mt-1 text-[10px] text-slate-400">${regions.length
+              ? regions.join('<br>') : 'No mapped states or countries at its stops.'}</p>`;
+          }
+          return questTripMarkup(entry, label, extraDetails);
+        }).join('');
+        return `<ul class="mt-3 space-y-2">${entries}</ul>`;
+      }
+      throw new Error(`Unsupported quest evidence type: ${evidence.type}`);
+    }
+
+    function questlineCardMarkup(quest, stats, distancesByExpedition = null) {
+      const { progress, total, complete, label } = stats.questProgress[quest.id];
+      const pct = Math.round((progress / total) * 100);
+      return `
+        <details class="questline-details rounded-2xl border ${complete
+          ? 'border-emerald-500/40 bg-emerald-950/20'
+          : 'border-slate-800 bg-slate-900/70'}">
+          <summary class="cursor-pointer list-none p-4">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <h3 class="font-bold text-sm text-amber-200">${escapeHtml(quest.title)}</h3>
+                <p class="text-xs text-slate-400 mt-1">${escapeHtml(quest.desc)}</p>
+              </div>
+              <span class="shrink-0 text-xs font-mono font-bold ${complete ? 'text-emerald-400' : 'text-amber-400'}">+${quest.bonusXp} XP</span>
+            </div>
+            <div class="mt-3">
+              <div class="flex justify-between gap-2 text-[11px] text-slate-400 mb-1">
+                <span>${complete ? 'Complete' : 'Progress'}</span>
+                <span>${escapeHtml(label)}</span>
+              </div>
+              <div class="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800">
+                <div class="h-full ${complete ? 'bg-gradient-to-r from-emerald-500 to-teal-400' : 'bg-gradient-to-r from-amber-500 to-amber-300'}" style="width: ${pct}%"></div>
+              </div>
+            </div>
+            <span class="mt-2 block text-[10px] text-sky-300">View requirements and contributing records</span>
+          </summary>
+          <div class="border-t border-slate-700/70 p-4">
+            <section aria-label="Quest requirement">
+              <h4 class="text-xs font-bold uppercase tracking-wide text-slate-300">Requirement</h4>
+              <p class="mt-1 text-xs text-slate-400">${escapeHtml(questRequirementText(quest))}</p>
+            </section>
+            <section class="mt-4" aria-label="Contributing records">
+              <h4 class="text-xs font-bold uppercase tracking-wide text-slate-300">${quest.parkIds ? 'Required parks and visit records' : 'Trips contributing to progress'}</h4>
+              ${questEvidenceMarkup(quest, distancesByExpedition)}
+            </section>
+          </div>
+        </details>`;
+    }
+
+    function renderQuestlinesContainer(container, stats, distancesByExpedition) {
+      if (!container) return;
+      container.innerHTML = QUESTLINES.map(quest =>
+        questlineCardMarkup(quest, stats, distancesByExpedition)).join('');
+    }
+
+    function renderQuestlineViews(stats) {
+      const distancesByExpedition = new Map(AppState.expeditions.map(expedition =>
+        [expedition.id, expeditionDistanceMiles(expedition)]));
+      if (AppState.currentTab === 'passport') {
+        renderQuestlinesContainer(document.getElementById('questsContainer'), stats, distancesByExpedition);
+      }
+      if (AppState.currentTab === 'questlines') {
+        renderQuestlinesContainer(document.getElementById('mainQuestlinesContainer'), stats, distancesByExpedition);
+      }
+      const completed = Object.values(stats.questProgress).filter(progress => progress.complete).length;
+      document.getElementById('questlineCompletionSummary').textContent =
+        `${completed} / ${QUESTLINES.length} complete`;
+    }
+
+    function renderQuestlinesView() {
+      renderQuestlineViews(calculateStats());
     }
 
     /* Dynamic Achievements */
@@ -5427,39 +5674,7 @@
         biomeContainer.appendChild(card);
       });
 
-      // Questlines
-      const questsContainer = document.getElementById('questsContainer');
-      questsContainer.innerHTML = '';
-
-      QUESTLINES.forEach(q => {
-        const { progress, total, complete: isComplete, label } = stats.questProgress[q.id];
-        const pct = Math.round((progress / total) * 100);
-
-        const card = document.createElement('div');
-        card.className = `p-4 rounded-2xl border ${
-          isComplete ? 'bg-emerald-950/20 border-emerald-500/40' : 'rpg-panel border-slate-800'
-        }`;
-        card.innerHTML = `
-          <div class="flex items-start justify-between">
-            <div>
-              <h4 class="font-bold text-sm text-amber-200">${q.title}</h4>
-              <p class="text-xs text-slate-400 mt-0.5">${q.desc}</p>
-            </div>
-            <span class="text-xs font-mono font-bold ${isComplete ? 'text-emerald-400' : 'text-amber-400'}">+${q.bonusXp} XP</span>
-          </div>
-          <div class="mt-3">
-            <div class="flex justify-between text-[11px] text-slate-400 mb-1">
-              <span>Progress</span>
-            <span>${label}</span>
-            </div>
-            <div class="w-full bg-slate-900 rounded-full h-2 overflow-hidden border border-slate-800">
-              <div class="h-full bg-gradient-to-r ${isComplete ? 'from-emerald-500 to-teal-400' : 'from-amber-500 to-amber-300'}" style="width: ${pct}%"></div>
-            </div>
-          </div>
-        `;
-        questsContainer.appendChild(card);
-      });
-
+      renderQuestlineViews(stats);
       renderEarnedAchievementBadges(stats);
       renderAchievementsView(stats);
     }
@@ -6012,6 +6227,7 @@
       document.getElementById('btnHistoryExpedition').classList.toggle('hidden', AppState.viewOnly);
       updateHud();
       if (AppState.currentTab === 'passport') renderPassportView();
+      if (AppState.currentTab === 'questlines') renderQuestlinesView();
       if (AppState.currentTab === 'travel') renderExpeditionHistory();
       if (AppState.currentTab === 'scratch') renderScratchMap();
       if (AppState.currentTab === 'bucketlist') renderBucketListView();
@@ -6046,6 +6262,7 @@
       document.getElementById('tabContent-map').classList.add('hidden');
       document.getElementById('tabContent-scratch').classList.add('hidden');
       document.getElementById('tabContent-passport').classList.add('hidden');
+      document.getElementById('tabContent-questlines').classList.add('hidden');
       document.getElementById('tabContent-travel').classList.add('hidden');
       document.getElementById('tabContent-bucketlist').classList.add('hidden');
       document.getElementById('tabContent-achievements').classList.add('hidden');
@@ -6067,6 +6284,9 @@
       } else if (tabId === 'passport') {
         document.getElementById('tabContent-passport').classList.remove('hidden');
         renderPassportView();
+      } else if (tabId === 'questlines') {
+        document.getElementById('tabContent-questlines').classList.remove('hidden');
+        renderQuestlinesView();
       } else if (tabId === 'travel') {
         document.getElementById('tabContent-travel').classList.remove('hidden');
         renderExpeditionHistory();
@@ -6082,6 +6302,7 @@
     document.querySelectorAll('#navTabs button').forEach(btn => {
       btn.addEventListener('click', () => switchTab(btn.dataset.tab));
     });
+    document.getElementById('btnOpenQuestlines').addEventListener('click', () => switchTab('questlines'));
 
     function restoreModeView() {
       switchTab(AppState.mode === 'classic' ? 'bucketlist' : 'map');
