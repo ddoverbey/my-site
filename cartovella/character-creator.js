@@ -1300,7 +1300,7 @@
     ctx.imageSmoothingEnabled = false;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();
-    ctx.scale(canvas.width / 160, canvas.height / 90);
+    ctx.scale(canvas.width / 160, canvas.width / 160);
     drawBackground(ctx, activeBackground, redraw);
     if (activeBackground.id === 'bg_campfire') {
       drawCampfire(ctx, redraw, tick % CAMPFIRE_SPRITE.frameCount);
@@ -1309,7 +1309,6 @@
     drawPet(ctx, activePet, redraw, petFrame, character.petAnimation);
     drawPetAccessory(ctx, character, 'petBackpack', redraw, petFrame, character.petAnimation);
     drawPetAccessory(ctx, character, 'petHat', redraw, petFrame, character.petAnimation);
-    pixel(ctx, 0, 82, 160, 8, '#17212d');
     pixel(ctx, 0, 82, 160, 1, '#84946d');
     ctx.restore();
     startStageAnimation(canvas);

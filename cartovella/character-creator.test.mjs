@@ -331,15 +331,16 @@ check('late character sprite loads redraw the most recently rendered stage', () 
     }
   };
   try {
+    const stageScales = [];
     const context = {
       clearRect() { drawCalls.length = 0; },
       save() {},
-      scale() {},
+      scale(x, y) { stageScales.push([x, y]); },
       restore() {},
       fillRect() {},
       drawImage(image) { drawCalls.push(image.src); }
     };
-    const canvas = { width: 320, height: 180, isConnected: true, getContext: () => context };
+    const canvas = { width: 320, height: 166, isConnected: true, getContext: () => context };
     const character = { ...characterCreator.DEFAULT_CHARACTER, gender: 'female', pet: 'pet_none' };
     characterCreator.drawStage(canvas, { ...character, background: 'bg_green_hills' });
     characterCreator.drawStage(canvas, { ...character, background: 'bg_yosemite' });
@@ -349,6 +350,7 @@ check('late character sprite loads redraw the most recently rendered stage', () 
     assert.equal(drawCalls.filter(src => src.includes('Female')).length, 5);
     assert.equal(drawCalls.filter(src => src.includes('yosemite-bg')).length, 1);
     assert.equal(drawCalls.some(src => src.includes('/campfire/')), false);
+    assert.deepEqual(stageScales, [[2, 2], [2, 2]]);
   } finally {
     if (originalImage === undefined) delete globalThis.Image;
     else globalThis.Image = originalImage;
