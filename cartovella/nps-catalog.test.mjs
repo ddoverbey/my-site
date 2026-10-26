@@ -2940,13 +2940,19 @@ check('park milestones form one class whose summary shows the highest achieved t
     assert.ok(parkClass, `${count}: park class is present`);
     assert.equal((cards.match(/data-achievement-class="parkVisits"/g) || []).length, 1, `${count}: one park class`);
     assert.ok(summary.includes(`<h5 class="text-sm font-bold text-slate-100">${title}</h5>`), `${count}: ${title} is current`);
-    assert.equal((parkClass.match(/data-achievement-tier="/g) || []).length, 4, `${count}: all tiers are listed`);
+    assert.equal((parkClass.match(/data-achievement-tier="/g) || []).length, 6, `${count}: all connected tiers are listed`);
+    for (const pathTitle of ['Grand Voyager', 'America the Beautiful', 'Completionist Legend']) {
+      assert.ok(parkClass.includes(pathTitle), `${count}: ${pathTitle} is in the park progression`);
+    }
     assert.ok(!parkClass.match(/<details[^>]*\sopen(?:\s|>)/), `${count}: class starts collapsed`);
     assert.ok(!cards.includes('Park Ranger'));
     assert.ok(cards.includes('data-achievement-section="unmet"'));
   }
   vm.runInContext('npsCatalogLoaded=false;renderPassportView()', context);
   assert.ok(!element('achievementsContainer').innerHTML.includes('Completionist Legend'));
+  assert.deepEqual(Array.from(vm.runInContext(
+    "ACHIEVEMENT_CLASS_GROUPS.find(group=>group.id==='parkVisits').achievementIds", context
+  )), ['firstSteps', 'trailblazer', 'masterRanger', 'grandVoyager', 'americaTheBeautiful', 'nps']);
   assert.ok(vm.runInContext('ACHIEVEMENTS.every(a => Array.isArray(a.tiers) && typeof a.progress(calculateStats()) === "number" && !("req" in a))', context));
 });
 
@@ -4109,6 +4115,8 @@ check('achievement hints appear at 85 percent, remain blurred until earned, and 
         assert.equal(card.includes('Achievement hint, blurred until earned'), unmet && hintVisible, testCase.title);
         assert.ok(!card.includes('achievement-redacted'), testCase.title);
         assert.equal(card.includes('achievement-icon-hidden'), false, testCase.title);
+        if (!unmet) assert.ok(card.includes('>Completed</span>'), testCase.title);
+        assert.ok(!card.includes('Highest earned · Tier 1 of 1'), testCase.title);
         const unmetImage = vm.runInContext('UNMET_ACHIEVEMENT_IMAGE', context);
         assert.equal(card.includes(`./assets/achievements/${unmetImage}`), unmet, testCase.title);
         assert.ok(!card.includes('Progress:'), testCase.title);
@@ -4122,6 +4130,8 @@ check('achievement hints appear at 85 percent, remain blurred until earned, and 
           assert.equal(badges.length, 0, testCase.title);
         } else if (progress >= testCase.goal) {
           assert.ok(card.includes('>Complete</span>'), testCase.title);
+          assert.ok(card.includes('>Completed</span>'), testCase.title);
+          assert.ok(!card.includes('Highest earned · Tier 1 of 1'), testCase.title);
           assert.ok(!card.includes('Class title unlocked'), testCase.title);
           assert.equal(badges.length, 1, testCase.title);
           assert.ok(badges[0].attributes.title.includes(testCase.desc), testCase.title);
@@ -4355,7 +4365,13 @@ check('achievement page sorts rarity sections high to low and keeps unmet classe
   const unmet = cards.indexOf('data-achievement-section="unmet"');
   assert.ok(mythic >= 0 && common > mythic && unmet > common);
   assert.ok(cards.includes('class="achievement-class w-full'));
+  assert.ok(cards.includes('class="achievement-section-title cinzel text-sm font-bold uppercase tracking-wide" data-rarity="mythic" style="--rarity-color:#f0abfc;"'));
+  assert.ok(cards.includes('class="achievement-section-title cinzel text-sm font-bold uppercase tracking-wide" data-rarity="common" style="--rarity-color:#cbd5e1;color:#cbd5e1"'));
+  assert.ok(cards.includes('data-achievement-section="mythic"'));
   assert.ok(!cards.includes('role="tab"'));
+  assert.ok(html.includes('.achievement-section-title[data-rarity="mythic"]'));
+  assert.ok(html.includes('#achievementsContainer .achievement-icon'));
+  assert.ok(html.includes('width: 5.5rem'));
   vm.runInContext('renderPassportView()', context);
 });
 check('every achievement milestone has valid difficulty rarity and distinct artwork', () => {
@@ -4377,6 +4393,37 @@ check('every achievement milestone has valid difficulty rarity and distinct artw
     'Visit every non-international NPS catalog listing');
   assert.ok(html.includes('.achievement-icon[data-rarity="mythic"]'));
   assert.ok(html.includes('linear-gradient(135deg, #fb7185'));
+  const cardStyles = vm.runInContext(`({
+    common: achievementCardStyle({background:'#123456'},{rarity:'common'}),
+    uncommon: achievementCardStyle({background:'#123456'},{rarity:'uncommon'}),
+    rare: achievementCardStyle({background:'#123456'},{rarity:'rare'}),
+    epic: achievementCardStyle({background:'#123456'},{rarity:'epic'}),
+    legendary: achievementCardStyle({background:'#123456'},{rarity:'legendary'}),
+    mythic: achievementCardStyle({background:'#123456'},{rarity:'mythic'})
+  })`, context);
+  assert.ok(cardStyles.common.includes('background:transparent;border-color:#cbd5e1;box-shadow:none'));
+  assert.ok(cardStyles.uncommon.includes('background:#123456'));
+  assert.ok(cardStyles.legendary.includes('linear-gradient(135deg,#78350f,#422006)'));
+  assert.ok(cardStyles.mythic.includes('linear-gradient(135deg,#7f1d4e,#713f12,#14532d,#164e63,#4c1d95)'));
+  assert.ok(cardStyles.mythic.includes('linear-gradient(135deg,#fb7185,#fbbf24,#4ade80,#38bdf8,#c084fc)'));
+  const glowSizes = ['uncommon', 'rare', 'epic', 'legendary', 'mythic'].map(rarity =>
+    Number(cardStyles[rarity].match(/box-shadow:0 0 (\d+)px/)[1]));
+  assert.deepEqual(glowSizes, [8, 14, 20, 28, 36]);
+  const cardStyles = vm.runInContext(`({
+    common: achievementCardStyle({background:'#123456'},{rarity:'common'}),
+    uncommon: achievementCardStyle({background:'#123456'},{rarity:'uncommon'}),
+    rare: achievementCardStyle({background:'#123456'},{rarity:'rare'}),
+    epic: achievementCardStyle({background:'#123456'},{rarity:'epic'}),
+    legendary: achievementCardStyle({background:'#123456'},{rarity:'legendary'}),
+    mythic: achievementCardStyle({background:'#123456'},{rarity:'mythic'})
+  })`, context);
+  assert.ok(cardStyles.common.includes('background:transparent;border-color:#cbd5e1;box-shadow:none'));
+  assert.ok(cardStyles.uncommon.includes('background:#123456'));
+  assert.ok(cardStyles.legendary.includes('linear-gradient(135deg,#78350f,#422006)'));
+  assert.ok(cardStyles.mythic.includes('linear-gradient(135deg,#fb7185,#fbbf24,#4ade80,#38bdf8,#c084fc)'));
+  const glowSizes = ['uncommon', 'rare', 'epic', 'legendary', 'mythic'].map(rarity =>
+    Number(cardStyles[rarity].match(/box-shadow:0 0 (\d+)px/)[1]));
+  assert.deepEqual(glowSizes, [8, 14, 20, 28, 36]);
 });
 check('character badges include every earned milestone without duplication or stale awards', () => {
   const captured = [];

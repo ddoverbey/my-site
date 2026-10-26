@@ -274,6 +274,18 @@
     #achievementsContainer progress::-moz-progress-bar { background: #f59e0b; }
     .achievement-class > summary::-webkit-details-marker { display: none; }
     .achievement-class[open] > summary > span:last-child { transform: rotate(180deg); }
+    #achievementsContainer .achievement-icon {
+      width: 5.5rem;
+      height: 5.5rem;
+      border-radius: 1.25rem;
+      font-size: 2.25rem;
+    }
+    .achievement-section-title { color: var(--rarity-color, #cbd5e1); }
+    .achievement-section-title[data-rarity="mythic"] {
+      background: linear-gradient(90deg, #fb7185, #fbbf24, #4ade80, #38bdf8, #c084fc);
+      background-clip: text;
+      color: transparent;
+    }
     .achievement-icon {
       display: inline-flex;
       align-items: center;
@@ -1688,7 +1700,7 @@
         id: 'nps', title: 'NPS Explorer',
         progress: s => npsCatalogLoaded && s.npsTotal > 0 ? s.usParksCount : 0,
         tiers: [{
-          goal: s => s.npsTotal, title: 'Completionist Legend',
+          goal: s => npsCatalogLoaded ? s.npsTotal : 0, title: 'Completionist Legend',
           desc: 'Visit every non-international NPS catalog listing'
         }]
       },
@@ -1844,7 +1856,10 @@
       rockyMountainHigh: ['🏔️🎵', '#1e3a5f', ['uncommon']]
     };
     const ACHIEVEMENT_CLASS_GROUPS = [
-      { id: 'parkVisits', title: 'Park Explorer', achievementIds: ['firstSteps', 'trailblazer', 'masterRanger', 'grandVoyager'] },
+      {
+        id: 'parkVisits', title: 'Park Explorer',
+        achievementIds: ['firstSteps', 'trailblazer', 'masterRanger', 'grandVoyager', 'americaTheBeautiful', 'nps']
+      },
       { id: 'biomeCoverage', title: 'Biome Explorer', achievementIds: ['juniorEcologist', 'almostThere', 'gaiaWanderer'] },
       { id: 'stateVisits', title: 'State Explorer', achievementIds: ['statehopper', 'semiCentennial', 'fiftyNifty'] },
       { id: 'countryVisits', title: 'Country Explorer', achievementIds: ['international', 'countries'] },
@@ -5832,6 +5847,22 @@
       return `--badge-background: ${achievement.background}; --rarity-color: ${ACHIEVEMENT_RARITIES[tier.rarity].color}`;
     }
 
+    function achievementCardStyle(achievement, tier) {
+      const color = ACHIEVEMENT_RARITIES[tier.rarity].color;
+      if (tier.rarity === 'common') return `background:transparent;border-color:${color};box-shadow:none`;
+      const glow = {
+        uncommon: [8, 16], rare: [14, 24], epic: [20, 34], legendary: [28, 46], mythic: [36, 62]
+      }[tier.rarity];
+      const shadow = `0 0 ${glow[0]}px color-mix(in srgb, ${color} ${glow[1]}%, transparent), inset 0 0 ${Math.round(glow[0] / 2)}px color-mix(in srgb, ${color} ${Math.round(glow[1] / 3)}%, transparent)`;
+      if (tier.rarity === 'mythic') {
+        return `background:linear-gradient(135deg,#7f1d4e,#713f12,#14532d,#164e63,#4c1d95) padding-box,linear-gradient(135deg,#fb7185,#fbbf24,#4ade80,#38bdf8,#c084fc) border-box;border-color:transparent;box-shadow:${shadow}`;
+      }
+      if (tier.rarity === 'legendary') {
+        return `background:linear-gradient(135deg,#78350f,#422006);border-color:${color};box-shadow:${shadow}`;
+      }
+      return `background:${achievement.background};border-color:${color};box-shadow:${shadow}`;
+    }
+
     const ACHIEVEMENT_IMAGES = {
       'Almost There!': 'almost-there.png',
       'America the Beautiful': 'america-the-beautiful.png',
@@ -5978,7 +6009,9 @@
         const completedClass = Boolean(model.completed);
         const summaryTitle = model.completed?.tier.title || model.next.tier.title;
         const summaryStatus = completedClass
-          ? `Highest earned · Tier ${completedIndex + 1} of ${model.milestones.length}`
+          ? model.milestones.length > 1
+            ? `Highest earned · Tier ${completedIndex + 1} of ${model.milestones.length}`
+            : 'Completed'
           : 'Unmet · Next tier';
         const classLabel = model.achievementIds.length > 1 || model.milestones.length > 1
           ? `<p class="text-[10px] uppercase tracking-wide text-slate-400">${escapeHtml(model.title)} class</p>`
@@ -6030,7 +6063,9 @@
               : completedClass
                 ? 'bg-amber-950/20 border-amber-500/40 shadow-md shadow-amber-500/5'
                 : 'bg-slate-950/50 border-slate-700'
-          }" data-achievement-class="${escapeHtml(model.id)}" data-rarity="${completedClass ? model.completed.tier.rarity : 'unmet'}">
+          }" data-achievement-class="${escapeHtml(model.id)}" data-rarity="${completedClass ? model.completed.tier.rarity : 'unmet'}"${
+            completedClass ? ` style="${achievementCardStyle(model.completed.achievement, model.completed.tier)}"` : ''
+          }>
             <summary class="flex w-full cursor-pointer list-none items-center gap-4 p-4 sm:p-5">
               <div class="achievement-icon shrink-0" data-rarity="${currentTier.rarity}" style="${achievementBadgeStyle(currentAchievement, currentTier)}" aria-hidden="true">
                 ${achievementIconMarkup(currentAchievement, currentTier, !completedClass)}
@@ -6053,15 +6088,22 @@
           </details>
         `;
       };
-      const renderSection = (key, title, models) => models.length ? `
-        <section class="space-y-3" data-achievement-section="${key}" aria-labelledby="achievementSection-${key}">
-          <div class="flex items-center gap-3 border-b border-slate-700/70 pb-2">
-            <h3 id="achievementSection-${key}" class="cinzel text-sm font-bold uppercase tracking-wide ${key === 'unmet' ? 'text-slate-300' : 'text-slate-200'}">${title}</h3>
-            <span class="text-[10px] text-slate-500">${models.length} ${models.length === 1 ? 'class' : 'classes'}</span>
-          </div>
-          <div class="space-y-3">${models.map(renderClassCard).join('')}</div>
-        </section>
-      ` : '';
+      const renderSection = (key, title, models) => {
+        if (!models.length) return '';
+        const color = ACHIEVEMENT_RARITIES[key]?.color;
+        const titleStyle = color
+          ? `--rarity-color:${color};${key === 'mythic' ? '' : `color:${color}`}`
+          : 'color:#cbd5e1';
+        return `
+          <section class="space-y-3" data-achievement-section="${key}" aria-labelledby="achievementSection-${key}">
+            <div class="flex items-center gap-3 border-b border-slate-700/70 pb-2">
+              <h3 id="achievementSection-${key}" class="achievement-section-title cinzel text-sm font-bold uppercase tracking-wide" data-rarity="${key}" style="${titleStyle}">${title}</h3>
+              <span class="text-[10px] text-slate-500">${models.length} ${models.length === 1 ? 'class' : 'classes'}</span>
+            </div>
+            <div class="space-y-3">${models.map(renderClassCard).join('')}</div>
+          </section>
+        `;
+      };
       const sections = [...completedByRarity].map(([rarity, models]) =>
         renderSection(rarity, ACHIEVEMENT_RARITIES[rarity].label, models));
       sections.push(renderSection('unmet', 'Unmet', unmetClasses));

@@ -111,7 +111,8 @@ notification with their artwork.
 It uses the National Parks scratch-map ledger, including separate Sequoia and Kings Canyon
 statuses; visited and lived locations count, but wishlist and transit locations do not.
 **Completionist Legend** is Mythic and requires every non-international NPS catalog listing,
-including other NPS designations such as monuments and historic sites.
+including other NPS designations such as monuments and historic sites. Both join **Grand Voyager**
+in the expandable Park Explorer path, so the full park progression is visible together.
 
 Numeric levels do not have individual hard-coded names or a maximum level. The Explorer Class shown
 alongside a level is a separate title based on travel progress; for example, **Level 9 · Park
