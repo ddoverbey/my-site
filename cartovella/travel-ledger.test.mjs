@@ -24,6 +24,7 @@ const exp = {
   countyIds: ['08065', '08097'], parkIds: ['romo'], customPoiIds: [],
   routeCoords: [[39.24, -106.29], [39.19, -106.81]], minElevationFt: 5280, maxElevationFt: 12095
 };
+const photo = 'data:image/jpeg;base64,YWJjZA==';
 const migrate = state => ledger.migrateState(state, lookups, catalog);
 check('character selections survive passport migration with safe catalog defaults', () => {
   const state = ledger.migrateState({
@@ -48,7 +49,6 @@ check('legacy purpose tags are discarded while location categories remain', () =
   assert.equal(Object.hasOwn(state.expeditions[0], 'purposeTags'), false);
 });
 check('journals and embedded photos survive Passport round-trips without changing legacy trips', () => {
-  const photo = 'data:image/jpeg;base64,YWJjZA==';
   const trip = { ...exp, journal: 'A detour worth remembering.\nBack next summer!', photos: [photo] };
   const state = migrate({ expeditions: [trip] });
   assert.deepEqual(state.expeditions, [trip]);
@@ -109,6 +109,15 @@ check('flat schema POIs retain fields while gaining political metadata; migratio
   assert.equal(state.customPois[0].countyId, '53059');
   assert.deepEqual(migrate(state), state);
   assert.deepEqual(JSON.parse(JSON.stringify(state)).expeditions, [exp]);
+});
+check('custom POIs with missing biome metadata normalize and count safely', () => {
+  const poiWithoutBiomes = { ...poi };
+  delete poiWithoutBiomes.biomes;
+  const state = migrate({ customPois: [poiWithoutBiomes] });
+  assert.deepEqual(state.customPois[0].biomes, []);
+  delete state.customPois[0].biomes;
+  delete state.customPois[0].political;
+  assert.doesNotThrow(() => ledger.metadataProgress(state));
 });
 check('unknown top-level and nested passport fields survive migration and later migrations', () => {
   const state = migrate({
@@ -408,7 +417,7 @@ check('biome pins connect logged locations, trip stops, and their contributing e
     customPois: [{ ...poi, id: 'poi_pin', name: 'Falls Viewpoint', status: 'v', biomes: ['5'] }],
     expeditions: [{
       ...exp, id: 'pin_trip', name: 'Forest Weekend', parkIds: ['yose'], customPoiIds: ['poi_pin'],
-      routeCoords: [[0, 0], [0, 1]], transitTags: ['road'],
+      routeCoords: [[0, 0]], transitTags: ['road'],
       routeStops: [{ kind: 'place', id: 'trailhead', name: 'Forest Trailhead', coords: [0, 0] }]
     }]
   });

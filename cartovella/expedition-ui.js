@@ -1362,16 +1362,16 @@ function travelLogPoint(coords) {
 
 function travelLogLegs(exp) {
   const route = (exp.routeCoords || []).filter(travelLogPoint);
-  return exp.routeLegs?.map((leg, index) => ({
+  return (Array.isArray(exp.routeLegs) ? exp.routeLegs.map((leg, index) => ({
     mode: leg.mode,
     routeSource: leg.routeSource ?? (leg.mode === 'flight' ? 'none' :
       ['road', 'awd'].includes(leg.mode) ? 'routed' : 'direct'),
     coords: leg.routeSource === 'uploaded' ? leg.routeCoords :
       ['ferry', 'flight', 'rail'].includes(leg.mode)
         ? [exp.routeStops?.[index]?.coords, exp.routeStops?.[index + 1]?.coords] : leg.routeCoords
-  })) || (route.length > 1 ? [{
-    mode: exp.transitTags.some(mode => !['road', 'awd'].includes(mode)) ? 'flight' : 'road',
-    routeSource: exp.transitTags.every(mode => ['road', 'awd'].includes(mode)) ? 'routed' : 'direct',
+  })) : null) || (route.length > 1 ? [{
+    mode: (exp.transitTags || []).some(mode => !['road', 'awd'].includes(mode)) ? 'flight' : 'road',
+    routeSource: (exp.transitTags || []).every(mode => ['road', 'awd'].includes(mode)) ? 'routed' : 'direct',
     coords: route
   }] : []);
 }
@@ -1398,9 +1398,40 @@ function travelLogMetrics(exp) {
     elevation, changes: pairs ? `+${Math.round(gain).toLocaleString('en')} / −${Math.round(loss).toLocaleString('en')} ft between logged stops` : '' };
 }
 
+function renderPublicExpeditionSummary(profile, expedition) {
+  const username = String(profile.username || '');
+  const stats = profile.summary_stats || {};
+  const dates = [expedition.startDate, expedition.endDate].filter(Boolean).join(' – ') || 'Dates not set';
+  const transitTags = (Array.isArray(expedition.transitTags) ? expedition.transitTags : [])
+    .map(mode => TravelLedger.transitTags[mode] || mode);
+  const stopNames = (Array.isArray(expedition.stopNames) ? expedition.stopNames : [])
+    .filter(name => typeof name === 'string' && name.trim());
+  const highlightPhoto = typeof expedition.highlightPhoto === 'string' &&
+    /^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/.test(expedition.highlightPhoto)
+    ? expedition.highlightPhoto : '';
+  const distance = Number.isFinite(expedition.distanceMiles)
+    ? `${expedition.distanceMiles.toLocaleString('en', { maximumFractionDigits: 1 })} mi`
+    : 'Distance not recorded';
+  return `<article class="rpg-panel overflow-hidden rounded-2xl p-4">
+    <div class="flex items-center gap-3">
+      <canvas width="80" height="48" data-guild-avatar="${escapeHtml(username)}" class="h-12 w-20 shrink-0 rounded-lg bg-slate-950" aria-hidden="true"></canvas>
+      <div class="min-w-0"><p class="truncate text-xs font-semibold text-sky-200">@${escapeHtml(username)}</p>
+        <p class="truncate text-[11px] text-slate-400">${escapeHtml(profile.display_name || stats.cls || 'Explorer')}</p></div>
+    </div>
+    <h4 class="mt-3 text-base font-bold text-amber-200">${escapeHtml(expedition.name || 'Untitled expedition')}</h4>
+    <p class="mt-1 text-xs text-slate-400">${escapeHtml(dates)}${expedition.dayTrip ? ' · Day trip' : ''} · ${escapeHtml(distance)}</p>
+    ${transitTags.length ? `<p class="mt-2 text-xs text-sky-200">Transit: ${escapeHtml(transitTags.join(' · '))}</p>` : ''}
+    ${stopNames.length ? `<p class="mt-2 text-xs text-slate-300"><span class="font-semibold text-slate-400">Stops:</span> ${escapeHtml(stopNames.join(' · '))}</p>` : ''}
+    ${expedition.reason ? `<p class="mt-2 text-xs text-slate-400">${escapeHtml(expedition.reason)}</p>` : ''}
+    ${expedition.journalSnippet ? `<p class="mt-2 whitespace-pre-line text-sm text-slate-200">${escapeHtml(expedition.journalSnippet)}</p>` : ''}
+    ${highlightPhoto ? `<figure class="mt-3 inline-block rotate-1 rounded bg-white p-2 pb-5 shadow-lg"><img src="${highlightPhoto}" alt="Expedition highlight from ${escapeHtml(expedition.name || 'trip')}" class="max-h-40 max-w-full object-cover" loading="lazy" decoding="async"></figure>` : ''}
+    <button type="button" data-guild-open-travel="${escapeHtml(username)}" class="mt-3 rounded-lg border border-sky-400/40 bg-sky-950/40 px-3 py-2 text-xs text-sky-200 hover:bg-sky-900/50">Open in Explorer's Travel Log (📖)</button>
+  </article>`;
+}
+
 function renderTravelLogMiniMap(exp) {
   const host = document.getElementById(`mini-map-${exp.id}`);
-  if (typeof L === 'undefined' || typeof L.map !== 'function') {
+  if (!L || typeof L.map !== 'function') {
     host.textContent = 'Map unavailable. Reopen Travel Log to retry.';
     return;
   }
@@ -1611,7 +1642,9 @@ function renderGlobalRoutesMap() {
       if (!travelLogPoint(stop?.coords)) return;
       if (scopeCodes &&
           !routeMapCountryCodesAt(stop.coords, allFeatures, countryCache).some(code => scopeCodes.has(code))) return;
-      const [cx, cy] = projection([stop.coords[1], stop.coords[0]]);
+      const projected = projection([stop.coords[1], stop.coords[0]]);
+      if (!projected) return;
+      const [cx, cy] = projected;
       markers.push(`<circle class="global-route-stop" cx="${cx}" cy="${cy}" r="2.5" fill="#e2e8f0" stroke="#020617" stroke-width="1"><title>${escapeHtml(`${exp.name || 'Expedition'} · ${stop.name || 'Stop'}`)}</title></circle>`);
     });
   });

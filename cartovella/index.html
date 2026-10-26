@@ -402,6 +402,7 @@
         <button data-tab="passport" type="button" class="header-icon" title="Explorer Profile — Character & Stats" aria-label="Explorer Profile — Character & Stats" aria-pressed="false" aria-controls="tabContent-passport"><span aria-hidden="true">👤</span></button>
         <button data-tab="questlines" type="button" class="header-icon" title="Main Questlines" aria-label="Main Questlines" aria-pressed="false" aria-controls="tabContent-questlines"><span aria-hidden="true">📜</span></button>
         <button data-tab="achievements" type="button" class="header-icon" title="Achievements" aria-label="Achievements" aria-pressed="false" aria-controls="tabContent-achievements"><span aria-hidden="true">🏆</span></button>
+        <button data-tab="guild" type="button" class="header-icon" title="Explorers' Guild — Community Atlases &amp; Travel Logs" aria-label="Explorers' Guild — Community Atlases &amp; Travel Logs" aria-pressed="false" aria-controls="tabContent-guild"><span aria-hidden="true">🌐</span></button>
       </nav>
     </div>
 
@@ -452,6 +453,13 @@
       </details>
     </div>
   </header>
+
+  <div id="viewingPublicAtlasBanner" class="hidden fixed inset-x-0 top-16 z-[650] border-y border-amber-300/50 bg-amber-950/95 px-4 py-3 text-amber-100 shadow-xl backdrop-blur-md" role="status" aria-live="polite">
+    <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
+      <p id="viewingPublicAtlasMessage" class="text-sm font-semibold">🧭 Viewing a Public Atlas · Read-Only</p>
+      <button id="btnExitPublicAtlas" type="button" class="rounded-lg border border-amber-300/50 bg-amber-400 px-3 py-1.5 text-xs font-bold text-slate-950 hover:bg-amber-300">Return to My Atlas</button>
+    </div>
+  </div>
 
   <main class="flex-1 relative isolate z-0 overflow-hidden">
 
@@ -883,6 +891,35 @@
       </section>
     </div>
 
+    <div id="tabContent-guild" class="hidden h-full w-full overflow-y-auto p-4 md:p-8">
+      <section class="mx-auto max-w-7xl space-y-6 pb-20" aria-labelledby="guildTitle">
+        <div class="rpg-panel rounded-2xl p-5 md:p-6">
+          <div class="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h2 id="guildTitle" class="cinzel text-xl font-bold text-amber-200">Explorers' Guild</h2>
+              <p class="mt-2 text-xs text-slate-400">Meet fellow explorers and discover the places and stories they have chosen to share.</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button id="btnManagePublicProfile" type="button" class="rounded-lg border border-amber-400/40 bg-amber-950/40 px-3 py-2 text-xs text-amber-200 hover:bg-amber-900/50">Manage My Public Profile</button>
+              <button id="btnRefreshGuild" type="button" class="rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-xs text-slate-200 hover:bg-slate-800">Refresh Guild</button>
+            </div>
+          </div>
+          <label class="mt-4 block max-w-xl text-xs text-slate-300">Search explorers
+            <input id="guildSearchInput" type="search" autocomplete="off" placeholder="Username, display name, class, or home base" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100">
+          </label>
+          <p id="guildStatus" class="mt-3 text-xs text-slate-400" role="status" aria-live="polite"></p>
+        </div>
+        <section class="space-y-3" aria-labelledby="guildExplorersTitle">
+          <h3 id="guildExplorersTitle" class="cinzel text-lg font-bold text-sky-200">Explorer Directory</h3>
+          <div id="guildExplorersGrid" class="grid gap-4 md:grid-cols-2 xl:grid-cols-3"></div>
+        </section>
+        <section class="space-y-3" aria-labelledby="guildExpeditionsTitle">
+          <h3 id="guildExpeditionsTitle" class="cinzel text-lg font-bold text-amber-200">Recent Public Expeditions</h3>
+          <div id="guildExpeditionsFeed" class="grid gap-4 lg:grid-cols-2"></div>
+        </section>
+      </section>
+    </div>
+
     <!-- VIEW 4: BUCKET LIST MODE (OVERLAY DRAWER / FULL VIEW) -->
     <div id="tabContent-bucketlist" class="w-full h-full p-4 md:p-8 overflow-y-auto hidden">
       <div class="max-w-5xl mx-auto space-y-6 pb-20">
@@ -1181,6 +1218,25 @@
           <p id="authCurrentEmail" class="mt-1 truncate text-xs text-slate-200"></p>
           <p id="authSyncStatusText" class="mt-2 text-[11px] text-slate-400" role="status" aria-live="polite">Waiting for cloud data…</p>
         </div>
+        <section class="space-y-3 rounded-xl border border-amber-500/30 bg-slate-950/50 p-3" aria-labelledby="publicProfileTitle">
+          <div>
+            <h3 id="publicProfileTitle" class="text-sm font-semibold text-amber-200">Public Explorer Profile</h3>
+            <p class="mt-1 text-[11px] text-slate-400">Choose what appears in the Explorers' Guild. Your atlas and travel stories are shared only when you opt in.</p>
+          </div>
+          <label class="block text-xs text-slate-300">Username
+            <input id="profileUsername" type="text" inputmode="text" autocomplete="username" minlength="3" maxlength="24" pattern="[a-z0-9_-]{3,24}" placeholder="devon" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100">
+          </label>
+          <p class="-mt-2 text-[10px] text-slate-500">3–24 lowercase letters, numbers, underscores, or hyphens.</p>
+          <label class="block text-xs text-slate-300">Display name
+            <input id="profileDisplayName" type="text" maxlength="60" placeholder="Devon · Alpine Ranger" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100">
+          </label>
+          <label class="flex items-start gap-2 text-xs text-slate-300">
+            <input id="profileIsPublic" type="checkbox" class="mt-0.5 accent-amber-400">
+            <span>List my Atlas &amp; Travel Log in the Public Explorers' Guild and enable my <code>?u=username</code> share link</span>
+          </label>
+          <button id="btnSavePublicProfile" type="button" class="w-full rounded-lg bg-amber-500 px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-amber-400">Save Profile &amp; Copy Share Link</button>
+          <p id="publicProfileStatus" class="text-[11px] text-slate-400" role="status" aria-live="polite"></p>
+        </section>
         <button id="btnForceCloudSync" type="button" class="w-full rounded-lg border border-sky-500/40 bg-slate-900 px-3 py-2 text-sm text-sky-200 hover:bg-slate-800">Force Cloud Sync Now</button>
         <button id="btnAuthLogout" type="button" class="w-full rounded-lg border border-rose-500/30 bg-rose-950/30 px-3 py-2 text-sm text-rose-300 hover:bg-rose-950/60">Sign Out</button>
       </div>
@@ -1224,15 +1280,15 @@
     </section>
   </div>
 
-  <script src="./nps-catalog.js?v=20261026-rarity-name-match-v2"></script>
-  <script src="./national-parks-scratch.js?v=20261026-rarity-name-match-v2"></script>
-  <script src="./international-parks.js?v=20261026-rarity-name-match-v2"></script>
-  <script src="./ecoregions.js?v=20261026-rarity-name-match-v2"></script>
-  <script src="./coordinate-lookups.js?v=20261026-rarity-name-match-v2"></script>
-  <script src="./micro-states.js?v=20261026-rarity-name-match-v2"></script>
-  <script src="./travel-ledger.js?v=20261026-rarity-name-match-v2"></script>
-  <script src="./character-creator.js?v=20261026-rarity-name-match-v2"></script>
-  <script src="./rarity-config.js?v=20261026-rarity-name-match-v2"></script>
+  <script src="./nps-catalog.js?v=20261027-public-guild-v1"></script>
+  <script src="./national-parks-scratch.js?v=20261027-public-guild-v1"></script>
+  <script src="./international-parks.js?v=20261027-public-guild-v1"></script>
+  <script src="./ecoregions.js?v=20261027-public-guild-v1"></script>
+  <script src="./coordinate-lookups.js?v=20261027-public-guild-v1"></script>
+  <script src="./micro-states.js?v=20261027-public-guild-v1"></script>
+  <script src="./travel-ledger.js?v=20261027-public-guild-v1"></script>
+  <script src="./character-creator.js?v=20261027-public-guild-v1"></script>
+  <script src="./rarity-config.js?v=20261027-public-guild-v1"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -1978,11 +2034,36 @@
     const PASSPORT_STORAGE_KEY = 'cartovella_state';
     const LOCAL_EDITED_AT_KEY = 'cartovella_local_edited_at';
     const LOCAL_CLOUD_DIRTY_KEY = 'cartovella_cloud_dirty';
+    const PUBLIC_PROFILE_STORAGE_KEY = 'cartovella_public_profile';
+    const PUBLIC_USERNAME_PATTERN = /^[a-z0-9_-]{3,24}$/;
     const LEGACY_PASSPORT_STORAGE_KEYS = ['terra_incognita_state'];
     const SUPABASE_URL = 'https://mrgdthihogxrqsfnknxd.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1yZ2R0aGlob2d4cnFzZm5rbnhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyNDk4NTYsImV4cCI6MjEwNDgyNTg1Nn0.1fwcaGPGrzUut3zng2NNkYZt7hUguhKPhfqYyu8MA3s';
     const AUTH_SESSION_KEY = 'cartovella_cloud_session';
     const CLOUD_SYNC_DEBOUNCE_MS = 250;
+    function normalizePublicProfile(profile = {}) {
+      return {
+        username: typeof profile.username === 'string' ? profile.username.trim().toLowerCase() : '',
+        display_name: typeof profile.display_name === 'string' ? profile.display_name.trim().slice(0, 60) : '',
+        is_public: profile.is_public === true
+      };
+    }
+
+    function readLocalPublicProfile() {
+      try {
+        return normalizePublicProfile(JSON.parse(localStorage.getItem(PUBLIC_PROFILE_STORAGE_KEY) || '{}'));
+      } catch (error) {
+        console.error('Stored Cartovella public profile is invalid.', error);
+        return normalizePublicProfile();
+      }
+    }
+
+    let publicProfile = readLocalPublicProfile();
+    let activePublicAtlasUsername = null;
+    let publicAtlasRequestId = 0;
+    let localAtlasReturnTab = 'map';
+    let guildProfiles = [];
+    let guildProfilesLoaded = false;
     const PASSPORT_FIELDS = Object.freeze({
       homeBase: () => null,
       pins: () => ({}),
@@ -2328,7 +2409,7 @@
       // Check query param for share link
       const params = new URLSearchParams(window.location.search);
       const sharedData = params.get('d');
-      if (sharedData) {
+      if (sharedData && !activePublicAtlasUsername) {
         try {
           const parsed = migratePassport(JSON.parse(decodeURIComponent(atob(sharedData))));
           applyPassport(parsed);
@@ -2834,10 +2915,10 @@
         }
       });
       visitedCustomLocations.forEach(p => {
-        p.political.states.forEach(state => {
+        (p.political?.states || []).forEach(state => {
           if (NpsCatalog.isUsState(state)) visitedStates.add(state);
         });
-        p.political.countries.forEach(country => visitedCountries.add(country));
+        (p.political?.countries || []).forEach(country => visitedCountries.add(country));
       });
 
       // Experience Points Calculation
@@ -2884,9 +2965,9 @@
         tags.some(tag => exp[field].includes(tag))).length;
       const archetypes = {
         Nature: Math.min(1, visitedLocations.length / 25),
-        Adventure: Math.min(1, (visitedLocations.filter(p => p.biomes.some(b => ['5','10','13'].includes(String(b)))).length +
+        Adventure: Math.min(1, (visitedLocations.filter(p => (p.biomes || []).some(b => ['5','10','13'].includes(String(b)))).length +
           tripsWith(['awd', 'foot'])) / 10),
-        Remoteness: Math.min(1, (visitedLocations.filter(p => p.biomes.some(b => ['6','11'].includes(String(b)))).length +
+        Remoteness: Math.min(1, (visitedLocations.filter(p => (p.biomes || []).some(b => ['6','11'].includes(String(b)))).length +
           tripsWith(['foot'])) / 6),
         Worldly: Math.min(1, (visitedCountries.size + tripsWith(['ferry', 'flight', 'rail'])) / 15),
         Roadtrip: Math.min(1, visitedStates.size / 30 + countiesCount / 100 + tripsWith(['road', 'awd']) / 30)
@@ -4367,7 +4448,7 @@
     function createPopupContent(p) {
       if (PARKS.includes(p)) p = catalogDestinationWithRarity(p);
       const cur = destinationStatus(p);
-      const biomeTags = p.biomes.map(b => {
+      const biomeTags = (p.biomes || []).map(b => {
         const info = BIOMES[b] || { name: b, icon: '🌿' };
         return `<span class="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-200">
           <span>${info.icon}</span> ${info.name} (${info.rarity})
@@ -4635,7 +4716,9 @@
     }
 
     function cachedBiomeRegionAt(lat, lng) {
-      if (!coordinateIndexes) return null;
+      if (!Array.isArray(coordinateIndexes?.ecoregions) || !Array.isArray(coordinateIndexes?.mangroves)) {
+        return { biomes: [] };
+      }
       return cachedCoordinate(biomeCache, lat, lng, () =>
         CoordinateLookups.biomeRegion(lat, lng, coordinateIndexes.ecoregions, d3.geoContains,
           coordinateIndexes.mangroves));
@@ -4934,11 +5017,15 @@
     }
 
     function customDestinations() {
-      return AppState.customLocations.map(location => ({
-        ...location, custom: true, states: location.political.states,
-        state: location.political.states.join(', '), country: location.political.countries.join(', '),
-        designation: 'Custom location', desc: `${location.lat}, ${location.lng}`
-      }));
+      return AppState.customLocations.map(location => {
+        const political = location.political || { countries: [], states: [] };
+        const states = political.states || [];
+        return {
+          ...location, custom: true, states,
+          state: states.join(', '), country: (political.countries || []).join(', '),
+          designation: 'Custom location', desc: `${location.lat}, ${location.lng}`
+        };
+      });
     }
 
     function destinationStatus(p) {
@@ -4947,6 +5034,11 @@
 
     function customLocationMetadata(p) {
       if (!p.custom) return '';
+      const political = {
+        countries: Array.isArray(p.political?.countries) ? p.political.countries : [],
+        states: Array.isArray(p.political?.states) ? p.political.states : [],
+        counties: Array.isArray(p.political?.counties) ? p.political.counties : []
+      };
       const category = p.category
         ? `<p class="text-[11px] text-amber-300">${escapeHtml(p.category)}</p>` : '';
       const namedAppraisal = CoordinateLookups.isNameMatchedRarity(p.rarity, p.name);
@@ -4962,8 +5054,8 @@
           ? `${escapeHtml(p.rarityTier)} · no matched place appraisal.`
           : 'No matched place appraisal.';
         const cityRegions = p.source === 'Photon'
-          ? [...p.political.countries, ...p.political.states,
-            ...p.political.counties.map(county => `${county.name} (${county.id})`)].filter(Boolean).join(' / ')
+          ? [...political.countries, ...political.states,
+            ...political.counties.map(county => `${county.name} (${county.id})`)].filter(Boolean).join(' / ')
           : '';
         const source = p.source === 'Photon'
           ? 'Source: Photon by Komoot; © OpenStreetMap contributors.'
@@ -4982,7 +5074,7 @@
         <p>Coordinates: ${p.lat}, ${p.lng}</p>
         <p>Elevation: ${Math.round(p.elevation.meters).toLocaleString('en')} m / ${Math.round(p.elevation.feet).toLocaleString('en')} ft
           (<a href="https://open-meteo.com/en/docs/elevation-api" target="_blank" rel="noopener noreferrer" class="text-sky-300 underline">Open-Meteo</a>)</p>
-        <p>${escapeHtml([...p.political.countries, ...p.political.states, ...p.political.counties.map(county => `${county.name} (${county.id})`)].join(' / ') || 'No political polygon match')}</p>
+        <p>${escapeHtml([...political.countries, ...political.states, ...political.counties.map(county => `${county.name} (${county.id})`)].join(' / ') || 'No political polygon match')}</p>
         <p>${rarityDescription}</p>
         <p>${escapeHtml(rarity.placeName)}; sampled/matched at ${rarity.matchedLat}, ${rarity.matchedLng}${rarity.cached ? ' (cached)' : ''}.</p>
         ${rarity.method === 'osm-poi-density' ? `<p>${rarity.nearestHighwayKm === null ? 'No mapped motorway/trunk detected within 5 km.' : `Nearest mapped motorway/trunk: ${rarity.nearestHighwayKm.toFixed(2)} km.`}</p>` : ''}
@@ -6001,7 +6093,7 @@
           <h4 class="font-bold text-xs text-slate-200 mt-2">${info.name}</h4>
           <p class="text-[10px] text-slate-400 mt-1">${info.areaShare === null ? 'Area data unavailable' : `${info.areaShare.toFixed(2)}% of classified biome land`}</p>
           <p class="text-[10px] text-slate-400">+${info.xp} XP on first collection</p>
-          <p class="text-[10px] text-slate-400">${PARKS.filter(p => p.biomes.includes(key)).length} mapped destinations in this catalog</p>
+          <p class="text-[10px] text-slate-400">${PARKS.filter(p => (p.biomes || []).includes(key)).length} mapped destinations in this catalog</p>
           <div class="text-[10px] text-slate-400 mt-0.5">
             ${isUnlocked ? '<span class="text-emerald-400">✓ Documented</span>' : 'Uncharted'}
           </div>
@@ -6083,7 +6175,7 @@
           (park ? trip.parkIds.includes(id) : trip.customPoiIds.includes(id)) ||
           (trip.routeStops || []).some(stop => stop.kind === (park ? 'park' : 'poi') && stop.id === id));
         extraMarkup = destination.biomes?.length
-          ? `<section><h3 class="mb-2 text-xs font-bold uppercase tracking-wide text-emerald-300">Biomes</h3><div class="flex flex-wrap gap-1.5">${destination.biomes.map(biomeId => BIOMES[biomeId]
+          ? `<section><h3 class="mb-2 text-xs font-bold uppercase tracking-wide text-emerald-300">Biomes</h3><div class="flex flex-wrap gap-1.5">${(destination.biomes || []).map(biomeId => BIOMES[biomeId]
             ? `<button type="button" data-atlas-pin-kind="biome" data-atlas-pin-id="${escapeHtml(biomeId)}" class="rounded-full border border-emerald-500/30 bg-emerald-950/40 px-2 py-1 text-xs text-emerald-200 hover:border-emerald-300">${escapeHtml(BIOMES[biomeId].icon)} ${escapeHtml(BIOMES[biomeId].name)}</button>`
             : '').join('')}</div></section>` : '';
       } else if (kind === 'county') {
@@ -6698,7 +6790,7 @@
                (p.designation && p.designation.toLowerCase().includes(search)) ||
                (p.topics && p.topics.some(topic => topic.toLowerCase().includes(search))) ||
                (p.ecoregions && p.ecoregions.some(region => region.name.toLowerCase().includes(search) || region.realm.toLowerCase().includes(search))) ||
-               p.biomes.some(b => (BIOMES[b] && BIOMES[b].name.toLowerCase().includes(search)));
+               (p.biomes || []).some(b => (BIOMES[b] && BIOMES[b].name.toLowerCase().includes(search)));
       });
       if (rarityFilter === 'rare-first') {
         const rarityRank = destination => {
@@ -6743,11 +6835,11 @@
             ${customLocationMetadata(p)}
             ${p.lat === null || p.lng === null ? '<p class="text-[11px] text-slate-400">Coordinates unavailable; list only</p>' : ''}
             <p class="text-[11px] text-slate-400">${escapeHtml(biomeLocationLabel(p))}</p>
-            <p class="text-[11px] text-teal-300">${p.biomes.map(b => escapeHtml(BIOMES[b].name)).join('; ')}</p>
+            <p class="text-[11px] text-teal-300">${(p.biomes || []).map(b => escapeHtml(BIOMES[b]?.name || b)).join('; ')}</p>
             <div class="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
               <span>${escapeHtml(p.state || p.country || '')}</span>
               <span>•</span>
-              <span class="text-[11px] text-amber-300">${p.biomes.map(b => BIOMES[b] ? BIOMES[b].icon : '').join('')}</span>
+              <span class="text-[11px] text-amber-300">${(p.biomes || []).map(b => BIOMES[b] ? BIOMES[b].icon : '').join('')}</span>
             </div>
           </div>
           <div class="flex flex-wrap max-w-full sm:max-w-44 gap-1 shrink-0">
@@ -6803,6 +6895,12 @@
       if (AppState.currentTab === 'scratch') renderScratchMap();
       if (AppState.currentTab === 'bucketlist') renderBucketListView();
       if (AppState.currentTab === 'achievements') renderAchievementsView();
+      if (AppState.currentTab === 'guild') {
+        if (guildProfilesLoaded) {
+          renderGuildDirectory();
+          renderGuildExpeditions();
+        } else void loadGuildProfiles();
+      }
     }
   </script>
 
@@ -6837,6 +6935,7 @@
       document.getElementById('tabContent-travel').classList.add('hidden');
       document.getElementById('tabContent-bucketlist').classList.add('hidden');
       document.getElementById('tabContent-achievements').classList.add('hidden');
+      document.getElementById('tabContent-guild').classList.add('hidden');
 
       if (tabId === 'map') {
         document.getElementById('tabContent-map').classList.remove('hidden');
@@ -6867,6 +6966,12 @@
       } else if (tabId === 'achievements') {
         document.getElementById('tabContent-achievements').classList.remove('hidden');
         renderAchievementsView();
+      } else if (tabId === 'guild') {
+        document.getElementById('tabContent-guild').classList.remove('hidden');
+        if (guildProfilesLoaded) {
+          renderGuildDirectory();
+          renderGuildExpeditions();
+        } else void loadGuildProfiles();
       }
     }
 
@@ -6993,19 +7098,14 @@
     }
 
     // Share link generator (base64 URL param)
-    document.getElementById('btnShare').addEventListener('click', () => {
-      const sharePayload = passportPayload();
-      const encoded = btoa(encodeURIComponent(JSON.stringify(sharePayload)));
-      const shareUrl = `${window.location.origin}${window.location.pathname}?d=${encoded}`;
-      
-      const copyInput = document.createElement('textarea');
-      copyInput.value = shareUrl;
-      document.body.appendChild(copyInput);
-      copyInput.select();
-      document.execCommand('copy');
-      document.body.removeChild(copyInput);
-
-      showNotification('🔗 Link Copied!', 'Shareable passport link copied to clipboard.', '📜');
+    document.getElementById('btnShare').addEventListener('click', async () => {
+      try {
+        await copyTextToClipboard(currentShareUrl());
+        showNotification('🔗 Link Copied!', 'Shareable passport link copied to clipboard.', '📜');
+      } catch (error) {
+        console.error('Share link copy failed.', error);
+        showNotification('Could not copy link', error.message, '⚠️');
+      }
     });
 
     function downloadJsonFile(payload, filename) {
@@ -7118,7 +7218,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261026-rarity-name-match-v2"></script>
+  <script src="./expedition-ui.js?v=20261027-public-guild-v1"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);
@@ -7281,6 +7381,7 @@
       } else {
         setCloudStatus('Not signed in.');
       }
+      updatePublicProfileSettings();
     }
 
     function toggleAuthModal(show) {
@@ -7387,8 +7488,8 @@
       );
     }
 
-    function showCloudConflict(cloudPassport, cloudUpdatedAt) {
-      pendingCloudConflict = { cloudPassport, cloudUpdatedAt };
+    function showCloudConflict(cloudPassport, cloudUpdatedAt, cloudProfile) {
+      pendingCloudConflict = { cloudPassport, cloudUpdatedAt, cloudProfile };
       const localPassport = passportPayload();
       document.getElementById('cloudConflictLocalSummary').textContent =
         passportConflictSummary(localPassport);
@@ -7425,6 +7526,7 @@
       if (!pendingCloudConflict) return;
       if (useCloud) {
         try {
+          if (pendingCloudConflict.cloudProfile) setPublicProfile(pendingCloudConflict.cloudProfile);
           renderLoadedCloudPassport(
             migratePassport(pendingCloudConflict.cloudPassport),
             pendingCloudConflict.cloudUpdatedAt
@@ -7565,6 +7667,385 @@
       toggleAuthModal(false);
     }
 
+    function publicHighlightThumbnail(dataUrl) {
+      if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/jpeg;base64,')) {
+        return Promise.resolve(null);
+      }
+      return new Promise((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => {
+          const scale = Math.min(1, 160 / image.naturalWidth, 120 / image.naturalHeight);
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+          canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+          const context = canvas.getContext('2d');
+          if (!context) {
+            reject(new Error('Could not prepare an expedition photo for the public profile.'));
+            return;
+          }
+          context.drawImage(image, 0, 0, canvas.width, canvas.height);
+          try {
+            resolve(canvas.toDataURL('image/jpeg', 0.48));
+          } catch (error) {
+            reject(new Error(`Could not prepare an expedition photo for the public profile: ${error.message}`));
+          }
+        };
+        image.onerror = () => reject(new Error('Could not read an expedition photo for the public profile.'));
+        image.src = dataUrl;
+      });
+    }
+
+    async function buildPublicSummaryStats(stats = calculateStats()) {
+      const character = CharacterCreator.normalizeCharacter(AppState.character);
+      const selectedEquipment = new Set([
+        character.top, character.bottoms, character.shoes, character.headwear, character.handItem,
+        character.backLayer, character.arms, character.face, character.ears, character.effect,
+        character.pet, character.petHat, character.petBackpack
+      ].filter(Boolean));
+      character.purchasedItems = character.purchasedItems.filter(item => selectedEquipment.has(item));
+      const publicCharacter = Object.fromEntries(Object.keys(CharacterCreator.DEFAULT_CHARACTER)
+        .filter(field => field !== 'proUnlocked' && field !== 'donationUsd')
+        .map(field => [field, character[field]]));
+      const topBadges = ACHIEVEMENTS.map(achievement => {
+        const { completed } = achievementDisclosure(achievement, stats);
+        return completed ? {
+          title: completed.title,
+          icon: achievement.icon,
+          rarity: completed.rarity
+        } : null;
+      }).filter(Boolean).sort((a, b) =>
+        ACHIEVEMENT_RARITY_ORDER.indexOf(b.rarity) - ACHIEVEMENT_RARITY_ORDER.indexOf(a.rarity)
+      ).slice(0, 4);
+      const recentExpeditions = [...AppState.expeditions]
+        .sort((a, b) => (b.startDate || b.endDate || '').localeCompare(a.startDate || a.endDate || ''))
+        .slice(0, 3);
+      return {
+        level: stats.level,
+        xp: stats.xp,
+        cls: stats.cls,
+        titleDesc: stats.titleDesc,
+        homeName: AppState.homeBase?.name || '',
+        character: publicCharacter,
+        countriesCount: stats.countriesCount,
+        statesCount: stats.statesCount,
+        parksCount: (stats.visitedParks || []).length,
+        biomesCount: stats.biomesSet?.size || 0,
+        clearedPct: Number.isFinite(stats.clearedPct) ? stats.clearedPct : null,
+        topBadges,
+        recentExpeditions: await Promise.all(recentExpeditions.map(async expedition => ({
+          id: expedition.id,
+          name: expedition.name,
+          startDate: expedition.startDate || null,
+          endDate: expedition.endDate || null,
+          dayTrip: expedition.dayTrip === true,
+          reason: expedition.reason || '',
+          journalSnippet: (expedition.journal || '').slice(0, 240),
+          highlightPhoto: await publicHighlightThumbnail(expedition.photos?.[0]),
+          distanceMiles: Math.round(expeditionDistanceMiles(expedition) * 10) / 10,
+          transitTags: Array.isArray(expedition.transitTags) ? [...expedition.transitTags] : [],
+          stopNames: (expedition.routeStops || []).map(stop => stop?.name).filter(Boolean).slice(0, 16)
+        })))
+      };
+    }
+
+    function publicProfileSnapshot(profile = publicProfile) {
+      return stablePassportStringify(normalizePublicProfile(profile));
+    }
+
+    function setPublicProfile(profile, { persist = true } = {}) {
+      const normalized = normalizePublicProfile(profile);
+      if (persist) localStorage.setItem(PUBLIC_PROFILE_STORAGE_KEY, JSON.stringify(normalized));
+      publicProfile = normalized;
+      updatePublicProfileSettings();
+    }
+
+    function updatePublicProfileSettings() {
+      const username = document.getElementById('profileUsername');
+      if (!username) return;
+      username.value = publicProfile.username;
+      document.getElementById('profileDisplayName').value = publicProfile.display_name;
+      document.getElementById('profileIsPublic').checked = publicProfile.is_public;
+    }
+
+    function currentShareUrl() {
+      if (activePublicAtlasUsername) {
+        return `${window.location.origin}${window.location.pathname}?u=${encodeURIComponent(activePublicAtlasUsername)}`;
+      }
+      if (publicProfile.is_public && publicProfile.username) {
+        return `${window.location.origin}${window.location.pathname}?u=${encodeURIComponent(publicProfile.username)}`;
+      }
+      const encoded = btoa(encodeURIComponent(JSON.stringify(passportPayload())));
+      return `${window.location.origin}${window.location.pathname}?d=${encoded}`;
+    }
+
+    async function copyTextToClipboard(value) {
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(value);
+        return;
+      }
+      const copyInput = document.createElement('textarea');
+      copyInput.value = value;
+      document.body.appendChild(copyInput);
+      copyInput.select();
+      const copied = document.execCommand('copy');
+      copyInput.remove();
+      if (!copied) throw new Error('Clipboard access is unavailable in this browser.');
+    }
+
+    async function savePublicProfile() {
+      const status = document.getElementById('publicProfileStatus');
+      if (AppState.viewOnly) {
+        status.textContent = 'Return to your own Atlas before changing public profile settings.';
+        return;
+      }
+      const username = document.getElementById('profileUsername').value.trim().toLowerCase();
+      const displayName = document.getElementById('profileDisplayName').value.trim();
+      const isPublic = document.getElementById('profileIsPublic').checked;
+      if (username && !PUBLIC_USERNAME_PATTERN.test(username)) {
+        status.textContent = 'Username must be 3–24 lowercase letters, numbers, underscores, or hyphens.';
+        document.getElementById('profileUsername').focus();
+        return;
+      }
+      if (isPublic && !username) {
+        status.textContent = 'Choose a username before listing your profile publicly.';
+        document.getElementById('profileUsername').focus();
+        return;
+      }
+      if (displayName.length > 60) {
+        status.textContent = 'Display names must be 60 characters or fewer.';
+        document.getElementById('profileDisplayName').focus();
+        return;
+      }
+      if (!cloudSession?.access_token) {
+        status.textContent = 'Sign in to save a public profile to your cloud passport.';
+        toggleAuthModal(true);
+        return;
+      }
+      const button = document.getElementById('btnSavePublicProfile');
+      button.disabled = true;
+      status.textContent = 'Saving your public profile…';
+      try {
+        setPublicProfile({ username, display_name: displayName, is_public: isPublic });
+        if (!await syncToCloud(false)) {
+          throw new Error(document.getElementById('authSyncStatusText').textContent || 'Cloud sync did not complete.');
+        }
+        await copyTextToClipboard(currentShareUrl());
+        status.textContent = 'Profile synced. Share link copied to the clipboard.';
+        showNotification('Public Profile Saved', 'Your profile settings are synced and the share link was copied.', '🌐');
+      } catch (error) {
+        console.error('Public profile save failed.', error);
+        status.textContent = `Profile save or link copy failed: ${error.message}`;
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    function renderGuildAvatarCanvases() {
+      document.querySelectorAll('#tabContent-guild canvas[data-guild-avatar]').forEach(canvas => {
+        const profile = guildProfiles.find(item => item.username === canvas.dataset.guildAvatar);
+        if (!profile) return;
+        try {
+          CharacterCreator.renderAvatar(canvas, profile.summary_stats?.character);
+        } catch (error) {
+          console.error(`Could not render guild avatar for @${profile.username}.`, error);
+        }
+      });
+    }
+
+    function renderGuildExplorerCard(profile) {
+      const stats = profile.summary_stats || {};
+      const badges = (Array.isArray(stats.topBadges) ? stats.topBadges : []).slice(0, 4)
+        .map(badge => `<span class="rounded-full border border-amber-300/20 bg-amber-950/40 px-2 py-1 text-[10px] text-amber-100" title="${escapeHtml(badge.title || '')}">${escapeHtml(badge.icon || '🏆')} ${escapeHtml(badge.title || '')}</span>`)
+        .join('');
+      const stat = value => Number.isFinite(Number(value)) ? Number(value).toLocaleString('en') : '0';
+      return `<article class="rpg-panel rounded-2xl p-4">
+        <div class="flex items-center gap-3">
+          <canvas width="80" height="48" data-guild-avatar="${escapeHtml(profile.username)}" class="h-12 w-20 shrink-0 rounded-lg bg-slate-950" aria-hidden="true"></canvas>
+          <div class="min-w-0"><p class="truncate text-sm font-bold text-sky-200">@${escapeHtml(profile.username)}</p>
+            <p class="truncate text-xs text-slate-300">${escapeHtml(profile.display_name || stats.cls || 'Explorer')}</p>
+            <p class="text-[11px] text-amber-200">Level ${escapeHtml(stat(stats.level))} · ${escapeHtml(stats.cls || 'Explorer')}</p></div>
+        </div>
+        <p class="mt-3 truncate text-xs text-slate-400">🏰 Home Citadel: ${escapeHtml(stats.homeName || 'Not selected')}</p>
+        <div class="mt-3 grid grid-cols-2 gap-2 text-[11px] text-slate-300">
+          <span>Countries <b>${escapeHtml(stat(stats.countriesCount))}</b></span>
+          <span>States <b>${escapeHtml(stat(stats.statesCount))}</b></span>
+          <span>Parks <b>${escapeHtml(stat(stats.parksCount))}</b></span>
+          <span>Biomes <b>${escapeHtml(stat(stats.biomesCount))}</b></span>
+        </div>
+        ${Number.isFinite(stats.clearedPct) ? `<p class="mt-2 text-[11px] text-emerald-200">${stats.clearedPct.toFixed(1)}% of mapped land cleared</p>` : ''}
+        ${badges ? `<div class="mt-3 flex flex-wrap gap-1.5" aria-label="Recent earned achievements">${badges}</div>` : ''}
+        <button type="button" data-guild-explore="${escapeHtml(profile.username)}" class="mt-4 rounded-lg border border-sky-400/40 bg-sky-950/40 px-3 py-2 text-xs text-sky-200 hover:bg-sky-900/50">Explore Atlas (🗺️)</button>
+      </article>`;
+    }
+
+    function renderGuildDirectory() {
+      const search = document.getElementById('guildSearchInput').value.trim().toLocaleLowerCase();
+      const profiles = guildProfiles.filter(profile => {
+        const stats = profile.summary_stats || {};
+        const haystack = [profile.username, profile.display_name, stats.cls, stats.homeName]
+          .join(' ').toLocaleLowerCase();
+        return haystack.includes(search);
+      });
+      const grid = document.getElementById('guildExplorersGrid');
+      grid.innerHTML = profiles.length
+        ? profiles.map(renderGuildExplorerCard).join('')
+        : '<p class="text-sm text-slate-400">No public explorers match this search.</p>';
+      renderGuildAvatarCanvases();
+    }
+
+    function renderGuildExpeditions() {
+      const expeditions = guildProfiles.flatMap(profile =>
+        (Array.isArray(profile.summary_stats?.recentExpeditions) ? profile.summary_stats.recentExpeditions : [])
+          .map(expedition => ({ profile, expedition, timestamp: Date.parse(
+            expedition.startDate || expedition.endDate || profile.updated_at || ''
+          ) || 0 }))
+      ).sort((a, b) => b.timestamp - a.timestamp);
+      const feed = document.getElementById('guildExpeditionsFeed');
+      feed.innerHTML = expeditions.length
+        ? expeditions.map(({ profile, expedition }) => renderPublicExpeditionSummary(profile, expedition)).join('')
+        : '<p class="text-sm text-slate-400">No public expeditions have been shared yet.</p>';
+      renderGuildAvatarCanvases();
+    }
+
+    async function loadGuildProfiles() {
+      const status = document.getElementById('guildStatus');
+      status.textContent = 'Loading public explorers…';
+      try {
+        const response = await fetch(
+          `${SUPABASE_URL}/rest/v1/cartovella_passports?is_public=eq.true&select=username,display_name,updated_at,summary_stats&order=updated_at.desc&limit=50`,
+          { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
+        );
+        if (!response.ok) throw new Error(`Guild request failed (HTTP ${response.status}).`);
+        const records = await response.json();
+        if (!Array.isArray(records)) throw new Error('Supabase returned an unexpected public explorer response.');
+        guildProfiles = records.filter(record =>
+          typeof record?.username === 'string' && PUBLIC_USERNAME_PATTERN.test(record.username)
+        ).map(record => ({
+          username: record.username,
+          display_name: typeof record.display_name === 'string' ? record.display_name.slice(0, 60) : '',
+          updated_at: typeof record.updated_at === 'string' ? record.updated_at : '',
+          summary_stats: record.summary_stats && typeof record.summary_stats === 'object' &&
+            !Array.isArray(record.summary_stats) ? record.summary_stats : {}
+        }));
+        guildProfilesLoaded = true;
+        renderGuildDirectory();
+        renderGuildExpeditions();
+        status.textContent = `${guildProfiles.length} public explorer${guildProfiles.length === 1 ? '' : 's'} loaded.`;
+      } catch (error) {
+        console.error('Explorers’ Guild load failed.', error);
+        status.textContent = `Could not load the Explorers' Guild: ${error.message}`;
+      }
+    }
+
+    function beginPublicAtlasView() {
+      const requested = new URLSearchParams(window.location?.search || '').get('u');
+      if (requested === null) return null;
+      const username = requested.trim().toLowerCase();
+      if (!PUBLIC_USERNAME_PATTERN.test(username)) {
+        showNotification('Public Atlas unavailable', 'The share link contains an invalid explorer username.', '⚠️');
+        return null;
+      }
+      localAtlasReturnTab = AppState.currentTab;
+      activePublicAtlasUsername = username;
+      AppState.viewOnly = true;
+      document.getElementById('viewingPublicAtlasMessage').textContent =
+        `🧭 Loading @${username}'s Public Atlas · Read-Only`;
+      document.getElementById('viewingPublicAtlasBanner').classList.remove('hidden');
+      return username;
+    }
+
+    function updatePublicAtlasUrl(username) {
+      if (!window.history?.replaceState || !window.location) return;
+      const url = new URL(window.location.href);
+      url.searchParams.delete('d');
+      url.searchParams.set('u', username);
+      window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
+    }
+
+    async function loadPublicAtlas(username, destinationTab = 'map') {
+      const normalizedUsername = String(username || '').trim().toLowerCase();
+      if (!PUBLIC_USERNAME_PATTERN.test(normalizedUsername)) {
+        throw new Error('The public explorer username is invalid.');
+      }
+      if (!activePublicAtlasUsername) localAtlasReturnTab = AppState.currentTab;
+      activePublicAtlasUsername = normalizedUsername;
+      AppState.viewOnly = true;
+      const requestId = ++publicAtlasRequestId;
+      updatePublicAtlasUrl(normalizedUsername);
+      document.getElementById('viewingPublicAtlasMessage').textContent =
+        `🧭 Loading @${normalizedUsername}'s Public Atlas · Read-Only`;
+      document.getElementById('viewingPublicAtlasBanner').classList.remove('hidden');
+      try {
+        const response = await fetch(
+          `${SUPABASE_URL}/rest/v1/cartovella_passports?username=eq.${encodeURIComponent(normalizedUsername)}&is_public=eq.true&select=username,display_name,updated_at,passport_data,summary_stats`,
+          { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
+        );
+        if (!response.ok) throw new Error(`Public Atlas request failed (HTTP ${response.status}).`);
+        const records = await response.json();
+        if (!Array.isArray(records)) throw new Error('Supabase returned an unexpected public passport response.');
+        const record = records.find(item => item.username === normalizedUsername);
+        if (!record?.passport_data) throw new Error(`@${normalizedUsername} does not have a public Atlas.`);
+        const parsed = migratePassport(record.passport_data);
+        await preparePassportGeography(parsed);
+        if (requestId !== publicAtlasRequestId || activePublicAtlasUsername !== normalizedUsername) return false;
+        applyPassport(parsed);
+        AppState.viewOnly = true;
+        syncDerivedState();
+        if (AppState.homeBase) closeHomeModal();
+        updateHomeBaseMarker();
+        renderParkMarkers();
+        drawFogOfWar();
+        updateAllUI();
+        switchTab(destinationTab);
+        const displayName = typeof record.display_name === 'string' && record.display_name.trim()
+          ? record.display_name.trim() : calculateStats().cls;
+        document.getElementById('viewingPublicAtlasMessage').textContent =
+          `🧭 Viewing @${normalizedUsername}'s Public Atlas (${displayName}) · Read-Only`;
+        return true;
+      } catch (error) {
+        if (requestId !== publicAtlasRequestId) return false;
+        console.error(`Could not load public Atlas for @${normalizedUsername}.`, error);
+        document.getElementById('viewingPublicAtlasMessage').textContent =
+          `🧭 @${normalizedUsername}'s Public Atlas is unavailable · ${error.message}`;
+        document.getElementById('guildStatus').textContent = error.message;
+        return false;
+      }
+    }
+
+    function returnToMyAtlas() {
+      publicAtlasRequestId++;
+      const stored = localStorage.getItem(PASSPORT_STORAGE_KEY) ??
+        LEGACY_PASSPORT_STORAGE_KEYS.map(key => localStorage.getItem(key)).find(value => value !== null);
+      try {
+        const localPassport = stored === undefined || stored === null
+          ? migratePassport({ version: 2 }) : migratePassport(JSON.parse(stored));
+        applyPassport(localPassport);
+      } catch (error) {
+        console.error('Could not restore the local Cartovella passport.', error);
+        showNotification('Local Atlas unavailable', 'Your saved browser passport could not be restored; the public Atlas remains open.', '⚠️');
+        return;
+      }
+      activePublicAtlasUsername = null;
+      AppState.viewOnly = false;
+      syncDerivedState();
+      document.getElementById('viewingPublicAtlasBanner').classList.add('hidden');
+      if (window.history?.replaceState && window.location) {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('u');
+        window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
+      }
+      closeHomeModal();
+      updateHomeBaseMarker();
+      renderParkMarkers();
+      drawFogOfWar();
+      updateAllUI();
+      switchTab(localAtlasReturnTab);
+      cloudHydrated = false;
+      setCloudStatus(cloudSession?.access_token
+        ? 'Your local Atlas is restored. Check cloud sync before saving changes.'
+        : 'Your local Atlas is restored.');
+    }
+
     async function syncToCloud(notify = false) {
       if (AppState.viewOnly || !cloudSession?.access_token) return false;
       if (!cloudHydrated) {
@@ -7579,6 +8060,8 @@
       try {
         const passportData = compactPassportForStorage(passportPayload());
         const uploadedSnapshot = stablePassportStringify(passportData);
+        const uploadedProfileSnapshot = publicProfileSnapshot();
+        const summaryStats = await buildPublicSummaryStats(calculateStats());
         const response = await cloudFetch(`${SUPABASE_URL}/rest/v1/cartovella_passports`, {
           method: 'POST',
           headers: {
@@ -7588,6 +8071,10 @@
           body: JSON.stringify({
             user_id: cloudSession.user.id,
             passport_data: passportData,
+            username: publicProfile.username || null,
+            display_name: publicProfile.display_name || null,
+            is_public: publicProfile.is_public,
+            summary_stats: summaryStats,
             updated_at: new Date().toISOString()
           })
         });
@@ -7596,7 +8083,8 @@
           throw new Error(body.message || body.details || `Cloud save failed (HTTP ${response.status}).`);
         }
         const currentSnapshot = stablePassportStringify(compactPassportForStorage(passportPayload()));
-        let savedCurrentState = currentSnapshot === uploadedSnapshot;
+        let savedCurrentState = currentSnapshot === uploadedSnapshot &&
+          publicProfileSnapshot() === uploadedProfileSnapshot;
         if (savedCurrentState) {
           try {
             localStorage.setItem(LOCAL_CLOUD_DIRTY_KEY, 'false');
@@ -7607,7 +8095,7 @@
         }
         if (savedCurrentState) {
           setCloudStatus(`Saved to cloud at ${new Date().toLocaleTimeString()}.`);
-        } else if (currentSnapshot !== uploadedSnapshot) {
+        } else if (currentSnapshot !== uploadedSnapshot || publicProfileSnapshot() !== uploadedProfileSnapshot) {
           setCloudStatus('A newer change is still being saved…');
           scheduleCloudSync();
         } else {
@@ -7704,6 +8192,7 @@
         if (!Array.isArray(records)) throw new Error('Supabase returned an unexpected passport response.');
         const localPassport = passportPayload();
         if (records.length) {
+          const cloudProfile = normalizePublicProfile(records[0]);
           const cloudPassport = migratePassport(records[0].passport_data);
           const localSnapshot = compactPassportForStorage(localPassport);
           const cloudSnapshot = compactPassportForStorage(cloudPassport);
@@ -7714,9 +8203,10 @@
             stablePassportStringify(localSnapshot) !== stablePassportStringify(cloudSnapshot);
           if (localSnapshot.homeBase && localHasProgress && cloudHasPassportData &&
               passportsDiffer && hasUnsyncedLocalChanges(records[0].updated_at)) {
-            showCloudConflict(cloudPassport, records[0].updated_at);
+            showCloudConflict(cloudPassport, records[0].updated_at, cloudProfile);
             return false;
           }
+          setPublicProfile(cloudProfile);
           if (localHasPassportData && !cloudHasPassportData) {
             cloudHydrated = true;
             if (!await syncToCloud(notifySeed)) {
@@ -7769,6 +8259,22 @@
     document.getElementById('btnAuthLogin').addEventListener('click', handleLogin);
     document.getElementById('btnAuthSignUp').addEventListener('click', handleSignUp);
     document.getElementById('btnAuthLogout').addEventListener('click', handleLogout);
+    document.getElementById('btnSavePublicProfile').addEventListener('click', () => void savePublicProfile());
+    document.getElementById('btnManagePublicProfile').addEventListener('click', () => toggleAuthModal(true));
+    document.getElementById('btnRefreshGuild').addEventListener('click', () => {
+      guildProfilesLoaded = false;
+      void loadGuildProfiles();
+    });
+    document.getElementById('guildSearchInput').addEventListener('input', renderGuildDirectory);
+    document.getElementById('guildExplorersGrid').addEventListener('click', event => {
+      const button = event.target.closest('button[data-guild-explore]');
+      if (button) void loadPublicAtlas(button.dataset.guildExplore, 'map');
+    });
+    document.getElementById('guildExpeditionsFeed').addEventListener('click', event => {
+      const button = event.target.closest('button[data-guild-open-travel]');
+      if (button) void loadPublicAtlas(button.dataset.guildOpenTravel, 'travel');
+    });
+    document.getElementById('btnExitPublicAtlas').addEventListener('click', returnToMyAtlas);
     document.getElementById('btnForceCloudSync').addEventListener('click', handleForceCloudSync);
     document.getElementById('btnManualSave').addEventListener('click', () =>
       handleManualSave().catch(error => {
@@ -7789,6 +8295,7 @@
     });
 
     window.addEventListener('DOMContentLoaded', () => {
+      const publicUsername = beginPublicAtlasView();
       loadPersistedState();
       updateStorageWarning();
       updateAuthUI();
@@ -7799,9 +8306,12 @@
       if (!AppState.homeBase && !AppState.viewOnly) openHomeModal();
       appReady = startApp();
       startupDataReady = appReady.then(async () => {
-        if (cloudSession?.access_token && !AppState.viewOnly) {
+        if (publicUsername && activePublicAtlasUsername === publicUsername) {
+          localAtlasReturnTab = AppState.currentTab;
+          await loadPublicAtlas(publicUsername);
+        } else if (cloudSession?.access_token && !AppState.viewOnly) {
           await loadFromCloud();
-        } else {
+        } else if (!AppState.viewOnly) {
           cloudHydrated = true;
         }
         await finishStartupDatasets();

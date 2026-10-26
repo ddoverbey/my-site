@@ -239,10 +239,11 @@
       throw new Error('Invalid Photon place reference.');
     }
     const elevationFt = poi.elevation?.feet ?? poi.elevationFt;
+    const biomes = poi.biomes || [];
     if ((!photonPlace && !Number.isFinite(elevationFt)) ||
         (photonPlace && elevationFt !== undefined && elevationFt !== null && !Number.isFinite(elevationFt)) ||
-        !Array.isArray(poi.biomes) ||
-        poi.biomes.some(biome => !/^(?:[1-9]|1[0-4])$/.test(biome))) throw new Error('Invalid POI elevation or biomes.');
+        !Array.isArray(biomes) ||
+        biomes.some(biome => !/^(?:[1-9]|1[0-4])$/.test(biome))) throw new Error('Invalid POI elevation or biomes.');
     const political = poi.political || {
       countries: poi.country ? [poi.country] : [],
       states: poi.state ? [poi.state] : [],
@@ -266,7 +267,7 @@
       throw new Error('POI review count does not match its rarity tier.');
     }
     const normalized = {
-      ...poi, political, elevationFt: elevationFt ?? null, country: political.countries[0] || '',
+      ...poi, biomes: [...biomes], political, elevationFt: elevationFt ?? null, country: political.countries[0] || '',
       state: political.states[0] || '', countyId: political.counties[0]?.id || null,
       rarity, rarityTier, reviewCount,
       category: typeof poi.category === 'string' ? poi.category : ''
@@ -716,7 +717,7 @@
     locations.forEach(addPoint);
     trips.forEach(trip => trip.routeCoords.forEach(([lat, lng]) => addPoint({ lat, lng })));
     const coordinates = [...points.values()];
-    const collectedBiomes = new Set(locations.flatMap(location => location.biomes).map(String));
+    const collectedBiomes = new Set(locations.flatMap(location => location.biomes || []).map(String));
     const biomesByExpedition = new Map(trips.map(trip => [trip.id, new Set()]));
     trips.forEach(trip => routeBiomeStopCoordinates(trip).forEach(([lat, lng]) =>
       sample(lat, lng, 'biomes').forEach(biome => {
@@ -741,7 +742,7 @@
     };
     locations.forEach(location => {
       const kind = parkById.has(location.id) ? 'park' : 'poi';
-      location.biomes.forEach(biomeId => addBiomeLocation(biomeId, {
+      (location.biomes || []).forEach(biomeId => addBiomeLocation(biomeId, {
         kind, id: location.id, name: location.name
       }));
     });
@@ -781,7 +782,7 @@
         linkedLocations.forEach(location => {
           const linked = location.kind === 'park' ? parkById.get(location.id) :
             location.kind === 'poi' ? poiById.get(location.id) : null;
-          if (linked?.biomes.map(String).includes(String(biomeId))) {
+          if ((linked?.biomes || []).map(String).includes(String(biomeId))) {
             addBiomeLocation(biomeId, location);
           }
         });
@@ -879,7 +880,7 @@
     }
     const visitedCountyIds = new Set(Object.entries(state.counties)
       .filter(([, status]) => isVisited(status)).map(([id]) => id));
-    pois.forEach(poi => poi.political.counties.forEach(county => visitedCountyIds.add(county.id)));
+    pois.forEach(poi => (poi.political?.counties || []).forEach(county => visitedCountyIds.add(county.id)));
     trips.forEach(trip => trip.countyIds.forEach(id => visitedCountyIds.add(id)));
     coordinates.forEach(point => {
       sample(point.lat, point.lng, 'political')?.counties?.forEach(county => visitedCountyIds.add(county.id));
@@ -913,8 +914,10 @@
         if (stop.kind === 'county') return;
         const linked = stop.kind === 'park' ? parkById.get(stop.id) :
           stop.kind === 'poi' ? poiById.get(stop.id) : null;
+        const validCoords = Array.isArray(stop.coords) && stop.coords.length === 2 &&
+          stop.coords.every(Number.isFinite);
         const placeKey = stop.photonId ? `photon:${stop.photonId}` :
-          Array.isArray(stop.coords) ? `place:${stop.coords.map(value => Number(value.toFixed(5))).join(',')}` :
+          validCoords ? `place:${stop.coords.map(value => Number(value.toFixed(5))).join(',')}` :
             stop.id ? `place:${stop.id}` : null;
         const key = stop.kind === 'park' ? `park:${stop.id}` :
           stop.kind === 'poi' ? `poi:${stop.id}` : placeKey;
@@ -934,7 +937,7 @@
       visitedSubdivisionIds,
       countryRoads: Number(westVirginia) + countryRoadsDestination,
       rockyMountainHigh: [...visitedCountyIds].filter(id => coloradoCounties.has(id) && !coloradoPlainsCounties.has(id)).length,
-      subterranean: pois.filter(poi => poi.biomes.length && poi.elevationFt < 0).length +
+      subterranean: pois.filter(poi => (poi.biomes || []).length && poi.elevationFt < 0).length +
         trips.filter(exp => exp.minElevationFt !== null && exp.minElevationFt < 0).length,
       thinAir: pois.filter(poi => poi.elevationFt >= 10000).length +
         trips.filter(exp => exp.maxElevationFt !== null && exp.maxElevationFt >= 10000).length,

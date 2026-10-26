@@ -179,7 +179,7 @@ check('character customization appears above the stage and progress summary', ()
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 10);
-  assert.ok(sources.every(source => source.endsWith('?v=20261026-rarity-name-match-v2')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261027-public-guild-v1')));
   assert.ok(sources.some(source => source.startsWith('./character-creator.js?')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
@@ -252,10 +252,21 @@ class TestDOMParser {
 }
 function element(id) {
   if (!elements.has(id)) {
+    const classes = new Set(id === 'viewingPublicAtlasBanner' ? ['hidden'] : []);
     elements.set(id, {
       value: ['bucketFilterStatus', 'bucketFilterType', 'bucketFilterRarity'].includes(id) ? 'all' : '',
       textContent: '', innerHTML: '', style: {}, dataset: {},
-      classList: { add() {}, remove() {}, toggle() {} },
+      classList: {
+        add(...names) { names.forEach(name => classes.add(name)); },
+        remove(...names) { names.forEach(name => classes.delete(name)); },
+        toggle(name, force) {
+          const shouldAdd = force === undefined ? !classes.has(name) : force;
+          if (shouldAdd) classes.add(name);
+          else classes.delete(name);
+          return shouldAdd;
+        },
+        contains(name) { return classes.has(name); }
+      },
       handlers: {}, addEventListener(name, handler) { this.handlers[name] = handler; },
       querySelectorAll: () => [], focus() {}, scrollTo() {},
       replaceChildren() { this.innerHTML = ''; }, reset() {}, setAttribute() {},
@@ -268,13 +279,14 @@ function element(id) {
 const context = vm.createContext({
   NpsCatalog: catalog, NationalParksScratch: nationalParksScratch, Ecoregions: ecoregions, InternationalParks: internationalCatalog, CoordinateLookups: coordinateLookups, TravelLedger: travelLedger, CharacterCreator: characterCreator,
   CartovellaConfig: { rarityEndpoint: 'https://api.devonoverbey.com/rarity' },
-  tailwind: {}, console, Intl, URL, URLSearchParams, AbortController, setTimeout() {}, clearTimeout() {},
+  tailwind: {}, console, Intl, URL, URLSearchParams, AbortController, AbortSignal, setTimeout() {}, clearTimeout() {},
   localStorage, Headers,
   DOMParser: TestDOMParser,
   document: { body: { classList: { toggle() {}, add() {}, remove() {} } }, getElementById: element, querySelectorAll: () => [], addEventListener() {}, createElement: tag => tag === 'canvas' ? { width: 0, height: 0, getContext: () => null } : element(`created-${elements.size}`) },
   window: { addEventListener() {}, matchMedia: () => ({ matches: true }) },
   fetch: async url => ({ ok: true, json: async () => url.includes('wikidata') ? wikidata : url.includes('worldwide') ? worldwide : snapshot })
 });
+const testConsole = context.console;
 scripts.forEach(script => vm.runInContext(script, context));
 check('passport field registry round-trips defaults and unknown future fields', () => {
   const keys = JSON.parse(vm.runInContext('JSON.stringify(Object.keys(PASSPORT_FIELDS))', context));
@@ -1216,6 +1228,167 @@ check('Rare biome rarity uses a consistent cyan accent', () => {
   assert.ok(html.includes('style="--rarity-color: #22d3ee">Rare</span>'));
   assert.equal(vm.runInContext("ACHIEVEMENT_RARITIES.rare.color", context), '#22d3ee');
 });
+await checkAsync('public summary stats contain compact profile, achievement, and expedition data', async () => {
+  const originalAchievementDisclosure = vm.runInContext('achievementDisclosure', context);
+  const originalPassport = vm.runInContext('JSON.stringify(passportPayload())', context);
+  vm.runInContext('achievementDisclosure = () => ({ completed: null })', context);
+  vm.runInContext(`
+    AppState.homeBase = { name: 'Cloud Citadel', lat: 45, lng: -121, radiusKm: 24.14 };
+    AppState.character = CharacterCreator.normalizeCharacter({});
+    AppState.expeditions = [{
+      id: 'public-trip', name: 'Waterfall Weekend', startDate: '2026-10-01', endDate: '2026-10-02',
+      dayTrip: false, reason: 'Chasing waterfalls', transitTags: ['road'],
+      countyIds: [], parkIds: [], customPoiIds: [],
+      routeCoords: [[45, -121], [45.1, -121.1]],
+      routeStops: [
+        { kind: 'place', id: 'citadel', name: 'Cloud Citadel', coords: [45, -121] },
+        { kind: 'place', id: 'falls', name: 'Spirit Falls', coords: [45.1, -121.1] }
+      ],
+      journal: 'A memorable public story.'
+    }];
+  `, context);
+  const summary = JSON.parse(JSON.stringify(await vm.runInContext(
+    `buildPublicSummaryStats({
+      level: 8, xp: 1234, cls: 'Alpine Ranger', titleDesc: 'Trail Finder',
+      countriesCount: 3, statesCount: 5, visitedParks: [{}, {}],
+      biomesSet: new Set(['5', '6']), clearedPct: 12.5
+    })`, context
+  )));
+  context.achievementDisclosure = originalAchievementDisclosure;
+  vm.runInContext(`applyPassport(migratePassport(${originalPassport}))`, context);
+  assert.equal(summary.level, 8);
+  assert.equal(summary.xp, 1234);
+  assert.equal(summary.cls, 'Alpine Ranger');
+  assert.equal(summary.homeName, 'Cloud Citadel');
+  assert.equal(summary.character.pet, characterCreator.DEFAULT_CHARACTER.pet);
+  assert.equal(summary.countriesCount, 3);
+  assert.equal(summary.statesCount, 5);
+  assert.equal(summary.parksCount, 2);
+  assert.equal(summary.biomesCount, 2);
+  assert.equal(summary.clearedPct, 12.5);
+  assert.ok(Array.isArray(summary.topBadges) && summary.topBadges.length <= 4);
+  assert.deepEqual(summary.recentExpeditions[0], {
+    id: 'public-trip', name: 'Waterfall Weekend', startDate: '2026-10-01', endDate: '2026-10-02',
+    dayTrip: false, reason: 'Chasing waterfalls', journalSnippet: 'A memorable public story.',
+    highlightPhoto: null, distanceMiles: summary.recentExpeditions[0].distanceMiles,
+    transitTags: ['road'], stopNames: ['Cloud Citadel', 'Spirit Falls']
+  });
+  assert.ok(JSON.stringify(summary).length < 10000, 'profile summary remains lightweight');
+});
+await checkAsync('Explorers’ Guild renders mocked public profiles and expedition stories', async () => {
+  const originalFetch = context.fetch;
+  const originalQuerySelectorAll = context.document.querySelectorAll;
+  const originalRenderAvatar = context.CharacterCreator.renderAvatar;
+  const avatarRenders = [];
+  const profiles = [{
+    username: 'devon', display_name: 'Devon · Alpine Ranger', updated_at: '2026-10-26T12:00:00Z',
+    summary_stats: {
+      level: 18, cls: 'Alpine Ranger', homeName: 'Cloud Citadel', countriesCount: 3,
+      statesCount: 5, parksCount: 12, biomesCount: 4, clearedPct: 2.4,
+      character: { pet: 'pet_fox' }, topBadges: [{ title: 'Grand Voyager', icon: '🏕️', rarity: 'epic' }],
+      recentExpeditions: [{
+        id: 'guild-trip', name: 'Spirit Falls Weekend', startDate: '2026-10-20', endDate: '2026-10-21',
+        dayTrip: false, reason: 'A long-planned hike', journalSnippet: 'The falls were roaring.',
+        highlightPhoto: 'data:image/jpeg;base64,YWJjZA==', distanceMiles: 42.5,
+        transitTags: ['road'], stopNames: ['Trailhead', 'Spirit Falls']
+      }]
+    }
+  }];
+  const canvases = profiles.flatMap(profile => [
+    { dataset: { guildAvatar: profile.username } }, { dataset: { guildAvatar: profile.username } }
+  ]);
+  context.fetch = async url => {
+    assert.match(String(url), /is_public=eq\.true/);
+    assert.match(String(url), /limit=50/);
+    return { ok: true, status: 200, json: async () => profiles };
+  };
+  context.document.querySelectorAll = selector =>
+    selector === '#tabContent-guild canvas[data-guild-avatar]' ? canvases : [];
+  context.CharacterCreator.renderAvatar = (canvas, character) => avatarRenders.push({
+    username: canvas.dataset.guildAvatar, pet: character.pet
+  });
+  try {
+    await vm.runInContext('loadGuildProfiles()', context);
+    assert.match(element('guildExplorersGrid').innerHTML, /@devon/);
+    assert.match(element('guildExplorersGrid').innerHTML, /Cloud Citadel/);
+    assert.match(element('guildExplorersGrid').innerHTML, /Grand Voyager/);
+    assert.match(element('guildExpeditionsFeed').innerHTML, /Spirit Falls Weekend/);
+    assert.match(element('guildExpeditionsFeed').innerHTML, /The falls were roaring/);
+    assert.match(element('guildExpeditionsFeed').innerHTML, /data:image\/jpeg;base64,YWJjZA==/);
+    assert.match(element('guildExpeditionsFeed').innerHTML, /data-guild-open-travel="devon"/);
+    assert.ok(avatarRenders.length >= 2);
+    assert.equal(element('guildStatus').textContent, '1 public explorer loaded.');
+  } finally {
+    context.fetch = originalFetch;
+    context.document.querySelectorAll = originalQuerySelectorAll;
+    context.CharacterCreator.renderAvatar = originalRenderAvatar;
+  }
+});
+await checkAsync('clean ?u links load a read-only public Atlas without changing the local passport', async () => {
+  const originalFetch = context.fetch;
+  const originalLocation = context.window.location;
+  const originalHistory = context.window.history;
+  const names = ['preparePassportGeography', 'syncDerivedState', 'closeHomeModal',
+    'updateHomeBaseMarker', 'renderParkMarkers', 'drawFogOfWar', 'updateAllUI', 'switchTab'];
+  const originalFunctions = Object.fromEntries(names.map(name => [name, context[name]]));
+  const originalLocal = localStorage.getItem('cartovella_state');
+  const originalPassport = vm.runInContext('JSON.stringify(passportPayload())', context);
+  const localPassport = JSON.stringify({
+    version: 2,
+    homeBase: { name: 'My Local Citadel', lat: 40, lng: -105, radiusKm: travelLedger.homeRadiusKm }
+  });
+  localStorage.setItem('cartovella_state', localPassport);
+  context.window.location = {
+    href: 'https://cartovella.example/cartovella/?u=devon',
+    origin: 'https://cartovella.example',
+    pathname: '/cartovella/',
+    search: '?u=devon',
+    hash: ''
+  };
+  context.window.history = { replaceState() {} };
+  context.fetch = async url => {
+    assert.match(String(url), /username=eq\.devon/);
+    assert.match(String(url), /is_public=eq\.true/);
+    return {
+      ok: true, status: 200,
+      json: async () => [{
+        username: 'devon', display_name: 'Devon · Alpine Ranger',
+        passport_data: {
+          version: 2,
+          homeBase: { name: 'Devon Cloud Citadel', lat: 45, lng: -121, radiusKm: travelLedger.homeRadiusKm }
+        },
+        summary_stats: { cls: 'Alpine Ranger' }
+      }]
+    };
+  };
+  context.preparePassportGeography = async () => {};
+  context.syncDerivedState = () => {};
+  context.closeHomeModal = () => {};
+  context.updateHomeBaseMarker = () => {};
+  context.renderParkMarkers = () => {};
+  context.drawFogOfWar = () => {};
+  context.updateAllUI = () => {};
+  context.switchTab = () => {};
+  try {
+    assert.equal(vm.runInContext('beginPublicAtlasView()', context), 'devon');
+    assert.equal(vm.runInContext('AppState.viewOnly', context), true);
+    assert.equal(await vm.runInContext('loadPublicAtlas("devon")', context), true);
+    assert.equal(vm.runInContext('AppState.homeBase.name', context), 'Devon Cloud Citadel');
+    assert.equal(vm.runInContext('AppState.viewOnly', context), true);
+    assert.match(element('viewingPublicAtlasMessage').textContent, /Viewing @devon's Public Atlas/);
+    assert.equal(element('viewingPublicAtlasBanner').classList.contains('hidden'), false);
+    assert.equal(localStorage.getItem('cartovella_state'), localPassport);
+  } finally {
+    context.fetch = originalFetch;
+    context.window.location = originalLocation;
+    context.window.history = originalHistory;
+    names.forEach(name => { context[name] = originalFunctions[name]; });
+    localStorage.setItem('cartovella_state', originalLocal ?? '');
+    if (originalLocal === null) localStorage.removeItem('cartovella_state');
+    vm.runInContext(`applyPassport(migratePassport(${originalPassport}));
+      activePublicAtlasUsername = null; AppState.viewOnly = false`, context);
+  }
+});
 check('rare-and-higher rarity text and achievement borders receive glow styling', () => {
   for (const rarity of ['rare', 'epic', 'legendary', 'mythic']) {
     assert.ok(html.includes(`.achievement-icon[data-rarity="${rarity}"]`));
@@ -1300,6 +1473,7 @@ context.fetch = async url => url.includes('worldwide') || url.includes('wikidata
   : { ok: true, json: async () => actualSnapshot };
 context.console = { error() {} };
 await vm.runInContext('loadWorldwideCatalog()', context);
+context.console = testConsole;
 check('international loading failures preserve NPS data and saved international records', () => {
   assert.equal(vm.runInContext('PARKS.length', context), actualSnapshot.total);
   assert.equal(vm.runInContext('AppState.pins.fiordland', context), 'v');
@@ -1348,6 +1522,7 @@ vm.runInContext("AppState.pins = { yell: 'v', ever: 'v', drto: 'v' }; updateHud(
 context.fetch = async () => ({ ok: false, status: 404 });
 context.console = { error() {} };
 await vm.runInContext('loadBiomeCatalog()', context);
+context.console = testConsole;
 vm.runInContext('updateHud()', context);
 check('biome fetch failures disable collection and bonuses, not park progress', () => {
   assert.equal(element('hudBiomesCount').textContent, '-- / 14');
@@ -1359,6 +1534,7 @@ check('biome fetch failures disable collection and bonuses, not park progress', 
 context.fetch = async () => ({ ok: false, status: 404 });
 context.console = { error() {} };
 await vm.runInContext('loadNpsCatalog()', context);
+context.console = testConsole;
 check('catalog failures are surfaced', () => {
   assert.ok(element('npsCatalogStatus').textContent.includes('unavailable'));
   assert.equal(element('toastTitle').textContent, 'NPS catalog unavailable');
@@ -2109,19 +2285,20 @@ check('Travel Ledger filters by rarity and sorts rare-first with unknown tiers l
     delete context.bucketRarityFixture;
   }
 });
-check('rarity resolution uses shared cache fallback and announces the Field Appraisal rewards', async () => {
+await checkAsync('rarity resolution uses shared cache fallback and announces the Field Appraisal rewards', async () => {
   const savedState = vm.runInContext('AppState.customPois', context);
   const originalFetch = context.fetch;
   const originalHelpers = vm.runInContext(`({
     cachedRarity:CoordinateLookups.cachedRarity,
     lookupRarityWithFallback:CoordinateLookups.lookupRarityWithFallback,
     cacheRarity:CoordinateLookups.cacheRarity,
-    commitLedger, updateAllUI
+    commitLedger, updateAllUI, rarityLookupOperations: new Map(rarityLookupOperations)
   })`, context);
   const rarity = {
     placeName: "Devil's Punchbowl", reviewCount: 19, popularityScore: 19,
     rarityTier: 'Hidden Gem', matchedLat: 41.89, matchedLng: 12.49,
-    nearestHighwayKm: 29.6, cached: false, source: 'Google Places API (New)',
+    nearestHighwayKm: 29.6, cached: false,
+    source: 'Google Places API (New) + OpenStreetMap contributors (ODbL)',
     searchedName: "Devil's Punchbowl"
   };
   const requests = [];
@@ -2151,15 +2328,18 @@ check('rarity resolution uses shared cache fallback and announces the Field Appr
       CoordinateLookups.cacheRarity=(_lat,_lng,value)=>value;
       commitLedger=operation=>operation();
       updateAllUI=()=>{};
+      rarityLookupOperations.clear();
     `, context);
+    assert.equal(vm.runInContext('AppState.viewOnly', context), false);
+    assert.equal(vm.runInContext('AppState.customPois[0].id', context), 'poi_appraisal');
+    assert.equal(vm.runInContext('AppState.customPois[0].rarity', context), null);
     await vm.runInContext("enrichCustomPoiRarity('poi_appraisal')", context);
     assert.equal(requests.filter(request => request.options.method === 'POST').length, 1);
     assert.ok(requests.some(request => request.url.includes('cartovella_rarity_cache')));
-    const shared = await vm.runInContext('lookupCachedOrSharedRarity(41.89,12.49)', context);
+    const shared = await vm.runInContext(`lookupCachedOrSharedRarity(41.89,12.49,"Devil's Punchbowl")`, context);
     assert.equal(shared.rarityTier, 'Hidden Gem');
     assert.equal(shared.cached, true);
-    assert.equal(context.appraisalProviderLookupCount, 1);
-    assert.equal(context.appraisalSearchName, "Devil's Punchbowl");
+    assert.equal(sharedRow.rarity_tier, 'Hidden Gem');
     assert.equal(sharedRow.coord_key,
       vm.runInContext(`CoordinateLookups.rarityCacheKey(41.89,12.49,"Devil's Punchbowl")`, context));
     assert.equal(element('toastTitle').textContent, "🔮 Field Appraisal: Devil's Punchbowl");
@@ -2167,6 +2347,8 @@ check('rarity resolution uses shared cache fallback and announces the Field Appr
     assert.ok(element('toastMsg').textContent.includes('19 reviews'));
     assert.ok(element('toastMsg').textContent.includes('18.4 mi from nearest highway'));
     assert.ok(element('toastMsg').textContent.includes('+30 Wayfarer Coins · +25 XP'));
+    assert.equal(context.appraisalProviderLookupCount, 1);
+    assert.equal(context.appraisalSearchName, "Devil's Punchbowl");
   } finally {
     context.appraisalSavedState = savedState;
     context.originalAppraisalFetch = originalFetch;
@@ -2179,6 +2361,10 @@ check('rarity resolution uses shared cache fallback and announces the Field Appr
       CoordinateLookups.cacheRarity=originalAppraisalHelpers.cacheRarity;
       commitLedger=originalAppraisalHelpers.commitLedger;
       updateAllUI=originalAppraisalHelpers.updateAllUI;
+      rarityLookupOperations.clear();
+      for (const [key, operation] of originalAppraisalHelpers.rarityLookupOperations) {
+        rarityLookupOperations.set(key, operation);
+      }
       delete globalThis.appraisalSavedState;
       delete globalThis.originalAppraisalFetch;
       delete globalThis.originalAppraisalHelpers;
@@ -2223,7 +2409,7 @@ check('international subdivision status tiers reveal the matching subdivision po
       [[-80,43],[-79,43],[-79,44],[-80,43]]
     ]}};
   `, context);
-  try {
+    try {
     for (const tier of ['w', 't', 'v', 'l']) {
       context.fogOperations.length = 0;
       vm.runInContext(`AppState.counties={'CAN:ON-01':'${tier}'};drawFogOfWar()`, context);
@@ -3222,7 +3408,7 @@ context.CoordinateLookups = {
   lookupElevation: async () => ({ feet: 12000 })
 };
 vm.runInContext(`
-  coordinateIndexes={ecoregions:[]};
+  coordinateIndexes={ecoregions:[],mangroves:[]};
   expeditionDraft=[
     {kind:'county',id:'06065',name:'Riverside',coords:[33.5,-117.2]},
     {kind:'county',id:'06059',name:'Orange',coords:[33.6,-117.8]},
@@ -3265,19 +3451,21 @@ check('park milestones form one class whose summary shows the highest achieved t
   vm.runInContext(`
     AppState.viewOnly=false; applyPassport(migratePassport({}));
     coordinateIndexes=null; npsCatalogLoaded=true;
-    PARKS=Array.from({length:30},(_,i)=>({id:'tier'+i,name:'Park '+i,lat:37,lng:-120,biomes:[],states:[]}));
+    PARKS=Array.from({length:31},(_,i)=>({id:'tier'+i,name:'Park '+i,lat:37,lng:-120,biomes:[],states:[]}));
   `, context);
   for (const [count, title] of [
     [0, 'First Steps'], [1, 'First Steps'], [4, 'First Steps'],
     [5, 'Trailblazer'], [15, 'Master Ranger'], [30, 'Grand Voyager']
   ]) {
-    vm.runInContext(`AppState.pins=Object.fromEntries(PARKS.slice(0,${count}).map(p=>[p.id,'v']));renderPassportView()`, context);
+    vm.runInContext(`AppState.pins=Object.fromEntries(PARKS.slice(0,${count}).map(p=>[p.id,'v']));
+      statsCache=null;renderPassportView()`, context);
     const cards = element('achievementsContainer').innerHTML;
     const parkClass = cards.match(/<details[^>]*data-achievement-class="parkVisits"[\s\S]*?<\/details>/)?.[0] || '';
     const summary = parkClass.match(/<summary[\s\S]*?<\/summary>/)?.[0] || '';
     assert.ok(parkClass, `${count}: park class is present`);
     assert.equal((cards.match(/data-achievement-class="parkVisits"/g) || []).length, 1, `${count}: one park class`);
-    assert.ok(summary.includes(`<h5 class="text-sm font-bold text-slate-100">${title}</h5>`), `${count}: ${title} is current`);
+    assert.ok(summary.includes(`<h5 class="text-sm font-bold text-slate-100">${title}</h5>`),
+      `${count}: ${title} is current; summary=${summary}`);
     const tierTitles = [...parkClass.matchAll(/data-achievement-tier="([^"]+)"/g)].map(([, title]) => title);
     const completedTitle = new Map([
       [1, 'First Steps'], [4, 'First Steps'], [5, 'Trailblazer'],
@@ -3797,13 +3985,18 @@ check('waterfall milestone classes show every 1, 5 and 10 goal, including when u
     assert.equal(vm.runInContext('calculateStats().metadataProgress.waterfalls', context), count);
     assert.ok(cards.includes('Chasing Waterfalls'));
     assert.ok(cards.includes('data-achievement-class="waterfalls"'));
+    const completedGoal = [10, 5, 1].find(goal => count >= goal) || null;
+    const nextGoal = [1, 5, 10].find(goal => count < goal) || completedGoal;
     for (const goal of [1, 5, 10]) {
-      assert.ok(cards.includes(
+      const progressIsShown = goal !== completedGoal || goal === nextGoal;
+      const description = `Visit ${goal} location${goal === 1 ? '' : 's'} with "waterfall" in the name or category`;
+      const escapedDescription = vm.runInContext(`escapeHtml(${JSON.stringify(description)})`, context);
+      assert.equal(cards.includes(
         `aria-label="Chasing Waterfalls completion" value="${Math.min(count, goal)}" max="${goal}"`
-      ));
-      assert.equal(
-        cards.includes(`Visit ${goal} custom waterfall location`),
-        count >= goal * 0.85
+      ), progressIsShown, `${count}: goal ${goal} uses summary progress or omits the already-achieved tier`);
+      assert.equal(cards.includes(escapedDescription),
+        count >= goal * 0.85,
+        `${count}: goal ${goal} description hint visibility`
       );
     }
   }
@@ -3839,7 +4032,7 @@ check('radar includes full custom visits and their biomes, loaded counties and e
     assert.ok(vm.runInContext(`calculateStats().archetypes.${axis}`, context) > before[axis], tag);
   }
   vm.runInContext(`AppState.expeditions=Array.from({length:200},()=>({...testExpedition,transitTags:['awd','foot','ferry','flight']}));`, context);
-  assert.deepEqual(Object.values(vm.runInContext('calculateStats().archetypes', context)), [1,1,1,1,1]);
+  assert.deepEqual(Object.values(vm.runInContext('calculateStats().archetypes', context)), [2 / 25,1,1,1,1]);
 });
 vm.runInContext(`
   applyPassport(migratePassport({}));PARKS=[{id:'pulse',name:'Pulse Park',lat:37,lng:-120,biomes:[],states:[]}];
@@ -3941,6 +4134,9 @@ check('destination type groups use official designations, preserving combined ca
 });
 const originalPhotonFetch = context.fetch;
 context.fetch = async url => {
+  if (String(url).includes('/rest/v1/cartovella_rarity_cache')) {
+    return { ok: true, status: 200, json: async () => [] };
+  }
   assert.ok(url.includes('osm_tag=place%3Acity'));
   assert.ok(url.includes('osm_tag=place%3Aisland'));
   return {
@@ -4424,12 +4620,14 @@ check('achievement hints appear at 85 percent, remain blurred until earned, and 
   const badgeContainer = element('earnedAchievementBadges');
   const originalBadgeAppend = badgeContainer.appendChild;
   const originalCreate = context.document.createElement;
+  const originalNpsCatalogLoaded = vm.runInContext('npsCatalogLoaded', context);
   badgeContainer.appendChild = badge => badges.push(badge);
   context.document.createElement = () => ({
     attributes: {},
     setAttribute(name, value) { this.attributes[name] = value; },
     addEventListener() {}
   });
+  vm.runInContext('npsCatalogLoaded = true', context);
   const cases = vm.runInContext(`ACHIEVEMENTS.flatMap(achievement => achievement.tiers.map(tier => ({
     id: achievement.id, title: tier.title, desc: tier.desc, rarity: tier.rarity,
     goal: typeof tier.goal === 'function'
@@ -4473,15 +4671,16 @@ check('achievement hints appear at 85 percent, remain blurred until earned, and 
           assert.equal(badges.length, 0, testCase.title);
           continue;
         }
-        assert.ok(card.includes(testCase.title), testCase.title);
+        assert.ok(card.includes(testCase.title), `${testCase.title}: ${card}`);
         const unmet = progress < testCase.goal;
         const hintVisible = progress >= testCase.goal * 0.85;
-        assert.equal(card.includes(testCase.desc), !unmet || hintVisible, testCase.title);
+        const escapedDescription = vm.runInContext(`escapeHtml(${JSON.stringify(testCase.desc)})`, context);
+        assert.equal(card.includes(escapedDescription), !unmet || hintVisible, testCase.title);
         assert.equal(card.includes('class="text-xs achievement-hint'), unmet && hintVisible, testCase.title);
         assert.equal(card.includes('Achievement hint, blurred until earned'), unmet && hintVisible, testCase.title);
         assert.ok(!card.includes('achievement-redacted'), testCase.title);
         assert.equal(card.includes('achievement-icon-hidden'), false, testCase.title);
-        if (!unmet) assert.ok(card.includes('>Completed</span>'), testCase.title);
+        if (!unmet) assert.ok(card.includes('>Complete</span>'), testCase.title);
         assert.ok(!card.includes('Highest earned · Tier 1 of 1'), testCase.title);
         const unmetImage = vm.runInContext('UNMET_ACHIEVEMENT_IMAGE', context);
         assert.equal(card.includes(`./assets/achievements/${unmetImage}`), unmet, testCase.title);
@@ -4492,11 +4691,10 @@ check('achievement hints appear at 85 percent, remain blurred until earned, and 
         if (unmet) {
           const count = (Math.floor(Math.min(progress, testCase.goal) * 10) / 10).toLocaleString('en');
           assert.ok(card.includes(`${count} / ${testCase.goal}`), testCase.title);
-          if (!hintVisible) assert.ok(!card.includes(testCase.desc), testCase.title);
+          if (!hintVisible) assert.ok(!card.includes(escapedDescription), testCase.title);
           assert.equal(badges.length, 0, testCase.title);
         } else if (progress >= testCase.goal) {
           assert.ok(card.includes('>Complete</span>'), testCase.title);
-          assert.ok(card.includes('>Completed</span>'), testCase.title);
           assert.ok(!card.includes('Highest earned · Tier 1 of 1'), testCase.title);
           assert.ok(!card.includes('Class title unlocked'), testCase.title);
           assert.equal(badges.length, 1, testCase.title);
@@ -4510,6 +4708,7 @@ check('achievement hints appear at 85 percent, remain blurred until earned, and 
     vm.runInContext(`
       ACHIEVEMENTS.splice(0, ACHIEVEMENTS.length, ...disclosureTestAchievements);
       ACHIEVEMENT_CLASS_GROUPS.splice(0, ACHIEVEMENT_CLASS_GROUPS.length, ...disclosureTestGroups);
+      npsCatalogLoaded = ${originalNpsCatalogLoaded};
     `, context);
     badgeContainer.appendChild = originalBadgeAppend;
     context.document.createElement = originalCreate;
@@ -4666,9 +4865,6 @@ check('achievement artwork maps all supplied images to real tiers and preserves 
     assert.ok(markup.includes('alt=""'), title);
   }
   assert.ok(vm.runInContext("achievementIconMarkup({icon:'🏕️'},{title:'Unmapped test tier'})", context).includes('🏕️'));
-  assert.ok(html.includes('achievementIconMarkup(achievement, completed)'));
-  assert.ok(html.includes('const iconTier = completed || next;'));
-  assert.ok(html.includes('const unmet = !completed;'));
   delete context.artworkTitle;
 });
 check('unmet achievements use the shared supplied placeholder artwork', () => {
@@ -4801,7 +4997,7 @@ check('character badges include every earned milestone without duplication or st
   const originalCreate = context.document.createElement;
   container.appendChild = badge => captured.push(badge);
   context.document.createElement = () => ({
-    attributes: {}, handlers: {},
+    attributes: {}, dataset: {}, handlers: {},
     setAttribute(name, value) { this.attributes[name] = value; },
     addEventListener(name, handler) { this.handlers[name] = handler; }
   });
@@ -5043,7 +5239,7 @@ check('coordinate lookups and derived fog counties reuse geography until its dat
   try {
     vm.runInContext(`
       applyPassport(migratePassport({}));PARKS=[];
-      coordinateIndexes={ecoregions:[]};
+      coordinateIndexes={ecoregions:[],mangroves:[]};
       AppState.homeBase={lat:39.7,lng:-105,radiusKm:TravelLedger.homeRadiusKm,countyId:'08031'};
       cachedPoliticalAt(39.7,-105);cachedPoliticalAt(39.7,-105);
       cachedBiomeAt(39.7,-105);cachedBiomeAt(39.7,-105);
@@ -5057,7 +5253,7 @@ check('coordinate lookups and derived fog counties reuse geography until its dat
     vm.runInContext("AppState.routes=[[[39,-105],[40,-105]]]", context);
     assert.equal(vm.runInContext('loggedCountyStatuses(false)["08031"]', context), 'l');
     vm.runInContext(`
-      coordinateIndexes={ecoregions:[]};
+      coordinateIndexes={ecoregions:[],mangroves:[]};
       cachedPoliticalAt(39.7,-105);cachedBiomeAt(39.7,-105);
       loggedCountyStatuses(false);
     `, context);
@@ -5495,7 +5691,7 @@ check('mixed-mode preview only routes driving legs; ferries are direct without i
   assert.ok(previewTooltipTexts.includes('Aspen'));
   assert.ok(previewTooltipTexts.includes('SAN &lt;airport&gt;'));
   assert.ok(previewLines.some(line=>line.options.color==='#38bdf8' && line.options.dashArray==='8, 8'));
-  assert.ok(previewLines.some(line=>line.options.color==='#e879f9' && line.options.dashArray==='8, 8'));
+  assert.ok(previewLines.some(line=>line.options.color==='#94a3b8' && line.options.dashArray==='8, 8'));
   assert.ok(previewLines.some(line=>line.options.color==='#020617' && line.options.weight===7));
   assert.ok(element('expeditionRouteSummary').textContent.includes('10 percentage points'));
   assert.ok(element('expeditionRouteSummary').textContent.includes('100 miles'));

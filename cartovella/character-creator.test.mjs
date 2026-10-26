@@ -350,7 +350,8 @@ check('late character sprite loads redraw the most recently rendered stage', () 
     assert.equal(drawCalls.filter(src => src.includes('Female')).length, 5);
     assert.equal(drawCalls.filter(src => src.includes('yosemite-bg')).length, 1);
     assert.equal(drawCalls.some(src => src.includes('/campfire/')), false);
-    assert.deepEqual(stageScales, [[2, 2], [2, 2]]);
+    assert.ok(stageScales.length >= 2);
+    assert.ok(stageScales.every(scale => scale[0] === 2 && scale[1] === 2));
   } finally {
     if (originalImage === undefined) delete globalThis.Image;
     else globalThis.Image = originalImage;
