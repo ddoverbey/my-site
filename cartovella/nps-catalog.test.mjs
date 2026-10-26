@@ -296,8 +296,16 @@ check('passport field registry round-trips defaults and unknown future fields', 
   assert.deepEqual(payload.routes, []);
   assert.deepEqual(payload.character, characterCreator.DEFAULT_CHARACTER);
 });
-check('character stage is above the hero and uses only existing achievement unlock IDs', () => {
-  assert.ok(html.indexOf('id="characterStage"') < html.indexOf('<!-- Hero Character Banner -->'));
+check('character stage and Explorer Profile share one section without a redundant heading', () => {
+  const passportContent = html.slice(html.indexOf('id="tabContent-passport"'), html.indexOf('id="tabContent-questlines"'));
+  const profileSection = passportContent.slice(
+    passportContent.indexOf('<!-- Explorer Profile and Character -->'),
+    passportContent.indexOf('<!-- Master Statistics Bento Box -->')
+  );
+  assert.ok(profileSection.includes('aria-labelledby="passportClassName"'));
+  assert.ok(profileSection.indexOf('id="characterStage"') < profileSection.indexOf('id="passportClassName"'));
+  assert.doesNotMatch(profileSection, /Your Explorer|Your character and current scene/);
+  assert.doesNotMatch(profileSection, /id="passportAvatar"/);
   assert.match(html, /id="characterCustomizationToggle"[^>]*aria-controls="characterCustomization"[^>]*aria-expanded="false"[^>]*title="Customize your character"/);
   assert.match(html, /id="characterCustomization" hidden/);
   assert.match(html, /CharacterCreator\.render\(\{[\s\S]*?achievements: ACHIEVEMENTS/);

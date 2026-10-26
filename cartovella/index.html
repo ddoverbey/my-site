@@ -615,46 +615,35 @@
     <div id="tabContent-passport" class="w-full h-full p-4 md:p-8 overflow-y-auto hidden">
       <div class="max-w-6xl mx-auto space-y-8 pb-16">
 
-        <!-- Explorer Character Stage -->
-        <section class="rpg-panel rpg-panel-gold relative z-20 rounded-3xl p-4 md:p-6" aria-labelledby="characterCreatorTitle">
-          <div class="flex items-center justify-between gap-3 mb-3">
-            <div>
-              <h2 id="characterCreatorTitle" class="cinzel text-xl font-bold text-amber-200">Your Explorer</h2>
-              <p class="text-xs text-slate-400 mt-1">Your character and current scene.</p>
-            </div>
-            <button id="characterCustomizationToggle" type="button" aria-controls="characterCustomization"
-              aria-expanded="false" aria-label="Customize your character" title="Customize your character"
-              class="shrink-0 rounded-lg border border-slate-700 bg-slate-900/80 p-2 text-slate-300 hover:border-amber-300 hover:text-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-300">
-              <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" class="h-5 w-5">
-                <path d="m12.5 3.5 4 4M3 17l3.8-.8L16.4 6.6a2.12 2.12 0 0 0-3-3L3.8 13.2 3 17Z"
-                  stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </button>
-          </div>
-          <div class="flex flex-col-reverse lg:flex-row lg:items-start gap-4">
-            <div id="characterCustomization" hidden tabindex="-1"
-              class="min-w-0 scroll-mt-4 lg:w-[44%] lg:shrink-0" aria-live="polite"></div>
-            <div class="w-full min-w-0 self-start lg:sticky lg:top-4 lg:z-10 lg:flex-1">
-              <div class="rounded-2xl overflow-hidden border border-slate-700 bg-slate-950">
-                <canvas id="characterStage" width="320" height="180" role="img"
-                  aria-label="Pixel-art explorer with selected companion and background"
-                  class="block w-full h-auto" style="image-rendering:pixelated"></canvas>
+        <!-- Explorer Profile and Character -->
+        <section class="rpg-panel rpg-panel-gold rounded-3xl p-4 md:p-6 relative overflow-hidden" aria-labelledby="passportClassName">
+          <div class="relative z-20 grid grid-cols-1 lg:grid-cols-12 gap-5">
+            <div class="min-w-0 lg:col-span-7">
+              <div class="flex justify-end mb-2">
+                <button id="characterCustomizationToggle" type="button" aria-controls="characterCustomization"
+                  aria-expanded="false" aria-label="Customize your character" title="Customize your character"
+                  class="shrink-0 rounded-lg border border-slate-700 bg-slate-900/80 p-2 text-slate-300 hover:border-amber-300 hover:text-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-300">
+                  <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" class="h-5 w-5">
+                    <path d="m12.5 3.5 4 4M3 17l3.8-.8L16.4 6.6a2.12 2.12 0 0 0-3-3L3.8 13.2 3 17Z"
+                      stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
               </div>
-              <div id="characterProgressSummary" class="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-3"></div>
-            </div>
-          </div>
-        </section>
-
-        <!-- Hero Character Banner -->
-        <div class="rpg-panel rpg-panel-gold rounded-3xl p-6 md:p-8 relative overflow-hidden">
-          <div class="relative z-10 flex flex-col md:flex-row items-center md:items-start justify-between gap-6">
-            <div class="flex flex-col md:flex-row items-center gap-5 text-center md:text-left">
-              <div class="w-24 h-24 rounded-2xl bg-gradient-to-tr from-amber-600 via-amber-400 to-amber-200 p-1 shadow-2xl">
-                <canvas id="passportAvatar" width="80" height="64" role="img"
-                  aria-label="Explorer character portrait"
-                  class="block w-full h-full bg-slate-950 rounded-xl" style="image-rendering:pixelated"></canvas>
+              <div class="flex flex-col-reverse lg:flex-row lg:items-start gap-4">
+                <div id="characterCustomization" hidden tabindex="-1"
+                  class="min-w-0 scroll-mt-4 lg:w-[44%] lg:shrink-0" aria-live="polite"></div>
+                <div class="w-full min-w-0 self-start lg:sticky lg:top-4 lg:z-10 lg:flex-1">
+                  <div class="rounded-2xl overflow-hidden border border-slate-700 bg-slate-950">
+                    <canvas id="characterStage" width="320" height="180" role="img"
+                      aria-label="Pixel-art explorer with selected companion and background"
+                      class="block w-full h-auto" style="image-rendering:pixelated"></canvas>
+                  </div>
+                  <div id="characterProgressSummary" class="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-3"></div>
+                </div>
               </div>
-              <div>
+            </div>
+            <div class="min-w-0 lg:col-span-5 flex flex-col items-center gap-4">
+              <div class="w-full">
                 <div class="flex items-center justify-center md:justify-start gap-3">
                   <h2 class="cinzel text-2xl md:text-3xl font-extrabold text-amber-200" id="passportClassName">Alpine Ranger</h2>
                   <span class="px-2.5 py-0.5 rounded-full text-xs font-mono bg-amber-400 text-slate-950 font-bold" id="passportLevelBadge">Level 1</span>
@@ -671,12 +660,10 @@
                   <span title="Share of global land covered by visited or lived country, state, county, and district boundaries. Area is estimated from the loaded atlas.">🗺️ Global Land Explored: <b class="text-amber-300 font-mono" id="passportExploredPct">—</b></span>
                 </div>
               </div>
-            </div>
-
-            <!-- Radar Archetype Chart Container -->
-            <div class="w-56 h-56 flex flex-col items-center justify-center shrink-0">
-              <span class="text-[10px] uppercase font-mono tracking-wider text-slate-400 mb-1">Traveler Archetype</span>
-              <svg id="radarSvg" viewBox="0 0 240 240" class="w-full h-full drop-shadow-lg"></svg>
+              <div class="w-56 h-56 flex flex-col items-center justify-center shrink-0">
+                <span class="text-[10px] uppercase font-mono tracking-wider text-slate-400 mb-1">Traveler Archetype</span>
+                <svg id="radarSvg" viewBox="0 0 240 240" class="w-full h-full drop-shadow-lg"></svg>
+              </div>
             </div>
           </div>
           <section class="relative z-10 mt-6 border-t border-slate-700/60 pt-4" aria-labelledby="passportFlagsTitle">
@@ -695,7 +682,7 @@
             <h3 id="earnedBadgesTitle" class="text-xs font-bold text-amber-200 mb-3">Earned Badges</h3>
             <div id="earnedAchievementBadges" class="flex flex-wrap gap-3"></div>
           </section>
-        </div>
+        </section>
 
         <!-- Master Statistics Bento Box -->
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -5586,7 +5573,6 @@
       const coins = CharacterCreator.coinSummary(characterStats, AppState);
       CharacterCreator.render({
         canvas: document.getElementById('characterStage'),
-        avatarCanvas: document.getElementById('passportAvatar'),
         controls: document.getElementById('characterCustomization'),
         customizeButton: document.getElementById('characterCustomizationToggle'),
         summary: document.getElementById('characterProgressSummary'),
