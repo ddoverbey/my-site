@@ -1742,17 +1742,15 @@
     const parks = Array.isArray(stats.visitedParks) ? stats.visitedParks.length : 0;
     const level = Math.max(1, Number(stats.level) || 1);
     const currentLevel = [...LEVEL_TRACK].reverse().find(reward => reward.level <= level) || LEVEL_TRACK[0];
-    const nextLevel = LEVEL_TRACK.find(reward => reward.level > level);
-    const nextLabel = nextLevel ? `Next: Level ${nextLevel.level} · ${nextLevel.title}` : 'All ten levels reached';
+    const xp = Math.max(0, Number(stats.xp) || 0).toLocaleString('en');
     container.innerHTML = `<div class="rounded-xl bg-slate-950/70 border border-slate-800 p-3">
         <span class="block text-[10px] uppercase tracking-wide text-slate-400">Worldwide parks</span>
         <strong class="block text-lg font-mono text-amber-200">${parks}</strong>
-        <span class="block text-[10px] text-slate-400 mt-1">${escapeHtml(nextLabel)}</span>
       </div>
       <div class="rounded-xl bg-slate-950/70 border border-slate-800 p-3">
-        <span class="block text-[10px] uppercase tracking-wide text-slate-400">Explorer track</span>
+        <span class="block text-[10px] uppercase tracking-wide text-slate-400">Explorer level</span>
         <strong class="block text-lg font-mono text-emerald-300">Level ${level} · ${escapeHtml(currentLevel.title)}</strong>
-        <span class="block text-[10px] text-slate-400 mt-1">${escapeHtml(nextLabel)}</span>
+        <span class="block text-[10px] text-slate-400 mt-1">${xp} XP</span>
       </div>
       <div class="rounded-xl bg-slate-950/70 border border-slate-800 p-3">
         <span class="block text-[10px] uppercase tracking-wide text-slate-400">Wayfarer Coins</span>

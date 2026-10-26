@@ -179,7 +179,7 @@ check('character customization appears above the stage and progress summary', ()
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 10);
-  assert.ok(sources.every(source => source.endsWith('?v=20261024-cartovella-customization-v17')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261025-character-profile-v18')));
   assert.ok(sources.some(source => source.startsWith('./character-creator.js?')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
@@ -303,9 +303,13 @@ check('character stage and Explorer Profile share one section without a redundan
     passportContent.indexOf('<!-- Master Statistics Bento Box -->')
   );
   assert.ok(profileSection.includes('aria-labelledby="passportClassName"'));
-  assert.ok(profileSection.indexOf('id="characterStage"') < profileSection.indexOf('id="passportClassName"'));
+  assert.ok(profileSection.indexOf('id="passportClassName"') < profileSection.indexOf('id="characterStage"'));
+  assert.ok(profileSection.indexOf('id="passportHomeText"') < profileSection.indexOf('id="characterStage"'));
+  assert.ok(profileSection.indexOf('id="passportExploredPct"') < profileSection.indexOf('id="characterStage"'));
+  assert.ok(profileSection.indexOf('id="characterStage"') < profileSection.indexOf('id="characterProgressSummary"'));
   assert.doesNotMatch(profileSection, /Your Explorer|Your character and current scene/);
   assert.doesNotMatch(profileSection, /id="passportAvatar"/);
+  assert.doesNotMatch(profileSection, /id="passportLevelBadge"|id="passportTotalXp"|id="passportCoins"/);
   assert.match(html, /id="characterCustomizationToggle"[^>]*aria-controls="characterCustomization"[^>]*aria-expanded="false"[^>]*title="Customize your character"/);
   assert.match(html, /id="characterCustomization" hidden/);
   assert.match(html, /CharacterCreator\.render\(\{[\s\S]*?achievements: ACHIEVEMENTS/);

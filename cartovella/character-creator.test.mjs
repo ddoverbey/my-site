@@ -91,6 +91,21 @@ check('character appearance, wardrobe, companions, and scene choices render as d
   assert.match(controls.innerHTML, /Wayfarer Coins/);
   assert.match(controls.innerHTML, /\d+ coins/);
 });
+check('character summary groups XP with level and does not show a completed-level message', () => {
+  const summary = { innerHTML: '' };
+  characterCreator.render({
+    summary,
+    character: characterCreator.DEFAULT_CHARACTER,
+    stats: { level: 55, xp: 104835, visitedParks: [{}, {}] },
+    appState: { character: characterCreator.DEFAULT_CHARACTER }
+  });
+  assert.match(summary.innerHTML, /Explorer level/);
+  assert.match(summary.innerHTML, /Level 55/);
+  assert.match(summary.innerHTML, /104,835 XP/);
+  assert.match(summary.innerHTML, /Worldwide parks[\s\S]*>2</);
+  assert.equal((summary.innerHTML.match(/Wayfarer Coins/g) || []).length, 1);
+  assert.doesNotMatch(summary.innerHTML, /All ten levels reached/);
+});
 check('hairstyle arrows cycle unlocked options, wrap around, and respect view-only mode', () => {
   for (const gender of ['male', 'female']) {
     const controls = { dataset: {}, innerHTML: '' };

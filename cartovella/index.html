@@ -617,8 +617,16 @@
 
         <!-- Explorer Profile and Character -->
         <section class="rpg-panel rpg-panel-gold rounded-3xl p-4 md:p-6 relative overflow-hidden" aria-labelledby="passportClassName">
-          <div class="relative z-20 grid grid-cols-1 lg:grid-cols-12 gap-5">
-            <div class="min-w-0 lg:col-span-7">
+          <div class="relative z-20">
+            <div class="mb-5 border-b border-slate-700/60 pb-4">
+              <h2 class="cinzel text-2xl md:text-3xl font-extrabold text-amber-200" id="passportClassName">Alpine Ranger</h2>
+              <p class="text-sm text-slate-300 mt-1" id="passportTitleDesc">Bound to the high peaks and wilderness.</p>
+              <div class="flex flex-wrap gap-x-5 gap-y-2 mt-3 text-xs text-slate-400">
+                <span>🏰 Home: <b class="text-slate-200" id="passportHomeText">Not Assigned</b></span>
+                <span title="Share of global land covered by visited or lived country, state, county, and district boundaries. Area is estimated from the loaded atlas.">🗺️ Global Land Explored: <b class="text-amber-300 font-mono" id="passportExploredPct">—</b></span>
+              </div>
+            </div>
+            <div class="min-w-0">
               <div class="flex justify-end mb-2">
                 <button id="characterCustomizationToggle" type="button" aria-controls="characterCustomization"
                   aria-expanded="false" aria-label="Customize your character" title="Customize your character"
@@ -631,36 +639,19 @@
               </div>
               <div class="flex flex-col-reverse lg:flex-row lg:items-start gap-4">
                 <div id="characterCustomization" hidden tabindex="-1"
-                  class="min-w-0 scroll-mt-4 lg:w-[44%] lg:shrink-0" aria-live="polite"></div>
-                <div class="w-full min-w-0 self-start lg:sticky lg:top-4 lg:z-10 lg:flex-1">
+                  class="min-w-0 scroll-mt-4 lg:w-[38%] lg:shrink-0" aria-live="polite"></div>
+                <div class="w-full min-w-0 self-start flex-1">
                   <div class="rounded-2xl overflow-hidden border border-slate-700 bg-slate-950">
                     <canvas id="characterStage" width="320" height="180" role="img"
                       aria-label="Pixel-art explorer with selected companion and background"
                       class="block w-full h-auto" style="image-rendering:pixelated"></canvas>
                   </div>
-                  <div id="characterProgressSummary" class="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-3"></div>
                 </div>
               </div>
             </div>
-            <div class="min-w-0 lg:col-span-5 flex flex-col items-center gap-4">
-              <div class="w-full">
-                <div class="flex items-center justify-center md:justify-start gap-3">
-                  <h2 class="cinzel text-2xl md:text-3xl font-extrabold text-amber-200" id="passportClassName">Alpine Ranger</h2>
-                  <span class="px-2.5 py-0.5 rounded-full text-xs font-mono bg-amber-400 text-slate-950 font-bold" id="passportLevelBadge">Level 1</span>
-                </div>
-                <p class="text-sm text-slate-300 mt-1" id="passportTitleDesc">Bound to the high peaks and wilderness.</p>
-                <div class="flex flex-wrap items-center justify-center md:justify-start gap-4 mt-3 text-xs text-slate-400">
-                  <span>🏰 Home: <b class="text-slate-200" id="passportHomeText">Not Assigned</b></span>
-                  <span>⚡ Total XP: <b class="text-emerald-400 font-mono" id="passportTotalXp">0</b></span>
-                  <span class="inline-flex items-center gap-1.5">
-                    <span aria-hidden="true" class="inline-block h-4 w-4 bg-no-repeat"
-                      style="background-image:url('./assets/gandalfhardcore/GandalfHardcore%20Emojis%20and%20Icons/Coin.png');background-size:192px 16px;background-position:0 0"></span>
-                    Wayfarer Coins: <b class="text-amber-300 font-mono" id="passportCoins">0</b>
-                  </span>
-                  <span title="Share of global land covered by visited or lived country, state, county, and district boundaries. Area is estimated from the loaded atlas.">🗺️ Global Land Explored: <b class="text-amber-300 font-mono" id="passportExploredPct">—</b></span>
-                </div>
-              </div>
-              <div class="w-56 h-56 flex flex-col items-center justify-center shrink-0">
+            <div class="mt-4 grid grid-cols-1 xl:grid-cols-4 gap-4 items-center">
+              <div id="characterProgressSummary" class="grid grid-cols-1 sm:grid-cols-3 gap-2 xl:col-span-3"></div>
+              <div class="w-56 h-56 mx-auto flex flex-col items-center justify-center">
                 <span class="text-[10px] uppercase font-mono tracking-wider text-slate-400 mb-1">Traveler Archetype</span>
                 <svg id="radarSvg" viewBox="0 0 240 240" class="w-full h-full drop-shadow-lg"></svg>
               </div>
@@ -1177,15 +1168,15 @@
     </section>
   </div>
 
-  <script src="./nps-catalog.js?v=20261024-cartovella-customization-v17"></script>
-  <script src="./national-parks-scratch.js?v=20261024-cartovella-customization-v17"></script>
-  <script src="./international-parks.js?v=20261024-cartovella-customization-v17"></script>
-  <script src="./ecoregions.js?v=20261024-cartovella-customization-v17"></script>
-  <script src="./coordinate-lookups.js?v=20261024-cartovella-customization-v17"></script>
-  <script src="./micro-states.js?v=20261024-cartovella-customization-v17"></script>
-  <script src="./travel-ledger.js?v=20261024-cartovella-customization-v17"></script>
-  <script src="./character-creator.js?v=20261024-cartovella-customization-v17"></script>
-  <script src="./rarity-config.js?v=20261024-cartovella-customization-v17"></script>
+  <script src="./nps-catalog.js?v=20261025-character-profile-v18"></script>
+  <script src="./national-parks-scratch.js?v=20261025-character-profile-v18"></script>
+  <script src="./international-parks.js?v=20261025-character-profile-v18"></script>
+  <script src="./ecoregions.js?v=20261025-character-profile-v18"></script>
+  <script src="./coordinate-lookups.js?v=20261025-character-profile-v18"></script>
+  <script src="./micro-states.js?v=20261025-character-profile-v18"></script>
+  <script src="./travel-ledger.js?v=20261025-character-profile-v18"></script>
+  <script src="./character-creator.js?v=20261025-character-profile-v18"></script>
+  <script src="./rarity-config.js?v=20261025-character-profile-v18"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -5570,7 +5561,6 @@
         ...stats,
         completedAchievementTiers: completedAchievementTiers(stats)
       };
-      const coins = CharacterCreator.coinSummary(characterStats, AppState);
       CharacterCreator.render({
         canvas: document.getElementById('characterStage'),
         controls: document.getElementById('characterCustomization'),
@@ -5601,10 +5591,7 @@
       // Hero banner
       document.getElementById('passportClassName').textContent = stats.cls;
       document.getElementById('passportTitleDesc').textContent = stats.titleDesc;
-      document.getElementById('passportLevelBadge').textContent = `Level ${stats.level}`;
       document.getElementById('passportHomeText').textContent = AppState.homeBase ? AppState.homeBase.name : 'Unknown Hearth';
-      document.getElementById('passportTotalXp').textContent = `${stats.xp} XP`;
-      document.getElementById('passportCoins').textContent = coins.availableCoins.toLocaleString('en');
       document.getElementById('passportExploredPct').textContent = Number.isFinite(stats.exploredPct)
         ? `${stats.exploredPct.toFixed(4)}%` : '—';
 
@@ -6514,7 +6501,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261024-cartovella-customization-v17"></script>
+  <script src="./expedition-ui.js?v=20261025-character-profile-v18"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);
