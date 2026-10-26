@@ -203,6 +203,23 @@ network rarity lookups. Newly saved custom and Photon places, and expedition sto
 in the background; if a rarity service is unavailable, the place remains saved and usable without
 a rarity badge.
 
+The Explorer Profile's Cabinet of Curiosities lists visited and lived parks and custom places,
+shows their rarity badges and rarity-coin totals, and lets you filter discoveries by tier. The
+Travel Ledger can filter by a specific rarity tier or sort destinations from rarest to most common;
+destinations without rarity data sort last. When a visited custom place receives its first rarity
+appraisal, Cartovella shows the tier, available review/popularity and highway-distance provenance,
+and the existing rarity coin and visit-XP rewards. Rarity coins are 10 for Tourist Trap, 15 for
+Beaten Path, 20 for Regional Staple, 25 for Deep Cut, 30 for Hidden Gem, and 35 for Uncharted.
+
+Rarity lookups use the browser's validated local cache first, then the shared
+`cartovella_rarity_cache` table in Supabase, then the configured rarity provider. The shared table
+must be provisioned with the coordinate key, rounded latitude/longitude, rarity tier, rarity JSON,
+and update timestamp fields, with the public app role allowed to read and upsert cache rows. Cache
+read/write failures are logged and do not prevent provider lookups. The Worker can optionally use
+Google Places review counts when its `GOOGLE_PLACES_API_KEY` secret is configured; without it, the
+Worker uses open-data classification. The optional Esri imagery token can be set as
+`CartovellaConfig.esriApiKey` in `rarity-config.js`.
+
 ## Run locally
 
 There is no build step or `npm start` script. Serve this directory over HTTP; opening `index.html`

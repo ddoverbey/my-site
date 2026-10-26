@@ -231,10 +231,13 @@ await check('boundary importer paginates all records and fails on partial pages/
 await check('OSM density categories use exact thresholds, not review-count claims', () => {
   for (const [count, category] of [[0, 'Uncharted'], [9, 'Uncharted'], [10, 'Hidden Gem'], [29, 'Hidden Gem'],
     [30, 'Deep Cut'], [99, 'Deep Cut'], [100, 'Regional Staple'], [999, 'Regional Staple'],
-    [1000, 'Beaten Path'], [10000, 'Beaten Path'], [10001, 'Tourist Trap']]) {
+    [1000, 'Beaten Path'], [9999, 'Beaten Path'], [10000, 'Tourist Trap']]) {
     assert.equal(lookups.categoryForPoiCount(count), category);
   }
   assert.throws(() => lookups.categoryForPoiCount(-1));
+  assert.equal(lookups.categoryForOpenData(10, 24), 'Hidden Gem');
+  assert.equal(lookups.categoryForOpenData(10, 25), 'Uncharted');
+  assert.throws(() => lookups.categoryForOpenData(10, 51));
 });
 await check('OSM POIs are deduplicated and highway distance uses the lightweight way center', () => {
   const summary = lookups.summarizeOsm([
@@ -343,6 +346,20 @@ const provider = {
   placeName: 'Matched POI', reviewCount: 30, popularityScore: 30, rarityTier: 'Deep Cut',
   matchedLat: 1, matchedLng: 1, cached: true, source: 'Licensed provider'
 };
+await check('rounded-coordinate rarity keys cache validated provider responses across lookups', async () => {
+  const cache = storage();
+  assert.equal(lookups.coordinateCacheKey(1.234, -2.345), '1.23,-2.35');
+  lookups.cacheRarity(1, 1, provider, cache);
+  const urls = [];
+  const rarity = await lookups.lookupRarityWithFallback(1, 1, {
+    rarityEndpoint: 'https://api.example.test/rarity',
+    storage: cache,
+    fetcher: async url => { urls.push(url); throw new Error('cache miss'); }
+  });
+  assert.equal(urls.length, 0);
+  assert.equal(rarity.rarityTier, 'Deep Cut');
+  assert.equal(rarity.cached, true);
+});
 await check('elevation and rarity requests use separate bounded abort timeouts', async () => {
   const originalTimeout = AbortSignal.timeout;
   const timeouts = [];

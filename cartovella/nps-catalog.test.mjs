@@ -141,7 +141,7 @@ check('Travel Ledger header is compact with no description beneath its title', (
   assert.ok(header.includes('>Travel Ledger</h2>'));
   assert.ok(!header.includes('Traditional Travel Wishlist'));
   assert.ok(!header.includes('Explore NPS parks'));
-  assert.ok(header.includes('grid-cols-1 sm:grid-cols-3'));
+  assert.ok(header.includes('grid-cols-1 sm:grid-cols-4'));
   assert.ok(header.includes('aria-label="Search destinations"'));
   assert.ok(header.includes('aria-label="Visit status"'));
   assert.ok(header.includes('id="bucketResultsCount"'));
@@ -179,7 +179,7 @@ check('character customization appears above the stage and progress summary', ()
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 10);
-  assert.ok(sources.every(source => source.endsWith('?v=20261026-achievements-v1')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261026-rarity-overhaul-v1')));
   assert.ok(sources.some(source => source.startsWith('./character-creator.js?')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
@@ -253,7 +253,7 @@ class TestDOMParser {
 function element(id) {
   if (!elements.has(id)) {
     elements.set(id, {
-      value: ['bucketFilterStatus', 'bucketFilterType'].includes(id) ? 'all' : '',
+      value: ['bucketFilterStatus', 'bucketFilterType', 'bucketFilterRarity'].includes(id) ? 'all' : '',
       textContent: '', innerHTML: '', style: {}, dataset: {},
       classList: { add() {}, remove() {}, toggle() {} },
       handlers: {}, addEventListener(name, handler) { this.handlers[name] = handler; },
@@ -1943,6 +1943,221 @@ check('expanded achievement tiers omit the summary tier, rank downward, and keep
     vm.runInContext(`npsCatalogLoaded=${previousCatalogLoaded}; renderAchievementsView()`, context);
     container.innerHTML = previousMarkup;
     delete context.achievementOrderTestStats;
+  }
+});
+check('Cabinet of Curiosities sorts appraised visits by rarity and its chips filter tiers', () => {
+  const savedState = vm.runInContext(
+    '({parks:PARKS,pins:AppState.pins,customPois:AppState.customPois,parkRarity:AppState.parkRarity})',
+    context
+  );
+  const savedFilter = vm.runInContext('cabinetRarityFilter', context);
+  context.cabinetFixture = {
+    parks: [
+      { id: 'cabinet-park', name: 'Quiet Park', lat: 10, lng: 10, state: 'Oregon', biomes: [], states: [] },
+      { id: 'cabinet-tourist-park', name: 'Popular Park', lat: 11, lng: 11, country: 'Italy', biomes: [], states: [] }
+    ],
+    pins: { 'cabinet-park': 'v', 'cabinet-tourist-park': 'l' },
+    parkRarity: {
+      'cabinet-park': { rarity: null, rarityTier: 'Uncharted' },
+      'cabinet-tourist-park': { rarity: null, rarityTier: 'Tourist Trap' }
+    },
+    pois: [
+      { id: 'poi_hidden', name: 'Hidden Cove', status: 'v', lat: 12, lng: 12, state: 'Maine',
+        political: { countries: [], states: [], counties: [] }, ecoregions: [], biomes: [],
+        rarityTier: 'Hidden Gem', rarity: { placeName: 'Hidden Cove', reviewCount: 10, popularityScore: 10,
+          rarityTier: 'Hidden Gem', matchedLat: 12, matchedLng: 12, nearestHighwayKm: null,
+          cached: false, source: 'Test provider' } },
+      { id: 'poi_uncharted', name: 'Uncharted Pool', status: 'l', lat: 13, lng: 13, state: 'Alaska',
+        political: { countries: [], states: [], counties: [] }, ecoregions: [], biomes: [],
+        rarityTier: 'Uncharted', rarity: { placeName: 'Uncharted Pool', reviewCount: 4, popularityScore: 4,
+          rarityTier: 'Uncharted', matchedLat: 13, matchedLng: 13, nearestHighwayKm: null,
+          cached: false, source: 'Test provider' } },
+      { id: 'poi_wishlist', name: 'Unvisited Wish', status: 'w', lat: 14, lng: 14,
+        rarityTier: 'Deep Cut', rarity: { reviewCount: 30, popularityScore: 30, rarityTier: 'Deep Cut' } }
+    ]
+  };
+  context.cabinetTestStats = {
+    metadataProgress: { rarityEntities: [
+      { kind: 'poi', tier: 'Uncharted' },
+      { kind: 'place', tier: 'Hidden Gem' },
+      { kind: 'park', tier: 'Tourist Trap' }
+    ] }
+  };
+  context.cabinetOriginalRenderer = vm.runInContext('renderCabinetOfCuriosities', context);
+  try {
+    vm.runInContext(`
+      PARKS=cabinetFixture.parks;
+      AppState.pins=cabinetFixture.pins;
+      AppState.parkRarity=cabinetFixture.parkRarity;
+      AppState.customPois=cabinetFixture.pois;
+      cabinetRarityFilter='all';
+      renderCabinetOfCuriosities(cabinetTestStats);
+      renderCabinetOfCuriosities=()=>cabinetOriginalRenderer(cabinetTestStats);
+    `, context);
+    const cards = element('rareDiscoveriesContainer').innerHTML;
+    const uncharted = cards.indexOf('Uncharted Pool');
+    const hidden = cards.indexOf('Hidden Cove');
+    const park = cards.indexOf('Quiet Park');
+    const tourist = cards.indexOf('Popular Park');
+    assert.ok(uncharted >= 0 && uncharted < park && park < hidden && hidden < tourist);
+    assert.ok(!cards.includes('Unvisited Wish'));
+    assert.ok(cards.includes('+35 Wayfarer Coins'));
+    assert.equal(element('rareDiscoveryCoins').textContent, '65');
+    const hiddenFilter = { dataset: { cabinetRarity: 'Hidden Gem' } };
+    element('rareDiscoveryFilters').handlers.click({ target: { closest: () => hiddenFilter } });
+    const filtered = element('rareDiscoveriesContainer').innerHTML;
+    assert.ok(filtered.includes('Hidden Cove'));
+    assert.ok(!filtered.includes('Uncharted Pool'));
+    assert.ok(!filtered.includes('Popular Park'));
+  } finally {
+    context.cabinetSavedState = savedState;
+    vm.runInContext(`
+      const cabinetRestoreState=cabinetSavedState;
+      PARKS=cabinetRestoreState.parks; AppState.pins=cabinetRestoreState.pins;
+      AppState.customPois=cabinetRestoreState.customPois; AppState.parkRarity=cabinetRestoreState.parkRarity;
+      cabinetRarityFilter=${JSON.stringify(savedFilter)};
+      renderCabinetOfCuriosities=cabinetOriginalRenderer;
+      delete globalThis.cabinetSavedState;
+    `, context);
+    delete context.cabinetFixture;
+    delete context.cabinetTestStats;
+    delete context.cabinetOriginalRenderer;
+  }
+});
+check('Travel Ledger filters by rarity and sorts rare-first with unknown tiers last', () => {
+  const savedState = vm.runInContext(
+    '({parks:PARKS,pins:AppState.pins,customPois:AppState.customPois,parkRarity:AppState.parkRarity})',
+    context
+  );
+  const previousRenderCityMatches = vm.runInContext('renderBucketCityMatches', context);
+  context.bucketRarityFixture = {
+    parks: [
+      { id: 'ledger-tourist', name: 'Popular Park', lat: 10, lng: 10, state: 'Oregon', biomes: [], states: [] },
+      { id: 'ledger-uncharted', name: 'Quiet Park', lat: 11, lng: 11, state: 'Alaska', biomes: [], states: [] }
+    ],
+    pois: [{
+      id: 'poi_ledger_hidden', name: 'Hidden Cove', status: 'v', lat: 12, lng: 12,
+      political: { countries: [], states: [], counties: [] }, ecoregions: [], biomes: [],
+      elevation: { meters: 0, feet: 0 },
+      rarityTier: 'Hidden Gem', rarity: { method: 'provider-review-count',
+        placeName: 'Hidden Cove', reviewCount: 10, popularityScore: 10,
+        rarityTier: 'Hidden Gem', matchedLat: 12, matchedLng: 12, nearestHighwayKm: null,
+        cached: false, source: 'Test provider' }
+    }]
+  };
+  try {
+    vm.runInContext(`
+      PARKS=bucketRarityFixture.parks;
+      AppState.pins={'ledger-tourist':'v','ledger-uncharted':'v'};
+      AppState.parkRarity={
+        'ledger-tourist':{rarity:null,rarityTier:'Tourist Trap'},
+        'ledger-uncharted':{rarity:null,rarityTier:'Uncharted'}
+      };
+      AppState.customPois=bucketRarityFixture.pois;
+      renderBucketCityMatches=()=>{};
+      bucketPage=0; bucketFilterKey=null;
+    `, context);
+    element('bucketSearch').value = '';
+    element('bucketFilterStatus').value = 'all';
+    element('bucketFilterType').value = 'all';
+    element('bucketFilterRarity').value = 'rare-first';
+    element('bucketFilterRarity').handlers.change();
+    let cards = element('bucketListGrid').innerHTML;
+    assert.ok(cards.indexOf('Quiet Park') < cards.indexOf('Hidden Cove'));
+    assert.ok(cards.indexOf('Hidden Cove') < cards.indexOf('Popular Park'));
+    element('bucketFilterRarity').value = 'Hidden Gem';
+    element('bucketFilterRarity').handlers.change();
+    cards = element('bucketListGrid').innerHTML;
+    assert.ok(cards.includes('Hidden Cove'));
+    assert.ok(!cards.includes('Quiet Park'));
+    assert.equal(element('bucketResultsCount').textContent, '1 / 3 destinations match · Showing 1–1');
+  } finally {
+    context.bucketSavedState = savedState;
+    context.previousBucketCityMatches = previousRenderCityMatches;
+    vm.runInContext(`
+      const bucketRestoreState=bucketSavedState;
+      PARKS=bucketRestoreState.parks; AppState.pins=bucketRestoreState.pins;
+      AppState.customPois=bucketRestoreState.customPois; AppState.parkRarity=bucketRestoreState.parkRarity;
+      renderBucketCityMatches=previousBucketCityMatches;
+      bucketPage=0; bucketFilterKey=null;
+      delete globalThis.bucketSavedState; delete globalThis.previousBucketCityMatches;
+    `, context);
+    element('bucketFilterRarity').value = 'all';
+    delete context.bucketRarityFixture;
+  }
+});
+check('rarity resolution uses shared cache fallback and announces the Field Appraisal rewards', async () => {
+  const savedState = vm.runInContext('AppState.customPois', context);
+  const originalFetch = context.fetch;
+  const originalHelpers = vm.runInContext(`({
+    cachedRarity:CoordinateLookups.cachedRarity,
+    lookupRarityWithFallback:CoordinateLookups.lookupRarityWithFallback,
+    cacheRarity:CoordinateLookups.cacheRarity,
+    commitLedger, updateAllUI
+  })`, context);
+  const rarity = {
+    placeName: "Devil's Punchbowl", reviewCount: 19, popularityScore: 19,
+    rarityTier: 'Hidden Gem', matchedLat: 41.89, matchedLng: 12.49,
+    nearestHighwayKm: 29.6, cached: false, source: 'Google Places API (New)'
+  };
+  const requests = [];
+  let sharedRow = null;
+  context.appraisalProviderLookupCount = 0;
+  context.appraisalTestPoi = {
+    id: 'poi_appraisal', name: "Devil's Punchbowl", status: 'v', lat: 41.89, lng: 12.49,
+    rarity: null, rarityTier: 'Uncharted'
+  };
+  context.fetch = async (url, options = {}) => {
+    requests.push({ url, options });
+    if (options.method === 'POST') {
+      sharedRow = JSON.parse(options.body)[0];
+      return { ok: true, status: 204 };
+    }
+    return { ok: true, status: 200, json: async () => sharedRow ? [sharedRow] : [] };
+  };
+  context.appraisalRarity = rarity;
+  try {
+    vm.runInContext(`
+      AppState.customPois=[appraisalTestPoi];
+      CoordinateLookups.cachedRarity=()=>null;
+      CoordinateLookups.lookupRarityWithFallback=async()=>{
+        appraisalProviderLookupCount++; return appraisalRarity;
+      };
+      CoordinateLookups.cacheRarity=(_lat,_lng,value)=>value;
+      commitLedger=operation=>operation();
+      updateAllUI=()=>{};
+    `, context);
+    await vm.runInContext("enrichCustomPoiRarity('poi_appraisal')", context);
+    assert.equal(requests.filter(request => request.options.method === 'POST').length, 1);
+    assert.ok(requests.some(request => request.url.includes('cartovella_rarity_cache')));
+    const shared = await vm.runInContext('lookupCachedOrSharedRarity(41.89,12.49)', context);
+    assert.equal(shared.rarityTier, 'Hidden Gem');
+    assert.equal(shared.cached, true);
+    assert.equal(context.appraisalProviderLookupCount, 1);
+    assert.equal(element('toastTitle').textContent, "🔮 Field Appraisal: Devil's Punchbowl");
+    assert.ok(element('toastMsg').textContent.includes('Hidden Gem'));
+    assert.ok(element('toastMsg').textContent.includes('19 reviews'));
+    assert.ok(element('toastMsg').textContent.includes('18.4 mi from nearest highway'));
+    assert.ok(element('toastMsg').textContent.includes('+30 Wayfarer Coins · +25 XP'));
+  } finally {
+    context.appraisalSavedState = savedState;
+    context.originalAppraisalFetch = originalFetch;
+    context.originalAppraisalHelpers = originalHelpers;
+    vm.runInContext(`
+      AppState.customPois=appraisalSavedState;
+      fetch=originalAppraisalFetch;
+      CoordinateLookups.cachedRarity=originalAppraisalHelpers.cachedRarity;
+      CoordinateLookups.lookupRarityWithFallback=originalAppraisalHelpers.lookupRarityWithFallback;
+      CoordinateLookups.cacheRarity=originalAppraisalHelpers.cacheRarity;
+      commitLedger=originalAppraisalHelpers.commitLedger;
+      updateAllUI=originalAppraisalHelpers.updateAllUI;
+      delete globalThis.appraisalSavedState;
+      delete globalThis.originalAppraisalFetch;
+      delete globalThis.originalAppraisalHelpers;
+    `, context);
+    delete context.appraisalTestPoi;
+    delete context.appraisalRarity;
+    delete context.appraisalProviderLookupCount;
   }
 });
 check('transited destinations clear exactly 60 percent of visited aura radius without visited stats', () => {

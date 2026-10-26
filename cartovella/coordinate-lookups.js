@@ -6,6 +6,12 @@
   const CACHE_TTL = 30 * 24 * 60 * 60 * 1000;
   const PROVIDER_TIMEOUT_MS = 3500;
   const RARITY_TIMEOUT_MS = 12000;
+  const RARITY_ISOLATION_DISTANCE_KM = 15 * 1.609344;
+  const HIGHWAY_SEARCH_RADIUS_KM = 50;
+  const RARITY_CACHE_PREFIX = 'terra_rarity_v2:';
+  const RARITY_ORDER = Object.freeze([
+    'Uncharted', 'Hidden Gem', 'Deep Cut', 'Regional Staple', 'Beaten Path', 'Tourist Trap'
+  ]);
   const RARITY_TIERS = Object.freeze({
     'Tourist Trap': Object.freeze({ icon: '📸', color: '#cbd5e1' }),
     'Beaten Path': Object.freeze({ icon: '🥾', color: '#4ade80' }),
@@ -383,13 +389,23 @@
   }
 
   function categoryForPoiCount(count) {
-    if (!Number.isInteger(count) || count < 0) throw new Error('Invalid OSM POI count.');
-    if (count > 10000) return 'Tourist Trap';
+    if (!Number.isInteger(count) || count < 0) throw new Error('Invalid rarity count.');
+    if (count >= 10000) return 'Tourist Trap';
     if (count >= 1000) return 'Beaten Path';
     if (count >= 100) return 'Regional Staple';
     if (count >= 30) return 'Deep Cut';
     if (count >= 10) return 'Hidden Gem';
     return 'Uncharted';
+  }
+
+  function categoryForOpenData(poiCount, nearestHighwayKm = null) {
+    if (!(nearestHighwayKm === null || (Number.isFinite(nearestHighwayKm) &&
+        nearestHighwayKm >= 0 && nearestHighwayKm <= HIGHWAY_SEARCH_RADIUS_KM))) {
+      throw new Error('Invalid nearest-highway distance.');
+    }
+    const category = categoryForPoiCount(poiCount);
+    if (nearestHighwayKm === null || nearestHighwayKm <= RARITY_ISOLATION_DISTANCE_KM) return category;
+    return RARITY_ORDER[Math.max(0, RARITY_ORDER.indexOf(category) - 1)];
   }
 
   function stableCatalogRarity(park, designation, memberships) {
@@ -463,12 +479,22 @@
   }
 
   function validateProviderRarity(data) {
+    const nearestHighwayKm = data?.nearestHighwayKm ?? null;
+    const expectedTier = data && Number.isSafeInteger(data.popularityScore) && data.popularityScore >= 0
+      ? data.reviewCount === null
+        ? categoryForOpenData(data.popularityScore, nearestHighwayKm)
+        : Number.isSafeInteger(data.reviewCount) && data.reviewCount >= 0
+          ? categoryForPoiCount(data.reviewCount)
+          : null
+      : null;
     if (!data || typeof data.placeName !== 'string' || !data.placeName.trim() ||
         !(data.reviewCount === null || (Number.isSafeInteger(data.reviewCount) && data.reviewCount >= 0)) ||
         !Number.isSafeInteger(data.popularityScore) || data.popularityScore < 0 ||
+        !(nearestHighwayKm === null || (Number.isFinite(nearestHighwayKm) &&
+          nearestHighwayKm >= 0 && nearestHighwayKm <= HIGHWAY_SEARCH_RADIUS_KM)) ||
         typeof data.cached !== 'boolean' || typeof data.source !== 'string' || !data.source.trim() ||
         data.source.length > 500 || data.placeName.length > 300 ||
-        data.rarityTier !== categoryForPoiCount(data.reviewCount ?? data.popularityScore)) {
+        data.rarityTier !== expectedTier) {
       throw new Error('Rarity endpoint returned invalid provider metadata.');
     }
     validateCoordinates(data.matchedLat, data.matchedLng);
@@ -477,9 +503,9 @@
 
   function normalizeRarity(rarity, lat, lng) {
     if (rarity?.method === 'osm-poi-density') {
-      if (rarity.category !== categoryForPoiCount(rarity.nearbyPoiCount) ||
+      if (rarity.category !== categoryForOpenData(rarity.nearbyPoiCount, rarity.nearestHighwayKm) ||
           !(rarity.nearestHighwayKm === null || (Number.isFinite(rarity.nearestHighwayKm) &&
-            rarity.nearestHighwayKm >= 0 && rarity.nearestHighwayKm <= 5))) {
+            rarity.nearestHighwayKm >= 0 && rarity.nearestHighwayKm <= HIGHWAY_SEARCH_RADIUS_KM))) {
         throw new Error('Invalid OSM rarity metadata.');
       }
       const matchedLat = rarity.sampledAt?.lat ?? lat;
@@ -511,6 +537,8 @@
     fetcher = root.fetch, storage, rarityEndpoint = '', onFallback = () => {}
   } = {}) {
     validateCoordinates(lat, lng);
+    const cached = cachedRarity(lat, lng, storage);
+    if (cached) return cached;
     if (rarityEndpoint) {
       try {
         const url = new URL(rarityEndpoint);
@@ -525,15 +553,15 @@
         if (coordinateDistanceKm(lat, lng, data.matchedLat, data.matchedLng) > 1) {
           throw new Error('Rarity endpoint matched a location more than 1 km from the requested point.');
         }
-        return normalizeRarity({
+        return cacheRarity(lat, lng, {
           ...data, method: data.reviewCount === null ? 'provider-popularity' : 'provider-review-count'
-        }, lat, lng);
+        }, storage);
       } catch (error) {
         console.warn('Rarity endpoint unavailable; using the direct OSM density lookup.', error);
         onFallback(error);
       }
     }
-    return normalizeRarity(await lookupRarity(lat, lng, fetcher, storage), lat, lng);
+    return cacheRarity(lat, lng, await lookupRarity(lat, lng, fetcher, storage), storage);
   }
 
   function segmentDistanceKm(lat, lng, a, b) {
@@ -564,9 +592,10 @@
         nearest = Math.min(nearest, coordinateDistanceKm(lat, lng, element.center.lat, element.center.lon));
       }
     }
+    const nearestHighwayKm = nearest <= HIGHWAY_SEARCH_RADIUS_KM ? nearest : null;
     return {
-      category: categoryForPoiCount(pois.size), nearbyPoiCount: pois.size,
-      nearestHighwayKm: nearest <= 5 ? nearest : null, radiusKm: 5,
+      category: categoryForOpenData(pois.size, nearestHighwayKm), nearbyPoiCount: pois.size,
+      nearestHighwayKm, radiusKm: 5,
       method: 'osm-poi-density', source: 'https://www.openstreetmap.org/copyright',
       sampledAt: { lat, lng }
     };
@@ -582,7 +611,7 @@
     if (cached) return cached;
     const query = `[out:json][timeout:10];(node(around:5000,${gridLat},${gridLng})["tourism"];` +
       `node(around:5000,${gridLat},${gridLng})["amenity"];` +
-      `way(around:5000,${gridLat},${gridLng})["highway"~"^(motorway|trunk)$"];);out center;`;
+      `way(around:${HIGHWAY_SEARCH_RADIUS_KM * 1000},${gridLat},${gridLng})["highway"~"^(motorway|trunk)$"];);out center;`;
     const result = await fetchJson(OVERPASS_URL, {
       method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({ data: query }).toString()
@@ -596,6 +625,31 @@
   function cachedRarity(lat, lng, storage, now = Date.now()) {
     validateCoordinates(lat, lng);
     if (!storage) return null;
+    const sharedKey = `${RARITY_CACHE_PREFIX}${coordinateCacheKey(lat, lng)}`;
+    const sharedRaw = storage.getItem(sharedKey);
+    if (sharedRaw) {
+      try {
+        const cached = JSON.parse(sharedRaw);
+        if (cached.version !== 1 || !Number.isFinite(cached.savedAt)) {
+          throw new Error('Invalid cached rarity metadata.');
+        }
+        const rarity = normalizeRarity(cached.data, lat, lng);
+        if (coordinateDistanceKm(lat, lng, rarity.matchedLat, rarity.matchedLng) > 1) {
+          throw new Error('Cached rarity match is more than 1 km from the requested point.');
+        }
+        if (now - cached.savedAt >= 0 && now - cached.savedAt < CACHE_TTL) {
+          return { ...rarity, cached: true };
+        }
+        storage.removeItem(sharedKey);
+      } catch (error) {
+        console.warn('Discarding invalid shared rarity cache entry', sharedKey, error);
+        try {
+          storage.removeItem(sharedKey);
+        } catch (removeError) {
+          console.warn('Could not remove invalid shared rarity cache entry', sharedKey, removeError);
+        }
+      }
+    }
     const gridLat = Number(lat.toFixed(3));
     const gridLng = Number(lng.toFixed(3));
     const key = `terra_osm_v1:${gridLat.toFixed(3)},${gridLng.toFixed(3)}`;
@@ -605,10 +659,10 @@
       const cached = JSON.parse(raw);
       if (cached.version !== 1 || !Number.isFinite(cached.savedAt) ||
           cached.data?.method !== 'osm-poi-density' || cached.data.radiusKm !== 5 ||
-          cached.data.category !== categoryForPoiCount(cached.data.nearbyPoiCount) ||
+          cached.data.category !== categoryForOpenData(cached.data.nearbyPoiCount, cached.data.nearestHighwayKm) ||
           cached.data.sampledAt?.lat !== gridLat || cached.data.sampledAt?.lng !== gridLng ||
           !(cached.data.nearestHighwayKm === null || (Number.isFinite(cached.data.nearestHighwayKm) &&
-            cached.data.nearestHighwayKm >= 0 && cached.data.nearestHighwayKm <= 5))) {
+            cached.data.nearestHighwayKm >= 0 && cached.data.nearestHighwayKm <= HIGHWAY_SEARCH_RADIUS_KM))) {
         throw new Error('Invalid cached OSM metadata.');
       }
       if (now - cached.savedAt >= 0 && now - cached.savedAt < CACHE_TTL) {
@@ -623,6 +677,20 @@
       }
     }
     return null;
+  }
+
+  function coordinateCacheKey(lat, lng) {
+    validateCoordinates(lat, lng);
+    return `${lat.toFixed(2)},${lng.toFixed(2)}`;
+  }
+
+  function cacheRarity(lat, lng, rarity, storage, now = Date.now()) {
+    const normalized = normalizeRarity(rarity, lat, lng);
+    if (storage) {
+      const key = `${RARITY_CACHE_PREFIX}${coordinateCacheKey(lat, lng)}`;
+      storage.setItem(key, JSON.stringify({ version: 1, savedAt: now, data: normalized }));
+    }
+    return normalized;
   }
 
   async function lookupCoordinate(lat, lng, {
@@ -709,8 +777,8 @@
     predominantBiome,
     validCountyId, validSubdivisionId, subdivisionFeatures,
     firstBoundaryIntersection, lookupRoadRoute, routeCountyIds,
-    lookupElevation, categoryForPoiCount, segmentDistanceKm, summarizeOsm, lookupRarity, cachedRarity,
-    lookupCoordinate, catalogParkRarity, RARITY_TIERS,
+    lookupElevation, categoryForPoiCount, categoryForOpenData, segmentDistanceKm, summarizeOsm, lookupRarity, cachedRarity,
+    coordinateCacheKey, cacheRarity, RARITY_ORDER, lookupCoordinate, catalogParkRarity, RARITY_TIERS,
     validateCustomLocations, migrateState, normalizeRarity, validateProviderRarity, coordinateDistanceKm,
     lookupRarityWithFallback, ELEVATION_URL, OVERPASS_URL, CACHE_TTL, NPS_SOURCE,
     SUBDIVISION_SOURCE, ADMIN2_COUNTRIES, ADMIN2_SOURCE, npsBoundaryIndex, admin2Features,

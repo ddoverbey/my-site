@@ -989,6 +989,18 @@ async function enrichExpeditionStopRarities(expeditionId) {
   for (let offset = 0; offset < stops.length; offset += 2) {
     const batch = await Promise.all(stops.slice(offset, offset + 2).map(async stop => {
       if (!stop.coords) return stop;
+      if (stop.kind === 'poi') {
+        const linkedPoi = AppState.customPois.find(poi => poi.id === stop.id);
+        if (linkedPoi) {
+          await window.enrichCustomPoiRarity?.(linkedPoi.id);
+          const resolvedPoi = AppState.customPois.find(poi => poi.id === linkedPoi.id);
+          if (resolvedPoi?.rarity && CoordinateLookups.RARITY_TIERS[resolvedPoi.rarityTier]) {
+            if (stop.rarityTier === resolvedPoi.rarityTier && stop.rarity) return stop;
+            updated = true;
+            return { ...stop, rarity: resolvedPoi.rarity, rarityTier: resolvedPoi.rarityTier };
+          }
+        }
+      }
       if (stop.kind === 'park') {
         const rarity = window.catalogParkRarityFor?.(stop.id);
         if (rarity?.rarityTier && CoordinateLookups.RARITY_TIERS[rarity.rarityTier]) {
@@ -997,15 +1009,27 @@ async function enrichExpeditionStopRarities(expeditionId) {
           return { ...stop, ...(rarity.rarity ? { rarity: rarity.rarity } : {}), rarityTier: rarity.rarityTier };
         }
       }
-      if (stop.rarityTier && stop.rarity) return stop;
+      if (stop.rarityTier && stop.rarity) {
+        if (stop.photonId || stop.kind === 'place') {
+          window.showFieldAppraisal?.({ ...stop, status: 'v' }, stop.rarity,
+            `${expeditionId}:${stop.photonId || stop.id || stop.coords.join(',')}`);
+        }
+        return stop;
+      }
       try {
-        const rarity = CoordinateLookups.cachedRarity(...stop.coords, rarityStorage) ||
+      const rarity = window.lookupCachedOrSharedRarity
+        ? await window.lookupCachedOrSharedRarity(...stop.coords)
+        : CoordinateLookups.cachedRarity(...stop.coords, rarityStorage) ||
           await CoordinateLookups.lookupRarityWithFallback(...stop.coords, {
             storage: rarityStorage, rarityEndpoint: CartovellaConfig.rarityEndpoint
           });
-        if (!rarity?.rarityTier || !CoordinateLookups.RARITY_TIERS[rarity.rarityTier]) return stop;
-        updated = true;
-        return { ...stop, rarity, rarityTier: rarity.rarityTier };
+      if (!rarity?.rarityTier || !CoordinateLookups.RARITY_TIERS[rarity.rarityTier]) return stop;
+      updated = true;
+      if (stop.photonId || stop.kind === 'place') {
+        window.showFieldAppraisal?.({ ...stop, status: 'v' }, rarity,
+          `${expeditionId}:${stop.photonId || stop.id || stop.coords.join(',')}`);
+      }
+      return { ...stop, rarity, rarityTier: rarity.rarityTier };
       } catch (error) {
         console.error('Expedition stop rarity lookup unavailable', expeditionId, stop.name, error);
         return stop;

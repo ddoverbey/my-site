@@ -821,6 +821,9 @@
     'Hidden Gem': 30,
     Uncharted: 35
   });
+  function rarityCoinReward(tier) {
+    return COINS_PER_RARITY[tier] || 0;
+  }
   const COINS_PER_ACHIEVEMENT_RARITY = Object.freeze({
     common: 25, uncommon: 50, rare: 100, epic: 200, legendary: 350, mythic: 500
   });
@@ -840,7 +843,7 @@
     const rarityPlaces = stats.metadataProgress?.rarityEntities || [];
     const placeCoins = rarityPlaces.reduce((total, entity) => {
       if (!['poi', 'photon', 'place'].includes(entity.kind)) return total;
-      return total + (COINS_PER_RARITY[entity.tier] || 0);
+      return total + rarityCoinReward(entity.tier);
     }, 0);
     const countries = new Set(stats.visitedCountries || []);
     Object.entries(appState.regions || {}).forEach(([key, status]) => {
@@ -1868,7 +1871,7 @@
     LEVEL_ITEMS, PARK_MILESTONE_ITEMS, ACHIEVEMENT_ITEMS,
     SHOP_WARDROBE, PET_ACCESSORY_CATALOG, EQUIPMENT_CATALOG, LEVEL_TRACK,
     BODY_SHAPE_PROFILES, normalizeCharacter, characterSpriteAssets, achievementProgress,
-    unlockStatus, coinSummary, processSpriteVariant, drawPet, drawCharacterSprite, drawCampfire,
+    unlockStatus, coinSummary, rarityCoinReward, processSpriteVariant, drawPet, drawCharacterSprite, drawCampfire,
     drawStage, renderAvatar, render
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

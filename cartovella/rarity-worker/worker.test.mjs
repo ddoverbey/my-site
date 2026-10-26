@@ -116,4 +116,80 @@ await check('concurrent same-isolate misses share one upstream request', async (
   assert.equal((await a).status, 200);
   assert.equal((await b).status, 200);
 });
+await check('Google Places review counts classify at exact thresholds and cache the combined highway result', async () => {
+  const googleEntries = new Map();
+  const googleRequests = [];
+  const googleGrid = coordinateGrid(35, -120);
+  const googleWorker = createWorker(async (url, options) => {
+    googleRequests.push({ url, options });
+    if (url === 'https://places.googleapis.com/v1/places:searchText') {
+      assert.equal(options.headers['X-Goog-Api-Key'], 'test-google-key');
+      assert.equal(options.headers['X-Goog-FieldMask'],
+        'places.displayName,places.userRatingCount,places.location');
+      const body = JSON.parse(options.body);
+      assert.equal(body.locationBias.circle.radius, 500);
+      return new Response(JSON.stringify({ places: [{
+        displayName: { text: 'Review-Rich Place' }, userRatingCount: 10000,
+        location: { latitude: googleGrid.matchedLat, longitude: googleGrid.matchedLng }
+      }] }));
+    }
+    assert.equal(url, 'https://overpass-api.de/api/interpreter');
+    const query = new URLSearchParams(options.body).get('data');
+    assert.match(query, /way\(around:50000,/);
+    return new Response(JSON.stringify({
+      elements: [{ type: 'way', id: 7, tags: { highway: 'trunk' },
+        center: { lat: googleGrid.matchedLat + 0.01, lon: googleGrid.matchedLng } }]
+    }));
+  });
+  const googleEnv = {
+    ...env,
+    GOOGLE_PLACES_API_KEY: 'test-google-key',
+    RARITY_CACHE: {
+      get: async key => googleEntries.has(key) ? JSON.parse(googleEntries.get(key)) : null,
+      put: async (key, value) => googleEntries.set(key, value)
+    }
+  };
+  const response = await googleWorker.fetch(request('lat=35&lng=-120'), googleEnv);
+  const result = await response.json();
+  assert.equal(response.status, 200);
+  assert.equal(result.placeName, 'Review-Rich Place');
+  assert.equal(result.reviewCount, 10000);
+  assert.equal(result.rarityTier, 'Tourist Trap');
+  assert.ok(result.nearestHighwayKm > 0);
+  assert.equal(googleRequests.length, 2);
+  const cached = await googleWorker.fetch(request('lat=35&lng=-120'), googleEnv);
+  assert.equal((await cached.json()).cached, true);
+  assert.equal(googleRequests.length, 2);
+});
+await check('Google failures fall back to open-data density and highway isolation; no key keeps OSM-only operation', async () => {
+  const isolatedWorker = createWorker(async url => {
+    if (url === 'https://places.googleapis.com/v1/places:searchText') {
+      return new Response('unavailable', { status: 503 });
+    }
+    const grid = coordinateGrid(20, 30);
+    return new Response(JSON.stringify({
+      elements: [
+        ...Array.from({ length: 10 }, (_, id) => ({ type: 'node', id, tags: { amenity: 'cafe' } })),
+        { type: 'way', id: 11, tags: { highway: 'motorway' },
+          center: { lat: grid.matchedLat + 0.27, lon: grid.matchedLng } }
+      ]
+    }));
+  });
+  const isolatedCache = new Map();
+  const isolatedEnv = {
+    ...env,
+    GOOGLE_PLACES_API_KEY: 'test-google-key',
+    RARITY_CACHE: {
+      get: async key => isolatedCache.has(key) ? JSON.parse(isolatedCache.get(key)) : null,
+      put: async (key, value) => isolatedCache.set(key, value)
+    }
+  };
+  const fallback = await isolatedWorker.fetch(request('lat=20&lng=30'), isolatedEnv);
+  const fallbackData = await fallback.json();
+  assert.equal(fallback.status, 200);
+  assert.equal(fallbackData.reviewCount, null);
+  assert.equal(fallbackData.popularityScore, 10);
+  assert.equal(fallbackData.rarityTier, 'Uncharted');
+  assert.ok(fallbackData.nearestHighwayKm > 15);
+});
 console.log(`${checks} rarity Worker checks passed.`);

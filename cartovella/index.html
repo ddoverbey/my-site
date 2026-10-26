@@ -746,6 +746,25 @@
           </div>
         </div>
 
+        <!-- Rare Discoveries Ledger -->
+        <section id="cabinetOfCuriositiesSection" class="space-y-4" aria-labelledby="cabinetOfCuriositiesTitle">
+          <div class="rpg-panel rounded-2xl p-4 md:p-5 space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+              <div>
+                <h3 id="cabinetOfCuriositiesTitle" class="cinzel text-xl font-bold text-amber-200">Cabinet of Curiosities — Rare Discoveries</h3>
+                <p class="text-xs text-slate-400 mt-1">A field ledger of visited places, from uncharted quiet to well-traveled landmarks.</p>
+              </div>
+              <div class="flex flex-wrap gap-x-5 gap-y-2 text-xs">
+                <span class="text-slate-400">Appraised places <b id="rareDiscoveryTotal" class="ml-1 font-mono text-slate-100">0</b></span>
+                <span class="text-slate-400">Rarity coins <b id="rareDiscoveryCoins" class="ml-1 font-mono text-amber-200">0</b></span>
+              </div>
+            </div>
+            <div id="rarityDiscoveryBreakdown" class="flex h-3 overflow-hidden rounded-full bg-slate-900" role="img" aria-label="Rarity distribution"></div>
+            <div id="rareDiscoveryFilters" class="flex flex-wrap gap-2" role="group" aria-label="Filter rare discoveries"></div>
+            <div id="rareDiscoveriesContainer" class="grid grid-cols-1 md:grid-cols-2 gap-3" aria-live="polite"></div>
+          </div>
+        </section>
+
         <!-- Questlines Section -->
         <div>
           <div class="mb-4">
@@ -869,7 +888,7 @@
       <div class="max-w-5xl mx-auto space-y-6 pb-20">
         <div class="rpg-panel p-4 md:p-6 rounded-2xl space-y-3">
           <h2 class="cinzel text-xl font-bold text-amber-200">Travel Ledger</h2>
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
             <input type="text" id="bucketSearch" aria-label="Search destinations" placeholder="Search destinations..." class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-amber-400 w-full min-w-0">
             <select id="bucketFilterStatus" aria-label="Visit status" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none w-full min-w-0">
               <option value="all">All Items</option>
@@ -898,6 +917,16 @@
               <option value="other">Other NPS Designations</option>
               <option value="international">International Catalog</option>
               <option value="custom">Custom Locations</option>
+            </select>
+            <select id="bucketFilterRarity" aria-label="Location rarity" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none w-full min-w-0">
+              <option value="all">All Rarity Tiers</option>
+              <option value="rare-first">Sort: Rarest First</option>
+              <option value="Uncharted">Uncharted</option>
+              <option value="Hidden Gem">Hidden Gem</option>
+              <option value="Deep Cut">Deep Cut</option>
+              <option value="Regional Staple">Regional Staple</option>
+              <option value="Beaten Path">Beaten Path</option>
+              <option value="Tourist Trap">Tourist Trap</option>
             </select>
           </div>
           <p id="bucketTypeHint" class="text-[11px] text-slate-400">NPS filters use the official US catalog. International classifications may be unverified.</p>
@@ -1195,15 +1224,15 @@
     </section>
   </div>
 
-  <script src="./nps-catalog.js?v=20261026-achievements-v1"></script>
-  <script src="./national-parks-scratch.js?v=20261026-achievements-v1"></script>
-  <script src="./international-parks.js?v=20261026-achievements-v1"></script>
-  <script src="./ecoregions.js?v=20261026-achievements-v1"></script>
-  <script src="./coordinate-lookups.js?v=20261026-achievements-v1"></script>
-  <script src="./micro-states.js?v=20261026-achievements-v1"></script>
-  <script src="./travel-ledger.js?v=20261026-achievements-v1"></script>
-  <script src="./character-creator.js?v=20261026-achievements-v1"></script>
-  <script src="./rarity-config.js?v=20261026-achievements-v1"></script>
+  <script src="./nps-catalog.js?v=20261026-rarity-overhaul-v1"></script>
+  <script src="./national-parks-scratch.js?v=20261026-rarity-overhaul-v1"></script>
+  <script src="./international-parks.js?v=20261026-rarity-overhaul-v1"></script>
+  <script src="./ecoregions.js?v=20261026-rarity-overhaul-v1"></script>
+  <script src="./coordinate-lookups.js?v=20261026-rarity-overhaul-v1"></script>
+  <script src="./micro-states.js?v=20261026-rarity-overhaul-v1"></script>
+  <script src="./travel-ledger.js?v=20261026-rarity-overhaul-v1"></script>
+  <script src="./character-creator.js?v=20261026-rarity-overhaul-v1"></script>
+  <script src="./rarity-config.js?v=20261026-rarity-overhaul-v1"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -2973,7 +3002,10 @@
       map.setView(defaultCenter, AppState.homeBase ? 6 : 4);
 
       // Esri World Imagery (High-res satellite, truly free)
-      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      const imageryUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+      const esriApiKey = typeof CartovellaConfig?.esriApiKey === 'string'
+        ? CartovellaConfig.esriApiKey.trim() : '';
+      L.tileLayer(esriApiKey ? `${imageryUrl}?token=${encodeURIComponent(esriApiKey)}` : imageryUrl, {
         maxZoom: 19,
         attribution: 'Tiles &copy; Esri'
       }).addTo(map);
@@ -4036,17 +4068,146 @@
       return rarity ? { ...park, ...rarity } : park;
     }
 
+    function destinationRarityTier(destination) {
+      if (PARKS.includes(destination)) return catalogParkRarityFor(destination)?.rarityTier || null;
+      return destination.rarityTier || destination.rarity?.rarityTier || null;
+    }
+
+    const fieldAppraisalsShown = new Set();
+    const locationRarityOrder = CoordinateLookups.RARITY_ORDER;
+
+    function rarityAppraisalDetails(rarity) {
+      const provenance = rarity.reviewCount !== null
+        ? `${rarity.reviewCount.toLocaleString('en')} reviews`
+        : `Popularity score: ${rarity.popularityScore.toLocaleString('en')}`;
+      const highway = Number.isFinite(rarity.nearestHighwayKm)
+        ? ` · ${(rarity.nearestHighwayKm * 0.621371).toFixed(1)} mi from nearest highway`
+        : '';
+      return `${provenance}${highway}`;
+    }
+
+    function showFieldAppraisal(location, rarity, key = location?.id) {
+      if (!location || !TravelLedger.isVisited(location.status) ||
+          !CoordinateLookups.RARITY_TIERS[rarity?.rarityTier] || fieldAppraisalsShown.has(key)) return;
+      fieldAppraisalsShown.add(key);
+      const coins = CharacterCreator.rarityCoinReward(rarity.rarityTier);
+      showNotification(`🔮 Field Appraisal: ${location.name}`,
+        `${rarity.rarityTier} · ${rarityAppraisalDetails(rarity)} · +${coins} Wayfarer Coins · +25 XP`,
+        '🔮');
+    }
+
+    async function fetchSupabaseRarityCache(lat, lng) {
+      const coordKey = CoordinateLookups.coordinateCacheKey(lat, lng);
+      const url = `${SUPABASE_URL}/rest/v1/cartovella_rarity_cache?coord_key=eq.${encodeURIComponent(coordKey)}&select=coord_key,lat,lng,rarity_tier,rarity_data&limit=1`;
+      const response = await fetch(url, {
+        headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+        signal: AbortSignal.timeout(CoordinateLookups.PROVIDER_TIMEOUT_MS)
+      });
+      if (!response.ok) {
+        throw new Error(`Supabase rarity cache read failed (HTTP ${response.status}).`);
+      }
+      const rows = await response.json();
+      if (!Array.isArray(rows)) throw new Error('Supabase returned an invalid rarity cache response.');
+      const row = rows[0];
+      if (!row) return null;
+      if (row.coord_key !== coordKey || typeof row.rarity_tier !== 'string' ||
+          !Number.isFinite(row.lat) || !Number.isFinite(row.lng)) {
+        throw new Error('Supabase returned an invalid rarity cache row.');
+      }
+      const rarity = CoordinateLookups.normalizeRarity(row.rarity_data, lat, lng);
+      if (rarity.rarityTier !== row.rarity_tier ||
+          CoordinateLookups.coordinateDistanceKm(lat, lng, rarity.matchedLat, rarity.matchedLng) > 1) {
+        throw new Error('Supabase rarity cache data does not match the requested location.');
+      }
+      return { ...rarity, cached: true };
+    }
+
+    async function saveSupabaseRarityCache(lat, lng, rarity) {
+      const normalized = CoordinateLookups.normalizeRarity(rarity, lat, lng);
+      const coordKey = CoordinateLookups.coordinateCacheKey(lat, lng);
+      const response = await fetch(
+        `${SUPABASE_URL}/rest/v1/cartovella_rarity_cache?on_conflict=coord_key`,
+        {
+          method: 'POST',
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            Prefer: 'resolution=merge-duplicates,return=minimal'
+          },
+          body: JSON.stringify([{
+            coord_key: coordKey,
+            lat: Number(lat.toFixed(2)),
+            lng: Number(lng.toFixed(2)),
+            rarity_tier: normalized.rarityTier,
+            rarity_data: normalized,
+            updated_at: new Date().toISOString()
+          }]),
+          signal: AbortSignal.timeout(CoordinateLookups.PROVIDER_TIMEOUT_MS)
+        }
+      );
+      if (!response.ok) throw new Error(`Supabase rarity cache write failed (HTTP ${response.status}).`);
+      return true;
+    }
+
+    const rarityLookupOperations = new Map();
+    async function lookupCachedOrSharedRarity(lat, lng) {
+      const key = CoordinateLookups.coordinateCacheKey(lat, lng);
+      if (rarityLookupOperations.has(key)) return rarityLookupOperations.get(key);
+      const operation = (async () => {
+        const storage = coordinateRarityStorage();
+        const local = CoordinateLookups.cachedRarity(lat, lng, storage);
+        if (local) {
+          try {
+            await saveSupabaseRarityCache(lat, lng, local);
+          } catch (error) {
+            console.warn('Could not seed the shared rarity cache from local data.', error);
+          }
+          return local;
+        }
+        try {
+          const shared = await fetchSupabaseRarityCache(lat, lng);
+          if (shared) {
+            CoordinateLookups.cacheRarity(lat, lng, shared, storage);
+            return shared;
+          }
+        } catch (error) {
+          console.warn('Shared rarity cache unavailable; continuing with the rarity provider.', error);
+        }
+        const rarity = await CoordinateLookups.lookupRarityWithFallback(lat, lng, {
+          storage, rarityEndpoint: CartovellaConfig.rarityEndpoint
+        });
+        try {
+          CoordinateLookups.cacheRarity(lat, lng, rarity, storage);
+        } catch (error) {
+          console.warn('Resolved rarity could not be saved to local storage.', error);
+        }
+        try {
+          await saveSupabaseRarityCache(lat, lng, rarity);
+        } catch (error) {
+          console.warn('Resolved rarity could not be saved to the shared cache.', error);
+        }
+        return rarity;
+      })();
+      rarityLookupOperations.set(key, operation);
+      try {
+        return await operation;
+      } finally {
+        if (rarityLookupOperations.get(key) === operation) rarityLookupOperations.delete(key);
+      }
+    }
+
     async function enrichCustomPoiRarity(poiId) {
       if (AppState.viewOnly) return null;
       const poi = AppState.customPois.find(item => item.id === poiId);
-      if (!poi || (poi.rarity && CoordinateLookups.RARITY_TIERS[poi.rarityTier])) return null;
-      const storage = coordinateRarityStorage();
+      if (!poi) return null;
+      if (poi.rarity && CoordinateLookups.RARITY_TIERS[poi.rarityTier]) {
+        showFieldAppraisal(poi, poi.rarity);
+        return poi.rarity;
+      }
       let rarity;
       try {
-        rarity = CoordinateLookups.cachedRarity(poi.lat, poi.lng, storage) ||
-          await CoordinateLookups.lookupRarityWithFallback(poi.lat, poi.lng, {
-            storage, rarityEndpoint: CartovellaConfig.rarityEndpoint
-          });
+        rarity = await lookupCachedOrSharedRarity(poi.lat, poi.lng);
       } catch (error) {
         console.error('Saved place rarity lookup unavailable', poiId, error);
         return null;
@@ -4062,7 +4223,128 @@
         return null;
       }
       updateAllUI();
+      showFieldAppraisal(current, rarity);
       return rarity;
+    }
+    window.enrichCustomPoiRarity = enrichCustomPoiRarity;
+    window.lookupCachedOrSharedRarity = lookupCachedOrSharedRarity;
+    window.showFieldAppraisal = showFieldAppraisal;
+
+    let cabinetRarityFilter = 'all';
+
+    function renderCabinetOfCuriosities(stats = calculateStats()) {
+      const filterContainer = document.getElementById('rareDiscoveryFilters');
+      const breakdown = document.getElementById('rarityDiscoveryBreakdown');
+      const grid = document.getElementById('rareDiscoveriesContainer');
+      const discoveries = [];
+      PARKS.forEach(park => {
+        if (!TravelLedger.isVisited(destinationStatus(park))) return;
+        const rarity = catalogParkRarityFor(park);
+        if (!CoordinateLookups.RARITY_TIERS[rarity?.rarityTier]) return;
+        discoveries.push({
+          ...park, rarity: rarity.rarity, rarityTier: rarity.rarityTier, kind: 'park'
+        });
+      });
+      AppState.customPois.forEach(poi => {
+        if (!TravelLedger.isVisited(poi.status) ||
+            !poi.rarity || !CoordinateLookups.RARITY_TIERS[poi.rarityTier]) return;
+        discoveries.push({ ...poi, rarity: poi.rarity, rarityTier: poi.rarityTier, kind: 'poi' });
+      });
+      const rarityRank = tier => {
+        const index = locationRarityOrder.indexOf(tier);
+        return index < 0 ? locationRarityOrder.length : index;
+      };
+      const scoreFor = item => item.rarity?.reviewCount ??
+        item.rarity?.popularityScore ?? Number.MAX_SAFE_INTEGER;
+      discoveries.sort((a, b) => rarityRank(a.rarityTier) - rarityRank(b.rarityTier) ||
+        scoreFor(a) - scoreFor(b) || a.name.localeCompare(b.name, 'en'));
+      const rarityCounts = Object.fromEntries(locationRarityOrder.map(tier => [
+        tier, discoveries.filter(item => item.rarityTier === tier).length
+      ]));
+      const rarityCoins = (stats.metadataProgress?.rarityEntities || []).reduce((total, entity) =>
+        total + (['poi', 'photon', 'place'].includes(entity.kind)
+          ? CharacterCreator.rarityCoinReward(entity.tier) : 0), 0);
+      document.getElementById('rareDiscoveryTotal').textContent = discoveries.length.toLocaleString('en');
+      document.getElementById('rareDiscoveryCoins').textContent = rarityCoins.toLocaleString('en');
+      breakdown.setAttribute('aria-label', locationRarityOrder.map(tier =>
+        `${tier}: ${rarityCounts[tier]}`).join(', '));
+      breakdown.innerHTML = discoveries.length
+        ? locationRarityOrder.filter(tier => rarityCounts[tier] > 0).map(tier => {
+          const width = rarityCounts[tier] / discoveries.length * 100;
+          const color = CoordinateLookups.RARITY_TIERS[tier].color;
+          return `<span class="h-full" style="width:${width}%;background-color:${color}" title="${escapeHtml(tier)}: ${rarityCounts[tier]}"></span>`;
+        }).join('')
+        : '<span class="h-full w-full bg-slate-700"></span>';
+      const filterOptions = [
+        { value: 'all', label: 'All Discoveries', count: discoveries.length },
+        ...locationRarityOrder.map(tier => ({ value: tier, label: tier, count: rarityCounts[tier] }))
+      ];
+      filterContainer.innerHTML = filterOptions.map(option => {
+        const active = cabinetRarityFilter === option.value;
+        return `<button type="button" data-cabinet-rarity="${escapeHtml(option.value)}" aria-pressed="${active}"
+          class="rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+            active ? 'border-amber-300 bg-amber-400/20 text-amber-100' : 'border-slate-700 bg-slate-950 text-slate-300 hover:border-slate-500'
+          }">${escapeHtml(option.label)} <span class="ml-1 font-mono text-slate-400">${option.count}</span></button>`;
+      }).join('');
+      const visible = cabinetRarityFilter === 'all'
+        ? discoveries : discoveries.filter(item => item.rarityTier === cabinetRarityFilter);
+      if (!discoveries.length) {
+        grid.innerHTML = '<p class="col-span-full rounded-xl border border-slate-800 bg-slate-950/60 p-5 text-sm text-slate-400">Your cabinet is waiting for its first field appraisal. Visit or live in catalog parks, log custom coordinates, or save Photon cities to discover their rarity here.</p>';
+        return;
+      }
+      if (!visible.length) {
+        grid.innerHTML = `<p class="col-span-full rounded-xl border border-slate-800 bg-slate-950/60 p-5 text-sm text-slate-400">No ${escapeHtml(cabinetRarityFilter)} discoveries yet.</p>`;
+        return;
+      }
+      grid.innerHTML = visible.map(item => {
+        const rarity = item.rarity;
+        const provenance = rarity
+          ? rarityAppraisalDetails(rarity)
+          : item.visitorCount
+            ? `Catalog estimate · ${item.visitorCount.toLocaleString('en')} visitors`
+            : 'Catalog designation estimate';
+        const coinReward = item.kind === 'park' ? 15 : CharacterCreator.rarityCoinReward(item.rarityTier);
+        const rewardLabel = item.kind === 'park'
+          ? `+${coinReward} Wayfarer Coins · park visit`
+          : `+${coinReward} Wayfarer Coins`;
+        return `<article class="rounded-xl border border-slate-800 bg-slate-950/70 p-3.5 space-y-2">
+          <div class="flex flex-wrap items-start justify-between gap-2">
+            <div class="min-w-0"><h4 class="font-semibold text-sm text-slate-100">${escapeHtml(item.name)}</h4>
+              <p class="text-[11px] text-slate-400">${escapeHtml(item.state || item.country || 'Location unavailable')}</p></div>
+            ${rarityBadgeMarkup(item.rarityTier)}
+          </div>
+          <p class="text-[11px] text-slate-400">${escapeHtml(provenance)}</p>
+          <div class="flex items-center justify-between gap-2">
+            <span class="rounded-full border border-amber-400/30 bg-amber-400/10 px-2 py-1 text-[10px] font-semibold text-amber-200">${rewardLabel}</span>
+            <button type="button" data-rarity-discovery-kind="${item.kind}" data-rarity-discovery-id="${escapeHtml(item.id)}" data-rarity-discovery-name="${escapeHtml(item.name)}"
+              class="rounded-lg border border-sky-500/30 px-2.5 py-1.5 text-[11px] font-semibold text-sky-200 hover:border-sky-300">View in Travel Ledger</button>
+          </div>
+        </article>`;
+      }).join('');
+    }
+
+    function focusRarityDiscovery(kind, id, name) {
+      const destination = kind === 'park'
+        ? PARKS.find(park => park.id === id)
+        : AppState.customPois.find(poi => poi.id === id);
+      if (!destination) return;
+      document.getElementById('bucketSearch').value = name;
+      document.getElementById('bucketFilterStatus').value = 'all';
+      document.getElementById('bucketFilterType').value = 'all';
+      document.getElementById('bucketFilterRarity').value = 'all';
+      bucketPage = 0;
+      bucketFilterKey = null;
+      switchTab('bucketlist');
+      renderBucketListView();
+      requestAnimationFrame(() => {
+        const button = [...document.querySelectorAll('#bucketListGrid [data-atlas-pin-kind="destination"]')]
+          .find(item => item.dataset.atlasPinId === id);
+        const card = button?.closest('.ledger-card');
+        if (!card) return;
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        card.classList.add('ring-2', 'ring-amber-300');
+        setTimeout(() => card.classList.remove('ring-2', 'ring-amber-300'), 2500);
+      });
     }
 
     function createPopupContent(p) {
@@ -4123,6 +4405,7 @@
         return;
       }
       if (custom) {
+        const wasVisited = TravelLedger.isVisited(custom.status);
         if (status === 'un' && AppState.expeditions.some(exp => exp.customPoiIds.includes(parkId))) {
           showNotification('Location retained', 'This POI belongs to an expedition. Its record cannot be removed.', '⚠️');
           return;
@@ -4134,6 +4417,11 @@
         renderParkMarkers();
         drawFogOfWar();
         updateAllUI();
+        if (TravelLedger.isVisited(status) && !wasVisited) {
+          const updated = AppState.customPois.find(poi => poi.id === parkId);
+          if (updated?.rarity) showFieldAppraisal(updated, updated.rarity);
+          else void enrichCustomPoiRarity(parkId);
+        }
         return;
       }
       const prev = AppState.pins[parkId];
@@ -5627,6 +5915,7 @@
       });
       renderProfileFlags(stats.visitedCountries);
       renderProfileStateFlags(stats.visitedStates);
+      renderCabinetOfCuriosities(stats);
 
       // Hero banner
       document.getElementById('passportClassName').textContent = stats.cls;
@@ -6328,7 +6617,6 @@
         lookedUpAt: new Date().toISOString()
       });
       let lookupWarnings = [];
-      let needsRarityEnrichment = true;
       try {
         const resolved = await CoordinateLookups.lookupCoordinate(place.lat, place.lng, {
           indexes: coordinateIndexes, geoContains: d3.geoContains, storage: coordinateRarityStorage(),
@@ -6343,7 +6631,6 @@
             political: resolved.political, ecoregions: resolved.ecoregions, biomes: resolved.biomes,
             biomeStatus: resolved.biomeStatus, lookedUpAt: resolved.lookedUpAt
           }));
-          needsRarityEnrichment = !resolved.rarity?.rarityTier;
         }
       } catch (error) {
         console.error('Photon place metadata lookup failed after saving', poiId, error);
@@ -6352,7 +6639,7 @@
       renderParkMarkers();
       drawFogOfWar();
       updateAllUI();
-      if (needsRarityEnrichment) void enrichCustomPoiRarity(poiId);
+      void enrichCustomPoiRarity(poiId);
       showNotification(lookupWarnings?.length ? 'Place saved with fallback metadata' : 'Place saved',
         lookupWarnings?.length ? lookupWarnings.join(' ') : `${place.name} added to your Travel Ledger.`,
         lookupWarnings?.length ? '⚠️' : place.category === 'City' ? '🏙️' : '📍');
@@ -6362,8 +6649,9 @@
       const search = (document.getElementById('bucketSearch').value || '').toLowerCase();
       const filter = document.getElementById('bucketFilterStatus').value;
       const type = document.getElementById('bucketFilterType').value;
+      const rarityFilter = document.getElementById('bucketFilterRarity').value;
       renderBucketCityMatches();
-      const filterKey = JSON.stringify([search, filter, type]);
+      const filterKey = JSON.stringify([search, filter, type, rarityFilter]);
       if (bucketFilterKey !== filterKey) bucketPage = 0;
       bucketFilterKey = filterKey;
       const grid = document.getElementById('bucketListGrid');
@@ -6373,6 +6661,8 @@
         const status = destinationStatus(p);
         if (filter !== 'all' && status !== filter) return false;
         if (!matchesBucketType(p, type)) return false;
+        const rarityTier = destinationRarityTier(p);
+        if (rarityFilter !== 'all' && rarityFilter !== 'rare-first' && rarityTier !== rarityFilter) return false;
         if (!search) return true;
         return p.name.toLowerCase().includes(search) || 
                (p.state && p.state.toLowerCase().includes(search)) ||
@@ -6384,6 +6674,14 @@
                (p.ecoregions && p.ecoregions.some(region => region.name.toLowerCase().includes(search) || region.realm.toLowerCase().includes(search))) ||
                p.biomes.some(b => (BIOMES[b] && BIOMES[b].name.toLowerCase().includes(search)));
       });
+      if (rarityFilter === 'rare-first') {
+        const rarityRank = destination => {
+          const index = locationRarityOrder.indexOf(destinationRarityTier(destination));
+          return index < 0 ? locationRarityOrder.length : index;
+        };
+        filtered.sort((a, b) =>
+          rarityRank(a) - rarityRank(b) || a.name.localeCompare(b.name, 'en'));
+      }
       const pageCount = Math.max(1, Math.ceil(filtered.length / BUCKET_PAGE_SIZE));
       bucketPage = Math.max(0, Math.min(bucketPage, pageCount - 1));
       const start = bucketPage * BUCKET_PAGE_SIZE;
@@ -6641,6 +6939,21 @@
     });
     document.getElementById('bucketFilterStatus').addEventListener('change', renderBucketListView);
     document.getElementById('bucketFilterType').addEventListener('change', renderBucketListView);
+    document.getElementById('bucketFilterRarity').addEventListener('change', renderBucketListView);
+    document.getElementById('rareDiscoveryFilters').addEventListener('click', event => {
+      const button = event.target.closest('button[data-cabinet-rarity]');
+      if (!button) return;
+      cabinetRarityFilter = button.dataset.cabinetRarity;
+      renderCabinetOfCuriosities();
+    });
+    document.getElementById('rareDiscoveriesContainer').addEventListener('click', event => {
+      const button = event.target.closest('button[data-rarity-discovery-id]');
+      if (button) focusRarityDiscovery(
+        button.dataset.rarityDiscoveryKind,
+        button.dataset.rarityDiscoveryId,
+        button.dataset.rarityDiscoveryName
+      );
+    });
     for (const [id, direction] of [['bucketPrevPage', -1], ['bucketNextPage', 1]]) {
       document.getElementById(id).addEventListener('click', () => {
         bucketPage += direction;
@@ -6775,7 +7088,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261026-achievements-v1"></script>
+  <script src="./expedition-ui.js?v=20261026-rarity-overhaul-v1"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);

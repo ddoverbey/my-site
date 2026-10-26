@@ -1,5 +1,9 @@
 import lookups from '../coordinate-lookups.js';
 
+const GOOGLE_PLACES_URL = 'https://places.googleapis.com/v1/places:searchText';
+const GOOGLE_PLACES_FIELD_MASK = 'places.displayName,places.userRatingCount,places.location';
+const GOOGLE_PLACE_MATCH_RADIUS_KM = 0.5;
+
 export function coordinateGrid(lat, lng) {
   lookups.validateCoordinates(lat, lng);
   const latStep = 0.5 / 111.195;
@@ -12,6 +16,63 @@ export function coordinateGrid(lat, lng) {
     matchedLat: Number(matchedLat.toFixed(7)),
     matchedLng: Number((column / longitudeCells * 360 - 180).toFixed(7))
   };
+}
+
+async function fetchOpenDataSummary(fetcher, grid) {
+  const query = `[out:json][timeout:25];(node(around:5000,${grid.matchedLat},${grid.matchedLng})["tourism"];` +
+    `node(around:5000,${grid.matchedLat},${grid.matchedLng})["amenity"];` +
+    `way(around:50000,${grid.matchedLat},${grid.matchedLng})["highway"~"^(motorway|trunk)$"];);out center;`;
+  const response = await fetcher(lookups.OVERPASS_URL, {
+    method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ data: query }).toString(), signal: AbortSignal.timeout(30000)
+  });
+  if (!response.ok) throw new Error(`Overpass HTTP ${response.status}.`);
+  const data = await response.json();
+  if (data.remark) throw new Error('Overpass returned an incomplete query.');
+  return {
+    summary: lookups.summarizeOsm(data.elements, grid.matchedLat, grid.matchedLng),
+    timestamp: data.osm3s?.timestamp_osm_base || null
+  };
+}
+
+async function fetchGooglePlace(fetcher, apiKey, grid) {
+  const response = await fetcher(GOOGLE_PLACES_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Goog-Api-Key': apiKey,
+      'X-Goog-FieldMask': GOOGLE_PLACES_FIELD_MASK
+    },
+    body: JSON.stringify({
+      textQuery: 'points of interest',
+      locationBias: {
+        circle: {
+          center: { latitude: grid.matchedLat, longitude: grid.matchedLng },
+          radius: GOOGLE_PLACE_MATCH_RADIUS_KM * 1000
+        }
+      },
+      maxResultCount: 20
+    }),
+    signal: AbortSignal.timeout(10000)
+  });
+  if (!response.ok) throw new Error(`Google Places HTTP ${response.status}.`);
+  const data = await response.json();
+  if (!Array.isArray(data.places)) throw new Error('Google Places returned an invalid response.');
+  const closest = data.places.map(place => {
+    const lat = place.location?.latitude;
+    const lng = place.location?.longitude;
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    return {
+      placeName: typeof place.displayName?.text === 'string' ? place.displayName.text.trim() : '',
+      reviewCount: place.userRatingCount === undefined ? null : place.userRatingCount,
+      matchedLat: lat,
+      matchedLng: lng,
+      distanceKm: lookups.coordinateDistanceKm(grid.matchedLat, grid.matchedLng, lat, lng)
+    };
+  }).filter(place => place?.placeName && place.distanceKm <= GOOGLE_PLACE_MATCH_RADIUS_KM &&
+    (place.reviewCount === null || (Number.isSafeInteger(place.reviewCount) && place.reviewCount >= 0)))
+    .sort((a, b) => a.distanceKm - b.distanceKm)[0];
+  return closest || null;
 }
 
 export function createWorker(fetcher = fetch) {
@@ -57,34 +118,55 @@ export function createWorker(fetcher = fetch) {
         const cached = await env.RARITY_CACHE.get(grid.key, 'json');
         if (cached) {
           lookups.validateProviderRarity(cached);
-          if (cached.reviewCount !== null || cached.source !== 'OpenStreetMap contributors (ODbL)' ||
+          const validSource = [
+            'OpenStreetMap contributors (ODbL)',
+            'Google Places API (New) + OpenStreetMap contributors (ODbL)'
+          ].includes(cached.source);
+          if (!validSource ||
+              (cached.source === 'OpenStreetMap contributors (ODbL)' && cached.reviewCount !== null) ||
               cached.matchedLat !== grid.matchedLat || cached.matchedLng !== grid.matchedLng) {
-            throw new Error('Invalid cached open-data rarity entry.');
+            throw new Error('Invalid cached rarity entry.');
           }
           return reply(200, { ...cached, cached: true });
         }
         let operation = inflight.get(grid.key);
         if (!operation) {
           operation = (async () => {
-            const query = `[out:json][timeout:25];(node(around:5000,${grid.matchedLat},${grid.matchedLng})["tourism"];` +
-              `node(around:5000,${grid.matchedLat},${grid.matchedLng})["amenity"];` +
-              `way(around:5000,${grid.matchedLat},${grid.matchedLng})["highway"~"^(motorway|trunk)$"];);out body geom;`;
-            const response = await fetcher(lookups.OVERPASS_URL, {
-              method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-              body: new URLSearchParams({ data: query }).toString(), signal: AbortSignal.timeout(30000)
-            });
-            if (!response.ok) throw new Error(`Overpass HTTP ${response.status}.`);
-            const data = await response.json();
-            if (data.remark) throw new Error('Overpass returned an incomplete query.');
-            const summary = lookups.summarizeOsm(data.elements, grid.matchedLat, grid.matchedLng);
+            const [openDataResult, googleResult] = await Promise.allSettled([
+              fetchOpenDataSummary(fetcher, grid),
+              env.GOOGLE_PLACES_API_KEY
+                ? fetchGooglePlace(fetcher, env.GOOGLE_PLACES_API_KEY, grid)
+                : Promise.resolve(null)
+            ]);
+            const openData = openDataResult.status === 'fulfilled' ? openDataResult.value : null;
+            const googlePlace = googleResult.status === 'fulfilled' ? googleResult.value : null;
+            if (googleResult.status === 'rejected') {
+              console.warn('Google Places rarity lookup failed; using open-data rarity.', googleResult.reason);
+            }
+            if (openDataResult.status === 'rejected') {
+              console.warn('Open-data highway lookup failed.', openDataResult.reason);
+            }
+            if (!openData && !googlePlace) {
+              throw openDataResult.status === 'rejected'
+                ? openDataResult.reason : new Error('No rarity provider returned a result.');
+            }
+            const popularityScore = openData?.summary.nearbyPoiCount || 0;
+            const nearestHighwayKm = openData?.summary.nearestHighwayKm ?? null;
+            const reviewCount = googlePlace?.reviewCount ?? null;
             const result = {
-              placeName: 'OSM vicinity (not a matched place)', reviewCount: null,
-              popularityScore: summary.nearbyPoiCount, rarityTier: summary.category,
+              placeName: googlePlace?.placeName || 'OSM vicinity (not a matched place)',
+              reviewCount, popularityScore,
+              rarityTier: reviewCount === null
+                ? lookups.categoryForOpenData(popularityScore, nearestHighwayKm)
+                : lookups.categoryForPoiCount(reviewCount),
               matchedLat: grid.matchedLat, matchedLng: grid.matchedLng,
-              cached: false, source: 'OpenStreetMap contributors (ODbL)',
-              radiusKm: 5, nearestHighwayKm: summary.nearestHighwayKm,
+              cached: false,
+              source: googlePlace
+                ? 'Google Places API (New) + OpenStreetMap contributors (ODbL)'
+                : 'OpenStreetMap contributors (ODbL)',
+              radiusKm: 5, nearestHighwayKm,
               sampledAt: new Date().toISOString(),
-              osmDataTimestamp: data.osm3s?.timestamp_osm_base || null
+              osmDataTimestamp: openData?.timestamp || null
             };
             lookups.validateProviderRarity(result);
             await env.RARITY_CACHE.put(grid.key, JSON.stringify(result));
@@ -95,8 +177,8 @@ export function createWorker(fetcher = fetch) {
         }
         return reply(200, await operation);
       } catch (error) {
-        console.error('Open-data rarity Worker failed', error.message);
-        return reply(503, { error: 'Rarity service unavailable. Use the direct OSM fallback or retry later.' });
+        console.error('Rarity Worker failed', error.message);
+        return reply(503, { error: 'Rarity service unavailable. Retry later or use the direct open-data fallback.' });
       }
     }
   };
