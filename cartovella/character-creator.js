@@ -42,6 +42,14 @@
     { id: 'silver', name: 'Silver', color: '#b7c3cd', imageSrc: null },
     { id: 'teal', name: 'Teal', color: '#53b8aa', imageSrc: null }
   ];
+  const HAIR_COLOR_PALETTES = Object.freeze({
+    black: Object.freeze({ outline: '#171820', shadow: '#22242e', base: '#292b35', highlight: '#525663' }),
+    brown: Object.freeze({ outline: '#211711', shadow: '#40291f', base: '#603c2e', highlight: '#966b47' }),
+    blonde: Object.freeze({ outline: '#332416', shadow: '#98713a', base: '#e4bd68', highlight: '#f5dc9a' }),
+    red: Object.freeze({ outline: '#291615', shadow: '#71352b', base: '#a84e36', highlight: '#df7b5b' }),
+    silver: Object.freeze({ outline: '#1d2228', shadow: '#626c79', base: '#b7c3cd', highlight: '#e8eef2' }),
+    teal: Object.freeze({ outline: '#142827', shadow: '#286c67', base: '#53b8aa', highlight: '#9be0d5' })
+  });
   const EYE_COLORS = [
     { id: 'brown', name: 'Brown', color: '#754532', imageSrc: null },
     { id: 'blue', name: 'Blue', color: '#5ba9dc', imageSrc: null },
@@ -705,14 +713,6 @@
   ]);
 
   const LEGACY_HAIR_STYLE_IDS = new Set(['short', 'bob', 'long', 'curls', 'braided']);
-  const HAIR_COLOR_FILTERS = Object.freeze({
-    brown: 'none',
-    black: 'grayscale(1) brightness(.38)',
-    blonde: 'sepia(1) saturate(2.2) hue-rotate(350deg) brightness(1.18)',
-    red: 'sepia(1) saturate(3) hue-rotate(330deg)',
-    silver: 'grayscale(1) brightness(1.45)',
-    teal: 'sepia(1) saturate(2) hue-rotate(130deg)'
-  });
   const CHARACTER_SPRITE_FRAME = Object.freeze({
     x: 24, y: 16, width: 32, height: 48, sheetWidth: 80
   });
@@ -1028,7 +1028,7 @@
       throw new Error(`Sprite variant source must be an aligned 80x64 sheet: ${sourcePath || 'unknown source'}`);
     }
     if (!variantSpec?.palette) throw new Error(`Sprite variant palette missing: ${sourcePath}`);
-    const colors = Object.fromEntries(['shadow', 'base', 'highlight', 'accent', 'sleeve', 'band']
+    const colors = Object.fromEntries(['outline', 'shadow', 'base', 'highlight', 'accent', 'sleeve', 'band']
       .filter(key => variantSpec.palette[key] &&
         !(key === 'band' && Array.isArray(variantSpec.palette[key])))
       .map(key => [key, parsePaletteColor(variantSpec.palette[key])]));
@@ -1054,6 +1054,14 @@
       variantSpec.bandRows || [];
     const bandRows = new Set(selectedBandRows);
     const [bandLeft, bandRight] = variantSpec.bandXRange || [0, 79];
+    let maximumLuminance = 0;
+    if (variantSpec.colorizeByLuminance) {
+      for (let index = 0; index < data.length; index += 4) {
+        if (data[index + 3] === 0) continue;
+        maximumLuminance = Math.max(maximumLuminance,
+          (0.2126 * data[index] + 0.7152 * data[index + 1] + 0.0722 * data[index + 2]) / 255);
+      }
+    }
     for (let y = 0; y < height; y++) {
       const localY = y % 64;
       for (let x = 0; x < width; x++) {
@@ -1063,10 +1071,21 @@
         if (alpha === 0) continue;
         const luminance = (0.2126 * data[index] + 0.7152 * data[index + 1] +
           0.0722 * data[index + 2]) / 255;
-        if (luminance < 0.20) continue;
         const mapped = luminance < 0.42 ? colors.shadow
           : luminance < 0.74 ? colors.base : colors.highlight;
-        let output = mapped;
+        let output;
+        if (variantSpec.colorizeByLuminance) {
+          if (luminance <= 0.12) {
+            output = colors.outline || colors.shadow;
+          } else {
+            const normalizedLuminance = (luminance - 0.12) / Math.max(0.01, maximumLuminance - 0.12);
+            output = normalizedLuminance < 0.28 ? colors.shadow
+              : normalizedLuminance < 0.72 ? colors.base : colors.highlight;
+          }
+        } else {
+          if (luminance < 0.20) continue;
+          output = mapped;
+        }
         const isMidtone = luminance >= 0.20 && luminance < 0.74;
         switch (variantSpec.pattern) {
           case 'plaid':
@@ -1139,7 +1158,10 @@
       imageSrc: assetUrl(`${originalHair
         ? `${ORIGINAL_HAIR_ROOT}${genderName} Hair/`
         : `${HAIRSTYLE_ASSET_ROOT}${hairFolder}/`}${hairFile}`),
-      filter: hairColorFilter(character.hairColor),
+      variantSpec: {
+        palette: HAIR_COLOR_PALETTES[character.hairColor],
+        colorizeByLuminance: true
+      },
       ...(wearsRangerHat ? { clipTopSourceY: 25 } : {})
     };
     const equipmentLayer = (field, layer) => {
@@ -1175,10 +1197,6 @@
       equipmentLayer('handItem', 'hand')
     ].filter(Boolean);
     return layers;
-  }
-
-  function hairColorFilter(colorId) {
-    return HAIR_COLOR_FILTERS[colorId] || 'none';
   }
 
   function pixel(ctx, x, y, width, height, color) {
@@ -1426,11 +1444,16 @@
   }
 
   function characterThumbnailMarkup(character) {
-    const assets = characterSpriteAssets(character);
-    return `<span aria-hidden="true" class="relative block h-10 w-10 shrink-0 overflow-hidden rounded bg-slate-900">
-      ${assets.map(layer => `<img src="${escapeHtml(layer.imageSrc)}" alt="" class="absolute top-0 max-w-none"
-        loading="lazy" style="left:${(layer.offsetX || 0) * 5}px;width:400px;height:224px;image-rendering:pixelated;${layer.filter ? `filter:${layer.filter};` : ''}${layer.clipTopSourceY == null ? '' : `clip-path:inset(${layer.clipTopSourceY * 0.5}px 0 0 0);`}">`).join('')}
-    </span>`;
+    return `<canvas data-character-thumbnail="${escapeHtml(JSON.stringify(normalizeCharacter(character)))}"
+      width="40" height="40" aria-hidden="true"
+      class="block h-10 w-10 shrink-0 rounded bg-slate-900"></canvas>`;
+  }
+
+  function renderCharacterThumbnails(container) {
+    if (typeof container.querySelectorAll !== 'function') return;
+    container.querySelectorAll('canvas[data-character-thumbnail]').forEach(canvas => {
+      renderAvatar(canvas, JSON.parse(canvas.dataset.characterThumbnail));
+    });
   }
 
   function hairPresetOptions(character) {
@@ -1834,6 +1857,7 @@
         class="rounded-lg px-3 py-2 text-xs font-semibold ${tab === activeTab ? 'bg-amber-400 text-slate-950' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}">${tabLabels[tab]}</button>`).join('')}
       </div><div role="tabpanel">${sections[activeTab]}</div>`;
     renderPetPreviews(container);
+    renderCharacterThumbnails(container);
     renderHairPreviews(container);
     renderSpriteVariantPreviews(container);
     if (typeof container.querySelectorAll === 'function') {
@@ -1861,6 +1885,7 @@
           }
           positionDropdown(details, container);
           renderPetPreviews(details);
+          renderCharacterThumbnails(details);
           renderHairPreviews(details);
           renderSpriteVariantPreviews(details);
         });
@@ -1910,6 +1935,7 @@
         customizeButton.setAttribute('aria-expanded', String(!controls.hidden));
         if (!controls.hidden) {
           renderPetPreviews(controls);
+          renderCharacterThumbnails(controls);
           renderHairPreviews(controls);
           renderSpriteVariantPreviews(controls);
           controls.focus?.({ preventScroll: true });
@@ -1982,7 +2008,8 @@
   }
 
   const api = {
-    DEFAULT_CHARACTER, SKIN_TONES, HAIR_STYLES, HAIR_COLORS, EYE_COLORS, BODY_SHAPES, HEIGHTS,
+    DEFAULT_CHARACTER, SKIN_TONES, HAIR_STYLES, HAIR_COLORS, HAIR_COLOR_PALETTES,
+    EYE_COLORS, BODY_SHAPES, HEIGHTS,
     OUTFIT_CATALOG, HAT_CATALOG, ACCESSORY_CATALOG, PET_CATALOG, BACKGROUND_CATALOG,
     LEVEL_ITEMS, PARK_MILESTONE_ITEMS, ACHIEVEMENT_ITEMS,
     SHOP_WARDROBE, PET_ACCESSORY_CATALOG, EQUIPMENT_CATALOG, LEVEL_TRACK,

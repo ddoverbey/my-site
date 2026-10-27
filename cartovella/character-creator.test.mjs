@@ -62,8 +62,9 @@ check('character appearance, wardrobe, companions, and scene choices render as d
   }
   controls.dataset.activeTab = 'appearance';
   characterCreator.render({ controls, character: characterCreator.DEFAULT_CHARACTER });
-  assert.match(controls.innerHTML, /Male%20Skin2\.png/);
-  assert.match(controls.innerHTML, /Female%20Skin2\.png/);
+  assert.ok((controls.innerHTML.match(/data-character-thumbnail=/g) || []).length >= 2);
+  assert.match(controls.innerHTML, /&quot;gender&quot;:&quot;male&quot;/);
+  assert.match(controls.innerHTML, /&quot;gender&quot;:&quot;female&quot;/);
   assert.match(controls.innerHTML, /data-hair-preview="true"/);
   assert.match(controls.innerHTML, /data-hair-style="hair_6"/);
   assert.match(controls.innerHTML, /data-hair-color="brown"/);
@@ -453,8 +454,24 @@ check('opening customization scrolls to and focuses the editor; closing does not
 });
 check('late character sprite loads redraw the most recently rendered stage', () => {
   const originalImage = globalThis.Image;
+  const originalOffscreenCanvas = globalThis.OffscreenCanvas;
   const pendingImages = [];
   const drawCalls = [];
+  class FakeOffscreenCanvas {
+    constructor(width, height) {
+      this.width = width;
+      this.height = height;
+      this.data = new Uint8ClampedArray(width * height * 4);
+    }
+    getContext() {
+      return {
+        drawImage() {},
+        getImageData: () => ({ data: this.data }),
+        putImageData() {}
+      };
+    }
+  }
+  globalThis.OffscreenCanvas = FakeOffscreenCanvas;
   globalThis.Image = class {
     constructor() {
       this.complete = false;
@@ -465,6 +482,7 @@ check('late character sprite loads redraw the most recently rendered stage', () 
     load() {
       this.complete = true;
       this.naturalWidth = 800;
+      this.naturalHeight = 448;
       this.onload();
     }
   };
@@ -485,14 +503,16 @@ check('late character sprite loads redraw the most recently rendered stage', () 
     assert.equal(pendingImages.length, 7);
     pendingImages.forEach(image => image.load());
     assert.equal(drawCalls.length, 6);
-    assert.equal(drawCalls.filter(src => src.includes('Female')).length, 5);
-    assert.equal(drawCalls.filter(src => src.includes('yosemite-bg')).length, 1);
-    assert.equal(drawCalls.some(src => src.includes('/campfire/')), false);
+    assert.equal(drawCalls.filter(src => src?.includes('Female')).length, 4);
+    assert.equal(drawCalls.filter(src => src?.includes('yosemite-bg')).length, 1);
+    assert.equal(drawCalls.some(src => src?.includes('/campfire/')), false);
     assert.ok(stageScales.length >= 2);
     assert.ok(stageScales.every(scale => scale[0] === 2 && scale[1] === 2));
   } finally {
     if (originalImage === undefined) delete globalThis.Image;
     else globalThis.Image = originalImage;
+    if (originalOffscreenCanvas === undefined) delete globalThis.OffscreenCanvas;
+    else globalThis.OffscreenCanvas = originalOffscreenCanvas;
   }
 });
 check('a shared sprite-sheet load redraws both the stage and its pet preview', () => {
@@ -620,6 +640,11 @@ check('sprite hairstyle assets are available for their matching character sprite
   assert.equal(femaleStyles.length, 39);
   assert.equal((maleStyles.length - 1) * characterCreator.HAIR_COLORS.length + 1, 199);
   assert.equal((femaleStyles.length - 1) * characterCreator.HAIR_COLORS.length + 1, 229);
+  for (const color of characterCreator.HAIR_COLORS) {
+    const palette = characterCreator.HAIR_COLOR_PALETTES[color.id];
+    assert.ok(palette, `${color.id} has a recolor palette`);
+    assert.equal(palette.base, color.color, `${color.id} palette matches its swatch`);
+  }
   for (const gender of ['male', 'female']) {
     const styles = characterCreator.HAIR_STYLES.filter(style =>
       style.genders.includes(gender) && style.id !== 'hair_bald');
@@ -632,6 +657,17 @@ check('sprite hairstyle assets are available for their matching character sprite
       const png = readFileSync(new URL(layer.imageSrc, import.meta.url));
       assert.equal(png.toString('ascii', 1, 4), 'PNG', paths[index]);
       assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [800, 448], paths[index]);
+    }
+    for (const style of styles) {
+      for (const color of characterCreator.HAIR_COLORS) {
+        const layer = characterCreator.characterSpriteAssets({
+          ...characterCreator.DEFAULT_CHARACTER, gender, hairStyle: style.id, hairColor: color.id
+        }).find(item => item.layer === 'hair');
+        assert.deepEqual(layer.variantSpec.palette, characterCreator.HAIR_COLOR_PALETTES[color.id],
+          `${gender} ${style.id} ${color.id}`);
+        assert.equal(layer.variantSpec.colorizeByLuminance, true);
+        assert.equal(layer.filter, undefined);
+      }
     }
     for (let sheet = 1; sheet <= 5; sheet++) {
       const style = characterCreator.HAIR_STYLES.find(item => item.id === `hair_${sheet}`);
@@ -824,7 +860,8 @@ check('companion sprite sheets crop the selected animation frame', () => {
   globalThis.Image = class {
     constructor() {
       this.complete = true;
-      this.naturalWidth = 896;
+      this.naturalWidth = 800;
+      this.naturalHeight = 448;
       this.src = '';
     }
   };
@@ -871,10 +908,27 @@ check('companion sprite sheets crop the selected animation frame', () => {
 });
 check('character effects use their own animation frames without shifting the explorer', () => {
   const originalImage = globalThis.Image;
+  const originalOffscreenCanvas = globalThis.OffscreenCanvas;
+  class FakeOffscreenCanvas {
+    constructor(width, height) {
+      this.width = width;
+      this.height = height;
+      this.data = new Uint8ClampedArray(width * height * 4);
+    }
+    getContext() {
+      return {
+        drawImage() {},
+        getImageData: () => ({ data: this.data }),
+        putImageData() {}
+      };
+    }
+  }
+  globalThis.OffscreenCanvas = FakeOffscreenCanvas;
   globalThis.Image = class {
     constructor() {
       this.complete = true;
-      this.naturalWidth = 896;
+      this.naturalWidth = 800;
+      this.naturalHeight = 448;
       this.src = '';
     }
   };
@@ -900,6 +954,8 @@ check('character effects use their own animation frames without shifting the exp
   } finally {
     if (originalImage === undefined) delete globalThis.Image;
     else globalThis.Image = originalImage;
+    if (originalOffscreenCanvas === undefined) delete globalThis.OffscreenCanvas;
+    else globalThis.OffscreenCanvas = originalOffscreenCanvas;
   }
 });
 check('level and destination unlocks show exact current progress', () => {
@@ -1083,6 +1139,10 @@ check('sprite palette shader recolors frames, preserves outlines and transparenc
   setPixel(4, 1, [150, 150, 150, 255]);
   setPixel(3, 3, [230, 230, 230, 255]);
   setPixel(7, 2, [90, 90, 90, 255]);
+  setPixel(8, 2, [75, 75, 75, 255]);
+  setPixel(9, 2, [120, 35, 0, 255]);
+  setPixel(10, 2, [150, 80, 40, 255]);
+  setPixel(11, 2, [40, 140, 60, 255]);
   setPixel(84, 2, [150, 150, 150, 255]);
   setPixel(30, 2, [150, 150, 150, 255]);
   setPixel(31, 2, [150, 150, 150, 255]);
@@ -1118,6 +1178,18 @@ check('sprite palette shader recolors frames, preserves outlines and transparenc
     assert.deepEqual(pixelAt(processed, 3, 3), [0xaa, 0xbb, 0xcc, 255]);
     assert.deepEqual(pixelAt(processed, 7, 2), [0x11, 0x22, 0x33, 255]);
     assert.deepEqual(pixelAt(processed, 84, 2), [0xde, 0xad, 0xde, 255]);
+    const colorizedHair = characterCreator.processSpriteVariant(source, {
+      palette: {
+        outline: '#101112', shadow: '#202122', base: '#404142', highlight: '#808182'
+      },
+      colorizeByLuminance: true
+    });
+    assert.deepEqual(pixelAt(colorizedHair, 1, 0), [0x10, 0x11, 0x12, 255]);
+    assert.deepEqual(pixelAt(colorizedHair, 8, 2), [0x20, 0x21, 0x22, 255]);
+    assert.deepEqual(pixelAt(colorizedHair, 9, 2), [0x20, 0x21, 0x22, 255]);
+    assert.deepEqual(pixelAt(colorizedHair, 10, 2), [0x40, 0x41, 0x42, 255]);
+    assert.deepEqual(pixelAt(colorizedHair, 11, 2), [0x40, 0x41, 0x42, 255]);
+    assert.deepEqual(pixelAt(colorizedHair, 3, 3), [0x80, 0x81, 0x82, 255]);
     assert.strictEqual(characterCreator.processSpriteVariant(source, plaid), processed);
     const vest = characterCreator.processSpriteVariant(source, {
       palette: {
@@ -1301,15 +1373,32 @@ check('Campfire Night slices its eight-frame sprite over the background glow', (
 });
 check('the shared stage animation loop advances pets and effects without moving the character', () => {
   const originalImage = globalThis.Image;
+  const originalOffscreenCanvas = globalThis.OffscreenCanvas;
   const originalWindow = globalThis.window;
   const originalDocument = globalThis.document;
   const intervalCallbacks = [];
   const clearedIntervals = [];
   let reducedMotion = true;
+  class FakeOffscreenCanvas {
+    constructor(width, height) {
+      this.width = width;
+      this.height = height;
+      this.data = new Uint8ClampedArray(width * height * 4);
+    }
+    getContext() {
+      return {
+        drawImage() {},
+        getImageData: () => ({ data: this.data }),
+        putImageData() {}
+      };
+    }
+  }
+  globalThis.OffscreenCanvas = FakeOffscreenCanvas;
   globalThis.Image = class {
     constructor() {
       this.complete = true;
-      this.naturalWidth = 896;
+      this.naturalWidth = 800;
+      this.naturalHeight = 448;
       this.src = '';
     }
   };
@@ -1389,6 +1478,8 @@ check('the shared stage animation loop advances pets and effects without moving 
   } finally {
     if (originalImage === undefined) delete globalThis.Image;
     else globalThis.Image = originalImage;
+    if (originalOffscreenCanvas === undefined) delete globalThis.OffscreenCanvas;
+    else globalThis.OffscreenCanvas = originalOffscreenCanvas;
     if (originalWindow === undefined) delete globalThis.window;
     else globalThis.window = originalWindow;
     if (originalDocument === undefined) delete globalThis.document;
@@ -1397,7 +1488,23 @@ check('the shared stage animation loop advances pets and effects without moving 
 });
 check('sprite character selects matching gender, skin, hair, and outfit layers', () => {
   const originalImage = globalThis.Image;
+  const originalOffscreenCanvas = globalThis.OffscreenCanvas;
   const drawCalls = [];
+  class FakeOffscreenCanvas {
+    constructor(width, height) {
+      this.width = width;
+      this.height = height;
+      this.data = new Uint8ClampedArray(width * height * 4);
+    }
+    getContext() {
+      return {
+        drawImage() {},
+        getImageData: () => ({ data: this.data }),
+        putImageData() {}
+      };
+    }
+  }
+  globalThis.OffscreenCanvas = FakeOffscreenCanvas;
   globalThis.Image = class {
     constructor() {
       this.complete = true;
@@ -1422,26 +1529,29 @@ check('sprite character selects matching gender, skin, hair, and outfit layers',
       decodeURIComponent(layer.imageSrc.split('/').at(-1))), [
       'Female Skin5.png', 'Skirt.png', 'Boots.png', 'Blue Corset v2.png', 'Female Hair10.png'
     ]);
+    const hairLayer = assets.find(layer => layer.layer === 'hair');
+    assert.equal(hairLayer.variantSpec.colorizeByLuminance, true);
+    assert.equal(hairLayer.variantSpec.palette.base, '#53b8aa');
     for (const asset of assets) {
       const png = readFileSync(new URL(asset.imageSrc, import.meta.url));
       assert.equal(png.toString('ascii', 1, 4), 'PNG');
       assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [800, 448]);
     }
-    let hairFilter = 'none';
     characterCreator.drawCharacterSprite({
       save() {},
       restore() {},
-      set filter(value) { hairFilter = value; },
       drawImage(...args) { drawCalls.push(args); }
     }, character);
     assert.equal(drawCalls.length, 5);
-    assert.match(hairFilter, /hue-rotate\(130deg\)/);
+    assert.equal(drawCalls[4][0].src, undefined, 'hair is rendered from its recolored canvas');
     assert.ok(drawCalls.every(call =>
       call.length === 9 && call.slice(1).join(',') === '24,16,32,48,62,39,36,43'
     ));
   } finally {
     if (originalImage === undefined) delete globalThis.Image;
     else globalThis.Image = originalImage;
+    if (originalOffscreenCanvas === undefined) delete globalThis.OffscreenCanvas;
+    else globalThis.OffscreenCanvas = originalOffscreenCanvas;
   }
 });
 
