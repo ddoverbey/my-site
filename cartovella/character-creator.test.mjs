@@ -617,26 +617,36 @@ check('sprite hairstyle assets are available for their matching character sprite
   const maleStyles = characterCreator.HAIR_STYLES.filter(style => style.genders.includes('male'));
   const femaleStyles = characterCreator.HAIR_STYLES.filter(style => style.genders.includes('female'));
   assert.equal(maleStyles.length, 34);
-  assert.equal(femaleStyles.length, 34);
+  assert.equal(femaleStyles.length, 39);
   assert.equal((maleStyles.length - 1) * characterCreator.HAIR_COLORS.length + 1, 199);
-  assert.equal((femaleStyles.length - 1) * characterCreator.HAIR_COLORS.length + 1, 199);
-  for (let sheet = 1; sheet <= 5; sheet++) {
-    const style = characterCreator.HAIR_STYLES.find(item => item.id === `hair_${sheet}`);
-    assert.ok(style.genders.includes('male'));
-    assert.equal(style.genders.includes('female'), false);
-    const layer = characterCreator.characterSpriteAssets({
-      ...characterCreator.DEFAULT_CHARACTER, hairStyle: style.id
-    }).find(item => item.layer === 'hair');
-    assert.ok(decodeURIComponent(layer.imageSrc).endsWith(
-      `/GandalfHardcore Character Asset Pack/GandalfHardcore Character Asset Pack/Male Hair/Male Hair${sheet}.png`
-    ));
-    const png = readFileSync(new URL(layer.imageSrc, import.meta.url));
-    assert.equal(png.toString('ascii', 1, 4), 'PNG');
-    assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [800, 448]);
+  assert.equal((femaleStyles.length - 1) * characterCreator.HAIR_COLORS.length + 1, 229);
+  for (const gender of ['male', 'female']) {
+    const styles = characterCreator.HAIR_STYLES.filter(style =>
+      style.genders.includes(gender) && style.id !== 'hair_bald');
+    const layers = styles.map(style => characterCreator.characterSpriteAssets({
+      ...characterCreator.DEFAULT_CHARACTER, gender, hairStyle: style.id
+    }).find(item => item.layer === 'hair'));
+    const paths = layers.map(layer => decodeURIComponent(layer.imageSrc));
+    assert.equal(new Set(paths).size, paths.length, `${gender} hairstyles use unique sheets`);
+    for (const [index, layer] of layers.entries()) {
+      const png = readFileSync(new URL(layer.imageSrc, import.meta.url));
+      assert.equal(png.toString('ascii', 1, 4), 'PNG', paths[index]);
+      assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [800, 448], paths[index]);
+    }
+    for (let sheet = 1; sheet <= 5; sheet++) {
+      const style = characterCreator.HAIR_STYLES.find(item => item.id === `hair_${sheet}`);
+      assert.ok(style.genders.includes(gender));
+      const layer = characterCreator.characterSpriteAssets({
+        ...characterCreator.DEFAULT_CHARACTER, gender, hairStyle: style.id
+      }).find(item => item.layer === 'hair');
+      assert.ok(decodeURIComponent(layer.imageSrc).endsWith(
+        `/GandalfHardcore Character Asset Pack/${gender === 'male' ? 'Male' : 'Female'} Hair/${gender === 'male' ? 'Male' : 'Female'} Hair${sheet}.png`
+      ));
+    }
   }
   assert.ok(characterCreator.characterSpriteAssets({
     ...characterCreator.DEFAULT_CHARACTER, hairStyle: 'hair_fancy'
-  })[4].imageSrc.endsWith('/Fancy%20Hair.png'));
+  }).find(item => item.layer === 'hair').imageSrc.endsWith('/Fancy%20Hair.png'));
   assert.ok(characterCreator.characterSpriteAssets({
     ...characterCreator.DEFAULT_CHARACTER, gender: 'female', hairStyle: 'hair_35'
   })[4].imageSrc.endsWith('/Female%20Hair35.png'));
@@ -658,9 +668,12 @@ check('ranger hats keep every hairstyle below the hat crown in both stage and av
       const character = characterCreator.normalizeCharacter({
         ...characterCreator.DEFAULT_CHARACTER, gender, headwear: hat
       });
-      const hair = characterCreator.characterSpriteAssets(character)
+      const assets = characterCreator.characterSpriteAssets(character);
+      const hair = assets
         .find(layer => layer.layer === 'hair');
       assert.equal(hair.clipTopSourceY, 25, `${gender} ${hat}`);
+      assert.equal(assets.find(layer => layer.layer === 'headwear').offsetX, -3,
+        `${gender} ${hat}`);
     }
     const clips = [];
     const context = {
@@ -677,6 +690,17 @@ check('ranger hats keep every hairstyle below the hat crown in both stage and av
     assert.equal(clips[0][0], 62);
     assert.ok(clips[0][1] > 45 && clips[0][1] < 48);
   }
+});
+check('ranger hats shift left three sprite pixels when drawn', () => {
+  const hatLayer = characterCreator.characterSpriteAssets({
+    ...characterCreator.DEFAULT_CHARACTER, headwear: 'ranger_hat_classic_brown'
+  }).find(layer => layer.layer === 'headwear');
+  const calls = [];
+  characterCreator.drawCharacterLayer({
+    drawImage(...args) { calls.push(args); }
+  }, {}, hatLayer, 0, 0, 80, 64, 62, 39, 36, 43);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0][5], 59);
 });
 check('low-resolution frame profiles keep the V-taper broad at the shoulders and hourglass defined', () => {
   const { straight, vTaper, hourglass } = characterCreator.BODY_SHAPE_PROFILES;

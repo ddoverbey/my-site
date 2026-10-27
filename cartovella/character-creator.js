@@ -14,9 +14,8 @@
       return {
         id: `hair_${sheet}`,
         name: `Hairstyle ${sheet}`,
-        fileName: `Male Hair${sheet}.png`,
-        folder: 'Male Hair',
-        genders: ['male'],
+        sheet,
+        genders: ['male', 'female'],
         imageSrc: null
       };
     }),
@@ -24,15 +23,15 @@
       const sheet = index + 6;
       return {
         id: `hair_${sheet}`,
-        name: `Hairstyle ${index + 1}`,
+        name: `Hairstyle ${sheet}`,
         sheet,
         genders: sheet <= 30 ? ['male', 'female'] : ['female'],
         imageSrc: null
       };
     }),
-    { id: 'hair_fancy', name: 'Hairstyle 26', fileName: 'Fancy Hair.png', genders: ['male', 'female'], imageSrc: null },
-    { id: 'hair_queen', name: 'Hairstyle 27', fileName: 'Queen hair.png', genders: ['male', 'female'], imageSrc: null },
-    { id: 'hair_shield_maiden', name: 'Hairstyle 28', fileName: 'Shield Maiden hair.png', genders: ['male', 'female'], imageSrc: null },
+    { id: 'hair_fancy', name: 'Extra Hairstyle 1', fileName: 'Fancy Hair.png', genders: ['male', 'female'], imageSrc: null },
+    { id: 'hair_queen', name: 'Extra Hairstyle 2', fileName: 'Queen hair.png', genders: ['male', 'female'], imageSrc: null },
+    { id: 'hair_shield_maiden', name: 'Extra Hairstyle 3', fileName: 'Shield Maiden hair.png', genders: ['male', 'female'], imageSrc: null },
     { id: 'hair_bald', name: 'Bald', genders: ['male', 'female'], imageSrc: null }
   ];
   const HAIR_COLORS = [
@@ -277,7 +276,7 @@
 
   const CHARACTER_ASSET_ROOT = `${ASSET_ROOT}GandalfHardcore Character Asset Pack/GandalfHardcore Character Asset Pack/`;
   const HAIRSTYLE_ASSET_ROOT = `${ASSET_ROOT}GandalfHardcore 58x Hair/`;
-  const ORIGINAL_MALE_HAIR_ROOT = `${CHARACTER_ASSET_ROOT}Male Hair/`;
+  const ORIGINAL_HAIR_ROOT = `${CHARACTER_ASSET_ROOT}`;
   const spritePath = (folder, file) => `${folder}${file}`;
   const pairedPaths = (folder, maleFile, femaleFile = maleFile) => ({
     male: spritePath(folder, maleFile),
@@ -1130,13 +1129,16 @@
     const skinIndex = SKIN_TONES.findIndex(tone => tone.id === character.skinTone) + 1;
     const hairCatalog = HAIR_STYLES.filter(style => style.genders.includes(character.gender));
     const hair = getItem(hairCatalog, character.hairStyle);
-    const hairFolder = hair.folder || (hair.fileName
-      ? '28x Male Hair' : character.gender === 'female' ? '30x Female Hair' : '28x Male Hair');
+    const originalHair = hair.sheet <= 5;
+    const hairFolder = hair.fileName ? '28x Male Hair'
+      : character.gender === 'female' ? '30x Female Hair' : '28x Male Hair';
     const hairFile = hair.fileName || `${genderName} Hair${hair.sheet}.png`;
     const wearsRangerHat = character.headwear.startsWith('ranger_hat_');
     const hairLayer = hair.id === 'hair_bald' ? null : {
       layer: 'hair',
-      imageSrc: assetUrl(`${hair.folder === 'Male Hair' ? ORIGINAL_MALE_HAIR_ROOT : `${HAIRSTYLE_ASSET_ROOT}${hairFolder}/`}${hairFile}`),
+      imageSrc: assetUrl(`${originalHair
+        ? `${ORIGINAL_HAIR_ROOT}${genderName} Hair/`
+        : `${HAIRSTYLE_ASSET_ROOT}${hairFolder}/`}${hairFile}`),
       filter: hairColorFilter(character.hairColor),
       ...(wearsRangerHat ? { clipTopSourceY: 25 } : {})
     };
@@ -1145,6 +1147,7 @@
       const path = item?.paths[character.gender];
       return path ? {
         layer, imageSrc: assetUrl(path),
+        ...(field === 'headwear' && item.id.startsWith('ranger_hat_') ? { offsetX: -3 } : {}),
         ...(item.variantSpec ? {
           variantSpec: variantSpecForGender(item, character.gender)
         } : {})
@@ -1273,21 +1276,22 @@
 
   function drawCharacterLayer(ctx, image, layer, sourceX, sourceY, sourceWidth, sourceHeight,
     targetX, targetY, targetWidth, targetHeight) {
+    const adjustedTargetX = targetX + (layer.offsetX || 0);
     const clipY = layer.clipTopSourceY == null
       ? null
       : targetY + ((layer.clipTopSourceY - sourceY) / sourceHeight) * targetHeight;
     if (clipY !== null && clipY > targetY) {
       ctx.save();
       ctx.beginPath();
-      ctx.rect(targetX, clipY, targetWidth, Math.max(0, targetY + targetHeight - clipY));
+      ctx.rect(adjustedTargetX, clipY, targetWidth, Math.max(0, targetY + targetHeight - clipY));
       ctx.clip();
       ctx.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight,
-        targetX, targetY, targetWidth, targetHeight);
+        adjustedTargetX, targetY, targetWidth, targetHeight);
       ctx.restore();
       return;
     }
     ctx.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight,
-      targetX, targetY, targetWidth, targetHeight);
+      adjustedTargetX, targetY, targetWidth, targetHeight);
   }
 
   function petAnimationFor(pet, animationId = '') {
@@ -1424,8 +1428,8 @@
   function characterThumbnailMarkup(character) {
     const assets = characterSpriteAssets(character);
     return `<span aria-hidden="true" class="relative block h-10 w-10 shrink-0 overflow-hidden rounded bg-slate-900">
-      ${assets.map(layer => `<img src="${escapeHtml(layer.imageSrc)}" alt="" class="absolute left-0 top-0 max-w-none"
-        loading="lazy" style="width:400px;height:224px;image-rendering:pixelated;${layer.filter ? `filter:${layer.filter};` : ''}${layer.clipTopSourceY == null ? '' : `clip-path:inset(${layer.clipTopSourceY * 0.5}px 0 0 0);`}">`).join('')}
+      ${assets.map(layer => `<img src="${escapeHtml(layer.imageSrc)}" alt="" class="absolute top-0 max-w-none"
+        loading="lazy" style="left:${(layer.offsetX || 0) * 5}px;width:400px;height:224px;image-rendering:pixelated;${layer.filter ? `filter:${layer.filter};` : ''}${layer.clipTopSourceY == null ? '' : `clip-path:inset(${layer.clipTopSourceY * 0.5}px 0 0 0);`}">`).join('')}
     </span>`;
   }
 
