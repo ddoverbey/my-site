@@ -631,6 +631,11 @@
   ].forEach(([id, name, male, female]) =>
     addShopItem(`special_${id}`, `${name} Skin`, 'specialSkin',
       pairedPaths(`${ASSET_ROOT}GandalfHardcore Special skin/`, male, female), 300));
+  SHOP_WARDROBE.push({
+    ...equipmentItem('special_miku', 'Miku', 'specialSkin',
+      pairedPaths(CUSTOM_GEAR_ASSET_ROOT, 'Miku-2.png'), { type: 'starter' }),
+    fixedAppearance: true
+  });
   addShopItem('small_backpack', 'Small Backpack', 'backLayer',
     pairedPaths(`${ASSET_ROOT}GandalfHardcore Back layers s/`, 'Small Backpack.png'), 100);
   [
@@ -655,6 +660,12 @@
   const EQUIPMENT_BY_FIELD = Object.freeze(Object.fromEntries(
     [...new Set(EQUIPMENT_CATALOG.map(item => item.field))].map(field =>
       [field, EQUIPMENT_CATALOG.filter(item => item.field === field)])));
+  const FIXED_APPEARANCE_FIELDS = new Set([
+    'specialSkin', 'effect', 'pet', 'petAnimation', 'petHat', 'petBackpack'
+  ]);
+  const fixedAppearanceSkin = character =>
+    EQUIPMENT_BY_FIELD.specialSkin.find(item =>
+      item.id === character.specialSkin && item.fixedAppearance);
   const EQUIPMENT_DEFAULTS = Object.freeze({
     top: 'starter_shirt', bottoms: 'starter_pants', shoes: 'simple_shoes',
     backLayer: '', effect: '', specialSkin: '', ears: '', arms: '', face: '',
@@ -1120,6 +1131,9 @@
       } : null;
     };
     const specialSkin = equipmentLayer('specialSkin', 'base');
+    if (fixedAppearanceSkin(character)) {
+      return [equipmentLayer('effect', 'effect'), specialSkin].filter(Boolean);
+    }
     const layers = [
       equipmentLayer('backLayer', 'back'),
       equipmentLayer('effect', 'effect'),
@@ -1640,6 +1654,7 @@
     }
     const activeTab = tabs.includes(container.dataset.activeTab) ? container.dataset.activeTab : 'appearance';
     const completedAchievements = achievementProgress(stats, achievements);
+    const fixedAppearance = !!fixedAppearanceSkin(character);
     const dropdown = (field, label, current, choices, renderChoice, fieldDisabled = false) =>
       visualDropdownMarkup(label, field, choices, current, disabled || fieldDisabled, renderChoice);
     const equipmentDropdown = (field, label, fieldDisabled = false) => dropdown(
@@ -1716,14 +1731,16 @@
     </div>`;
     const sections = {
       appearance: `<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        ${dropdown('gender', 'Character sprite', character.gender, [
-          { id: 'male', name: 'Sprite A' }, { id: 'female', name: 'Sprite B' }
-        ], option => characterThumbnailMarkup({ ...character, gender: option.id }))}
-        ${dropdown('skinTone', 'Skin tone', character.skinTone, SKIN_TONES, option =>
-          `<span aria-hidden="true" class="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-slate-900">
-            <span class="h-6 w-6 rounded-full border border-slate-500" style="background-color:${escapeHtml(option.color)}"></span>
-          </span>`)}
-        <div class="sm:col-span-2">${hairPicker}</div>
+        ${fixedAppearance
+          ? '<p class="sm:col-span-2 text-xs text-slate-400">Miku’s appearance is fixed; only pets and character effects can be changed.</p>'
+          : `${dropdown('gender', 'Character sprite', character.gender, [
+            { id: 'male', name: 'Sprite A' }, { id: 'female', name: 'Sprite B' }
+          ], option => characterThumbnailMarkup({ ...character, gender: option.id }))}
+          ${dropdown('skinTone', 'Skin tone', character.skinTone, SKIN_TONES, option =>
+            `<span aria-hidden="true" class="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-slate-900">
+              <span class="h-6 w-6 rounded-full border border-slate-500" style="background-color:${escapeHtml(option.color)}"></span>
+            </span>`)}
+          <div class="sm:col-span-2">${hairPicker}</div>`}
         <div class="sm:col-span-2">${equipmentDropdown('specialSkin', 'Special Skins')}</div>
           <div class="sm:col-span-2">
             <p class="mb-2 text-xs text-slate-400">Equipped effects animate automatically. Unlock more in the Coin Shop.</p>
@@ -1731,8 +1748,10 @@
           </div>
       </div>`,
       wardrobe: `<div class="space-y-3">
-        <p class="text-xs text-slate-400">Choose a layer to preview and cycle through your unlocked gear. Browse all to shop.</p>
-        ${purchaseControls}
+        ${fixedAppearance
+          ? '<p class="text-xs text-slate-400">Wardrobe items cannot be equipped while Miku is selected.</p>'
+          : `<p class="text-xs text-slate-400">Choose a layer to preview and cycle through your unlocked gear. Browse all to shop.</p>
+        ${purchaseControls}`}
       </div>`,
       pets: `<p class="mb-3 text-xs text-slate-400">Companions are purchased with Wayfarer Coins and animate alongside your explorer.</p>
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -1741,12 +1760,16 @@
           ${equipmentDropdown('petHat', 'Dog Hat', !character.pet.startsWith('pet_trail_dog'))}
           ${equipmentDropdown('petBackpack', 'Dog Backpack', !character.pet.startsWith('pet_trail_dog'))}
         </div>`,
-      backgrounds: `<p class="mb-3 text-xs text-slate-400">Campfire Night is your current scene.</p>
+      backgrounds: fixedAppearance
+        ? '<p class="text-xs text-slate-400">Scene changes are unavailable while Miku is selected.</p>'
+        : `<p class="mb-3 text-xs text-slate-400">Campfire Night is your current scene.</p>
         ${dropdown('background', 'Scene', character.background,
           catalogOptions(BACKGROUND_CATALOG, character.background, stats, character,
             completedAchievements, 'Equipped', appState),
           option => backgroundThumbnailMarkup(option))}`,
-      shop: `<div class="space-y-4">
+      shop: fixedAppearance
+        ? '<p class="text-xs text-slate-400">Wardrobe items cannot be equipped while Miku is selected.</p>'
+        : `<div class="space-y-4">
         <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-400/30 bg-amber-950/20 p-4">
           <span class="text-sm font-semibold text-amber-100">Wayfarer Coins</span>
           <strong class="flex items-center gap-2 font-mono text-lg text-amber-200">${coinIconMarkup()}${coinBalance.availableCoins.toLocaleString('en')}</strong>
@@ -1829,6 +1852,7 @@
     const controls = options.controls;
     const customizeButton = options.customizeButton;
     const character = normalizeCharacter(options.character);
+    const fixedAppearance = !!fixedAppearanceSkin(character);
     const stats = options.stats || {};
     const achievements = options.achievements || [];
     const appState = options.appState || { character };
@@ -1868,6 +1892,7 @@
         if (disabled || choiceButton.disabled) return;
         const field = choiceButton.dataset.characterField;
         const id = choiceButton.dataset.characterId;
+        if (fixedAppearance && !FIXED_APPEARANCE_FIELDS.has(field)) return;
         if (field === 'hairPreset') {
           const option = hairPresetOptions(character).find(item => item.id === id);
           if (!option || !unlockStatus(option.unlock, stats, character,
@@ -1901,12 +1926,13 @@
     };
     controls.onchange = event => {
       if (event.target.dataset.characterWardrobeCategory === 'true') {
+        if (fixedAppearance) return;
         controls.dataset.activeWardrobeField = event.target.value;
         renderControls(controls, character, stats, achievements, disabled, appState);
         return;
       }
       const field = event.target.dataset.characterField;
-      if (!field || disabled) return;
+      if (!field || disabled || (fixedAppearance && !FIXED_APPEARANCE_FIELDS.has(field))) return;
       options.onChange?.(normalizeCharacter({ ...character, [field]: event.target.value }));
     };
   }

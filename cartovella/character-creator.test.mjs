@@ -239,6 +239,76 @@ check('wardrobe and shop expose one compact layer picker at a time', () => {
     assert.match(controls.innerHTML, /aria-label="Next hats &amp; helmets"\s+disabled/);
   }
 });
+check('Miku uses its fixed sprite and only exposes pet and effect customization', () => {
+  const miku = characterCreator.SHOP_WARDROBE.find(item => item.id === 'special_miku');
+  assert.ok(miku);
+  assert.equal(miku.name, 'Miku');
+  assert.equal(miku.fixedAppearance, true);
+  assert.equal(miku.unlock.type, 'starter');
+  assert.equal(miku.paths.male, './assets/custom-gear/Miku-2.png');
+  assert.equal(miku.paths.female, miku.paths.male);
+  const png = readFileSync(new URL(miku.paths.male, import.meta.url));
+  assert.equal(png.toString('ascii', 1, 4), 'PNG');
+  assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [80, 64]);
+
+  const character = characterCreator.normalizeCharacter({
+    ...characterCreator.DEFAULT_CHARACTER,
+    specialSkin: miku.id,
+    top: 'green_shirt',
+    bottoms: 'green_pants',
+    skinTone: 'deep',
+    effect: 'effect_1',
+    purchasedItems: ['green_shirt', 'green_pants', 'effect_1']
+  });
+  const layers = characterCreator.characterSpriteAssets(character);
+  assert.deepEqual(layers.map(layer => layer.layer), ['effect', 'base']);
+  assert.ok(layers[1].imageSrc.endsWith('/Miku-2.png'));
+
+  const controls = { dataset: { activeTab: 'appearance' }, innerHTML: '' };
+  let changed;
+  const render = () => characterCreator.render({
+    controls, character, stats: { level: 10 },
+    onChange: next => { changed = next; }
+  });
+  render();
+  assert.match(controls.innerHTML, /data-character-field="specialSkin"/);
+  assert.match(controls.innerHTML, /data-character-field="effect"/);
+  for (const field of ['gender', 'skinTone', 'hairPreset']) {
+    assert.doesNotMatch(controls.innerHTML, new RegExp(`data-character-field="${field}"`));
+  }
+  controls.onclick({ target: { closest(selector) {
+    return selector === 'button[data-character-field][data-character-id]'
+      ? { dataset: { characterField: 'top', characterId: 'green_shirt' }, disabled: false }
+      : null;
+  } } });
+  assert.equal(changed, undefined, 'fixed-skin gear cannot be changed through the event handler');
+  controls.onchange({ target: { dataset: { characterField: 'skinTone' }, value: 'deep' } });
+  assert.equal(changed, undefined, 'fixed-skin colors cannot be changed through the event handler');
+  for (const [field, id] of [['effect', ''], ['pet', 'pet_none']]) {
+    render();
+    controls.onclick({ target: { closest(selector) {
+      return selector === 'button[data-character-field][data-character-id]'
+        ? { dataset: { characterField: field, characterId: id }, disabled: false }
+        : null;
+    } } });
+    assert.equal(changed?.[field], id, `${field} remains changeable`);
+    changed = undefined;
+  }
+
+  controls.dataset.activeTab = 'wardrobe';
+  render();
+  assert.match(controls.innerHTML, /Wardrobe items cannot be equipped while Miku is selected/);
+  controls.dataset.activeTab = 'shop';
+  render();
+  assert.doesNotMatch(controls.innerHTML, /data-character-field="top"/);
+  controls.dataset.activeTab = 'backgrounds';
+  render();
+  assert.doesNotMatch(controls.innerHTML, /data-character-field="background"/);
+  controls.dataset.activeTab = 'pets';
+  render();
+  assert.match(controls.innerHTML, /data-character-field="pet"/);
+  assert.match(controls.innerHTML, /data-character-field="petHat"/);
+});
 check('wardrobe arrows never purchase, cycle owned gear and None, and leave purchases to browse-all', () => {
   const fields = ['top', 'bottoms', 'shoes', 'headwear', 'handItem', 'backLayer',
     'arms', 'face', 'ears', 'effect'];
