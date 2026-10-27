@@ -787,10 +787,12 @@ check('variant clothing includes all requested rewards and valid paired sprite-s
     'vanguard_tabard', 'highlander_gilded_pants', 'sovereign_cartographer_coat'
   ];
   const parkIds = [
-    'volunteer_park_tee', 'ranger_hat_brown', 'park_ranger_uniform', 'ranger_trail_pants',
-    'ranger_hat_silver', 'ranger_hat_gold', 'grand_warden_cloak', 'ranger_hat_diamond'
+    'volunteer_park_tee', 'park_ranger_uniform', 'ranger_trail_pants', 'grand_warden_cloak'
   ];
   const achievementIds = [
+    'ranger_hat_classic_brown', 'ranger_hat_forest_green', 'ranger_hat_green',
+    'ranger_hat_navy', 'ranger_hat_navy_banded', 'ranger_hat_purple',
+    'ranger_hat_silver', 'ranger_hat_golden', 'ranger_hat_diamond',
     'khaki_trail_pants', 'mist_rain_poncho', 'cavern_miner_suit', 'summit_down_parka',
     'overland_canvas_jacket', 'mariner_pea_coat', 'photographer_vest', 'arctic_aurora_cloak',
     'blue_ridge_flannel', 'alpine_timberline_jacket', 'continental_cape',
@@ -800,16 +802,36 @@ check('variant clothing includes all requested rewards and valid paired sprite-s
     .map(item => item.id), levelIds);
   assert.deepEqual(characterCreator.PARK_MILESTONE_ITEMS.map(item => item.id), parkIds);
   assert.deepEqual(characterCreator.ACHIEVEMENT_ITEMS.map(item => item.id), achievementIds);
-  const rangerHats = characterCreator.PARK_MILESTONE_ITEMS.filter(item =>
-    item.variantSpec.pattern === 'hatBand');
-  assert.equal(rangerHats.length, 4);
-  assert.ok(rangerHats.every(item =>
-    item.variantSpec.bandRowsByGender.male.join(',') === '21' &&
-    item.variantSpec.bandRowsByGender.female.join(',') === '22' &&
-    item.variantSpec.bandXRange.join(',') === '39,46'));
+  const rangerHats = characterCreator.ACHIEVEMENT_ITEMS.filter(item =>
+    item.id.startsWith('ranger_hat_'));
+  assert.deepEqual(rangerHats.map(item => item.unlock.id), [
+    'firstSteps', 'trailblazer', 'trailblazer', 'masterRanger', 'masterRanger',
+    'grandVoyager', 'grandVoyager', 'americaTheBeautiful', 'nps'
+  ]);
+  assert.equal(rangerHats.every(item => !item.variantSpec), true);
+  const rangerHatAssetPaths = [
+    'brown-ranger-hat.png', 'forest-green-ranger-hat.png', 'green-ranger-hat.png',
+    'navy-ranger-hat.png', 'navy-banded-ranger-hat.png', 'purple-ranger-hat.png',
+    'silver-ranger-hat.png', 'golden-ranger-hat.png', 'diamond-ranger-hat.png'
+  ];
+  rangerHats.forEach((item, index) => {
+    const path = `./assets/custom-gear/${rangerHatAssetPaths[index]}`;
+    assert.equal(item.paths.male, path, item.id);
+    assert.equal(item.paths.female, path, item.id);
+    const png = readFileSync(new URL(path, import.meta.url));
+    assert.equal(png.toString('ascii', 1, 4), 'PNG', item.id);
+    assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [80, 64], item.id);
+    for (const gender of ['male', 'female']) {
+      const layer = characterCreator.characterSpriteAssets({
+        ...characterCreator.DEFAULT_CHARACTER, gender, headwear: item.id
+      }).find(candidate => candidate.layer === 'headwear');
+      assert.equal(layer?.imageSrc, path, `${item.id} ${gender} sprite layer`);
+    }
+  });
   const allVariantItems = [
     ...characterCreator.LEVEL_ITEMS.filter(item => item.variantSpec),
-    ...characterCreator.PARK_MILESTONE_ITEMS, ...characterCreator.ACHIEVEMENT_ITEMS
+    ...characterCreator.PARK_MILESTONE_ITEMS.filter(item => item.variantSpec),
+    ...characterCreator.ACHIEVEMENT_ITEMS.filter(item => item.variantSpec)
   ];
   const checkedPaths = new Set();
   for (const item of allVariantItems) {
@@ -834,14 +856,14 @@ check('variant clothing includes all requested rewards and valid paired sprite-s
 });
 check('park and achievement clothing unlock at their exact requirements', () => {
   const character = characterCreator.normalizeCharacter();
-  const parkGoals = [5, 10, 15, 25, 35, 50, 75, 100];
-  characterCreator.PARK_MILESTONE_ITEMS.forEach((item, index) => {
-    assert.equal(item.unlock.goal, parkGoals[index], item.id);
+  characterCreator.PARK_MILESTONE_ITEMS.forEach(item => {
+    const goal = item.unlock.goal;
+    assert.equal(item.unlock.type, 'worldParks', item.id);
     assert.equal(characterCreator.unlockStatus(item.unlock, {
-      visitedParks: Array(parkGoals[index] - 1).fill('park')
+      visitedParks: Array(goal - 1).fill('park')
     }, character, new Map()).unlocked, false, item.id);
     assert.equal(characterCreator.unlockStatus(item.unlock, {
-      visitedParks: Array(parkGoals[index]).fill('park')
+      visitedParks: Array(goal).fill('park')
     }, character, new Map()).unlocked, true, item.id);
   });
   const titles = new Map([
@@ -986,14 +1008,6 @@ check('sprite palette shader recolors frames, preserves outlines and transparenc
     });
     assert.deepEqual(pixelAt(hat, 30, 2), [0x00, 0xff, 0xff, 255]);
     assert.deepEqual(pixelAt(hat, 31, 2), [0xff, 0xff, 0xff, 255]);
-    const rangerHat = characterCreator.PARK_MILESTONE_ITEMS.find(item =>
-      item.id === 'ranger_hat_gold').variantSpec;
-    const maleHat = characterCreator.processSpriteVariant(source, { ...rangerHat, gender: 'male' });
-    const femaleHat = characterCreator.processSpriteVariant(source, { ...rangerHat, gender: 'female' });
-    assert.deepEqual(pixelAt(maleHat, 40, 21), [0xed, 0xc0, 0x4d, 255]);
-    assert.deepEqual(pixelAt(maleHat, 40, 22), [0xb7, 0x95, 0x61, 255]);
-    assert.deepEqual(pixelAt(femaleHat, 40, 21), [0xb7, 0x95, 0x61, 255]);
-    assert.deepEqual(pixelAt(femaleHat, 40, 22), [0xed, 0xc0, 0x4d, 255]);
     const cape = characterCreator.processSpriteVariant({
       src: 'cape-sheet.png', naturalWidth: 720, naturalHeight: 448,
       data: new Uint8ClampedArray(720 * 448 * 4)
