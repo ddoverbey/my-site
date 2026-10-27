@@ -75,17 +75,17 @@ check('character appearance, wardrobe, companions, and scene choices render as d
   assert.doesNotMatch(controls.innerHTML, /Hair color/);
   assert.match(controls.innerHTML, /Porcelain/);
   assert.match(controls.innerHTML, /Warm/);
-  assert.match(controls.innerHTML, /Hairstyle 1: Chestnut/);
+  assert.match(controls.innerHTML, /Hairstyle 6: Chestnut/);
   assert.match(controls.innerHTML, /Hairstyle 28: Teal/);
   assert.match(controls.innerHTML, /data-character-id="hair_shield_maiden::teal"/);
   assert.match(controls.innerHTML, /Sprite A/);
   assert.match(controls.innerHTML, /Sprite B/);
-  assert.equal((controls.innerHTML.match(/data-character-field="hairPreset"/g) || []).length, 170);
+  assert.equal((controls.innerHTML.match(/data-character-field="hairPreset"/g) || []).length, 201);
   assert.match(controls.innerHTML, /aria-label="Previous hairstyle"/);
   assert.match(controls.innerHTML, /aria-label="Next hairstyle"/);
   assert.match(controls.innerHTML, /<details class="mt-2" data-character-browse="hairPreset">\s*<summary[^>]*>Browse all hairstyles/);
   assert.match(controls.innerHTML, /class="sm:col-span-2">[\s\S]*?aria-label="Hairstyle picker"/);
-  assert.match(controls.innerHTML, /class="min-w-0 truncate text-center" title="Hairstyle 1: Chestnut"/);
+  assert.match(controls.innerHTML, /class="min-w-0 truncate text-center" title="Hairstyle 6: Chestnut"/);
   assert.match(controls.innerHTML, /h-16/);
   assert.match(controls.innerHTML, /h-10 w-10/);
   assert.match(controls.innerHTML, /data-character-browse="hairPreset"/);
@@ -616,16 +616,67 @@ check('inclusive body frames migrate legacy selections', () => {
 check('sprite hairstyle assets are available for their matching character sprites', () => {
   const maleStyles = characterCreator.HAIR_STYLES.filter(style => style.genders.includes('male'));
   const femaleStyles = characterCreator.HAIR_STYLES.filter(style => style.genders.includes('female'));
-  assert.equal(maleStyles.length, 28);
-  assert.equal(femaleStyles.length, 33);
-  assert.equal(maleStyles.length * characterCreator.HAIR_COLORS.length, 168);
-  assert.equal(femaleStyles.length * characterCreator.HAIR_COLORS.length, 198);
+  assert.equal(maleStyles.length, 34);
+  assert.equal(femaleStyles.length, 34);
+  assert.equal((maleStyles.length - 1) * characterCreator.HAIR_COLORS.length + 1, 199);
+  assert.equal((femaleStyles.length - 1) * characterCreator.HAIR_COLORS.length + 1, 199);
+  for (let sheet = 1; sheet <= 5; sheet++) {
+    const style = characterCreator.HAIR_STYLES.find(item => item.id === `hair_${sheet}`);
+    assert.ok(style.genders.includes('male'));
+    assert.equal(style.genders.includes('female'), false);
+    const layer = characterCreator.characterSpriteAssets({
+      ...characterCreator.DEFAULT_CHARACTER, hairStyle: style.id
+    }).find(item => item.layer === 'hair');
+    assert.ok(decodeURIComponent(layer.imageSrc).endsWith(
+      `/GandalfHardcore Character Asset Pack/GandalfHardcore Character Asset Pack/Male Hair/Male Hair${sheet}.png`
+    ));
+    const png = readFileSync(new URL(layer.imageSrc, import.meta.url));
+    assert.equal(png.toString('ascii', 1, 4), 'PNG');
+    assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [800, 448]);
+  }
   assert.ok(characterCreator.characterSpriteAssets({
     ...characterCreator.DEFAULT_CHARACTER, hairStyle: 'hair_fancy'
   })[4].imageSrc.endsWith('/Fancy%20Hair.png'));
   assert.ok(characterCreator.characterSpriteAssets({
     ...characterCreator.DEFAULT_CHARACTER, gender: 'female', hairStyle: 'hair_35'
   })[4].imageSrc.endsWith('/Female%20Hair35.png'));
+  for (const gender of ['male', 'female']) {
+    assert.equal(characterCreator.characterSpriteAssets({
+      ...characterCreator.DEFAULT_CHARACTER, gender, hairStyle: 'hair_bald'
+    }).some(layer => layer.layer === 'hair'), false);
+  }
+  const controls = { dataset: { activeTab: 'appearance' }, innerHTML: '' };
+  characterCreator.render({ controls, character: characterCreator.DEFAULT_CHARACTER });
+  assert.match(controls.innerHTML, /data-character-id="hair_bald::brown"[^>]*>[\s\S]*?Bald/);
+});
+check('ranger hats keep every hairstyle below the hat crown in both stage and avatar rendering', () => {
+  const rangerHatIds = characterCreator.ACHIEVEMENT_ITEMS
+    .filter(item => item.id.startsWith('ranger_hat_')).map(item => item.id);
+  assert.ok(rangerHatIds.length > 0);
+  for (const gender of ['male', 'female']) {
+    for (const hat of rangerHatIds) {
+      const character = characterCreator.normalizeCharacter({
+        ...characterCreator.DEFAULT_CHARACTER, gender, headwear: hat
+      });
+      const hair = characterCreator.characterSpriteAssets(character)
+        .find(layer => layer.layer === 'hair');
+      assert.equal(hair.clipTopSourceY, 25, `${gender} ${hat}`);
+    }
+    const clips = [];
+    const context = {
+      save() {}, restore() {}, beginPath() {},
+      rect(...args) { clips.push(args); }, clip() {}, drawImage() {}
+    };
+    const character = characterCreator.normalizeCharacter({
+      ...characterCreator.DEFAULT_CHARACTER, gender, headwear: rangerHatIds[0]
+    });
+    const hair = characterCreator.characterSpriteAssets(character)
+      .find(layer => layer.layer === 'hair');
+    characterCreator.drawCharacterLayer(context, {}, hair, 24, 16, 32, 48, 62, 39, 36, 43);
+    assert.equal(clips.length, 1);
+    assert.equal(clips[0][0], 62);
+    assert.ok(clips[0][1] > 45 && clips[0][1] < 48);
+  }
 });
 check('low-resolution frame profiles keep the V-taper broad at the shoulders and hourglass defined', () => {
   const { straight, vTaper, hourglass } = characterCreator.BODY_SHAPE_PROFILES;
@@ -945,7 +996,8 @@ check('park and achievement clothing unlock at their exact requirements', () => 
     ['focal', 'Focal Point'], ['longDark', 'The Long Dark'],
     ['countryRoads', 'Country Roads'], ['rockyMountainHigh', 'Rocky Mountain High'],
     ['fiftyNifty', 'Fifty Nifty'], ['americaTheBeautiful', 'America the Beautiful'],
-    ['gaiaWanderer', 'Gaia Wanderer']
+    ['gaiaWanderer', 'Gaia Wanderer'], ['trailblazer', 'Trailblazer'],
+    ['masterRanger', 'Master Ranger'], ['grandVoyager', 'Grand Voyager'], ['nps', 'NPS']
   ]);
   const definitions = [...titles].map(([id, title]) => ({
     id, title, progress: stats => stats.achievementsDone ? 1 : 0, tiers: [{ goal: 1 }]
@@ -971,11 +1023,11 @@ check('park and achievement clothing unlock at their exact requirements', () => 
     controls, character, stats: { level: 1, visitedParks: [] }, achievements: definitions
   });
   assert.match(controls.innerHTML, /Unlock Achievement: Thin Air \(0\/1\)/);
-  controls.dataset.activeWardrobeField = 'headwear';
+  controls.dataset.activeWardrobeField = 'top';
   characterCreator.render({
     controls, character, stats: { level: 1, visitedParks: [] }, achievements: definitions
   });
-  assert.match(controls.innerHTML, /Visit 10 Global Parks \(0\/10\)/);
+  assert.match(controls.innerHTML, /Visit 5 Global Parks \(0\/5\)/);
 });
 check('sprite palette shader recolors frames, preserves outlines and transparency, and caches variants', () => {
   const originalOffscreenCanvas = globalThis.OffscreenCanvas;

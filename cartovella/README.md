@@ -139,12 +139,14 @@ Completionist class. The current hard-coded Explorer Classes are:
 
 The Explorer Profile character stage composites the gendered base, skin tone, hairstyle, and outfit
 sprite layers from the bundled GandalfHardcore asset packs. The 58x Hair bundle supplies 58
-gender-specific hairstyle sprites (28 male and 30 female). One appearance picker combines each
+gender-specific hairstyle sprites (28 male and 30 female), and the original character pack adds
+the first five clean-shaven male hairstyles. Both sprites also have a Bald option. One appearance picker combines each
 available hairstyle with its hair color, with labels such as “Hairstyle 1: Chestnut.” Character sprite catalogs,
 layer composition, unlock rules, backgrounds, and companion rendering live in `character-creator.js`;
 character settings are stored in the passport and included in local, cloud, export, and shared saves.
 The sprite picker is labeled Sprite A and Sprite B; internal male/female keys remain for mapping
-each choice to its source art. Shirts, bottoms, and shoes can be unequipped independently, including
+each choice to its source art. Ranger hats mask the upper edge of hairstyles, while allowing hair to
+show below the hat. Shirts, bottoms, and shoes can be unequipped independently, including
 when a one-piece outfit such as a bikini is selected. The wardrobe includes skirt, black short skirt,
 and pants options.
 GandalfHardcore asset folders are grouped under `assets/gandalfhardcore/`; source ZIP archives remain

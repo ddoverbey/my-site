@@ -9,6 +9,17 @@
     { id: 'deep', name: 'Deep', color: '#57372f', imageSrc: null }
   ];
   const HAIR_STYLES = [
+    ...Array.from({ length: 5 }, (_, index) => {
+      const sheet = index + 1;
+      return {
+        id: `hair_${sheet}`,
+        name: `Hairstyle ${sheet}`,
+        fileName: `Male Hair${sheet}.png`,
+        folder: 'Male Hair',
+        genders: ['male'],
+        imageSrc: null
+      };
+    }),
     ...Array.from({ length: 30 }, (_, index) => {
       const sheet = index + 6;
       return {
@@ -21,7 +32,8 @@
     }),
     { id: 'hair_fancy', name: 'Hairstyle 26', fileName: 'Fancy Hair.png', genders: ['male', 'female'], imageSrc: null },
     { id: 'hair_queen', name: 'Hairstyle 27', fileName: 'Queen hair.png', genders: ['male', 'female'], imageSrc: null },
-    { id: 'hair_shield_maiden', name: 'Hairstyle 28', fileName: 'Shield Maiden hair.png', genders: ['male', 'female'], imageSrc: null }
+    { id: 'hair_shield_maiden', name: 'Hairstyle 28', fileName: 'Shield Maiden hair.png', genders: ['male', 'female'], imageSrc: null },
+    { id: 'hair_bald', name: 'Bald', genders: ['male', 'female'], imageSrc: null }
   ];
   const HAIR_COLORS = [
     { id: 'black', name: 'Black', color: '#292b35', imageSrc: null },
@@ -265,6 +277,7 @@
 
   const CHARACTER_ASSET_ROOT = `${ASSET_ROOT}GandalfHardcore Character Asset Pack/GandalfHardcore Character Asset Pack/`;
   const HAIRSTYLE_ASSET_ROOT = `${ASSET_ROOT}GandalfHardcore 58x Hair/`;
+  const ORIGINAL_MALE_HAIR_ROOT = `${CHARACTER_ASSET_ROOT}Male Hair/`;
   const spritePath = (folder, file) => `${folder}${file}`;
   const pairedPaths = (folder, maleFile, femaleFile = maleFile) => ({
     male: spritePath(folder, maleFile),
@@ -1117,9 +1130,16 @@
     const skinIndex = SKIN_TONES.findIndex(tone => tone.id === character.skinTone) + 1;
     const hairCatalog = HAIR_STYLES.filter(style => style.genders.includes(character.gender));
     const hair = getItem(hairCatalog, character.hairStyle);
-    const hairFolder = hair.fileName
-      ? '28x Male Hair' : character.gender === 'female' ? '30x Female Hair' : '28x Male Hair';
+    const hairFolder = hair.folder || (hair.fileName
+      ? '28x Male Hair' : character.gender === 'female' ? '30x Female Hair' : '28x Male Hair');
     const hairFile = hair.fileName || `${genderName} Hair${hair.sheet}.png`;
+    const wearsRangerHat = character.headwear.startsWith('ranger_hat_');
+    const hairLayer = hair.id === 'hair_bald' ? null : {
+      layer: 'hair',
+      imageSrc: assetUrl(`${hair.folder === 'Male Hair' ? ORIGINAL_MALE_HAIR_ROOT : `${HAIRSTYLE_ASSET_ROOT}${hairFolder}/`}${hairFile}`),
+      filter: hairColorFilter(character.hairColor),
+      ...(wearsRangerHat ? { clipTopSourceY: 25 } : {})
+    };
     const equipmentLayer = (field, layer) => {
       const item = (EQUIPMENT_BY_FIELD[field] || []).find(candidate => candidate.id === character[field]);
       const path = item?.paths[character.gender];
@@ -1146,11 +1166,7 @@
       equipmentLayer('shoes', 'shoes'),
       equipmentLayer('top', 'top'),
       equipmentLayer('arms', 'arms'),
-      {
-        layer: 'hair',
-        imageSrc: assetUrl(`${HAIRSTYLE_ASSET_ROOT}${hairFolder}/${hairFile}`),
-        filter: hairColorFilter(character.hairColor)
-      },
+      hairLayer,
       equipmentLayer('face', 'face'),
       equipmentLayer('headwear', 'headwear'),
       equipmentLayer('handItem', 'hand')
@@ -1246,16 +1262,32 @@
         const layerFrame = layer.layer === 'effect'
           ? ((Math.max(0, effectFrame) % CHARACTER_EFFECT_FRAME_COUNT) * CHARACTER_SPRITE_FRAME.sheetWidth)
           : 0;
-        ctx.drawImage(
-          image,
-          layerFrame + CHARACTER_SPRITE_FRAME.x,
-          CHARACTER_SPRITE_FRAME.y,
+        drawCharacterLayer(ctx, image, layer,
+          layerFrame + CHARACTER_SPRITE_FRAME.x, CHARACTER_SPRITE_FRAME.y,
           CHARACTER_SPRITE_FRAME.width, CHARACTER_SPRITE_FRAME.height,
-          target.x, target.y + bobOffset, target.width, target.height
-        );
+          target.x, target.y + bobOffset, target.width, target.height);
         if (layer.filter) ctx.restore();
       }
     });
+  }
+
+  function drawCharacterLayer(ctx, image, layer, sourceX, sourceY, sourceWidth, sourceHeight,
+    targetX, targetY, targetWidth, targetHeight) {
+    const clipY = layer.clipTopSourceY == null
+      ? null
+      : targetY + ((layer.clipTopSourceY - sourceY) / sourceHeight) * targetHeight;
+    if (clipY !== null && clipY > targetY) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(targetX, clipY, targetWidth, Math.max(0, targetY + targetHeight - clipY));
+      ctx.clip();
+      ctx.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight,
+        targetX, targetY, targetWidth, targetHeight);
+      ctx.restore();
+      return;
+    }
+    ctx.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight,
+      targetX, targetY, targetWidth, targetHeight);
   }
 
   function petAnimationFor(pet, animationId = '') {
@@ -1372,7 +1404,7 @@
         ctx.save();
         ctx.filter = layer.filter;
       }
-      ctx.drawImage(image, 0, 0, 80, 48, 0, 0, 80, 48);
+      drawCharacterLayer(ctx, image, layer, 0, 0, 80, 48, 0, 0, 80, 48);
       if (layer.filter) ctx.restore();
     });
     ctx.restore();
@@ -1393,13 +1425,21 @@
     const assets = characterSpriteAssets(character);
     return `<span aria-hidden="true" class="relative block h-10 w-10 shrink-0 overflow-hidden rounded bg-slate-900">
       ${assets.map(layer => `<img src="${escapeHtml(layer.imageSrc)}" alt="" class="absolute left-0 top-0 max-w-none"
-        loading="lazy" style="width:400px;height:224px;image-rendering:pixelated;${layer.filter ? `filter:${layer.filter}` : ''}">`).join('')}
+        loading="lazy" style="width:400px;height:224px;image-rendering:pixelated;${layer.filter ? `filter:${layer.filter};` : ''}${layer.clipTopSourceY == null ? '' : `clip-path:inset(${layer.clipTopSourceY * 0.5}px 0 0 0);`}">`).join('')}
     </span>`;
   }
 
   function hairPresetOptions(character) {
     const styles = HAIR_STYLES.filter(style => style.genders.includes(character.gender));
-    return styles.flatMap((style, index) => HAIR_COLORS.map(color => {
+    return styles.flatMap((style, index) => style.id === 'hair_bald'
+      ? [{
+        id: `${style.id}::${character.hairColor}`,
+        name: 'Bald',
+        hairStyle: style.id,
+        hairColor: character.hairColor,
+        unlock: { type: 'starter' }
+      }]
+      : HAIR_COLORS.map(color => {
       const levelReward = LEVEL_HAIR_REWARDS.find(reward => reward.id === style.id);
       return {
         id: `${style.id}::${color.id}`,
@@ -1943,7 +1983,8 @@
     LEVEL_ITEMS, PARK_MILESTONE_ITEMS, ACHIEVEMENT_ITEMS,
     SHOP_WARDROBE, PET_ACCESSORY_CATALOG, EQUIPMENT_CATALOG, LEVEL_TRACK,
     BODY_SHAPE_PROFILES, normalizeCharacter, characterSpriteAssets, achievementProgress,
-    unlockStatus, coinSummary, rarityCoinReward, processSpriteVariant, drawPet, drawCharacterSprite, drawCampfire,
+    unlockStatus, coinSummary, rarityCoinReward, processSpriteVariant, drawPet, drawCharacterLayer,
+    drawCharacterSprite, drawCampfire,
     drawStage, renderAvatar, render
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
