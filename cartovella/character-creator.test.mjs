@@ -81,15 +81,79 @@ check('character appearance, wardrobe, companions, and scene choices render as d
   assert.equal((controls.innerHTML.match(/data-character-field="hairPreset"/g) || []).length, 170);
   assert.match(controls.innerHTML, /aria-label="Previous hairstyle"/);
   assert.match(controls.innerHTML, /aria-label="Next hairstyle"/);
-  assert.match(controls.innerHTML, /<details class="mt-2">\s*<summary[^>]*>Browse all hairstyles/);
+  assert.match(controls.innerHTML, /<details class="mt-2" data-character-browse="hairPreset">\s*<summary[^>]*>Browse all hairstyles/);
   assert.match(controls.innerHTML, /class="sm:col-span-2">[\s\S]*?aria-label="Hairstyle picker"/);
   assert.match(controls.innerHTML, /class="min-w-0 truncate text-center" title="Hairstyle 1: Chestnut"/);
   assert.match(controls.innerHTML, /h-16/);
   assert.match(controls.innerHTML, /h-10 w-10/);
+  assert.match(controls.innerHTML, /data-character-browse="hairPreset"/);
   controls.dataset.activeTab = 'shop';
   characterCreator.render({ controls, character: characterCreator.DEFAULT_CHARACTER });
   assert.match(controls.innerHTML, /Wayfarer Coins/);
   assert.match(controls.innerHTML, /\d+ coins/);
+});
+check('Browse all remains expanded after choosing a hairstyle or wardrobe item', () => {
+  for (const { tab, field, browseId, choiceId } of [
+    { tab: 'appearance', field: 'hairPreset', browseId: 'hairPreset', choiceId: 'hair_6::brown' },
+    { tab: 'wardrobe', field: 'top', browseId: 'top', choiceId: characterCreator.DEFAULT_CHARACTER.top }
+  ]) {
+    const controls = {
+      dataset: { activeTab: tab }, innerHTML: '', openBrowse: null,
+      querySelectorAll(selector) {
+        return selector === 'details[data-character-browse][open]' && this.openBrowse?.open
+          ? [this.openBrowse] : [];
+      }
+    };
+    let character = characterCreator.normalizeCharacter(characterCreator.DEFAULT_CHARACTER);
+    const render = () => characterCreator.render({
+      controls, character, stats: { level: 1 }, onChange: next => { character = next; render(); }
+    });
+    render();
+    controls.openBrowse = { open: true, dataset: { characterBrowse: browseId } };
+    controls.onclick({ target: { closest(selector) {
+      if (selector === '[data-character-tab]') return null;
+      return selector === 'button[data-character-field][data-character-id]'
+        ? { dataset: { characterField: field, characterId: choiceId }, disabled: false } : null;
+    } } });
+    assert.match(controls.innerHTML, new RegExp(
+      `<details class="mt-2" data-character-browse="${browseId}" open>`
+    ));
+  }
+});
+check('opening Browse all closes unrelated visual pickers to prevent overlapping menus', () => {
+  const makeDetails = (dataset, open = false) => ({
+    dataset, open, toggleHandler: null,
+    addEventListener(name, handler) { if (name === 'toggle') this.toggleHandler = handler; },
+    querySelector() { return null; },
+    querySelectorAll() { return []; },
+    closest() { return null; },
+    getBoundingClientRect() { return { top: 0, bottom: 0 }; }
+  });
+  const skinPicker = makeDetails({ characterDropdown: 'true' }, true);
+  const hairstyleBrowse = makeDetails({ characterBrowse: 'hairPreset' });
+  const details = [skinPicker, hairstyleBrowse];
+  const controls = {
+    dataset: { activeTab: 'appearance' }, innerHTML: '',
+    closest() { return null; },
+    querySelectorAll(selector) {
+      if (selector === 'details') return details;
+      if (selector === 'details[data-character-browse][open]') {
+        return details.filter(details => details.dataset.characterBrowse && details.open);
+      }
+      if (selector === 'details[data-character-dropdown][open]') {
+        return details.filter(details => details.dataset.characterDropdown && details.open);
+      }
+      return [];
+    }
+  };
+  characterCreator.render({ controls, character: characterCreator.DEFAULT_CHARACTER, stats: { level: 1 } });
+  hairstyleBrowse.open = true;
+  hairstyleBrowse.toggleHandler();
+  assert.equal(skinPicker.open, false);
+  assert.equal(controls.dataset.openCharacterBrowse, 'hairPreset');
+  skinPicker.open = true;
+  skinPicker.toggleHandler();
+  assert.equal(hairstyleBrowse.open, false);
 });
 check('character summary groups XP with level and does not show a completed-level message', () => {
   const summary = { innerHTML: '' };

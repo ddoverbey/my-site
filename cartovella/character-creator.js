@@ -1425,7 +1425,7 @@
       { id: '', name: 'None' };
     return `<div class="block text-xs text-slate-300">
       <span class="block">${escapeHtml(label)}</span>
-      <details class="relative mt-1">
+      <details class="relative mt-1" data-character-dropdown="true">
         <summary ${disabled ? 'aria-disabled="true"' : ''}
           class="flex h-16 cursor-pointer list-none items-center justify-between gap-2 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 ${disabled ? 'opacity-50' : 'hover:border-slate-500'}">
           <span class="flex min-w-0 items-center gap-2">${renderChoice(selected, true)}
@@ -1579,7 +1579,7 @@
     </span>`;
   }
 
-  function cyclePickerMarkup(label, field, value, options, disabled, renderChoice, browseLabel) {
+  function cyclePickerMarkup(label, field, value, options, disabled, renderChoice, browseLabel, browseOpen) {
     const available = options.filter(option => option.canCycle);
     const currentIndex = available.findIndex(option => option.id === value);
     const selected = options.find(option => option.id === value);
@@ -1606,7 +1606,7 @@
         </span>
         ${arrow(1)}
       </div>
-      <details class="mt-2">
+      <details class="mt-2" data-character-browse="${escapeHtml(field)}"${browseOpen ? ' open' : ''}>
         <summary class="cursor-pointer text-amber-200">${escapeHtml(browseLabel)}</summary>
         ${visualDropdownMarkup(label, field, options, value, disabled, renderChoice)}
       </details>
@@ -1614,6 +1614,10 @@
   }
 
   function renderControls(container, character, stats, achievements, disabled, appState) {
+    const openBrowse = container.querySelectorAll?.('details[data-character-browse][open]');
+    if (openBrowse?.length) {
+      container.dataset.openCharacterBrowse = openBrowse[0].dataset.characterBrowse || '';
+    }
     const activeTab = tabs.includes(container.dataset.activeTab) ? container.dataset.activeTab : 'appearance';
     const completedAchievements = achievementProgress(stats, achievements);
     const dropdown = (field, label, current, choices, renderChoice, fieldDisabled = false) =>
@@ -1650,7 +1654,7 @@
     const hairPicker = cyclePickerMarkup('Hairstyle', 'hairPreset', hairValue, hairOptions, disabled,
       option => hairThumbnailMarkup({
         ...character, hairStyle: option.hairStyle, hairColor: option.hairColor
-      }), 'Browse all hairstyles');
+      }), 'Browse all hairstyles', container.dataset.openCharacterBrowse === 'hairPreset');
     const coinBalance = coinSummary(stats, appState);
     const wardrobeFields = [
       ['top', 'Shirts, Bodices & Dresses'], ['bottoms', 'Pants & Skirts'], ['shoes', 'Footwear'],
@@ -1686,7 +1690,8 @@
         selectedWardrobeLabel, selectedWardrobeField, character[selectedWardrobeField],
         selectedWardrobeOptions, disabled,
         option => equipmentThumbnailMarkup(option, character.gender),
-        `Browse all ${selectedWardrobeLabel.toLowerCase()}`
+        `Browse all ${selectedWardrobeLabel.toLowerCase()}`,
+        container.dataset.openCharacterBrowse === selectedWardrobeField
       )}
     </div>`;
     const sections = {
@@ -1747,6 +1752,26 @@
     if (typeof container.querySelectorAll === 'function') {
       container.querySelectorAll('details').forEach(details => {
         details.addEventListener('toggle', () => {
+          if (details.open && details.dataset.characterBrowse) {
+            container.dataset.openCharacterBrowse = details.dataset.characterBrowse;
+            container.querySelectorAll('details[data-character-browse][open]').forEach(other => {
+              if (other !== details) other.open = false;
+            });
+            container.querySelectorAll('details[data-character-dropdown][open]').forEach(other => {
+              other.open = false;
+            });
+          } else if (details.open && details.dataset.characterDropdown) {
+            const parentBrowse = details.closest('details[data-character-browse]');
+            container.querySelectorAll('details[data-character-dropdown][open]').forEach(other => {
+              if (other !== details) other.open = false;
+            });
+            container.querySelectorAll('details[data-character-browse][open]').forEach(other => {
+              if (other !== parentBrowse) other.open = false;
+            });
+          } else if (!details.open && details.dataset.characterBrowse &&
+              container.dataset.openCharacterBrowse === details.dataset.characterBrowse) {
+            container.dataset.openCharacterBrowse = '';
+          }
           positionDropdown(details, container);
           renderPetPreviews(details);
           renderHairPreviews(details);
@@ -1814,6 +1839,7 @@
       const tabButton = event.target.closest('[data-character-tab]');
       if (tabButton) {
         controls.dataset.activeTab = tabButton.dataset.characterTab;
+        controls.dataset.openCharacterBrowse = '';
         renderControls(controls, character, stats, achievements, disabled, appState);
         return;
       }
