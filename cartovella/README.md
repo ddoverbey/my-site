@@ -143,8 +143,8 @@ and 30 female hairstyles plus three shared extra styles. The original character 
 first five hairstyles for both sprites. The catalog also includes a Bald option for each sprite.
 One appearance picker combines each available hairstyle with its hair color, with labels such as
 “Hairstyle 1: Chestnut.” Hair color palettes are normalized across the differently colored source
-sheets, so each color choice is consistent between styles. Ranger hats are shifted left three sprite
-pixels to align them with the character. Character sprite catalogs, layer composition, unlock rules,
+sheets, so each color choice is consistent between styles. Ranger hats are centered on the character.
+Character sprite catalogs, layer composition, unlock rules,
 backgrounds, and companion rendering live in `character-creator.js`;
 character settings are stored in the passport and included in local, cloud, export, and shared saves.
 The sprite picker is labeled Sprite A and Sprite B; internal male/female keys remain for mapping

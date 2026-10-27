@@ -1430,6 +1430,7 @@ check('the shared stage animation loop advances pets and effects without moving 
     const context = {
       clearRect() {},
       save() {},
+      translate() {},
       scale() {},
       restore() {},
       fillRect() {},
@@ -1477,6 +1478,23 @@ check('the shared stage animation loop advances pets and effects without moving 
     const thumbnailCanvas = { ...canvas, isConnected: true };
     characterCreator.drawStage(thumbnailCanvas, character, { animate: false });
     assert.equal(intervalCallbacks.length, 1, 'static scene thumbnails do not start an animation timer');
+    const avatarDrawCalls = [];
+    const avatarCanvas = {
+      width: 80, height: 48, isConnected: true,
+      getContext: () => ({
+        clearRect() {},
+        save() {},
+        translate() {},
+        scale() {},
+        restore() {},
+        drawImage(...args) { avatarDrawCalls.push(args); }
+      })
+    };
+    characterCreator.renderAvatar(avatarCanvas, character);
+    assert.ok(avatarDrawCalls.length > 0);
+    assert.ok(avatarDrawCalls.every(call =>
+      call.length === 9 && call.slice(1).join(',') === '24,16,32,48,0,0,80,48'
+    ), 'avatar thumbnails use the same single-character source frame as the stage');
   } finally {
     if (originalImage === undefined) delete globalThis.Image;
     else globalThis.Image = originalImage;
