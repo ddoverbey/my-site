@@ -1493,8 +1493,8 @@ check('the shared stage animation loop advances pets and effects without moving 
     characterCreator.renderAvatar(avatarCanvas, character);
     assert.ok(avatarDrawCalls.length > 0);
     assert.ok(avatarDrawCalls.every(call =>
-      call.length === 9 && call.slice(1).join(',') === '24,16,32,48,0,0,80,48'
-    ), 'avatar thumbnails use the same single-character source frame as the stage');
+      call.length === 9 && call.slice(1).join(',') === '0,0,80,48,0,0,80,48'
+    ), 'avatar thumbnails use the centered 80x48 bust crop');
   } finally {
     if (originalImage === undefined) delete globalThis.Image;
     else globalThis.Image = originalImage;

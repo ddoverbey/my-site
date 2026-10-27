@@ -1425,10 +1425,7 @@
         ctx.save();
         ctx.filter = layer.filter;
       }
-      drawCharacterLayer(ctx, image, layer,
-        CHARACTER_SPRITE_FRAME.x, CHARACTER_SPRITE_FRAME.y,
-        CHARACTER_SPRITE_FRAME.width, CHARACTER_SPRITE_FRAME.height,
-        0, 0, 80, 48);
+      drawCharacterLayer(ctx, image, layer, 0, 0, 80, 48, 0, 0, 80, 48);
       if (layer.filter) ctx.restore();
     });
     ctx.restore();
