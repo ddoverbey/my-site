@@ -1218,7 +1218,7 @@
       </div>
       <div id="authViewLoggedIn" class="hidden space-y-4">
         <div class="rounded-xl border border-emerald-500/30 bg-slate-950/60 p-3">
-          <p class="text-xs font-semibold text-emerald-300">● Cloud Active</p>
+          <p id="authCloudStatusLabel" class="text-xs font-semibold text-slate-300">● Cloud account</p>
           <p id="authCurrentEmail" class="mt-1 truncate text-xs text-slate-200"></p>
           <p id="authSyncStatusText" class="mt-2 text-[11px] text-slate-400" role="status" aria-live="polite">Waiting for cloud data…</p>
         </div>
@@ -2096,6 +2096,7 @@
     let cloudHydrated = false;
     let cloudSyncTimer = null;
     let cloudSyncInProgress = false;
+    let cloudSessionRefreshPromise = null;
     let pendingCloudConflict = null;
 
     function encodeRoutePolyline(route) {
@@ -7361,6 +7362,18 @@
     function setCloudStatus(message, failed = false) {
       const status = document.getElementById('authSyncStatusText');
       if (status) status.textContent = message;
+      const cloudLabel = document.getElementById('authCloudStatusLabel');
+      if (cloudLabel) {
+        const label = !cloudSession?.user
+          ? '● Not signed in'
+          : failed
+            ? '● Cloud sync issue'
+            : /^(Loading|Restoring|Checking)/.test(message)
+              ? '● Connecting to cloud'
+              : '● Cloud connected';
+        cloudLabel.textContent = label;
+        cloudLabel.className = `text-xs font-semibold ${failed ? 'text-rose-300' : cloudSession?.user ? 'text-emerald-300' : 'text-slate-400'}`;
+      }
       const dot = document.getElementById('syncStatusDot');
       if (dot) {
         const saving = message.startsWith('Saving') || message.startsWith('A newer change');
@@ -7399,26 +7412,119 @@
     }
 
     async function refreshCloudSession() {
-      if (!cloudSession?.refresh_token) return false;
-      try {
-        const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY },
-          body: JSON.stringify({ refresh_token: cloudSession.refresh_token })
-        });
-        if (!response.ok) return false;
-        const session = await response.json();
-        if (!session.access_token || !session.refresh_token || !session.user) {
-          throw new Error('Supabase returned an incomplete refreshed session.');
+      if (cloudSessionRefreshPromise) return cloudSessionRefreshPromise;
+      const sessionAtRequest = cloudSession;
+      if (!sessionAtRequest?.user?.id) return false;
+
+      cloudSessionRefreshPromise = (async () => {
+        const refreshUnderLock = async () => {
+          if (cloudSession?.user?.id !== sessionAtRequest.user.id) return false;
+          const storedSession = readStoredCloudSession();
+          if (adoptNewerCloudSession(storedSession, sessionAtRequest)) return true;
+          if (cloudSession !== sessionAtRequest && cloudSession?.access_token) return true;
+          if (!cloudSession?.refresh_token) {
+            const expired = expireCloudSession(cloudSession || sessionAtRequest);
+            if (expired) {
+              const message = 'Your cloud session expired. Sign in again; your local passport is safe.';
+              setCloudStatus(message, true);
+              showAuthError(message);
+            }
+            return false;
+          }
+
+          const sessionToRefresh = cloudSession;
+          const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY },
+            body: JSON.stringify({ refresh_token: sessionToRefresh.refresh_token })
+          });
+          const result = await response.json().catch(() => ({}));
+          if (!response.ok) {
+            const details = [
+              result.error, result.error_code, result.code,
+              result.error_description, result.message
+            ].filter(value => typeof value === 'string').join(' ');
+            if ([400, 401, 403].includes(response.status) &&
+                /invalid_grant|invalid.*refresh|refresh.*(already used|expired|not found|revoked)/i.test(details)) {
+              const expired = expireCloudSession(sessionToRefresh);
+              if (expired) {
+                const message = 'Your cloud session expired. Sign in again; your local passport is safe.';
+                setCloudStatus(message, true);
+                showAuthError(message);
+                return false;
+              }
+              return cloudSession?.user?.id === sessionToRefresh.user.id &&
+                cloudSession.access_token !== sessionToRefresh.access_token;
+            }
+            throw new Error(details || `Cloud session refresh failed (HTTP ${response.status}).`);
+          }
+
+          if (!result.access_token || !result.refresh_token || !result.user) {
+            throw new Error('Supabase returned an incomplete refreshed session.');
+          }
+          if (cloudSession !== sessionToRefresh) {
+            return cloudSession?.user?.id === sessionToRefresh.user.id &&
+              cloudSession.access_token !== sessionToRefresh.access_token;
+          }
+          cloudSession = result;
+          localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(cloudSession));
+          updateAuthUI();
+          return true;
+        };
+
+        try {
+          const locks = window.navigator?.locks;
+          if (locks?.request) {
+            try {
+              return await locks.request('cartovella-cloud-session-refresh', refreshUnderLock);
+            } catch (error) {
+              if (!['NotSupportedError', 'SecurityError'].includes(error.name)) throw error;
+            }
+          }
+          return await refreshUnderLock();
+        } catch (error) {
+          console.error('Cartovella cloud session refresh failed.', error);
+          throw error;
         }
-        cloudSession = session;
-        localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(cloudSession));
-        updateAuthUI();
-        return true;
-      } catch (error) {
-        console.error('Cartovella cloud session refresh failed.', error);
-        return false;
+      })();
+      try {
+        return await cloudSessionRefreshPromise;
+      } finally {
+        cloudSessionRefreshPromise = null;
       }
+    }
+
+    function readStoredCloudSession() {
+      try {
+        return JSON.parse(localStorage.getItem(AUTH_SESSION_KEY) || 'null');
+      } catch (error) {
+        console.error('Stored Cartovella cloud session is invalid.', error);
+        return null;
+      }
+    }
+
+    function adoptNewerCloudSession(storedSession, currentSession) {
+      if (!storedSession?.access_token || !storedSession?.refresh_token ||
+          storedSession.user?.id !== currentSession.user.id ||
+          (storedSession.access_token === currentSession.access_token &&
+            storedSession.refresh_token === currentSession.refresh_token)) return false;
+      cloudSession = storedSession;
+      updateAuthUI();
+      return true;
+    }
+
+    function expireCloudSession(session) {
+      if (!session || cloudSession !== session) return false;
+      const storedSession = readStoredCloudSession();
+      if (adoptNewerCloudSession(storedSession, session)) return false;
+      cloudSession = null;
+      cloudHydrated = false;
+      pendingCloudConflict = null;
+      if (!storedSession || storedSession.refresh_token === session.refresh_token) {
+        localStorage.removeItem(AUTH_SESSION_KEY);
+      }
+      updateAuthUI();
+      return true;
     }
 
     async function cloudFetch(url, options = {}, retried = false) {
@@ -7427,9 +7533,11 @@
       headers.set('apikey', SUPABASE_ANON_KEY);
       headers.set('Authorization', `Bearer ${cloudSession.access_token}`);
       const response = await fetch(url, { ...options, headers });
-      if ((response.status === 401 || response.status === 403) && !retried &&
-          await refreshCloudSession()) {
-        return cloudFetch(url, options, true);
+      if ((response.status === 401 || response.status === 403) && !retried) {
+        if (await refreshCloudSession()) return cloudFetch(url, options, true);
+        if (!cloudSession?.access_token) {
+          throw new Error('Your cloud session expired. Sign in again; your local passport was kept.');
+        }
       }
       return response;
     }

@@ -604,6 +604,90 @@ const cloudTestHydrated = vm.runInContext('cloudHydrated', context);
 const cloudTestStoredPassport = localStorage.getItem('cartovella_state');
 const cloudTestStoredSession = localStorage.getItem('cartovella_cloud_session');
 const cloudTestStoredDirtyState = localStorage.getItem('cartovella_cloud_dirty');
+const cloudTestPendingConflict = vm.runInContext('pendingCloudConflict', context);
+const cloudTestFetch = context.fetch;
+await checkAsync('cloud session refresh is shared and adopts tokens refreshed by another tab', async () => {
+  const expiredSession = {
+    access_token: 'expired-access', refresh_token: 'expired-refresh',
+    user: { id: 'user-refresh', email: 'refresh@example.com' }
+  };
+  const refreshedSession = {
+    access_token: 'fresh-access', refresh_token: 'fresh-refresh',
+    user: expiredSession.user
+  };
+  vm.runInContext(`
+    cloudSession = ${JSON.stringify(expiredSession)};
+    cloudSessionRefreshPromise = null;
+  `, context);
+  localStorage.setItem('cartovella_cloud_session', JSON.stringify(expiredSession));
+  let refreshRequests = 0;
+  context.fetch = async (url, options = {}) => {
+    if (String(url).includes('/auth/v1/token?grant_type=refresh_token')) {
+      refreshRequests++;
+      return { ok: true, status: 200, json: async () => refreshedSession };
+    }
+    const token = options.headers?.get('Authorization') || '';
+    return token.includes('fresh-access')
+      ? { ok: true, status: 200, json: async () => [] }
+      : { ok: false, status: 401, json: async () => ({ message: 'JWT expired' }) };
+  };
+  const results = await vm.runInContext(
+    'Promise.all([cloudFetch("/test/first"), cloudFetch("/test/second")])',
+    context
+  );
+  assert.equal(refreshRequests, 1);
+  assert.ok(results.every(response => response.ok));
+  assert.equal(vm.runInContext('cloudSession.access_token', context), 'fresh-access');
+  assert.equal(JSON.parse(localStorage.getItem('cartovella_cloud_session')).refresh_token, 'fresh-refresh');
+
+  vm.runInContext(`
+    cloudSession = ${JSON.stringify(expiredSession)};
+    cloudSessionRefreshPromise = null;
+  `, context);
+  localStorage.setItem('cartovella_cloud_session', JSON.stringify(refreshedSession));
+  refreshRequests = 0;
+  const adoptedResponse = await vm.runInContext('cloudFetch("/test/other-tab")', context);
+  assert.equal(adoptedResponse.ok, true);
+  assert.equal(refreshRequests, 0);
+  assert.equal(vm.runInContext('cloudSession.access_token', context), 'fresh-access');
+});
+await checkAsync('an invalid refresh token clears only the cloud session and prompts reauthentication', async () => {
+  const expiredSession = {
+    access_token: 'expired-access', refresh_token: 'revoked-refresh',
+    user: { id: 'user-revoked', email: 'revoked@example.com' }
+  };
+  vm.runInContext(`
+    cloudSession = ${JSON.stringify(expiredSession)};
+    cloudSessionRefreshPromise = null;
+  `, context);
+  localStorage.setItem('cartovella_cloud_session', JSON.stringify(expiredSession));
+  context.fetch = async (url, options = {}) => {
+    if (String(url).includes('/auth/v1/token?grant_type=refresh_token')) {
+      return {
+        ok: false, status: 400,
+        json: async () => ({ error: 'invalid_grant', error_description: 'Invalid Refresh Token: Already Used' })
+      };
+    }
+    return { ok: false, status: 401, json: async () => ({ message: 'JWT expired' }) };
+  };
+  await assert.rejects(
+    vm.runInContext('cloudFetch("/test/expired")', context),
+    /Your cloud session expired/
+  );
+  assert.equal(vm.runInContext('cloudSession', context), null);
+  assert.equal(localStorage.getItem('cartovella_cloud_session'), null);
+  assert.match(element('authSyncStatusText').textContent, /local passport is safe/i);
+  assert.match(element('authErrorMsg').textContent, /sign in again/i);
+});
+context.fetch = cloudTestFetch;
+vm.runInContext(`
+  cloudSession = ${JSON.stringify(cloudTestSession)};
+  cloudHydrated = ${cloudTestHydrated};
+  pendingCloudConflict = ${JSON.stringify(cloudTestPendingConflict)};
+  cloudSessionRefreshPromise = null;
+`, context);
+if (cloudTestStoredSession === null) localStorage.removeItem('cartovella_cloud_session');
+else localStorage.setItem('cartovella_cloud_session', cloudTestStoredSession);
 const originalCloudUiFunctions = Object.fromEntries([
   'closeHomeModal', 'updateHomeBaseMarker', 'renderParkMarkers', 'drawFogOfWar', 'updateAllUI'
 ].map(name => [name, context[name]]));
