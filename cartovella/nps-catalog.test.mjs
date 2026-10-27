@@ -1275,6 +1275,125 @@ await checkAsync('public summary stats contain compact profile, achievement, and
   });
   assert.ok(JSON.stringify(summary).length < 10000, 'profile summary remains lightweight');
 });
+await checkAsync('signup requires a unique username, stores it, and reports username conflicts clearly', async () => {
+  const originalFetch = context.fetch;
+  const originalSession = JSON.stringify(vm.runInContext('cloudSession', context));
+  const originalHydrated = vm.runInContext('cloudHydrated', context);
+  const originalViewOnly = vm.runInContext('AppState.viewOnly', context);
+  const originalProfile = JSON.stringify(vm.runInContext('publicProfile', context));
+  const originalStoredProfile = localStorage.getItem('cartovella_public_profile');
+  const originalSignupUsername = element('authSignupUsername').value;
+  const originalEmail = element('authEmail').value;
+  const originalPassword = element('authPassword').value;
+  const originalErrorText = element('authErrorMsg').textContent;
+  const originalErrorHidden = element('authErrorMsg').classList.contains('hidden');
+  try {
+    vm.runInContext('cloudSession = null; cloudHydrated = false; AppState.viewOnly = false', context);
+    element('authEmail').value = 'new@example.com';
+    element('authPassword').value = 'password123';
+    let requests = [];
+    context.fetch = async (url, options = {}) => {
+      requests.push({ url: String(url), options });
+      throw new Error(`Unexpected request: ${url}`);
+    };
+    element('authSignupUsername').value = 'ab';
+    await vm.runInContext('handleSignUp()', context);
+    assert.equal(requests.length, 0);
+    assert.match(element('authErrorMsg').textContent, /Username must be 3–24/);
+
+    requests = [];
+    context.fetch = async (url, options = {}) => {
+      requests.push({ url: String(url), options });
+      return { ok: true, status: 200, json: async () => [{ user_id: 'existing-user', username: 'devon' }] };
+    };
+    element('authSignupUsername').value = 'Devon';
+    await vm.runInContext('handleSignUp()', context);
+    assert.equal(requests.length, 1);
+    assert.match(requests[0].url, /username=eq\.devon/);
+    assert.equal(element('authSignupUsername').value, 'devon');
+    assert.equal(element('authErrorMsg').textContent, 'That username is already taken. Please choose another.');
+
+    requests = [];
+    context.fetch = async (url, options = {}) => {
+      requests.push({ url: String(url), options });
+      if (String(url).includes('/rest/v1/cartovella_passports?')) {
+        return { ok: true, status: 200, json: async () => [] };
+      }
+      if (String(url).includes('/auth/v1/signup')) {
+        return {
+          ok: true, status: 200,
+          json: async () => ({ user: { id: 'new-user', user_metadata: { username: 'newtraveler' } }, session: null })
+        };
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    };
+    element('authSignupUsername').value = 'NewTraveler';
+    await vm.runInContext('handleSignUp()', context);
+    const signupRequest = requests.find(request => request.url.includes('/auth/v1/signup'));
+    assert.ok(signupRequest);
+    assert.equal(JSON.parse(signupRequest.options.body).data.username, 'newtraveler');
+    assert.equal(JSON.parse(localStorage.getItem('cartovella_public_profile')).username, 'newtraveler');
+
+    requests = [];
+    context.fetch = async (url, options = {}) => {
+      requests.push({ url: String(url), options });
+      if (String(url).includes('/rest/v1/cartovella_passports?')) {
+        return { ok: true, status: 200, json: async () => [] };
+      }
+      if (String(url).includes('/auth/v1/signup')) {
+        return {
+          ok: false, status: 409,
+          json: async () => ({
+            code: '23505',
+            message: 'duplicate key value violates unique constraint "cartovella_passports_username_idx"'
+          })
+        };
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    };
+    element('authSignupUsername').value = 'reservedname';
+    await vm.runInContext('handleSignUp()', context);
+    assert.equal(element('authErrorMsg').textContent, 'That username is already taken. Please choose another.');
+
+    const profileBeforeConflict = JSON.stringify(vm.runInContext('publicProfile', context));
+    vm.runInContext(`cloudSession = {
+      access_token: 'test-access', refresh_token: 'test-refresh',
+      user: { id: 'new-user', email: 'new@example.com' }
+    }; cloudHydrated = true`, context);
+    element('profileUsername').value = 'privatecollision';
+    element('profileDisplayName').value = 'New Traveler';
+    element('profileIsPublic').checked = true;
+    context.fetch = async (url, options = {}) => {
+      requests.push({ url: String(url), options });
+      if (String(url).includes('/rest/v1/cartovella_passports?') && options.method === 'GET') {
+        return { ok: true, status: 200, json: async () => [] };
+      }
+      if (String(url).includes('/rest/v1/cartovella_passports') && options.method === 'POST') {
+        return {
+          ok: false, status: 409,
+          json: async () => ({
+            code: '23505',
+            message: 'duplicate key value violates unique constraint "cartovella_passports_username_idx"'
+          })
+        };
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    };
+    await vm.runInContext('savePublicProfile()', context);
+    assert.equal(element('publicProfileStatus').textContent, 'That username is already taken. Please choose another.');
+    assert.equal(JSON.stringify(vm.runInContext('publicProfile', context)), profileBeforeConflict);
+  } finally {
+    context.fetch = originalFetch;
+    vm.runInContext(`cloudSession = ${originalSession}; cloudHydrated = ${originalHydrated}; AppState.viewOnly = ${originalViewOnly}; publicProfile = normalizePublicProfile(${originalProfile}); updatePublicProfileSettings()`, context);
+    if (originalStoredProfile === null) localStorage.removeItem('cartovella_public_profile');
+    else localStorage.setItem('cartovella_public_profile', originalStoredProfile);
+    element('authSignupUsername').value = originalSignupUsername;
+    element('authEmail').value = originalEmail;
+    element('authPassword').value = originalPassword;
+    element('authErrorMsg').textContent = originalErrorText;
+    element('authErrorMsg').classList.toggle('hidden', originalErrorHidden);
+  }
+});
 await checkAsync('Explorers’ Guild renders mocked public profiles and expedition stories', async () => {
   const originalFetch = context.fetch;
   const originalQuerySelectorAll = context.document.querySelectorAll;

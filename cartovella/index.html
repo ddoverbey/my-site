@@ -1200,6 +1200,10 @@
       </div>
       <div id="authViewLoggedOut" class="space-y-3">
         <p class="text-xs text-slate-400">Each change is saved on this device immediately and synced to your cloud passport shortly after. Your local save stays available offline.</p>
+        <label class="block text-xs text-slate-300">Username
+          <input id="authSignupUsername" type="text" inputmode="text" autocomplete="username" minlength="3" maxlength="24" pattern="[a-z0-9_-]{3,24}" placeholder="devon" required class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100">
+        </label>
+        <p class="-mt-2 text-[10px] text-slate-500">Required to create an account: 3–24 letters, numbers, underscores, or hyphens.</p>
         <label class="block text-xs text-slate-300">Email
           <input id="authEmail" type="email" autocomplete="email" required class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100">
         </label>
@@ -1232,7 +1236,7 @@
           </label>
           <label class="flex items-start gap-2 text-xs text-slate-300">
             <input id="profileIsPublic" type="checkbox" class="mt-0.5 accent-amber-400">
-            <span>List my Atlas &amp; Travel Log in the Public Explorers' Guild and enable my <code>?u=username</code> share link</span>
+            <span>List my Atlas &amp; Travel Log in the Public Explorers' Guild and enable my shareable public profile link</span>
           </label>
           <button id="btnSavePublicProfile" type="button" class="w-full rounded-lg bg-amber-500 px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-amber-400">Save Profile &amp; Copy Share Link</button>
           <p id="publicProfileStatus" class="text-[11px] text-slate-400" role="status" aria-live="polite"></p>
@@ -7436,6 +7440,46 @@
       error.classList.remove('hidden');
     }
 
+    const USERNAME_TAKEN_MESSAGE = 'That username is already taken. Please choose another.';
+
+    function usernameConflictMessage(status, payload = {}, assumeConflictStatus = false) {
+      const details = [payload.code, payload.message, payload.details, payload.hint]
+        .filter(value => typeof value === 'string').join(' ');
+      if ((assumeConflictStatus && status === 409) || payload.code === '23505' ||
+          /cartovella_passports_username_idx|duplicate key.*username|username.*already exists/i.test(details)) {
+        return USERNAME_TAKEN_MESSAGE;
+      }
+      return null;
+    }
+
+    async function isUsernameAvailable(username, currentUserId = null) {
+      const queryUrl = `${SUPABASE_URL}/rest/v1/cartovella_passports?username=eq.${encodeURIComponent(username)}&select=user_id,username&limit=1`;
+      const options = { method: 'GET' };
+      const response = cloudSession?.access_token
+        ? await cloudFetch(queryUrl, options)
+        : await fetch(queryUrl, { ...options, headers: { apikey: SUPABASE_ANON_KEY } });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.message || body.details || `Username availability check failed (HTTP ${response.status}).`);
+      }
+      const records = await response.json();
+      if (!Array.isArray(records)) throw new Error('Supabase returned an unexpected username availability response.');
+      return !records.some(record => record.user_id !== currentUserId);
+    }
+
+    function authPublicUsernameFallback() {
+      if (publicProfile.username) return publicProfile.username;
+      const candidate = cloudSession?.user?.user_metadata?.username;
+      if (typeof candidate !== 'string') return '';
+      const username = candidate.trim().toLowerCase();
+      return PUBLIC_USERNAME_PATTERN.test(username) ? username : '';
+    }
+
+    function ensureAuthPublicUsername() {
+      const username = authPublicUsernameFallback();
+      if (username && !publicProfile.username) setPublicProfile({ ...publicProfile, username });
+    }
+
     function stablePassportStringify(value) {
       if (Array.isArray(value)) return `[${value.map(stablePassportStringify).join(',')}]`;
       if (!value || typeof value !== 'object') return JSON.stringify(value);
@@ -7589,6 +7633,7 @@
         }
         cloudSession = session;
         localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(cloudSession));
+        ensureAuthPublicUsername();
         cloudHydrated = false;
         pendingCloudConflict = null;
         updateAuthUI();
@@ -7611,23 +7656,42 @@
         showAuthError('Cloud sync is unavailable while viewing a shared read-only passport.');
         return;
       }
+      const usernameInput = document.getElementById('authSignupUsername');
+      const username = usernameInput.value.trim().toLowerCase();
+      usernameInput.value = username;
+      if (!PUBLIC_USERNAME_PATTERN.test(username)) {
+        showAuthError('Username must be 3–24 lowercase letters, numbers, underscores, or hyphens.');
+        usernameInput.focus();
+        return;
+      }
       try {
+        if (!await isUsernameAvailable(username)) {
+          showAuthError(USERNAME_TAKEN_MESSAGE);
+          usernameInput.focus();
+          return;
+        }
         const response = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY },
           body: JSON.stringify({
             email: document.getElementById('authEmail').value.trim(),
-            password: document.getElementById('authPassword').value
+            password: document.getElementById('authPassword').value,
+            data: { username }
           })
         });
         const result = await response.json();
-        if (!response.ok) throw new Error(result.msg || result.message || 'Account creation failed.');
+        if (!response.ok) {
+          throw new Error(usernameConflictMessage(response.status, result) ||
+            result.msg || result.message || 'Account creation failed.');
+        }
+        setPublicProfile({ ...publicProfile, username });
         if (!result.session?.access_token || !result.session?.user) {
           showAuthError('Account created. Confirm your email, then sign in to enable cloud sync.');
           return;
         }
         cloudSession = result.session;
         localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(cloudSession));
+        ensureAuthPublicUsername();
         cloudHydrated = false;
         pendingCloudConflict = null;
         updateAuthUI();
@@ -7638,7 +7702,7 @@
         }
       } catch (cause) {
         console.error('Cartovella account creation failed.', cause);
-        showAuthError(cause.message);
+        showAuthError(usernameConflictMessage(cause.status, cause) || cause.message);
       }
     }
 
@@ -7821,13 +7885,25 @@
         toggleAuthModal(true);
         return;
       }
+      if (username && !await isUsernameAvailable(username, cloudSession.user.id)) {
+        status.textContent = USERNAME_TAKEN_MESSAGE;
+        document.getElementById('profileUsername').focus();
+        return;
+      }
       const button = document.getElementById('btnSavePublicProfile');
+      const previousProfile = { ...publicProfile };
       button.disabled = true;
       status.textContent = 'Saving your public profile…';
       try {
         setPublicProfile({ username, display_name: displayName, is_public: isPublic });
         if (!await syncToCloud(false)) {
-          throw new Error(document.getElementById('authSyncStatusText').textContent || 'Cloud sync did not complete.');
+          const syncMessage = document.getElementById('authSyncStatusText').textContent || 'Cloud sync did not complete.';
+          if (syncMessage === USERNAME_TAKEN_MESSAGE) {
+            setPublicProfile(previousProfile);
+            status.textContent = USERNAME_TAKEN_MESSAGE;
+            return;
+          }
+          throw new Error(syncMessage);
         }
         await copyTextToClipboard(currentShareUrl());
         status.textContent = 'Profile synced. Share link copied to the clipboard.';
@@ -8080,7 +8156,8 @@
         });
         if (!response.ok) {
           const body = await response.json().catch(() => ({}));
-          throw new Error(body.message || body.details || `Cloud save failed (HTTP ${response.status}).`);
+          throw new Error(usernameConflictMessage(response.status, body, true) ||
+            body.message || body.details || `Cloud save failed (HTTP ${response.status}).`);
         }
         const currentSnapshot = stablePassportStringify(compactPassportForStorage(passportPayload()));
         let savedCurrentState = currentSnapshot === uploadedSnapshot &&
@@ -8110,8 +8187,10 @@
         return true;
       } catch (error) {
         console.error('Cartovella cloud sync failed.', error);
-        setCloudStatus(`Cloud sync failed: ${error.message}`, true);
-        if (notify) showNotification('Cloud Sync Failed', `${error.message} Your local save is still available.`, '⚠️');
+        const message = error.message === USERNAME_TAKEN_MESSAGE
+          ? USERNAME_TAKEN_MESSAGE : `Cloud sync failed: ${error.message}`;
+        setCloudStatus(message, true);
+        if (notify) showNotification('Cloud Sync Failed', `${message} Your local save is still available.`, '⚠️');
         return false;
       } finally {
         cloudSyncInProgress = false;
@@ -8174,6 +8253,7 @@
 
     async function loadFromCloud({ notifySeed = false } = {}) {
       if (AppState.viewOnly || !cloudSession?.access_token) return false;
+      ensureAuthPublicUsername();
       cloudHydrated = false;
       setCloudStatus('Loading your cloud passport…');
       try {
@@ -8193,6 +8273,9 @@
         const localPassport = passportPayload();
         if (records.length) {
           const cloudProfile = normalizePublicProfile(records[0]);
+          if (!cloudProfile.username) {
+            cloudProfile.username = authPublicUsernameFallback();
+          }
           const cloudPassport = migratePassport(records[0].passport_data);
           const localSnapshot = compactPassportForStorage(localPassport);
           const cloudSnapshot = compactPassportForStorage(cloudPassport);
@@ -8258,6 +8341,12 @@
     });
     document.getElementById('btnAuthLogin').addEventListener('click', handleLogin);
     document.getElementById('btnAuthSignUp').addEventListener('click', handleSignUp);
+    for (const id of ['authSignupUsername', 'profileUsername']) {
+      const usernameInput = document.getElementById(id);
+      usernameInput.addEventListener('input', () => {
+        usernameInput.value = usernameInput.value.toLowerCase();
+      });
+    }
     document.getElementById('btnAuthLogout').addEventListener('click', handleLogout);
     document.getElementById('btnSavePublicProfile').addEventListener('click', () => void savePublicProfile());
     document.getElementById('btnManagePublicProfile').addEventListener('click', () => toggleAuthModal(true));
