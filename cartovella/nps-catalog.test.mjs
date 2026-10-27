@@ -167,10 +167,23 @@ check('home citadel setup can be dismissed by its close button, backdrop, or Esc
   assert.match(html, /id="homeBaseModal" role="dialog" aria-modal="true" aria-labelledby="homeBaseModalTitle"/);
   assert.match(html, /id="btnCloseHomeModal" type="button" aria-label="Close home citadel setup"/);
   assert.match(html, /id="btnHomeSignIn"[^>]*>[\s\S]*?Sign In to an Existing Account/);
-  assert.match(html, /btnHomeSignIn'\)\.addEventListener\('click', \(\) => toggleAuthModal\(true\)\)/);
+  assert.match(html, /btnHomeSignIn'\)\.addEventListener\('click', \(\) => toggleAuthModal\(true, 'signin'\)\)/);
   assert.match(html, /btnCloseHomeModal'\)\.addEventListener\('click', closeHomeModal\)/);
   assert.match(html, /event\.target === event\.currentTarget\) closeHomeModal\(\)/);
   assert.match(html, /event\.key === 'Escape'[\s\S]*?closeHomeModal\(\)/);
+});
+check('existing sign-in and account creation use separate views, with username only on sign-up', () => {
+  const chooser = html.slice(html.indexOf('id="authViewOptions"'), html.indexOf('id="authViewSignIn"'));
+  const signIn = html.slice(html.indexOf('id="authViewSignIn"'), html.indexOf('id="authViewSignUp"'));
+  const signUp = html.slice(html.indexOf('id="authViewSignUp"'), html.indexOf('id="authErrorMsg"'));
+  assert.match(chooser, /Sign In to an Existing Account/);
+  assert.match(chooser, /Create a New Account/);
+  assert.doesNotMatch(signIn, /authSignupUsername/);
+  assert.match(signIn, /id="authEmail"/);
+  assert.match(signUp, /id="authSignupUsername"[^>]*required/);
+  assert.match(signUp, /id="authSignupEmail"/);
+  assert.match(signUp, /id="authSignupPassword"/);
+  assert.match(html, /btnHomeSignIn'\)\.addEventListener\('click', \(\) => toggleAuthModal\(true, 'signin'\)\)/);
 });
 check('character customization appears above the stage and progress summary', () => {
   assert.ok(html.indexOf('id="characterCustomization"') < html.indexOf('id="characterStage"'));
@@ -288,6 +301,16 @@ const context = vm.createContext({
 });
 const testConsole = context.console;
 scripts.forEach(script => vm.runInContext(script, context));
+check('auth navigation switches between separate existing-user and account-creation views', () => {
+  vm.runInContext(`setAuthView('signin')`, context);
+  assert.equal(element('authViewSignIn').classList.contains('hidden'), false);
+  assert.equal(element('authViewSignUp').classList.contains('hidden'), true);
+  vm.runInContext(`setAuthView('signup')`, context);
+  assert.equal(element('authViewSignIn').classList.contains('hidden'), true);
+  assert.equal(element('authViewSignUp').classList.contains('hidden'), false);
+  vm.runInContext(`setAuthView('options')`, context);
+  assert.equal(element('authViewOptions').classList.contains('hidden'), false);
+});
 check('passport field registry round-trips defaults and unknown future fields', () => {
   const keys = JSON.parse(vm.runInContext('JSON.stringify(Object.keys(PASSPORT_FIELDS))', context));
   assert.deepEqual(keys, [
@@ -1417,14 +1440,14 @@ await checkAsync('signup requires a unique username, stores it, and reports user
   const originalProfile = JSON.stringify(vm.runInContext('publicProfile', context));
   const originalStoredProfile = localStorage.getItem('cartovella_public_profile');
   const originalSignupUsername = element('authSignupUsername').value;
-  const originalEmail = element('authEmail').value;
-  const originalPassword = element('authPassword').value;
+  const originalSignupEmail = element('authSignupEmail').value;
+  const originalSignupPassword = element('authSignupPassword').value;
   const originalErrorText = element('authErrorMsg').textContent;
   const originalErrorHidden = element('authErrorMsg').classList.contains('hidden');
   try {
     vm.runInContext('cloudSession = null; cloudHydrated = false; AppState.viewOnly = false', context);
-    element('authEmail').value = 'new@example.com';
-    element('authPassword').value = 'password123';
+    element('authSignupEmail').value = 'new@example.com';
+    element('authSignupPassword').value = 'password123';
     let requests = [];
     context.fetch = async (url, options = {}) => {
       requests.push({ url: String(url), options });
@@ -1522,8 +1545,8 @@ await checkAsync('signup requires a unique username, stores it, and reports user
     if (originalStoredProfile === null) localStorage.removeItem('cartovella_public_profile');
     else localStorage.setItem('cartovella_public_profile', originalStoredProfile);
     element('authSignupUsername').value = originalSignupUsername;
-    element('authEmail').value = originalEmail;
-    element('authPassword').value = originalPassword;
+    element('authSignupEmail').value = originalSignupEmail;
+    element('authSignupPassword').value = originalSignupPassword;
     element('authErrorMsg').textContent = originalErrorText;
     element('authErrorMsg').classList.toggle('hidden', originalErrorHidden);
   }

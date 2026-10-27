@@ -1199,22 +1199,38 @@
         <button id="btnCloseAuthModal" type="button" aria-label="Close account and cloud sync" class="rounded-lg px-2 py-1 text-slate-400 hover:text-white">×</button>
       </div>
       <div id="authViewLoggedOut" class="space-y-3">
-        <p class="text-xs text-slate-400">Each change is saved on this device immediately and synced to your cloud passport shortly after. Your local save stays available offline.</p>
-        <label class="block text-xs text-slate-300">Username
-          <input id="authSignupUsername" type="text" inputmode="text" autocomplete="username" minlength="3" maxlength="24" pattern="[a-z0-9_-]{3,24}" placeholder="devon" required class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100">
-        </label>
-        <p class="-mt-2 text-[10px] text-slate-500">Required to create an account: 3–24 letters, numbers, underscores, or hyphens.</p>
-        <label class="block text-xs text-slate-300">Email
-          <input id="authEmail" type="email" autocomplete="email" required class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100">
-        </label>
-        <label class="block text-xs text-slate-300">Password
-          <input id="authPassword" type="password" autocomplete="current-password" required class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100">
-        </label>
-        <p id="authErrorMsg" class="hidden text-xs text-rose-300" role="alert" aria-live="assertive"></p>
-        <div class="flex gap-2">
-          <button id="btnAuthLogin" type="button" class="flex-1 rounded-lg bg-amber-500 px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-amber-400">Sign In</button>
-          <button id="btnAuthSignUp" type="button" class="flex-1 rounded-lg border border-slate-600 px-3 py-2 text-sm text-slate-200 hover:bg-slate-800">Create Account</button>
+        <div id="authViewOptions" class="space-y-3">
+          <p class="text-xs text-slate-400">Sign in to sync an existing passport, or create an account to start syncing across devices. Your local save stays available offline.</p>
+          <button id="btnShowAuthLogin" type="button" class="w-full rounded-lg bg-amber-500 px-3 py-2.5 text-sm font-semibold text-slate-950 hover:bg-amber-400">Sign In to an Existing Account</button>
+          <button id="btnShowAuthSignUp" type="button" class="w-full rounded-lg border border-slate-600 px-3 py-2.5 text-sm text-slate-200 hover:bg-slate-800">Create a New Account</button>
         </div>
+        <div id="authViewSignIn" class="hidden space-y-3">
+          <p class="text-xs text-slate-400">Sign in with the email and password for your existing account.</p>
+          <label class="block text-xs text-slate-300">Email
+            <input id="authEmail" type="email" autocomplete="email" required class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100">
+          </label>
+          <label class="block text-xs text-slate-300">Password
+            <input id="authPassword" type="password" autocomplete="current-password" required class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100">
+          </label>
+          <button id="btnAuthLogin" type="button" class="w-full rounded-lg bg-amber-500 px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-amber-400">Sign In</button>
+          <button id="btnBackFromAuthLogin" type="button" class="w-full rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-300 hover:bg-slate-800">Back</button>
+        </div>
+        <div id="authViewSignUp" class="hidden space-y-3">
+          <p class="text-xs text-slate-400">Create an account to sync your passport across devices.</p>
+          <label class="block text-xs text-slate-300">Username
+            <input id="authSignupUsername" type="text" inputmode="text" autocomplete="username" minlength="3" maxlength="24" pattern="[a-z0-9_-]{3,24}" placeholder="devon" required class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100">
+          </label>
+          <p class="-mt-2 text-[10px] text-slate-500">3–24 letters, numbers, underscores, or hyphens.</p>
+          <label class="block text-xs text-slate-300">Email
+            <input id="authSignupEmail" type="email" autocomplete="email" required class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100">
+          </label>
+          <label class="block text-xs text-slate-300">Password
+            <input id="authSignupPassword" type="password" autocomplete="new-password" required class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100">
+          </label>
+          <button id="btnAuthSignUp" type="button" class="w-full rounded-lg bg-amber-500 px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-amber-400">Create Account</button>
+          <button id="btnBackFromAuthSignUp" type="button" class="w-full rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-300 hover:bg-slate-800">Back</button>
+        </div>
+        <p id="authErrorMsg" class="hidden text-xs text-rose-300" role="alert" aria-live="assertive"></p>
       </div>
       <div id="authViewLoggedIn" class="hidden space-y-4">
         <div class="rounded-xl border border-emerald-500/30 bg-slate-950/60 p-3">
@@ -7257,7 +7273,7 @@
       hideLevelUpNotification();
     });
     document.getElementById('btnHomeConfig').addEventListener('click', openHomeModal);
-    document.getElementById('btnHomeSignIn').addEventListener('click', () => toggleAuthModal(true));
+    document.getElementById('btnHomeSignIn').addEventListener('click', () => toggleAuthModal(true, 'signin'));
     document.getElementById('btnHomeImport').addEventListener('click', () => {
       document.getElementById('fileInput').click();
     });
@@ -7397,7 +7413,9 @@
       document.getElementById('cloudConflictView').classList.toggle('hidden', !hasConflict);
       document.getElementById('authViewLoggedIn').classList.toggle('hidden', !isLoggedIn || hasConflict);
       document.getElementById('authViewLoggedOut').classList.toggle('hidden', isLoggedIn || hasConflict);
+      if (!isLoggedIn && !hasConflict) setAuthView(authViewMode);
       if (isLoggedIn) {
+        document.getElementById('authModalTitle').textContent = 'Account & Cloud Sync';
         document.getElementById('authCurrentEmail').textContent = cloudSession.user.email || '';
       } else {
         setCloudStatus('Not signed in.');
@@ -7405,13 +7423,31 @@
       updatePublicProfileSettings();
     }
 
-    function toggleAuthModal(show) {
+    let authViewMode = 'options';
+
+    function setAuthView(view) {
+      authViewMode = ['signin', 'signup'].includes(view) ? view : 'options';
+      document.getElementById('authModalTitle').textContent = authViewMode === 'signin'
+        ? 'Sign In' : authViewMode === 'signup' ? 'Create Account' : 'Account & Cloud Sync';
+      document.getElementById('authViewOptions').classList.toggle('hidden', authViewMode !== 'options');
+      document.getElementById('authViewSignIn').classList.toggle('hidden', authViewMode !== 'signin');
+      document.getElementById('authViewSignUp').classList.toggle('hidden', authViewMode !== 'signup');
+      const error = document.getElementById('authErrorMsg');
+      error.textContent = '';
+      error.classList.add('hidden');
+    }
+
+    function toggleAuthModal(show, loggedOutView = 'options') {
       const modal = document.getElementById('authModal');
       modal.classList.toggle('hidden', !show);
       if (show) {
+        if (!cloudSession?.user) setAuthView(loggedOutView);
         updateAuthUI();
-        (cloudSession ? document.getElementById('btnForceCloudSync') :
-          document.getElementById('authEmail')).focus();
+        const focusTarget = cloudSession ? document.getElementById('btnForceCloudSync')
+          : authViewMode === 'signin' ? document.getElementById('authEmail')
+            : authViewMode === 'signup' ? document.getElementById('authSignupUsername')
+              : document.getElementById('btnShowAuthLogin');
+        focusTarget.focus();
       }
     }
 
@@ -7722,6 +7758,7 @@
     }
 
     async function handleLogin() {
+      setAuthView('signin');
       const error = document.getElementById('authErrorMsg');
       error.textContent = '';
       error.classList.add('hidden');
@@ -7761,6 +7798,7 @@
     }
 
     async function handleSignUp() {
+      setAuthView('signup');
       const error = document.getElementById('authErrorMsg');
       error.textContent = '';
       error.classList.add('hidden');
@@ -7786,8 +7824,8 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY },
           body: JSON.stringify({
-            email: document.getElementById('authEmail').value.trim(),
-            password: document.getElementById('authPassword').value,
+            email: document.getElementById('authSignupEmail').value.trim(),
+            password: document.getElementById('authSignupPassword').value,
             data: { username }
           })
         });
@@ -8545,6 +8583,16 @@
     });
     document.getElementById('btnAuthLogin').addEventListener('click', handleLogin);
     document.getElementById('btnAuthSignUp').addEventListener('click', handleSignUp);
+    document.getElementById('btnShowAuthLogin').addEventListener('click', () => {
+      setAuthView('signin');
+      document.getElementById('authEmail').focus();
+    });
+    document.getElementById('btnShowAuthSignUp').addEventListener('click', () => {
+      setAuthView('signup');
+      document.getElementById('authSignupUsername').focus();
+    });
+    document.getElementById('btnBackFromAuthLogin').addEventListener('click', () => setAuthView('options'));
+    document.getElementById('btnBackFromAuthSignUp').addEventListener('click', () => setAuthView('options'));
     for (const id of ['authSignupUsername', 'profileUsername']) {
       const usernameInput = document.getElementById(id);
       usernameInput.addEventListener('input', () => {
@@ -8580,6 +8628,9 @@
     document.getElementById('btnCancelCloudConflict').addEventListener('click', cancelCloudConflict);
     document.getElementById('authPassword').addEventListener('keydown', event => {
       if (event.key === 'Enter') handleLogin();
+    });
+    document.getElementById('authSignupPassword').addEventListener('keydown', event => {
+      if (event.key === 'Enter') handleSignUp();
     });
     window.addEventListener('keydown', event => {
       const modal = document.getElementById('authModal');
