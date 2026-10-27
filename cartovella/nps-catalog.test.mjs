@@ -1315,49 +1315,99 @@ check('Rare biome rarity uses a consistent cyan accent', () => {
 await checkAsync('public summary stats contain compact profile, achievement, and expedition data', async () => {
   const originalAchievementDisclosure = vm.runInContext('achievementDisclosure', context);
   const originalPassport = vm.runInContext('JSON.stringify(passportPayload())', context);
-  vm.runInContext('achievementDisclosure = () => ({ completed: null })', context);
-  vm.runInContext(`
-    AppState.homeBase = { name: 'Cloud Citadel', lat: 45, lng: -121, radiusKm: 24.14 };
-    AppState.character = CharacterCreator.normalizeCharacter({});
-    AppState.expeditions = [{
+  const originalD3 = context.d3;
+  const originalWorldGeoJson = vm.runInContext('JSON.stringify(worldGeoJson)', context);
+  const originalPublicProfile = vm.runInContext('JSON.stringify(publicProfile)', context);
+  const originalCacheKey = vm.runInContext('JSON.stringify(publicRouteMapThumbnailCacheKey)', context);
+  const originalCachedThumbnail = vm.runInContext('JSON.stringify(publicRouteMapThumbnailCache)', context);
+  const originalCreateElement = context.document.createElement;
+  const routeCanvasContext = {
+    beginPath() {}, moveTo() {}, lineTo() {}, closePath() {}, fill() {}, stroke() {},
+    fillRect() {}, setLineDash() {}
+  };
+  let routeCanvasSize = null;
+  context.d3 = { ...d3Geo };
+  context.document.createElement = tag => {
+    if (tag !== 'canvas') return originalCreateElement(tag);
+    return {
+      width: 0, height: 0, getContext: () => routeCanvasContext,
+      toDataURL(type, quality) {
+        routeCanvasSize = { width: this.width, height: this.height, type, quality };
+        return 'data:image/jpeg;base64,dGVzdA==';
+      }
+    };
+  };
+  try {
+    vm.runInContext('achievementDisclosure = () => ({ completed: null })', context);
+    vm.runInContext(`
+      AppState.homeBase = { name: 'Cloud Citadel', lat: 45, lng: -121, radiusKm: 24.14 };
+      AppState.character = CharacterCreator.normalizeCharacter({});
+      AppState.routes = [];
+      AppState.expeditions = [{
+        id: 'public-trip', name: 'Waterfall Weekend', startDate: '2026-10-01', endDate: '2026-10-02',
+        dayTrip: false, reason: 'Chasing waterfalls', transitTags: ['road'],
+        countyIds: [], parkIds: [], customPoiIds: [],
+        routeCoords: [[45, -121], [45.1, -121.1]],
+        routeStops: [
+          { kind: 'place', id: 'citadel', name: 'Cloud Citadel', coords: [45, -121] },
+          { kind: 'place', id: 'falls', name: 'Spirit Falls', coords: [45.1, -121.1] }
+        ],
+        journal: 'A memorable public story.'
+      }];
+      worldGeoJson = [];
+      publicProfile.is_public = true;
+      publicRouteMapThumbnailCacheKey = null;
+      publicRouteMapThumbnailCache = null;
+    `, context);
+    const summary = JSON.parse(JSON.stringify(await vm.runInContext(
+      `buildPublicSummaryStats({
+        level: 8, xp: 1234, cls: 'Alpine Ranger', titleDesc: 'Trail Finder',
+        countriesCount: 3, statesCount: 5, visitedParks: [{}, {}],
+        biomesSet: new Set(['5', '6']), clearedPct: 12.5
+      })`, context
+    )));
+    assert.equal(summary.level, 8);
+    assert.equal(summary.xp, 1234);
+    assert.equal(summary.cls, 'Alpine Ranger');
+    assert.equal(summary.homeName, 'Cloud Citadel');
+    assert.equal(summary.character.pet, characterCreator.DEFAULT_CHARACTER.pet);
+    assert.equal(summary.countriesCount, 3);
+    assert.equal(summary.statesCount, 5);
+    assert.equal(summary.parksCount, 2);
+    assert.equal(summary.biomesCount, 2);
+    assert.equal(summary.clearedPct, 12.5);
+    assert.match(summary.routeMapThumbnail, /^data:image\/jpeg;base64,/);
+    assert.deepEqual(routeCanvasSize, { width: 320, height: 168, type: 'image/jpeg', quality: 0.42 });
+    vm.runInContext('publicProfile.is_public = false', context);
+    const privateSummary = JSON.parse(JSON.stringify(await vm.runInContext(
+      `buildPublicSummaryStats({
+        level: 8, xp: 1234, cls: 'Alpine Ranger', titleDesc: 'Trail Finder',
+        countriesCount: 3, statesCount: 5, visitedParks: [{}, {}],
+        biomesSet: new Set(['5', '6']), clearedPct: 12.5
+      })`,
+      context
+    )));
+    assert.equal(privateSummary.routeMapThumbnail, null, 'private profiles do not publish route previews');
+    assert.ok(Array.isArray(summary.topBadges) && summary.topBadges.length <= 4);
+    assert.deepEqual(summary.recentExpeditions[0], {
       id: 'public-trip', name: 'Waterfall Weekend', startDate: '2026-10-01', endDate: '2026-10-02',
-      dayTrip: false, reason: 'Chasing waterfalls', transitTags: ['road'],
-      countyIds: [], parkIds: [], customPoiIds: [],
-      routeCoords: [[45, -121], [45.1, -121.1]],
-      routeStops: [
-        { kind: 'place', id: 'citadel', name: 'Cloud Citadel', coords: [45, -121] },
-        { kind: 'place', id: 'falls', name: 'Spirit Falls', coords: [45.1, -121.1] }
-      ],
-      journal: 'A memorable public story.'
-    }];
-  `, context);
-  const summary = JSON.parse(JSON.stringify(await vm.runInContext(
-    `buildPublicSummaryStats({
-      level: 8, xp: 1234, cls: 'Alpine Ranger', titleDesc: 'Trail Finder',
-      countriesCount: 3, statesCount: 5, visitedParks: [{}, {}],
-      biomesSet: new Set(['5', '6']), clearedPct: 12.5
-    })`, context
-  )));
-  context.achievementDisclosure = originalAchievementDisclosure;
-  vm.runInContext(`applyPassport(migratePassport(${originalPassport}))`, context);
-  assert.equal(summary.level, 8);
-  assert.equal(summary.xp, 1234);
-  assert.equal(summary.cls, 'Alpine Ranger');
-  assert.equal(summary.homeName, 'Cloud Citadel');
-  assert.equal(summary.character.pet, characterCreator.DEFAULT_CHARACTER.pet);
-  assert.equal(summary.countriesCount, 3);
-  assert.equal(summary.statesCount, 5);
-  assert.equal(summary.parksCount, 2);
-  assert.equal(summary.biomesCount, 2);
-  assert.equal(summary.clearedPct, 12.5);
-  assert.ok(Array.isArray(summary.topBadges) && summary.topBadges.length <= 4);
-  assert.deepEqual(summary.recentExpeditions[0], {
-    id: 'public-trip', name: 'Waterfall Weekend', startDate: '2026-10-01', endDate: '2026-10-02',
-    dayTrip: false, reason: 'Chasing waterfalls', journalSnippet: 'A memorable public story.',
-    highlightPhoto: null, distanceMiles: summary.recentExpeditions[0].distanceMiles,
-    transitTags: ['road'], stopNames: ['Cloud Citadel', 'Spirit Falls']
-  });
-  assert.ok(JSON.stringify(summary).length < 10000, 'profile summary remains lightweight');
+      dayTrip: false, reason: 'Chasing waterfalls', journalSnippet: 'A memorable public story.',
+      highlightPhoto: null, distanceMiles: summary.recentExpeditions[0].distanceMiles,
+      transitTags: ['road'], stopNames: ['Cloud Citadel', 'Spirit Falls']
+    });
+    assert.ok(JSON.stringify(summary).length < 10000, 'profile summary remains lightweight');
+  } finally {
+    context.achievementDisclosure = originalAchievementDisclosure;
+    context.d3 = originalD3;
+    context.document.createElement = originalCreateElement;
+    vm.runInContext(`
+      applyPassport(migratePassport(${originalPassport}));
+      worldGeoJson = JSON.parse(${JSON.stringify(originalWorldGeoJson)});
+      publicProfile = JSON.parse(${JSON.stringify(originalPublicProfile)});
+      publicRouteMapThumbnailCacheKey = JSON.parse(${JSON.stringify(originalCacheKey)});
+      publicRouteMapThumbnailCache = JSON.parse(${JSON.stringify(originalCachedThumbnail)});
+    `, context);
+  }
 });
 await checkAsync('signup requires a unique username, stores it, and reports username conflicts clearly', async () => {
   const originalFetch = context.fetch;
@@ -1481,14 +1531,19 @@ await checkAsync('signup requires a unique username, stores it, and reports user
 await checkAsync('Explorers’ Guild renders mocked public profiles and expedition stories', async () => {
   const originalFetch = context.fetch;
   const originalQuerySelectorAll = context.document.querySelectorAll;
-  const originalRenderAvatar = context.CharacterCreator.renderAvatar;
-  const avatarRenders = [];
+  const originalDrawStage = context.CharacterCreator.drawStage;
+  const originalProfiles = vm.runInContext('JSON.stringify(guildProfiles)', context);
+  const originalProfilesLoaded = vm.runInContext('guildProfilesLoaded', context);
+  const originalCurrentTab = vm.runInContext('AppState.currentTab', context);
+  const stageRenders = [];
   const profiles = [{
     username: 'devon', display_name: 'Devon · Alpine Ranger', updated_at: '2026-10-26T12:00:00Z',
     summary_stats: {
       level: 18, cls: 'Alpine Ranger', homeName: 'Cloud Citadel', countriesCount: 3,
       statesCount: 5, parksCount: 12, biomesCount: 4, clearedPct: 2.4,
-      character: { pet: 'pet_fox' }, topBadges: [{ title: 'Grand Voyager', icon: '🏕️', rarity: 'epic' }],
+      character: { pet: 'pet_fox', background: 'bg_yosemite' },
+      routeMapThumbnail: 'data:image/jpeg;base64,YWJjZA==',
+      topBadges: [{ title: 'Grand Voyager', icon: '🏕️', rarity: 'epic' }],
       recentExpeditions: [{
         id: 'guild-trip', name: 'Spirit Falls Weekend', startDate: '2026-10-20', endDate: '2026-10-21',
         dayTrip: false, reason: 'A long-planned hike', journalSnippet: 'The falls were roaring.',
@@ -1498,33 +1553,54 @@ await checkAsync('Explorers’ Guild renders mocked public profiles and expediti
     }
   }];
   const canvases = profiles.flatMap(profile => [
-    { dataset: { guildAvatar: profile.username } }, { dataset: { guildAvatar: profile.username } }
+    { width: 160, height: 90, dataset: { guildAvatar: profile.username } },
+    { width: 160, height: 90, dataset: { guildAvatar: profile.username } }
   ]);
+  let requests = 0;
   context.fetch = async url => {
+    requests++;
     assert.match(String(url), /is_public=eq\.true/);
     assert.match(String(url), /limit=50/);
     return { ok: true, status: 200, json: async () => profiles };
   };
   context.document.querySelectorAll = selector =>
     selector === '#tabContent-guild canvas[data-guild-avatar]' ? canvases : [];
-  context.CharacterCreator.renderAvatar = (canvas, character) => avatarRenders.push({
-    username: canvas.dataset.guildAvatar, pet: character.pet
+  context.CharacterCreator.drawStage = (canvas, character, options) => stageRenders.push({
+    username: canvas.dataset.guildAvatar, width: canvas.width, height: canvas.height,
+    pet: character.pet, background: character.background, animate: options.animate
   });
   try {
-    await vm.runInContext('loadGuildProfiles()', context);
+    vm.runInContext('guildProfiles = []; guildProfilesLoaded = true; guildProfilesLoadPromise = null;', context);
+    vm.runInContext('switchTab("guild")', context);
+    await vm.runInContext('guildProfilesLoadPromise', context);
+    assert.equal(requests, 1);
+    vm.runInContext('switchTab("guild")', context);
+    await vm.runInContext('guildProfilesLoadPromise', context);
+    assert.equal(requests, 2, 'opening the Guild tab again refreshes the directory');
     assert.match(element('guildExplorersGrid').innerHTML, /@devon/);
     assert.match(element('guildExplorersGrid').innerHTML, /Cloud Citadel/);
     assert.match(element('guildExplorersGrid').innerHTML, /Grand Voyager/);
+    assert.match(element('guildExplorersGrid').innerHTML, /data:image\/jpeg;base64,YWJjZA==/);
+    assert.match(element('guildExplorersGrid').innerHTML, /Low-resolution route map for @devon/);
     assert.match(element('guildExpeditionsFeed').innerHTML, /Spirit Falls Weekend/);
     assert.match(element('guildExpeditionsFeed').innerHTML, /The falls were roaring/);
     assert.match(element('guildExpeditionsFeed').innerHTML, /data:image\/jpeg;base64,YWJjZA==/);
     assert.match(element('guildExpeditionsFeed').innerHTML, /data-guild-open-travel="devon"/);
-    assert.ok(avatarRenders.length >= 2);
+    assert.ok(stageRenders.length >= 2);
+    assert.ok(stageRenders.every(render =>
+      render.width === 160 && render.height === 90 && render.background === 'bg_yosemite' &&
+      render.animate === false));
     assert.equal(element('guildStatus').textContent, '1 public explorer loaded.');
   } finally {
     context.fetch = originalFetch;
     context.document.querySelectorAll = originalQuerySelectorAll;
-    context.CharacterCreator.renderAvatar = originalRenderAvatar;
+    context.CharacterCreator.drawStage = originalDrawStage;
+    vm.runInContext(`
+      guildProfiles = JSON.parse(${JSON.stringify(originalProfiles)});
+      guildProfilesLoaded = ${originalProfilesLoaded};
+      guildProfilesLoadPromise = null;
+      AppState.currentTab = ${JSON.stringify(originalCurrentTab)};
+    `, context);
   }
 });
 await checkAsync('clean ?u links load a read-only public Atlas without changing the local passport', async () => {

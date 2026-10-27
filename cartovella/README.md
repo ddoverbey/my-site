@@ -9,6 +9,8 @@ expeditions, track parks and regions, and earn achievements from your travel his
 - Custom places and expedition logs with ordered stops, travel modes, route previews, and journal entries.
 - KML and GeoJSON route imports, a Global Route Map, and PNG route-poster export. Water Transit
   routes are blue, while flights use a neutral gray in the map and trip logs.
+- The Explorers' Guild refreshes its directory when opened and shows opted-in explorers' character
+  scenes and low-resolution route-map previews.
 - Progress for parks, regions, elevations, rarity, and terrestrial biomes.
 - Clickable biome and destination pins show the trips, stops, and saved places contributing to them.
 - Achievements are grouped into expandable milestone classes and sorted by rarity, with unmet classes
@@ -264,6 +266,11 @@ resetting browser data.
 Searches and some coordinate lookups contact external services. The app's **Map services & privacy**
 section describes which information is sent for each feature. Imported route files are processed
 locally; imported driving and AWD tracks are not sent to the road router.
+
+Public Explorer Directory listings include the saved character scene (including its selected
+background), summary stats, recent shared expedition details, and a low-resolution image of logged
+routes. Only profiles explicitly marked public appear in the directory; route previews reveal
+approximate travel geography, so keep the listing private if you do not want that shared.
 
 ## Data files
 

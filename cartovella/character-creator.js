@@ -1324,7 +1324,8 @@
     drawPetAccessory(ctx, character, 'petHat', redraw, petFrame, character.petAnimation);
     pixel(ctx, 0, 89, 160, 1, '#84946d');
     ctx.restore();
-    startStageAnimation(canvas);
+    if (options.animate === false) stopStageAnimation(canvas);
+    else startStageAnimation(canvas);
   }
 
   function renderAvatar(canvas, value) {

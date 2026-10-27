@@ -1221,6 +1221,9 @@ check('the shared stage animation loop advances pets and effects without moving 
     canvas.isConnected = false;
     intervalCallbacks[0]();
     assert.deepEqual(clearedIntervals, [1]);
+    const thumbnailCanvas = { ...canvas, isConnected: true };
+    characterCreator.drawStage(thumbnailCanvas, character, { animate: false });
+    assert.equal(intervalCallbacks.length, 1, 'static scene thumbnails do not start an animation timer');
   } finally {
     if (originalImage === undefined) delete globalThis.Image;
     else globalThis.Image = originalImage;
