@@ -141,6 +141,10 @@ gender-specific hairstyle sprites (28 male and 30 female). One appearance picker
 available hairstyle with its hair color, with labels such as “Hairstyle 1: Chestnut.” Character sprite catalogs,
 layer composition, unlock rules, backgrounds, and companion rendering live in `character-creator.js`;
 character settings are stored in the passport and included in local, cloud, export, and shared saves.
+The sprite picker is labeled Sprite A and Sprite B; internal male/female keys remain for mapping
+each choice to its source art. Shirts, bottoms, and shoes can be unequipped independently, including
+when a one-piece outfit such as a bikini is selected. The wardrobe includes skirt, black short skirt,
+and pants options.
 GandalfHardcore asset folders are grouped under `assets/gandalfhardcore/`; source ZIP archives remain
 in `assets/Zips/`.
 The character layers use aligned 800×448 sheets and a 32×48 crop around the first character

@@ -78,6 +78,8 @@ check('character appearance, wardrobe, companions, and scene choices render as d
   assert.match(controls.innerHTML, /Hairstyle 1: Chestnut/);
   assert.match(controls.innerHTML, /Hairstyle 28: Teal/);
   assert.match(controls.innerHTML, /data-character-id="hair_shield_maiden::teal"/);
+  assert.match(controls.innerHTML, /Sprite A/);
+  assert.match(controls.innerHTML, /Sprite B/);
   assert.equal((controls.innerHTML.match(/data-character-field="hairPreset"/g) || []).length, 170);
   assert.match(controls.innerHTML, /aria-label="Previous hairstyle"/);
   assert.match(controls.innerHTML, /aria-label="Next hairstyle"/);
@@ -281,7 +283,7 @@ check('wardrobe arrows never purchase, cycle owned gear and None, and leave purc
           character = changed;
         }
         if (shopItems.length) assert.ok(seen.has(shopItems[0].id), `${gender} ${tab} ${field}: owned gear`);
-        if (!['top', 'bottoms', 'shoes'].includes(field)) assert.ok(seen.has(''), `${field}: None`);
+        assert.ok(seen.has(''), `${field}: None`);
         const unowned = shopItems[1];
         if (unowned) {
           render();
@@ -463,6 +465,45 @@ check('starter character uses sprite-pack gear and starts without a companion', 
   assert.equal(characterCreator.normalizeCharacter().background, 'bg_campfire');
   assert.equal(characterCreator.normalizeCharacter().bodyShape, 'straight');
   assert.equal(characterCreator.normalizeCharacter().proUnlocked, false);
+});
+check('shirts, bottoms, and shoes can be cleared, and requested bottom pieces use valid sheets', () => {
+  const withoutClothes = characterCreator.normalizeCharacter({ top: '', bottoms: '', shoes: '' });
+  assert.equal(withoutClothes.top, '');
+  assert.equal(withoutClothes.bottoms, '');
+  assert.equal(withoutClothes.shoes, '');
+  const bareLayers = characterCreator.characterSpriteAssets(withoutClothes);
+  for (const layer of ['top', 'bottoms', 'shoes']) {
+    assert.equal(bareLayers.some(entry => entry.layer === layer), false, `${layer} is removed`);
+  }
+
+  const bikini = characterCreator.normalizeCharacter({
+    gender: 'female', top: 'red_bikini', bottoms: '', purchasedItems: ['red_bikini']
+  });
+  const bikiniLayers = characterCreator.characterSpriteAssets(bikini);
+  assert.equal(bikini.top, 'red_bikini');
+  assert.equal(bikini.bottoms, '');
+  assert.ok(bikiniLayers.find(entry => entry.layer === 'top').imageSrc.endsWith('/Red%20bikini.png'));
+  assert.equal(bikiniLayers.some(entry => entry.layer === 'bottoms'), false);
+
+  for (const id of ['black_short_skirt', 'skirt', 'pants']) {
+    const item = characterCreator.SHOP_WARDROBE.find(candidate => candidate.id === id);
+    assert.ok(item, `${id} is available in the wardrobe`);
+    assert.equal(item.field, 'bottoms');
+    for (const gender of ['male', 'female']) {
+      const path = item.paths[gender];
+      assert.ok(path, `${id} has a ${gender} sprite`);
+      const png = readFileSync(new URL(path, import.meta.url));
+      assert.equal(png.toString('ascii', 1, 4), 'PNG');
+      assert.equal(png.readUInt32BE(16) % 80, 0, `${id} frame width`);
+      assert.equal(png.readUInt32BE(20) % 64, 0, `${id} frame height`);
+      const character = characterCreator.normalizeCharacter({
+        gender, bottoms: id, purchasedItems: [id]
+      });
+      const layer = characterCreator.characterSpriteAssets(character).find(entry => entry.layer === 'bottoms');
+      assert.ok(layer, `${id} renders for ${gender}`);
+      if (id === 'black_short_skirt') assert.ok(layer.variantSpec);
+    }
+  }
 });
 check('character migration clamps invalid values and preserves safe selections', () => {
   assert.deepEqual(characterCreator.normalizeCharacter({

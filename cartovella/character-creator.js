@@ -545,6 +545,16 @@
   ].forEach(([id, name, file]) =>
     addShopItem(id, name, 'bottoms', oneGenderPath('female',
       `${ASSET_ROOT}GandalfHardcore 43x Female Clothing/${file}`), 100));
+  addShopItem('skirt', 'Skirt', 'bottoms', pairedPaths(PACK,
+    'Female Clothing/Skirt.png'), 100);
+  addShopItem('pants', 'Pants', 'bottoms', pairedPaths(PACK,
+    'Male Clothing/Pants.png'), 100);
+  SHOP_WARDROBE.push({
+    ...equipmentItem('black_short_skirt', 'Black Short Skirt', 'bottoms',
+      pairedPaths(`${ASSET_ROOT}GandalfHardcore 43x Female Clothing/`, 'Short Skirt.png'),
+      { type: 'coin', cost: 100 }),
+    variantSpec: { palette: palette('#111111', '#292929', '#525252') }
+  });
   [
     ['black_thigh_high_boots', 'Black Thigh-High Boots', 'Black Thigh-High Boots.png'],
     ['brown_thigh_high_boots', 'Brown Thigh-High Boots', 'Brown Thigh-High Boots.png'],
@@ -746,6 +756,7 @@
       const allowed = EQUIPMENT_BY_FIELD[field] || [];
       const isOwned = candidate => candidate.unlock.type !== 'coin' ||
         purchasedItems.includes(candidate.id);
+      if (source[field] === '') return [field, ''];
       const item = allowed.find(candidate =>
         candidate.id === source[field] && candidate.paths[gender] && isOwned(candidate));
       const defaultItem = allowed.find(candidate =>
@@ -1469,8 +1480,7 @@
   function equipmentOptions(field, character, stats, achievements, appState) {
     const choices = (EQUIPMENT_BY_FIELD[field] || [])
       .filter(item => item.paths[character.gender]);
-    const canClear = !['top', 'bottoms', 'shoes'].includes(field);
-    if (canClear) choices.unshift({
+    choices.unshift({
       id: '', name: 'None', field, paths: {}, unlock: { type: 'starter' }, imageSrc: null
     });
     return catalogOptions(choices, character[field], stats, character, achievements, 'Equipped', appState);
@@ -1697,7 +1707,7 @@
     const sections = {
       appearance: `<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
         ${dropdown('gender', 'Character sprite', character.gender, [
-          { id: 'male', name: 'Male sprite' }, { id: 'female', name: 'Female sprite' }
+          { id: 'male', name: 'Sprite A' }, { id: 'female', name: 'Sprite B' }
         ], option => characterThumbnailMarkup({ ...character, gender: option.id }))}
         ${dropdown('skinTone', 'Skin tone', character.skinTone, SKIN_TONES, option =>
           `<span aria-hidden="true" class="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-slate-900">
