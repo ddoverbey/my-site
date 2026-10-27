@@ -225,6 +225,8 @@ check('wardrobe and shop expose one compact layer picker at a time', () => {
     controls.onchange({ target: { dataset: { characterWardrobeCategory: 'true' }, value: 'headwear' } });
     assert.equal(controls.dataset.activeWardrobeField, 'headwear');
     assert.match(controls.innerHTML, /data-character-field="headwear"[^>]*aria-label="Next hats/);
+    assert.match(controls.innerHTML,
+      /src="\.\/assets\/custom-gear\/brown-ranger-hat\.png"[^>]*style="width:40px;height:32px;top:4px;image-rendering:pixelated"/);
     const nextId = controls.innerHTML.match(
       /data-character-field="headwear"[^>]*data-character-id="([^"]*)"[^>]*aria-label="Next/
     )[1];

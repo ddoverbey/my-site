@@ -205,6 +205,7 @@
   });
   const CHARACTER_EFFECT_FRAME_COUNT = 5;
   const ASSET_ROOT = './assets/gandalfhardcore/';
+  const CUSTOM_GEAR_ASSET_ROOT = './assets/custom-gear/';
   const assetUrl = path => encodeURI(path);
   const COMPANION_ASSET_PATH = `${ASSET_ROOT}GandalfHardcore Pet companion/GandalfHardcore Pet companion/`;
   const CAT_ASSET_PATH = './assets/cat-PACK/PACK/';
@@ -420,7 +421,7 @@
   ];
   const customGearHat = (id, name, file, achievementId) =>
     equipmentItem(id, name, 'headwear', pairedPaths(
-      `${ASSET_ROOT}custom-gear/`, file
+      CUSTOM_GEAR_ASSET_ROOT, file
     ), { type: 'achievement', id: achievementId });
   const ACHIEVEMENT_ITEMS = [
     customGearHat('ranger_hat_classic_brown', 'Classic Brown Ranger Hat',
@@ -1496,6 +1497,7 @@
   function equipmentThumbnailMarkup(item, gender) {
     const path = item.paths?.[gender];
     const isPetAccessory = item.field === 'petHat' || item.field === 'petBackpack';
+    const isCustomGear = path?.startsWith(CUSTOM_GEAR_ASSET_ROOT);
     if (path && item.variantSpec) {
       return `<canvas data-sprite-variant-preview="${escapeHtml(item.id)}"
         data-gender="${escapeHtml(gender)}" width="40" height="40" aria-hidden="true"
@@ -1503,7 +1505,8 @@
     }
     return `<span aria-hidden="true" class="relative block h-10 w-10 shrink-0 overflow-hidden rounded bg-slate-900">
       ${path ? `<img src="${escapeHtml(assetUrl(path))}" alt="" class="absolute left-0 top-0 max-w-none"
-        style="width:${isPetAccessory ? 240 : 400}px;height:${isPetAccessory ? 80 : 224}px;image-rendering:pixelated">` : ''}
+        style="${isCustomGear ? 'width:40px;height:32px;top:4px;' :
+          `width:${isPetAccessory ? 240 : 400}px;height:${isPetAccessory ? 80 : 224}px;`}image-rendering:pixelated">` : ''}
     </span>`;
   }
 
