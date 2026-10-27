@@ -462,6 +462,9 @@
       'golden-ranger-hat.png', 'americaTheBeautiful'),
     customGearHat('ranger_hat_diamond', 'Diamond Ranger Hat',
       'diamond-ranger-hat.png', 'nps'),
+    equipmentItem('john_denver_guitar', "John Denver's Guitar", 'handItem',
+      pairedPaths(CUSTOM_GEAR_ASSET_ROOT, 'guitar-1.png'),
+      { type: 'achievement', ids: ['countryRoads', 'rockyMountainHigh'] }),
     makeVariantItem('khaki_trail_pants', 'Khaki Trail Pants', 'bottoms',
       { type: 'achievement', id: 'firstSteps' },
       palette('#363126', '#9d8a5d', '#d6c79b')),
@@ -947,11 +950,16 @@
       };
     }
     if (unlock.type === 'achievement') {
-      const result = achievements.get(unlock.id);
+      const results = (Array.isArray(unlock.ids) ? unlock.ids : [unlock.id])
+        .map(id => achievements.get(id)).filter(Boolean);
+      const result = results.find(item => item.progress >= item.goal) || results[0];
+      const unlocked = results.some(item => item.progress >= item.goal);
+      const progressLabel = item =>
+        `${item.name} (${Math.min(item.progress, item.goal)}/${item.goal})`;
       return {
-        unlocked: !!result && result.progress >= result.goal,
+        unlocked,
         description: result
-          ? `Unlock Achievement: ${result.name} (${Math.min(result.progress, result.goal)}/${result.goal}).`
+          ? `Unlock Achievement: ${unlocked ? progressLabel(result) : results.map(progressLabel).join(' or ')}.`
           : 'Unlock the linked achievement.'
       };
     }

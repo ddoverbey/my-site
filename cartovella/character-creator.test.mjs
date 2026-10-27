@@ -997,7 +997,7 @@ check('variant clothing includes all requested rewards and valid paired sprite-s
   const achievementIds = [
     'ranger_hat_classic_brown', 'ranger_hat_forest_green', 'ranger_hat_green',
     'ranger_hat_navy', 'ranger_hat_navy_banded', 'ranger_hat_purple',
-    'ranger_hat_silver', 'ranger_hat_golden', 'ranger_hat_diamond',
+    'ranger_hat_silver', 'ranger_hat_golden', 'ranger_hat_diamond', 'john_denver_guitar',
     'khaki_trail_pants', 'mist_rain_poncho', 'cavern_miner_suit', 'summit_down_parka',
     'overland_canvas_jacket', 'mariner_pea_coat', 'photographer_vest', 'arctic_aurora_cloak',
     'blue_ridge_flannel', 'alpine_timberline_jacket', 'continental_cape',
@@ -1100,6 +1100,34 @@ check('park and achievement clothing unlock at their exact requirements', () => 
   assert.equal(characterCreator.unlockStatus(
     { type: 'achievement', id: 'thinAir' }, {}, character, incomplete
   ).description, 'Unlock Achievement: Thin Air (0/1).');
+  const guitar = characterCreator.ACHIEVEMENT_ITEMS.find(item => item.id === 'john_denver_guitar');
+  assert.equal(guitar.name, "John Denver's Guitar");
+  assert.equal(guitar.field, 'handItem');
+  assert.deepEqual(guitar.unlock, {
+    type: 'achievement', ids: ['countryRoads', 'rockyMountainHigh']
+  });
+  const guitarLockedStatus = characterCreator.unlockStatus(guitar.unlock, {}, character, incomplete);
+  assert.equal(guitarLockedStatus.unlocked, false);
+  assert.equal(guitarLockedStatus.description,
+    'Unlock Achievement: Country Roads (0/1) or Rocky Mountain High (0/1).');
+  for (const achievementId of guitar.unlock.ids) {
+    const singleAchievement = new Map([[achievementId, { progress: 1, goal: 1, name: achievementId }]]);
+    assert.equal(characterCreator.unlockStatus(guitar.unlock, {}, character, singleAchievement).unlocked,
+      true, `${achievementId} alone unlocks the guitar`);
+  }
+  const guitarPath = './assets/custom-gear/guitar-1.png';
+  assert.equal(guitar.paths.male, guitarPath);
+  assert.equal(guitar.paths.female, guitarPath);
+  const guitarPng = readFileSync(new URL(guitarPath, import.meta.url));
+  assert.equal(guitarPng.toString('ascii', 1, 4), 'PNG');
+  assert.deepEqual([guitarPng.readUInt32BE(16), guitarPng.readUInt32BE(20)], [80, 64]);
+  for (const gender of ['male', 'female']) {
+    const handLayer = characterCreator.characterSpriteAssets({
+      ...character, gender, handItem: guitar.id
+    }).at(-1);
+    assert.equal(handLayer.layer, 'hand');
+    assert.equal(handLayer.imageSrc, guitarPath);
+  }
   const controls = { dataset: { activeTab: 'wardrobe' }, innerHTML: '' };
   characterCreator.render({
     controls, character, stats: { level: 1, visitedParks: [] }, achievements: definitions
