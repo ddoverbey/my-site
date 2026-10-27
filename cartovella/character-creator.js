@@ -1169,7 +1169,6 @@
       const path = item?.paths[character.gender];
       return path ? {
         layer, imageSrc: assetUrl(path),
-        ...(field === 'headwear' && item.id.startsWith('ranger_hat_') ? { offsetX: -3 } : {}),
         ...(item.variantSpec ? {
           variantSpec: variantSpecForGender(item, character.gender)
         } : {})

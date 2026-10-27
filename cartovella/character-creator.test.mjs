@@ -695,7 +695,7 @@ check('sprite hairstyle assets are available for their matching character sprite
   characterCreator.render({ controls, character: characterCreator.DEFAULT_CHARACTER });
   assert.match(controls.innerHTML, /data-character-id="hair_bald::brown"[^>]*>[\s\S]*?Bald/);
 });
-check('ranger hats keep every hairstyle below the hat crown in both stage and avatar rendering', () => {
+check('ranger hats keep every hairstyle below the hat crown in stage and avatar rendering', () => {
   const rangerHatIds = characterCreator.ACHIEVEMENT_ITEMS
     .filter(item => item.id.startsWith('ranger_hat_')).map(item => item.id);
   assert.ok(rangerHatIds.length > 0);
@@ -708,8 +708,6 @@ check('ranger hats keep every hairstyle below the hat crown in both stage and av
       const hair = assets
         .find(layer => layer.layer === 'hair');
       assert.equal(hair.clipTopSourceY, 25, `${gender} ${hat}`);
-      assert.equal(assets.find(layer => layer.layer === 'headwear').offsetX, -3,
-        `${gender} ${hat}`);
     }
     const clips = [];
     const context = {
@@ -727,16 +725,20 @@ check('ranger hats keep every hairstyle below the hat crown in both stage and av
     assert.ok(clips[0][1] > 45 && clips[0][1] < 48);
   }
 });
-check('ranger hats shift left three sprite pixels when drawn', () => {
-  const hatLayer = characterCreator.characterSpriteAssets({
-    ...characterCreator.DEFAULT_CHARACTER, headwear: 'ranger_hat_classic_brown'
-  }).find(layer => layer.layer === 'headwear');
-  const calls = [];
-  characterCreator.drawCharacterLayer({
-    drawImage(...args) { calls.push(args); }
-  }, {}, hatLayer, 0, 0, 80, 64, 62, 39, 36, 43);
-  assert.equal(calls.length, 1);
-  assert.equal(calls[0][5], 59);
+check('ranger hats preserve their shared centered canvas position when drawn', () => {
+  const rangerHatIds = characterCreator.ACHIEVEMENT_ITEMS
+    .filter(item => item.id.startsWith('ranger_hat_')).map(item => item.id);
+  for (const hat of rangerHatIds) {
+    const hatLayer = characterCreator.characterSpriteAssets({
+      ...characterCreator.DEFAULT_CHARACTER, headwear: hat
+    }).find(layer => layer.layer === 'headwear');
+    const calls = [];
+    characterCreator.drawCharacterLayer({
+      drawImage(...args) { calls.push(args); }
+    }, {}, hatLayer, 0, 0, 80, 64, 62, 39, 36, 43);
+    assert.equal(calls.length, 1, hat);
+    assert.equal(calls[0][5], 62, `${hat} should use the character's shared center`);
+  }
 });
 check('low-resolution frame profiles keep the V-taper broad at the shoulders and hourglass defined', () => {
   const { straight, vTaper, hourglass } = characterCreator.BODY_SHAPE_PROFILES;
