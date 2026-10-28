@@ -2090,8 +2090,13 @@ function renderExpeditionHistory() {
       const { sharingTrip: id, sharingField: field, sharingPhoto } = input.dataset;
       const current = AppState.expeditions.find(exp => exp.id === id);
       if (!current) return;
+      let previousSharing = null;
       try {
-        const sharing = TravelLedger.normalizePublicSharing(current.publicSharing, current.photos?.length || 0);
+        previousSharing = TravelLedger.normalizePublicSharing(current.publicSharing, current.photos?.length || 0);
+        const sharing = {
+          ...previousSharing,
+          photoIndexes: [...previousSharing.photoIndexes]
+        };
         if (field === 'photo') {
           const index = Number(sharingPhoto);
           sharing.photoIndexes = input.checked
@@ -2099,13 +2104,23 @@ function renderExpeditionHistory() {
             : sharing.photoIndexes.filter(photoIndex => photoIndex !== index);
         } else sharing[field] = input.checked;
         updateExpedition({ ...current, publicSharing: sharing });
-        renderExpeditionHistory();
-        Array.from(container.querySelectorAll('[data-sharing-trip]'))
-          .find(control => control.dataset.sharingTrip === id &&
-            control.dataset.sharingField === field && control.dataset.sharingPhoto === sharingPhoto)?.focus();
+        container.querySelectorAll('[data-sharing-trip]').forEach(control => {
+          if (control.dataset.sharingTrip === id && control.dataset.sharingField !== 'enabled') {
+            control.disabled = !sharing.enabled;
+          }
+        });
       } catch (error) {
         showNotification('Sharing settings not saved', error.message, '⚠️');
-        renderExpeditionHistory();
+        if (previousSharing) {
+          container.querySelectorAll('[data-sharing-trip]').forEach(control => {
+            if (control.dataset.sharingTrip !== id) return;
+            const controlField = control.dataset.sharingField;
+            control.checked = controlField === 'photo'
+              ? previousSharing.photoIndexes.includes(Number(control.dataset.sharingPhoto))
+              : previousSharing[controlField];
+            if (controlField !== 'enabled') control.disabled = !previousSharing.enabled;
+          });
+        }
       }
     });
   });

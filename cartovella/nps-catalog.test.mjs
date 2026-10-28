@@ -207,7 +207,7 @@ check('character customization appears above the stage and progress summary', ()
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 10);
-  assert.ok(sources.every(source => source.endsWith('?v=20261028-public-trip-sharing-v3')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261028-public-trip-sharing-v4')));
   assert.ok(sources.some(source => source.startsWith('./character-creator.js?')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
@@ -3660,6 +3660,30 @@ const feed = element('travelLogFeed');
 const originalFeedQuerySelectorAll = feed.querySelectorAll;
 const travelLogActionButtons = new Map();
 feed.querySelectorAll = selector => {
+  if (selector === '[data-sharing-trip]') {
+    const controls = [...feed.innerHTML.matchAll(
+      /<input type="checkbox"(?=[^>]*data-sharing-trip="([^"]+)")(?=[^>]*data-sharing-field="([^"]+)")([^>]*)>/g
+    )];
+    return controls.map(match => {
+      const [, trip, sharingField, attributes] = match;
+      const photo = /data-sharing-photo="([^"]+)"/.exec(attributes)?.[1];
+      const key = `${selector}:${trip}:${sharingField}:${photo || ''}`;
+      if (!travelLogActionButtons.has(key)) {
+        travelLogActionButtons.set(key, {
+          dataset: {
+            sharingTrip: trip, sharingField,
+            ...(photo === undefined ? {} : { sharingPhoto: photo })
+          },
+          checked: /\schecked(?:\s|>)/.test(attributes),
+          disabled: /\sdisabled(?:\s|>)/.test(attributes),
+          handlers: {},
+          addEventListener(name, handler) { this.handlers[name] = handler; },
+          focus() { this.focused = true; }
+        });
+      }
+      return travelLogActionButtons.get(key);
+    });
+  }
   const selectors = {
     '[data-delete-expedition]': ['data-delete-expedition', 'deleteExpedition'],
     '[data-confirm-delete-expedition]': ['data-confirm-delete-expedition', 'confirmDeleteExpedition'],
@@ -3680,6 +3704,37 @@ feed.querySelectorAll = selector => {
       return travelLogActionButtons.get(key);
     });
 };
+context.renderExpeditionHistory();
+check('trip-sharing checkbox changes update in place without rerendering or moving focus', () => {
+  const originalRenderer = context.renderExpeditionHistory;
+  let renderCount = 0;
+  context.renderExpeditionHistory = () => {
+    renderCount++;
+    originalRenderer();
+  };
+  const controls = feed.querySelectorAll('[data-sharing-trip]')
+    .filter(control => control.dataset.sharingTrip === 'exp_test');
+  const enabled = controls.find(control => control.dataset.sharingField === 'enabled');
+  const details = controls.find(control => control.dataset.sharingField === 'includeDetails');
+  assert.ok(enabled && details);
+  enabled.checked = true;
+  enabled.handlers.change();
+  assert.equal(vm.runInContext(
+    "AppState.expeditions.find(expedition=>expedition.id==='exp_test').publicSharing.enabled",
+    context), true);
+  assert.equal(details.disabled, false);
+  assert.equal(renderCount, 0);
+  assert.equal(enabled.focused, undefined);
+  enabled.checked = false;
+  enabled.handlers.change();
+  assert.equal(vm.runInContext(
+    "AppState.expeditions.find(expedition=>expedition.id==='exp_test').publicSharing.enabled",
+    context), false);
+  assert.equal(details.disabled, true);
+  assert.equal(renderCount, 0);
+  assert.equal(enabled.focused, undefined);
+  context.renderExpeditionHistory = originalRenderer;
+});
 const previousCurrentTab = vm.runInContext('AppState.currentTab', context);
 vm.runInContext(`
   AppState.currentTab='travel';
