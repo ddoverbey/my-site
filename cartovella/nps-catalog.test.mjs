@@ -1404,12 +1404,20 @@ await checkAsync('public summary stats contain compact profile, achievement, and
   const originalCacheKey = vm.runInContext('JSON.stringify(publicRouteMapThumbnailCacheKey)', context);
   const originalCachedThumbnail = vm.runInContext('JSON.stringify(publicRouteMapThumbnailCache)', context);
   const originalCreateElement = context.document.createElement;
+  const routeInterpolations = [];
+  const routeScale = [];
   const routeCanvasContext = {
     beginPath() {}, moveTo() {}, lineTo() {}, closePath() {}, fill() {}, stroke() {},
-    fillRect() {}, setLineDash() {}
+    fillRect() {}, setLineDash() {}, scale(x, y) { routeScale.push([x, y]); }
   };
   let routeCanvasSize = null;
-  context.d3 = { ...d3Geo };
+  context.d3 = {
+    ...d3Geo,
+    geoInterpolate(...points) {
+      routeInterpolations.push(points);
+      return d3Geo.geoInterpolate(...points);
+    }
+  };
   context.document.createElement = tag => {
     if (tag !== 'canvas') return originalCreateElement(tag);
     return {
@@ -1436,6 +1444,16 @@ await checkAsync('public summary stats contain compact profile, achievement, and
           { kind: 'place', id: 'falls', name: 'Spirit Falls', coords: [45.1, -121.1] }
         ],
         journal: 'A memorable public story.'
+      }, {
+        id: 'legacy-public-flight', name: 'Legacy Flight', startDate: '2026-09-01', endDate: '2026-09-02',
+        dayTrip: false, reason: '', transitTags: ['flight'],
+        countyIds: [], parkIds: [], customPoiIds: [],
+        routeCoords: [[40,-120],[41,-121],[42,-122]],
+        routeStops: [
+          { kind: 'place', id: 'flight-a', name: 'Flight A', coords: [40,-120] },
+          { kind: 'place', id: 'flight-b', name: 'Flight B', coords: [41,-121] },
+          { kind: 'place', id: 'flight-c', name: 'Flight C', coords: [42,-122] }
+        ]
       }];
       worldGeoJson = [];
       publicProfile.is_public = true;
@@ -1460,7 +1478,11 @@ await checkAsync('public summary stats contain compact profile, achievement, and
     assert.equal(summary.biomesCount, 2);
     assert.equal(summary.clearedPct, 12.5);
     assert.match(summary.routeMapThumbnail, /^data:image\/jpeg;base64,/);
-    assert.deepEqual(routeCanvasSize, { width: 320, height: 168, type: 'image/jpeg', quality: 0.42 });
+    assert.deepEqual(routeCanvasSize, { width: 80, height: 42, type: 'image/jpeg', quality: 0.82 });
+    assert.deepEqual(routeScale, [[0.25, 0.25]]);
+    const interpolatedPairs = routeInterpolations.map(points => JSON.stringify(points));
+    assert.ok(interpolatedPairs.includes('[[-120,40],[-121,41]]'));
+    assert.ok(interpolatedPairs.includes('[[-121,41],[-122,42]]'));
     vm.runInContext('publicProfile.is_public = false', context);
     const privateSummary = JSON.parse(JSON.stringify(await vm.runInContext(
       `buildPublicSummaryStats({
@@ -1664,7 +1686,8 @@ await checkAsync('Explorers’ Guild renders mocked public profiles and expediti
     assert.match(element('guildExplorersGrid').innerHTML, /Cloud Citadel/);
     assert.match(element('guildExplorersGrid').innerHTML, /Grand Voyager/);
     assert.match(element('guildExplorersGrid').innerHTML, /data:image\/jpeg;base64,YWJjZA==/);
-    assert.match(element('guildExplorersGrid').innerHTML, /Low-resolution route map for @devon/);
+    assert.match(element('guildExplorersGrid').innerHTML, /Pixel-art route map for @devon/);
+    assert.match(element('guildExplorersGrid').innerHTML, /image-rendering:pixelated/);
     assert.match(element('guildExpeditionsFeed').innerHTML, /Spirit Falls Weekend/);
     assert.match(element('guildExpeditionsFeed').innerHTML, /The falls were roaring/);
     assert.match(element('guildExpeditionsFeed').innerHTML, /data:image\/jpeg;base64,YWJjZA==/);
