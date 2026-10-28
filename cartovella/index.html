@@ -334,10 +334,10 @@
         0 0 7px color-mix(in srgb, var(--rarity-color, #f0abfc) 72%, transparent),
         0 0 16px color-mix(in srgb, var(--rarity-color, #f0abfc) 36%, transparent);
     }
-    #biomePokedexContainer .achievement-rarity[data-rarity="rare"],
-    #biomePokedexContainer .achievement-rarity[data-rarity="epic"],
-    #biomePokedexContainer .achievement-rarity[data-rarity="legendary"],
-    #biomePokedexContainer .achievement-rarity[data-rarity="mythic"] {
+    #biomedexContainer .achievement-rarity[data-rarity="rare"],
+    #biomedexContainer .achievement-rarity[data-rarity="epic"],
+    #biomedexContainer .achievement-rarity[data-rarity="legendary"],
+    #biomedexContainer .achievement-rarity[data-rarity="mythic"] {
       box-shadow:
         0 0 8px color-mix(in srgb, var(--rarity-color) 48%, transparent),
         inset 0 0 5px color-mix(in srgb, var(--rarity-color) 18%, transparent);
@@ -732,11 +732,11 @@
           </div>
         </div>
 
-        <!-- Biome Pokédex Section -->
+        <!-- Biomédex Section -->
         <div>
           <div class="flex items-center justify-between mb-4">
             <div>
-              <h3 class="cinzel text-xl font-bold text-amber-200">Biome Pokédex</h3>
+              <h3 class="cinzel text-xl font-bold text-amber-200">Biomédex</h3>
               <p class="text-xs text-slate-400">Collect 14 terrestrial biomes from logged stops and land routes</p>
             </div>
             <span class="text-xs font-mono text-amber-400 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30" id="biomeCompletionRatio">--/14 Found</span>
@@ -749,7 +749,7 @@
             Point samples do not describe an entire park; oceans, rock/ice, and unclassified points earn no terrestrial biome.
           </p>
           <p id="biomeCatalogStatus" class="text-xs text-slate-400 mb-3" role="status" aria-live="polite">Loading ecoregion mappings...</p>
-          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3" id="biomePokedexContainer">
+          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3" id="biomedexContainer">
             <!-- Dynamically populated -->
           </div>
         </div>
@@ -6091,8 +6091,8 @@
         ? `of ${Object.values(BIOMES).filter(b => RARE_OR_HIGHER_RARITIES.has(b.rarity)).length} rare+ biomes`
         : 'Rarity unavailable';
 
-      // Biome Pokédex cards
-      const biomeContainer = document.getElementById('biomePokedexContainer');
+      // Biomédex cards
+      const biomeContainer = document.getElementById('biomedexContainer');
       document.getElementById('biomeCompletionRatio').textContent = `${biomeCatalogLoaded ? stats.biomesSet.size : '--'} / ${Object.keys(BIOMES).length} Found`;
       biomeContainer.innerHTML = '';
 

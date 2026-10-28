@@ -23,7 +23,7 @@ expeditions, track parks and regions, and earn achievements from your travel his
 - Waterfall achievements automatically recognize visited locations whose names or categories include
   “waterfall”; Focal Length counts photos saved to trip journals.
 
-The Biome Pokédex uses the matching badge art from `assets/biome-badges/`; uncollected biomes
+The Biomédex uses the matching badge art from `assets/biome-badges/`; uncollected biomes
 show their badges in grayscale and dimmed, while collected badges retain their full color.
 
 Biome credit comes from logged stops and sampled land routes. Road, AWD, rail, and walking route

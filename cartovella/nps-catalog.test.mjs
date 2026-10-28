@@ -1366,16 +1366,16 @@ check('search finds real ecoregions and displays terrestrial biome labels', () =
   assert.ok(element('bucketListGrid').innerHTML.includes('Temperate Conifer Forests'));
 });
 vm.runInContext('renderPassportView()', context);
-check('pokedex and rare totals use the 14 real biome types', () => {
+check('Biomédex and rare totals use the 14 real biome types', () => {
   assert.equal(element('biomeCompletionRatio').textContent, '2 / 14 Found');
-  const pokedex = element('biomePokedexContainer').innerHTML;
+  const biomedex = element('biomedexContainer').innerHTML;
   assert.equal(element('statRareTotal').textContent, 'of 3 rare+ biomes');
-  assert.ok(pokedex.includes('0.23% of classified biome land'));
-  assert.ok(pokedex.includes('data-rarity="epic"'));
-  assert.ok(pokedex.includes('data-rarity="legendary"'));
-  assert.ok(pokedex.includes('--rarity-color:#c084fc'));
-  assert.ok(pokedex.includes('--rarity-color:#fbbf24'));
-  assert.ok(!pokedex.includes('Subterranean Cavern'));
+  assert.ok(biomedex.includes('0.23% of classified biome land'));
+  assert.ok(biomedex.includes('data-rarity="epic"'));
+  assert.ok(biomedex.includes('data-rarity="legendary"'));
+  assert.ok(biomedex.includes('--rarity-color:#c084fc'));
+  assert.ok(biomedex.includes('--rarity-color:#fbbf24'));
+  assert.ok(!biomedex.includes('Subterranean Cavern'));
 });
 const biomeBadgeImages = vm.runInContext('BIOME_BADGE_IMAGES', context);
 assert.equal(Object.keys(biomeBadgeImages).length, 14);
@@ -1385,20 +1385,20 @@ for (const [biomeId, filename] of Object.entries(biomeBadgeImages)) {
   assert.equal(data.readUInt32BE(16), 128, `Biome ${biomeId} badge width`);
   assert.equal(data.readUInt32BE(20), 72, `Biome ${biomeId} badge height`);
 }
-check('Biome Pokédex shows all mapped badge art and dims unreached badges', () => {
-  const pokedex = element('biomePokedexContainer').innerHTML;
+check('Biomédex shows all mapped badge art and dims unreached badges', () => {
+  const biomedex = element('biomedexContainer').innerHTML;
   for (const [id, filename] of Object.entries(biomeBadgeImages)) {
     const source = `./assets/biome-badges/${encodeURI(filename)}`;
-    assert.ok(pokedex.includes(`data-biome-badge="${id}"`), `Biome ${id} card`);
-    assert.ok(pokedex.includes(`src="${source}"`), `Biome ${id} image`);
+    assert.ok(biomedex.includes(`data-biome-badge="${id}"`), `Biome ${id} card`);
+    assert.ok(biomedex.includes(`src="${source}"`), `Biome ${id} image`);
   }
-  assert.equal((pokedex.match(/class="relative mb-3 rounded-xl border biome-badge-frame"/g) || []).length, 14);
-  assert.equal((pokedex.match(/data-biome-rarity="/g) || []).length, 14);
-  assert.match(pokedex, /data-biome-rarity="epic" style="--rarity-color:#c084fc"/);
-  assert.match(pokedex, /data-biome-rarity="legendary" style="--rarity-color:#fbbf24"/);
-  assert.equal((pokedex.match(/data-biome-unlocked="true"/g) || []).length, 2);
-  assert.equal((pokedex.match(/data-biome-unlocked="false"/g) || []).length, 12);
-  assert.equal((pokedex.match(/filter:grayscale\(1\) brightness\(\.35\);opacity:\.65/g) || []).length, 12);
+  assert.equal((biomedex.match(/class="relative mb-3 rounded-xl border biome-badge-frame"/g) || []).length, 14);
+  assert.equal((biomedex.match(/data-biome-rarity="/g) || []).length, 14);
+  assert.match(biomedex, /data-biome-rarity="epic" style="--rarity-color:#c084fc"/);
+  assert.match(biomedex, /data-biome-rarity="legendary" style="--rarity-color:#fbbf24"/);
+  assert.equal((biomedex.match(/data-biome-unlocked="true"/g) || []).length, 2);
+  assert.equal((biomedex.match(/data-biome-unlocked="false"/g) || []).length, 12);
+  assert.equal((biomedex.match(/filter:grayscale\(1\) brightness\(\.35\);opacity:\.65/g) || []).length, 12);
 });
 check('Rare biome rarity uses a consistent cyan accent', () => {
   assert.ok(html.includes('text-cyan-400'));
@@ -1952,7 +1952,7 @@ check('rare-and-higher rarity text and achievement borders receive glow styling'
     assert.ok(html.includes(`.achievement-rarity[data-rarity="${rarity}"]`));
   }
   assert.match(html, /\.biome-badge-frame\s*\{[\s\S]*?border-color:\s*var\(--rarity-color\);[\s\S]*?box-shadow:/);
-  assert.ok(html.includes('#biomePokedexContainer .achievement-rarity[data-rarity="rare"]'));
+  assert.ok(html.includes('#biomedexContainer .achievement-rarity[data-rarity="rare"]'));
   assert.ok(html.includes('.rarity-glow-text[data-rarity="rare"]'));
 });
 vm.runInContext("AppState.pins = { fiordland: 'v', retired_destination: 'v', 'world-af-band-e-amir': 'v', npsa: 'v' }; updateHud();", context);
