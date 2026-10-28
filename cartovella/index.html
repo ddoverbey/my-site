@@ -1123,12 +1123,12 @@
         <p class="text-[11px] text-slate-400">Drag a stop by its grip to reorder your trip. Keyboard: focus the grip and use the up/down arrow keys. Each leg has its own transit type.</p>
         <ol id="expeditionStops" class="space-y-2 text-xs"></ol>
         <div class="flex flex-wrap items-center gap-2">
-          <button id="btnImportExpeditionRoute" type="button" class="rounded-lg bg-slate-800 border border-slate-600 px-3 py-2 text-xs">Import stops or track (.geojson / .kml)</button>
-          <input id="expeditionFileInput" type="file" accept=".geojson,.json,.kml,application/geo+json,application/vnd.google-earth.kml+xml" class="hidden">
+          <button id="btnImportExpeditionRoute" type="button" class="rounded-lg bg-slate-800 border border-slate-600 px-3 py-2 text-xs">Import stops or tracks (.geojson / .kml)</button>
+          <input id="expeditionFileInput" type="file" multiple accept=".geojson,.json,.kml,application/geo+json,application/vnd.google-earth.kml+xml" class="hidden">
           <span id="expeditionRouteFileStatus" role="status" aria-live="polite" class="text-xs text-slate-400">No route imported.</span>
           <button id="btnClearExpeditionRoute" type="button" class="hidden rounded-lg px-2 py-1 text-xs text-amber-200 underline">Clear track</button>
         </div>
-        <p class="text-[11px] text-slate-500">GeoJSON/KML files import ordered stops; choose a transit type for each leg. An embedded track is used when it matches one leg between two stops; otherwise stops are still imported and the track is skipped. Track-only files import one route.</p>
+        <p class="text-[11px] text-slate-500">Select multiple GeoJSON/KML files to import several tracks. Tracks are matched to adjacent stops by their endpoints; when no stops are listed, connected tracks create the itinerary. Choose a transit type for each leg. Unmatched embedded tracks are skipped with a status message.</p>
         <button id="btnPreviewExpedition" type="button" class="rounded-lg bg-sky-700 px-3 py-2 text-xs">Preview routes</button>
         <div id="expeditionRoutePreview" class="hidden h-52 w-full rounded-lg overflow-hidden" aria-label="Expedition route preview"></div>
         <p id="expeditionRouteSummary" class="text-xs text-slate-400"></p>

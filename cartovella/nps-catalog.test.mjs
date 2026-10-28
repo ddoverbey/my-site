@@ -1311,6 +1311,7 @@ check('GeoJSON Point features and KML Point placemarks import ordered named stop
       { name: 'Finish', coords: [38, -120] }
     ],
     route: [[37, -122], [37.5, -121], [38, -120]],
+    routes: [[[37, -122], [37.5, -121], [38, -120]]],
     trackCount: 1
   });
   assert.deepEqual(mixedKmlStopsAndTrack, mixedGeoJsonStopsAndTrack);
@@ -1321,15 +1322,21 @@ check('GeoJSON Point features and KML Point placemarks import ordered named stop
       { name: 'Finish', coords: [38, -120] }
     ],
     route: [[37, -122], [37.5, -121], [38, -120]],
+    routes: [[[37, -122], [37.5, -121], [38, -120]]],
     trackCount: 1
   });
-  assert.throws(() => parseRouteFixture(JSON.stringify({
+  const multipleTracks = parseRouteFixture(JSON.stringify({
     type: 'MultiLineString', coordinates: [[[0, 0], [1, 1]], [[2, 2], [3, 3]]]
-  }), 'multiple.geojson'), /multiple route lines/);
+  }), 'multiple.geojson');
+  assert.deepEqual(multipleTracks, {
+    stops: [], route: null,
+    routes: [[[0, 0], [1, 1]], [[2, 2], [3, 3]]],
+    trackCount: 2
+  });
 });
-await checkAsync('mixed GeoJSON imports stops and leaves unsupported multi-leg track geometry out', async () => {
+await checkAsync('GeoJSON imports ordered stops and keeps only endpoint-matched embedded tracks', async () => {
   const originalDraft = JSON.stringify(vm.runInContext('expeditionDraft', context));
-  const originalRoute = JSON.stringify(vm.runInContext('expeditionUploadedRoute', context));
+  const originalRoutes = JSON.stringify(vm.runInContext('expeditionUploadedRoutes', context));
   const originalPreparedLegs = JSON.stringify(vm.runInContext('expeditionPreparedLegs', context));
   const originalPreparedKey = JSON.stringify(vm.runInContext('expeditionPreparedKey', context));
   const originalPending = vm.runInContext('expeditionPending', context);
@@ -1339,6 +1346,7 @@ await checkAsync('mixed GeoJSON imports stops and leaves unsupported multi-leg t
   const originalUpdateStatus = context.updateUploadedRouteStatus;
   const originalInvalidate = context.invalidateExpeditionRoutes;
   const originalRenderStops = context.renderExpeditionStops;
+  const originalPreviewRoutes = context.previewExpeditionRoutes;
   let importStatus = '';
   let uuid = 0;
   const geoJson = JSON.stringify({
@@ -1372,35 +1380,75 @@ await checkAsync('mixed GeoJSON imports stops and leaves unsupported multi-leg t
     context.updateUploadedRouteStatus = message => { importStatus = message || ''; };
     context.invalidateExpeditionRoutes = () => {};
     context.renderExpeditionStops = () => {};
-    vm.runInContext(`expeditionDraft = []; expeditionUploadedRoute = null;
+    context.previewExpeditionRoutes = async () => {};
+    vm.runInContext(`expeditionDraft = []; expeditionUploadedRoutes = [];
       expeditionPreparedLegs = null; expeditionPreparedKey = null; expeditionPending = false;
       AppState.viewOnly = false`, context);
     await context.importExpeditionRoute({ target: input });
     const importedStops = JSON.parse(vm.runInContext('JSON.stringify(expeditionDraft)', context));
     assert.deepEqual(importedStops.map(stop => stop.name), ['Start Harbor', 'Mountain Pass', 'Finish Lodge']);
     assert.ok(importedStops.every(stop => stop.travelMode === 'road'));
-    assert.equal(vm.runInContext('expeditionUploadedRoute', context), null);
+    assert.deepEqual(JSON.parse(vm.runInContext('JSON.stringify(expeditionUploadedRoutes)', context)), []);
     assert.match(importStatus, /3 stops imported/);
     assert.match(importStatus, /Choose a transit type for each leg/);
-    assert.match(importStatus, /embedded track was skipped/);
+    assert.match(importStatus, /embedded track skipped/);
     assert.equal(input.value, '');
 
-    vm.runInContext('expeditionDraft = []; expeditionUploadedRoute = null', context);
+    vm.runInContext('expeditionDraft = []; expeditionUploadedRoutes = []', context);
     input.files = [{ name: 'two-stops-and-track.geojson', size: twoStopGeoJson.length, text: async () => twoStopGeoJson }];
     input.value = 'selected-file';
     await context.importExpeditionRoute({ target: input });
-    const importedRoute = JSON.parse(vm.runInContext('JSON.stringify(expeditionUploadedRoute)', context));
-    assert.deepEqual(importedRoute, [[37, -122], [37.5, -121], [38, -120]]);
-    assert.match(importStatus, /2 stops and their track imported/);
+    const importedRoutes = JSON.parse(vm.runInContext('JSON.stringify(expeditionUploadedRoutes)', context));
+    assert.deepEqual(importedRoutes, [[[37, -122], [37.5, -121], [38, -120]]]);
+    assert.match(importStatus, /2 stops imported with 1 matching track/);
     assert.equal(vm.runInContext('expeditionDraft[0].travelMode', context), 'road');
+
+    const itineraryWithTwoTracks = {
+      type: 'FeatureCollection',
+      features: [
+        { type: 'Feature', properties: { name: 'Start Harbor' }, geometry: { type: 'Point', coordinates: [-122, 37] } },
+        { type: 'Feature', properties: { name: 'Mountain Pass' }, geometry: { type: 'Point', coordinates: [-121, 37.5] } },
+        { type: 'Feature', properties: { name: 'Finish Lodge' }, geometry: { type: 'Point', coordinates: [-120, 38] } },
+        { type: 'Feature', properties: { name: 'Camp' }, geometry: { type: 'Point', coordinates: [-119, 39] } }
+      ]
+    };
+    const firstTrack = {
+      type: 'LineString', coordinates: [[-122, 37], [-121.5, 37.25], [-121, 37.5]]
+    };
+    const secondTrack = {
+      type: 'LineString', coordinates: [[-120, 38], [-120.5, 37.75], [-121, 37.5]]
+    };
+    vm.runInContext('expeditionDraft = []; expeditionUploadedRoutes = []', context);
+    input.files = [
+      { name: 'itinerary.geojson', size: 500, text: async () => JSON.stringify(itineraryWithTwoTracks) },
+      { name: 'first-leg.geojson', size: 200, text: async () => JSON.stringify(firstTrack) },
+      { name: 'second-leg.geojson', size: 200, text: async () => JSON.stringify(secondTrack) }
+    ];
+    await context.importExpeditionRoute({ target: input });
+    const savedTracks = JSON.parse(vm.runInContext('JSON.stringify(expeditionUploadedRoutes)', context));
+    assert.equal(vm.runInContext('expeditionDraft.length', context), 4);
+    assert.equal(savedTracks.length, 2);
+    assert.deepEqual(savedTracks[0].at(-1), [37.5, -121]);
+    assert.deepEqual(savedTracks[1][0], [37.5, -121], 'reversed tracks are oriented to the itinerary');
+    assert.match(importStatus, /4 stops imported with 2 matching tracks/);
+
+    vm.runInContext('expeditionDraft = []; expeditionUploadedRoutes = []', context);
+    input.files = [
+      { name: 'first-connected.geojson', size: 200, text: async () => JSON.stringify(firstTrack) },
+      { name: 'second-connected.geojson', size: 200, text: async () => JSON.stringify(secondTrack) }
+    ];
+    await context.importExpeditionRoute({ target: input });
+    assert.equal(vm.runInContext('expeditionDraft.length', context), 3);
+    assert.equal(vm.runInContext('expeditionUploadedRoutes.length', context), 2);
   } finally {
     context.crypto = originalCrypto;
     context.window.confirm = originalConfirm;
     context.updateUploadedRouteStatus = originalUpdateStatus;
     context.invalidateExpeditionRoutes = originalInvalidate;
     context.renderExpeditionStops = originalRenderStops;
+    context.previewExpeditionRoutes = originalPreviewRoutes;
     vm.runInContext(`expeditionDraft = JSON.parse(${JSON.stringify(originalDraft)});
-      expeditionUploadedRoute = JSON.parse(${JSON.stringify(originalRoute)});
+      expeditionUploadedRoutes = JSON.parse(${JSON.stringify(originalRoutes)});
       expeditionPreparedLegs = JSON.parse(${JSON.stringify(originalPreparedLegs)});
       expeditionPreparedKey = JSON.parse(${JSON.stringify(originalPreparedKey)});
       expeditionPending = ${originalPending}; AppState.viewOnly = ${originalViewOnly}`, context);
@@ -6803,7 +6851,7 @@ check('imported track auto-creates labeled endpoint stops and previews without O
   assert.deepEqual(JSON.parse(vm.runInContext('JSON.stringify(expeditionPreparedLegs[0].routeCoords)',context)),geoJsonTrack);
   assert.ok(previewLines.some(line=>JSON.stringify(line.coords)===JSON.stringify(geoJsonTrack) &&
     line.options.dashArray===null));
-  assert.equal(element('expeditionRouteFileStatus').textContent,'Loaded track: 3 points.');
+  assert.equal(element('expeditionRouteFileStatus').textContent,'1 track added. 1 track matched to itinerary legs.');
 });
 await element('expeditionForm').handlers.submit({preventDefault(){}});
 check('saving an uploaded road track persists its full geometry and awards route counties without OSRM',()=>{
@@ -6833,7 +6881,7 @@ check('imported GeoJSON points populate an ordered editable itinerary with per-l
   assert.equal(vm.runInContext('expeditionDraft.length',context),5);
   assert.deepEqual(JSON.parse(vm.runInContext('JSON.stringify(expeditionDraft.map(stop=>stop.name))',context)),
     ['Oakland','Sacramento','Reno','Salt Lake City','Denver']);
-  assert.equal(vm.runInContext('expeditionUploadedRoute',context),null);
+  assert.deepEqual(JSON.parse(vm.runInContext('JSON.stringify(expeditionUploadedRoutes)',context)),[]);
   assert.equal(vm.runInContext('expeditionPreparedLegs',context),null);
   assert.equal(element('expeditionRouteFileStatus').textContent,
     '5 stops imported. Choose a transit type for each leg, then preview routes.');

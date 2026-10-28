@@ -3,7 +3,7 @@ let expeditionPending = false;
 let expeditionEditingId = null;
 let expeditionPreparedLegs = null;
 let expeditionPreparedKey = null;
-let expeditionUploadedRoute = null;
+let expeditionUploadedRoutes = [];
 let expeditionPreviewMap = null;
 let expeditionPreviewLayers = null;
 let expeditionSearchVersion = 0;
@@ -120,7 +120,7 @@ function expeditionRecoverySnapshot() {
     preparedLegs: expeditionPreparedLegs?.map(leg => ({
       ...leg, routeCoords: leg.routeCoords.map(point => [...point]), countyIds: [...leg.countyIds]
     })) || null,
-    uploadedRoute: expeditionUploadedRoute?.map(point => [...point]) || null
+    uploadedRoutes: expeditionUploadedRoutes.map(route => route.map(point => [...point]))
   };
 }
 
@@ -167,7 +167,9 @@ function restoreSavedExpeditionDraft() {
   const draft = savedExpeditionDraft;
   if (!draft) return;
   expeditionEditingId = null;
-  expeditionUploadedRoute = draft.uploadedRoute?.map(point => [...point]) || null;
+  const uploadedRoutes = Array.isArray(draft.uploadedRoutes)
+    ? draft.uploadedRoutes : (draft.uploadedRoute ? [draft.uploadedRoute] : []);
+  expeditionUploadedRoutes = uploadedRoutes.map(route => route.map(point => [...point]));
   expeditionDraft = draft.stops.map(stop => ({ ...stop, coords: [...stop.coords] }));
   document.getElementById('expeditionName').value = draft.name || '';
   document.getElementById('expeditionReason').value = draft.reason || '';
@@ -331,17 +333,17 @@ function parseUploadedRouteFile(text, filename) {
       }
     }
   } else throw new Error('Choose a .geojson, .json, or .kml stops or route file.');
+  const routes = lines.map(downsampleUploadedRoute);
   if (stops.length) {
     return {
       stops,
-      route: lines.length === 1 ? downsampleUploadedRoute(lines[0]) : null,
-      ...(lines.length ? { trackCount: lines.length } : {})
+      route: routes.length === 1 ? routes[0] : null,
+      ...(routes.length ? { routes, trackCount: routes.length } : {})
     };
   }
-  if (lines.length > 1) {
-    throw new Error('This file contains multiple route lines. Import one track at a time.');
+  if (routes.length) {
+    return { stops: [], route: routes.length === 1 ? routes[0] : null, routes, trackCount: routes.length };
   }
-  if (lines.length) return { stops: [], route: downsampleUploadedRoute(lines[0]) };
   throw new Error('No Point, LineString, or gx:Track geometry was found in the file.');
 }
 
@@ -358,11 +360,87 @@ function trackEndpointStop(name, coords, id) {
   };
 }
 
+function matchUploadedRoutesToStops(routes, stops) {
+  const matchedRoutes = Array.from({ length: Math.max(0, stops.length - 1) }, () => null);
+  const unmatchedRoutes = [];
+  for (const route of routes) {
+    let matched = false;
+    for (let index = 0; index < matchedRoutes.length; index++) {
+      if (matchedRoutes[index]) continue;
+      const startMatches = uploadedRouteDistanceKm(route[0], stops[index].coords) <= 1.609344;
+      const endMatches = uploadedRouteDistanceKm(route.at(-1), stops[index + 1].coords) <= 1.609344;
+      const reversedStartMatches = uploadedRouteDistanceKm(route.at(-1), stops[index].coords) <= 1.609344;
+      const reversedEndMatches = uploadedRouteDistanceKm(route[0], stops[index + 1].coords) <= 1.609344;
+      if (startMatches && endMatches) {
+        matchedRoutes[index] = route.map(point => [...point]);
+        matched = true;
+        break;
+      }
+      if (reversedStartMatches && reversedEndMatches) {
+        matchedRoutes[index] = route.map(point => [...point]).reverse();
+        matched = true;
+        break;
+      }
+    }
+    if (!matched) unmatchedRoutes.push(route);
+  }
+  return { matchedRoutes, unmatchedRoutes };
+}
+
+function connectedTrackRoutes(routes) {
+  if (!routes.length) return [];
+  const ordered = [routes[0].map(point => [...point])];
+  const remaining = routes.slice(1).map(route => route.map(point => [...point]));
+  while (remaining.length) {
+    const currentStart = ordered[0][0];
+    const currentEnd = ordered.at(-1).at(-1);
+    let connection = -1;
+    let connectedRoute = null;
+    let prepend = false;
+    for (let index = 0; index < remaining.length; index++) {
+      const route = remaining[index];
+      if (uploadedRouteDistanceKm(route[0], currentEnd) <= 1.609344) {
+        connection = index;
+        connectedRoute = route;
+        break;
+      }
+      if (uploadedRouteDistanceKm(route.at(-1), currentEnd) <= 1.609344) {
+        connection = index;
+        connectedRoute = route.slice().reverse();
+        break;
+      }
+      if (uploadedRouteDistanceKm(route.at(-1), currentStart) <= 1.609344) {
+        connection = index;
+        connectedRoute = route;
+        prepend = true;
+        break;
+      }
+      if (uploadedRouteDistanceKm(route[0], currentStart) <= 1.609344) {
+        connection = index;
+        connectedRoute = route.slice().reverse();
+        prepend = true;
+        break;
+      }
+    }
+    if (connection < 0 || !connectedRoute) {
+      throw new Error('Imported tracks do not connect end-to-end. Add the itinerary stops first, or select tracks that share endpoints.');
+    }
+    remaining.splice(connection, 1);
+    if (prepend) ordered.unshift(connectedRoute);
+    else ordered.push(connectedRoute);
+  }
+  return ordered;
+}
+
 function updateUploadedRouteStatus(message = null) {
-  const route = expeditionUploadedRoute;
+  const routes = expeditionUploadedRoutes;
+  const pointCount = routes.reduce((count, route) => count + route.length, 0);
+  const summary = routes.length === 1
+    ? `Loaded track: ${routes[0].length} points.`
+    : routes.length > 1 ? `Loaded ${routes.length} tracks: ${pointCount} points total.` : 'No route imported.';
   document.getElementById('expeditionRouteFileStatus').textContent =
-    message || (route ? `Loaded track: ${route.length} points.` : 'No route imported.');
-  document.getElementById('btnClearExpeditionRoute').classList.toggle('hidden', !route);
+    message || summary;
+  document.getElementById('btnClearExpeditionRoute').classList.toggle('hidden', !routes.length);
 }
 
 function dismissPlaceSuggestions(home, clearInput = false) {
@@ -506,7 +584,7 @@ function invalidateExpeditionRoutes() {
 function expeditionRouteKey() {
   return JSON.stringify([
     expeditionDraft.map(stop => [stop.kind, stop.id, stop.coords, stop.travelMode || 'road']),
-    expeditionUploadedRoute
+    expeditionUploadedRoutes
   ]);
 }
 
@@ -717,7 +795,7 @@ function openExpedition(id = null) {
     return;
   }
   expeditionEditingId = id;
-  expeditionUploadedRoute = null;
+  expeditionUploadedRoutes = [];
   expeditionReturnFocus = document.activeElement;
   document.getElementById('expeditionForm').reset();
   document.getElementById('expeditionFileInput').value = '';
@@ -748,9 +826,9 @@ function openExpedition(id = null) {
       return;
     }
   }
-  const importedLeg = existing?.routeLegs?.length === 1 && existing.routeLegs[0].routeSource === 'uploaded'
-    ? existing.routeLegs[0] : null;
-  if (importedLeg) expeditionUploadedRoute = importedLeg.routeCoords.map(point => [...point]);
+  expeditionUploadedRoutes = (existing?.routeLegs || [])
+    .filter(leg => leg.routeSource === 'uploaded')
+    .map(leg => leg.routeCoords.map(point => [...point]));
   updateUploadedRouteStatus();
   document.getElementById('expeditionSearch').value = '';
   document.getElementById('expeditionStatus').textContent = '';
@@ -773,7 +851,7 @@ function closeExpedition() {
   const discardRecovery = !expeditionEditingId;
   expeditionPicking = false;
   expeditionDraft = [];
-  expeditionUploadedRoute = null;
+  expeditionUploadedRoutes = [];
   expeditionEditingId = null;
   document.getElementById('expeditionFileInput').value = '';
   updateUploadedRouteStatus();
@@ -887,8 +965,10 @@ async function previewExpeditionRoutes() {
     status.textContent = 'Preparing route preview...';
     const legs = [];
     const countyIndex = coordinateIndexes.counties;
-    if (expeditionUploadedRoute && expeditionDraft.length !== 2) {
-      throw new Error('An imported track needs exactly two expedition stops. Remove intermediate stops or clear the track.');
+    const { matchedRoutes: uploadedRoutesByLeg, unmatchedRoutes } =
+      matchUploadedRoutesToStops(expeditionUploadedRoutes, expeditionDraft);
+    if (unmatchedRoutes.length) {
+      throw new Error(`${unmatchedRoutes.length} imported track${unmatchedRoutes.length === 1 ? '' : 's'} do not match adjacent stop pairs. Check that each track’s endpoints match its two stops.`);
     }
     for (let index = 0; index < expeditionDraft.length - 1; index++) {
       const from = expeditionDraft[index], to = expeditionDraft[index + 1];
@@ -896,11 +976,11 @@ async function previewExpeditionRoutes() {
       let routeCoords = [];
       let countyIds = [];
       let routeSource = 'direct';
-      if (expeditionUploadedRoute) {
-        routeCoords = expeditionUploadedRoute.map(point => [...point]);
+      if (uploadedRoutesByLeg[index]) {
+        routeCoords = uploadedRoutesByLeg[index].map(point => [...point]);
         if (uploadedRouteDistanceKm(routeCoords[0], from.coords) > 1.609344 ||
             uploadedRouteDistanceKm(routeCoords[routeCoords.length - 1], to.coords) > 1.609344) {
-          throw new Error('The imported track endpoints must match the first and last expedition stops.');
+          throw new Error(`The imported track for leg ${index + 1} must match its two adjacent stops.`);
         }
         routeSource = 'uploaded';
         if (mode === 'road' || mode === 'awd') {
@@ -1117,8 +1197,7 @@ function downloadExpeditionRecovery() {
   const recoveryDraft = {
     ...draft,
     stops: draft.stops.map(({ travelMode, ...stop }) => ({ ...stop, travelMode })),
-    legs: draft.preparedLegs,
-    uploadedRoute: draft.uploadedRoute
+    legs: draft.preparedLegs
   };
   downloadJsonFile(
     { ...passportPayload(), _unsavedExpeditionDraft: recoveryDraft },
@@ -1131,71 +1210,66 @@ function downloadExpeditionRecovery() {
 async function importExpeditionRoute(event) {
   if (AppState.viewOnly || expeditionPending) return;
   const input = event.target;
-  const file = input.files?.[0];
-  if (!file) return;
+  const files = Array.from(input.files || []);
+  if (!files.length) return;
   try {
-    if (file.size > 20_000_000) throw new Error('The route file is too large (20 MB maximum).');
-    const imported = parseUploadedRouteFile(await file.text(), file.name);
-    if (imported.stops.length) {
+    if (files.length > 100) throw new Error('Import at most 100 route files at a time.');
+    const totalBytes = files.reduce((total, file) => total + (Number(file.size) || 0), 0);
+    if (totalBytes > 20_000_000) throw new Error('The selected route files exceed the 20 MB total limit.');
+    const importedFiles = await Promise.all(files.map(async file =>
+      parseUploadedRouteFile(await file.text(), file.name)));
+    const stopFiles = importedFiles.filter(imported => imported.stops.length);
+    if (stopFiles.length > 1) throw new Error('Only one selected file can provide the ordered itinerary stops.');
+    const importedRoutes = importedFiles.flatMap(imported =>
+      imported.routes || (imported.route ? [imported.route] : []));
+    if (stopFiles.length) {
+      const imported = stopFiles[0];
       if (expeditionDraft.length && !window.confirm(
         'Replace the current expedition stops with the imported stops?'
       )) return;
-      expeditionDraft = imported.stops.map(stop => ({
+      const importedStops = imported.stops.map(stop => ({
         kind: 'place',
         id: `file_${crypto.randomUUID()}`,
         name: stop.name,
         coords: [...stop.coords],
         travelMode: 'road'
       }));
-      expeditionUploadedRoute = null;
-      let ignoredTrackReason = '';
-      if (imported.trackCount > 1) {
-        ignoredTrackReason = `${imported.trackCount} embedded tracks were skipped because a single leg can use only one track.`;
-      } else if (imported.route) {
-        if (expeditionDraft.length === 2) {
-          const route = imported.route;
-          const startMatches = uploadedRouteDistanceKm(route[0], expeditionDraft[0].coords) <= 1.609344;
-          const endMatches = uploadedRouteDistanceKm(route[route.length - 1], expeditionDraft[1].coords) <= 1.609344;
-          const reversedStartMatches = uploadedRouteDistanceKm(route[route.length - 1], expeditionDraft[0].coords) <= 1.609344;
-          const reversedEndMatches = uploadedRouteDistanceKm(route[0], expeditionDraft[1].coords) <= 1.609344;
-          if (startMatches && endMatches) expeditionUploadedRoute = route;
-          else if (reversedStartMatches && reversedEndMatches) expeditionUploadedRoute = route.reverse();
-          else ignoredTrackReason = 'The embedded track was skipped because its endpoints do not match the two stops.';
-        } else {
-          ignoredTrackReason = 'The embedded track was skipped because it cannot be assigned across multiple legs.';
-        }
-      }
+      const { matchedRoutes, unmatchedRoutes } = matchUploadedRoutesToStops(importedRoutes, importedStops);
+      expeditionDraft = importedStops;
+      expeditionUploadedRoutes = matchedRoutes.filter(Boolean);
       invalidateExpeditionRoutes();
       renderExpeditionStops();
-      const importedMessage = expeditionUploadedRoute
-        ? `${imported.stops.length} stops and their track imported. Choose a transit type for each leg, then preview routes.`
-        : `${imported.stops.length} stops imported. Choose a transit type for each leg, then preview routes.`;
-      updateUploadedRouteStatus(ignoredTrackReason
-        ? `${importedMessage} ${ignoredTrackReason}` : importedMessage);
+      const matchedCount = expeditionUploadedRoutes.length;
+      const importedMessage = `${imported.stops.length} stops imported` +
+        (matchedCount ? ` with ${matchedCount} matching track${matchedCount === 1 ? '' : 's'}` : '') +
+        '. Choose a transit type for each leg, then preview routes.';
+      const skippedMessage = unmatchedRoutes.length
+        ? ` ${unmatchedRoutes.length} embedded track${unmatchedRoutes.length === 1 ? '' : 's'} skipped because the endpoints do not match adjacent stops.`
+        : '';
+      updateUploadedRouteStatus(`${importedMessage}${skippedMessage}`);
       return;
     }
-    const route = imported.route;
-    if (expeditionDraft.length > 2) {
-      throw new Error('An imported track needs exactly two expedition stops. Remove intermediate stops before importing.');
-    }
+    if (!importedRoutes.length) throw new Error('The selected files contain no route tracks.');
+    const candidateRoutes = [...expeditionUploadedRoutes, ...importedRoutes];
     if (expeditionDraft.length < 2) {
+      const orderedRoutes = connectedTrackRoutes(candidateRoutes);
       expeditionDraft = [
-        trackEndpointStop('Track Start', route[0], `track_start_${crypto.randomUUID()}`),
-        trackEndpointStop('Track End', route[route.length - 1], `track_end_${crypto.randomUUID()}`)
+        trackEndpointStop('Track Start', orderedRoutes[0][0], `track_start_${crypto.randomUUID()}`),
+        ...orderedRoutes.map(route =>
+          trackEndpointStop('Track End', route.at(-1), `track_end_${crypto.randomUUID()}`))
       ];
-      renderExpeditionStops();
+      expeditionUploadedRoutes = orderedRoutes;
     } else {
-      const startMatches = uploadedRouteDistanceKm(route[0], expeditionDraft[0].coords) <= 1.609344;
-      const endMatches = uploadedRouteDistanceKm(route[route.length - 1], expeditionDraft[1].coords) <= 1.609344;
-      const reversedStartMatches = uploadedRouteDistanceKm(route[route.length - 1], expeditionDraft[0].coords) <= 1.609344;
-      const reversedEndMatches = uploadedRouteDistanceKm(route[0], expeditionDraft[1].coords) <= 1.609344;
-      if (!startMatches || !endMatches) {
-        if (reversedStartMatches && reversedEndMatches) route.reverse();
-        else throw new Error('The imported track endpoints must match the first and last expedition stops.');
+      const { matchedRoutes, unmatchedRoutes } = matchUploadedRoutesToStops(candidateRoutes, expeditionDraft);
+      if (unmatchedRoutes.length) {
+        throw new Error(`${unmatchedRoutes.length} track${unmatchedRoutes.length === 1 ? '' : 's'} could not be matched to adjacent stops. Check the track endpoints and itinerary order.`);
       }
+      expeditionUploadedRoutes = matchedRoutes.filter(Boolean);
     }
-    expeditionUploadedRoute = route;
-    updateUploadedRouteStatus();
+    updateUploadedRouteStatus(
+      `${importedRoutes.length} track${importedRoutes.length === 1 ? '' : 's'} added. ` +
+      `${expeditionUploadedRoutes.length} track${expeditionUploadedRoutes.length === 1 ? '' : 's'} matched to itinerary legs.`
+    );
     invalidateExpeditionRoutes();
     renderExpeditionStops();
     await previewExpeditionRoutes();
@@ -1209,7 +1283,7 @@ async function importExpeditionRoute(event) {
 
 function clearExpeditionRoute() {
   if (expeditionPending) return;
-  expeditionUploadedRoute = null;
+  expeditionUploadedRoutes = [];
   document.getElementById('expeditionFileInput').value = '';
   updateUploadedRouteStatus();
   invalidateExpeditionRoutes();
