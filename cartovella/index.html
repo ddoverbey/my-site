@@ -8012,6 +8012,8 @@
         statesCount: stats.statesCount,
         parksCount: (stats.visitedParks || []).length,
         biomesCount: stats.biomesSet?.size || 0,
+        totalMiles: Math.round(AppState.expeditions.reduce((total, expedition) =>
+          total + expeditionDistanceMiles(expedition), 0) * 10) / 10,
         clearedPct: Number.isFinite(stats.clearedPct) ? stats.clearedPct : null,
         topBadges,
         recentExpeditions: await Promise.all(recentExpeditions.map(async expedition => ({
@@ -8152,6 +8154,8 @@
         .map(badge => `<span class="rounded-full border border-amber-300/20 bg-amber-950/40 px-2 py-1 text-[10px] text-amber-100" title="${escapeHtml(badge.title || '')}">${escapeHtml(badge.icon || '🏆')} ${escapeHtml(badge.title || '')}</span>`)
         .join('');
       const stat = value => Number.isFinite(Number(value)) ? Number(value).toLocaleString('en') : '0';
+      const totalMiles = Number.isFinite(stats.totalMiles) && stats.totalMiles >= 0
+        ? `${stats.totalMiles.toLocaleString('en', { maximumFractionDigits: 1 })} mi` : 'Not synced';
       const routeMapThumbnail = typeof stats.routeMapThumbnail === 'string' &&
         stats.routeMapThumbnail.length <= 64000 &&
         /^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/.test(stats.routeMapThumbnail)
@@ -8170,6 +8174,9 @@
           <span>Parks <b>${escapeHtml(stat(stats.parksCount))}</b></span>
           <span>Biomes <b>${escapeHtml(stat(stats.biomesCount))}</b></span>
         </div>
+        <p class="mt-3 rounded-lg border border-sky-400/20 bg-sky-950/30 px-3 py-2 text-xs text-slate-300">
+          Total miles traveled <b class="ml-1 text-sky-200">${escapeHtml(totalMiles)}</b>
+        </p>
         ${routeMapThumbnail ? `<img src="${escapeHtml(routeMapThumbnail)}" alt="Route map preview for @${escapeHtml(profile.username)}" loading="lazy" decoding="async" class="mt-3 aspect-[320/168] w-full rounded-lg border border-slate-700 object-cover">` : ''}
         ${Number.isFinite(stats.clearedPct) ? `<p class="mt-2 text-[11px] text-emerald-200">${stats.clearedPct.toFixed(1)}% of mapped land cleared</p>` : ''}
         ${badges ? `<div class="mt-3 flex flex-wrap gap-1.5" aria-label="Recent earned achievements">${badges}</div>` : ''}

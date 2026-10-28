@@ -1553,6 +1553,10 @@ await checkAsync('public summary stats contain compact profile, achievement, and
     assert.equal(summary.statesCount, 5);
     assert.equal(summary.parksCount, 2);
     assert.equal(summary.biomesCount, 2);
+    assert.equal(summary.totalMiles, vm.runInContext(
+      'Math.round(AppState.expeditions.reduce((total, expedition) => total + expeditionDistanceMiles(expedition), 0) * 10) / 10',
+      context
+    ));
     assert.equal(summary.clearedPct, 12.5);
     assert.match(summary.routeMapThumbnail, /^data:image\/jpeg;base64,/);
     assert.deepEqual(routeCanvasEncodings[0], {
@@ -1749,7 +1753,7 @@ await checkAsync('Explorers’ Guild renders mocked public profiles and expediti
     username: 'devon', display_name: 'Devon · Alpine Ranger', updated_at: '2026-10-26T12:00:00Z',
     summary_stats: {
       level: 18, cls: 'Alpine Ranger', homeName: 'Cloud Citadel', countriesCount: 3,
-      statesCount: 5, parksCount: 12, biomesCount: 4, clearedPct: 2.4,
+      statesCount: 5, parksCount: 12, biomesCount: 4, totalMiles: 12345.6, clearedPct: 2.4,
       character: { pet: 'pet_fox', background: 'bg_yosemite' },
       routeMapThumbnail: 'data:image/jpeg;base64,YWJjZA==',
       topBadges: [{ title: 'Grand Voyager', icon: '🏕️', rarity: 'epic' }],
@@ -1788,10 +1792,16 @@ await checkAsync('Explorers’ Guild renders mocked public profiles and expediti
     assert.equal(requests, 2, 'opening the Guild tab again refreshes the directory');
     assert.match(element('guildExplorersGrid').innerHTML, /@devon/);
     assert.match(element('guildExplorersGrid').innerHTML, /Cloud Citadel/);
+    assert.match(element('guildExplorersGrid').innerHTML, /Total miles traveled/);
+    assert.match(element('guildExplorersGrid').innerHTML, /12,345\.6 mi/);
+    const unsyncedCard = vm.runInContext(
+      `renderGuildExplorerCard({username:'legacy',summary_stats:{}})`, context
+    );
+    assert.match(unsyncedCard, /Total miles traveled[\s\S]*Not synced/);
     assert.match(element('guildExplorersGrid').innerHTML, /Grand Voyager/);
     assert.match(element('guildExplorersGrid').innerHTML, /data:image\/jpeg;base64,YWJjZA==/);
-    assert.match(element('guildExplorersGrid').innerHTML, /Pixel-art route map for @devon/);
-    assert.match(element('guildExplorersGrid').innerHTML, /image-rendering:pixelated/);
+    assert.match(element('guildExplorersGrid').innerHTML, /Route map preview for @devon/);
+    assert.doesNotMatch(element('guildExplorersGrid').innerHTML, /image-rendering:pixelated/);
     assert.match(element('guildExpeditionsFeed').innerHTML, /Spirit Falls Weekend/);
     assert.match(element('guildExpeditionsFeed').innerHTML, /The falls were roaring/);
     assert.match(element('guildExpeditionsFeed').innerHTML, /data:image\/jpeg;base64,YWJjZA==/);
