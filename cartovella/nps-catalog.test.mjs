@@ -1403,36 +1403,46 @@ await checkAsync('GeoJSON imports ordered stops and keeps only endpoint-matched 
     assert.match(importStatus, /2 stops imported with 1 matching track/);
     assert.equal(vm.runInContext('expeditionDraft[0].travelMode', context), 'road');
 
-    const itineraryWithTwoTracks = {
-      type: 'FeatureCollection',
-      features: [
-        { type: 'Feature', properties: { name: 'Start Harbor' }, geometry: { type: 'Point', coordinates: [-122, 37] } },
-        { type: 'Feature', properties: { name: 'Mountain Pass' }, geometry: { type: 'Point', coordinates: [-121, 37.5] } },
-        { type: 'Feature', properties: { name: 'Finish Lodge' }, geometry: { type: 'Point', coordinates: [-120, 38] } },
-        { type: 'Feature', properties: { name: 'Camp' }, geometry: { type: 'Point', coordinates: [-119, 39] } }
-      ]
-    };
+    const walkOneKml = `<kml><Document>
+      <Placemark><name>Deadhorse, Alaska</name><Point><coordinates>-148.4597191,70.2001996,0</coordinates></Point></Placemark>
+      <Placemark><name>Deadhorse, Alaska</name><Point><coordinates>-148.4596106,70.2000611,0</coordinates></Point></Placemark>
+      <Placemark><name>Yaviza, Panama</name><Point><coordinates>-77.6916121,8.1578525,0</coordinates></Point></Placemark>
+      <Placemark><name>Walk 1</name><LineString><coordinates>-148.4596106,70.2000611,0 -100,40,0 -77.6916121,8.1578525,0</coordinates></LineString></Placemark>
+    </Document></kml>`;
+    const walkTwoKml = `<kml><Document>
+      <Placemark><name>Turbo, Colombia</name><Point><coordinates>-76.7284435,8.0951616,0</coordinates></Point></Placemark>
+      <Placemark><name>Ushuaia, Argentina</name><Point><coordinates>-68.303,-54.8019,0</coordinates></Point></Placemark>
+      <Placemark><name>Walk 2</name><LineString><coordinates>-76.7284435,8.0951616,0 -75,0,0 -68.303,-54.8019,0</coordinates></LineString></Placemark>
+    </Document></kml>`;
+    vm.runInContext('expeditionDraft = []; expeditionUploadedRoutes = []', context);
+    input.files = [
+      { name: 'Walk 1.kml', size: walkOneKml.length, text: async () => walkOneKml },
+      { name: 'Walk 2.kml', size: walkTwoKml.length, text: async () => walkTwoKml }
+    ];
+    await context.importExpeditionRoute({ target: input });
+    const importedWalkStops = JSON.parse(vm.runInContext('JSON.stringify(expeditionDraft)', context));
+    const savedTracks = JSON.parse(vm.runInContext('JSON.stringify(expeditionUploadedRoutes)', context));
+    assert.deepEqual(importedWalkStops.map(stop => stop.name), [
+      'Deadhorse, Alaska', 'Yaviza, Panama', 'Turbo, Colombia', 'Ushuaia, Argentina'
+    ]);
+    assert.equal(savedTracks.length, 2);
+    assert.deepEqual(savedTracks[0].at(-1), [8.1578525, -77.6916121]);
+    assert.deepEqual(savedTracks[1][0], [8.0951616, -76.7284435]);
+    const matchedLegs = JSON.parse(vm.runInContext(
+      'JSON.stringify(matchUploadedRoutesToStops(expeditionUploadedRoutes, expeditionDraft).matchedRoutes.map(Boolean))',
+      context
+    ));
+    assert.deepEqual(matchedLegs, [true, false, true], 'the Yaviza–Turbo gap remains a separate leg');
+    assert.match(importStatus, /4 stops imported from 2 files with 2 matching tracks/);
+    assert.match(importStatus, /1 leg has no uploaded track; choose how to travel that gap in Cartovella/);
+
+    vm.runInContext('expeditionDraft = []; expeditionUploadedRoutes = []', context);
     const firstTrack = {
       type: 'LineString', coordinates: [[-122, 37], [-121.5, 37.25], [-121, 37.5]]
     };
     const secondTrack = {
       type: 'LineString', coordinates: [[-120, 38], [-120.5, 37.75], [-121, 37.5]]
     };
-    vm.runInContext('expeditionDraft = []; expeditionUploadedRoutes = []', context);
-    input.files = [
-      { name: 'itinerary.geojson', size: 500, text: async () => JSON.stringify(itineraryWithTwoTracks) },
-      { name: 'first-leg.geojson', size: 200, text: async () => JSON.stringify(firstTrack) },
-      { name: 'second-leg.geojson', size: 200, text: async () => JSON.stringify(secondTrack) }
-    ];
-    await context.importExpeditionRoute({ target: input });
-    const savedTracks = JSON.parse(vm.runInContext('JSON.stringify(expeditionUploadedRoutes)', context));
-    assert.equal(vm.runInContext('expeditionDraft.length', context), 4);
-    assert.equal(savedTracks.length, 2);
-    assert.deepEqual(savedTracks[0].at(-1), [37.5, -121]);
-    assert.deepEqual(savedTracks[1][0], [37.5, -121], 'reversed tracks are oriented to the itinerary');
-    assert.match(importStatus, /4 stops imported with 2 matching tracks/);
-
-    vm.runInContext('expeditionDraft = []; expeditionUploadedRoutes = []', context);
     input.files = [
       { name: 'first-connected.geojson', size: 200, text: async () => JSON.stringify(firstTrack) },
       { name: 'second-connected.geojson', size: 200, text: async () => JSON.stringify(secondTrack) }
@@ -6884,7 +6894,7 @@ check('imported GeoJSON points populate an ordered editable itinerary with per-l
   assert.deepEqual(JSON.parse(vm.runInContext('JSON.stringify(expeditionUploadedRoutes)',context)),[]);
   assert.equal(vm.runInContext('expeditionPreparedLegs',context),null);
   assert.equal(element('expeditionRouteFileStatus').textContent,
-    '5 stops imported. Choose a transit type for each leg, then preview routes.');
+    '5 stops imported. Choose a transit type for each leg, then preview routes. 4 legs have no uploaded track; choose how to travel those gaps in Cartovella.');
   const rows=element('expeditionStops').children;
   assert.equal(rows.length,5);
   const selectors=rows.slice(0,-1).map(row=>row.children[1].children[0]);

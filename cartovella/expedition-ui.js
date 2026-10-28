@@ -12,6 +12,7 @@ let homeSearchVersion = 0;
 let homeSearchTimer = null;
 let expeditionReturnFocus = null;
 const expeditionRouteCache = new Map();
+const DUPLICATE_IMPORTED_STOP_DISTANCE_KM = 0.05;
 let lastRouteRequest = 0;
 const EXPEDITION_DRAFT_DB = 'cartovella-local-recovery';
 const LEGACY_EXPEDITION_DRAFT_DB = 'wanderlog-local-recovery';
@@ -1219,34 +1220,48 @@ async function importExpeditionRoute(event) {
     const importedFiles = await Promise.all(files.map(async file =>
       parseUploadedRouteFile(await file.text(), file.name)));
     const stopFiles = importedFiles.filter(imported => imported.stops.length);
-    if (stopFiles.length > 1) throw new Error('Only one selected file can provide the ordered itinerary stops.');
     const importedRoutes = importedFiles.flatMap(imported =>
       imported.routes || (imported.route ? [imported.route] : []));
     if (stopFiles.length) {
-      const imported = stopFiles[0];
+      const importedStops = [];
+      for (const imported of stopFiles) {
+        for (const stop of imported.stops) {
+          const previous = importedStops.at(-1);
+          if (previous && uploadedRouteDistanceKm(previous.coords, stop.coords) <= DUPLICATE_IMPORTED_STOP_DISTANCE_KM) {
+            continue;
+          }
+          if (importedStops.length >= 100) throw new Error('Combined imported itineraries can contain at most 100 stops.');
+          importedStops.push(stop);
+        }
+      }
       if (expeditionDraft.length && !window.confirm(
-        'Replace the current expedition stops with the imported stops?'
+        'Replace the current itinerary with the ordered stops from the selected files?'
       )) return;
-      const importedStops = imported.stops.map(stop => ({
+      const routeStops = importedStops.map(stop => ({
         kind: 'place',
         id: `file_${crypto.randomUUID()}`,
         name: stop.name,
         coords: [...stop.coords],
         travelMode: 'road'
       }));
-      const { matchedRoutes, unmatchedRoutes } = matchUploadedRoutesToStops(importedRoutes, importedStops);
-      expeditionDraft = importedStops;
+      const { matchedRoutes, unmatchedRoutes } = matchUploadedRoutesToStops(importedRoutes, routeStops);
+      expeditionDraft = routeStops;
       expeditionUploadedRoutes = matchedRoutes.filter(Boolean);
       invalidateExpeditionRoutes();
       renderExpeditionStops();
       const matchedCount = expeditionUploadedRoutes.length;
-      const importedMessage = `${imported.stops.length} stops imported` +
+      const importedMessage = `${routeStops.length} stops imported` +
+        (stopFiles.length > 1 ? ` from ${stopFiles.length} files` : '') +
         (matchedCount ? ` with ${matchedCount} matching track${matchedCount === 1 ? '' : 's'}` : '') +
         '. Choose a transit type for each leg, then preview routes.';
+      const untrackedLegCount = Math.max(0, routeStops.length - 1 - matchedCount);
+      const gapMessage = untrackedLegCount
+        ? ` ${untrackedLegCount} leg${untrackedLegCount === 1 ? '' : 's'} ${untrackedLegCount === 1 ? 'has' : 'have'} no uploaded track; choose how to travel ${untrackedLegCount === 1 ? 'that gap' : 'those gaps'} in Cartovella.`
+        : '';
       const skippedMessage = unmatchedRoutes.length
         ? ` ${unmatchedRoutes.length} embedded track${unmatchedRoutes.length === 1 ? '' : 's'} skipped because the endpoints do not match adjacent stops.`
         : '';
-      updateUploadedRouteStatus(`${importedMessage}${skippedMessage}`);
+      updateUploadedRouteStatus(`${importedMessage}${gapMessage}${skippedMessage}`);
       return;
     }
     if (!importedRoutes.length) throw new Error('The selected files contain no route tracks.');

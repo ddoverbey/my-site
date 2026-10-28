@@ -10,9 +10,10 @@ expeditions, track parks and regions, and earn achievements from your travel his
   Walking legs use mapped pedestrian routes when available and show a dashed direct approximation when
   no walkable route exists.
 - GeoJSON and KML imports support ordered stops and multiple tracks, including track-only files or
-  files that contain both. Select multiple track files to fill separate itinerary legs; each track
-  is matched to adjacent stops by its endpoints. Connected track-only imports create the itinerary;
-  choose a transit mode for every leg. The Global Route Map can be exported as a PNG route poster.
+  files that contain both. Select multiple files in itinerary order to combine their stops and tracks;
+  adjacent duplicate stops are merged, and each track is matched to adjacent stops by its endpoints.
+  Gaps between files remain as legs to route in the app. Connected track-only imports create the
+  itinerary; choose a transit mode for every leg. The Global Route Map can be exported as a PNG route poster.
   Water Transit routes are blue, while flights use a neutral gray in the map and trip logs.
 - The Explorers' Guild refreshes its directory when opened and shows opted-in explorers' character
   scenes, total logged travel miles, and compressed snapshots of the same complete Global Route Map,

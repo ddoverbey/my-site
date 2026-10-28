@@ -1128,7 +1128,7 @@
           <span id="expeditionRouteFileStatus" role="status" aria-live="polite" class="text-xs text-slate-400">No route imported.</span>
           <button id="btnClearExpeditionRoute" type="button" class="hidden rounded-lg px-2 py-1 text-xs text-amber-200 underline">Clear track</button>
         </div>
-        <p class="text-[11px] text-slate-500">Select multiple GeoJSON/KML files to import several tracks. Tracks are matched to adjacent stops by their endpoints; when no stops are listed, connected tracks create the itinerary. Choose a transit type for each leg. Unmatched embedded tracks are skipped with a status message.</p>
+        <p class="text-[11px] text-slate-500">Select multiple GeoJSON/KML files in itinerary order to combine their stops and tracks. Adjacent duplicate stops are merged; matching tracks fill their legs. Any gaps between files remain as legs you can route in Cartovella by choosing a transit type. With no stops, connected track-only files create the itinerary.</p>
         <button id="btnPreviewExpedition" type="button" class="rounded-lg bg-sky-700 px-3 py-2 text-xs">Preview routes</button>
         <div id="expeditionRoutePreview" class="hidden h-52 w-full rounded-lg overflow-hidden" aria-label="Expedition route preview"></div>
         <p id="expeditionRouteSummary" class="text-xs text-slate-400"></p>
