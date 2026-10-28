@@ -240,7 +240,7 @@ check('wardrobe and shop expose one compact layer picker at a time', () => {
     assert.match(controls.innerHTML, /aria-label="Next hats &amp; helmets"\s+disabled/);
   }
 });
-check('Miku uses its fixed sprite and only exposes pet and effect customization', () => {
+check('Miku locks hair and clothing while keeping scene, sprite, skin, pet and effect choices available', () => {
   const miku = characterCreator.SHOP_WARDROBE.find(item => item.id === 'special_miku');
   assert.ok(miku);
   assert.equal(miku.name, 'Miku');
@@ -274,7 +274,10 @@ check('Miku uses its fixed sprite and only exposes pet and effect customization'
   render();
   assert.match(controls.innerHTML, /data-character-field="specialSkin"/);
   assert.match(controls.innerHTML, /data-character-field="effect"/);
-  for (const field of ['gender', 'skinTone', 'hairPreset']) {
+  for (const field of ['gender', 'skinTone']) {
+    assert.match(controls.innerHTML, new RegExp(`data-character-field="${field}"`));
+  }
+  for (const field of ['hairPreset', 'top']) {
     assert.doesNotMatch(controls.innerHTML, new RegExp(`data-character-field="${field}"`));
   }
   controls.onclick({ target: { closest(selector) {
@@ -283,8 +286,12 @@ check('Miku uses its fixed sprite and only exposes pet and effect customization'
       : null;
   } } });
   assert.equal(changed, undefined, 'fixed-skin gear cannot be changed through the event handler');
-  controls.onchange({ target: { dataset: { characterField: 'skinTone' }, value: 'deep' } });
-  assert.equal(changed, undefined, 'fixed-skin colors cannot be changed through the event handler');
+  controls.onchange({ target: { dataset: { characterField: 'skinTone' }, value: 'porcelain' } });
+  assert.equal(changed?.skinTone, 'porcelain', 'skin selection remains available for when Miku is deselected');
+  changed = undefined;
+  controls.onchange({ target: { dataset: { characterField: 'gender' }, value: 'female' } });
+  assert.equal(changed?.gender, 'female', 'sprite selection remains available for when Miku is deselected');
+  changed = undefined;
   for (const [field, id] of [['effect', ''], ['pet', 'pet_none']]) {
     render();
     controls.onclick({ target: { closest(selector) {
@@ -304,7 +311,13 @@ check('Miku uses its fixed sprite and only exposes pet and effect customization'
   assert.doesNotMatch(controls.innerHTML, /data-character-field="top"/);
   controls.dataset.activeTab = 'backgrounds';
   render();
-  assert.doesNotMatch(controls.innerHTML, /data-character-field="background"/);
+  assert.match(controls.innerHTML, /data-character-field="background"/);
+  controls.onclick({ target: { closest(selector) {
+    return selector === 'button[data-character-field][data-character-id]'
+      ? { dataset: { characterField: 'background', characterId: 'bg_green_hills' }, disabled: false }
+      : null;
+  } } });
+  assert.equal(changed?.background, 'bg_green_hills', 'scene selection remains available');
   controls.dataset.activeTab = 'pets';
   render();
   assert.match(controls.innerHTML, /data-character-field="pet"/);

@@ -683,8 +683,9 @@
   const EQUIPMENT_BY_FIELD = Object.freeze(Object.fromEntries(
     [...new Set(EQUIPMENT_CATALOG.map(item => item.field))].map(field =>
       [field, EQUIPMENT_CATALOG.filter(item => item.field === field)])));
-  const FIXED_APPEARANCE_FIELDS = new Set([
-    'specialSkin', 'effect', 'pet', 'petAnimation', 'petHat', 'petBackpack'
+  const FIXED_SKIN_ALLOWED_FIELDS = new Set([
+    'gender', 'skinTone', 'specialSkin', 'effect', 'pet', 'petAnimation',
+    'petHat', 'petBackpack', 'background'
   ]);
   const fixedAppearanceSkin = character =>
     EQUIPMENT_BY_FIELD.specialSkin.find(item =>
@@ -1806,15 +1807,18 @@
     const sections = {
       appearance: `<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
         ${fixedAppearance
-          ? '<p class="sm:col-span-2 text-xs text-slate-400">Miku’s appearance is fixed; only pets and character effects can be changed.</p>'
-          : `${dropdown('gender', 'Character sprite', character.gender, [
-            { id: 'male', name: 'Sprite A' }, { id: 'female', name: 'Sprite B' }
-          ], option => characterThumbnailMarkup({ ...character, gender: option.id }))}
-          ${dropdown('skinTone', 'Skin tone', character.skinTone, SKIN_TONES, option =>
-            `<span aria-hidden="true" class="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-slate-900">
-              <span class="h-6 w-6 rounded-full border border-slate-500" style="background-color:${escapeHtml(option.color)}"></span>
-            </span>`)}
-          <div class="sm:col-span-2">${hairPicker}</div>`}
+          ? '<p class="sm:col-span-2 text-xs text-slate-400">Miku’s sprite stays fixed; hair and clothing cannot be changed. Sprite and skin choices are saved for when you switch back.</p>'
+          : ''}
+        ${dropdown('gender', 'Character sprite', character.gender, [
+          { id: 'male', name: 'Sprite A' }, { id: 'female', name: 'Sprite B' }
+        ], option => characterThumbnailMarkup({ ...character, gender: option.id }))}
+        ${dropdown('skinTone', 'Skin tone', character.skinTone, SKIN_TONES, option =>
+          `<span aria-hidden="true" class="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-slate-900">
+            <span class="h-6 w-6 rounded-full border border-slate-500" style="background-color:${escapeHtml(option.color)}"></span>
+          </span>`)}
+        ${fixedAppearance
+          ? '<p class="sm:col-span-2 text-xs text-slate-400">Hairstyle changes are unavailable while Miku is selected.</p>'
+          : `<div class="sm:col-span-2">${hairPicker}</div>`}
         <div class="sm:col-span-2">${equipmentDropdown('specialSkin', 'Special Skins')}</div>
           <div class="sm:col-span-2">
             <p class="mb-2 text-xs text-slate-400">Equipped effects animate automatically. Unlock more in the Coin Shop.</p>
@@ -1834,9 +1838,7 @@
           ${equipmentDropdown('petHat', 'Dog Hat', !character.pet.startsWith('pet_trail_dog'))}
           ${equipmentDropdown('petBackpack', 'Dog Backpack', !character.pet.startsWith('pet_trail_dog'))}
         </div>`,
-      backgrounds: fixedAppearance
-        ? '<p class="text-xs text-slate-400">Scene changes are unavailable while Miku is selected.</p>'
-        : `<p class="mb-3 text-xs text-slate-400">Campfire Night is your current scene.</p>
+      backgrounds: `<p class="mb-3 text-xs text-slate-400">Choose a scene for your character.</p>
         ${dropdown('background', 'Scene', character.background,
           catalogOptions(BACKGROUND_CATALOG, character.background, stats, character,
             completedAchievements, 'Equipped', appState),
@@ -1969,7 +1971,7 @@
         if (disabled || choiceButton.disabled) return;
         const field = choiceButton.dataset.characterField;
         const id = choiceButton.dataset.characterId;
-        if (fixedAppearance && !FIXED_APPEARANCE_FIELDS.has(field)) return;
+        if (fixedAppearance && !FIXED_SKIN_ALLOWED_FIELDS.has(field)) return;
         if (field === 'hairPreset') {
           const option = hairPresetOptions(character).find(item => item.id === id);
           if (!option || !unlockStatus(option.unlock, stats, character,
@@ -2009,7 +2011,7 @@
         return;
       }
       const field = event.target.dataset.characterField;
-      if (!field || disabled || (fixedAppearance && !FIXED_APPEARANCE_FIELDS.has(field))) return;
+      if (!field || disabled || (fixedAppearance && !FIXED_SKIN_ALLOWED_FIELDS.has(field))) return;
       options.onChange?.(normalizeCharacter({ ...character, [field]: event.target.value }));
     };
   }
