@@ -6597,7 +6597,7 @@ context.uiMixedStops=[
 ];
 vm.runInContext(`
   applyPassport(migratePassport({counties:{'08001':'v'}}));map=null;PARKS=[];
-  expeditionRoadCache.clear();
+  expeditionRouteCache.clear();
   coordinateIndexes={countries:[],states:[],counties:[],ecoregions:[]};
   countyGeoJson=[{id:'08001'},{id:'08059'},{id:'06073'},{id:'08031'},{id:'08097'}];
   openExpedition();expeditionDraft=uiMixedStops.map(stop=>({...stop,coords:[...stop.coords]}));invalidateExpeditionRoutes();
@@ -6695,7 +6695,7 @@ check('shared passports show expedition history but cannot open an editor or upd
   assert.equal(vm.runInContext('expeditionEditingId',context),null);
 });
 vm.runInContext(`
-  AppState.viewOnly=false;openExpedition();expeditionRoadCache.clear();
+  AppState.viewOnly=false;openExpedition();expeditionRouteCache.clear();
   expeditionDraft=uiMixedStops.map(stop=>({...stop,coords:[...stop.coords]}));invalidateExpeditionRoutes();
 `,context);
 context.CoordinateLookups.lookupRoadRoute=async()=>{throw new Error('Road routing HTTP 503');};
@@ -6730,24 +6730,44 @@ vm.runInContext(`
 `,context);
 let directModeRoadRequests=0;
 let directModeCountyRequests=0;
+let walkingRequests=0;
 context.CoordinateLookups.lookupRoadRoute=async()=>{directModeRoadRequests++;throw new Error('Direct modes must not route');};
+context.CoordinateLookups.lookupWalkingRoute=async(from,to)=>{
+  walkingRequests++;
+  return [[...from],[(from[0]+to[0])/2,(from[1]+to[1])/2],[...to]];
+};
 context.CoordinateLookups.routeCountyIds=()=>{directModeCountyRequests++;throw new Error('Direct modes must not interpolate counties');};
 await element('btnPreviewExpedition').handlers.click();
-check('ferry, rail and walking legs preview without road requests, county interpolation, or land fog',()=>{
+check('walking legs use pedestrian routes while ferries and rail remain direct without county credit',()=>{
   assert.equal(directModeRoadRequests,0);
   assert.equal(directModeCountyRequests,0);
+  assert.equal(walkingRequests,1);
   const legs=JSON.parse(vm.runInContext('JSON.stringify(expeditionPreparedLegs)',context));
   assert.notEqual(legs,null,element('expeditionStatus').textContent);
   assert.deepEqual(legs.map(leg=>leg.mode),['ferry','rail','foot']);
-  legs.forEach((leg,index)=>{
+  legs.slice(0,2).forEach((leg,index)=>{
     assert.equal(leg.routeSource,'direct');
     assert.deepEqual(leg.routeCoords,context.uiMixedStops.slice(index,index+2).map(stop=>stop.coords));
     assert.deepEqual(leg.countyIds,[]);
   });
-  assert.equal(vm.runInContext('TravelLedger.fogRoutes(draftExpedition(expeditionPreparedLegs)).length',context),0);
+  assert.equal(legs[2].routeSource,'routed');
+  assert.equal(legs[2].routeCoords.length,3);
+  assert.deepEqual(legs[2].countyIds,[]);
+  assert.ok(previewLines.some(line => line.options.color === '#4ade80' && line.options.dashArray === null));
   assert.equal(vm.runInContext('TravelLedger.fogRoutes(draftExpedition(expeditionPreparedLegs)).length',context),0);
   assert.equal(travelLedger.transitTags.rail,'Rail / Train');
   assert.equal(travelLedger.transitIcons.rail,'🚆');
+});
+context.CoordinateLookups.lookupWalkingRoute=async()=>{walkingRequests++;return null;};
+vm.runInContext('expeditionRouteCache.clear();invalidateExpeditionRoutes()',context);
+await element('btnPreviewExpedition').handlers.click();
+check('missing pedestrian routes fall back to dashed direct lines and disclose the approximation',()=>{
+  assert.equal(walkingRequests,2);
+  const legs=JSON.parse(vm.runInContext('JSON.stringify(expeditionPreparedLegs)',context));
+  assert.equal(legs[2].routeSource,'direct');
+  assert.deepEqual(legs[2].routeCoords,context.uiMixedStops.slice(2,4).map(stop=>stop.coords));
+  assert.ok(element('expeditionStatus').textContent.includes('No walking route was found'));
+  assert.ok(previewLines.some(line => line.options.color === '#4ade80' && line.options.dashArray === '8, 8'));
 });
 let importedRoadRequests=0;
 let importedCountyRequests=0;

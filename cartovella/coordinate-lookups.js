@@ -295,20 +295,34 @@
     return null;
   }
 
-  async function lookupRoadRoute(from, to, fetcher = root.fetch) {
+  async function lookupRoute(from, to, profile, fetcher, allowNoRoute = false) {
     validateCoordinates(...from);
     validateCoordinates(...to);
     const coordinates = [from, to].map(([lat, lng]) => `${lng},${lat}`).join(';');
-    const data = await fetchJson(`https://routing.openstreetmap.de/routed-car/route/v1/driving/${coordinates}?overview=full&geometries=geojson&steps=false`, {}, fetcher);
+    const routeType = profile === 'foot' ? 'walking' : 'road';
+    const router = profile === 'foot' ? 'routed-foot' : 'routed-car';
+    const data = await fetchJson(
+      `https://routing.openstreetmap.de/${router}/route/v1/driving/${coordinates}?overview=full&geometries=geojson&steps=false`,
+      {}, fetcher, 45000, allowNoRoute ? ['NoRoute', 'NoSegment'] : []
+    );
+    if (allowNoRoute && ['NoRoute', 'NoSegment'].includes(data.code)) return null;
     if (data.code !== 'Ok' || !data.routes?.length ||
         data.routes[0].geometry?.type !== 'LineString' || !Array.isArray(data.routes[0].geometry.coordinates) ||
-        data.routes[0].geometry.coordinates.length < 2) throw new Error('No road route found between these stops.');
+        data.routes[0].geometry.coordinates.length < 2) throw new Error(`No ${routeType} route found between these stops.`);
     return data.routes[0].geometry.coordinates.map(point => {
-      if (!Array.isArray(point) || point.length !== 2) throw new Error('Invalid road route returned.');
+      if (!Array.isArray(point) || point.length !== 2) throw new Error(`Invalid ${routeType} route returned.`);
       const [lng, lat] = point;
       validateCoordinates(lat, lng);
       return [lat, lng];
     });
+  }
+
+  async function lookupRoadRoute(from, to, fetcher = root.fetch) {
+    return lookupRoute(from, to, 'car', fetcher);
+  }
+
+  async function lookupWalkingRoute(from, to, fetcher = root.fetch) {
+    return lookupRoute(from, to, 'foot', fetcher, true);
   }
 
   function routeCountyIds(route, countyIndex, geoContains) {
@@ -372,9 +386,15 @@
     return [...new Set(ids)];
   }
 
-  async function fetchJson(url, options, fetcher, timeoutMs = 45000) {
+  async function fetchJson(url, options, fetcher, timeoutMs = 45000, allowedErrorCodes = []) {
     const response = await fetcher(url, { ...options, signal: AbortSignal.timeout(timeoutMs) });
-    if (!response.ok) throw new Error(`Lookup request failed (HTTP ${response.status}).`);
+    if (!response.ok) {
+      if (response.status === 400 && allowedErrorCodes.length) {
+        const data = await response.json();
+        if (allowedErrorCodes.includes(data.code)) return data;
+      }
+      throw new Error(`Lookup request failed (HTTP ${response.status}).`);
+    }
     return response.json();
   }
 
@@ -824,7 +844,7 @@
     validateCoordinates, normalizeFeature, indexFeatures, findContaining, politicalRegion, biomeRegion,
     predominantBiome,
     validCountyId, validSubdivisionId, subdivisionFeatures,
-    firstBoundaryIntersection, lookupRoadRoute, routeCountyIds,
+    firstBoundaryIntersection, lookupRoadRoute, lookupWalkingRoute, routeCountyIds,
     lookupElevation, categoryForPoiCount, categoryForOpenData, segmentDistanceKm, summarizeOsm, lookupRarity, cachedRarity,
     coordinateCacheKey, rarityCacheKey, normalizePlaceName, isNameMatchedRarity, cacheRarity, RARITY_ORDER,
     lookupCoordinate, catalogParkRarity, RARITY_TIERS,

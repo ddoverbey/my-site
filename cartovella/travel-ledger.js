@@ -185,8 +185,8 @@
                 (routeSource === 'direct' && leg.routeCoords.length !== 2)) ||
               ((['road', 'awd'].includes(leg.mode) && !['routed', 'uploaded'].includes(routeSource)) ||
                 (!['road', 'awd'].includes(leg.mode) && leg.countyIds.length) ||
-                (routeSource === 'routed' && !['road', 'awd', 'ferry'].includes(leg.mode)) ||
-                (['foot', 'rail'].includes(leg.mode) && !['direct', 'uploaded'].includes(routeSource)) ||
+                (routeSource === 'routed' && !['road', 'awd', 'ferry', 'foot'].includes(leg.mode)) ||
+                (leg.mode === 'rail' && !['direct', 'uploaded'].includes(routeSource)) ||
                 (leg.mode === 'ferry' && !['routed', 'direct', 'uploaded'].includes(routeSource)))) {
             throw new Error('Invalid expedition travel leg.');
           }

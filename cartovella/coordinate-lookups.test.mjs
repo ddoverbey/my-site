@@ -33,7 +33,7 @@ const storage = () => {
   const values = new Map();
   return { values, getItem: key => values.get(key) || null, setItem: (key, value) => values.set(key, value), removeItem: key => values.delete(key) };
 };
-const response = data => ({ ok: true, json: async () => data });
+const response = (data, status = 200) => ({ ok: status >= 200 && status < 300, status, json: async () => data });
 
 await check('coordinate limits reject non-numeric, non-finite, and out-of-range input', () => {
   for (const [lat, lng] of [[91, 0], [0, -181], [NaN, 0], [0, Infinity], ['41', 12]]) {
@@ -588,6 +588,28 @@ await check('road routing uses the requested endpoints and validates full GeoJSO
     {code:'Ok',routes:[{geometry:{type:'LineString',coordinates:[[0,0]]}}]}
   ]) await assert.rejects(lookups.lookupRoadRoute([39,-105],[40,-106],async()=>response(data)));
   await assert.rejects(lookups.lookupRoadRoute([39,-105],[40,-106],async()=>({ok:false,status:503})),/503/);
+});
+await check('walking routing uses the pedestrian profile and reports missing paths for direct fallback', async () => {
+  let requested;
+  const route=await lookups.lookupWalkingRoute([52.517037,13.38886],[52.529407,13.397634],async url=>{
+    requested=url;
+    return response({code:'Ok',routes:[{geometry:{type:'LineString',coordinates:[
+      [13.38886,52.517037],[13.392,52.523],[13.397634,52.529407]
+    ]}}]});
+  });
+  assert.ok(requested.includes('/routed-foot/route/v1/driving/'));
+  assert.ok(requested.includes('overview=full&geometries=geojson'));
+  assert.deepEqual(route,[[52.517037,13.38886],[52.523,13.392],[52.529407,13.397634]]);
+  for (const code of ['NoRoute', 'NoSegment']) {
+    assert.equal(await lookups.lookupWalkingRoute([52.517037,13.38886],[52.529407,13.397634],
+      async()=>response({code,routes:[]},400)),null);
+  }
+  await assert.rejects(lookups.lookupWalkingRoute([52.517037,13.38886],[52.529407,13.397634],
+    async()=>({ok:false,status:503})),/503/);
+  await assert.rejects(lookups.lookupWalkingRoute([52.517037,13.38886],[52.529407,13.397634],
+    async()=>response({code:'InvalidQuery'},400)),/400/);
+  await assert.rejects(lookups.lookupWalkingRoute([52.517037,13.38886],[52.529407,13.397634],
+    async()=>response({code:'Ok',routes:[{geometry:{type:'LineString',coordinates:[[0,0]]}}]})));
 });
 await check('road county intersections include narrow crossed counties without mistaking nearby counties or polygon holes', () => {
   const features=[

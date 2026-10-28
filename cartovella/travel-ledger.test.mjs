@@ -991,6 +991,12 @@ check('leg validation rejects missing legs, mismatched tags, malformed coordinat
   const validatedFerry = ledger.validateExpeditions([ferry],lookups)[0];
   assert.deepEqual(ledger.fogRoutes(validatedFerry),[]);
   assert.equal(validatedFerry.routeLegs[0].routeSource,'direct');
+  const walkingRoute = {
+    ...ferry, transitTags:['foot'],
+    routeLegs:[{mode:'foot',routeSource:'routed',
+      routeCoords:[mixedStops[0].coords,[39.75,-105.5],mixedStops[1].coords],countyIds:[]}]
+  };
+  assert.equal(ledger.validateExpeditions([walkingRoute],lookups)[0].routeLegs[0].routeSource,'routed');
   assert.throws(()=>ledger.validateExpeditions([{...ferry,
     routeLegs:[{...ferry.routeLegs[0],countyIds:['04001']}]}],lookups),/travel leg/);
   const directFerry = {...ferry,routeLegs:[{mode:'ferry',routeSource:'direct',

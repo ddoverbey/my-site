@@ -11,8 +11,8 @@ let expeditionSearchTimer = null;
 let homeSearchVersion = 0;
 let homeSearchTimer = null;
 let expeditionReturnFocus = null;
-const expeditionRoadCache = new Map();
-let lastRoadRequest = 0;
+const expeditionRouteCache = new Map();
+let lastRouteRequest = 0;
 const EXPEDITION_DRAFT_DB = 'cartovella-local-recovery';
 const LEGACY_EXPEDITION_DRAFT_DB = 'wanderlog-local-recovery';
 let expeditionDraftDbPromise = null;
@@ -873,7 +873,7 @@ function displayExpeditionPreview(legs) {
   expeditionPreviewMap.fitBounds(expeditionPreviewLayers.getBounds(), { padding: [20, 20], maxZoom: 12, animate: false });
   const counties = new Set(legs.flatMap(leg => leg.countyIds));
   document.getElementById('expeditionRouteSummary').textContent =
-    `${legs.length} travel leg${legs.length === 1 ? '' : 's'} · ${counties.size} driving counties. Each boat trip reduces ocean fog by 10 percentage points to a 50% minimum (99% before the first trip). Ferry/flight routes fully clear water within 100 miles on either side when the world atlas is loaded; unvisited land stays shrouded; flights clear only a small area around each airport stop on land. Non-driving routes award no intermediate counties; rail/walking clear no route fog. Dashed lines are direct approximations.`;
+    `${legs.length} travel leg${legs.length === 1 ? '' : 's'} · ${counties.size} driving counties. Each boat trip reduces ocean fog by 10 percentage points to a 50% minimum (99% before the first trip). Ferry/flight routes fully clear water within 100 miles on either side when the world atlas is loaded; unvisited land stays shrouded; flights clear only a small area around each airport stop on land. Non-driving routes award no intermediate counties; rail/walking clear no route fog. Walking uses mapped foot routes when available. Dashed lines are direct approximations.`;
 }
 
 async function previewExpeditionRoutes() {
@@ -907,17 +907,28 @@ async function previewExpeditionRoutes() {
           countyIds = CoordinateLookups.routeCountyIds(routeCoords, countyIndex, d3.geoContains);
         }
       } else if (mode === 'road' || mode === 'awd') {
-        const key = JSON.stringify([from.coords, to.coords]);
-        if (!expeditionRoadCache.has(key)) {
-          const wait = Math.max(0, 1100 - (Date.now() - lastRoadRequest));
+        const key = JSON.stringify([mode, from.coords, to.coords]);
+        if (!expeditionRouteCache.has(key)) {
+          const wait = Math.max(0, 1100 - (Date.now() - lastRouteRequest));
           if (wait) await new Promise(resolve => setTimeout(resolve, wait));
-          lastRoadRequest = Date.now();
-          expeditionRoadCache.set(key, await CoordinateLookups.lookupRoadRoute(from.coords, to.coords));
+          lastRouteRequest = Date.now();
+          expeditionRouteCache.set(key, await CoordinateLookups.lookupRoadRoute(from.coords, to.coords));
         }
-        routeCoords = expeditionRoadCache.get(key).map(point => [...point]);
+        routeCoords = expeditionRouteCache.get(key).map(point => [...point]);
         countyIds = CoordinateLookups.routeCountyIds(routeCoords, countyIndex, d3.geoContains);
         routeSource = 'routed';
-      } else if (['ferry', 'foot', 'rail'].includes(mode)) routeCoords = [[...from.coords], [...to.coords]];
+      } else if (mode === 'foot') {
+        const key = JSON.stringify([mode, from.coords, to.coords]);
+        if (!expeditionRouteCache.has(key)) {
+          const wait = Math.max(0, 1100 - (Date.now() - lastRouteRequest));
+          if (wait) await new Promise(resolve => setTimeout(resolve, wait));
+          lastRouteRequest = Date.now();
+          expeditionRouteCache.set(key, await CoordinateLookups.lookupWalkingRoute(from.coords, to.coords));
+        }
+        const walkingRoute = expeditionRouteCache.get(key);
+        routeCoords = walkingRoute?.map(point => [...point]) || [[...from.coords], [...to.coords]];
+        routeSource = walkingRoute ? 'routed' : 'direct';
+      } else if (['ferry', 'rail'].includes(mode)) routeCoords = [[...from.coords], [...to.coords]];
       else routeSource = 'none';
       legs.push({ mode, routeSource, routeCoords, countyIds });
     }
@@ -926,7 +937,9 @@ async function previewExpeditionRoutes() {
     displayExpeditionPreview(legs);
     expeditionPreparedLegs = legs;
     expeditionPreparedKey = expeditionRouteKey();
-    status.textContent = 'Review the routes, then save. Dashed lines are direct approximations, not routed paths.';
+    status.textContent = legs.some(leg => leg.mode === 'foot' && leg.routeSource === 'direct')
+      ? 'No walking route was found for one or more legs; dashed lines show direct approximations. Review the routes, then save.'
+      : 'Review the routes, then save. Dashed lines are direct approximations, not routed paths.';
   } catch (error) {
     console.error('Expedition route preview failed', error);
     invalidateExpeditionRoutes();

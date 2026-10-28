@@ -7,6 +7,8 @@ expeditions, track parks and regions, and earn achievements from your travel his
 
 - An RPG world map with visit statuses, a travel ledger, and country, state, province, and county views.
 - Custom places and expedition logs with ordered stops, travel modes, route previews, and journal entries.
+  Walking legs use mapped pedestrian routes when available and show a dashed direct approximation when
+  no walkable route exists.
 - GeoJSON and KML imports support ordered stops, including files that also contain a track. Choose
   a transit mode for every leg; an embedded track is used when it matches one leg between two stops.
   Track-only files can import one route. The Global Route Map can be exported as a PNG route poster.
