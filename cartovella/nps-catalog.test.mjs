@@ -4903,6 +4903,15 @@ check('missing county data clears prior statistics and displays explicit retry g
   assert.ok(scratchNodes.some(n => String(n.text).includes('Retry datasets')));
 });
 check('waterfall milestone classes show every 1, 5 and 10 goal, including when unmet', () => {
+  const waterfallTitles = JSON.parse(vm.runInContext(`JSON.stringify(
+    ACHIEVEMENTS.filter(achievement => achievement.id.startsWith('waterfalls_'))
+      .map(achievement => achievement.tiers[0].title)
+  )`, context));
+  assert.deepEqual(waterfallTitles, [
+    'Chasing Waterfalls (1 location)',
+    'Chasing Waterfalls (5 locations)',
+    'Chasing Waterfalls (10 locations)'
+  ]);
   for (const count of [0, 1, 4, 5, 9, 10]) {
     context.fallsCount = count;
     vm.runInContext(`
@@ -4920,10 +4929,11 @@ check('waterfall milestone classes show every 1, 5 and 10 goal, including when u
     const nextGoal = [1, 5, 10].find(goal => count < goal) || completedGoal;
     for (const goal of [1, 5, 10]) {
       const progressIsShown = goal !== completedGoal || goal === nextGoal;
+      const title = `Chasing Waterfalls (${goal} ${goal === 1 ? 'location' : 'locations'})`;
       const description = `Visit ${goal} location${goal === 1 ? '' : 's'} with "waterfall" in the name or category`;
       const escapedDescription = vm.runInContext(`escapeHtml(${JSON.stringify(description)})`, context);
       assert.equal(cards.includes(
-        `aria-label="Chasing Waterfalls completion" value="${Math.min(count, goal)}" max="${goal}"`
+        `aria-label="${title} completion" value="${Math.min(count, goal)}" max="${goal}"`
       ), progressIsShown, `${count}: goal ${goal} uses summary progress or omits the already-achieved tier`);
       assert.equal(cards.includes(escapedDescription),
         count >= goal * 0.85,
@@ -5785,7 +5795,7 @@ for (const [title, filename] of achievementImages) {
 const unmetAchievementData = await readFile(new URL(`./assets/achievements/${unmetAchievementImage}`, import.meta.url));
 assert.equal(unmetAchievementData.subarray(1, 4).toString(), 'PNG', 'shared locked artwork exists and is PNG');
 check('achievement artwork maps all supplied images to real tiers and preserves emoji fallbacks', () => {
-  assert.equal(achievementImages.length, 34);
+  assert.equal(achievementImages.length, 36);
   for (const [title, filename] of achievementImages) {
     context.artworkTitle = title;
     const markup = vm.runInContext(`(()=>{

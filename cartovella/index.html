@@ -1870,10 +1870,11 @@
       }
     ];
     for (const goal of [1, 5, 10]) {
+      const title = `Chasing Waterfalls (${goal} ${goal === 1 ? 'location' : 'locations'})`;
       ACHIEVEMENTS.push({
         id: `waterfalls_${goal}`, title: 'Chasing Waterfalls', progress: s => s.metadataProgress.waterfalls,
         tiers: [{
-          goal, title: 'Chasing Waterfalls',
+          goal, title,
           desc: `Visit ${goal} location${goal === 1 ? '' : 's'} with "waterfall" in the name or category`
         }]
       });
@@ -6349,7 +6350,9 @@
       'America the Beautiful': 'america-the-beautiful.png',
       'Anomaly Seeker': 'anomaly-seeker.png',
       'Beyond the Horizon': 'beyond-the-horizon.png',
-      'Chasing Waterfalls': 'chasing-waterfalls.png',
+      'Chasing Waterfalls (1 location)': 'chasing-waterfalls.png',
+      'Chasing Waterfalls (5 locations)': 'chasing-waterfalls.png',
+      'Chasing Waterfalls (10 locations)': 'chasing-waterfalls.png',
       'Completionist Legend': 'completionist-legend-.png',
       'Country Roads, Take Me Home': 'country-roads.png',
       'Earth Sandwich': 'earth-sandwhich.png',
