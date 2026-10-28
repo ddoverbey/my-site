@@ -40,9 +40,14 @@ function check(name, action) {
   console.log(`PASS ${name}`);
 }
 check('public-trip migration exposes only versioned shared expedition fields', () => {
+  assert.match(publicTripSharingSql, /ADD COLUMN IF NOT EXISTS profile_visibility text/);
+  assert.match(publicTripSharingSql, /WHEN is_public IS TRUE THEN 'passport' ELSE 'none'/);
+  assert.match(publicTripSharingSql, /profile_visibility IN \('none', 'profile', 'passport'\)/);
   assert.match(publicTripSharingSql, /DROP POLICY IF EXISTS "Anyone can view public passports"/);
   assert.match(publicTripSharingSql, /REVOKE SELECT ON TABLE public\.cartovella_passports FROM anon/);
   assert.match(publicTripSharingSql, /public_trip_sharing_version = 1/);
+  assert.match(publicTripSharingSql, /profile_visibility IN \('profile', 'passport'\)/);
+  assert.match(publicTripSharingSql, /CASE WHEN profile_visibility = 'passport' THEN passport_data/);
   assert.match(publicTripSharingSql, /publicSharing'->>'enabled' = 'true'/);
   assert.match(publicTripSharingSql, /publicSharing'->>'includeDetails' = 'true'/);
   assert.match(publicTripSharingSql, /includeJournal/);
@@ -202,7 +207,7 @@ check('character customization appears above the stage and progress summary', ()
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 10);
-  assert.ok(sources.every(source => source.endsWith('?v=20261028-public-trip-sharing-v1')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261028-public-trip-sharing-v2')));
   assert.ok(sources.some(source => source.startsWith('./character-creator.js?')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
@@ -333,6 +338,68 @@ const context = vm.createContext({
 });
 const testConsole = context.console;
 scripts.forEach(script => vm.runInContext(script, context));
+check('public profile visibility migrates legacy consent without widening access', () => {
+  assert.equal(vm.runInContext(`normalizePublicProfile({username:'Devon',is_public:true}).visibility`, context), 'passport');
+  assert.equal(vm.runInContext(`normalizePublicProfile({username:'devon',is_public:false}).visibility`, context), 'none');
+  assert.equal(vm.runInContext(`normalizePublicProfile({visibility:'profile',is_public:true}).visibility`, context), 'profile');
+  assert.equal(vm.runInContext(`normalizePublicProfile({visibility:'none',is_public:true}).is_public`, context), false);
+  const originalProfile = JSON.stringify(vm.runInContext('publicProfile', context));
+  const originalWindow = context.window;
+  try {
+    context.window = { location: { origin: 'https://cartovella.example', pathname: '/cartovella/' } };
+    vm.runInContext(`publicProfile = normalizePublicProfile({username:'devon',visibility:'profile'})`, context);
+    assert.match(vm.runInContext('currentShareUrl()', context), /\?u=devon$/);
+    vm.runInContext(`publicProfile = normalizePublicProfile({username:'devon',visibility:'none'})`, context);
+    assert.equal(vm.runInContext('currentShareUrl()', context), null);
+  } finally {
+    vm.runInContext(`publicProfile = normalizePublicProfile(${originalProfile}); updatePublicProfileSettings()`, context);
+    context.window = originalWindow;
+  }
+});
+check('bulk trip sharing preselects all public content and validates the whole batch before saving', () => {
+  const originalExpeditions = vm.runInContext('JSON.stringify(AppState.expeditions)', context);
+  const originalCommitLedger = context.commitLedger;
+  const originalViewOnly = vm.runInContext('AppState.viewOnly', context);
+  const fixture = travelLedger.validateExpeditions([{
+    id: 'bulk-trip', name: 'Bulk Review Trip', startDate: '2026-10-01', endDate: '2026-10-02',
+    dayTrip: false, reason: 'A trip', countyIds: [], parkIds: [], customPoiIds: [],
+    routeCoords: [[40, -105], [41, -106]],
+    routeStops: [
+      { kind: 'place', id: 'bulk-start', name: 'Start', coords: [40, -105] },
+      { kind: 'place', id: 'bulk-end', name: 'Finish', coords: [41, -106] }
+    ],
+    transitTags: [], minElevationFt: null, maxElevationFt: null,
+    journal: 'A journal entry.', photos: ['data:image/jpeg;base64,YWJjZA=='],
+    publicSharing: { enabled: false, includeDetails: false, includeJournal: false, photoIndexes: [] }
+  }], coordinateLookups);
+  try {
+    context.commitLedger = change => change();
+    vm.runInContext(`AppState.viewOnly = false; AppState.expeditions = ${JSON.stringify(fixture)}`, context);
+    vm.runInContext(`openBulkTripSharingDialog('share')`, context);
+    const sharingMarkup = element('bulkTripSharingContent').innerHTML;
+    assert.match(sharingMarkup, /data-bulk-field="enabled"[^>]*checked/);
+    assert.match(sharingMarkup, /data-bulk-field="includeDetails"[^>]*checked/);
+    assert.match(sharingMarkup, /data-bulk-field="includeJournal"[^>]*checked/);
+    assert.match(sharingMarkup, /data-bulk-field="photo" data-bulk-photo="0"[^>]*checked/);
+    assert.match(element('bulkTripSharingIntro').textContent, /details, journal text, and photos/);
+    vm.runInContext(`updateExpeditionSharingSettings([{
+      id:'bulk-trip',publicSharing:{enabled:true,includeDetails:true,includeJournal:true,photoIndexes:[0]}
+    }])`, context);
+    assert.equal(vm.runInContext('AppState.expeditions[0].publicSharing.enabled', context), true);
+    const beforeInvalidBatch = vm.runInContext('JSON.stringify(AppState.expeditions)', context);
+    assert.throws(() => vm.runInContext(`updateExpeditionSharingSettings([
+      {id:'bulk-trip',publicSharing:{enabled:false,includeDetails:true,includeJournal:true,photoIndexes:[]}},
+      {id:'missing-trip',publicSharing:{enabled:false,includeDetails:false,includeJournal:false,photoIndexes:[]}}
+    ])`, context), /missing or duplicated/);
+    assert.equal(vm.runInContext('JSON.stringify(AppState.expeditions)', context), beforeInvalidBatch);
+    vm.runInContext(`openBulkTripSharingDialog('unshare')`, context);
+    assert.match(element('bulkTripSharingTitle').textContent, /Unshare all trips/);
+    assert.match(element('bulkTripSharingContent').innerHTML, /All 1 trip will become private/);
+  } finally {
+    context.commitLedger = originalCommitLedger;
+    vm.runInContext(`AppState.expeditions = ${originalExpeditions}; AppState.viewOnly = ${originalViewOnly}`, context);
+  }
+});
 check('auth navigation switches between separate existing-user and account-creation views', () => {
   vm.runInContext(`setAuthView('signin')`, context);
   assert.equal(element('authViewSignIn').classList.contains('hidden'), false);
@@ -1568,6 +1635,7 @@ await checkAsync('public summary stats contain compact profile, achievement, and
         publicSharing: { enabled: true, includeDetails: false, includeJournal: true, photoIndexes: [0] }
       }];
       worldGeoJson = [];
+      publicProfile.visibility = 'profile';
       publicProfile.is_public = true;
       publicRouteMapThumbnailCacheKey = null;
       publicRouteMapThumbnailCache = null;
@@ -1597,6 +1665,7 @@ await checkAsync('public summary stats contain compact profile, achievement, and
       context
     ));
     assert.equal(summary.clearedPct, 12.5);
+    assert.equal(summary.totalTrips, 4);
     assert.match(summary.routeMapThumbnail, /^data:image\/jpeg;base64,/);
     assert.deepEqual(routeCanvasEncodings.find(encoding => encoding.width === 640), {
       width: 640, height: 336, type: 'image/jpeg', quality: 0.55
@@ -1615,7 +1684,7 @@ await checkAsync('public summary stats contain compact profile, achievement, and
     const interpolatedPairs = routeInterpolations.map(points => JSON.stringify(points));
     assert.ok(interpolatedPairs.includes('[[-120,40],[-121,41]]'));
     assert.ok(interpolatedPairs.includes('[[-121,41],[-122,42]]'));
-    vm.runInContext('publicProfile.is_public = false', context);
+    vm.runInContext("publicProfile.visibility = 'none'; publicProfile.is_public = false", context);
     const privateSummary = JSON.parse(JSON.stringify(await vm.runInContext(
       `buildPublicSummaryStats({
         level: 8, xp: 1234, cls: 'Alpine Ranger', titleDesc: 'Trail Finder',
@@ -1758,7 +1827,7 @@ await checkAsync('signup requires a unique username, stores it, and reports user
     }; cloudHydrated = true`, context);
     element('profileUsername').value = 'privatecollision';
     element('profileDisplayName').value = 'New Traveler';
-    element('profileIsPublic').checked = true;
+    element('profileVisibility').value = 'profile';
     context.fetch = async (url, options = {}) => {
       requests.push({ url: String(url), options });
       if (String(url).includes('/rest/v1/cartovella_public_profiles?') && options.method === 'GET') {
@@ -1799,10 +1868,10 @@ await checkAsync('Explorers’ Guild renders mocked public profiles and expediti
   const originalCurrentTab = vm.runInContext('AppState.currentTab', context);
   const stageRenders = [];
   const profiles = [{
-    username: 'devon', display_name: 'Devon · Alpine Ranger', updated_at: '2026-10-26T12:00:00Z',
+    username: 'devon', display_name: 'Devon · Alpine Ranger', profile_visibility: 'passport', updated_at: '2026-10-26T12:00:00Z',
     summary_stats: {
       level: 18, cls: 'Alpine Ranger', homeName: 'Cloud Citadel', countriesCount: 3,
-      statesCount: 5, parksCount: 12, biomesCount: 4, totalMiles: 12345.6, clearedPct: 2.4,
+      statesCount: 5, parksCount: 12, biomesCount: 4, totalMiles: 12345.6, totalTrips: 8, clearedPct: 2.4,
       character: { pet: 'pet_fox', background: 'bg_yosemite' },
       routeMapThumbnail: 'data:image/jpeg;base64,YWJjZA==',
       topBadges: [{ title: 'Grand Voyager', icon: '🏕️', rarity: 'epic' }],
@@ -1843,6 +1912,7 @@ await checkAsync('Explorers’ Guild renders mocked public profiles and expediti
     assert.match(element('guildExplorersGrid').innerHTML, /Cloud Citadel/);
     assert.match(element('guildExplorersGrid').innerHTML, /Total miles traveled/);
     assert.match(element('guildExplorersGrid').innerHTML, /12,345\.6 mi/);
+    assert.match(element('guildExplorersGrid').innerHTML, /Shared trips/);
     const unsyncedCard = vm.runInContext(
       `renderGuildExplorerCard({username:'legacy',summary_stats:{}})`, context
     );
@@ -1944,6 +2014,111 @@ await checkAsync('clean ?u links load a read-only public Atlas without changing 
     if (originalLocal === null) localStorage.removeItem('cartovella_state');
     vm.runInContext(`applyPassport(migratePassport(${originalPassport}));
       activePublicAtlasUsername = null; AppState.viewOnly = false`, context);
+  }
+});
+await checkAsync('Explorer-card links expose only the card and shared posts, then restore the local Guild state', async () => {
+  const originalFetch = context.fetch;
+  const originalLocation = context.window.location;
+  const originalHistory = context.window.history;
+  const names = ['updatePublicAtlasUrl', 'updateAllUI', 'syncDerivedState', 'closeHomeModal',
+    'updateHomeBaseMarker', 'renderParkMarkers', 'drawFogOfWar', 'renderGuildDirectory', 'renderGuildExpeditions'];
+  const originalFunctions = Object.fromEntries(names.map(name => [name, context[name]]));
+  const originalLocal = localStorage.getItem('cartovella_state');
+  const originalPassport = vm.runInContext('JSON.stringify(passportPayload())', context);
+  const originalProfiles = vm.runInContext('JSON.stringify(guildProfiles)', context);
+  const originalLoaded = vm.runInContext('guildProfilesLoaded', context);
+  const originalCurrentTab = vm.runInContext('AppState.currentTab', context);
+  const originalReturnTab = vm.runInContext('localAtlasReturnTab', context);
+  const originalSearch = element('guildSearchInput').value;
+  const originalOnlyView = vm.runInContext('profileOnlyView', context);
+  const localPassport = JSON.stringify({
+    version: 2,
+    homeBase: { name: 'My Local Citadel', lat: 40, lng: -105, radiusKm: travelLedger.homeRadiusKm }
+  });
+  localStorage.setItem('cartovella_state', localPassport);
+  context.window.location = {
+    href: 'https://cartovella.example/cartovella/?u=trailfriend',
+    origin: 'https://cartovella.example',
+    pathname: '/cartovella/',
+    search: '?u=trailfriend',
+    hash: ''
+  };
+  context.window.history = { replaceState() {} };
+  context.updatePublicAtlasUrl = () => {};
+  context.updateAllUI = () => {};
+  context.syncDerivedState = () => {};
+  context.closeHomeModal = () => {};
+  context.updateHomeBaseMarker = () => {};
+  context.renderParkMarkers = () => {};
+  context.drawFogOfWar = () => {};
+  context.renderGuildDirectory = () => {};
+  context.renderGuildExpeditions = () => {};
+  context.fetch = async url => {
+    assert.match(String(url), /profile_visibility,updated_at,public_passport_data,summary_stats/);
+    return {
+      ok: true, status: 200,
+      json: async () => [{
+        username: 'trailfriend', display_name: 'Trail Friend', profile_visibility: 'profile',
+        public_passport_data: null,
+        summary_stats: {
+          totalTrips: 2,
+          recentExpeditions: [{
+            id: 'public-story', name: 'A shared trip', detailsShared: true,
+            startDate: '2026-10-01', photos: [], stopNames: []
+          }]
+        }
+      }]
+    };
+  };
+  vm.runInContext(`activePublicAtlasUsername = null; profileOnlyView = false;
+    guildStateBeforeProfileView = null; AppState.viewOnly = false; AppState.currentTab = 'guild';
+    localAtlasReturnTab = 'guild'; guildProfiles = [{username:'local-explorer'}];
+    guildProfilesLoaded = true`, context);
+  element('guildSearchInput').value = 'local query';
+  try {
+    assert.equal(await vm.runInContext('loadPublicAtlas("trailfriend")', context), true);
+    assert.equal(vm.runInContext('profileOnlyView', context), true);
+    assert.equal(vm.runInContext('AppState.viewOnly', context), true);
+    assert.deepEqual(JSON.parse(vm.runInContext('JSON.stringify(guildProfiles.map(profile => profile.username))', context)), ['trailfriend']);
+    assert.equal(element('guildSearchLabel').classList.contains('hidden'), true);
+    assert.equal(element('guildDirectoryActions').classList.contains('hidden'), true);
+    assert.match(element('viewingPublicAtlasMessage').textContent, /Explorer Profile/);
+    vm.runInContext("switchTab('map')", context);
+    assert.equal(vm.runInContext('AppState.currentTab', context), 'guild');
+    const card = vm.runInContext(`renderGuildExplorerCard({
+      username:'trailfriend',visibility:'profile',summary_stats:{totalTrips:2}
+    })`, context);
+    assert.match(card, /Shared trips/);
+    assert.doesNotMatch(card, /data-guild-explore/);
+    const post = vm.runInContext(`renderPublicExpeditionSummary(
+      {username:'trailfriend',visibility:'profile',summary_stats:{}},
+      {id:'public-story',name:'A shared trip',detailsShared:true,startDate:'2026-10-01'}
+    )`, context);
+    assert.doesNotMatch(post, /data-guild-open-travel/);
+    vm.runInContext('returnToMyAtlas()', context);
+    assert.equal(vm.runInContext('profileOnlyView', context), false);
+    assert.equal(vm.runInContext('AppState.viewOnly', context), false);
+    assert.deepEqual(JSON.parse(vm.runInContext('JSON.stringify(guildProfiles.map(profile => profile.username))', context)), ['local-explorer']);
+    assert.equal(element('guildSearchInput').value, 'local query');
+    assert.equal(element('guildSearchLabel').classList.contains('hidden'), false);
+    assert.equal(localStorage.getItem('cartovella_state'), localPassport);
+  } finally {
+    context.fetch = originalFetch;
+    context.window.location = originalLocation;
+    context.window.history = originalHistory;
+    names.forEach(name => { context[name] = originalFunctions[name]; });
+    localStorage.setItem('cartovella_state', originalLocal ?? '');
+    if (originalLocal === null) localStorage.removeItem('cartovella_state');
+    element('guildSearchInput').value = originalSearch;
+    vm.runInContext(`applyPassport(migratePassport(${originalPassport}));
+      guildProfiles = JSON.parse(${JSON.stringify(originalProfiles)});
+      guildProfilesLoaded = ${originalLoaded};
+      activePublicAtlasUsername = null;
+      profileOnlyView = ${originalOnlyView};
+      guildStateBeforeProfileView = null;
+      AppState.currentTab = ${JSON.stringify(originalCurrentTab)};
+      localAtlasReturnTab = ${JSON.stringify(originalReturnTab)};
+      AppState.viewOnly = false`, context);
   }
 });
 check('rare-and-higher rarity text and achievement borders receive glow styling', () => {

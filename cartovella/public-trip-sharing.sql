@@ -1,8 +1,35 @@
 -- Apply this migration in the Supabase SQL editor before deploying the matching app.
--- Existing public profiles need to sync once afterward to publish the versioned snapshot.
+-- Legacy public profiles become Entire Passport; private profiles become None. Existing
+-- public profiles need to sync once afterward to publish their versioned summary snapshot.
 
 ALTER TABLE public.cartovella_passports
   ADD COLUMN IF NOT EXISTS public_trip_sharing_version integer;
+
+ALTER TABLE public.cartovella_passports
+  ADD COLUMN IF NOT EXISTS profile_visibility text;
+
+UPDATE public.cartovella_passports
+SET profile_visibility = CASE WHEN is_public IS TRUE THEN 'passport' ELSE 'none' END
+WHERE profile_visibility IS NULL;
+
+ALTER TABLE public.cartovella_passports
+  ALTER COLUMN profile_visibility SET DEFAULT 'none',
+  ALTER COLUMN profile_visibility SET NOT NULL;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conrelid = 'public.cartovella_passports'::regclass
+      AND conname = 'cartovella_passports_profile_visibility_check'
+  ) THEN
+    ALTER TABLE public.cartovella_passports
+      ADD CONSTRAINT cartovella_passports_profile_visibility_check
+      CHECK (profile_visibility IN ('none', 'profile', 'passport'));
+  END IF;
+END;
+$$;
 
 ALTER TABLE public.cartovella_passports
   ENABLE ROW LEVEL SECURITY;
@@ -20,7 +47,7 @@ SELECT
   display_name,
   updated_at,
   summary_stats,
-  passport_data || jsonb_build_object(
+  CASE WHEN profile_visibility = 'passport' THEN passport_data || jsonb_build_object(
     'expeditions',
     COALESCE((
       SELECT jsonb_agg(
@@ -55,9 +82,10 @@ SELECT
       WHERE expedition.trip->'publicSharing'->>'enabled' = 'true'
         AND expedition.trip->'publicSharing'->>'includeDetails' = 'true'
     ), '[]'::jsonb)
-  ) AS public_passport_data
+  ) ELSE NULL::jsonb END AS public_passport_data,
+  profile_visibility
 FROM public.cartovella_passports
-WHERE is_public IS TRUE
+WHERE profile_visibility IN ('profile', 'passport')
   AND username IS NOT NULL
   AND public_trip_sharing_version = 1;
 

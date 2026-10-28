@@ -1486,7 +1486,7 @@ function renderPublicExpeditionSummary(profile, expedition) {
     ${photos.length ? `<div class="mt-3 flex flex-wrap gap-2">${photos.map((photo, index) =>
       `<figure class="rotate-1 rounded bg-white p-2 pb-3 shadow-lg"><img src="${photo}" alt="Shared trip photo ${index + 1}" class="max-h-40 max-w-full object-cover" loading="lazy" decoding="async"></figure>`
     ).join('')}</div>` : ''}
-    ${detailsShared ? `<button type="button" data-guild-open-travel="${escapeHtml(username)}" class="mt-3 rounded-lg border border-sky-400/40 bg-sky-950/40 px-3 py-2 text-xs text-sky-200 hover:bg-sky-900/50">Open in Explorer's Travel Log (📖)</button>` : ''}
+    ${detailsShared && profile.visibility !== 'profile' ? `<button type="button" data-guild-open-travel="${escapeHtml(username)}" class="mt-3 rounded-lg border border-sky-400/40 bg-sky-950/40 px-3 py-2 text-xs text-sky-200 hover:bg-sky-900/50">Open in Explorer's Travel Log (📖)</button>` : ''}
   </article>`;
 }
 

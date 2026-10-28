@@ -413,7 +413,7 @@
         <span id="headerHometownText" class="sr-only">Home Base</span>
       </button>
 
-      <button id="btnShare" aria-label="Copy Shareable Link" title="Copy Shareable Link" class="header-icon">
+      <button id="btnShare" aria-label="Copy Public Profile Link" title="Copy Public Profile Link" class="header-icon">
         🔗
       </button>
 
@@ -818,9 +818,12 @@
           <div class="flex flex-wrap items-center gap-2">
             <button id="btnToggleTravelRoutes" type="button" class="shrink-0 rounded-lg bg-slate-800 px-3 py-2 text-xs text-sky-200" aria-label="Show Route Map" aria-controls="travelGlobalRoutesPanel" aria-expanded="false" aria-pressed="false">🗺️ Route Map</button>
             <button id="btnExportRoutesPng" type="button" class="hidden shrink-0 rounded-lg bg-amber-600 px-3 py-2 text-xs font-semibold text-slate-950">📸 Export Map (.png)</button>
+            <button id="btnShareAllTrips" type="button" aria-controls="bulkTripSharingDialog" class="shrink-0 rounded-lg bg-sky-800 px-3 py-2 text-xs text-sky-100">Share all trips</button>
+            <button id="btnUnshareAllTrips" type="button" aria-controls="bulkTripSharingDialog" class="shrink-0 rounded-lg bg-slate-800 px-3 py-2 text-xs text-rose-200">Unshare all</button>
             <button id="btnHistoryExpedition" type="button" class="shrink-0 rounded-lg bg-emerald-600 px-3 py-2 text-xs">Log Expedition</button>
           </div>
         </div>
+        <p id="bulkTripSharingStatus" class="text-[11px] text-slate-400" role="status" aria-live="polite"></p>
         <aside id="storageWarning" role="status" aria-live="polite" class="hidden rounded-xl border border-amber-500/50 bg-amber-950/50 p-4 text-xs text-amber-100">
           <div class="flex flex-wrap items-center justify-between gap-3">
             <p id="storageWarningText"></p>
@@ -871,6 +874,20 @@
         <div id="travelLogFeed" class="space-y-6" aria-live="polite"></div>
       </div>
     </div>
+    <dialog id="bulkTripSharingDialog" aria-labelledby="bulkTripSharingTitle" aria-describedby="bulkTripSharingIntro" class="w-[min(96vw,48rem)] max-h-[88vh] overflow-y-auto rounded-2xl border border-sky-400/40 bg-slate-950 p-0 text-slate-100 shadow-2xl backdrop:bg-black/70">
+      <form id="bulkTripSharingForm" class="space-y-4 p-5">
+        <header class="flex items-start justify-between gap-3">
+          <div>
+            <h2 id="bulkTripSharingTitle" class="text-lg font-bold text-amber-200"></h2>
+            <p id="bulkTripSharingIntro" class="mt-1 text-xs text-slate-300"></p>
+          </div>
+          <button type="button" data-bulk-sharing-close aria-label="Close bulk trip sharing" class="rounded-lg bg-slate-800 px-3 py-2 text-sm">Close</button>
+        </header>
+        <div id="bulkTripSharingContent" class="max-h-[55vh] space-y-3 overflow-y-auto"></div>
+        <p id="bulkTripSharingDialogStatus" class="text-xs text-rose-300" role="status" aria-live="polite"></p>
+        <footer id="bulkTripSharingActions" class="flex flex-wrap justify-end gap-2"></footer>
+      </form>
+    </dialog>
 
     <div id="tabContent-achievements" class="w-full h-full p-4 md:p-8 overflow-y-auto hidden">
       <section class="max-w-6xl mx-auto space-y-6 pb-20" aria-labelledby="achievementsTitle">
@@ -900,12 +917,12 @@
               <h2 id="guildTitle" class="cinzel text-xl font-bold text-amber-200">Explorers' Guild</h2>
               <p class="mt-2 text-xs text-slate-400">Meet fellow explorers and discover the places and stories they have chosen to share.</p>
             </div>
-            <div class="flex flex-wrap gap-2">
+            <div id="guildDirectoryActions" class="flex flex-wrap gap-2">
               <button id="btnManagePublicProfile" type="button" class="rounded-lg border border-amber-400/40 bg-amber-950/40 px-3 py-2 text-xs text-amber-200 hover:bg-amber-900/50">Manage My Public Profile</button>
               <button id="btnRefreshGuild" type="button" class="rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-xs text-slate-200 hover:bg-slate-800">Refresh Guild</button>
             </div>
           </div>
-          <label class="mt-4 block max-w-xl text-xs text-slate-300">Search explorers
+          <label id="guildSearchLabel" class="mt-4 block max-w-xl text-xs text-slate-300">Search explorers
             <input id="guildSearchInput" type="search" autocomplete="off" placeholder="Username, display name, class, or home base" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100">
           </label>
           <p id="guildStatus" class="mt-3 text-xs text-slate-400" role="status" aria-live="polite"></p>
@@ -1243,7 +1260,7 @@
         <section class="space-y-3 rounded-xl border border-amber-500/30 bg-slate-950/50 p-3" aria-labelledby="publicProfileTitle">
           <div>
             <h3 id="publicProfileTitle" class="text-sm font-semibold text-amber-200">Public Explorer Profile</h3>
-            <p class="mt-1 text-[11px] text-slate-400">The Guild shares your character scene, progress, and the route map for trips you choose to share. Trips start private; each trip separately controls its details, journal, and photos.</p>
+            <p class="mt-1 text-[11px] text-slate-400">Choose what the public can see. Shared trips stay hidden whenever visibility is set to None.</p>
           </div>
           <label class="block text-xs text-slate-300">Username
             <input id="profileUsername" type="text" inputmode="text" autocomplete="username" minlength="3" maxlength="24" pattern="[a-z0-9_-]{3,24}" placeholder="devon" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100">
@@ -1252,11 +1269,15 @@
           <label class="block text-xs text-slate-300">Display name
             <input id="profileDisplayName" type="text" maxlength="60" placeholder="Devon · Alpine Ranger" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100">
           </label>
-          <label class="flex items-start gap-2 text-xs text-slate-300">
-            <input id="profileIsPublic" type="checkbox" class="mt-0.5 accent-amber-400">
-            <span>List my public Atlas and shared trips in the Public Explorers' Guild and enable my shareable profile link</span>
+          <label class="block text-xs text-slate-300">Public visibility
+            <select id="profileVisibility" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100">
+              <option value="none">None — hide profile and public trip posts</option>
+              <option value="profile">Explorer card — show profile, progress, achievements, and shared trips</option>
+              <option value="passport">Entire Passport — Explorer card plus read-only Public Atlas</option>
+            </select>
           </label>
-          <button id="btnSavePublicProfile" type="button" class="w-full rounded-lg bg-amber-500 px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-amber-400">Save Profile &amp; Copy Share Link</button>
+          <p class="text-[11px] text-slate-400">Explorer card visibility includes your avatar/name, shared-trip count and miles, progress, route preview from shared trips, and achievements. Entire Passport also lets visitors explore your public Atlas.</p>
+          <button id="btnSavePublicProfile" type="button" class="w-full rounded-lg bg-amber-500 px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-amber-400">Save Visibility</button>
           <p id="publicProfileStatus" class="text-[11px] text-slate-400" role="status" aria-live="polite"></p>
         </section>
         <button id="btnForceCloudSync" type="button" class="w-full rounded-lg border border-sky-500/40 bg-slate-900 px-3 py-2 text-sm text-sky-200 hover:bg-slate-800">Force Cloud Sync Now</button>
@@ -1302,15 +1323,15 @@
     </section>
   </div>
 
-  <script src="./nps-catalog.js?v=20261028-public-trip-sharing-v1"></script>
-  <script src="./national-parks-scratch.js?v=20261028-public-trip-sharing-v1"></script>
-  <script src="./international-parks.js?v=20261028-public-trip-sharing-v1"></script>
-  <script src="./ecoregions.js?v=20261028-public-trip-sharing-v1"></script>
-  <script src="./coordinate-lookups.js?v=20261028-public-trip-sharing-v1"></script>
-  <script src="./micro-states.js?v=20261028-public-trip-sharing-v1"></script>
-  <script src="./travel-ledger.js?v=20261028-public-trip-sharing-v1"></script>
-  <script src="./character-creator.js?v=20261028-public-trip-sharing-v1"></script>
-  <script src="./rarity-config.js?v=20261028-public-trip-sharing-v1"></script>
+  <script src="./nps-catalog.js?v=20261028-public-trip-sharing-v2"></script>
+  <script src="./national-parks-scratch.js?v=20261028-public-trip-sharing-v2"></script>
+  <script src="./international-parks.js?v=20261028-public-trip-sharing-v2"></script>
+  <script src="./ecoregions.js?v=20261028-public-trip-sharing-v2"></script>
+  <script src="./coordinate-lookups.js?v=20261028-public-trip-sharing-v2"></script>
+  <script src="./micro-states.js?v=20261028-public-trip-sharing-v2"></script>
+  <script src="./travel-ledger.js?v=20261028-public-trip-sharing-v2"></script>
+  <script src="./character-creator.js?v=20261028-public-trip-sharing-v2"></script>
+  <script src="./rarity-config.js?v=20261028-public-trip-sharing-v2"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -2064,10 +2085,14 @@
     const AUTH_SESSION_KEY = 'cartovella_cloud_session';
     const CLOUD_SYNC_DEBOUNCE_MS = 250;
     function normalizePublicProfile(profile = {}) {
+      const requestedVisibility = profile.visibility ?? profile.profile_visibility;
+      const visibility = ['none', 'profile', 'passport'].includes(requestedVisibility)
+        ? requestedVisibility : profile.is_public === true ? 'passport' : 'none';
       return {
         username: typeof profile.username === 'string' ? profile.username.trim().toLowerCase() : '',
         display_name: typeof profile.display_name === 'string' ? profile.display_name.trim().slice(0, 60) : '',
-        is_public: profile.is_public === true
+        visibility,
+        is_public: visibility !== 'none'
       };
     }
 
@@ -2084,9 +2109,12 @@
     let activePublicAtlasUsername = null;
     let publicAtlasRequestId = 0;
     let localAtlasReturnTab = 'map';
+    let profileOnlyView = false;
+    let guildStateBeforeProfileView = null;
     let guildProfiles = [];
     let guildProfilesLoaded = false;
     let guildProfilesLoadPromise = null;
+    let bulkTripSharingMode = null;
     let publicRouteMapThumbnailCacheKey = null;
     let publicRouteMapThumbnailCache = null;
     const PASSPORT_FIELDS = Object.freeze({
@@ -2428,6 +2456,25 @@
       if (index < 0) throw new Error('This expedition no longer exists.');
       if (exp.customPoiIds.some(id => !AppState.customPois.some(poi => poi.id === id))) throw new Error('Unknown custom POI in expedition.');
       commitLedger(() => { AppState.expeditions[index] = validated; });
+    }
+
+    function updateExpeditionSharingSettings(updates) {
+      if (AppState.viewOnly) throw new Error('Shared passports are read-only.');
+      if (!Array.isArray(updates)) throw new Error('Trip-sharing updates must be a list.');
+      const seen = new Set();
+      const validatedUpdates = updates.map(update => {
+        const current = AppState.expeditions.find(expedition => expedition.id === update?.id);
+        if (!current || seen.has(update.id)) throw new Error('A trip in the sharing update is missing or duplicated.');
+        seen.add(update.id);
+        return TravelLedger.validateExpeditions([{
+          ...current, publicSharing: update.publicSharing
+        }], CoordinateLookups)[0];
+      });
+      commitLedger(() => {
+        const byId = new Map(validatedUpdates.map(expedition => [expedition.id, expedition]));
+        AppState.expeditions = AppState.expeditions.map(expedition => byId.get(expedition.id) || expedition);
+      });
+      return validatedUpdates.length;
     }
 
     function deleteExpeditionRecord(id) {
@@ -6923,6 +6970,8 @@
       document.getElementById('btnCustomLocation').classList.toggle('hidden', AppState.viewOnly);
       document.getElementById('btnExpedition').classList.toggle('hidden', AppState.viewOnly);
       document.getElementById('btnHistoryExpedition').classList.toggle('hidden', AppState.viewOnly);
+      document.getElementById('btnShareAllTrips').classList.toggle('hidden', AppState.viewOnly);
+      document.getElementById('btnUnshareAllTrips').classList.toggle('hidden', AppState.viewOnly);
       updateHud();
       if (AppState.currentTab === 'passport') renderPassportView();
       if (AppState.currentTab === 'questlines') renderQuestlinesView();
@@ -6954,6 +7003,7 @@
     }
 
     function switchTab(tabId) {
+      if (profileOnlyView && tabId !== 'guild') return;
       if (tabId === 'map' && AppState.mode !== 'rpg') {
         AppState.mode = 'rpg';
         saveState();
@@ -7007,7 +7057,7 @@
           renderGuildDirectory();
           renderGuildExpeditions();
         }
-        void loadGuildProfiles();
+        if (!profileOnlyView) void loadGuildProfiles();
       }
     }
 
@@ -7133,11 +7183,124 @@
       });
     }
 
-    // Share link generator (base64 URL param)
-    document.getElementById('btnShare').addEventListener('click', async () => {
+    function closeBulkTripSharingDialog() {
+      const dialog = document.getElementById('bulkTripSharingDialog');
+      if (typeof dialog.close === 'function') dialog.close();
+      else dialog.removeAttribute('open');
+    }
+
+    function openBulkTripSharingDialog(mode) {
+      if (AppState.viewOnly) return;
+      if (!AppState.expeditions.length) {
+        document.getElementById('bulkTripSharingStatus').textContent = 'Log a trip before changing trip-sharing settings.';
+        return;
+      }
+      bulkTripSharingMode = mode;
+      const content = document.getElementById('bulkTripSharingContent');
+      const actions = document.getElementById('bulkTripSharingActions');
+      const title = document.getElementById('bulkTripSharingTitle');
+      const intro = document.getElementById('bulkTripSharingIntro');
+      const dialogStatus = document.getElementById('bulkTripSharingDialogStatus');
+      dialogStatus.textContent = '';
+      if (mode === 'share') {
+        title.textContent = 'Review trips to share';
+        intro.textContent = 'Every trip and all its details, journal text, and photos are selected by default. Anything you leave selected will be visible in public trip posts when your profile visibility is Explorer card or Entire Passport. Unchecked trips stay private; uncheck any details, journal, or photo you do not want public.';
+        content.innerHTML = AppState.expeditions.map(expedition => {
+          const sharing = TravelLedger.normalizePublicSharing(expedition.publicSharing, expedition.photos?.length || 0);
+          const photos = Array.isArray(expedition.photos) ? expedition.photos : [];
+          return `<fieldset data-bulk-trip-card="${escapeHtml(expedition.id)}" class="space-y-2 rounded-xl border border-slate-700 bg-slate-900/70 p-3">
+            <label class="flex items-start gap-2 text-sm font-semibold text-slate-100">
+              <input type="checkbox" data-bulk-trip="${escapeHtml(expedition.id)}" data-bulk-field="enabled" class="mt-1 accent-sky-400" checked>
+              <span>${escapeHtml(expedition.name || 'Untitled trip')}<span class="mt-0.5 block text-[11px] font-normal text-slate-400">${escapeHtml(travelLogDateRange(expedition))}</span></span>
+            </label>
+            <label class="flex items-center gap-2 text-xs text-slate-300"><input type="checkbox" data-bulk-field="includeDetails" class="accent-sky-400" checked> Include trip details, stops, dates, and route</label>
+            <label class="flex items-center gap-2 text-xs text-slate-300"><input type="checkbox" data-bulk-field="includeJournal" class="accent-sky-400" checked> Include journal</label>
+            ${photos.length ? `<div class="flex flex-wrap gap-2">${photos.map((photo, index) => `<label class="flex items-center gap-1.5 rounded-lg border border-slate-700 p-1.5 text-[11px] text-slate-300">
+              <input type="checkbox" data-bulk-field="photo" data-bulk-photo="${index}" class="accent-sky-400" checked>
+              <img src="${escapeHtml(photo)}" alt="" class="h-10 w-10 rounded object-cover" loading="lazy">Photo ${index + 1}
+            </label>`).join('')}</div>` : '<p class="text-[11px] text-slate-400">No photos on this trip.</p>'}
+          </fieldset>`;
+        }).join('');
+        actions.innerHTML = `<button type="button" data-bulk-sharing-close class="rounded-lg bg-slate-800 px-3 py-2 text-xs text-slate-200">Cancel</button>
+          <button type="submit" class="rounded-lg bg-sky-700 px-3 py-2 text-xs font-semibold text-white">Share selected trips</button>`;
+      } else {
+        title.textContent = 'Unshare all trips?';
+        intro.textContent = 'This will stop publishing every trip immediately. Your saved detail, journal, and photo choices will be preserved so you can share them again later.';
+        const tripLabel = AppState.expeditions.length === 1 ? 'trip' : 'trips';
+        content.innerHTML = `<p class="rounded-lg border border-rose-400/30 bg-rose-950/30 p-3 text-sm text-rose-100">All ${AppState.expeditions.length} ${tripLabel} will become private. This does not delete any travel logs or change your profile visibility.</p>`;
+        actions.innerHTML = `<button type="button" data-bulk-sharing-close class="rounded-lg bg-slate-800 px-3 py-2 text-xs text-slate-200">Cancel</button>
+          <button type="submit" class="rounded-lg bg-rose-800 px-3 py-2 text-xs font-semibold text-white">Confirm unshare all</button>`;
+      }
+      const dialog = document.getElementById('bulkTripSharingDialog');
+      if (typeof dialog.showModal === 'function') dialog.showModal();
+      else dialog.setAttribute('open', '');
+    }
+
+    document.getElementById('btnShareAllTrips').addEventListener('click', () => openBulkTripSharingDialog('share'));
+    document.getElementById('btnUnshareAllTrips').addEventListener('click', () => openBulkTripSharingDialog('unshare'));
+    document.getElementById('bulkTripSharingDialog').addEventListener('click', event => {
+      if (event.target.closest('[data-bulk-sharing-close]')) closeBulkTripSharingDialog();
+    });
+    document.getElementById('bulkTripSharingContent').addEventListener('change', event => {
+      const tripToggle = event.target.closest('input[data-bulk-trip][data-bulk-field="enabled"]');
+      if (tripToggle) {
+        const card = tripToggle.closest('[data-bulk-trip-card]');
+        card.querySelectorAll('input[data-bulk-field]:not([data-bulk-field="enabled"])')
+          .forEach(input => { input.disabled = !tripToggle.checked; });
+      }
+    });
+    document.getElementById('bulkTripSharingForm').addEventListener('submit', event => {
+      event.preventDefault();
+      if (AppState.viewOnly) return;
+      const dialogStatus = document.getElementById('bulkTripSharingDialogStatus');
       try {
-        await copyTextToClipboard(currentShareUrl());
-        showNotification('🔗 Link Copied!', 'Shareable passport link copied to clipboard.', '📜');
+        if (bulkTripSharingMode === 'unshare') {
+          updateExpeditionSharingSettings(AppState.expeditions.map(expedition => {
+            const sharing = TravelLedger.normalizePublicSharing(expedition.publicSharing, expedition.photos?.length || 0);
+            return { id: expedition.id, publicSharing: { ...sharing, enabled: false } };
+          }));
+          document.getElementById('bulkTripSharingStatus').textContent = 'All trips are now private; their content choices were preserved.';
+        } else if (bulkTripSharingMode === 'share') {
+          const cards = [...document.querySelectorAll('#bulkTripSharingContent [data-bulk-trip-card]')];
+          const updates = cards.map(card => {
+            const enabled = card.querySelector('[data-bulk-field="enabled"]').checked;
+            const current = AppState.expeditions.find(expedition => expedition.id === card.dataset.bulkTripCard);
+            if (!current) throw new Error('A trip changed while the sharing review was open. Reopen the review and try again.');
+            const photoIndexes = [...card.querySelectorAll('[data-bulk-field="photo"]:checked')]
+              .map(input => Number(input.dataset.bulkPhoto));
+            const sharing = TravelLedger.normalizePublicSharing({
+              enabled,
+              includeDetails: card.querySelector('[data-bulk-field="includeDetails"]').checked,
+              includeJournal: card.querySelector('[data-bulk-field="includeJournal"]').checked,
+              photoIndexes
+            }, current.photos?.length || 0);
+            return { id: current.id, publicSharing: sharing };
+          });
+          updateExpeditionSharingSettings(updates);
+          const sharedCount = updates.filter(update => update.publicSharing.enabled).length;
+          document.getElementById('bulkTripSharingStatus').textContent =
+            `${sharedCount} trip${sharedCount === 1 ? '' : 's'} selected for public sharing.`;
+        }
+        closeBulkTripSharingDialog();
+        refreshTravelUI();
+      } catch (error) {
+        console.error('Bulk trip-sharing update failed.', error);
+        dialogStatus.textContent = `Sharing settings were not saved: ${error.message}`;
+      }
+    });
+
+    // Copy the public link allowed by the selected visibility tier.
+    document.getElementById('btnShare').addEventListener('click', async () => {
+      if (publicProfile.visibility === 'none') {
+        showNotification('Public sharing is off', 'Choose Explorer card or Entire Passport in your profile settings before copying a public link.', '🔒');
+        return;
+      }
+      try {
+        const shareUrl = currentShareUrl();
+        if (!shareUrl) throw new Error('A public profile link is unavailable. Save your profile visibility first.');
+        await copyTextToClipboard(shareUrl);
+        showNotification('🔗 Link Copied!', publicProfile.visibility === 'profile'
+          ? 'Your Explorer card and shared trips link was copied.' : 'Your public passport link was copied.', '📜');
       } catch (error) {
         console.error('Share link copy failed.', error);
         showNotification('Could not copy link', error.message, '⚠️');
@@ -7254,7 +7417,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261028-public-trip-sharing-v1"></script>
+  <script src="./expedition-ui.js?v=20261028-public-trip-sharing-v2"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);
@@ -8023,7 +8186,8 @@
       }).filter(Boolean).sort((a, b) =>
         ACHIEVEMENT_RARITY_ORDER.indexOf(b.rarity) - ACHIEVEMENT_RARITY_ORDER.indexOf(a.rarity)
       ).slice(0, 4);
-      const sharedExpeditions = publicProfile.is_public ? AppState.expeditions.filter(expedition => {
+      const profileIsVisible = publicProfile.visibility !== 'none';
+      const sharedExpeditions = profileIsVisible ? AppState.expeditions.filter(expedition => {
         const sharing = publicSharingForExpedition(expedition);
         return sharing.enabled && (sharing.includeDetails ||
           (sharing.includeJournal && Boolean(expedition.journal?.trim())) || sharing.photoIndexes.length > 0);
@@ -8060,7 +8224,7 @@
         titleDesc: stats.titleDesc,
         homeName: AppState.homeBase?.name || '',
         character: publicCharacter,
-        routeMapThumbnail: publicProfile.is_public ? await buildPublicRouteMapThumbnail() : null,
+        routeMapThumbnail: profileIsVisible ? await buildPublicRouteMapThumbnail() : null,
         countriesCount: stats.countriesCount,
         statesCount: stats.statesCount,
         parksCount: (stats.visitedParks || []).length,
@@ -8068,6 +8232,7 @@
         totalMiles: Math.round(sharedExpeditions.reduce((total, expedition) =>
           total + (publicSharingForExpedition(expedition).includeDetails
             ? expeditionDistanceMiles(expedition) : 0), 0) * 10) / 10,
+        totalTrips: sharedExpeditions.length,
         clearedPct: Number.isFinite(stats.clearedPct) ? stats.clearedPct : null,
         topBadges,
         recentExpeditions: publicPosts
@@ -8090,18 +8255,19 @@
       if (!username) return;
       username.value = publicProfile.username;
       document.getElementById('profileDisplayName').value = publicProfile.display_name;
-      document.getElementById('profileIsPublic').checked = publicProfile.is_public;
+      document.getElementById('profileVisibility').value = publicProfile.visibility;
+      document.getElementById('btnSavePublicProfile').textContent = publicProfile.visibility === 'none'
+        ? 'Save Visibility' : 'Save Visibility & Copy Share Link';
     }
 
     function currentShareUrl() {
       if (activePublicAtlasUsername) {
         return `${window.location.origin}${window.location.pathname}?u=${encodeURIComponent(activePublicAtlasUsername)}`;
       }
-      if (publicProfile.is_public && publicProfile.username) {
+      if (publicProfile.visibility !== 'none' && publicProfile.username) {
         return `${window.location.origin}${window.location.pathname}?u=${encodeURIComponent(publicProfile.username)}`;
       }
-      const encoded = btoa(encodeURIComponent(JSON.stringify(passportPayload())));
-      return `${window.location.origin}${window.location.pathname}?d=${encoded}`;
+      return null;
     }
 
     async function copyTextToClipboard(value) {
@@ -8126,13 +8292,18 @@
       }
       const username = document.getElementById('profileUsername').value.trim().toLowerCase();
       const displayName = document.getElementById('profileDisplayName').value.trim();
-      const isPublic = document.getElementById('profileIsPublic').checked;
+      const visibility = document.getElementById('profileVisibility').value;
+      if (!['none', 'profile', 'passport'].includes(visibility)) {
+        status.textContent = 'Choose a valid public visibility level.';
+        document.getElementById('profileVisibility').focus();
+        return;
+      }
       if (username && !PUBLIC_USERNAME_PATTERN.test(username)) {
         status.textContent = 'Username must be 3–24 lowercase letters, numbers, underscores, or hyphens.';
         document.getElementById('profileUsername').focus();
         return;
       }
-      if (isPublic && !username) {
+      if (visibility !== 'none' && !username) {
         status.textContent = 'Choose a username before listing your profile publicly.';
         document.getElementById('profileUsername').focus();
         return;
@@ -8157,7 +8328,7 @@
       button.disabled = true;
       status.textContent = 'Saving your public profile…';
       try {
-        setPublicProfile({ username, display_name: displayName, is_public: isPublic });
+        setPublicProfile({ username, display_name: displayName, visibility });
         if (!await syncToCloud(false)) {
           const syncMessage = document.getElementById('authSyncStatusText').textContent || 'Cloud sync did not complete.';
           if (syncMessage === USERNAME_TAKEN_MESSAGE) {
@@ -8167,9 +8338,15 @@
           }
           throw new Error(syncMessage);
         }
-        await copyTextToClipboard(currentShareUrl());
-        status.textContent = 'Profile synced. Share link copied to the clipboard.';
-        showNotification('Public Profile Saved', 'Your profile settings are synced and the share link was copied.', '🌐');
+        const shareUrl = currentShareUrl();
+        if (shareUrl) {
+          await copyTextToClipboard(shareUrl);
+          status.textContent = 'Profile synced. Share link copied to the clipboard.';
+          showNotification('Public Profile Saved', 'Your profile settings are synced and the share link was copied.', '🌐');
+        } else {
+          status.textContent = 'Profile set to None and synced. No public profile or trip posts are visible.';
+          showNotification('Profile Hidden', 'Your public profile and shared-trip posts are now hidden.', '🔒');
+        }
       } catch (error) {
         console.error('Public profile save failed.', error);
         status.textContent = `Profile save or link copy failed: ${error.message}`;
@@ -8202,6 +8379,7 @@
         stats.routeMapThumbnail.length <= 64000 &&
         /^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/.test(stats.routeMapThumbnail)
         ? stats.routeMapThumbnail : null;
+      const visibility = profile.visibility === 'profile' ? 'profile' : 'passport';
       return `<article class="rpg-panel rounded-2xl p-4">
         <div class="flex items-center gap-3">
           <canvas width="160" height="90" data-guild-avatar="${escapeHtml(profile.username)}" class="h-16 w-16 shrink-0 rounded-full bg-slate-950 object-cover" role="img" aria-label="Explorer avatar and chosen background for @${escapeHtml(profile.username)}"></canvas>
@@ -8219,10 +8397,11 @@
         <p class="mt-3 rounded-lg border border-sky-400/20 bg-sky-950/30 px-3 py-2 text-xs text-slate-300">
           Total miles traveled <b class="ml-1 text-sky-200">${escapeHtml(totalMiles)}</b>
         </p>
+        <p class="mt-2 text-[11px] text-slate-400">Shared trips <b class="text-slate-200">${escapeHtml(stat(stats.totalTrips))}</b></p>
         ${routeMapThumbnail ? `<img src="${escapeHtml(routeMapThumbnail)}" alt="Route map preview for @${escapeHtml(profile.username)}" loading="lazy" decoding="async" class="mt-3 aspect-[320/168] w-full rounded-lg border border-slate-700 object-cover">` : ''}
         ${Number.isFinite(stats.clearedPct) ? `<p class="mt-2 text-[11px] text-emerald-200">${stats.clearedPct.toFixed(1)}% of mapped land cleared</p>` : ''}
         ${badges ? `<div class="mt-3 flex flex-wrap gap-1.5" aria-label="Recent earned achievements">${badges}</div>` : ''}
-        <button type="button" data-guild-explore="${escapeHtml(profile.username)}" class="mt-4 rounded-lg border border-sky-400/40 bg-sky-950/40 px-3 py-2 text-xs text-sky-200 hover:bg-sky-900/50">Explore Atlas (🗺️)</button>
+        ${visibility === 'passport' ? `<button type="button" data-guild-explore="${escapeHtml(profile.username)}" class="mt-4 rounded-lg border border-sky-400/40 bg-sky-950/40 px-3 py-2 text-xs text-sky-200 hover:bg-sky-900/50">Explore Atlas (🗺️)</button>` : ''}
       </article>`;
     }
 
@@ -8256,13 +8435,14 @@
     }
 
     async function loadGuildProfiles() {
+      if (profileOnlyView) return true;
       if (guildProfilesLoadPromise) return guildProfilesLoadPromise;
       const status = document.getElementById('guildStatus');
       status.textContent = 'Loading public explorers…';
       guildProfilesLoadPromise = (async () => {
         try {
           const response = await fetch(
-          `${SUPABASE_URL}/rest/v1/cartovella_public_profiles?select=username,display_name,updated_at,summary_stats&order=updated_at.desc&limit=50`,
+          `${SUPABASE_URL}/rest/v1/cartovella_public_profiles?select=username,display_name,profile_visibility,updated_at,summary_stats&order=updated_at.desc&limit=50`,
           { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
         );
           if (!response.ok) throw new Error(`Guild request failed (HTTP ${response.status}).`);
@@ -8273,6 +8453,7 @@
           ).map(record => ({
             username: record.username,
             display_name: typeof record.display_name === 'string' ? record.display_name.slice(0, 60) : '',
+            visibility: record.profile_visibility === 'profile' ? 'profile' : 'passport',
             updated_at: typeof record.updated_at === 'string' ? record.updated_at : '',
             summary_stats: record.summary_stats && typeof record.summary_stats === 'object' &&
               !Array.isArray(record.summary_stats) ? record.summary_stats : {}
@@ -8317,6 +8498,49 @@
       window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
     }
 
+    function showPublicProfileCard(record, username) {
+      if (!profileOnlyView) {
+        guildStateBeforeProfileView = {
+          profiles: guildProfiles,
+          loaded: guildProfilesLoaded,
+          search: document.getElementById('guildSearchInput').value,
+          actionsHidden: document.getElementById('guildDirectoryActions').classList.contains('hidden'),
+          searchHidden: document.getElementById('guildSearchLabel').classList.contains('hidden')
+        };
+      }
+      profileOnlyView = true;
+      guildProfiles = [{
+        username,
+        display_name: typeof record.display_name === 'string' ? record.display_name.slice(0, 60) : '',
+        visibility: 'profile',
+        updated_at: typeof record.updated_at === 'string' ? record.updated_at : '',
+        summary_stats: record.summary_stats && typeof record.summary_stats === 'object' &&
+          !Array.isArray(record.summary_stats) ? record.summary_stats : {}
+      }];
+      guildProfilesLoaded = true;
+      document.getElementById('guildSearchInput').value = '';
+      document.getElementById('guildDirectoryActions').classList.add('hidden');
+      document.getElementById('guildSearchLabel').classList.add('hidden');
+      document.getElementById('guildStatus').textContent = `Viewing @${username}'s public Explorer card and shared trips.`;
+      document.getElementById('viewingPublicAtlasMessage').textContent =
+        `🧭 Viewing @${username}'s Explorer Profile · Read-Only`;
+      renderGuildDirectory();
+      renderGuildExpeditions();
+      switchTab('guild');
+    }
+
+    function restoreGuildDirectoryAfterProfileView() {
+      if (!profileOnlyView) return;
+      profileOnlyView = false;
+      const previous = guildStateBeforeProfileView;
+      guildStateBeforeProfileView = null;
+      guildProfiles = previous?.profiles || [];
+      guildProfilesLoaded = previous?.loaded === true;
+      document.getElementById('guildSearchInput').value = previous?.search || '';
+      document.getElementById('guildDirectoryActions').classList.toggle('hidden', previous?.actionsHidden === true);
+      document.getElementById('guildSearchLabel').classList.toggle('hidden', previous?.searchHidden === true);
+    }
+
     async function loadPublicAtlas(username, destinationTab = 'map') {
       const normalizedUsername = String(username || '').trim().toLowerCase();
       if (!PUBLIC_USERNAME_PATTERN.test(normalizedUsername)) {
@@ -8332,13 +8556,20 @@
       document.getElementById('viewingPublicAtlasBanner').classList.remove('hidden');
       try {
         const response = await fetch(
-          `${SUPABASE_URL}/rest/v1/cartovella_public_profiles?username=eq.${encodeURIComponent(normalizedUsername)}&select=username,display_name,updated_at,public_passport_data,summary_stats`,
+          `${SUPABASE_URL}/rest/v1/cartovella_public_profiles?username=eq.${encodeURIComponent(normalizedUsername)}&select=username,display_name,profile_visibility,updated_at,public_passport_data,summary_stats`,
           { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
         );
         if (!response.ok) throw new Error(`Public Atlas request failed (HTTP ${response.status}).`);
         const records = await response.json();
         if (!Array.isArray(records)) throw new Error('Supabase returned an unexpected public passport response.');
         const record = records.find(item => item.username === normalizedUsername);
+        if (!record) throw new Error(`@${normalizedUsername} does not have a public profile.`);
+        if (requestId !== publicAtlasRequestId || activePublicAtlasUsername !== normalizedUsername) return false;
+        if (record.profile_visibility === 'profile') {
+          showPublicProfileCard(record, normalizedUsername);
+          AppState.viewOnly = true;
+          return true;
+        }
         if (!record?.public_passport_data) throw new Error(`@${normalizedUsername} does not have a public Atlas.`);
         const parsed = migratePassport(record.public_passport_data);
         await preparePassportGeography(parsed);
@@ -8382,6 +8613,7 @@
       }
       activePublicAtlasUsername = null;
       AppState.viewOnly = false;
+      restoreGuildDirectoryAfterProfileView();
       syncDerivedState();
       document.getElementById('viewingPublicAtlasBanner').classList.add('hidden');
       if (window.history?.replaceState && window.location) {
@@ -8426,8 +8658,9 @@
           body: JSON.stringify({
             user_id: cloudSession.user.id,
             passport_data: passportData,
-              public_trip_sharing_version: publicProfile.is_public ? 1 : null,
-              username: publicProfile.username || null,
+            public_trip_sharing_version: publicProfile.visibility !== 'none' ? 1 : null,
+            profile_visibility: publicProfile.visibility,
+            username: publicProfile.username || null,
             display_name: publicProfile.display_name || null,
             is_public: publicProfile.is_public,
             summary_stats: summaryStats,
@@ -8645,6 +8878,10 @@
     }
     document.getElementById('btnAuthLogout').addEventListener('click', handleLogout);
     document.getElementById('btnSavePublicProfile').addEventListener('click', () => void savePublicProfile());
+    document.getElementById('profileVisibility').addEventListener('change', event => {
+      document.getElementById('btnSavePublicProfile').textContent = event.target.value === 'none'
+        ? 'Save Visibility' : 'Save Visibility & Copy Share Link';
+    });
     document.getElementById('btnManagePublicProfile').addEventListener('click', () => toggleAuthModal(true));
     document.getElementById('btnRefreshGuild').addEventListener('click', () => {
       guildProfilesLoaded = false;
