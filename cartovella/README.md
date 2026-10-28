@@ -206,7 +206,9 @@ unlock individually when their corresponding national park has been visited.
 Stats stop resolving county biomes once every catalog biome is already collected. This
 avoids redundant polygon lookups when importing completionist or fully unlocked test passports.
 Passport imports prepare park geography in small batches, yielding between batches and showing
-progress before replacing the current records. Back up real travel data before importing synthetic
+progress before replacing the current records. Cloud sign-in, passport restore/import, and public
+Atlas loading show an animated dog with a live status message; long render steps yield to the browser
+so the loading indicator can stay responsive. Back up real travel data before importing synthetic
 test passports, and keep test passports separate from accounts used for real cloud saves.
 
 Level, worldwide-destination, and existing achievement milestones unlock wardrobe and companion

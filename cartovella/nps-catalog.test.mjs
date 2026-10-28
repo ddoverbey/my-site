@@ -15,6 +15,9 @@ const worldwide = JSON.parse(await readFile(new URL('./worldwide-national-parks.
 const wikidata = JSON.parse(await readFile(new URL('./wikidata-national-parks-query.json', import.meta.url), 'utf8'));
 const internationalParks = internationalCatalog.combineParks(worldwide, wikidata).parks;
 const publicTripSharingSql = await readFile(new URL('./public-trip-sharing.sql', import.meta.url), 'utf8');
+const loadingDogSprite = await readFile(new URL(
+  './assets/Loading%20Animations/Topdown%20-%20Pet%20-%20Dog/Root_Idle.png', import.meta.url
+));
 
 const records = Array.from({ length: 405 }, (_, index) => ({
   id: `official-${index}`, parkCode: index.toString(36).padStart(4, '0'),
@@ -151,6 +154,14 @@ check('refresh restores the signed-in UI and local atlas before supplemental dat
   assert.match(startup, /await finishStartupDatasets\(\)/);
   assert.doesNotMatch(html, /cache:\s*'no-cache'/);
 });
+check('passport loading displays an accessible animated dog and keeps nested loading steps visible', () => {
+  assert.equal(loadingDogSprite.readUInt32BE(16), 256);
+  assert.equal(loadingDogSprite.readUInt32BE(20), 256);
+  assert.match(html, /id="appLoadingOverlay"[^>]*role="status"[^>]*aria-live="polite"/);
+  assert.match(html, /background-image: url\("\.\/assets\/Loading%20Animations\/Topdown%20-%20Pet%20-%20Dog\/Root_Idle\.png"\)/);
+  assert.match(html, /animation: loadingDogIdle 900ms steps\(4, end\) infinite/);
+  assert.match(html, /@keyframes loadingDogIdle/);
+});
 check('Travel Ledger header is compact with no description beneath its title', () => {
   const header=html.slice(html.indexOf('<div id="tabContent-bucketlist"'),html.indexOf('<section id="bucketCityMatches"'));
   assert.ok(header.includes('>Travel Ledger</h2>'));
@@ -207,7 +218,7 @@ check('character customization appears above the stage and progress summary', ()
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 10);
-  assert.ok(sources.every(source => source.endsWith('?v=20261028-public-trip-sharing-v4')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261028-loading-dog-v1')));
   assert.ok(sources.some(source => source.startsWith('./character-creator.js?')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
@@ -329,7 +340,8 @@ function element(id) {
 const context = vm.createContext({
   NpsCatalog: catalog, NationalParksScratch: nationalParksScratch, Ecoregions: ecoregions, InternationalParks: internationalCatalog, CoordinateLookups: coordinateLookups, TravelLedger: travelLedger, CharacterCreator: characterCreator,
   CartovellaConfig: { rarityEndpoint: 'https://api.devonoverbey.com/rarity' },
-  tailwind: {}, console, Intl, URL, URLSearchParams, AbortController, AbortSignal, setTimeout() {}, clearTimeout() {},
+  tailwind: {}, console, Intl, URL, URLSearchParams, AbortController, AbortSignal,
+  requestAnimationFrame: callback => callback(), setTimeout() {}, clearTimeout() {},
   localStorage, Headers,
   DOMParser: TestDOMParser,
   document: { body: { classList: { toggle() {}, add() {}, remove() {} } }, getElementById: element, querySelectorAll: () => [], addEventListener() {}, createElement: tag => tag === 'canvas' ? { width: 0, height: 0, getContext: () => null } : element(`created-${elements.size}`) },
@@ -338,6 +350,16 @@ const context = vm.createContext({
 });
 const testConsole = context.console;
 scripts.forEach(script => vm.runInContext(script, context));
+check('loading overlay reports nested operations and hides after the last operation finishes', () => {
+  const firstTask = vm.runInContext("beginAppLoading('Reading passport…')", context);
+  assert.equal(element('appLoadingMessage').textContent, 'Reading passport…');
+  const secondTask = vm.runInContext("beginAppLoading('Restoring atlas…')", context);
+  assert.equal(element('appLoadingMessage').textContent, 'Restoring atlas…');
+  secondTask.finish();
+  assert.equal(element('appLoadingMessage').textContent, 'Reading passport…');
+  firstTask.finish();
+  assert.equal(element('appLoadingOverlay').classList.contains('hidden'), true);
+});
 check('public profile visibility migrates legacy consent without widening access', () => {
   assert.equal(vm.runInContext(`normalizePublicProfile({username:'Devon',is_public:true}).visibility`, context), 'passport');
   assert.equal(vm.runInContext(`normalizePublicProfile({username:'devon',is_public:false}).visibility`, context), 'none');
@@ -853,6 +875,8 @@ await checkAsync('existing cloud passport sign-in hydrates local state', async (
   assert.equal(vm.runInContext('AppState.homeBase.name', context), 'Cloud Home');
   assert.equal(element('authCurrentEmail').textContent, cloudSession.user.email);
   assert.equal(vm.runInContext('cloudHydrated', context), true, element('authSyncStatusText').textContent);
+  assert.equal(vm.runInContext('authRequestInProgress', context), false);
+  assert.equal(element('appLoadingOverlay').classList.contains('hidden'), true);
 });
 await checkAsync('different local and cloud passports are compared without replacing either copy', async () => {
   const cloudUpdatedAt = '2026-05-14T12:30:00.000Z';

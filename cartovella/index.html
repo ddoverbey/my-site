@@ -262,6 +262,28 @@
       background: linear-gradient(90deg, #10b981 0%, #34d399 50%, #10b981 100%);
       background-size: 200% 100%;
     }
+    .app-loading-overlay {
+      display: grid;
+      place-items: center;
+      background: rgba(3, 7, 18, 0.78);
+      backdrop-filter: blur(3px);
+    }
+    .app-loading-overlay.hidden { display: none; }
+    .loading-dog {
+      width: 72px;
+      height: 72px;
+      background-image: url("./assets/Loading%20Animations/Topdown%20-%20Pet%20-%20Dog/Root_Idle.png");
+      background-size: 288px 288px;
+      image-rendering: pixelated;
+      animation: loadingDogIdle 900ms steps(4, end) infinite;
+    }
+    @keyframes loadingDogIdle {
+      from { background-position: 0 -72px; }
+      to { background-position: -288px -72px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .loading-dog { background-position: 0 -72px; animation: none; }
+    }
     #achievementsContainer progress {
       appearance: none;
       border: 1px solid #334155;
@@ -371,6 +393,14 @@
   </style>
 </head>
 <body class="h-screen w-screen flex flex-col bg-[#060913] text-slate-100 select-none">
+
+  <div id="appLoadingOverlay" class="app-loading-overlay hidden fixed inset-0 z-[2000] p-4" role="status" aria-live="polite" aria-atomic="true">
+    <div class="rpg-panel rpg-panel-gold flex w-full max-w-sm flex-col items-center rounded-2xl p-6 text-center shadow-2xl">
+      <div class="loading-dog" aria-hidden="true"></div>
+      <p id="appLoadingMessage" class="mt-2 text-sm font-semibold text-amber-100">Loading Cartovella…</p>
+      <p class="mt-1 text-xs text-slate-400">Large passports can take a little while to prepare. Please keep this page open.</p>
+    </div>
+  </div>
 
   <header class="relative min-h-16 border-b border-slate-800 bg-[#0c1222]/95 px-3 py-2 sm:px-4 flex flex-wrap sm:flex-nowrap items-center justify-between gap-x-3 gap-y-2 z-[600] shrink-0 backdrop-blur-md">
     <div class="flex items-center gap-3 min-w-0">
@@ -1323,15 +1353,15 @@
     </section>
   </div>
 
-  <script src="./nps-catalog.js?v=20261028-public-trip-sharing-v4"></script>
-  <script src="./national-parks-scratch.js?v=20261028-public-trip-sharing-v4"></script>
-  <script src="./international-parks.js?v=20261028-public-trip-sharing-v4"></script>
-  <script src="./ecoregions.js?v=20261028-public-trip-sharing-v4"></script>
-  <script src="./coordinate-lookups.js?v=20261028-public-trip-sharing-v4"></script>
-  <script src="./micro-states.js?v=20261028-public-trip-sharing-v4"></script>
-  <script src="./travel-ledger.js?v=20261028-public-trip-sharing-v4"></script>
-  <script src="./character-creator.js?v=20261028-public-trip-sharing-v4"></script>
-  <script src="./rarity-config.js?v=20261028-public-trip-sharing-v4"></script>
+  <script src="./nps-catalog.js?v=20261028-loading-dog-v1"></script>
+  <script src="./national-parks-scratch.js?v=20261028-loading-dog-v1"></script>
+  <script src="./international-parks.js?v=20261028-loading-dog-v1"></script>
+  <script src="./ecoregions.js?v=20261028-loading-dog-v1"></script>
+  <script src="./coordinate-lookups.js?v=20261028-loading-dog-v1"></script>
+  <script src="./micro-states.js?v=20261028-loading-dog-v1"></script>
+  <script src="./travel-ledger.js?v=20261028-loading-dog-v1"></script>
+  <script src="./character-creator.js?v=20261028-loading-dog-v1"></script>
+  <script src="./rarity-config.js?v=20261028-loading-dog-v1"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -4895,6 +4925,9 @@
 
     function yieldToMain() {
       if (typeof globalThis.scheduler?.yield === 'function') return globalThis.scheduler.yield();
+      if (typeof requestAnimationFrame === 'function') {
+        return new Promise(resolve => requestAnimationFrame(resolve));
+      }
       return new Promise(resolve => setTimeout(resolve, 0));
     }
 
@@ -7347,16 +7380,21 @@
       }
       passportImportInProgress = true;
       const reader = new FileReader();
+      const loadingTask = beginAppLoading('Reading your passport file…');
       reader.onload = async (event) => {
         try {
           if (AppState.viewOnly) throw new Error('Read-only passport: import is disabled.');
           const source = JSON.parse(event.target.result);
           const includesRecoveryDraft = !!source?._unsavedExpeditionDraft;
           const parsed = migratePassport(source);
+          loadingTask.update('Preparing your atlas…');
           await appReady;
-          await preparePassportGeography(parsed, (current, total) =>
+          await preparePassportGeography(parsed, (current, total) => {
+            loadingTask.update(`Preparing location data (${current.toLocaleString()} / ${total.toLocaleString()})…`);
             showNotification('Importing passport',
-              `Preparing location geography (${current.toLocaleString()} / ${total.toLocaleString()})...`, '📂'));
+              `Preparing location geography (${current.toLocaleString()} / ${total.toLocaleString()})...`, '📂');
+          });
+          loadingTask.update('Saving records and updating your atlas…');
           showNotification('Importing passport', 'Saving records and updating your atlas...', '📂');
           await yieldToMain();
           commitLedger(() => applyPassport(parsed), { notifyProgress: false });
@@ -7385,10 +7423,12 @@
           showNotification('Error', `Passport import failed: ${err.message}`, '⚠️');
         } finally {
           passportImportInProgress = false;
+          loadingTask.finish();
         }
       };
       reader.onerror = () => {
         passportImportInProgress = false;
+        loadingTask.finish();
         console.error('Failed to read passport file', reader.error);
         showNotification('Error', `Passport file could not be read: ${reader.error?.message || 'Unknown file read error'}`, '⚠️');
       };
@@ -7413,7 +7453,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261028-public-trip-sharing-v4"></script>
+  <script src="./expedition-ui.js?v=20261028-loading-dog-v1"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);
@@ -7871,9 +7911,11 @@
       document.getElementById('btnKeepCloudPassport').focus();
     }
 
-    function renderLoadedCloudPassport(parsed, cloudUpdatedAt = null) {
+    async function renderLoadedCloudPassport(parsed, cloudUpdatedAt = null) {
       applyPassport(parsed);
+      await yieldToMain();
       syncDerivedState();
+      await yieldToMain();
       saveState({ recordEdit: false });
       if (cloudUpdatedAt && Number.isFinite(Date.parse(cloudUpdatedAt))) {
         localStorage.setItem(LOCAL_EDITED_AT_KEY, new Date(cloudUpdatedAt).toISOString());
@@ -7882,17 +7924,20 @@
       cloudHydrated = true;
       if (AppState.homeBase) closeHomeModal();
       updateHomeBaseMarker();
+      await yieldToMain();
       renderParkMarkers();
       restoreModeView();
+      await yieldToMain();
       updateAllUI();
     }
 
     async function resolveCloudConflict(useCloud) {
       if (!pendingCloudConflict) return;
       if (useCloud) {
+        const loadingTask = beginAppLoading('Loading the selected cloud passport…');
         try {
           if (pendingCloudConflict.cloudProfile) setPublicProfile(pendingCloudConflict.cloudProfile);
-          renderLoadedCloudPassport(
+          await renderLoadedCloudPassport(
             migratePassport(pendingCloudConflict.cloudPassport),
             pendingCloudConflict.cloudUpdatedAt
           );
@@ -7900,6 +7945,8 @@
           console.error('Could not apply the selected cloud passport.', error);
           setCloudStatus(`Could not load the cloud passport: ${error.message} Local data was kept.`, true);
           return;
+        } finally {
+          loadingTask.finish();
         }
         pendingCloudConflict = null;
         updateAuthUI();
@@ -7939,6 +7986,10 @@
         showAuthError('Cloud sync is unavailable while viewing a shared read-only passport.');
         return;
       }
+      if (authRequestInProgress) return;
+      authRequestInProgress = true;
+      const loadingTask = beginAppLoading('Signing in to Cartovella…');
+      document.getElementById('btnAuthLogin').disabled = true;
       try {
         const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
           method: 'POST',
@@ -7959,6 +8010,7 @@
         cloudHydrated = false;
         pendingCloudConflict = null;
         updateAuthUI();
+        loadingTask.update('Preparing your atlas…');
         await appReady;
         if (await loadFromCloud()) toggleAuthModal(false);
         else if (!pendingCloudConflict) {
@@ -7967,6 +8019,10 @@
       } catch (cause) {
         console.error('Cartovella sign-in failed.', cause);
         showAuthError(cause.message);
+      } finally {
+        authRequestInProgress = false;
+        document.getElementById('btnAuthLogin').disabled = false;
+        loadingTask.finish();
       }
     }
 
@@ -7987,6 +8043,10 @@
         usernameInput.focus();
         return;
       }
+      if (authRequestInProgress) return;
+      authRequestInProgress = true;
+      const loadingTask = beginAppLoading('Creating your Cartovella account…');
+      document.getElementById('btnAuthSignUp').disabled = true;
       try {
         if (!await isUsernameAvailable(username)) {
           showAuthError(USERNAME_TAKEN_MESSAGE);
@@ -8018,6 +8078,7 @@
         cloudHydrated = false;
         pendingCloudConflict = null;
         updateAuthUI();
+        loadingTask.update('Preparing your atlas…');
         await appReady;
         if (await loadFromCloud()) toggleAuthModal(false);
         else if (!pendingCloudConflict) {
@@ -8026,6 +8087,10 @@
       } catch (cause) {
         console.error('Cartovella account creation failed.', cause);
         showAuthError(usernameConflictMessage(cause.status, cause) || cause.message);
+      } finally {
+        authRequestInProgress = false;
+        document.getElementById('btnAuthSignUp').disabled = false;
+        loadingTask.finish();
       }
     }
 
@@ -8542,6 +8607,7 @@
       if (!PUBLIC_USERNAME_PATTERN.test(normalizedUsername)) {
         throw new Error('The public explorer username is invalid.');
       }
+      const loadingTask = beginAppLoading(`Loading @${normalizedUsername}'s passport…`);
       if (!activePublicAtlasUsername) localAtlasReturnTab = AppState.currentTab;
       activePublicAtlasUsername = normalizedUsername;
       AppState.viewOnly = true;
@@ -8567,16 +8633,20 @@
           return true;
         }
         if (!record?.public_passport_data) throw new Error(`@${normalizedUsername} does not have a public Atlas.`);
+        loadingTask.update(`Preparing @${normalizedUsername}'s atlas…`);
         const parsed = migratePassport(record.public_passport_data);
         await preparePassportGeography(parsed);
         if (requestId !== publicAtlasRequestId || activePublicAtlasUsername !== normalizedUsername) return false;
         applyPassport(parsed);
         AppState.viewOnly = true;
+        await yieldToMain();
         syncDerivedState();
         if (AppState.homeBase) closeHomeModal();
         updateHomeBaseMarker();
+        await yieldToMain();
         renderParkMarkers();
         drawFogOfWar();
+        await yieldToMain();
         updateAllUI();
         switchTab(destinationTab);
         const displayName = typeof record.display_name === 'string' && record.display_name.trim()
@@ -8591,6 +8661,8 @@
           `🧭 @${normalizedUsername}'s Public Atlas is unavailable · ${error.message}`;
         document.getElementById('guildStatus').textContent = error.message;
         return false;
+      } finally {
+        loadingTask.finish();
       }
     }
 
@@ -8762,10 +8834,11 @@
 
     async function loadFromCloud({ notifySeed = false } = {}) {
       if (AppState.viewOnly || !cloudSession?.access_token) return false;
-      ensureAuthPublicUsername();
-      cloudHydrated = false;
-      setCloudStatus('Loading your cloud passport…');
+      const loadingTask = beginAppLoading('Loading your cloud passport…');
       try {
+        ensureAuthPublicUsername();
+        cloudHydrated = false;
+        setCloudStatus('Loading your cloud passport…');
         const response = await cloudFetch(
           `${SUPABASE_URL}/rest/v1/cartovella_passports?user_id=eq.${encodeURIComponent(cloudSession.user.id)}&select=*`,
           { method: 'GET' }
@@ -8805,7 +8878,8 @@
               throw new Error('The cloud passport was empty and the local passport could not be uploaded.');
             }
           } else {
-            renderLoadedCloudPassport(cloudPassport, records[0].updated_at);
+            loadingTask.update('Restoring your passport and updating the atlas…');
+            await renderLoadedCloudPassport(cloudPassport, records[0].updated_at);
             setCloudStatus('Cloud passport loaded and ready.');
           }
         } else {
@@ -8830,6 +8904,8 @@
         setCloudStatus(message, true);
         if (needsReauthentication) showAuthError(message);
         return false;
+      } finally {
+        loadingTask.finish();
       }
     }
 
@@ -8923,21 +8999,32 @@
       if (cloudSession?.access_token && !AppState.viewOnly) {
         setCloudStatus('Restoring your signed-in session…');
       }
+      if ((publicUsername && activePublicAtlasUsername === publicUsername) ||
+          (cloudSession?.access_token && !AppState.viewOnly)) {
+        startupLoadingTask = beginAppLoading('Preparing Cartovella…');
+      }
       // Decide on onboarding from saved state immediately, not after every dataset loads.
       if (!AppState.homeBase && !AppState.viewOnly) openHomeModal();
       appReady = startApp();
       startupDataReady = appReady.then(async () => {
         if (publicUsername && activePublicAtlasUsername === publicUsername) {
+          startupLoadingTask?.update(`Loading @${publicUsername}'s passport…`);
           localAtlasReturnTab = AppState.currentTab;
           await loadPublicAtlas(publicUsername);
         } else if (cloudSession?.access_token && !AppState.viewOnly) {
+          startupLoadingTask?.update('Loading your cloud passport…');
           await loadFromCloud();
         } else if (!AppState.viewOnly) {
           cloudHydrated = true;
         }
+        startupLoadingTask?.update('Finishing atlas setup…');
         await finishStartupDatasets();
+        startupLoadingTask?.finish();
+        startupLoadingTask = null;
         startupDataReady = null;
       }).catch(error => {
+        startupLoadingTask?.finish();
+        startupLoadingTask = null;
         startupDataReady = null;
         console.error('Cartovella startup failed.', error);
         setCloudStatus(`Startup failed: ${error.message}`, true);
@@ -8948,19 +9035,53 @@
     let appLoading = false;
     let appReady = Promise.resolve();
     let startupDataReady = null;
+    let startupLoadingTask = null;
+    let appLoadingSequence = 0;
+    let authRequestInProgress = false;
+    const activeAppLoadingTasks = new Map();
+
+    function renderAppLoadingOverlay() {
+      const overlay = document.getElementById('appLoadingOverlay');
+      const latestMessage = [...activeAppLoadingTasks.values()].at(-1) || '';
+      overlay.classList.toggle('hidden', !latestMessage);
+      overlay.setAttribute('aria-busy', String(Boolean(latestMessage)));
+      document.getElementById('appLoadingMessage').textContent = latestMessage;
+    }
+
+    function beginAppLoading(message) {
+      const taskId = ++appLoadingSequence;
+      activeAppLoadingTasks.set(taskId, message);
+      renderAppLoadingOverlay();
+      return {
+        update(nextMessage) {
+          if (!activeAppLoadingTasks.has(taskId)) return;
+          activeAppLoadingTasks.set(taskId, nextMessage);
+          renderAppLoadingOverlay();
+        },
+        finish() {
+          if (!activeAppLoadingTasks.delete(taskId)) return;
+          renderAppLoadingOverlay();
+        }
+      };
+    }
 
     async function startApp() {
       appLoading = true;
+      const loadingTask = beginAppLoading('Preparing Cartovella…');
       try {
         await loadCoreGeoDatasets();
+        await yieldToMain();
         syncDerivedState();
         saveState({ recordEdit: false });
+        await yieldToMain();
         initMap();
         drawFogOfWar();
+        await yieldToMain();
         restoreModeView();
         updateAllUI();
       } finally {
         appLoading = false;
+        loadingTask.finish();
       }
     }
 
