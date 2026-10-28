@@ -277,6 +277,9 @@ Your editable passport is saved in the browser. Use the in-app JSON export to cr
 move it to another browser or device; import that file there to continue. Keep backups before
 resetting browser data.
 
+When signed in, the header shows the relative time since the last successful cloud save. **Save now**
+and **Copy Public Profile Link** are available from **Settings**.
+
 If Cloud Sync reports that the session needs reconnection or that a refresh token was not found,
 open **Account and cloud sync** and sign in again. The rejected cloud session is cleared, but your
 local passport is kept. Do not clear browser storage just to fix a cloud sign-in problem.

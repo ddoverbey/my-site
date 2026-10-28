@@ -444,11 +444,7 @@
         <span id="headerHometownText" class="sr-only">Home Base</span>
       </button>
 
-      <button id="btnShare" aria-label="Copy Public Profile Link" title="Copy Public Profile Link" class="header-icon">
-        🔗
-      </button>
-
-      <button id="btnManualSave" type="button" class="header-icon" aria-label="Save now" title="Save now">💾</button>
+      <span id="headerSaveStatus" class="hidden max-w-[9rem] truncate rounded-lg border border-slate-700 bg-slate-900/80 px-2 py-1 text-[10px] text-slate-300 sm:text-xs" role="status" aria-live="polite"></span>
 
       <button id="btnCloudAuth" type="button" class="header-icon relative" aria-label="Account and cloud sync" title="Account &amp; Cloud Sync">
         ☁️
@@ -460,6 +456,13 @@
           ⚙️
         </summary>
         <div class="absolute right-0 mt-2 w-64 max-w-[calc(100vw-2rem)] py-2 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl">
+          <button id="btnShare" type="button" class="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-800 flex items-center gap-2">
+            <span aria-hidden="true">🔗</span> Copy Public Profile Link
+          </button>
+          <button id="btnManualSave" type="button" class="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-800 flex items-center gap-2" aria-label="Save now">
+            <span aria-hidden="true">💾</span> Save now
+          </button>
+          <hr class="border-slate-800 my-1">
           <button id="btnExport" class="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-800 flex items-center gap-2">
             <span>💾</span> Export Passport (.json)
           </button>
@@ -2228,6 +2231,9 @@
       console.error('Stored Cartovella cloud session is invalid.', error);
       localStorage.removeItem(AUTH_SESSION_KEY);
     }
+    let lastCloudSavedAt = null;
+    let latestCloudStatusMessage = '';
+    let latestCloudStatusFailed = false;
     let cloudHydrated = false;
     let cloudSyncTimer = null;
     let cloudSyncInProgress = false;
@@ -7055,6 +7061,7 @@
 
     function updateAllUI() {
       updateHeaderNavigation();
+      updateHeaderSaveStatus();
       renderCountyHitboxes();
       document.getElementById('btnCustomLocation').classList.toggle('hidden', AppState.viewOnly);
       document.getElementById('btnExpedition').classList.toggle('hidden', AppState.viewOnly);
@@ -7393,6 +7400,7 @@
 
     // Copy the public link allowed by the selected visibility tier.
     document.getElementById('btnShare').addEventListener('click', async () => {
+      document.getElementById('settingsMenu').open = false;
       if (publicProfile.visibility === 'none') {
         showNotification('Public sharing is off', 'Choose Explorer card or Entire Passport in your profile settings before copying a public link.', '🔒');
         return;
@@ -7662,7 +7670,47 @@
       setRpgMapHudCollapsed(rpgMapHud.dataset.collapsed !== 'true');
     });
 
+    function updateHeaderSaveStatus() {
+      const status = document.getElementById('headerSaveStatus');
+      if (!status) return;
+      const visible = !!cloudSession?.user && !AppState.viewOnly;
+      status.classList.toggle('hidden', !visible);
+      if (!visible) return;
+
+      const saving = /^(Loading|Restoring|Checking|Saving|A newer change)/.test(latestCloudStatusMessage);
+      const dirty = localStorage.getItem(LOCAL_CLOUD_DIRTY_KEY) === 'true';
+      let label;
+      if (latestCloudStatusFailed) label = 'Sync issue';
+      else if (saving) label = /^(Loading|Restoring|Checking)/.test(latestCloudStatusMessage) ? 'Syncing…' : 'Saving…';
+      else if (dirty) label = 'Needs sync';
+      else if (Number.isFinite(lastCloudSavedAt)) {
+        const seconds = Math.max(0, Math.floor((Date.now() - lastCloudSavedAt) / 1000));
+        const age = seconds < 5 ? 'just now'
+          : seconds < 60 ? `${seconds} sec ago`
+            : seconds < 3600 ? `${Math.floor(seconds / 60)} min ago`
+              : seconds < 86400 ? `${Math.floor(seconds / 3600)} hr ago`
+                : `${Math.floor(seconds / 86400)} days ago`;
+        label = `Saved ${age}`;
+      } else {
+        label = 'Not saved yet';
+      }
+
+      status.textContent = label;
+      status.title = latestCloudStatusMessage || label;
+      status.className = `max-w-[9rem] truncate rounded-lg border px-2 py-1 text-[10px] sm:text-xs ${
+        latestCloudStatusFailed
+          ? 'border-rose-500/40 bg-rose-950/50 text-rose-200'
+          : saving
+            ? 'border-amber-500/40 bg-amber-950/50 text-amber-100'
+            : dirty
+              ? 'border-amber-500/40 bg-amber-950/50 text-amber-100'
+              : 'border-emerald-500/30 bg-emerald-950/40 text-emerald-200'
+      }${visible ? '' : ' hidden'}`;
+    }
+
     function setCloudStatus(message, failed = false) {
+      latestCloudStatusMessage = message;
+      latestCloudStatusFailed = failed;
       const status = document.getElementById('authSyncStatusText');
       if (status) status.textContent = message;
       const cloudLabel = document.getElementById('authCloudStatusLabel');
@@ -7685,9 +7733,10 @@
         }`;
         dot.title = message;
       }
-      const saveButton = document.getElementById('btnManualSave');
-      if (saveButton) saveButton.title = cloudSession ? `Save now. ${message}` : 'Save now on this device.';
+      updateHeaderSaveStatus();
     }
+
+    if (typeof window.setInterval === 'function') window.setInterval(updateHeaderSaveStatus, 1000);
 
     function updateAuthUI() {
       const isLoggedIn = !!cloudSession?.user;
@@ -7704,6 +7753,7 @@
         setCloudStatus('Not signed in.');
       }
       updatePublicProfileSettings();
+      updateHeaderSaveStatus();
     }
 
     let authViewMode = 'options';
@@ -7990,6 +8040,8 @@
       syncDerivedState();
       await yieldToMain();
       saveState({ recordEdit: false });
+      const cloudSavedTimestamp = Date.parse(cloudUpdatedAt || '');
+      lastCloudSavedAt = Number.isFinite(cloudSavedTimestamp) ? cloudSavedTimestamp : null;
       if (cloudUpdatedAt && Number.isFinite(Date.parse(cloudUpdatedAt))) {
         localStorage.setItem(LOCAL_EDITED_AT_KEY, new Date(cloudUpdatedAt).toISOString());
       }
@@ -8790,6 +8842,7 @@
         const uploadedSnapshot = stablePassportStringify(passportData);
         const uploadedProfileSnapshot = publicProfileSnapshot();
         const summaryStats = await buildPublicSummaryStats(calculateStats());
+        const cloudSavedAt = new Date();
         const response = await cloudFetch(`${SUPABASE_URL}/rest/v1/cartovella_passports`, {
           method: 'POST',
           headers: {
@@ -8805,7 +8858,7 @@
             display_name: publicProfile.display_name || null,
             is_public: publicProfile.is_public,
             summary_stats: summaryStats,
-            updated_at: new Date().toISOString()
+            updated_at: cloudSavedAt.toISOString()
           })
         });
         if (!response.ok) {
@@ -8813,6 +8866,7 @@
           throw new Error(usernameConflictMessage(response.status, body, true) ||
             body.message || body.details || `Cloud save failed (HTTP ${response.status}).`);
         }
+        lastCloudSavedAt = cloudSavedAt.getTime();
         const currentSnapshot = stablePassportStringify(compactPassportForStorage(passportPayload()));
         let savedCurrentState = currentSnapshot === uploadedSnapshot &&
           publicProfileSnapshot() === uploadedProfileSnapshot;
@@ -9043,12 +9097,14 @@
     });
     document.getElementById('btnExitPublicAtlas').addEventListener('click', returnToMyAtlas);
     document.getElementById('btnForceCloudSync').addEventListener('click', handleForceCloudSync);
-    document.getElementById('btnManualSave').addEventListener('click', () =>
-      handleManualSave().catch(error => {
+    document.getElementById('btnManualSave').addEventListener('click', () => {
+      document.getElementById('settingsMenu').open = false;
+      return handleManualSave().catch(error => {
         console.error('Manual passport save failed.', error);
         setCloudStatus(`Save failed: ${error.message}`, true);
         showNotification('Save Failed', error.message, '⚠️');
-      }));
+      });
+    });
     document.getElementById('btnKeepLocalPassport').addEventListener('click', () => resolveCloudConflict(false));
     document.getElementById('btnKeepCloudPassport').addEventListener('click', () => resolveCloudConflict(true));
     document.getElementById('btnCancelCloudConflict').addEventListener('click', cancelCloudConflict);

@@ -920,7 +920,15 @@ await checkAsync('different local and cloud passports are compared without repla
   assert.match(html, /Replace the save on this browser with the cloud copy/);
   assert.match(html, /Keep this browser's save/);
   assert.match(html, /Replace the cloud account's copy with this browser's version/);
-  assert.match(html, /id="btnManualSave"[^>]*aria-label="Save now"/);
+  const settings = html.slice(html.indexOf('<details id="settingsMenu"'), html.indexOf('</details>'));
+  const header = html.slice(html.indexOf('<header'), html.indexOf('<details id="settingsMenu"'));
+  assert.ok(settings.includes('id="btnManualSave"'));
+  assert.ok(settings.includes('id="btnShare"'));
+  assert.ok(!header.includes('id="btnManualSave"'));
+  assert.ok(!header.includes('id="btnShare"'));
+  assert.match(html, /id="headerSaveStatus"[^>]*role="status"/);
+  assert.match(html, /function updateHeaderSaveStatus\(\)/);
+  assert.match(html, /Saved \$\{age\}/);
 });
 await checkAsync('a clean browser reload accepts the cloud copy without repeating a conflict', async () => {
   const cloudSession = {
@@ -2489,6 +2497,43 @@ check('credits are reachable from Settings without adding a main-navigation butt
   assert.ok(credits.includes('Modular Fantasy Cards Asset Pack'));
   assert.ok(html.includes("document.getElementById('btnOpenCredits').addEventListener('click'"));
   assert.ok(!html.includes('data-tab="credits"'));
+});
+check('header save status shows relative cloud-save age only for signed-in explorers', () => {
+  const originalSession = JSON.stringify(vm.runInContext('cloudSession', context));
+  const originalSavedAt = vm.runInContext('lastCloudSavedAt', context);
+  const originalMessage = JSON.stringify(vm.runInContext('latestCloudStatusMessage', context));
+  const originalFailed = vm.runInContext('latestCloudStatusFailed', context);
+  const originalViewOnly = vm.runInContext('AppState.viewOnly', context);
+  const originalDirty = localStorage.getItem('cartovella_cloud_dirty');
+  try {
+    vm.runInContext(`
+      cloudSession = { access_token: 'test-token', user: { id: 'save-status-test' } };
+      AppState.viewOnly = false;
+      lastCloudSavedAt = Date.now() - 10000;
+      latestCloudStatusMessage = 'Saved to cloud';
+      latestCloudStatusFailed = false;
+      updateHeaderSaveStatus();
+    `, context);
+    localStorage.setItem('cartovella_cloud_dirty', 'false');
+    vm.runInContext('updateHeaderSaveStatus()', context);
+    assert.equal(element('headerSaveStatus').textContent, 'Saved 10 sec ago');
+    assert.equal(element('headerSaveStatus').classList.contains('hidden'), false);
+    vm.runInContext("latestCloudStatusMessage = 'Saving changes to your cloud passport…'; updateHeaderSaveStatus()", context);
+    assert.equal(element('headerSaveStatus').textContent, 'Saving…');
+    vm.runInContext('cloudSession = null; updateHeaderSaveStatus()', context);
+    assert.equal(element('headerSaveStatus').classList.contains('hidden'), true);
+  } finally {
+    vm.runInContext(`
+      cloudSession = ${originalSession};
+      lastCloudSavedAt = ${originalSavedAt === null ? 'null' : originalSavedAt};
+      latestCloudStatusMessage = ${originalMessage};
+      latestCloudStatusFailed = ${originalFailed};
+      AppState.viewOnly = ${originalViewOnly};
+      updateHeaderSaveStatus();
+    `, context);
+    if (originalDirty === null) localStorage.removeItem('cartovella_cloud_dirty');
+    else localStorage.setItem('cartovella_cloud_dirty', originalDirty);
+  }
 });
 check('progressive oceans and water-only corridors use a cached combined land stencil', () => {
   assert.ok(html.includes('TravelLedger.waterFogRoutes(exp)'));
