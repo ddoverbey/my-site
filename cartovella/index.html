@@ -1128,7 +1128,7 @@
           <span id="expeditionRouteFileStatus" role="status" aria-live="polite" class="text-xs text-slate-400">No route imported.</span>
           <button id="btnClearExpeditionRoute" type="button" class="hidden rounded-lg px-2 py-1 text-xs text-amber-200 underline">Clear track</button>
         </div>
-        <p class="text-[11px] text-slate-500">Point-only GeoJSON/KML files import ordered stops; choose a transit type for each leg. Track-only files import one route. Files mixing points and tracks or containing multiple tracks are not supported.</p>
+        <p class="text-[11px] text-slate-500">GeoJSON/KML files import ordered stops; choose a transit type for each leg. An embedded track is used when it matches one leg between two stops; otherwise stops are still imported and the track is skipped. Track-only files import one route.</p>
         <button id="btnPreviewExpedition" type="button" class="rounded-lg bg-sky-700 px-3 py-2 text-xs">Preview routes</button>
         <div id="expeditionRoutePreview" class="hidden h-52 w-full rounded-lg overflow-hidden" aria-label="Expedition route preview"></div>
         <p id="expeditionRouteSummary" class="text-xs text-slate-400"></p>
@@ -1323,15 +1323,15 @@
     </section>
   </div>
 
-  <script src="./nps-catalog.js?v=20261028-public-trip-sharing-v2"></script>
-  <script src="./national-parks-scratch.js?v=20261028-public-trip-sharing-v2"></script>
-  <script src="./international-parks.js?v=20261028-public-trip-sharing-v2"></script>
-  <script src="./ecoregions.js?v=20261028-public-trip-sharing-v2"></script>
-  <script src="./coordinate-lookups.js?v=20261028-public-trip-sharing-v2"></script>
-  <script src="./micro-states.js?v=20261028-public-trip-sharing-v2"></script>
-  <script src="./travel-ledger.js?v=20261028-public-trip-sharing-v2"></script>
-  <script src="./character-creator.js?v=20261028-public-trip-sharing-v2"></script>
-  <script src="./rarity-config.js?v=20261028-public-trip-sharing-v2"></script>
+  <script src="./nps-catalog.js?v=20261028-public-trip-sharing-v3"></script>
+  <script src="./national-parks-scratch.js?v=20261028-public-trip-sharing-v3"></script>
+  <script src="./international-parks.js?v=20261028-public-trip-sharing-v3"></script>
+  <script src="./ecoregions.js?v=20261028-public-trip-sharing-v3"></script>
+  <script src="./coordinate-lookups.js?v=20261028-public-trip-sharing-v3"></script>
+  <script src="./micro-states.js?v=20261028-public-trip-sharing-v3"></script>
+  <script src="./travel-ledger.js?v=20261028-public-trip-sharing-v3"></script>
+  <script src="./character-creator.js?v=20261028-public-trip-sharing-v3"></script>
+  <script src="./rarity-config.js?v=20261028-public-trip-sharing-v3"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -7417,7 +7417,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261028-public-trip-sharing-v2"></script>
+  <script src="./expedition-ui.js?v=20261028-public-trip-sharing-v3"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);

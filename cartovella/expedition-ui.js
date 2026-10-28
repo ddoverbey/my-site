@@ -331,13 +331,16 @@ function parseUploadedRouteFile(text, filename) {
       }
     }
   } else throw new Error('Choose a .geojson, .json, or .kml stops or route file.');
-  if (stops.length && lines.length) {
-    throw new Error('This file contains both stops and a track. Import a points-only file for stops or a track-only file for route geometry.');
+  if (stops.length) {
+    return {
+      stops,
+      route: lines.length === 1 ? downsampleUploadedRoute(lines[0]) : null,
+      ...(lines.length ? { trackCount: lines.length } : {})
+    };
   }
   if (lines.length > 1) {
     throw new Error('This file contains multiple route lines. Import one track at a time.');
   }
-  if (stops.length) return { stops, route: null };
   if (lines.length) return { stops: [], route: downsampleUploadedRoute(lines[0]) };
   throw new Error('No Point, LineString, or gx:Track geometry was found in the file.');
 }
@@ -1132,9 +1135,30 @@ async function importExpeditionRoute(event) {
         travelMode: 'road'
       }));
       expeditionUploadedRoute = null;
+      let ignoredTrackReason = '';
+      if (imported.trackCount > 1) {
+        ignoredTrackReason = `${imported.trackCount} embedded tracks were skipped because a single leg can use only one track.`;
+      } else if (imported.route) {
+        if (expeditionDraft.length === 2) {
+          const route = imported.route;
+          const startMatches = uploadedRouteDistanceKm(route[0], expeditionDraft[0].coords) <= 1.609344;
+          const endMatches = uploadedRouteDistanceKm(route[route.length - 1], expeditionDraft[1].coords) <= 1.609344;
+          const reversedStartMatches = uploadedRouteDistanceKm(route[route.length - 1], expeditionDraft[0].coords) <= 1.609344;
+          const reversedEndMatches = uploadedRouteDistanceKm(route[0], expeditionDraft[1].coords) <= 1.609344;
+          if (startMatches && endMatches) expeditionUploadedRoute = route;
+          else if (reversedStartMatches && reversedEndMatches) expeditionUploadedRoute = route.reverse();
+          else ignoredTrackReason = 'The embedded track was skipped because its endpoints do not match the two stops.';
+        } else {
+          ignoredTrackReason = 'The embedded track was skipped because it cannot be assigned across multiple legs.';
+        }
+      }
       invalidateExpeditionRoutes();
       renderExpeditionStops();
-      updateUploadedRouteStatus(`${imported.stops.length} stops imported. Choose a transit type for each leg, then preview routes.`);
+      const importedMessage = expeditionUploadedRoute
+        ? `${imported.stops.length} stops and their track imported. Choose a transit type for each leg, then preview routes.`
+        : `${imported.stops.length} stops imported. Choose a transit type for each leg, then preview routes.`;
+      updateUploadedRouteStatus(ignoredTrackReason
+        ? `${importedMessage} ${ignoredTrackReason}` : importedMessage);
       return;
     }
     const route = imported.route;

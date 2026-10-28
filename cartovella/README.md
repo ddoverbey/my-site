@@ -7,8 +7,10 @@ expeditions, track parks and regions, and earn achievements from your travel his
 
 - An RPG world map with visit statuses, a travel ledger, and country, state, province, and county views.
 - Custom places and expedition logs with ordered stops, travel modes, route previews, and journal entries.
-- KML and GeoJSON route imports, a Global Route Map, and PNG route-poster export. Water Transit
-  routes are blue, while flights use a neutral gray in the map and trip logs.
+- GeoJSON and KML imports support ordered stops, including files that also contain a track. Choose
+  a transit mode for every leg; an embedded track is used when it matches one leg between two stops.
+  Track-only files can import one route. The Global Route Map can be exported as a PNG route poster.
+  Water Transit routes are blue, while flights use a neutral gray in the map and trip logs.
 - The Explorers' Guild refreshes its directory when opened and shows opted-in explorers' character
   scenes, total logged travel miles, and compressed snapshots of the same complete Global Route Map,
   including its trip routes and stops.

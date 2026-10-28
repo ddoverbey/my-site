@@ -207,7 +207,7 @@ check('character customization appears above the stage and progress summary', ()
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 10);
-  assert.ok(sources.every(source => source.endsWith('?v=20261028-public-trip-sharing-v2')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261028-public-trip-sharing-v3')));
   assert.ok(sources.some(source => source.startsWith('./character-creator.js?')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
@@ -1252,6 +1252,32 @@ const kmlStops = parseRouteFixture(
   '<kml><Document><Placemark><name>First Stop</name><Point><coordinates>-122.4,37.8,0</coordinates></Point></Placemark>' +
     '<Placemark><name>Second Stop</name><Point><coordinates>-121.2,39.1</coordinates></Point></Placemark></Document></kml>',
   'stops.kml');
+const mixedGeoJsonStopsAndTrack = parseRouteFixture(JSON.stringify({
+  type: 'FeatureCollection',
+  features: [
+    { type: 'Feature', properties: { name: 'Start' }, geometry: { type: 'Point', coordinates: [-122, 37] } },
+    { type: 'Feature', properties: { name: 'Finish' }, geometry: { type: 'Point', coordinates: [-120, 38] } },
+    { type: 'Feature', properties: {}, geometry: {
+      type: 'LineString', coordinates: [[-122, 37], [-121, 37.5], [-120, 38]]
+    } }
+  ]
+}), 'mixed.geojson');
+const mixedKmlStopsAndTrack = parseRouteFixture(
+  '<kml><Document><Placemark><name>Start</name><Point><coordinates>-122,37,0</coordinates></Point></Placemark>' +
+    '<Placemark><name>Finish</name><Point><coordinates>-120,38,0</coordinates></Point></Placemark>' +
+    '<Placemark><LineString><coordinates>-122,37,0 -121,37.5,0 -120,38,0</coordinates></LineString></Placemark></Document></kml>',
+  'mixed.kml');
+const multiStopGeoJsonTrack = parseRouteFixture(JSON.stringify({
+  type: 'FeatureCollection',
+  features: [
+    { type: 'Feature', properties: { name: 'Start' }, geometry: { type: 'Point', coordinates: [-122, 37] } },
+    { type: 'Feature', properties: { name: 'Middle' }, geometry: { type: 'Point', coordinates: [-121, 37.5] } },
+    { type: 'Feature', properties: { name: 'Finish' }, geometry: { type: 'Point', coordinates: [-120, 38] } },
+    { type: 'Feature', properties: {}, geometry: {
+      type: 'LineString', coordinates: [[-122, 37], [-121, 37.5], [-120, 38]]
+    } }
+  ]
+}), 'multi-stop.geojson');
 check('GeoJSON, KML coordinates and gx:Track import as validated lat/lng tracks and downsample while preserving endpoints', () => {
   assert.deepEqual(geoJsonTrack, [[37, -122], [37, -121.9], [37, -121]]);
   assert.deepEqual(kmlTrack, [[37, -122], [38, -121]]);
@@ -1279,15 +1305,106 @@ check('GeoJSON Point features and KML Point placemarks import ordered named stop
       { name: 'Second Stop', coords: [39.1, -121.2] }
     ]
   });
-  assert.throws(() => parseRouteFixture(JSON.stringify({
-    type: 'FeatureCollection', features: [
-      { type: 'Feature', properties: { name: 'Stop' }, geometry: { type: 'Point', coordinates: [0, 0] } },
-      { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [[0, 0], [1, 1]] } }
-    ]
-  }), 'mixed.geojson'), /both stops and a track/);
+  assert.deepEqual(mixedGeoJsonStopsAndTrack, {
+    stops: [
+      { name: 'Start', coords: [37, -122] },
+      { name: 'Finish', coords: [38, -120] }
+    ],
+    route: [[37, -122], [37.5, -121], [38, -120]],
+    trackCount: 1
+  });
+  assert.deepEqual(mixedKmlStopsAndTrack, mixedGeoJsonStopsAndTrack);
+  assert.deepEqual(multiStopGeoJsonTrack, {
+    stops: [
+      { name: 'Start', coords: [37, -122] },
+      { name: 'Middle', coords: [37.5, -121] },
+      { name: 'Finish', coords: [38, -120] }
+    ],
+    route: [[37, -122], [37.5, -121], [38, -120]],
+    trackCount: 1
+  });
   assert.throws(() => parseRouteFixture(JSON.stringify({
     type: 'MultiLineString', coordinates: [[[0, 0], [1, 1]], [[2, 2], [3, 3]]]
   }), 'multiple.geojson'), /multiple route lines/);
+});
+await checkAsync('mixed GeoJSON imports stops and leaves unsupported multi-leg track geometry out', async () => {
+  const originalDraft = JSON.stringify(vm.runInContext('expeditionDraft', context));
+  const originalRoute = JSON.stringify(vm.runInContext('expeditionUploadedRoute', context));
+  const originalPreparedLegs = JSON.stringify(vm.runInContext('expeditionPreparedLegs', context));
+  const originalPreparedKey = JSON.stringify(vm.runInContext('expeditionPreparedKey', context));
+  const originalPending = vm.runInContext('expeditionPending', context);
+  const originalViewOnly = vm.runInContext('AppState.viewOnly', context);
+  const originalCrypto = context.crypto;
+  const originalConfirm = context.window.confirm;
+  const originalUpdateStatus = context.updateUploadedRouteStatus;
+  const originalInvalidate = context.invalidateExpeditionRoutes;
+  const originalRenderStops = context.renderExpeditionStops;
+  let importStatus = '';
+  let uuid = 0;
+  const geoJson = JSON.stringify({
+    type: 'FeatureCollection',
+    features: [
+      { type: 'Feature', properties: { name: 'Start Harbor' }, geometry: { type: 'Point', coordinates: [-122, 37] } },
+      { type: 'Feature', properties: { name: 'Mountain Pass' }, geometry: { type: 'Point', coordinates: [-121, 37.5] } },
+      { type: 'Feature', properties: { name: 'Finish Lodge' }, geometry: { type: 'Point', coordinates: [-120, 38] } },
+      { type: 'Feature', properties: {}, geometry: {
+        type: 'LineString', coordinates: [[-122, 37], [-121, 37.5], [-120, 38]]
+      } }
+    ]
+  });
+  const twoStopGeoJson = JSON.stringify({
+    type: 'FeatureCollection',
+    features: [
+      { type: 'Feature', properties: { name: 'Start Harbor' }, geometry: { type: 'Point', coordinates: [-122, 37] } },
+      { type: 'Feature', properties: { name: 'Finish Lodge' }, geometry: { type: 'Point', coordinates: [-120, 38] } },
+      { type: 'Feature', properties: {}, geometry: {
+        type: 'LineString', coordinates: [[-122, 37], [-121, 37.5], [-120, 38]]
+      } }
+    ]
+  });
+  const input = {
+    files: [{ name: 'stops-and-track.geojson', size: geoJson.length, text: async () => geoJson }],
+    value: 'selected-file'
+  };
+  try {
+    context.crypto = { randomUUID: () => `import-stop-${++uuid}` };
+    context.window.confirm = () => true;
+    context.updateUploadedRouteStatus = message => { importStatus = message || ''; };
+    context.invalidateExpeditionRoutes = () => {};
+    context.renderExpeditionStops = () => {};
+    vm.runInContext(`expeditionDraft = []; expeditionUploadedRoute = null;
+      expeditionPreparedLegs = null; expeditionPreparedKey = null; expeditionPending = false;
+      AppState.viewOnly = false`, context);
+    await context.importExpeditionRoute({ target: input });
+    const importedStops = JSON.parse(vm.runInContext('JSON.stringify(expeditionDraft)', context));
+    assert.deepEqual(importedStops.map(stop => stop.name), ['Start Harbor', 'Mountain Pass', 'Finish Lodge']);
+    assert.ok(importedStops.every(stop => stop.travelMode === 'road'));
+    assert.equal(vm.runInContext('expeditionUploadedRoute', context), null);
+    assert.match(importStatus, /3 stops imported/);
+    assert.match(importStatus, /Choose a transit type for each leg/);
+    assert.match(importStatus, /embedded track was skipped/);
+    assert.equal(input.value, '');
+
+    vm.runInContext('expeditionDraft = []; expeditionUploadedRoute = null', context);
+    input.files = [{ name: 'two-stops-and-track.geojson', size: twoStopGeoJson.length, text: async () => twoStopGeoJson }];
+    input.value = 'selected-file';
+    await context.importExpeditionRoute({ target: input });
+    const importedRoute = JSON.parse(vm.runInContext('JSON.stringify(expeditionUploadedRoute)', context));
+    assert.deepEqual(importedRoute, [[37, -122], [37.5, -121], [38, -120]]);
+    assert.match(importStatus, /2 stops and their track imported/);
+    assert.equal(vm.runInContext('expeditionDraft[0].travelMode', context), 'road');
+  } finally {
+    context.crypto = originalCrypto;
+    context.window.confirm = originalConfirm;
+    context.updateUploadedRouteStatus = originalUpdateStatus;
+    context.invalidateExpeditionRoutes = originalInvalidate;
+    context.renderExpeditionStops = originalRenderStops;
+    vm.runInContext(`expeditionDraft = JSON.parse(${JSON.stringify(originalDraft)});
+      expeditionUploadedRoute = JSON.parse(${JSON.stringify(originalRoute)});
+      expeditionPreparedLegs = JSON.parse(${JSON.stringify(originalPreparedLegs)});
+      expeditionPreparedKey = JSON.parse(${JSON.stringify(originalPreparedKey)});
+      expeditionPending = ${originalPending}; AppState.viewOnly = ${originalViewOnly}`, context);
+  }
 });
 check('header navigation uses compact icons with accessible labels and synchronized pressed states', () => {
   for (const label of ['Explore — RPG mode', 'Travel Ledger — Classic mode', 'Scratch Map', 'Explorer Profile — Character & Stats', 'Achievements']) {
