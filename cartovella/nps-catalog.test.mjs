@@ -192,7 +192,7 @@ check('character customization appears above the stage and progress summary', ()
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 10);
-  assert.ok(sources.every(source => source.endsWith('?v=20261027-legacy-flight-route-v1')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261028-travel-log-return-v1')));
   assert.ok(sources.some(source => source.startsWith('./character-creator.js?')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
@@ -7265,6 +7265,8 @@ check('Global Route Map renders country and expedition paths and toggles indepen
     assert.equal(classLists.get('btnExportRoutesPng').state.hidden, false);
     assert.equal(toggleAttributes['aria-expanded'], 'true');
     assert.equal(toggleAttributes['aria-pressed'], 'true');
+    assert.equal(toggle.textContent, '📖 Travel Log');
+    assert.equal(toggleAttributes['aria-label'], 'Return to Travel Log');
     assert.equal(routeYear.value, 'all');
     assert.match(routeYear.innerHTML, /value="2026">2026/);
     assert.match(routeYear.innerHTML, /value="2025">2025/);
@@ -7373,12 +7375,14 @@ check('Global Route Map renders country and expedition paths and toggles indepen
     vm.runInContext("AppState.homeBase = { name: 'Test Base', lat: 40.7, lng: -74 }", context);
     routeScope.value = 'global';
     routeScope.handlers.change({ currentTarget: routeScope });
-    toggle.handlers.click();
+    element('btnReturnToTravelLog').handlers.click();
     assert.equal(classLists.get('travelGlobalRoutesPanel').state.hidden, true);
     assert.equal(classLists.get('travelLogFeed').state.hidden, false);
     assert.equal(classLists.get('btnExportRoutesPng').state.hidden, true);
     assert.equal(toggleAttributes['aria-expanded'], 'false');
     assert.equal(toggleAttributes['aria-pressed'], 'false');
+    assert.equal(toggle.textContent, '🗺️ Route Map');
+    assert.equal(toggleAttributes['aria-label'], 'Show Route Map');
   } finally {
     for (const [id, entry] of classLists) element(id).classList = entry.original;
     toggle.setAttribute = originalSetAttribute;

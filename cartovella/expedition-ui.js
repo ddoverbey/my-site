@@ -1733,6 +1733,8 @@ function setGlobalRoutesView(open) {
   document.getElementById('travelLogFeed').classList.toggle('hidden', open);
   document.getElementById('btnExportRoutesPng').classList.toggle('hidden', !open);
   const toggle = document.getElementById('btnToggleTravelRoutes');
+  toggle.textContent = open ? '📖 Travel Log' : '🗺️ Route Map';
+  toggle.setAttribute('aria-label', open ? 'Return to Travel Log' : 'Show Route Map');
   toggle.setAttribute('aria-expanded', String(open));
   toggle.setAttribute('aria-pressed', String(open));
   if (open) renderGlobalRoutesMap();
@@ -2277,6 +2279,8 @@ document.getElementById('btnExpedition').addEventListener('click', () => openExp
 document.getElementById('btnHistoryExpedition').addEventListener('click', () => openExpedition());
 document.getElementById('btnToggleTravelRoutes').addEventListener('click', () =>
   setGlobalRoutesView(!globalRoutesOpen));
+document.getElementById('btnReturnToTravelLog').addEventListener('click', () =>
+  setGlobalRoutesView(false));
 document.getElementById('globalRoutesScope').addEventListener('change', event => {
   const scope = event.currentTarget.value;
   if (!['global', 'domestic', 'continental'].includes(scope)) {

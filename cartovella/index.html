@@ -816,7 +816,7 @@
             <p class="text-xs text-slate-400 mt-2">Your trips, one story at a time.</p>
           </div>
           <div class="flex flex-wrap items-center gap-2">
-            <button id="btnToggleTravelRoutes" type="button" class="shrink-0 rounded-lg bg-slate-800 px-3 py-2 text-xs text-sky-200" aria-controls="travelGlobalRoutesPanel" aria-expanded="false" aria-pressed="false">🗺️ Route Map</button>
+            <button id="btnToggleTravelRoutes" type="button" class="shrink-0 rounded-lg bg-slate-800 px-3 py-2 text-xs text-sky-200" aria-label="Show Route Map" aria-controls="travelGlobalRoutesPanel" aria-expanded="false" aria-pressed="false">🗺️ Route Map</button>
             <button id="btnExportRoutesPng" type="button" class="hidden shrink-0 rounded-lg bg-amber-600 px-3 py-2 text-xs font-semibold text-slate-950">📸 Export Map (.png)</button>
             <button id="btnHistoryExpedition" type="button" class="shrink-0 rounded-lg bg-emerald-600 px-3 py-2 text-xs">Log Expedition</button>
           </div>
@@ -861,6 +861,7 @@
                 <option value="parchment">Parchment</option>
               </select>
               <button id="btnResetGlobalRoutesZoom" type="button" class="shrink-0 rounded-lg bg-slate-800 px-3 py-2 text-xs text-slate-200">Reset zoom</button>
+              <button id="btnReturnToTravelLog" type="button" class="shrink-0 rounded-lg bg-slate-800 px-3 py-2 text-xs text-sky-200" aria-label="Return to Travel Log">← Travel Log</button>
             </div>
           </div>
           <p class="text-[10px] text-slate-500">Atlas styles recolor the built-in vector map; no external basemap tiles are loaded.</p>
@@ -1301,15 +1302,15 @@
     </section>
   </div>
 
-  <script src="./nps-catalog.js?v=20261027-legacy-flight-route-v1"></script>
-  <script src="./national-parks-scratch.js?v=20261027-legacy-flight-route-v1"></script>
-  <script src="./international-parks.js?v=20261027-legacy-flight-route-v1"></script>
-  <script src="./ecoregions.js?v=20261027-legacy-flight-route-v1"></script>
-  <script src="./coordinate-lookups.js?v=20261027-legacy-flight-route-v1"></script>
-  <script src="./micro-states.js?v=20261027-legacy-flight-route-v1"></script>
-  <script src="./travel-ledger.js?v=20261027-legacy-flight-route-v1"></script>
-  <script src="./character-creator.js?v=20261027-legacy-flight-route-v1"></script>
-  <script src="./rarity-config.js?v=20261027-legacy-flight-route-v1"></script>
+  <script src="./nps-catalog.js?v=20261028-travel-log-return-v1"></script>
+  <script src="./national-parks-scratch.js?v=20261028-travel-log-return-v1"></script>
+  <script src="./international-parks.js?v=20261028-travel-log-return-v1"></script>
+  <script src="./ecoregions.js?v=20261028-travel-log-return-v1"></script>
+  <script src="./coordinate-lookups.js?v=20261028-travel-log-return-v1"></script>
+  <script src="./micro-states.js?v=20261028-travel-log-return-v1"></script>
+  <script src="./travel-ledger.js?v=20261028-travel-log-return-v1"></script>
+  <script src="./character-creator.js?v=20261028-travel-log-return-v1"></script>
+  <script src="./rarity-config.js?v=20261028-travel-log-return-v1"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -7253,7 +7254,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261027-legacy-flight-route-v1"></script>
+  <script src="./expedition-ui.js?v=20261028-travel-log-return-v1"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);
