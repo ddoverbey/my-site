@@ -299,6 +299,12 @@ The app loads its catalog and compact geography snapshots from this directory. K
 - `ecoregion-mapping.json` for park biome mappings, and `ecoregions.topojson` plus `mangroves.topojson` for coordinate lookups.
 - `world-subdivisions.topojson`, `world-admin2.topojson`, and `micro-states.topojson` for map boundaries.
 
+## Credits and attribution
+
+Open **Settings > Credits & Data Sources** in Cartovella for the project story and current attribution
+for its APIs, geographic datasets, libraries, and art assets. The Credits panel does not add another
+main-navigation button.
+
 Biome and political-boundary matching uses simplified geographic data and may be approximate near
 coasts or borders; mangrove matches use a separate detailed coastline layer. See the [repository README](../README.md) for
 data sources, attribution, refresh procedures, and implementation details.

@@ -2478,6 +2478,18 @@ check('dataset status lives in Settings and the obsolete map legend is removed',
   assert.ok(!html.includes('id="rpgMapLegend"'));
   assert.ok(!html.includes('<!-- Map Legend'));
 });
+check('credits are reachable from Settings without adding a main-navigation button', () => {
+  const settings = html.slice(html.indexOf('<details id="settingsMenu"'), html.indexOf('</details>'));
+  const credits = html.slice(html.indexOf('<dialog id="creditsDialog"'), html.indexOf('</dialog>', html.indexOf('<dialog id="creditsDialog"')));
+  assert.ok(settings.includes('id="btnOpenCredits"'));
+  assert.ok(credits.includes('aria-labelledby="creditsTitle"'));
+  assert.ok(credits.includes('How it started'));
+  assert.ok(credits.includes('APIs, data &amp; services'));
+  assert.ok(credits.includes('Art &amp; assets'));
+  assert.ok(credits.includes('Modular Fantasy Cards Asset Pack'));
+  assert.ok(html.includes("document.getElementById('btnOpenCredits').addEventListener('click'"));
+  assert.ok(!html.includes('data-tab="credits"'));
+});
 check('progressive oceans and water-only corridors use a cached combined land stencil', () => {
   assert.ok(html.includes('TravelLedger.waterFogRoutes(exp)'));
   assert.ok(html.includes('punchFogRoute(isFlight ? flightFogRoute(route) : route, 160.934)'));

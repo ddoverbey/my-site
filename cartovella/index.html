@@ -466,6 +466,9 @@
           <button id="btnImportTrigger" class="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-800 flex items-center gap-2">
             <span>📂</span> Import Passport
           </button>
+          <button id="btnOpenCredits" type="button" class="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-800 flex items-center gap-2">
+            <span aria-hidden="true">ⓘ</span> Credits &amp; Data Sources
+          </button>
           <input type="file" id="fileInput" accept=".json" class="hidden" />
           <hr class="border-slate-800 my-1">
           <button id="btnResetData" class="w-full text-left px-4 py-2 text-xs text-rose-400 hover:bg-rose-950/40 flex items-center gap-2">
@@ -918,6 +921,62 @@
         <p id="bulkTripSharingDialogStatus" class="text-xs text-rose-300" role="status" aria-live="polite"></p>
         <footer id="bulkTripSharingActions" class="flex flex-wrap justify-end gap-2"></footer>
       </form>
+    </dialog>
+    <dialog id="creditsDialog" aria-labelledby="creditsTitle" class="m-auto w-[min(96vw,64rem)] max-h-[90vh] overflow-y-auto rounded-2xl border border-amber-400/40 bg-slate-950 p-0 text-slate-100 shadow-2xl backdrop:bg-black/70">
+      <div class="space-y-6 p-5 sm:p-8">
+        <header class="flex items-start justify-between gap-4">
+          <div>
+            <h2 id="creditsTitle" class="cinzel text-2xl font-bold text-amber-200">Credits &amp; About Cartovella</h2>
+            <p class="mt-2 text-sm text-slate-300">The people, projects, data, and tools that help bring this travel atlas to life.</p>
+          </div>
+          <button type="button" data-credits-close class="shrink-0 rounded-lg bg-slate-800 px-3 py-2 text-sm text-slate-200 hover:bg-slate-700">Close</button>
+        </header>
+        <section class="rounded-xl border border-slate-700 bg-slate-900/70 p-4" aria-labelledby="creditsStoryTitle">
+          <h3 id="creditsStoryTitle" class="font-bold text-amber-100">How it started</h3>
+          <p class="mt-2 text-sm leading-6 text-slate-300">Cartovella began as a way to keep a seasonal travel bucket list—a place to remember where I hoped to go before the season passed. It quickly grew into a travel atlas, log, and game.</p>
+          <p class="mt-2 text-sm leading-6 text-slate-300">The project draws inspiration from <a class="text-sky-300 underline" href="https://afoviz.com/biomeatlas/" target="_blank" rel="noopener noreferrer">AFOVIZ’s Biome Atlas</a> and the question “What Is the Rarest Biome on Earth?”</p>
+        </section>
+        <section aria-labelledby="creditsDataTitle">
+          <h3 id="creditsDataTitle" class="font-bold text-amber-100">APIs, data &amp; services</h3>
+          <ul class="mt-3 grid gap-2 text-sm leading-6 text-slate-300 sm:grid-cols-2">
+            <li><a class="text-sky-300 underline" href="https://www.nps.gov/subjects/developer/get-started.htm" target="_blank" rel="noopener noreferrer">National Park Service API</a> — U.S. park catalog source.</li>
+            <li><a class="text-sky-300 underline" href="https://github.com/RohanNagar/parksoftheworld" target="_blank" rel="noopener noreferrer">Parks of the World</a> and <a class="text-sky-300 underline" href="https://www.wikidata.org/" target="_blank" rel="noopener noreferrer">Wikidata</a> — international park data.</li>
+            <li><a class="text-sky-300 underline" href="https://ecoregions.appspot.com/" target="_blank" rel="noopener noreferrer">RESOLVE Ecoregions 2017</a> — terrestrial ecoregions, derived under <a class="text-sky-300 underline" href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>; based on Dinerstein et al. (2017).</li>
+            <li><a class="text-sky-300 underline" href="https://www.nps.gov/subjects/gisandmapping/tools-and-data.htm" target="_blank" rel="noopener noreferrer">NPS GIS resources</a> and the <a class="text-sky-300 underline" href="https://services1.arcgis.com/fBc8EJBxQRMcHlei/ArcGIS/rest/services/NPS_Land_Resources_Division_Boundary_and_Tract_Data_Service/FeatureServer/2" target="_blank" rel="noopener noreferrer">NPS boundary feature service</a>.</li>
+            <li><a class="text-sky-300 underline" href="https://www.naturalearthdata.com/" target="_blank" rel="noopener noreferrer">Natural Earth</a> and <a class="text-sky-300 underline" href="https://www.geoboundaries.org/" target="_blank" rel="noopener noreferrer">geoBoundaries</a> — geographic boundary datasets.</li>
+            <li><a class="text-sky-300 underline" href="https://open-meteo.com/en/docs/elevation-api" target="_blank" rel="noopener noreferrer">Open-Meteo Elevation API</a> — elevation lookups.</li>
+            <li><a class="text-sky-300 underline" href="https://photon.komoot.io/" target="_blank" rel="noopener noreferrer">Photon by Komoot</a> — place search and geocoding.</li>
+            <li><a class="text-sky-300 underline" href="https://overpass-api.de/" target="_blank" rel="noopener noreferrer">Overpass API</a> and <a class="text-sky-300 underline" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> — mapped places, routing data, and map tiles.</li>
+            <li><a class="text-sky-300 underline" href="https://routing.openstreetmap.de/" target="_blank" rel="noopener noreferrer">OpenStreetMap routing service</a> — road and walking route geometry.</li>
+            <li><a class="text-sky-300 underline" href="https://www.esri.com/en-us/arcgis/products/arcgis-world-imagery/overview" target="_blank" rel="noopener noreferrer">Esri World Imagery</a> — travel-log map imagery.</li>
+            <li><a class="text-sky-300 underline" href="https://supabase.com/" target="_blank" rel="noopener noreferrer">Supabase</a> — account authentication, cloud passports, public profiles, and shared data.</li>
+            <li>Google Places may be used for rarity lookups when the optional Cartovella provider is configured.</li>
+          </ul>
+        </section>
+        <section aria-labelledby="creditsLibrariesTitle">
+          <h3 id="creditsLibrariesTitle" class="font-bold text-amber-100">Libraries &amp; web tools</h3>
+          <p class="mt-2 text-sm leading-6 text-slate-300"><a class="text-sky-300 underline" href="https://leafletjs.com/" target="_blank" rel="noopener noreferrer">Leaflet</a>, <a class="text-sky-300 underline" href="https://d3js.org/" target="_blank" rel="noopener noreferrer">D3</a>, <a class="text-sky-300 underline" href="https://github.com/topojson/topojson-client" target="_blank" rel="noopener noreferrer">TopoJSON Client</a>, <a class="text-sky-300 underline" href="https://tailwindcss.com/" target="_blank" rel="noopener noreferrer">Tailwind CSS</a>, and <a class="text-sky-300 underline" href="https://fonts.google.com/" target="_blank" rel="noopener noreferrer">Google Fonts</a>.</p>
+        </section>
+        <section aria-labelledby="creditsArtTitle">
+          <h3 id="creditsArtTitle" class="font-bold text-amber-100">Art &amp; assets</h3>
+          <ul class="mt-3 grid gap-x-6 gap-y-1 text-sm leading-6 text-slate-300 sm:grid-cols-2">
+            <li>Modular Fantasy Cards Asset Pack — LyniaDesign</li>
+            <li>Fireplace — Small sheet — Devs In Exile Studio</li>
+            <li>Canva Pro icons and assets</li>
+            <li>32x32 FREE Pixel Bunnies - Animated NPC — Last tick</li>
+            <li>64x64 FREE Pixel Cats animated NPC — Last tick</li>
+            <li>32x32 Pixel kittens Cats - Animated NPC — Last tick</li>
+            <li>FREE - 2D Pixel Art Male and Female Character - Sidescroller — GandalfHardcore</li>
+            <li>Pixel U.S.A. — R. Mocci / Tiny Archive</li>
+            <li>Dark forest — Val_DeMar</li>
+            <li>Mountain Dusk Parallax background — ansimuz</li>
+            <li>Free Pixel-art background, desert (Day/Night) — blank_canvas</li>
+            <li>Pixel Country Flags - 15x10 — DaFluffyPotato</li>
+            <li>Flags Pack — xvideosman</li>
+            <li>Top Down - Mobs - Dog — Admurin</li>
+          </ul>
+        </section>
+      </div>
     </dialog>
 
     <div id="tabContent-achievements" class="w-full h-full p-4 md:p-8 overflow-y-auto hidden">
@@ -7317,6 +7376,19 @@
         console.error('Bulk trip-sharing update failed.', error);
         dialogStatus.textContent = `Sharing settings were not saved: ${error.message}`;
       }
+    });
+
+    document.getElementById('btnOpenCredits').addEventListener('click', () => {
+      document.getElementById('settingsMenu').open = false;
+      const dialog = document.getElementById('creditsDialog');
+      if (typeof dialog.showModal === 'function') dialog.showModal();
+      else dialog.setAttribute('open', '');
+    });
+    document.getElementById('creditsDialog').addEventListener('click', event => {
+      if (!event.target.closest('[data-credits-close]')) return;
+      const dialog = document.getElementById('creditsDialog');
+      if (typeof dialog.close === 'function') dialog.close();
+      else dialog.removeAttribute('open');
     });
 
     // Copy the public link allowed by the selected visibility tier.
