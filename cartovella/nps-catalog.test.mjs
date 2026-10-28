@@ -1407,14 +1407,27 @@ await checkAsync('public summary stats contain compact profile, achievement, and
   const originalCachedThumbnail = vm.runInContext('JSON.stringify(publicRouteMapThumbnailCache)', context);
   const originalCreateElement = context.document.createElement;
   const routeInterpolations = [];
+  const routeGeometries = [];
   const routeScale = [];
+  const routeStrokeWidths = [];
+  const routeDashPatterns = [];
   const routeCanvasContext = {
-    beginPath() {}, moveTo() {}, lineTo() {}, closePath() {}, fill() {}, stroke() {},
-    fillRect() {}, setLineDash() {}, scale(x, y) { routeScale.push([x, y]); }
+    beginPath() {}, moveTo() {}, lineTo() {}, closePath() {}, fill() {},
+    stroke() { routeStrokeWidths.push(this.lineWidth); },
+    fillRect() {},
+    setLineDash(pattern) { routeDashPatterns.push([...pattern]); },
+    scale(x, y) { routeScale.push([x, y]); }
   };
   let routeCanvasSize = null;
   context.d3 = {
     ...d3Geo,
+    geoPath(projection, canvasContext) {
+      const path = d3Geo.geoPath(projection, canvasContext);
+      return geometry => {
+        if (geometry?.type === 'LineString') routeGeometries.push(geometry.coordinates);
+        return path(geometry);
+      };
+    },
     geoInterpolate(...points) {
       routeInterpolations.push(points);
       return d3Geo.geoInterpolate(...points);
@@ -1456,6 +1469,19 @@ await checkAsync('public summary stats contain compact profile, achievement, and
           { kind: 'place', id: 'flight-b', name: 'Flight B', coords: [41,-121] },
           { kind: 'place', id: 'flight-c', name: 'Flight C', coords: [42,-122] }
         ]
+      }, {
+        id: 'long-road-route', name: 'Long Road Route', startDate: '2025-08-01', endDate: '2025-08-03',
+        dayTrip: false, reason: '', transitTags: ['road'],
+        countyIds: [], parkIds: [], customPoiIds: [],
+        routeCoords: [[34,-118],[40,-105]],
+        routeStops: [
+          { kind: 'place', id: 'road-start', name: 'Road Start', coords: [34,-118] },
+          { kind: 'place', id: 'road-end', name: 'Road End', coords: [40,-105] }
+        ],
+        routeLegs: [{
+          mode: 'road', routeSource: 'uploaded',
+          routeCoords: [[34,-118],[36,-116],[39,-112],[40,-105]], countyIds: []
+        }]
       }];
       worldGeoJson = [];
       publicProfile.is_public = true;
@@ -1480,8 +1506,14 @@ await checkAsync('public summary stats contain compact profile, achievement, and
     assert.equal(summary.biomesCount, 2);
     assert.equal(summary.clearedPct, 12.5);
     assert.match(summary.routeMapThumbnail, /^data:image\/jpeg;base64,/);
-    assert.deepEqual(routeCanvasSize, { width: 80, height: 42, type: 'image/jpeg', quality: 0.82 });
-    assert.deepEqual(routeScale, [[0.25, 0.25]]);
+    assert.deepEqual(routeCanvasSize, { width: 320, height: 168, type: 'image/jpeg', quality: 0.55 });
+    assert.deepEqual(routeScale, []);
+    assert.ok(routeStrokeWidths.includes(2.5), 'route lines retain the full map stroke width');
+    assert.ok(routeDashPatterns.some(pattern => JSON.stringify(pattern) === '[6,5]'),
+      'flight legs retain the full map dash pattern');
+    assert.ok(routeGeometries.some(coordinates =>
+      JSON.stringify(coordinates) === '[[-118,34],[-116,36],[-112,39],[-105,40]]'),
+    'the complete long road route, including its intermediate points, is drawn');
     const interpolatedPairs = routeInterpolations.map(points => JSON.stringify(points));
     assert.ok(interpolatedPairs.includes('[[-120,40],[-121,41]]'));
     assert.ok(interpolatedPairs.includes('[[-121,41],[-122,42]]'));
