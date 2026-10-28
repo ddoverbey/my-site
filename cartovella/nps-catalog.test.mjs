@@ -4902,17 +4902,13 @@ check('missing county data clears prior statistics and displays explicit retry g
   assert.equal(element('scratchStatsLabel').textContent, 'Dataset unavailable');
   assert.ok(scratchNodes.some(n => String(n.text).includes('Retry datasets')));
 });
-check('waterfall milestone classes show every 1, 5 and 10 goal, including when unmet', () => {
-  const waterfallTitles = JSON.parse(vm.runInContext(`JSON.stringify(
+check('Chasing Waterfalls is one achievement unlocked after visiting two waterfall locations', () => {
+  const waterfalls = JSON.parse(vm.runInContext(`JSON.stringify(
     ACHIEVEMENTS.filter(achievement => achievement.id.startsWith('waterfalls_'))
-      .map(achievement => achievement.tiers[0].title)
+      .map(achievement => ({ id: achievement.id, title: achievement.tiers[0].title, goal: achievement.tiers[0].goal }))
   )`, context));
-  assert.deepEqual(waterfallTitles, [
-    'Chasing Waterfalls (1 location)',
-    'Chasing Waterfalls (5 locations)',
-    'Chasing Waterfalls (10 locations)'
-  ]);
-  for (const count of [0, 1, 4, 5, 9, 10]) {
+  assert.deepEqual(waterfalls, [{ id: 'waterfalls_1', title: 'Chasing Waterfalls', goal: 2 }]);
+  for (const count of [0, 1, 2, 3]) {
     context.fallsCount = count;
     vm.runInContext(`
       applyPassport(migratePassport({}));PARKS=[];coordinateIndexes=null;AppState.currentTab='map';
@@ -4925,21 +4921,17 @@ check('waterfall milestone classes show every 1, 5 and 10 goal, including when u
     assert.equal(vm.runInContext('calculateStats().metadataProgress.waterfalls', context), count);
     assert.ok(cards.includes('Chasing Waterfalls'));
     assert.ok(cards.includes('data-achievement-class="waterfalls"'));
-    const completedGoal = [10, 5, 1].find(goal => count >= goal) || null;
-    const nextGoal = [1, 5, 10].find(goal => count < goal) || completedGoal;
-    for (const goal of [1, 5, 10]) {
-      const progressIsShown = goal !== completedGoal || goal === nextGoal;
-      const title = `Chasing Waterfalls (${goal} ${goal === 1 ? 'location' : 'locations'})`;
-      const description = `Visit ${goal} location${goal === 1 ? '' : 's'} with "waterfall" in the name or category`;
-      const escapedDescription = vm.runInContext(`escapeHtml(${JSON.stringify(description)})`, context);
-      assert.equal(cards.includes(
-        `aria-label="${title} completion" value="${Math.min(count, goal)}" max="${goal}"`
-      ), progressIsShown, `${count}: goal ${goal} uses summary progress or omits the already-achieved tier`);
-      assert.equal(cards.includes(escapedDescription),
-        count >= goal * 0.85,
-        `${count}: goal ${goal} description hint visibility`
-      );
-    }
+    assert.equal(cards.includes(
+      `aria-label="Chasing Waterfalls completion" value="${Math.min(count, 2)}" max="2"`
+    ), true, `${count}: the single achievement shows progress toward two locations`);
+    const description = vm.runInContext(
+      `escapeHtml(${JSON.stringify('Visit at least 2 locations with "waterfall" in the name or category')})`,
+      context
+    );
+    assert.equal(cards.includes(description),
+      count >= 2,
+      `${count}: the achievement description appears once earned`
+    );
   }
 });
 check('radar includes full custom visits and their biomes, loaded counties and each supported trip tag', () => {
@@ -5795,7 +5787,7 @@ for (const [title, filename] of achievementImages) {
 const unmetAchievementData = await readFile(new URL(`./assets/achievements/${unmetAchievementImage}`, import.meta.url));
 assert.equal(unmetAchievementData.subarray(1, 4).toString(), 'PNG', 'shared locked artwork exists and is PNG');
 check('achievement artwork maps all supplied images to real tiers and preserves emoji fallbacks', () => {
-  assert.equal(achievementImages.length, 36);
+  assert.equal(achievementImages.length, 34);
   for (const [title, filename] of achievementImages) {
     context.artworkTitle = title;
     const markup = vm.runInContext(`(()=>{
@@ -5947,10 +5939,10 @@ check('character badges include every earned milestone without duplication or st
     assert.equal(captured.length, 0);
     assert.ok(container.innerHTML.includes('earned achievement badges'));
     for (const [count, expected] of [
-      [1, [['waterfalls_1', 'common']]],
-      [4, [['waterfalls_1', 'common']]],
-      [5, [['waterfalls_1', 'common'], ['waterfalls_5', 'uncommon']]],
-      [10, [['waterfalls_1', 'common'], ['waterfalls_5', 'uncommon'], ['waterfalls_10', 'rare']]]
+      [1, []],
+      [2, [['waterfalls_1', 'common']]],
+      [5, [['waterfalls_1', 'common']]],
+      [10, [['waterfalls_1', 'common']]]
     ]) {
       captured.length = 0;
       context.badgeWaterfalls = count;
@@ -6031,7 +6023,7 @@ check('achievement classes show rarity artwork and retain untouched milestones i
   assert.ok(cards.includes('assets/achievements/unmet.png'));
   assert.ok(cards.includes('data-rarity="common"'));
   assert.ok(cards.includes('data-rarity="uncommon"'));
-  assert.ok(cards.includes('>Common</h3>'));
+  assert.ok(cards.includes('Chasing Waterfalls'));
   assert.match(cards, /class="achievement-rarity[^>]*>Uncommon<\/span>/);
   assert.ok(cards.includes('data-achievement-section="unmet"'));
   assert.ok(cards.includes('Southern Cross'));

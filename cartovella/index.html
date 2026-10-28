@@ -1869,16 +1869,13 @@
         tiers: [{ goal: 5, title: 'Globetrotter', desc: 'Log 5 different nations' }]
       }
     ];
-    for (const goal of [1, 5, 10]) {
-      const title = `Chasing Waterfalls (${goal} ${goal === 1 ? 'location' : 'locations'})`;
-      ACHIEVEMENTS.push({
-        id: `waterfalls_${goal}`, title: 'Chasing Waterfalls', progress: s => s.metadataProgress.waterfalls,
-        tiers: [{
-          goal, title,
-          desc: `Visit ${goal} location${goal === 1 ? '' : 's'} with "waterfall" in the name or category`
-        }]
-      });
-    }
+    ACHIEVEMENTS.push({
+      id: 'waterfalls_1', title: 'Chasing Waterfalls', progress: s => s.metadataProgress.waterfalls,
+      tiers: [{
+        goal: 2, title: 'Chasing Waterfalls',
+        desc: 'Visit at least 2 locations with "waterfall" in the name or category'
+      }]
+    });
     [
       ['subterranean', 'Under Pressure', 'Log a land-based stop below sea level', 1],
       ['thinAir', 'Thin Air', 'Log a stop at 10,000 ft or higher', 1],
@@ -1956,8 +1953,6 @@
       fiftyNifty: ['🇺🇸', '#78350f', ['legendary']],
       countries: ['🛂', '#164e63', ['rare']],
       waterfalls_1: ['💧', '#334155', ['common']],
-      waterfalls_5: ['💧', '#14532d', ['uncommon']],
-      waterfalls_10: ['💧', '#155e75', ['rare']],
       subterranean: ['🌊⬇️', '#064e3b', ['uncommon']],
       thinAir: ['🏔️', '#1e3a5f', ['rare']],
       whispers: ['🌲✨', '#14332c', ['uncommon']],
@@ -1987,7 +1982,7 @@
       { id: 'biomeCoverage', title: 'Biome Explorer', achievementIds: ['juniorEcologist', 'almostThere', 'gaiaWanderer'] },
       { id: 'stateVisits', title: 'State Explorer', achievementIds: ['statehopper', 'semiCentennial', 'fiftyNifty'] },
       { id: 'countryVisits', title: 'International Explorer', achievementIds: ['international', 'countries', 'worldAtlas'] },
-      { id: 'waterfalls', title: 'Waterfall Hunter', achievementIds: ['waterfalls_1', 'waterfalls_5', 'waterfalls_10'] }
+      { id: 'waterfalls', title: 'Waterfall Hunter', achievementIds: ['waterfalls_1'] }
     ];
     ACHIEVEMENTS.forEach(achievement => {
       const [icon, background, rarities] = ACHIEVEMENT_ART[achievement.id];
@@ -6350,9 +6345,7 @@
       'America the Beautiful': 'america-the-beautiful.png',
       'Anomaly Seeker': 'anomaly-seeker.png',
       'Beyond the Horizon': 'beyond-the-horizon.png',
-      'Chasing Waterfalls (1 location)': 'chasing-waterfalls.png',
-      'Chasing Waterfalls (5 locations)': 'chasing-waterfalls.png',
-      'Chasing Waterfalls (10 locations)': 'chasing-waterfalls.png',
+      'Chasing Waterfalls': 'chasing-waterfalls.png',
       'Completionist Legend': 'completionist-legend-.png',
       'Country Roads, Take Me Home': 'country-roads.png',
       'Earth Sandwich': 'earth-sandwhich.png',
