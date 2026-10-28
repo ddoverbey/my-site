@@ -236,72 +236,110 @@ function downsampleUploadedRoute(points) {
 }
 
 function parseUploadedRouteFile(text, filename) {
-  if (typeof text !== 'string' || text.length > 20_000_000) throw new Error('The route file is empty or too large (20 MB maximum).');
-  if (typeof filename !== 'string') throw new Error('Choose a GeoJSON or KML route file.');
+  if (typeof text !== 'string' || !text.length || text.length > 20_000_000) throw new Error('The route file is empty or too large (20 MB maximum).');
+  if (typeof filename !== 'string') throw new Error('Choose a GeoJSON or KML stops or route file.');
   const extension = /\.([^.]+)$/.exec(filename.trim().toLowerCase())?.[1];
   const lines = [];
+  const stops = [];
   const addLine = tuples => {
     if (!Array.isArray(tuples)) throw new Error('Invalid route geometry.');
     const points = tuples.map(uploadedRoutePoint);
     if (points.length < 2) throw new Error('Each route line must contain at least two points.');
     lines.push(points);
   };
+  const addStop = (tuple, name = '') => {
+    if (stops.length >= 100) throw new Error('Imported itineraries can contain at most 100 stops.');
+    const coords = uploadedRoutePoint(tuple);
+    const label = typeof name === 'string' ? name.trim() : '';
+    if (label.length > 100) throw new Error('Imported stop names must be 100 characters or fewer.');
+    stops.push({ name: label || `Stop ${stops.length + 1}`, coords });
+  };
+  const geoJsonName = properties =>
+    [properties.name, properties.title, properties.label]
+      .find(value => typeof value === 'string' && value.trim()) || '';
   if (extension === 'geojson' || extension === 'json') {
     let data;
     try { data = JSON.parse(text); }
     catch (error) { throw new Error(`Invalid GeoJSON: ${error.message}`); }
-    const visitGeometry = geometry => {
-      if (!geometry || typeof geometry !== 'object') return;
-      if (geometry.type === 'FeatureCollection') {
-        if (!Array.isArray(geometry.features)) throw new Error('Invalid GeoJSON FeatureCollection.');
-        geometry.features.forEach(feature => {
-          if (feature?.type === 'Feature') visitGeometry(feature.geometry);
+    const visitGeoJson = (value, properties = {}) => {
+      if (!value || typeof value !== 'object') return;
+      if (value.type === 'FeatureCollection') {
+        if (!Array.isArray(value.features)) throw new Error('Invalid GeoJSON FeatureCollection.');
+        value.features.forEach(feature => {
+          if (feature?.type === 'Feature') visitGeoJson(feature);
         });
-      } else if (geometry.type === 'Feature') visitGeometry(geometry.geometry);
-      else if (geometry.type === 'GeometryCollection') {
-        if (!Array.isArray(geometry.geometries)) throw new Error('Invalid GeoJSON GeometryCollection.');
-        geometry.geometries.forEach(visitGeometry);
-      } else if (geometry.type === 'LineString') addLine(geometry.coordinates);
-      else if (geometry.type === 'MultiLineString') {
-        if (!Array.isArray(geometry.coordinates)) throw new Error('Invalid GeoJSON MultiLineString.');
-        geometry.coordinates.forEach(addLine);
+      } else if (value.type === 'Feature') visitGeoJson(value.geometry, value.properties || {});
+      else if (value.type === 'GeometryCollection') {
+        if (!Array.isArray(value.geometries)) throw new Error('Invalid GeoJSON GeometryCollection.');
+        value.geometries.forEach(geometry => visitGeoJson(geometry, properties));
+      } else if (value.type === 'Point') addStop(value.coordinates, geoJsonName(properties));
+      else if (value.type === 'MultiPoint') {
+        if (!Array.isArray(value.coordinates)) throw new Error('Invalid GeoJSON MultiPoint.');
+        value.coordinates.forEach((coordinates, index) => {
+          const baseName = geoJsonName(properties);
+          addStop(coordinates, value.coordinates.length > 1 && baseName
+            ? `${baseName} ${index + 1}` : baseName);
+        });
+      } else if (value.type === 'LineString') addLine(value.coordinates);
+      else if (value.type === 'MultiLineString') {
+        if (!Array.isArray(value.coordinates)) throw new Error('Invalid GeoJSON MultiLineString.');
+        value.coordinates.forEach(addLine);
       }
     };
-    visitGeometry(data);
+    visitGeoJson(data);
   } else if (extension === 'kml') {
     if (/<!DOCTYPE|<!ENTITY/i.test(text)) throw new Error('KML files with document type or entity declarations are not supported.');
     const xml = new DOMParser().parseFromString(text, 'application/xml');
     if (xml.getElementsByTagName('parsererror').length) throw new Error('Invalid KML XML.');
     const descendants = element => Array.from(element.getElementsByTagName('*'));
-    for (const element of descendants(xml)) {
-      const name = element.localName || element.tagName?.split(':').pop();
-      if (name === 'LineString') {
-        const coordinates = descendants(element).find(child =>
-          (child.localName || child.tagName?.split(':').pop()) === 'coordinates');
-        if (!coordinates) throw new Error('KML LineString has no coordinates.');
-        const tuples = coordinates.textContent.trim().split(/\s+/).filter(Boolean).map(token => {
-          const values = token.split(',');
-          if (values.length < 2 || !values[0].trim() || !values[1].trim()) throw new Error('Invalid KML coordinate.');
-          const longitude = Number(values[0]), latitude = Number(values[1]);
-          if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) throw new Error('Invalid KML coordinate.');
-          return [longitude, latitude];
-        });
-        addLine(tuples);
-      } else if (name === 'Track') {
-        const tuples = descendants(element).filter(child =>
-          (child.localName || child.tagName?.split(':').pop()) === 'coord').map(coord => {
-          const values = coord.textContent.trim().split(/\s+/);
-          if (values.length < 2 || !values[0] || !values[1]) throw new Error('Invalid KML gx:coord.');
-          const longitude = Number(values[0]), latitude = Number(values[1]);
-          if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) throw new Error('Invalid KML gx:coord.');
-          return [longitude, latitude];
-        });
-        addLine(tuples);
+    const localName = element => element.localName || element.tagName?.split(':').pop();
+    const parseKmlCoordinate = (text, isTrack = false) => {
+      const values = text.trim().split(isTrack ? /\s+/ : ',');
+      if (values.length < 2 || !values[0].trim() || !values[1].trim()) {
+        throw new Error(isTrack ? 'Invalid KML gx:coord.' : 'Invalid KML coordinate.');
+      }
+      const longitude = Number(values[0]), latitude = Number(values[1]);
+      if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) {
+        throw new Error(isTrack ? 'Invalid KML gx:coord.' : 'Invalid KML coordinate.');
+      }
+      return [longitude, latitude];
+    };
+    const placemarks = descendants(xml).filter(element => localName(element) === 'Placemark');
+    for (const placemark of placemarks) {
+      const elements = descendants(placemark);
+      const nameElement = elements.find(element => localName(element) === 'name');
+      const placemarkName = nameElement?.textContent?.trim() || '';
+      for (const element of elements) {
+        const name = localName(element);
+        if (name === 'Point') {
+          const coordinateElement = descendants(element).find(child => localName(child) === 'coordinates');
+          if (!coordinateElement) throw new Error('KML Point has no coordinates.');
+          const tokens = coordinateElement.textContent.trim().split(/\s+/).filter(Boolean);
+          if (tokens.length !== 1) throw new Error('Each KML Point must contain exactly one coordinate.');
+          addStop(parseKmlCoordinate(tokens[0]), placemarkName);
+        } else if (name === 'LineString') {
+          const coordinateElement = descendants(element).find(child => localName(child) === 'coordinates');
+          if (!coordinateElement) throw new Error('KML LineString has no coordinates.');
+          const tuples = coordinateElement.textContent.trim().split(/\s+/).filter(Boolean)
+            .map(token => parseKmlCoordinate(token));
+          addLine(tuples);
+        } else if (name === 'Track') {
+          const tuples = descendants(element).filter(child => localName(child) === 'coord')
+            .map(coord => parseKmlCoordinate(coord.textContent, true));
+          addLine(tuples);
+        }
       }
     }
-  } else throw new Error('Choose a .geojson, .json, or .kml route file.');
-  if (!lines.length) throw new Error('No LineString or gx:Track route was found in the file.');
-  return downsampleUploadedRoute(lines.flat());
+  } else throw new Error('Choose a .geojson, .json, or .kml stops or route file.');
+  if (stops.length && lines.length) {
+    throw new Error('This file contains both stops and a track. Import a points-only file for stops or a track-only file for route geometry.');
+  }
+  if (lines.length > 1) {
+    throw new Error('This file contains multiple route lines. Import one track at a time.');
+  }
+  if (stops.length) return { stops, route: null };
+  if (lines.length) return { stops: [], route: downsampleUploadedRoute(lines[0]) };
+  throw new Error('No Point, LineString, or gx:Track geometry was found in the file.');
 }
 
 function trackEndpointStop(name, coords, id) {
@@ -1081,7 +1119,25 @@ async function importExpeditionRoute(event) {
   if (!file) return;
   try {
     if (file.size > 20_000_000) throw new Error('The route file is too large (20 MB maximum).');
-    const route = parseUploadedRouteFile(await file.text(), file.name);
+    const imported = parseUploadedRouteFile(await file.text(), file.name);
+    if (imported.stops.length) {
+      if (expeditionDraft.length && !window.confirm(
+        'Replace the current expedition stops with the imported stops?'
+      )) return;
+      expeditionDraft = imported.stops.map(stop => ({
+        kind: 'place',
+        id: `file_${crypto.randomUUID()}`,
+        name: stop.name,
+        coords: [...stop.coords],
+        travelMode: 'road'
+      }));
+      expeditionUploadedRoute = null;
+      invalidateExpeditionRoutes();
+      renderExpeditionStops();
+      updateUploadedRouteStatus(`${imported.stops.length} stops imported. Choose a transit type for each leg, then preview routes.`);
+      return;
+    }
+    const route = imported.route;
     if (expeditionDraft.length > 2) {
       throw new Error('An imported track needs exactly two expedition stops. Remove intermediate stops before importing.');
     }

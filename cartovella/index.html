@@ -1102,14 +1102,15 @@
             <p class="text-[11px] text-slate-400">Decimal degrees. West longitudes are negative. The stop name defaults to its coordinates.</p>
           </div>
         </details>
-        <p class="text-[11px] text-slate-400">Drag a stop by its grip to reorder your trip. Keyboard: focus the grip and use the up/down arrow keys.</p>
+        <p class="text-[11px] text-slate-400">Drag a stop by its grip to reorder your trip. Keyboard: focus the grip and use the up/down arrow keys. Each leg has its own transit type.</p>
         <ol id="expeditionStops" class="space-y-2 text-xs"></ol>
         <div class="flex flex-wrap items-center gap-2">
-          <button id="btnImportExpeditionRoute" type="button" class="rounded-lg bg-slate-800 border border-slate-600 px-3 py-2 text-xs">Import route (.geojson / .kml)</button>
+          <button id="btnImportExpeditionRoute" type="button" class="rounded-lg bg-slate-800 border border-slate-600 px-3 py-2 text-xs">Import stops or track (.geojson / .kml)</button>
           <input id="expeditionFileInput" type="file" accept=".geojson,.json,.kml,application/geo+json,application/vnd.google-earth.kml+xml" class="hidden">
           <span id="expeditionRouteFileStatus" role="status" aria-live="polite" class="text-xs text-slate-400">No route imported.</span>
           <button id="btnClearExpeditionRoute" type="button" class="hidden rounded-lg px-2 py-1 text-xs text-amber-200 underline">Clear track</button>
         </div>
+        <p class="text-[11px] text-slate-500">Point-only GeoJSON/KML files import ordered stops; choose a transit type for each leg. Track-only files import one route. Files mixing points and tracks or containing multiple tracks are not supported.</p>
         <button id="btnPreviewExpedition" type="button" class="rounded-lg bg-sky-700 px-3 py-2 text-xs">Preview routes</button>
         <div id="expeditionRoutePreview" class="hidden h-52 w-full rounded-lg overflow-hidden" aria-label="Expedition route preview"></div>
         <p id="expeditionRouteSummary" class="text-xs text-slate-400"></p>
@@ -1300,15 +1301,15 @@
     </section>
   </div>
 
-  <script src="./nps-catalog.js?v=20261027-hairstyle-render-v2"></script>
-  <script src="./national-parks-scratch.js?v=20261027-hairstyle-render-v2"></script>
-  <script src="./international-parks.js?v=20261027-hairstyle-render-v2"></script>
-  <script src="./ecoregions.js?v=20261027-hairstyle-render-v2"></script>
-  <script src="./coordinate-lookups.js?v=20261027-hairstyle-render-v2"></script>
-  <script src="./micro-states.js?v=20261027-hairstyle-render-v2"></script>
-  <script src="./travel-ledger.js?v=20261027-hairstyle-render-v2"></script>
-  <script src="./character-creator.js?v=20261027-hairstyle-render-v2"></script>
-  <script src="./rarity-config.js?v=20261027-hairstyle-render-v2"></script>
+  <script src="./nps-catalog.js?v=20261027-route-stops-v1"></script>
+  <script src="./national-parks-scratch.js?v=20261027-route-stops-v1"></script>
+  <script src="./international-parks.js?v=20261027-route-stops-v1"></script>
+  <script src="./ecoregions.js?v=20261027-route-stops-v1"></script>
+  <script src="./coordinate-lookups.js?v=20261027-route-stops-v1"></script>
+  <script src="./micro-states.js?v=20261027-route-stops-v1"></script>
+  <script src="./travel-ledger.js?v=20261027-route-stops-v1"></script>
+  <script src="./character-creator.js?v=20261027-route-stops-v1"></script>
+  <script src="./rarity-config.js?v=20261027-route-stops-v1"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -7243,7 +7244,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261027-hairstyle-render-v2"></script>
+  <script src="./expedition-ui.js?v=20261027-route-stops-v1"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);

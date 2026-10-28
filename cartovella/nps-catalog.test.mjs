@@ -192,7 +192,7 @@ check('character customization appears above the stage and progress summary', ()
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 10);
-  assert.ok(sources.every(source => source.endsWith('?v=20261027-hairstyle-render-v2')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261027-route-stops-v1')));
   assert.ok(sources.some(source => source.startsWith('./character-creator.js?')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
@@ -250,6 +250,26 @@ class TestXmlElement {
 }
 class TestDOMParser {
   parseFromString(text) {
+    const parsePlacemarkChildren = content => {
+      const children = [];
+      const name = content.match(/<([^\s:>]+:)?name\b[^>]*>([\s\S]*?)<\/\1name\s*>/i);
+      if (name) children.push(new TestXmlElement(`${name[1] || ''}name`, name[2]));
+      for (const match of content.matchAll(/<([^\s:>]+:)?Point\b[^>]*>([\s\S]*?)<\/\1Point\s*>/gi)) {
+        const coordinates = [...match[2].matchAll(
+          /<([^\s:>]+:)?coordinates\b[^>]*>([\s\S]*?)<\/\1coordinates\s*>/gi
+        )].map(coordinate =>
+          new TestXmlElement(`${coordinate[1] || ''}coordinates`, coordinate[2]));
+        children.push(new TestXmlElement(`${match[1] || ''}Point`, '', coordinates));
+      }
+      return children;
+    };
+    const placemarks = [...text.matchAll(
+      /<([^\s:>]+:)?Placemark\b[^>]*>([\s\S]*?)<\/\1Placemark\s*>/gi
+    )].map(match => ({
+      element: new TestXmlElement(
+        `${match[1] || ''}Placemark`, '', parsePlacemarkChildren(match[2])),
+      content: match[2]
+    }));
     const parseBlocks = (tag, content, childTag) => [...content.matchAll(
       new RegExp(`<([\\w.-]*:)?${tag}\\b[^>]*>([\\s\\S]*?)<\\/\\1${tag}\\s*>`, 'gi')
     )].map(match => {
@@ -258,9 +278,11 @@ class TestDOMParser {
       )].map(child => new TestXmlElement(`${child[1] || ''}${childTag}`, child[2])) : [];
       return new TestXmlElement(`${match[1] || ''}${tag}`, '', children);
     });
-    const lines = parseBlocks('LineString', text, 'coordinates');
-    const tracks = parseBlocks('Track', text, 'coord');
-    return new TestXmlElement('document', '', [...lines, ...tracks]);
+    placemarks.forEach(({ element, content }) => {
+      element.children.push(...parseBlocks('LineString', content, 'coordinates'));
+      element.children.push(...parseBlocks('Track', content, 'coord'));
+    });
+    return new TestXmlElement('document', '', placemarks.map(({ element }) => element));
   }
 }
 function element(id) {
@@ -268,7 +290,7 @@ function element(id) {
     const classes = new Set(id === 'viewingPublicAtlasBanner' ? ['hidden'] : []);
     elements.set(id, {
       value: ['bucketFilterStatus', 'bucketFilterType', 'bucketFilterRarity'].includes(id) ? 'all' : '',
-      textContent: '', innerHTML: '', style: {}, dataset: {},
+      textContent: '', innerHTML: '', style: {}, dataset: {}, children: [],
       classList: {
         add(...names) { names.forEach(name => classes.add(name)); },
         remove(...names) { names.forEach(name => classes.delete(name)); },
@@ -282,8 +304,8 @@ function element(id) {
       },
       handlers: {}, addEventListener(name, handler) { this.handlers[name] = handler; },
       querySelectorAll: () => [], focus() {}, scrollTo() {},
-      replaceChildren() { this.innerHTML = ''; }, reset() {}, setAttribute() {},
-      appendChild(child) { this.innerHTML += child.innerHTML; },
+      replaceChildren(...children) { this.children = children; this.innerHTML = ''; }, reset() {}, setAttribute() {},
+      appendChild(child) { this.children.push(child); this.innerHTML += child.innerHTML; },
       prepend(child) { this.innerHTML = child.innerHTML + this.innerHTML; }
     });
   }
@@ -1129,16 +1151,28 @@ const geoJsonTrack = parseRouteFixture(JSON.stringify({
   features: [{ type: 'Feature', properties: {}, geometry: {
     type: 'LineString', coordinates: [[-122, 37, 0], [-121.999, 37, 0], [-121.9, 37, 0], [-121, 37, 0]]
   } }]
-}), 'imported.geojson');
+}), 'imported.geojson').route;
 const kmlTrack = parseRouteFixture(
   '<kml><Placemark><LineString><coordinates>-122,37,0 -121,38,0</coordinates></LineString></Placemark></kml>',
-  'imported.kml');
+  'imported.kml').route;
 const gxTrack = parseRouteFixture(
   '<kml><Placemark><gx:Track><gx:coord>-122 37 0</gx:coord><gx:coord>-121 38 0</gx:coord></gx:Track></Placemark></kml>',
-  'imported.kml');
+  'imported.kml').route;
 const denseTrack = parseRouteFixture(JSON.stringify({
   type: 'LineString', coordinates: Array.from({ length: 1000 }, (_, index) => [index * 0.05, 0, 0])
-}), 'dense.json');
+}), 'dense.json').route;
+const geoJsonStops = parseRouteFixture(JSON.stringify({
+  type: 'FeatureCollection',
+  features: [
+    { type: 'Feature', properties: { name: 'Start Harbor' }, geometry: { type: 'Point', coordinates: [-122.4, 37.8] } },
+    { type: 'Feature', properties: { title: 'Mountain Lodge' }, geometry: { type: 'Point', coordinates: [-121.2, 39.1, 1200] } },
+    { type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [-120.5, 40] } }
+  ]
+}), 'stops.geojson');
+const kmlStops = parseRouteFixture(
+  '<kml><Document><Placemark><name>First Stop</name><Point><coordinates>-122.4,37.8,0</coordinates></Point></Placemark>' +
+    '<Placemark><name>Second Stop</name><Point><coordinates>-121.2,39.1</coordinates></Point></Placemark></Document></kml>',
+  'stops.kml');
 check('GeoJSON, KML coordinates and gx:Track import as validated lat/lng tracks and downsample while preserving endpoints', () => {
   assert.deepEqual(geoJsonTrack, [[37, -122], [37, -121.9], [37, -121]]);
   assert.deepEqual(kmlTrack, [[37, -122], [38, -121]]);
@@ -1149,6 +1183,32 @@ check('GeoJSON, KML coordinates and gx:Track import as validated lat/lng tracks 
   assert.throws(() => parseRouteFixture(JSON.stringify({
     type: 'LineString', coordinates: [[181, 0], [1, 0]]
   }), 'invalid.json'), /longitude/);
+});
+check('GeoJSON Point features and KML Point placemarks import ordered named stops', () => {
+  assert.deepEqual(geoJsonStops, {
+    route: null,
+    stops: [
+      { name: 'Start Harbor', coords: [37.8, -122.4] },
+      { name: 'Mountain Lodge', coords: [39.1, -121.2] },
+      { name: 'Stop 3', coords: [40, -120.5] }
+    ]
+  });
+  assert.deepEqual(kmlStops, {
+    route: null,
+    stops: [
+      { name: 'First Stop', coords: [37.8, -122.4] },
+      { name: 'Second Stop', coords: [39.1, -121.2] }
+    ]
+  });
+  assert.throws(() => parseRouteFixture(JSON.stringify({
+    type: 'FeatureCollection', features: [
+      { type: 'Feature', properties: { name: 'Stop' }, geometry: { type: 'Point', coordinates: [0, 0] } },
+      { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [[0, 0], [1, 1]] } }
+    ]
+  }), 'mixed.geojson'), /both stops and a track/);
+  assert.throws(() => parseRouteFixture(JSON.stringify({
+    type: 'MultiLineString', coordinates: [[[0, 0], [1, 1]], [[2, 2], [3, 3]]]
+  }), 'multiple.geojson'), /multiple route lines/);
 });
 check('header navigation uses compact icons with accessible labels and synchronized pressed states', () => {
   for (const label of ['Explore — RPG mode', 'Travel Ledger — Classic mode', 'Scratch Map', 'Explorer Profile — Character & Stats', 'Achievements']) {
@@ -6161,6 +6221,51 @@ check('saving an uploaded road track persists its full geometry and awards route
   assert.deepEqual(JSON.parse(vm.runInContext(
     'JSON.stringify(TravelLedger.fogRoutes(AppState.expeditions[0]))',context)),[geoJsonTrack]);
   assert.equal(importedRoadRequests,0);
+});
+context.window.confirm=()=>true;
+vm.runInContext('openExpedition()',context);
+element('expeditionName').value='Imported itinerary';
+importedFileInput.files=[{
+  name:'itinerary.geojson',size:500,
+  text:async()=>JSON.stringify({type:'FeatureCollection',features:[
+    {type:'Feature',properties:{name:'Oakland'},geometry:{type:'Point',coordinates:[-122.27,37.8]}},
+    {type:'Feature',properties:{name:'Sacramento'},geometry:{type:'Point',coordinates:[-121.49,38.58]}},
+    {type:'Feature',properties:{name:'Reno'},geometry:{type:'Point',coordinates:[-119.81,39.53]}},
+    {type:'Feature',properties:{name:'Salt Lake City'},geometry:{type:'Point',coordinates:[-111.89,40.76]}},
+    {type:'Feature',properties:{name:'Denver'},geometry:{type:'Point',coordinates:[-104.99,39.74]}}
+  ]})
+}];
+await importedFileInput.handlers.change({target:importedFileInput});
+check('imported GeoJSON points populate an ordered editable itinerary with per-leg transit selectors',()=>{
+  assert.equal(vm.runInContext('expeditionDraft.length',context),5);
+  assert.deepEqual(JSON.parse(vm.runInContext('JSON.stringify(expeditionDraft.map(stop=>stop.name))',context)),
+    ['Oakland','Sacramento','Reno','Salt Lake City','Denver']);
+  assert.equal(vm.runInContext('expeditionUploadedRoute',context),null);
+  assert.equal(vm.runInContext('expeditionPreparedLegs',context),null);
+  assert.equal(element('expeditionRouteFileStatus').textContent,
+    '5 stops imported. Choose a transit type for each leg, then preview routes.');
+  const rows=element('expeditionStops').children;
+  assert.equal(rows.length,5);
+  const selectors=rows.slice(0,-1).map(row=>row.children[1].children[0]);
+  assert.ok(selectors.every(select =>
+    ['road','foot','ferry','flight','rail'].every(mode =>
+      select.children.some(option=>option.value===mode))));
+  ['road','foot','ferry','flight'].forEach((mode,index)=>{
+    selectors[index].handlers.change({target:{value:mode}});
+  });
+  assert.deepEqual(JSON.parse(vm.runInContext(
+    'JSON.stringify(expeditionDraft.slice(0,-1).map(stop=>stop.travelMode))',context)),
+  ['road','foot','ferry','flight']);
+});
+const previousImportedStops=vm.runInContext('JSON.stringify(expeditionDraft.map(stop=>stop.name))',context);
+context.window.confirm=()=>false;
+importedFileInput.files=[{
+  name:'replacement.geojson',size:100,
+  text:async()=>JSON.stringify({type:'Feature',properties:{name:'Replacement'},geometry:{type:'Point',coordinates:[0,0]}})
+}];
+await importedFileInput.handlers.change({target:importedFileInput});
+check('declining replacement preserves the existing itinerary',()=>{
+  assert.equal(vm.runInContext('JSON.stringify(expeditionDraft.map(stop=>stop.name))',context),previousImportedStops);
 });
 context.CoordinateLookups=originalExpeditionLookups;
 context.L=originalPreviewL;
