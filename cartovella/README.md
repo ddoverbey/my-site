@@ -268,6 +268,10 @@ Your editable passport is saved in the browser. Use the in-app JSON export to cr
 move it to another browser or device; import that file there to continue. Keep backups before
 resetting browser data.
 
+If Cloud Sync reports that the session needs reconnection or that a refresh token was not found,
+open **Account and cloud sync** and sign in again. The rejected cloud session is cleared, but your
+local passport is kept. Do not clear browser storage just to fix a cloud sign-in problem.
+
 Searches and some coordinate lookups contact external services. The app's **Map services & privacy**
 section describes which information is sent for each feature. Imported route files are processed
 locally; imported driving and AWD tracks are not sent to the road router.

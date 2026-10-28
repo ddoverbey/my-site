@@ -7475,7 +7475,7 @@
           if (!cloudSession?.refresh_token) {
             const expired = expireCloudSession(cloudSession || sessionAtRequest);
             if (expired) {
-              const message = 'Your cloud session expired. Sign in again; your local passport is safe.';
+              const message = 'Your cloud session is no longer valid. Sign in again; your local passport is safe.';
               setCloudStatus(message, true);
               showAuthError(message);
             }
@@ -7494,11 +7494,13 @@
               result.error, result.error_code, result.code,
               result.error_description, result.message
             ].filter(value => typeof value === 'string').join(' ');
+            const normalizedDetails = details.replace(/[_-]+/g, ' ');
             if ([400, 401, 403].includes(response.status) &&
-                /invalid_grant|invalid.*refresh|refresh.*(already used|expired|not found|revoked)/i.test(details)) {
+                /invalid grant|invalid.*refresh|refresh.*(invalid|already used|expired|not found|revoked)/i
+                  .test(normalizedDetails)) {
               const expired = expireCloudSession(sessionToRefresh);
               if (expired) {
-                const message = 'Your cloud session expired. Sign in again; your local passport is safe.';
+                const message = 'Your cloud session is no longer valid. Sign in again; your local passport is safe.';
                 setCloudStatus(message, true);
                 showAuthError(message);
                 return false;
@@ -7586,7 +7588,7 @@
       if ((response.status === 401 || response.status === 403) && !retried) {
         if (await refreshCloudSession()) return cloudFetch(url, options, true);
         if (!cloudSession?.access_token) {
-          throw new Error('Your cloud session expired. Sign in again; your local passport was kept.');
+          throw new Error('Your cloud session is no longer valid. Sign in again; your local passport was kept.');
         }
       }
       return response;
@@ -8572,7 +8574,13 @@
       } catch (error) {
         cloudHydrated = false;
         console.error('Cartovella cloud passport load failed.', error);
-        setCloudStatus(`Cloud load failed: ${error.message} Local data was kept.`, true);
+        const needsReauthentication = !cloudSession?.access_token &&
+          /cloud session is no longer valid/i.test(error.message);
+        const message = needsReauthentication
+          ? 'Cloud session needs reconnection. Sign in again to resume syncing; your local passport was kept.'
+          : `Cloud load failed: ${error.message} Local data was kept.`;
+        setCloudStatus(message, true);
+        if (needsReauthentication) showAuthError(message);
         return false;
       }
     }

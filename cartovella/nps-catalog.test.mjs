@@ -701,6 +701,7 @@ await checkAsync('an invalid refresh token clears only the cloud session and pro
     access_token: 'expired-access', refresh_token: 'revoked-refresh',
     user: { id: 'user-revoked', email: 'revoked@example.com' }
   };
+  const passportBeforeRefreshFailure = vm.runInContext('JSON.stringify(passportPayload())', context);
   vm.runInContext(`
     cloudSession = ${JSON.stringify(expiredSession)};
     cloudSessionRefreshPromise = null;
@@ -710,19 +711,20 @@ await checkAsync('an invalid refresh token clears only the cloud session and pro
     if (String(url).includes('/auth/v1/token?grant_type=refresh_token')) {
       return {
         ok: false, status: 400,
-        json: async () => ({ error: 'invalid_grant', error_description: 'Invalid Refresh Token: Already Used' })
+        json: async () => ({ code: 'refresh_token_not_found' })
       };
     }
     return { ok: false, status: 401, json: async () => ({ message: 'JWT expired' }) };
   };
-  await assert.rejects(
-    vm.runInContext('cloudFetch("/test/expired")', context),
-    /Your cloud session expired/
-  );
+  assert.equal(await vm.runInContext('loadFromCloud()', context), false);
   assert.equal(vm.runInContext('cloudSession', context), null);
   assert.equal(localStorage.getItem('cartovella_cloud_session'), null);
-  assert.match(element('authSyncStatusText').textContent, /local passport is safe/i);
+  assert.match(element('authSyncStatusText').textContent, /reconnection/i);
+  assert.match(element('authSyncStatusText').textContent, /local passport was kept/i);
   assert.match(element('authErrorMsg').textContent, /sign in again/i);
+  assert.equal(vm.runInContext('JSON.stringify(passportPayload())', context),
+    passportBeforeRefreshFailure);
+  assert.equal(localStorage.getItem('cartovella_state'), cloudTestStoredPassport);
 });
 context.fetch = cloudTestFetch;
 vm.runInContext(`
