@@ -1401,6 +1401,16 @@ await checkAsync('public summary stats contain compact profile, achievement, and
   const originalAchievementDisclosure = vm.runInContext('achievementDisclosure', context);
   const originalPassport = vm.runInContext('JSON.stringify(passportPayload())', context);
   const originalD3 = context.d3;
+  const originalImage = context.Image;
+  const originalURL = context.URL;
+  const originalBlob = context.Blob;
+  const originalXMLSerializer = context.XMLSerializer;
+  const originalGlobalRoutesOpen = vm.runInContext('globalRoutesOpen', context);
+  const originalGlobalRoutesScope = vm.runInContext('globalRoutesScope', context);
+  const originalGlobalRoutesYear = vm.runInContext('globalRoutesYear', context);
+  const originalGlobalRoutesAtlasStyle = vm.runInContext('globalRoutesAtlasStyle', context);
+  const originalGlobalRoutesZoomBehavior = vm.runInContext('globalRoutesZoomBehavior', context);
+  const originalGlobalRoutesVisibleExpeditions = vm.runInContext('globalRoutesVisibleExpeditions', context);
   const originalWorldGeoJson = vm.runInContext('JSON.stringify(worldGeoJson)', context);
   const originalPublicProfile = vm.runInContext('JSON.stringify(publicProfile)', context);
   const originalCacheKey = vm.runInContext('JSON.stringify(publicRouteMapThumbnailCacheKey)', context);
@@ -1408,21 +1418,21 @@ await checkAsync('public summary stats contain compact profile, achievement, and
   const originalCreateElement = context.document.createElement;
   const routeInterpolations = [];
   const routeGeometries = [];
-  const routeScale = [];
-  const routeStrokeWidths = [];
-  const routeDashPatterns = [];
-  const routeCanvasContext = {
-    beginPath() {}, moveTo() {}, lineTo() {}, closePath() {}, fill() {},
-    stroke() { routeStrokeWidths.push(this.lineWidth); },
-    fillRect() {},
-    setLineDash(pattern) { routeDashPatterns.push([...pattern]); },
-    scale(x, y) { routeScale.push([x, y]); }
-  };
-  let routeCanvasSize = null;
+  const routeCanvasContext = { drawImage() {} };
+  const routeCanvasEncodings = [];
+  let serializedRouteMap = '';
+  let revokedRouteMapUrl = false;
+  const routeMapSvg = element('svgGlobalRoutesMap');
+  const originalSvgCloneNode = routeMapSvg.cloneNode;
+  routeMapSvg.cloneNode = () => ({
+    innerHTML: routeMapSvg.innerHTML,
+    attributes: {},
+    setAttribute(name, value) { this.attributes[name] = value; }
+  });
   context.d3 = {
     ...d3Geo,
-    geoPath(projection, canvasContext) {
-      const path = d3Geo.geoPath(projection, canvasContext);
+    geoPath(projection) {
+      const path = d3Geo.geoPath(projection);
       return geometry => {
         if (geometry?.type === 'LineString') routeGeometries.push(geometry.coordinates);
         return path(geometry);
@@ -1431,6 +1441,41 @@ await checkAsync('public summary stats contain compact profile, achievement, and
     geoInterpolate(...points) {
       routeInterpolations.push(points);
       return d3Geo.geoInterpolate(...points);
+    },
+    select: () => ({
+      call(callback, ...args) { callback(this, ...args); return this; },
+      select: () => ({ attr() { return this; } })
+    }),
+    zoom: () => {
+      const behavior = () => {};
+      behavior.scaleExtent = () => behavior;
+      behavior.on = () => behavior;
+      return behavior;
+    },
+    zoomIdentity: { toString: () => 'translate(0,0) scale(1)' },
+    zoomTransform: () => ({ toString: () => 'translate(0,0) scale(1)' })
+  };
+  context.Image = class {
+    set src(value) {
+      this.source = value;
+      this.onload();
+    }
+  };
+  context.Blob = class {
+    constructor(parts) { this.parts = parts; }
+  };
+  context.URL = {
+    createObjectURL(blob) {
+      serializedRouteMap = blob.parts.join('');
+      return 'blob:route-map';
+    },
+    revokeObjectURL(value) {
+      revokedRouteMapUrl = value === 'blob:route-map';
+    }
+  };
+  context.XMLSerializer = class {
+    serializeToString(svg) {
+      return `<svg xmlns="${svg.attributes.xmlns}" width="${svg.attributes.width}" height="${svg.attributes.height}">${svg.innerHTML}</svg>`;
     }
   };
   context.document.createElement = tag => {
@@ -1438,7 +1483,7 @@ await checkAsync('public summary stats contain compact profile, achievement, and
     return {
       width: 0, height: 0, getContext: () => routeCanvasContext,
       toDataURL(type, quality) {
-        routeCanvasSize = { width: this.width, height: this.height, type, quality };
+        routeCanvasEncodings.push({ width: this.width, height: this.height, type, quality });
         return 'data:image/jpeg;base64,dGVzdA==';
       }
     };
@@ -1487,6 +1532,10 @@ await checkAsync('public summary stats contain compact profile, achievement, and
       publicProfile.is_public = true;
       publicRouteMapThumbnailCacheKey = null;
       publicRouteMapThumbnailCache = null;
+      globalRoutesOpen = false;
+      globalRoutesScope = 'global';
+      globalRoutesYear = 'all';
+      globalRoutesAtlasStyle = 'midnight';
     `, context);
     const summary = JSON.parse(JSON.stringify(await vm.runInContext(
       `buildPublicSummaryStats({
@@ -1506,14 +1555,18 @@ await checkAsync('public summary stats contain compact profile, achievement, and
     assert.equal(summary.biomesCount, 2);
     assert.equal(summary.clearedPct, 12.5);
     assert.match(summary.routeMapThumbnail, /^data:image\/jpeg;base64,/);
-    assert.deepEqual(routeCanvasSize, { width: 320, height: 168, type: 'image/jpeg', quality: 0.55 });
-    assert.deepEqual(routeScale, []);
-    assert.ok(routeStrokeWidths.includes(2.5), 'route lines retain the full map stroke width');
-    assert.ok(routeDashPatterns.some(pattern => JSON.stringify(pattern) === '[6,5]'),
-      'flight legs retain the full map dash pattern');
+    assert.deepEqual(routeCanvasEncodings[0], {
+      width: 640, height: 336, type: 'image/jpeg', quality: 0.55
+    });
+    assert.match(serializedRouteMap, /class="global-route"/);
+    assert.match(serializedRouteMap, /class="global-route-stop"/);
+    assert.match(serializedRouteMap, /class="global-route-home"/);
+    assert.equal((serializedRouteMap.match(/class="global-route"/g) || []).length, 3,
+      'the preview is rasterized from the same complete SVG rendered by the Global Route Map');
+    assert.ok(revokedRouteMapUrl, 'the temporary SVG object URL is released');
     assert.ok(routeGeometries.some(coordinates =>
       JSON.stringify(coordinates) === '[[-118,34],[-116,36],[-112,39],[-105,40]]'),
-    'the complete long road route, including its intermediate points, is drawn');
+      'the complete long road route, including its intermediate points, is drawn');
     const interpolatedPairs = routeInterpolations.map(points => JSON.stringify(points));
     assert.ok(interpolatedPairs.includes('[[-120,40],[-121,41]]'));
     assert.ok(interpolatedPairs.includes('[[-121,41],[-122,42]]'));
@@ -1538,13 +1591,30 @@ await checkAsync('public summary stats contain compact profile, achievement, and
   } finally {
     context.achievementDisclosure = originalAchievementDisclosure;
     context.d3 = originalD3;
+    context.Image = originalImage;
+    context.URL = originalURL;
+    context.Blob = originalBlob;
+    context.XMLSerializer = originalXMLSerializer;
     context.document.createElement = originalCreateElement;
+    routeMapSvg.cloneNode = originalSvgCloneNode;
     vm.runInContext(`
       applyPassport(migratePassport(${originalPassport}));
       worldGeoJson = JSON.parse(${JSON.stringify(originalWorldGeoJson)});
       publicProfile = JSON.parse(${JSON.stringify(originalPublicProfile)});
       publicRouteMapThumbnailCacheKey = JSON.parse(${JSON.stringify(originalCacheKey)});
       publicRouteMapThumbnailCache = JSON.parse(${JSON.stringify(originalCachedThumbnail)});
+      globalRoutesOpen = ${originalGlobalRoutesOpen};
+      globalRoutesScope = ${JSON.stringify(originalGlobalRoutesScope)};
+      globalRoutesYear = ${JSON.stringify(originalGlobalRoutesYear)};
+      globalRoutesAtlasStyle = ${JSON.stringify(originalGlobalRoutesAtlasStyle)};
+    `, context);
+    context.__originalGlobalRoutesZoomBehavior = originalGlobalRoutesZoomBehavior;
+    context.__originalGlobalRoutesVisibleExpeditions = originalGlobalRoutesVisibleExpeditions;
+    vm.runInContext(`
+      globalRoutesZoomBehavior = __originalGlobalRoutesZoomBehavior;
+      globalRoutesVisibleExpeditions = __originalGlobalRoutesVisibleExpeditions;
+      delete globalThis.__originalGlobalRoutesZoomBehavior;
+      delete globalThis.__originalGlobalRoutesVisibleExpeditions;
     `, context);
   }
 });

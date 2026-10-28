@@ -10,7 +10,8 @@ expeditions, track parks and regions, and earn achievements from your travel his
 - KML and GeoJSON route imports, a Global Route Map, and PNG route-poster export. Water Transit
   routes are blue, while flights use a neutral gray in the map and trip logs.
 - The Explorers' Guild refreshes its directory when opened and shows opted-in explorers' character
-  scenes and low-resolution route-map previews.
+  scenes and compressed snapshots of the same complete Global Route Map, including its trip routes
+  and stops.
 - Progress for parks, regions, elevations, rarity, and terrestrial biomes.
 - Clickable biome and destination pins show the trips, stops, and saved places contributing to them.
 - Achievements are grouped into expandable milestone classes and sorted by rarity, with unmet classes

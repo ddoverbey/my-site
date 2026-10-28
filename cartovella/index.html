@@ -7921,88 +7921,59 @@
       });
     }
 
-    function buildPublicRouteMapThumbnail() {
-      const routes = AppState.routes
-        .filter(route => Array.isArray(route) && route.length > 1)
-        .map(coords => ({ mode: 'road', routeSource: 'uploaded', coords }));
-      AppState.expeditions.forEach(expedition => {
-        travelLogLegs(expedition).forEach(leg => routes.push(leg));
-      });
-      const cacheKey = stablePassportStringify({
-        worldFeatureCount: Array.isArray(worldGeoJson) ? worldGeoJson.length : 0,
-        routes: routes.map(({ mode, routeSource, coords }) => ({ mode, routeSource, coords }))
-      });
-      if (cacheKey === publicRouteMapThumbnailCacheKey) return publicRouteMapThumbnailCache;
-      publicRouteMapThumbnailCacheKey = cacheKey;
-      publicRouteMapThumbnailCache = null;
-      const validRoutes = routes.filter(route =>
-        Array.isArray(route.coords) && route.coords.length > 1 && route.coords.every(travelLogPoint)
-      );
-      if (!validRoutes.length) return null;
-
-      const width = 320;
-      const height = 168;
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const context = canvas.getContext('2d');
-      if (!context) throw new Error('Could not prepare the public route map preview.');
-      const style = GLOBAL_ROUTE_MAP_STYLES.midnight;
-      const features = Array.isArray(worldGeoJson) ? worldGeoJson.filter(feature => feature?.geometry) : [];
-      const projection = d3.geoNaturalEarth1();
-      if (features.length) {
-        projection.fitExtent([[5, 5], [width - 5, height - 5]], { type: 'FeatureCollection', features });
-      } else {
-        projection.scale(50).translate([width / 2, height / 2]);
+    async function buildPublicRouteMapThumbnail() {
+      if (!AppState.expeditions.some(expedition =>
+        travelLogLegs(expedition).some(leg =>
+          Array.isArray(leg.coords) && leg.coords.length > 1 && leg.coords.every(travelLogPoint)))) {
+        publicRouteMapThumbnailCacheKey = null;
+        publicRouteMapThumbnailCache = null;
+        return null;
       }
-      const path = d3.geoPath(projection, context);
 
-      context.fillStyle = style.ocean;
-      context.fillRect(0, 0, width, height);
-      context.beginPath();
-      path(d3.geoGraticule());
-      context.strokeStyle = style.graticule;
-      context.lineWidth = 0.4;
-      context.stroke();
-      features.forEach(feature => {
-        context.beginPath();
-        path(feature);
-        context.fillStyle = style.land;
-        context.fill();
-        context.strokeStyle = style.border;
-        context.lineWidth = 0.35;
-        context.stroke();
-      });
+      renderGlobalRoutesMap();
+      const svg = document.getElementById('svgGlobalRoutesMap').cloneNode(true);
+      svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+      svg.setAttribute('width', '1200');
+      svg.setAttribute('height', '630');
+      const svgMarkup = new XMLSerializer().serializeToString(svg);
+      if (svgMarkup === publicRouteMapThumbnailCacheKey) return publicRouteMapThumbnailCache;
 
-      validRoutes.forEach(({ mode, routeSource, coords }) => {
-        const segments = mode === 'flight' && routeSource === 'direct'
-          ? coords.slice(1).map((point, index) => [coords[index], point])
-          : [coords];
-        context.strokeStyle = style.routes[mode] || '#94a3b8';
-        context.lineWidth = 2.5;
-        context.lineCap = 'round';
-        context.lineJoin = 'round';
-        context.setLineDash(mode === 'flight' ? [6, 5] : []);
-        segments.forEach(segment => {
-          const isDirect = routeSource === 'direct' && segment.length === 2;
-          let coordinates;
-          if (mode === 'flight' || isDirect) {
-            const interpolate = d3.geoInterpolate(
-              [segment[0][1], segment[0][0]],
-              [segment.at(-1)[1], segment.at(-1)[0]]
-            );
-            coordinates = Array.from({ length: 25 }, (_, index) => interpolate(index / 24));
-          } else {
-            coordinates = segment.map(([lat, lng]) => [lng, lat]);
-          }
-          context.beginPath();
-          path({ type: 'LineString', coordinates });
-          context.stroke();
+      const imageUrl = URL.createObjectURL(new Blob([svgMarkup], {
+        type: 'image/svg+xml;charset=utf-8'
+      }));
+      try {
+        const image = new Image();
+        await new Promise((resolve, reject) => {
+          image.onload = resolve;
+          image.onerror = () => reject(new Error('Could not render the public route map preview.'));
+          image.src = imageUrl;
         });
-      });
-      context.setLineDash([]);
-      publicRouteMapThumbnailCache = canvas.toDataURL('image/jpeg', 0.55);
-      return publicRouteMapThumbnailCache;
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        if (!context) throw new Error('Could not prepare the public route map preview.');
+        for (const [width, height] of [[640, 336], [480, 252], [320, 168]]) {
+          canvas.width = width;
+          canvas.height = height;
+          context.drawImage(image, 0, 0, width, height);
+          for (const quality of [0.55, 0.42, 0.3]) {
+            const candidate = canvas.toDataURL('image/jpeg', quality);
+            if (candidate.length <= 64000) {
+              publicRouteMapThumbnailCache = candidate;
+              break;
+            }
+          }
+          if (publicRouteMapThumbnailCache) break;
+        }
+        if (!publicRouteMapThumbnailCache) {
+          throw new Error('The rendered route map exceeds the public profile preview size limit.');
+        }
+        publicRouteMapThumbnailCacheKey = svgMarkup;
+        return publicRouteMapThumbnailCache;
+      } catch (error) {
+        throw new Error(`Could not prepare the public route map preview: ${error.message}`);
+      } finally {
+        URL.revokeObjectURL(imageUrl);
+      }
     }
 
     async function buildPublicSummaryStats(stats = calculateStats()) {
@@ -8036,7 +8007,7 @@
         titleDesc: stats.titleDesc,
         homeName: AppState.homeBase?.name || '',
         character: publicCharacter,
-        routeMapThumbnail: publicProfile.is_public ? buildPublicRouteMapThumbnail() : null,
+        routeMapThumbnail: publicProfile.is_public ? await buildPublicRouteMapThumbnail() : null,
         countriesCount: stats.countriesCount,
         statesCount: stats.statesCount,
         parksCount: (stats.visitedParks || []).length,
