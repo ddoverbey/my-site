@@ -154,6 +154,12 @@ sheets, so each color choice is consistent between styles. Ranger hats are cente
 Character sprite catalogs, layer composition, unlock rules,
 backgrounds, and companion rendering live in `character-creator.js`;
 character settings are stored in the passport and included in local, cloud, export, and shared saves.
+Santa hats unlock for free starting December 1, 2026; pumpkin and witch hats unlock for free starting
+October 30, 2026. On December 24–25 all character sprites, including Miku, automatically wear Santa
+hats; on October 30–31 male sprites wear pumpkin hats and female sprites, including Miku, wear witch
+hats. These event hats temporarily cover the equipped hat. Remove or restore them from Wardrobe;
+removing one restores the previous hat and keeps the event hat off for that character through the
+current holiday. The dismissal is saved with the character. Dates use the device's local calendar.
 The sprite picker is labeled Sprite A and Sprite B; internal male/female keys remain for mapping
 each choice to its source art. Ranger hats mask the upper edge of hairstyles, while allowing hair to
 show below the hat. Shirts, bottoms, and shoes can be unequipped independently, including

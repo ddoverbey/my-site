@@ -599,9 +599,17 @@
     ...(male ? { male: `${hatFolder}${male}` } : {}),
     ...(female ? { female: `${hatFolder}${female}` } : {})
   }, cost);
-  addHat('witch_hat', 'Witch Hat', null, 'Female Hat/Witch hat.png');
-  addHat('santa_hat', 'Santa Hat', 'Male Hat/Male Santa hat.png', 'Female Hat/Female Santa hat.png');
-  addHat('pumpkin_hat', 'Pumpkin Hat', 'Male Hat/Pumpkin hat.png', null);
+  const addDateUnlockedHat = (id, name, male, female, date) =>
+    SHOP_WARDROBE.push(equipmentItem(id, name, 'headwear', {
+      ...(male ? { male: `${hatFolder}${male}` } : {}),
+      ...(female ? { female: `${hatFolder}${female}` } : {})
+    }, { type: 'date', ...date }));
+  addDateUnlockedHat('witch_hat', 'Witch Hat', null, 'Female Hat/Witch hat.png',
+    { year: 2026, month: 10, day: 30 });
+  addDateUnlockedHat('santa_hat', 'Santa Hat', 'Male Hat/Male Santa hat.png', 'Female Hat/Female Santa hat.png',
+    { year: 2026, month: 12, day: 1 });
+  addDateUnlockedHat('pumpkin_hat', 'Pumpkin Hat', 'Male Hat/Pumpkin hat.png', null,
+    { year: 2026, month: 10, day: 30 });
   addHat('viking_horns', 'Viking Helmet with Horns',
     'Male Hat/Viking Helmet with horns.png', 'Female Hat/Headdress.png', 125);
   [
@@ -685,11 +693,46 @@
       [field, EQUIPMENT_CATALOG.filter(item => item.field === field)])));
   const FIXED_SKIN_ALLOWED_FIELDS = new Set([
     'gender', 'skinTone', 'specialSkin', 'effect', 'pet', 'petAnimation',
-    'petHat', 'petBackpack', 'background'
+    'petHat', 'petBackpack', 'background', 'headwear'
   ]);
   const fixedAppearanceSkin = character =>
     EQUIPMENT_BY_FIELD.specialSkin.find(item =>
       item.id === character.specialSkin && item.fixedAppearance);
+  function holidayHatEventFor(date = new Date()) {
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    if (month === 12 && (day === 24 || day === 25)) {
+      return {
+        id: 'christmas', key: `christmas:${date.getFullYear()}`, label: 'Christmas',
+        maleHat: 'santa_hat', femaleHat: 'santa_hat'
+      };
+    }
+    if (month === 10 && (day === 30 || day === 31)) {
+      return {
+        id: 'halloween', key: `halloween:${date.getFullYear()}`, label: 'Halloween',
+        maleHat: 'pumpkin_hat', femaleHat: 'witch_hat'
+      };
+    }
+    return null;
+  }
+  function holidayHatFor(character, date = new Date()) {
+    const event = holidayHatEventFor(date);
+    if (!event || (character.seasonalHatDismissals || []).includes(event.key)) return null;
+    const gender = character.specialSkin === 'special_miku' ? 'female' : character.gender;
+    return {
+      id: gender === 'female' ? event.femaleHat : event.maleHat,
+      eventKey: event.key,
+      eventLabel: event.label
+    };
+  }
+  function normalizeSeasonalHatDismissals(value) {
+    return Array.isArray(value)
+      ? [...new Set(value.filter(key => /^(?:halloween|christmas):\d{4}$/.test(key)))].slice(-12)
+      : [];
+  }
+  function equipmentGenderFor(character) {
+    return character.specialSkin === 'special_miku' ? 'female' : character.gender;
+  }
   const EQUIPMENT_DEFAULTS = Object.freeze({
     top: 'starter_shirt', bottoms: 'starter_pants', shoes: 'simple_shoes',
     backLayer: '', effect: '', specialSkin: '', ears: '', arms: '', face: '',
@@ -737,6 +780,7 @@
     petAnimation: '',
     background: 'bg_campfire',
     ...EQUIPMENT_DEFAULTS,
+    seasonalHatDismissals: [],
     purchasedItems: [],
     proUnlocked: false,
     donationUsd: 0
@@ -788,14 +832,16 @@
       const legacyValue = field === 'top' ? legacyOutfit[0] :
         field === 'bottoms' ? legacyOutfit[1] : fallback;
       const allowed = EQUIPMENT_BY_FIELD[field] || [];
+      const equipmentGender = field === 'headwear' && source.specialSkin === 'special_miku'
+        ? 'female' : gender;
       const isOwned = candidate => candidate.unlock.type !== 'coin' ||
         purchasedItems.includes(candidate.id);
       if (source[field] === '') return [field, ''];
       const item = allowed.find(candidate =>
-        candidate.id === source[field] && candidate.paths[gender] && isOwned(candidate));
+        candidate.id === source[field] && candidate.paths[equipmentGender] && isOwned(candidate));
       const defaultItem = allowed.find(candidate =>
         candidate.id === (source[field] == null ? legacyValue : source[field]) &&
-        candidate.paths[gender] && isOwned(candidate));
+        candidate.paths[equipmentGender] && isOwned(candidate));
       return [field, item?.id || defaultItem?.id || fallback];
     }));
     const selectedPet = PET_CATALOG.find(item => item.id === pet);
@@ -830,6 +876,7 @@
       petAnimation,
       background: normalizeId(source.background, knownIds(BACKGROUND_CATALOG), DEFAULT_CHARACTER.background),
       ...equipment,
+      seasonalHatDismissals: normalizeSeasonalHatDismissals(source.seasonalHatDismissals),
       purchasedItems,
       proUnlocked: source.proUnlocked === true,
       donationUsd: Number.isFinite(Number(source.donationUsd))
@@ -972,6 +1019,16 @@
       return {
         unlocked: current >= unlock.goal,
         description: `Requires $${unlock.goal} in recorded donations ($${Math.min(current, unlock.goal)}/$${unlock.goal}).`
+      };
+    }
+    if (unlock.type === 'date') {
+      const releaseDate = new Date(unlock.year, unlock.month - 1, unlock.day);
+      const currentDate = appState.currentDate instanceof Date ? appState.currentDate : new Date();
+      return {
+        unlocked: currentDate >= releaseDate,
+        description: `Unlocks ${new Intl.DateTimeFormat('en-US', {
+          month: 'long', day: 'numeric', year: 'numeric'
+        }).format(releaseDate)}.`
       };
     }
     if (unlock.type === 'coin') {
@@ -1151,8 +1208,10 @@
     return canvas;
   }
 
-  function characterSpriteAssets(value) {
+  function characterSpriteAssets(value, date = new Date()) {
     const character = normalizeCharacter(value);
+    const equipmentGender = equipmentGenderFor(character);
+    const holidayHat = holidayHatFor(character, date);
     const genderName = character.gender === 'female' ? 'Female' : 'Male';
     const skinIndex = SKIN_TONES.findIndex(tone => tone.id === character.skinTone) + 1;
     const hairCatalog = HAIR_STYLES.filter(style => style.genders.includes(character.gender));
@@ -1173,19 +1232,23 @@
       },
       ...(wearsRangerHat ? { clipTopSourceY: 25 } : {})
     };
-    const equipmentLayer = (field, layer) => {
-      const item = (EQUIPMENT_BY_FIELD[field] || []).find(candidate => candidate.id === character[field]);
-      const path = item?.paths[character.gender];
+    const equipmentLayer = (field, layer, gender = character.gender, itemId = character[field]) => {
+      const item = (EQUIPMENT_BY_FIELD[field] || []).find(candidate => candidate.id === itemId);
+      const path = item?.paths[gender];
       return path ? {
         layer, imageSrc: assetUrl(path),
         ...(item.variantSpec ? {
-          variantSpec: variantSpecForGender(item, character.gender)
+          variantSpec: variantSpecForGender(item, gender)
         } : {})
       } : null;
     };
     const specialSkin = equipmentLayer('specialSkin', 'base');
     if (fixedAppearanceSkin(character)) {
-      return [equipmentLayer('effect', 'effect'), specialSkin].filter(Boolean);
+      return [
+        equipmentLayer('effect', 'effect'),
+        specialSkin,
+        equipmentLayer('headwear', 'headwear', equipmentGender, holidayHat?.id || character.headwear)
+      ].filter(Boolean);
     }
     const layers = [
       equipmentLayer('backLayer', 'back'),
@@ -1201,7 +1264,7 @@
       equipmentLayer('arms', 'arms'),
       hairLayer,
       equipmentLayer('face', 'face'),
-      equipmentLayer('headwear', 'headwear'),
+      equipmentLayer('headwear', 'headwear', equipmentGender, holidayHat?.id || character.headwear),
       equipmentLayer('handItem', 'hand')
     ].filter(Boolean);
     return layers;
@@ -1596,8 +1659,9 @@
   }
 
   function equipmentOptions(field, character, stats, achievements, appState) {
+    const gender = equipmentGenderFor(character);
     const choices = (EQUIPMENT_BY_FIELD[field] || [])
-      .filter(item => item.paths[character.gender]);
+      .filter(item => item.paths[gender]);
     choices.unshift({
       id: '', name: 'None', field, paths: {}, unlock: { type: 'starter' }, imageSrc: null
     });
@@ -1743,7 +1807,7 @@
     </div>`;
   }
 
-  function renderControls(container, character, stats, achievements, disabled, appState) {
+  function renderControls(container, character, stats, achievements, disabled, appState, currentDate) {
     const openBrowse = container.querySelectorAll?.('details[data-character-browse][open]');
     if (openBrowse?.length) {
       container.dataset.openCharacterBrowse = openBrowse[0].dataset.characterBrowse || '';
@@ -1756,7 +1820,7 @@
     const equipmentDropdown = (field, label, fieldDisabled = false) => dropdown(
       field, label, character[field],
       equipmentOptions(field, character, stats, completedAchievements, appState),
-      option => equipmentThumbnailMarkup(option, character.gender),
+      option => equipmentThumbnailMarkup(option, equipmentGenderFor(character)),
       disabled || fieldDisabled
     );
     const petOptions = catalogOptions(PET_CATALOG, character.pet, stats, character,
@@ -1801,6 +1865,24 @@
       field === selectedWardrobeField)[1];
     const selectedWardrobeOptions = equipmentOptions(
       selectedWardrobeField, character, stats, completedAchievements, appState);
+    const holidayEvent = holidayHatEventFor(currentDate);
+    const holidayHatId = holidayEvent
+      ? equipmentGenderFor(character) === 'female' ? holidayEvent.femaleHat : holidayEvent.maleHat
+      : '';
+    const holidayHatName = EQUIPMENT_CATALOG.find(item => item.id === holidayHatId)?.name || 'holiday hat';
+    const holidayHatActive = !!holidayHatFor(character, currentDate);
+    const holidayHatControl = holidayEvent
+      ? `<div class="rounded-lg border border-amber-400/30 bg-amber-950/20 p-3">
+          <p class="text-xs text-amber-100">${holidayHatActive
+            ? `${escapeHtml(holidayEvent.label)} automatically displays the ${escapeHtml(holidayHatName)} over your current hat.`
+            : `The ${escapeHtml(holidayHatName)} is turned off for this ${escapeHtml(holidayEvent.label)}; your current hat is showing.`}
+          </p>
+          <button type="button" data-seasonal-hat-action="${holidayHatActive ? 'remove' : 'restore'}"
+            class="mt-2 rounded-lg bg-slate-800 px-3 py-2 text-xs text-slate-100 hover:bg-slate-700">
+            ${holidayHatActive ? 'Remove holiday hat' : 'Wear holiday hat'}
+          </button>
+        </div>`
+      : '';
     const purchaseControls = `<div class="space-y-3">
       <label class="block text-xs font-medium text-slate-300">
         Outfit layer
@@ -1847,8 +1929,10 @@
           </div>
       </div>`,
       wardrobe: `<div class="space-y-3">
+        ${holidayHatControl}
         ${fixedAppearance
-          ? '<p class="text-xs text-slate-400">Wardrobe items cannot be equipped while Miku is selected.</p>'
+          ? `<p class="text-xs text-slate-400">Miku’s hair and clothing stay fixed. Hats and helmets remain available.</p>
+            ${equipmentDropdown('headwear', 'Hats & Helmets')}`
           : `<p class="text-xs text-slate-400">Choose a layer to preview and cycle through your unlocked gear. Browse all to shop.</p>
         ${purchaseControls}`}
       </div>`,
@@ -1865,7 +1949,7 @@
             completedAchievements, 'Equipped', appState),
           option => backgroundThumbnailMarkup(option))}`,
       shop: fixedAppearance
-        ? '<p class="text-xs text-slate-400">Wardrobe items cannot be equipped while Miku is selected.</p>'
+        ? '<p class="text-xs text-slate-400">The Coin Shop is unavailable while Miku is selected. Use Wardrobe to choose an unlocked hat.</p>'
         : `<div class="space-y-4">
         <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-400/30 bg-amber-950/20 p-4">
           <span class="text-sm font-semibold text-amber-100">Wayfarer Coins</span>
@@ -1977,14 +2061,30 @@
       };
     }
     if (!controls) return;
-    renderControls(controls, character, stats, achievements, disabled, appState);
+    const currentDate = options.currentDate instanceof Date ? options.currentDate : new Date();
+    renderControls(controls, character, stats, achievements, disabled, appState, currentDate);
     const completedAchievements = achievementProgress(stats, achievements);
     controls.onclick = event => {
       const tabButton = event.target.closest('[data-character-tab]');
       if (tabButton) {
         controls.dataset.activeTab = tabButton.dataset.characterTab;
         controls.dataset.openCharacterBrowse = '';
-        renderControls(controls, character, stats, achievements, disabled, appState);
+        renderControls(controls, character, stats, achievements, disabled, appState, currentDate);
+        return;
+      }
+      const seasonalHatButton = event.target.closest('button[data-seasonal-hat-action]');
+      if (seasonalHatButton) {
+        const holidayEvent = holidayHatEventFor(currentDate);
+        if (disabled || !holidayEvent) return;
+        const dismissals = new Set(character.seasonalHatDismissals);
+        if (seasonalHatButton.dataset.seasonalHatAction === 'remove') {
+          dismissals.add(holidayEvent.key);
+        } else {
+          dismissals.delete(holidayEvent.key);
+        }
+        options.onChange?.(normalizeCharacter({
+          ...character, seasonalHatDismissals: [...dismissals]
+        }));
         return;
       }
       const choiceButton = event.target.closest('button[data-character-field][data-character-id]');
@@ -2011,6 +2111,14 @@
         if (id && (!selected || !unlockStatus(selected.unlock, stats, character,
           completedAchievements, appState).unlocked)) return;
         const next = { ...character, [field]: id };
+        if (field === 'headwear') {
+          const holidayEvent = holidayHatEventFor(currentDate);
+          if (holidayEvent) {
+            next.seasonalHatDismissals = [...new Set([
+              ...character.seasonalHatDismissals, holidayEvent.key
+            ])];
+          }
+        }
         if (selected?.unlock.type === 'coin' && !character.purchasedItems.includes(selected.id)) {
           if (choiceButton.dataset.characterCycle === 'true') return;
           const balance = coinSummary(stats, appState);
@@ -2028,12 +2136,21 @@
       if (event.target.dataset.characterWardrobeCategory === 'true') {
         if (fixedAppearance) return;
         controls.dataset.activeWardrobeField = event.target.value;
-        renderControls(controls, character, stats, achievements, disabled, appState);
+        renderControls(controls, character, stats, achievements, disabled, appState, currentDate);
         return;
       }
       const field = event.target.dataset.characterField;
       if (!field || disabled || (fixedAppearance && !FIXED_SKIN_ALLOWED_FIELDS.has(field))) return;
-      options.onChange?.(normalizeCharacter({ ...character, [field]: event.target.value }));
+      const next = { ...character, [field]: event.target.value };
+      if (field === 'headwear') {
+        const holidayEvent = holidayHatEventFor(currentDate);
+        if (holidayEvent) {
+          next.seasonalHatDismissals = [...new Set([
+            ...character.seasonalHatDismissals, holidayEvent.key
+          ])];
+        }
+      }
+      options.onChange?.(normalizeCharacter(next));
     };
   }
 
@@ -2044,7 +2161,8 @@
     LEVEL_ITEMS, PARK_MILESTONE_ITEMS, ACHIEVEMENT_ITEMS,
     SHOP_WARDROBE, PET_ACCESSORY_CATALOG, EQUIPMENT_CATALOG, LEVEL_TRACK,
     BODY_SHAPE_PROFILES, normalizeCharacter, characterSpriteAssets, achievementProgress,
-    unlockStatus, coinSummary, rarityCoinReward, processSpriteVariant, drawPet, drawCharacterLayer,
+    unlockStatus, holidayHatEventFor, holidayHatFor, coinSummary, rarityCoinReward,
+    processSpriteVariant, drawPet, drawCharacterLayer,
     drawCharacterSprite, drawCampfire,
     drawStage, drawGuildAvatar, renderAvatar, render
   };

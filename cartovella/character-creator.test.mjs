@@ -261,7 +261,7 @@ check('Miku locks hair and clothing while keeping scene, sprite, skin, pet and e
     effect: 'effect_1',
     purchasedItems: ['green_shirt', 'green_pants', 'effect_1']
   });
-  const layers = characterCreator.characterSpriteAssets(character);
+  const layers = characterCreator.characterSpriteAssets(character, new Date(2026, 9, 28));
   assert.deepEqual(layers.map(layer => layer.layer), ['effect', 'base']);
   assert.ok(layers[1].imageSrc.endsWith('/Miku-2.png'));
 
@@ -305,7 +305,8 @@ check('Miku locks hair and clothing while keeping scene, sprite, skin, pet and e
 
   controls.dataset.activeTab = 'wardrobe';
   render();
-  assert.match(controls.innerHTML, /Wardrobe items cannot be equipped while Miku is selected/);
+  assert.match(controls.innerHTML, /Hats and helmets remain available/);
+  assert.match(controls.innerHTML, /data-character-field="headwear"/);
   controls.dataset.activeTab = 'shop';
   render();
   assert.doesNotMatch(controls.innerHTML, /data-character-field="top"/);
@@ -323,6 +324,95 @@ check('Miku locks hair and clothing while keeping scene, sprite, skin, pet and e
   assert.match(controls.innerHTML, /data-character-field="pet"/);
   assert.match(controls.innerHTML, /data-character-field="petHat"/);
 });
+check('seasonal hats are free and unlock on their announced 2026 dates', () => {
+  const hats = Object.fromEntries(['santa_hat', 'pumpkin_hat', 'witch_hat'].map(id => [
+    id, characterCreator.EQUIPMENT_CATALOG.find(item => item.id === id)
+  ]));
+  assert.equal(hats.santa_hat.unlock.type, 'date');
+  assert.deepEqual(
+    [hats.santa_hat.unlock.year, hats.santa_hat.unlock.month, hats.santa_hat.unlock.day],
+    [2026, 12, 1]
+  );
+  assert.equal(hats.pumpkin_hat.unlock.type, 'date');
+  assert.deepEqual(
+    [hats.pumpkin_hat.unlock.year, hats.pumpkin_hat.unlock.month, hats.pumpkin_hat.unlock.day],
+    [2026, 10, 30]
+  );
+  assert.equal(hats.witch_hat.unlock.type, 'date');
+  assert.deepEqual(
+    [hats.witch_hat.unlock.year, hats.witch_hat.unlock.month, hats.witch_hat.unlock.day],
+    [2026, 10, 30]
+  );
+  for (const hat of Object.values(hats)) assert.equal(hat.cost, undefined);
+  const character = characterCreator.DEFAULT_CHARACTER;
+  const achievements = new Map();
+  assert.equal(characterCreator.unlockStatus(hats.pumpkin_hat.unlock, {}, character, achievements, {
+    character, currentDate: new Date(2026, 9, 29)
+  }).unlocked, false);
+  assert.equal(characterCreator.unlockStatus(hats.pumpkin_hat.unlock, {}, character, achievements, {
+    character, currentDate: new Date(2026, 9, 30)
+  }).unlocked, true);
+  assert.equal(characterCreator.unlockStatus(hats.santa_hat.unlock, {}, character, achievements, {
+    character, currentDate: new Date(2026, 11, 1)
+  }).unlocked, true);
+  assert.equal(characterCreator.unlockStatus(hats.santa_hat.unlock, {}, character, achievements, {
+    character, currentDate: new Date(2027, 0, 1)
+  }).unlocked, true);
+});
+check('holiday hats automatically overlay male, female and Miku sprites only on the event dates', () => {
+  const makeCharacter = values => characterCreator.normalizeCharacter({
+    ...characterCreator.DEFAULT_CHARACTER, headwear: 'traveler_cap', ...values
+  });
+  const headwearPath = (character, date) => decodeURIComponent(
+    characterCreator.characterSpriteAssets(character, date).find(layer => layer.layer === 'headwear').imageSrc
+  );
+  const halloween = new Date(2026, 9, 30);
+  const halloweenEnd = new Date(2026, 9, 31);
+  const christmas = new Date(2026, 11, 24);
+  const christmasEnd = new Date(2026, 11, 25);
+  const male = makeCharacter({ gender: 'male' });
+  const female = makeCharacter({ gender: 'female' });
+  const miku = makeCharacter({ specialSkin: 'special_miku', gender: 'male' });
+  assert.ok(headwearPath(male, halloween).endsWith('/Male Hat/Pumpkin hat.png'));
+  assert.ok(headwearPath(male, halloweenEnd).endsWith('/Male Hat/Pumpkin hat.png'));
+  assert.ok(headwearPath(female, halloween).endsWith('/Female Hat/Witch hat.png'));
+  assert.ok(headwearPath(miku, halloween).endsWith('/Female Hat/Witch hat.png'));
+  assert.ok(headwearPath(male, christmas).endsWith('/Male Hat/Male Santa hat.png'));
+  assert.ok(headwearPath(female, christmasEnd).endsWith('/Female Hat/Female Santa hat.png'));
+  assert.ok(headwearPath(miku, christmas).endsWith('/Female Hat/Female Santa hat.png'));
+  assert.ok(headwearPath(male, new Date(2026, 10, 1)).endsWith('/Male Hat/Male Blue cap.png'));
+  assert.equal(characterCreator.holidayHatFor(male, new Date(2026, 9, 29)), null);
+});
+check('holiday hat removal restores prior headwear and persists for the active event', () => {
+  let character = characterCreator.normalizeCharacter({
+    ...characterCreator.DEFAULT_CHARACTER,
+    specialSkin: 'special_miku',
+    headwear: 'traveler_cap'
+  });
+  const currentDate = new Date(2026, 9, 30);
+  const controls = { dataset: { activeTab: 'wardrobe' }, innerHTML: '' };
+  const render = () => characterCreator.render({
+    controls, character, stats: { level: 10 }, currentDate,
+    onChange: next => { character = next; render(); }
+  });
+  render();
+  assert.match(controls.innerHTML, /Remove holiday hat/);
+  const clickHolidayControl = action => controls.onclick({ target: { closest(selector) {
+    if (selector === 'button[data-seasonal-hat-action]') {
+      return { dataset: { seasonalHatAction: action } };
+    }
+    return null;
+  } } });
+  clickHolidayControl('remove');
+  assert.ok(character.seasonalHatDismissals.includes('halloween:2026'));
+  assert.equal(character.headwear, 'traveler_cap');
+  assert.ok(decodeURIComponent(characterCreator.characterSpriteAssets(character, currentDate)
+    .find(layer => layer.layer === 'headwear').imageSrc).endsWith('/Female Hat/Female Blue cap.png'));
+  assert.match(controls.innerHTML, /Wear holiday hat/);
+  clickHolidayControl('restore');
+  assert.equal(character.seasonalHatDismissals.includes('halloween:2026'), false);
+  assert.ok(characterCreator.holidayHatFor(character, currentDate));
+});
 check('wardrobe arrows never purchase, cycle owned gear and None, and leave purchases to browse-all', () => {
   const fields = ['top', 'bottoms', 'shoes', 'headwear', 'handItem', 'backLayer',
     'arms', 'face', 'ears', 'effect'];
@@ -331,7 +421,8 @@ check('wardrobe arrows never purchase, cycle owned gear and None, and leave purc
       for (const field of fields) {
         const shopItems = characterCreator.SHOP_WARDROBE.filter(item =>
           item.field === field && item.paths[gender]);
-        const purchasedItems = shopItems.slice(0, 1).map(item => item.id);
+        const purchasedItems = shopItems.filter(item => item.unlock.type === 'coin')
+          .slice(0, 1).map(item => item.id);
         let character = characterCreator.normalizeCharacter({ gender, purchasedItems });
         const controls = { dataset: { activeTab: tab }, innerHTML: '' };
         let changed;
@@ -368,9 +459,12 @@ check('wardrobe arrows never purchase, cycle owned gear and None, and leave purc
           assert.equal(changed[field], next[1]);
           character = changed;
         }
-        if (shopItems.length) assert.ok(seen.has(shopItems[0].id), `${gender} ${tab} ${field}: owned gear`);
+        if (purchasedItems.length) {
+          assert.ok(seen.has(purchasedItems[0]), `${gender} ${tab} ${field}: owned gear`);
+        }
         assert.ok(seen.has(''), `${field}: None`);
-        const unowned = shopItems[1];
+        const unowned = shopItems.find(item =>
+          item.unlock.type === 'coin' && !purchasedItems.includes(item.id));
         if (unowned) {
           render();
           selectField();
