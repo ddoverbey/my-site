@@ -6251,6 +6251,7 @@ check('imported GeoJSON points populate an ordered editable itinerary with per-l
     ['road','foot','ferry','flight','rail'].every(mode =>
       select.children.some(option=>option.value===mode))));
   ['road','foot','ferry','flight'].forEach((mode,index)=>{
+    selectors[index].value=mode;
     selectors[index].handlers.change({target:{value:mode}});
   });
   assert.deepEqual(JSON.parse(vm.runInContext(
