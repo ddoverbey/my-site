@@ -14,6 +14,7 @@ import { feature as decodeTopology } from 'topojson-client';
 const worldwide = JSON.parse(await readFile(new URL('./worldwide-national-parks.json', import.meta.url), 'utf8'));
 const wikidata = JSON.parse(await readFile(new URL('./wikidata-national-parks-query.json', import.meta.url), 'utf8'));
 const internationalParks = internationalCatalog.combineParks(worldwide, wikidata).parks;
+const publicTripSharingSql = await readFile(new URL('./public-trip-sharing.sql', import.meta.url), 'utf8');
 
 const records = Array.from({ length: 405 }, (_, index) => ({
   id: `official-${index}`, parkCode: index.toString(36).padStart(4, '0'),
@@ -38,6 +39,15 @@ function check(name, action) {
   checks++;
   console.log(`PASS ${name}`);
 }
+check('public-trip migration exposes only versioned shared expedition fields', () => {
+  assert.match(publicTripSharingSql, /DROP POLICY IF EXISTS "Anyone can view public passports"/);
+  assert.match(publicTripSharingSql, /REVOKE SELECT ON TABLE public\.cartovella_passports FROM anon/);
+  assert.match(publicTripSharingSql, /public_trip_sharing_version = 1/);
+  assert.match(publicTripSharingSql, /publicSharing'->>'enabled' = 'true'/);
+  assert.match(publicTripSharingSql, /publicSharing'->>'includeDetails' = 'true'/);
+  assert.match(publicTripSharingSql, /includeJournal/);
+  assert.match(publicTripSharingSql, /photoIndexes/);
+});
 async function checkAsync(name, action) {
   await action();
   checks++;
@@ -192,7 +202,7 @@ check('character customization appears above the stage and progress summary', ()
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 10);
-  assert.ok(sources.every(source => source.endsWith('?v=20261028-travel-log-return-v1')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261028-public-trip-sharing-v1')));
   assert.ok(sources.some(source => source.startsWith('./character-creator.js?')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
@@ -1456,6 +1466,7 @@ await checkAsync('public summary stats contain compact profile, achievement, and
     zoomTransform: () => ({ toString: () => 'translate(0,0) scale(1)' })
   };
   context.Image = class {
+    constructor() { this.naturalWidth = 100; this.naturalHeight = 100; }
     set src(value) {
       this.source = value;
       this.onload();
@@ -1503,7 +1514,8 @@ await checkAsync('public summary stats contain compact profile, achievement, and
           { kind: 'place', id: 'citadel', name: 'Cloud Citadel', coords: [45, -121] },
           { kind: 'place', id: 'falls', name: 'Spirit Falls', coords: [45.1, -121.1] }
         ],
-        journal: 'A memorable public story.'
+        journal: 'A memorable public story.',
+        publicSharing: { enabled: true, includeDetails: true, includeJournal: true, photoIndexes: [] }
       }, {
         id: 'legacy-public-flight', name: 'Legacy Flight', startDate: '2026-09-01', endDate: '2026-09-02',
         dayTrip: false, reason: '', transitTags: ['flight'],
@@ -1513,7 +1525,8 @@ await checkAsync('public summary stats contain compact profile, achievement, and
           { kind: 'place', id: 'flight-a', name: 'Flight A', coords: [40,-120] },
           { kind: 'place', id: 'flight-b', name: 'Flight B', coords: [41,-121] },
           { kind: 'place', id: 'flight-c', name: 'Flight C', coords: [42,-122] }
-        ]
+        ],
+        publicSharing: { enabled: true, includeDetails: true, includeJournal: false, photoIndexes: [] }
       }, {
         id: 'long-road-route', name: 'Long Road Route', startDate: '2025-08-01', endDate: '2025-08-03',
         dayTrip: false, reason: '', transitTags: ['road'],
@@ -1526,7 +1539,33 @@ await checkAsync('public summary stats contain compact profile, achievement, and
         routeLegs: [{
           mode: 'road', routeSource: 'uploaded',
           routeCoords: [[34,-118],[36,-116],[39,-112],[40,-105]], countyIds: []
+        }],
+        publicSharing: { enabled: true, includeDetails: true, includeJournal: false, photoIndexes: [] }
+      }, {
+        id: 'private-trip', name: 'Private Weekend', startDate: '2026-11-01', endDate: '2026-11-02',
+        dayTrip: false, reason: 'Secret destination', transitTags: ['road'],
+        countyIds: [], parkIds: [], customPoiIds: [],
+        routeCoords: [[10, 10], [11, 11]],
+        routeStops: [
+          { kind: 'place', id: 'private-a', name: 'Private Start', coords: [10, 10] },
+          { kind: 'place', id: 'private-b', name: 'Private Finish', coords: [11, 11] }
+        ],
+        routeLegs: [{
+          mode: 'road', routeSource: 'uploaded',
+          routeCoords: [[10, 10], [10.5, 10.5], [11, 11]], countyIds: []
         }]
+      }, {
+        id: 'story-only', name: 'Hidden story title', startDate: '2026-08-01', endDate: '2026-08-02',
+        dayTrip: false, reason: 'Hidden trip details', transitTags: ['rail'],
+        countyIds: [], parkIds: [], customPoiIds: [],
+        routeCoords: [[20, 20], [21, 21]],
+        routeStops: [
+          { kind: 'place', id: 'story-a', name: 'Hidden station', coords: [20, 20] },
+          { kind: 'place', id: 'story-b', name: 'Hidden town', coords: [21, 21] }
+        ],
+        journal: 'A story shared without its details.',
+        photos: ['data:image/jpeg;base64,YWJjZA=='],
+        publicSharing: { enabled: true, includeDetails: false, includeJournal: true, photoIndexes: [0] }
       }];
       worldGeoJson = [];
       publicProfile.is_public = true;
@@ -1554,12 +1593,12 @@ await checkAsync('public summary stats contain compact profile, achievement, and
     assert.equal(summary.parksCount, 2);
     assert.equal(summary.biomesCount, 2);
     assert.equal(summary.totalMiles, vm.runInContext(
-      'Math.round(AppState.expeditions.reduce((total, expedition) => total + expeditionDistanceMiles(expedition), 0) * 10) / 10',
+      'Math.round(AppState.expeditions.filter(expedition => expedition.publicSharing?.enabled && expedition.publicSharing?.includeDetails).reduce((total, expedition) => total + expeditionDistanceMiles(expedition), 0) * 10) / 10',
       context
     ));
     assert.equal(summary.clearedPct, 12.5);
     assert.match(summary.routeMapThumbnail, /^data:image\/jpeg;base64,/);
-    assert.deepEqual(routeCanvasEncodings[0], {
+    assert.deepEqual(routeCanvasEncodings.find(encoding => encoding.width === 640), {
       width: 640, height: 336, type: 'image/jpeg', quality: 0.55
     });
     assert.match(serializedRouteMap, /class="global-route"/);
@@ -1571,6 +1610,8 @@ await checkAsync('public summary stats contain compact profile, achievement, and
     assert.ok(routeGeometries.some(coordinates =>
       JSON.stringify(coordinates) === '[[-118,34],[-116,36],[-112,39],[-105,40]]'),
       'the complete long road route, including its intermediate points, is drawn');
+    assert.doesNotMatch(serializedRouteMap, /Private Weekend|Private Start|Private Finish/,
+      'private trip routes and stop names are excluded from the public map');
     const interpolatedPairs = routeInterpolations.map(points => JSON.stringify(points));
     assert.ok(interpolatedPairs.includes('[[-120,40],[-121,41]]'));
     assert.ok(interpolatedPairs.includes('[[-121,41],[-122,42]]'));
@@ -1584,13 +1625,21 @@ await checkAsync('public summary stats contain compact profile, achievement, and
       context
     )));
     assert.equal(privateSummary.routeMapThumbnail, null, 'private profiles do not publish route previews');
+    assert.deepEqual(privateSummary.recentExpeditions, [], 'private profiles publish no expedition posts');
     assert.ok(Array.isArray(summary.topBadges) && summary.topBadges.length <= 4);
     assert.deepEqual(summary.recentExpeditions[0], {
       id: 'public-trip', name: 'Waterfall Weekend', startDate: '2026-10-01', endDate: '2026-10-02',
       dayTrip: false, reason: 'Chasing waterfalls', journalSnippet: 'A memorable public story.',
-      highlightPhoto: null, distanceMiles: summary.recentExpeditions[0].distanceMiles,
+      detailsShared: true, photos: [], distanceMiles: summary.recentExpeditions[0].distanceMiles,
       transitTags: ['road'], stopNames: ['Cloud Citadel', 'Spirit Falls']
     });
+    const storyOnly = summary.recentExpeditions.find(expedition => expedition.id === 'story-only');
+    assert.equal(storyOnly.name, 'Shared expedition');
+    assert.equal(storyOnly.detailsShared, false);
+    assert.equal(storyOnly.startDate, null);
+    assert.equal(storyOnly.reason, '');
+    assert.equal(storyOnly.journalSnippet, 'A story shared without its details.');
+    assert.deepEqual(storyOnly.photos, ['data:image/jpeg;base64,dGVzdA==']);
     assert.ok(JSON.stringify(summary).length < 10000, 'profile summary remains lightweight');
   } finally {
     context.achievementDisclosure = originalAchievementDisclosure;
@@ -1663,7 +1712,7 @@ await checkAsync('signup requires a unique username, stores it, and reports user
     requests = [];
     context.fetch = async (url, options = {}) => {
       requests.push({ url: String(url), options });
-      if (String(url).includes('/rest/v1/cartovella_passports?')) {
+      if (String(url).includes('/rest/v1/cartovella_public_profiles?')) {
         return { ok: true, status: 200, json: async () => [] };
       }
       if (String(url).includes('/auth/v1/signup')) {
@@ -1684,7 +1733,7 @@ await checkAsync('signup requires a unique username, stores it, and reports user
     requests = [];
     context.fetch = async (url, options = {}) => {
       requests.push({ url: String(url), options });
-      if (String(url).includes('/rest/v1/cartovella_passports?')) {
+      if (String(url).includes('/rest/v1/cartovella_public_profiles?')) {
         return { ok: true, status: 200, json: async () => [] };
       }
       if (String(url).includes('/auth/v1/signup')) {
@@ -1712,7 +1761,7 @@ await checkAsync('signup requires a unique username, stores it, and reports user
     element('profileIsPublic').checked = true;
     context.fetch = async (url, options = {}) => {
       requests.push({ url: String(url), options });
-      if (String(url).includes('/rest/v1/cartovella_passports?') && options.method === 'GET') {
+      if (String(url).includes('/rest/v1/cartovella_public_profiles?') && options.method === 'GET') {
         return { ok: true, status: 200, json: async () => [] };
       }
       if (String(url).includes('/rest/v1/cartovella_passports') && options.method === 'POST') {
@@ -1772,7 +1821,7 @@ await checkAsync('Explorers’ Guild renders mocked public profiles and expediti
   let requests = 0;
   context.fetch = async url => {
     requests++;
-    assert.match(String(url), /is_public=eq\.true/);
+    assert.match(String(url), /cartovella_public_profiles/);
     assert.match(String(url), /limit=50/);
     return { ok: true, status: 200, json: async () => profiles };
   };
@@ -1801,11 +1850,21 @@ await checkAsync('Explorers’ Guild renders mocked public profiles and expediti
     assert.match(element('guildExplorersGrid').innerHTML, /Grand Voyager/);
     assert.match(element('guildExplorersGrid').innerHTML, /data:image\/jpeg;base64,YWJjZA==/);
     assert.match(element('guildExplorersGrid').innerHTML, /Route map preview for @devon/);
+    assert.match(element('guildExplorersGrid').innerHTML, /h-16 w-16 shrink-0 rounded-full.*object-cover/);
     assert.doesNotMatch(element('guildExplorersGrid').innerHTML, /image-rendering:pixelated/);
     assert.match(element('guildExpeditionsFeed').innerHTML, /Spirit Falls Weekend/);
     assert.match(element('guildExpeditionsFeed').innerHTML, /The falls were roaring/);
     assert.match(element('guildExpeditionsFeed').innerHTML, /data:image\/jpeg;base64,YWJjZA==/);
     assert.match(element('guildExpeditionsFeed').innerHTML, /data-guild-open-travel="devon"/);
+    assert.match(element('guildExpeditionsFeed').innerHTML, /h-12 w-12 shrink-0 rounded-full.*object-cover/);
+    const privateDetailsPost = vm.runInContext(`renderPublicExpeditionSummary(
+      {username:'devon',summary_stats:{}},
+      {id:'private-post',detailsShared:false,name:'Secret trip',reason:'Secret reason',
+        startDate:'2026-01-01',stopNames:['Secret stop'],journalSnippet:'Public story'}
+    )`, context);
+    assert.match(privateDetailsPost, /Shared expedition/);
+    assert.match(privateDetailsPost, /Public story/);
+    assert.doesNotMatch(privateDetailsPost, /Secret trip|Secret reason|Secret stop|data-guild-open-travel/);
     assert.ok(stageRenders.length >= 2);
     assert.ok(stageRenders.every(render =>
       render.width === 160 && render.height === 90 && render.background === 'bg_yosemite' &&
@@ -1846,13 +1905,12 @@ await checkAsync('clean ?u links load a read-only public Atlas without changing 
   };
   context.window.history = { replaceState() {} };
   context.fetch = async url => {
-    assert.match(String(url), /username=eq\.devon/);
-    assert.match(String(url), /is_public=eq\.true/);
+    assert.match(String(url), /cartovella_public_profiles\?username=eq\.devon/);
     return {
       ok: true, status: 200,
       json: async () => [{
         username: 'devon', display_name: 'Devon · Alpine Ranger',
-        passport_data: {
+        public_passport_data: {
           version: 2,
           homeBase: { name: 'Devon Cloud Citadel', lat: 45, lng: -121, radiusKm: travelLedger.homeRadiusKm }
         },
@@ -3242,6 +3300,9 @@ check('expedition history escapes names, shows date/elevation/tags and starts me
 });
 check('editable travel logs expose a two-step delete confirmation', () => {
   const history = element('travelLogFeed').innerHTML;
+  assert.match(history, /data-sharing-field="enabled"[^>]*>[\s\S]*?Share this trip publicly/);
+  assert.doesNotMatch(history, /data-sharing-field="enabled"[^>]*checked/,
+    'legacy trips default to private');
   assert.match(history, /data-delete-expedition="exp_test"[^>]*>Delete trip<\/button>/);
   assert.doesNotMatch(history, /data-confirm-delete-expedition="exp_test"/);
 });
@@ -3511,7 +3572,8 @@ check('journal cards keep the itinerary collapsed, show one highlight, and prese
     assert.equal((feed.match(/<img class="travel-journal-highlight"/g) || []).length, 1, 'only one highlight photo is built before opening');
     assert.ok(feed.includes('travel-journal-highlight'));
     assert.ok(!feed.includes('A &lt;script&gt;memory'));
-    assert.ok(!feed.includes('ZWZnaA=='), 'remaining images are not inserted until the journal opens');
+    const collapsedJournal = feed.match(/<div class="travel-journal-photos">([\s\S]*?)<\/div>/)?.[1] || '';
+    assert.ok(!collapsedJournal.includes('ZWZnaA=='), 'remaining journal images are not inserted until the journal opens');
     assert.ok(feed.indexOf('Itinerary &amp; trip details') > feed.indexOf('</summary>'));
     const result = vm.runInContext(`(()=>{
       const editing=expeditionEditingId, draft=expeditionDraft;

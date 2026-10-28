@@ -38,6 +38,26 @@
     }
     return { journal, photos: [...photos] };
   }
+
+  function normalizePublicSharing(value, photoCount = 0) {
+    if (value === undefined || value === null) {
+      return { enabled: false, includeDetails: false, includeJournal: false, photoIndexes: [] };
+    }
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      throw new Error('Invalid expedition public-sharing settings.');
+    }
+    const enabled = value.enabled ?? false;
+    const includeDetails = value.includeDetails ?? false;
+    const includeJournal = value.includeJournal ?? false;
+    const photoIndexes = value.photoIndexes ?? [];
+    if (typeof enabled !== 'boolean' || typeof includeDetails !== 'boolean' ||
+        typeof includeJournal !== 'boolean' || !Array.isArray(photoIndexes) ||
+        new Set(photoIndexes).size !== photoIndexes.length ||
+        photoIndexes.some(index => !Number.isInteger(index) || index < 0 || index >= photoCount)) {
+      throw new Error('Invalid expedition public-sharing settings.');
+    }
+    return { enabled, includeDetails, includeJournal, photoIndexes: [...photoIndexes].sort((a, b) => a - b) };
+  }
   const promote = (current, next) => {
     if (!Object.hasOwn(ranks, next)) throw new Error('Invalid status promotion.');
     return (ranks[current] || 0) > ranks[next] ? current : next;
@@ -205,6 +225,9 @@
       delete normalized.purposeTags;
       return {
         ...normalized, ...(exp.journal !== undefined || exp.photos !== undefined ? journal : {}),
+        ...(exp.publicSharing !== undefined ? {
+          publicSharing: normalizePublicSharing(exp.publicSharing, journal.photos.length)
+        } : {}),
         transitTags: validateTags(exp.transitTags, transitTags),
         routeCoords: exp.routeCoords.map(point => [...point]),
         ...(exp.routeStops ? { routeStops: exp.routeStops.map(stop => {
@@ -973,6 +996,7 @@
     ranks, labels, colors, transitTags, transitIcons, isVisited, clearsFog, promote,
     homeRadiusKm, hasLoggedTravel, overnightNights, distanceMiles, fogRoutes, waterFogRoutes, flightStops, restoreExpeditionPromotions,
     journalLimits, validateJournal,
+    normalizePublicSharing,
     validateStatuses, validateTags, validateExpeditions, normalizePoi, migrateState, syncDerivedState, loggedCountyStatuses, metadataProgress
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

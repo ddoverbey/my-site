@@ -1458,31 +1458,35 @@ function travelLogMetrics(exp) {
 function renderPublicExpeditionSummary(profile, expedition) {
   const username = String(profile.username || '');
   const stats = profile.summary_stats || {};
-  const dates = [expedition.startDate, expedition.endDate].filter(Boolean).join(' – ') || 'Dates not set';
-  const transitTags = (Array.isArray(expedition.transitTags) ? expedition.transitTags : [])
+  const detailsShared = expedition.detailsShared !== false;
+  const dates = [expedition.startDate, expedition.endDate].filter(Boolean).join(' – ');
+  const transitTags = (detailsShared && Array.isArray(expedition.transitTags) ? expedition.transitTags : [])
     .map(mode => TravelLedger.transitTags[mode] || mode);
-  const stopNames = (Array.isArray(expedition.stopNames) ? expedition.stopNames : [])
+  const stopNames = (detailsShared && Array.isArray(expedition.stopNames) ? expedition.stopNames : [])
     .filter(name => typeof name === 'string' && name.trim());
-  const highlightPhoto = typeof expedition.highlightPhoto === 'string' &&
-    /^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/.test(expedition.highlightPhoto)
-    ? expedition.highlightPhoto : '';
-  const distance = Number.isFinite(expedition.distanceMiles)
+  const photos = (Array.isArray(expedition.photos) ? expedition.photos :
+    typeof expedition.highlightPhoto === 'string' ? [expedition.highlightPhoto] : [])
+    .filter(photo => typeof photo === 'string' && /^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/.test(photo));
+  const distance = detailsShared && Number.isFinite(expedition.distanceMiles)
     ? `${expedition.distanceMiles.toLocaleString('en', { maximumFractionDigits: 1 })} mi`
-    : 'Distance not recorded';
+    : '';
+  const title = detailsShared ? expedition.name || 'Untitled expedition' : 'Shared expedition';
   return `<article class="rpg-panel overflow-hidden rounded-2xl p-4">
     <div class="flex items-center gap-3">
-      <canvas width="80" height="48" data-guild-avatar="${escapeHtml(username)}" class="h-12 w-20 shrink-0 rounded-lg bg-slate-950" aria-hidden="true"></canvas>
+      <canvas width="80" height="48" data-guild-avatar="${escapeHtml(username)}" class="h-12 w-12 shrink-0 rounded-full bg-slate-950 object-cover" aria-hidden="true"></canvas>
       <div class="min-w-0"><p class="truncate text-xs font-semibold text-sky-200">@${escapeHtml(username)}</p>
         <p class="truncate text-[11px] text-slate-400">${escapeHtml(profile.display_name || stats.cls || 'Explorer')}</p></div>
     </div>
-    <h4 class="mt-3 text-base font-bold text-amber-200">${escapeHtml(expedition.name || 'Untitled expedition')}</h4>
-    <p class="mt-1 text-xs text-slate-400">${escapeHtml(dates)}${expedition.dayTrip ? ' · Day trip' : ''} · ${escapeHtml(distance)}</p>
+    <h4 class="mt-3 text-base font-bold text-amber-200">${escapeHtml(title)}</h4>
+    ${detailsShared ? `<p class="mt-1 text-xs text-slate-400">${escapeHtml(dates || 'Dates not set')}${expedition.dayTrip ? ' · Day trip' : ''} · ${escapeHtml(distance || 'Distance not recorded')}</p>` : ''}
     ${transitTags.length ? `<p class="mt-2 text-xs text-sky-200">Transit: ${escapeHtml(transitTags.join(' · '))}</p>` : ''}
     ${stopNames.length ? `<p class="mt-2 text-xs text-slate-300"><span class="font-semibold text-slate-400">Stops:</span> ${escapeHtml(stopNames.join(' · '))}</p>` : ''}
-    ${expedition.reason ? `<p class="mt-2 text-xs text-slate-400">${escapeHtml(expedition.reason)}</p>` : ''}
+    ${detailsShared && expedition.reason ? `<p class="mt-2 text-xs text-slate-400">${escapeHtml(expedition.reason)}</p>` : ''}
     ${expedition.journalSnippet ? `<p class="mt-2 whitespace-pre-line text-sm text-slate-200">${escapeHtml(expedition.journalSnippet)}</p>` : ''}
-    ${highlightPhoto ? `<figure class="mt-3 inline-block rotate-1 rounded bg-white p-2 pb-5 shadow-lg"><img src="${highlightPhoto}" alt="Expedition highlight from ${escapeHtml(expedition.name || 'trip')}" class="max-h-40 max-w-full object-cover" loading="lazy" decoding="async"></figure>` : ''}
-    <button type="button" data-guild-open-travel="${escapeHtml(username)}" class="mt-3 rounded-lg border border-sky-400/40 bg-sky-950/40 px-3 py-2 text-xs text-sky-200 hover:bg-sky-900/50">Open in Explorer's Travel Log (📖)</button>
+    ${photos.length ? `<div class="mt-3 flex flex-wrap gap-2">${photos.map((photo, index) =>
+      `<figure class="rotate-1 rounded bg-white p-2 pb-3 shadow-lg"><img src="${photo}" alt="Shared trip photo ${index + 1}" class="max-h-40 max-w-full object-cover" loading="lazy" decoding="async"></figure>`
+    ).join('')}</div>` : ''}
+    ${detailsShared ? `<button type="button" data-guild-open-travel="${escapeHtml(username)}" class="mt-3 rounded-lg border border-sky-400/40 bg-sky-950/40 px-3 py-2 text-xs text-sky-200 hover:bg-sky-900/50">Open in Explorer's Travel Log (📖)</button>` : ''}
   </article>`;
 }
 
@@ -1870,6 +1874,7 @@ function renderExpeditionHistory() {
   }
   let period = null;
   container.innerHTML = sorted.map(exp => {
+    const sharing = TravelLedger.normalizePublicSharing(exp.publicSharing, exp.photos?.length || 0);
     const names = travelLogStopNames(exp);
     const regions = travelLogRegions(exp);
     const badges = travelLogBadges(exp);
@@ -1920,6 +1925,24 @@ function renderExpeditionHistory() {
           <div class="flex flex-wrap gap-1.5">${badgeMarkup.join('')}</div>
           ${exp.reason ? `<p class="text-xs text-slate-400">${escapeHtml(exp.reason)}</p>` : ''}
         </details>
+        ${AppState.viewOnly ? '' : `<fieldset class="mt-3 space-y-2 rounded-xl border border-sky-400/20 bg-slate-950/40 p-3" aria-label="Public sharing choices for ${escapeHtml(exp.name)}">
+          <label class="flex items-start gap-2 text-xs text-slate-200">
+            <input type="checkbox" data-sharing-trip="${escapeHtml(exp.id)}" data-sharing-field="enabled" class="mt-0.5 accent-sky-400"${sharing.enabled ? ' checked' : ''}>
+            <span><b>Share this trip publicly</b><span class="mt-1 block text-slate-400">Trips start private. Shared content appears in the Explorers' Guild and public Atlas only when your profile is public.</span></span>
+          </label>
+          <label class="flex items-center gap-2 text-xs text-slate-300">
+            <input type="checkbox" data-sharing-trip="${escapeHtml(exp.id)}" data-sharing-field="includeDetails" class="accent-sky-400"${sharing.includeDetails ? ' checked' : ''}${sharing.enabled ? '' : ' disabled'}>
+            <span>Include trip details, stops, dates, and route</span>
+          </label>
+          <label class="flex items-center gap-2 text-xs text-slate-300">
+            <input type="checkbox" data-sharing-trip="${escapeHtml(exp.id)}" data-sharing-field="includeJournal" class="accent-sky-400"${sharing.includeJournal ? ' checked' : ''}${sharing.enabled ? '' : ' disabled'}>
+            <span>Include journal</span>
+          </label>
+          ${exp.photos?.length ? `<div class="flex flex-wrap gap-2">${exp.photos.map((photo, index) => `<label class="flex items-center gap-1.5 rounded-lg border border-slate-700 p-1.5 text-[11px] text-slate-300">
+            <input type="checkbox" data-sharing-trip="${escapeHtml(exp.id)}" data-sharing-field="photo" data-sharing-photo="${index}" class="accent-sky-400"${sharing.photoIndexes.includes(index) ? ' checked' : ''}${sharing.enabled ? '' : ' disabled'}>
+            <img src="${photo}" alt="" class="h-10 w-10 rounded object-cover" loading="lazy">Photo ${index + 1}
+          </label>`).join('')}</div>` : '<p class="text-[11px] text-slate-400">No photos on this trip.</p>'}
+        </fieldset>`}
         <div class="flex flex-wrap items-center gap-2">
           ${AppState.viewOnly ? '' : `<button type="button" data-edit-expedition="${escapeHtml(exp.id)}" class="rounded-lg bg-slate-800 px-3 py-2 text-xs text-amber-200">Edit trip &amp; route</button>`}
           ${AppState.viewOnly ? '' : confirmingTravelLogDeletion.has(exp.id)
@@ -1934,6 +1957,31 @@ function renderExpeditionHistory() {
   }).join('');
   container.querySelectorAll('[data-edit-expedition]').forEach(button => {
     button.addEventListener('click', () => openExpedition(button.dataset.editExpedition));
+  });
+  container.querySelectorAll('[data-sharing-trip]').forEach(input => {
+    input.addEventListener('change', () => {
+      if (AppState.viewOnly) return;
+      const { sharingTrip: id, sharingField: field, sharingPhoto } = input.dataset;
+      const current = AppState.expeditions.find(exp => exp.id === id);
+      if (!current) return;
+      try {
+        const sharing = TravelLedger.normalizePublicSharing(current.publicSharing, current.photos?.length || 0);
+        if (field === 'photo') {
+          const index = Number(sharingPhoto);
+          sharing.photoIndexes = input.checked
+            ? [...sharing.photoIndexes, index].sort((a, b) => a - b)
+            : sharing.photoIndexes.filter(photoIndex => photoIndex !== index);
+        } else sharing[field] = input.checked;
+        updateExpedition({ ...current, publicSharing: sharing });
+        renderExpeditionHistory();
+        Array.from(container.querySelectorAll('[data-sharing-trip]'))
+          .find(control => control.dataset.sharingTrip === id &&
+            control.dataset.sharingField === field && control.dataset.sharingPhoto === sharingPhoto)?.focus();
+      } catch (error) {
+        showNotification('Sharing settings not saved', error.message, '⚠️');
+        renderExpeditionHistory();
+      }
+    });
   });
   container.querySelectorAll('[data-delete-expedition]').forEach(button => {
     button.addEventListener('click', () => {
@@ -2029,7 +2077,10 @@ function travelJournalDraft(exp) {
     (draft.source.photos || []).length === (exp.photos || []).length &&
     (draft.source.photos || []).every((photo, index) => photo === exp.photos[index]);
   if (!matches) {
-    draft = { source: exp, journal: exp.journal || '', photos: [...(exp.photos || [])], busy: false };
+    draft = {
+      source: exp, journal: exp.journal || '', photos: [...(exp.photos || [])],
+      photoOrigins: (exp.photos || []).map((_, index) => index), busy: false
+    };
     travelJournalDrafts.set(exp.id, draft);
   } else draft.source = exp;
   return draft;
@@ -2157,7 +2208,9 @@ function renderTravelJournal(exp) {
   gallery.addEventListener('click', event => {
     const button = event.target.closest('[data-remove-photo]');
     if (!button || draft.busy) return;
-    draft.photos.splice(Number(button.dataset.removePhoto), 1);
+    const index = Number(button.dataset.removePhoto);
+    draft.photos.splice(index, 1);
+    draft.photoOrigins.splice(index, 1);
     updateGallery();
     status.textContent = 'Photo removed from draft. Save journal to keep this change.';
   });
@@ -2198,7 +2251,15 @@ function renderTravelJournal(exp) {
       const current = AppState.expeditions.find(item => item.id === exp.id);
       if (!current) throw new Error('This trip no longer exists.');
       draft.journal = form.elements.journal.value;
-      updateExpedition({ ...current, ...TravelLedger.validateJournal(draft.journal, draft.photos) });
+      const sharing = TravelLedger.normalizePublicSharing(current.publicSharing, current.photos?.length || 0);
+      sharing.photoIndexes = sharing.photoIndexes.flatMap(index => {
+        const newIndex = draft.photoOrigins.indexOf(index);
+        return newIndex < 0 ? [] : [newIndex];
+      });
+      updateExpedition({
+        ...current, ...TravelLedger.validateJournal(draft.journal, draft.photos),
+        publicSharing: sharing
+      });
       travelJournalDrafts.delete(exp.id);
       renderExpeditionHistory();
       showNotification('Journal saved', 'Your memories and photos are included in Passport backups.', '📖');

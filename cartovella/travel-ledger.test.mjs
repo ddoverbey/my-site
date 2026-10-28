@@ -71,6 +71,26 @@ check('journal validation enforces bounded text and portable JPEG photos', () =>
   }
   assert.equal(ledger.validateJournal('', Array(4).fill(photo)).photos.length, 4);
 });
+check('public-sharing settings default private and validate selected photo indexes', () => {
+  assert.deepEqual(ledger.normalizePublicSharing(), {
+    enabled: false, includeDetails: false, includeJournal: false, photoIndexes: []
+  });
+  const trip = {
+    ...exp, journal: 'Shared story', photos: [photo, photo],
+    publicSharing: { enabled: true, includeDetails: true, includeJournal: false, photoIndexes: [1, 0] }
+  };
+  assert.deepEqual(ledger.validateExpeditions([trip], lookups)[0].publicSharing, {
+    enabled: true, includeDetails: true, includeJournal: false, photoIndexes: [0, 1]
+  });
+  for (const publicSharing of [
+    { enabled: 'yes' }, { includeDetails: true, photoIndexes: [0, 0] },
+    { enabled: true, photoIndexes: [2] }, { enabled: true, photoIndexes: [-1] }
+  ]) {
+    assert.throws(() => ledger.validateExpeditions([{
+      ...exp, photos: [photo], publicSharing
+    }], lookups), /public-sharing settings/);
+  }
+});
 check('promotion respects every tier pair and rejects invalid tiers', () => {
   for (const [current, rank] of Object.entries(ledger.ranks)) {
     for (const [next, nextRank] of Object.entries(ledger.ranks)) {

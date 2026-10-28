@@ -1243,7 +1243,7 @@
         <section class="space-y-3 rounded-xl border border-amber-500/30 bg-slate-950/50 p-3" aria-labelledby="publicProfileTitle">
           <div>
             <h3 id="publicProfileTitle" class="text-sm font-semibold text-amber-200">Public Explorer Profile</h3>
-            <p class="mt-1 text-[11px] text-slate-400">The Guild shares your character scene, a low-resolution route-map preview, progress, and recent expedition details only when you opt in.</p>
+            <p class="mt-1 text-[11px] text-slate-400">The Guild shares your character scene, progress, and the route map for trips you choose to share. Trips start private; each trip separately controls its details, journal, and photos.</p>
           </div>
           <label class="block text-xs text-slate-300">Username
             <input id="profileUsername" type="text" inputmode="text" autocomplete="username" minlength="3" maxlength="24" pattern="[a-z0-9_-]{3,24}" placeholder="devon" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100">
@@ -1254,7 +1254,7 @@
           </label>
           <label class="flex items-start gap-2 text-xs text-slate-300">
             <input id="profileIsPublic" type="checkbox" class="mt-0.5 accent-amber-400">
-            <span>List my Atlas &amp; Travel Log in the Public Explorers' Guild and enable my shareable public profile link</span>
+            <span>List my public Atlas and shared trips in the Public Explorers' Guild and enable my shareable profile link</span>
           </label>
           <button id="btnSavePublicProfile" type="button" class="w-full rounded-lg bg-amber-500 px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-amber-400">Save Profile &amp; Copy Share Link</button>
           <p id="publicProfileStatus" class="text-[11px] text-slate-400" role="status" aria-live="polite"></p>
@@ -1302,15 +1302,15 @@
     </section>
   </div>
 
-  <script src="./nps-catalog.js?v=20261028-travel-log-return-v1"></script>
-  <script src="./national-parks-scratch.js?v=20261028-travel-log-return-v1"></script>
-  <script src="./international-parks.js?v=20261028-travel-log-return-v1"></script>
-  <script src="./ecoregions.js?v=20261028-travel-log-return-v1"></script>
-  <script src="./coordinate-lookups.js?v=20261028-travel-log-return-v1"></script>
-  <script src="./micro-states.js?v=20261028-travel-log-return-v1"></script>
-  <script src="./travel-ledger.js?v=20261028-travel-log-return-v1"></script>
-  <script src="./character-creator.js?v=20261028-travel-log-return-v1"></script>
-  <script src="./rarity-config.js?v=20261028-travel-log-return-v1"></script>
+  <script src="./nps-catalog.js?v=20261028-public-trip-sharing-v1"></script>
+  <script src="./national-parks-scratch.js?v=20261028-public-trip-sharing-v1"></script>
+  <script src="./international-parks.js?v=20261028-public-trip-sharing-v1"></script>
+  <script src="./ecoregions.js?v=20261028-public-trip-sharing-v1"></script>
+  <script src="./coordinate-lookups.js?v=20261028-public-trip-sharing-v1"></script>
+  <script src="./micro-states.js?v=20261028-public-trip-sharing-v1"></script>
+  <script src="./travel-ledger.js?v=20261028-public-trip-sharing-v1"></script>
+  <script src="./character-creator.js?v=20261028-public-trip-sharing-v1"></script>
+  <script src="./rarity-config.js?v=20261028-public-trip-sharing-v1"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -7254,7 +7254,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261028-travel-log-return-v1"></script>
+  <script src="./expedition-ui.js?v=20261028-public-trip-sharing-v1"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);
@@ -7614,7 +7614,8 @@
     }
 
     async function isUsernameAvailable(username, currentUserId = null) {
-      const queryUrl = `${SUPABASE_URL}/rest/v1/cartovella_passports?username=eq.${encodeURIComponent(username)}&select=user_id,username&limit=1`;
+      if (currentUserId === cloudSession?.user?.id && username === publicProfile.username) return true;
+      const queryUrl = `${SUPABASE_URL}/rest/v1/cartovella_public_profiles?username=eq.${encodeURIComponent(username)}&select=username&limit=1`;
       const options = { method: 'GET' };
       const response = cloudSession?.access_token
         ? await cloudFetch(queryUrl, options)
@@ -7625,7 +7626,7 @@
       }
       const records = await response.json();
       if (!Array.isArray(records)) throw new Error('Supabase returned an unexpected username availability response.');
-      return !records.some(record => record.user_id !== currentUserId);
+      return records.length === 0;
     }
 
     function authPublicUsernameFallback() {
@@ -7922,8 +7923,18 @@
       });
     }
 
+    function publicSharingForExpedition(expedition) {
+      return TravelLedger.normalizePublicSharing(
+        expedition.publicSharing, expedition.photos?.length || 0
+      );
+    }
+
     async function buildPublicRouteMapThumbnail() {
-      if (!AppState.expeditions.some(expedition =>
+      const publicExpeditions = AppState.expeditions.filter(expedition => {
+        const sharing = publicSharingForExpedition(expedition);
+        return sharing.enabled && sharing.includeDetails;
+      });
+      if (!publicExpeditions.some(expedition =>
         travelLogLegs(expedition).some(leg =>
           Array.isArray(leg.coords) && leg.coords.length > 1 && leg.coords.every(travelLogPoint)))) {
         publicRouteMapThumbnailCacheKey = null;
@@ -7931,12 +7942,26 @@
         return null;
       }
 
-      renderGlobalRoutesMap();
-      const svg = document.getElementById('svgGlobalRoutesMap').cloneNode(true);
-      svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-      svg.setAttribute('width', '1200');
-      svg.setAttribute('height', '630');
-      const svgMarkup = new XMLSerializer().serializeToString(svg);
+      const originalExpeditions = AppState.expeditions;
+      const originalScope = globalRoutesScope;
+      const originalYear = globalRoutesYear;
+      let svgMarkup;
+      try {
+        AppState.expeditions = publicExpeditions;
+        globalRoutesScope = 'global';
+        globalRoutesYear = 'all';
+        renderGlobalRoutesMap();
+        const svg = document.getElementById('svgGlobalRoutesMap').cloneNode(true);
+        svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+        svg.setAttribute('width', '1200');
+        svg.setAttribute('height', '630');
+        svgMarkup = new XMLSerializer().serializeToString(svg);
+      } finally {
+        AppState.expeditions = originalExpeditions;
+        globalRoutesScope = originalScope;
+        globalRoutesYear = originalYear;
+        renderGlobalRoutesMap();
+      }
       if (svgMarkup === publicRouteMapThumbnailCacheKey) return publicRouteMapThumbnailCache;
 
       const imageUrl = URL.createObjectURL(new Blob([svgMarkup], {
@@ -7998,9 +8023,36 @@
       }).filter(Boolean).sort((a, b) =>
         ACHIEVEMENT_RARITY_ORDER.indexOf(b.rarity) - ACHIEVEMENT_RARITY_ORDER.indexOf(a.rarity)
       ).slice(0, 4);
-      const recentExpeditions = [...AppState.expeditions]
+      const sharedExpeditions = publicProfile.is_public ? AppState.expeditions.filter(expedition => {
+        const sharing = publicSharingForExpedition(expedition);
+        return sharing.enabled && (sharing.includeDetails ||
+          (sharing.includeJournal && Boolean(expedition.journal?.trim())) || sharing.photoIndexes.length > 0);
+      }) : [];
+      const recentExpeditions = [...sharedExpeditions]
         .sort((a, b) => (b.startDate || b.endDate || '').localeCompare(a.startDate || a.endDate || ''))
         .slice(0, 3);
+      const publicPosts = await Promise.all(recentExpeditions.map(async expedition => {
+        const sharing = publicSharingForExpedition(expedition);
+        const detailsShared = sharing.includeDetails;
+        const photos = await Promise.all(sharing.photoIndexes.map(index =>
+          publicHighlightThumbnail(expedition.photos[index])
+        ));
+        return {
+          id: expedition.id,
+          detailsShared,
+          name: detailsShared ? expedition.name : 'Shared expedition',
+          startDate: detailsShared ? expedition.startDate || null : null,
+          endDate: detailsShared ? expedition.endDate || null : null,
+          dayTrip: detailsShared && expedition.dayTrip === true,
+          reason: detailsShared ? expedition.reason || '' : '',
+          journalSnippet: sharing.includeJournal ? (expedition.journal || '').slice(0, 240) : '',
+          photos: photos.filter(Boolean),
+          distanceMiles: detailsShared ? Math.round(expeditionDistanceMiles(expedition) * 10) / 10 : null,
+          transitTags: detailsShared && Array.isArray(expedition.transitTags) ? [...expedition.transitTags] : [],
+          stopNames: detailsShared
+            ? (expedition.routeStops || []).map(stop => stop?.name).filter(Boolean).slice(0, 16) : []
+        };
+      }));
       return {
         level: stats.level,
         xp: stats.xp,
@@ -8013,23 +8065,12 @@
         statesCount: stats.statesCount,
         parksCount: (stats.visitedParks || []).length,
         biomesCount: stats.biomesSet?.size || 0,
-        totalMiles: Math.round(AppState.expeditions.reduce((total, expedition) =>
-          total + expeditionDistanceMiles(expedition), 0) * 10) / 10,
+        totalMiles: Math.round(sharedExpeditions.reduce((total, expedition) =>
+          total + (publicSharingForExpedition(expedition).includeDetails
+            ? expeditionDistanceMiles(expedition) : 0), 0) * 10) / 10,
         clearedPct: Number.isFinite(stats.clearedPct) ? stats.clearedPct : null,
         topBadges,
-        recentExpeditions: await Promise.all(recentExpeditions.map(async expedition => ({
-          id: expedition.id,
-          name: expedition.name,
-          startDate: expedition.startDate || null,
-          endDate: expedition.endDate || null,
-          dayTrip: expedition.dayTrip === true,
-          reason: expedition.reason || '',
-          journalSnippet: (expedition.journal || '').slice(0, 240),
-          highlightPhoto: await publicHighlightThumbnail(expedition.photos?.[0]),
-          distanceMiles: Math.round(expeditionDistanceMiles(expedition) * 10) / 10,
-          transitTags: Array.isArray(expedition.transitTags) ? [...expedition.transitTags] : [],
-          stopNames: (expedition.routeStops || []).map(stop => stop?.name).filter(Boolean).slice(0, 16)
-        })))
+        recentExpeditions: publicPosts
       };
     }
 
@@ -8163,7 +8204,7 @@
         ? stats.routeMapThumbnail : null;
       return `<article class="rpg-panel rounded-2xl p-4">
         <div class="flex items-center gap-3">
-          <canvas width="160" height="90" data-guild-avatar="${escapeHtml(profile.username)}" class="h-[54px] w-24 shrink-0 rounded-lg bg-slate-950" role="img" aria-label="Explorer avatar and chosen background for @${escapeHtml(profile.username)}"></canvas>
+          <canvas width="160" height="90" data-guild-avatar="${escapeHtml(profile.username)}" class="h-16 w-16 shrink-0 rounded-full bg-slate-950 object-cover" role="img" aria-label="Explorer avatar and chosen background for @${escapeHtml(profile.username)}"></canvas>
           <div class="min-w-0"><p class="truncate text-sm font-bold text-sky-200">@${escapeHtml(profile.username)}</p>
             <p class="truncate text-xs text-slate-300">${escapeHtml(profile.display_name || stats.cls || 'Explorer')}</p>
             <p class="text-[11px] text-amber-200">Level ${escapeHtml(stat(stats.level))} · ${escapeHtml(stats.cls || 'Explorer')}</p></div>
@@ -8221,7 +8262,7 @@
       guildProfilesLoadPromise = (async () => {
         try {
           const response = await fetch(
-          `${SUPABASE_URL}/rest/v1/cartovella_passports?is_public=eq.true&select=username,display_name,updated_at,summary_stats&order=updated_at.desc&limit=50`,
+          `${SUPABASE_URL}/rest/v1/cartovella_public_profiles?select=username,display_name,updated_at,summary_stats&order=updated_at.desc&limit=50`,
           { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
         );
           if (!response.ok) throw new Error(`Guild request failed (HTTP ${response.status}).`);
@@ -8291,15 +8332,15 @@
       document.getElementById('viewingPublicAtlasBanner').classList.remove('hidden');
       try {
         const response = await fetch(
-          `${SUPABASE_URL}/rest/v1/cartovella_passports?username=eq.${encodeURIComponent(normalizedUsername)}&is_public=eq.true&select=username,display_name,updated_at,passport_data,summary_stats`,
+          `${SUPABASE_URL}/rest/v1/cartovella_public_profiles?username=eq.${encodeURIComponent(normalizedUsername)}&select=username,display_name,updated_at,public_passport_data,summary_stats`,
           { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
         );
         if (!response.ok) throw new Error(`Public Atlas request failed (HTTP ${response.status}).`);
         const records = await response.json();
         if (!Array.isArray(records)) throw new Error('Supabase returned an unexpected public passport response.');
         const record = records.find(item => item.username === normalizedUsername);
-        if (!record?.passport_data) throw new Error(`@${normalizedUsername} does not have a public Atlas.`);
-        const parsed = migratePassport(record.passport_data);
+        if (!record?.public_passport_data) throw new Error(`@${normalizedUsername} does not have a public Atlas.`);
+        const parsed = migratePassport(record.public_passport_data);
         await preparePassportGeography(parsed);
         if (requestId !== publicAtlasRequestId || activePublicAtlasUsername !== normalizedUsername) return false;
         applyPassport(parsed);
@@ -8385,7 +8426,8 @@
           body: JSON.stringify({
             user_id: cloudSession.user.id,
             passport_data: passportData,
-            username: publicProfile.username || null,
+              public_trip_sharing_version: publicProfile.is_public ? 1 : null,
+              username: publicProfile.username || null,
             display_name: publicProfile.display_name || null,
             is_public: publicProfile.is_public,
             summary_stats: summaryStats,
