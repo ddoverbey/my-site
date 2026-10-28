@@ -1446,6 +1446,7 @@ check('the shared stage animation loop advances pets and effects without moving 
     }
   };
   globalThis.window = {
+    devicePixelRatio: 2,
     setInterval(callback, delay) {
       assert.equal(delay, 110);
       intervalCallbacks.push(callback);
@@ -1536,6 +1537,28 @@ check('the shared stage animation loop advances pets and effects without moving 
     assert.ok(avatarDrawCalls.every(call =>
       call.length === 9 && call.slice(1).join(',') === '0,0,80,48,0,0,80,48'
     ), 'avatar thumbnails use the centered 80x48 bust crop');
+    const avatarTransforms = [];
+    const guildAvatarContext = {
+      clearRect() {},
+      save() {},
+      translate(...values) { avatarTransforms.push(['translate', ...values]); },
+      scale(...values) { avatarTransforms.push(['scale', ...values]); },
+      restore() {},
+      fillRect() {},
+      drawImage() {}
+    };
+    const guildAvatarCanvas = {
+      width: 96, height: 96, dataset: { guildAvatarSize: '96' },
+      getContext: () => guildAvatarContext
+    };
+    characterCreator.drawGuildAvatar(guildAvatarCanvas, character);
+    assert.deepEqual([guildAvatarCanvas.width, guildAvatarCanvas.height], [192, 192]);
+    assert.deepEqual(avatarTransforms.slice(0, 3), [
+      ['translate', -106, -55],
+      ['scale', 2.1, 2.1],
+      ['scale', 1.2, 1.2]
+    ], 'Guild avatars center and zoom the character using the high-DPI canvas scale');
+    assert.equal(guildAvatarContext.imageSmoothingEnabled, false);
   } finally {
     if (originalImage === undefined) delete globalThis.Image;
     else globalThis.Image = originalImage;

@@ -269,6 +269,7 @@
       backdrop-filter: blur(3px);
     }
     .app-loading-overlay.hidden { display: none; }
+    .guild-avatar { image-rendering: pixelated; }
     .loading-dog {
       width: 72px;
       height: 72px;
@@ -1353,15 +1354,15 @@
     </section>
   </div>
 
-  <script src="./nps-catalog.js?v=20261028-loading-dog-v1"></script>
-  <script src="./national-parks-scratch.js?v=20261028-loading-dog-v1"></script>
-  <script src="./international-parks.js?v=20261028-loading-dog-v1"></script>
-  <script src="./ecoregions.js?v=20261028-loading-dog-v1"></script>
-  <script src="./coordinate-lookups.js?v=20261028-loading-dog-v1"></script>
-  <script src="./micro-states.js?v=20261028-loading-dog-v1"></script>
-  <script src="./travel-ledger.js?v=20261028-loading-dog-v1"></script>
-  <script src="./character-creator.js?v=20261028-loading-dog-v1"></script>
-  <script src="./rarity-config.js?v=20261028-loading-dog-v1"></script>
+  <script src="./nps-catalog.js?v=20261028-guild-avatar-v1"></script>
+  <script src="./national-parks-scratch.js?v=20261028-guild-avatar-v1"></script>
+  <script src="./international-parks.js?v=20261028-guild-avatar-v1"></script>
+  <script src="./ecoregions.js?v=20261028-guild-avatar-v1"></script>
+  <script src="./coordinate-lookups.js?v=20261028-guild-avatar-v1"></script>
+  <script src="./micro-states.js?v=20261028-guild-avatar-v1"></script>
+  <script src="./travel-ledger.js?v=20261028-guild-avatar-v1"></script>
+  <script src="./character-creator.js?v=20261028-guild-avatar-v1"></script>
+  <script src="./rarity-config.js?v=20261028-guild-avatar-v1"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -7453,7 +7454,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261028-loading-dog-v1"></script>
+  <script src="./expedition-ui.js?v=20261028-guild-avatar-v1"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);
@@ -8421,7 +8422,7 @@
         const profile = guildProfiles.find(item => item.username === canvas.dataset.guildAvatar);
         if (!profile) return;
         try {
-          CharacterCreator.drawStage(canvas, profile.summary_stats?.character, { animate: false });
+          CharacterCreator.drawGuildAvatar(canvas, profile.summary_stats?.character);
         } catch (error) {
           console.error(`Could not render guild explorer scene for @${profile.username}.`, error);
         }
@@ -8443,7 +8444,7 @@
       const visibility = profile.visibility === 'profile' ? 'profile' : 'passport';
       return `<article class="rpg-panel rounded-2xl p-4">
         <div class="flex items-center gap-3">
-          <canvas width="160" height="90" data-guild-avatar="${escapeHtml(profile.username)}" class="h-16 w-16 shrink-0 rounded-full bg-slate-950 object-cover" role="img" aria-label="Explorer avatar and chosen background for @${escapeHtml(profile.username)}"></canvas>
+          <canvas width="96" height="96" data-guild-avatar="${escapeHtml(profile.username)}" data-guild-avatar-size="96" class="guild-avatar h-24 w-24 shrink-0 rounded-full bg-slate-950" role="img" aria-label="Explorer avatar and chosen background for @${escapeHtml(profile.username)}"></canvas>
           <div class="min-w-0"><p class="truncate text-sm font-bold text-sky-200">@${escapeHtml(profile.username)}</p>
             <p class="truncate text-xs text-slate-300">${escapeHtml(profile.display_name || stats.cls || 'Explorer')}</p>
             <p class="text-[11px] text-amber-200">Level ${escapeHtml(stat(stats.level))} · ${escapeHtml(stats.cls || 'Explorer')}</p></div>

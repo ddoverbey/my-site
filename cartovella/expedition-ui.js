@@ -1599,7 +1599,7 @@ function renderPublicExpeditionSummary(profile, expedition) {
   const title = detailsShared ? expedition.name || 'Untitled expedition' : 'Shared expedition';
   return `<article class="rpg-panel overflow-hidden rounded-2xl p-4">
     <div class="flex items-center gap-3">
-      <canvas width="80" height="48" data-guild-avatar="${escapeHtml(username)}" class="h-12 w-12 shrink-0 rounded-full bg-slate-950 object-cover" aria-hidden="true"></canvas>
+      <canvas width="64" height="64" data-guild-avatar="${escapeHtml(username)}" data-guild-avatar-size="64" class="guild-avatar h-16 w-16 shrink-0 rounded-full bg-slate-950" aria-hidden="true"></canvas>
       <div class="min-w-0"><p class="truncate text-xs font-semibold text-sky-200">@${escapeHtml(username)}</p>
         <p class="truncate text-[11px] text-slate-400">${escapeHtml(profile.display_name || stats.cls || 'Explorer')}</p></div>
     </div>

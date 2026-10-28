@@ -1396,6 +1396,15 @@
     ctx.imageSmoothingEnabled = false;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();
+    const avatarZoom = Number(options.avatarZoom);
+    if (Number.isFinite(avatarZoom) && avatarZoom > 1) {
+      const stageScale = canvas.width / 160;
+      ctx.translate(
+        Math.round(canvas.width / 2 - 80 * stageScale * avatarZoom),
+        Math.round(canvas.height / 2 - 60 * stageScale * avatarZoom)
+      );
+      ctx.scale(avatarZoom, avatarZoom);
+    }
     ctx.scale(canvas.width / 160, canvas.width / 160);
     drawBackground(ctx, activeBackground, redraw);
     if (activeBackground.id === 'bg_campfire') {
@@ -1409,6 +1418,18 @@
     ctx.restore();
     if (options.animate === false) stopStageAnimation(canvas);
     else startStageAnimation(canvas);
+  }
+
+  function drawGuildAvatar(canvas, value) {
+    if (!canvas || typeof canvas.getContext !== 'function') return;
+    const displaySize = Math.max(32, Math.min(160, Number(canvas.dataset?.guildAvatarSize) || 96));
+    const deviceScale = typeof window !== 'undefined'
+      ? Math.max(1, Math.min(3, Number(window.devicePixelRatio) || 1))
+      : 1;
+    const bitmapSize = Math.round(displaySize * deviceScale);
+    if (canvas.width !== bitmapSize) canvas.width = bitmapSize;
+    if (canvas.height !== bitmapSize) canvas.height = bitmapSize;
+    drawStage(canvas, value, { animate: false, avatarZoom: 2.1 });
   }
 
   function renderAvatar(canvas, value) {
@@ -2025,7 +2046,7 @@
     BODY_SHAPE_PROFILES, normalizeCharacter, characterSpriteAssets, achievementProgress,
     unlockStatus, coinSummary, rarityCoinReward, processSpriteVariant, drawPet, drawCharacterLayer,
     drawCharacterSprite, drawCampfire,
-    drawStage, renderAvatar, render
+    drawStage, drawGuildAvatar, renderAvatar, render
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CharacterCreator = api;

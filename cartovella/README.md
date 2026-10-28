@@ -15,9 +15,9 @@ expeditions, track parks and regions, and earn achievements from your travel his
   Gaps between files remain as legs to route in the app. Connected track-only imports create the
   itinerary; choose a transit mode for every leg. The Global Route Map can be exported as a PNG route poster.
   Water Transit routes are blue, while flights use a neutral gray in the map and trip logs.
-- The Explorers' Guild refreshes its directory when opened and shows opted-in explorers' character
-  scenes, total logged travel miles, and compressed snapshots of the same complete Global Route Map,
-  including its trip routes and stops.
+- The Explorers' Guild refreshes its directory when opened and shows opted-in explorers' zoomed,
+  pixel-crisp character avatars, total logged travel miles, and compressed snapshots of the same
+  complete Global Route Map, including its trip routes and stops.
 - Progress for parks, regions, elevations, rarity, and terrestrial biomes.
 - Clickable biome and destination pins show the trips, stops, and saved places contributing to them.
 - Achievements are grouped into expandable milestone classes and sorted by rarity, with unmet classes

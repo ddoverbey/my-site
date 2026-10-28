@@ -218,7 +218,7 @@ check('character customization appears above the stage and progress summary', ()
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 10);
-  assert.ok(sources.every(source => source.endsWith('?v=20261028-loading-dog-v1')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261028-guild-avatar-v1')));
   assert.ok(sources.some(source => source.startsWith('./character-creator.js?')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
@@ -2061,7 +2061,7 @@ await checkAsync('signup requires a unique username, stores it, and reports user
 await checkAsync('Explorers’ Guild renders mocked public profiles and expedition stories', async () => {
   const originalFetch = context.fetch;
   const originalQuerySelectorAll = context.document.querySelectorAll;
-  const originalDrawStage = context.CharacterCreator.drawStage;
+  const originalDrawGuildAvatar = context.CharacterCreator.drawGuildAvatar;
   const originalProfiles = vm.runInContext('JSON.stringify(guildProfiles)', context);
   const originalProfilesLoaded = vm.runInContext('guildProfilesLoaded', context);
   const originalCurrentTab = vm.runInContext('AppState.currentTab', context);
@@ -2083,8 +2083,8 @@ await checkAsync('Explorers’ Guild renders mocked public profiles and expediti
     }
   }];
   const canvases = profiles.flatMap(profile => [
-    { width: 160, height: 90, dataset: { guildAvatar: profile.username } },
-    { width: 160, height: 90, dataset: { guildAvatar: profile.username } }
+    { width: 96, height: 96, dataset: { guildAvatar: profile.username, guildAvatarSize: '96' } },
+    { width: 64, height: 64, dataset: { guildAvatar: profile.username, guildAvatarSize: '64' } }
   ]);
   let requests = 0;
   context.fetch = async url => {
@@ -2095,9 +2095,9 @@ await checkAsync('Explorers’ Guild renders mocked public profiles and expediti
   };
   context.document.querySelectorAll = selector =>
     selector === '#tabContent-guild canvas[data-guild-avatar]' ? canvases : [];
-  context.CharacterCreator.drawStage = (canvas, character, options) => stageRenders.push({
+  context.CharacterCreator.drawGuildAvatar = (canvas, character) => stageRenders.push({
     username: canvas.dataset.guildAvatar, width: canvas.width, height: canvas.height,
-    pet: character.pet, background: character.background, animate: options.animate
+    pet: character.pet, background: character.background
   });
   try {
     vm.runInContext('guildProfiles = []; guildProfilesLoaded = true; guildProfilesLoadPromise = null;', context);
@@ -2119,13 +2119,13 @@ await checkAsync('Explorers’ Guild renders mocked public profiles and expediti
     assert.match(element('guildExplorersGrid').innerHTML, /Grand Voyager/);
     assert.match(element('guildExplorersGrid').innerHTML, /data:image\/jpeg;base64,YWJjZA==/);
     assert.match(element('guildExplorersGrid').innerHTML, /Route map preview for @devon/);
-    assert.match(element('guildExplorersGrid').innerHTML, /h-16 w-16 shrink-0 rounded-full.*object-cover/);
-    assert.doesNotMatch(element('guildExplorersGrid').innerHTML, /image-rendering:pixelated/);
+    assert.match(element('guildExplorersGrid').innerHTML, /guild-avatar h-24 w-24 shrink-0 rounded-full/);
+    assert.match(html, /\.guild-avatar\s*\{\s*image-rendering:\s*pixelated;/);
     assert.match(element('guildExpeditionsFeed').innerHTML, /Spirit Falls Weekend/);
     assert.match(element('guildExpeditionsFeed').innerHTML, /The falls were roaring/);
     assert.match(element('guildExpeditionsFeed').innerHTML, /data:image\/jpeg;base64,YWJjZA==/);
     assert.match(element('guildExpeditionsFeed').innerHTML, /data-guild-open-travel="devon"/);
-    assert.match(element('guildExpeditionsFeed').innerHTML, /h-12 w-12 shrink-0 rounded-full.*object-cover/);
+    assert.match(element('guildExpeditionsFeed').innerHTML, /guild-avatar h-16 w-16 shrink-0 rounded-full/);
     const privateDetailsPost = vm.runInContext(`renderPublicExpeditionSummary(
       {username:'devon',summary_stats:{}},
       {id:'private-post',detailsShared:false,name:'Secret trip',reason:'Secret reason',
@@ -2136,13 +2136,12 @@ await checkAsync('Explorers’ Guild renders mocked public profiles and expediti
     assert.doesNotMatch(privateDetailsPost, /Secret trip|Secret reason|Secret stop|data-guild-open-travel/);
     assert.ok(stageRenders.length >= 2);
     assert.ok(stageRenders.every(render =>
-      render.width === 160 && render.height === 90 && render.background === 'bg_yosemite' &&
-      render.animate === false));
+      render.width >= 64 && render.height >= 64 && render.background === 'bg_yosemite'));
     assert.equal(element('guildStatus').textContent, '1 public explorer loaded.');
   } finally {
     context.fetch = originalFetch;
     context.document.querySelectorAll = originalQuerySelectorAll;
-    context.CharacterCreator.drawStage = originalDrawStage;
+    context.CharacterCreator.drawGuildAvatar = originalDrawGuildAvatar;
     vm.runInContext(`
       guildProfiles = JSON.parse(${JSON.stringify(originalProfiles)});
       guildProfilesLoaded = ${originalProfilesLoaded};
