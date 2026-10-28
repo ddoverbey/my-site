@@ -192,7 +192,7 @@ check('character customization appears above the stage and progress summary', ()
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 10);
-  assert.ok(sources.every(source => source.endsWith('?v=20261027-delete-logs-v1')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261027-legacy-flight-route-v1')));
   assert.ok(sources.some(source => source.startsWith('./character-creator.js?')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
@@ -7003,11 +7003,16 @@ check('Global Route Map renders country and expedition paths and toggles indepen
   const atlasStyle = element('globalRoutesAtlasStyle');
   const domesticOption = element('globalRoutesDomesticOption');
   const continentOption = element('globalRoutesContinentOption');
+  const flightInterpolations = [];
   toggle.setAttribute = (name, value) => { toggleAttributes[name] = value; };
   const zoomIdentity = { toString: () => 'translate(0,0) scale(1)' };
   let albersUsaProjectionCalls = 0;
   context.d3 = {
     ...d3Geo,
+    geoInterpolate: (...points) => {
+      flightInterpolations.push(points);
+      return d3Geo.geoInterpolate(...points);
+    },
     geoAlbersUsa: () => {
       albersUsaProjectionCalls++;
       return d3Geo.geoAlbersUsa();
@@ -7062,6 +7067,16 @@ check('Global Route Map renders country and expedition paths and toggles indepen
         routeCoords: [[40.7,-74],[51.5,-0.1]]
       }]
     }, {
+      id: 'legacy-flight-route-test', name: 'Legacy Multi-stop Flight', startDate: '2026-06-03',
+      endDate: '2026-06-04', transitTags: ['flight'],
+      countyIds: [], parkIds: [], customPoiIds: [],
+      routeStops: [
+        { kind: 'place', name: 'A', coords: [10,20] },
+        { kind: 'place', name: 'B', coords: [30,40] },
+        { kind: 'place', name: 'C', coords: [50,60] }
+      ],
+      routeCoords: [[10,20],[30,40],[50,60]]
+    }, {
       id: 'europe-route-test', name: 'European Weekend', startDate: '2025-06-03',
       endDate: '2025-06-04', transitTags: ['train'],
       countyIds: [], parkIds: [], customPoiIds: [],
@@ -7100,6 +7115,11 @@ check('Global Route Map renders country and expedition paths and toggles indepen
     const svg = element('svgGlobalRoutesMap').innerHTML;
     assert.match(svg, /class="global-country"/);
     assert.match(svg, /class="global-route"/);
+    const interpolatedPairs = flightInterpolations.map(points => JSON.stringify(points));
+    assert.ok(interpolatedPairs.includes('[[20,10],[40,30]]'),
+      'legacy multi-stop flights should draw the arc from the first to second stop');
+    assert.ok(interpolatedPairs.includes('[[40,30],[60,50]]'),
+      'legacy multi-stop flights should draw the arc from the second to third stop');
     assert.match(svg, /stroke="#94a3b8"/);
     assert.match(svg, /stroke="#38bdf8"/);
     assert.match(svg, /stroke-dasharray="6 5"/);

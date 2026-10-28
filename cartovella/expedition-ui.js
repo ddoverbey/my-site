@@ -1680,17 +1680,22 @@ function renderGlobalRoutesMap() {
     const title = `${exp.name || 'Expedition'} · ${travelLogDateRange(exp)}`;
     travelLogLegs(exp).forEach(leg => {
       if (!Array.isArray(leg.coords) || leg.coords.length < 2 || !leg.coords.every(travelLogPoint)) return;
-      const isDirect = leg.routeSource === 'direct' && leg.coords.length === 2;
-      const coordinates = leg.mode === 'flight' || isDirect
-        ? (() => {
+      const segments = leg.mode === 'flight' && leg.routeSource === 'direct'
+        ? leg.coords.slice(1).map((point, index) => [leg.coords[index], point])
+        : [leg.coords];
+      const routePath = segments.map(segment => {
+        const isDirect = leg.routeSource === 'direct' && segment.length === 2;
+        const coordinates = leg.mode === 'flight' || isDirect
+          ? (() => {
           const interpolate = d3.geoInterpolate(
-            [leg.coords[0][1], leg.coords[0][0]],
-            [leg.coords.at(-1)[1], leg.coords.at(-1)[0]]
+            [segment[0][1], segment[0][0]],
+            [segment.at(-1)[1], segment.at(-1)[0]]
           );
           return Array.from({ length: 25 }, (_, index) => interpolate(index / 24));
         })()
-        : leg.coords.map(([lat, lng]) => [lng, lat]);
-      const routePath = path({ type: 'LineString', coordinates });
+          : segment.map(([lat, lng]) => [lng, lat]);
+        return path({ type: 'LineString', coordinates }) || '';
+      }).join('');
       if (!routePath) return;
       const color = mapStyle.routes[leg.mode] || '#94a3b8';
       routes.push(`<path class="global-route" data-mode="${escapeHtml(leg.mode)}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"${leg.mode === 'flight' ? ' stroke-dasharray="6 5"' : ''} d="${routePath}"><title>${escapeHtml(title)}</title></path>`);
