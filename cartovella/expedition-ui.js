@@ -1182,6 +1182,7 @@ let travelLogMaps = {};
 let travelLogResizeObserver = null;
 const openTravelLogs = new Set();
 const travelJournalDrafts = new Map();
+const confirmingTravelLogDeletion = new Set();
 const TRAVEL_ROUTE_COLORS = { road: '#22d3ee', awd: '#22d3ee', ferry: '#38bdf8',
   flight: '#94a3b8', rail: '#a78bfa', foot: '#4ade80' };
 const GLOBAL_ROUTE_COLORS = {
@@ -1854,6 +1855,9 @@ function renderExpeditionHistory() {
   const biomesByExpedition = calculateStats().metadataProgress.biomesByExpedition;
   const sorted = [...AppState.expeditions].sort((a, b) =>
     (b.startDate || b.endDate || '').localeCompare(a.startDate || a.endDate || ''));
+  for (const id of confirmingTravelLogDeletion) {
+    if (!sorted.some(exp => exp.id === id)) confirmingTravelLogDeletion.delete(id);
+  }
   for (const id of travelJournalDrafts.keys()) {
     if (!sorted.some(exp => exp.id === id)) travelJournalDrafts.delete(id);
   }
@@ -1909,13 +1913,63 @@ function renderExpeditionHistory() {
           <div class="flex flex-wrap gap-1.5">${badgeMarkup.join('')}</div>
           ${exp.reason ? `<p class="text-xs text-slate-400">${escapeHtml(exp.reason)}</p>` : ''}
         </details>
-        ${AppState.viewOnly ? '' : `<button type="button" data-edit-expedition="${escapeHtml(exp.id)}" class="rounded-lg bg-slate-800 px-3 py-2 text-xs text-amber-200">Edit trip &amp; route</button>`}
-        <button type="button" data-collapse-journal class="rounded-lg bg-slate-800 px-3 py-2 text-xs text-sky-300">Collapse journal ↑</button>
+        <div class="flex flex-wrap items-center gap-2">
+          ${AppState.viewOnly ? '' : `<button type="button" data-edit-expedition="${escapeHtml(exp.id)}" class="rounded-lg bg-slate-800 px-3 py-2 text-xs text-amber-200">Edit trip &amp; route</button>`}
+          ${AppState.viewOnly ? '' : confirmingTravelLogDeletion.has(exp.id)
+            ? `<span class="text-xs text-rose-200">Delete this travel log? This cannot be undone.</span>
+              <button type="button" data-confirm-delete-expedition="${escapeHtml(exp.id)}" aria-label="Confirm deletion of ${escapeHtml(exp.name)}" class="rounded-lg bg-rose-800 px-3 py-2 text-xs font-semibold text-white">Confirm delete</button>
+              <button type="button" data-cancel-delete-expedition="${escapeHtml(exp.id)}" class="rounded-lg bg-slate-800 px-3 py-2 text-xs text-slate-200">Cancel</button>`
+            : `<button type="button" data-delete-expedition="${escapeHtml(exp.id)}" aria-label="Delete ${escapeHtml(exp.name)}" class="rounded-lg bg-slate-800 px-3 py-2 text-xs text-rose-300">Delete trip</button>`}
+          <button type="button" data-collapse-journal class="rounded-lg bg-slate-800 px-3 py-2 text-xs text-sky-300">Collapse journal ↑</button>
+        </div>
       </div>
     </details>`;
   }).join('');
   container.querySelectorAll('[data-edit-expedition]').forEach(button => {
     button.addEventListener('click', () => openExpedition(button.dataset.editExpedition));
+  });
+  container.querySelectorAll('[data-delete-expedition]').forEach(button => {
+    button.addEventListener('click', () => {
+      if (AppState.viewOnly) return;
+      const id = button.dataset.deleteExpedition;
+      confirmingTravelLogDeletion.add(id);
+      renderExpeditionHistory();
+      Array.from(container.querySelectorAll('[data-confirm-delete-expedition]'))
+        .find(action => action.dataset.confirmDeleteExpedition === id)?.focus();
+    });
+  });
+  container.querySelectorAll('[data-cancel-delete-expedition]').forEach(button => {
+    button.addEventListener('click', () => {
+      const id = button.dataset.cancelDeleteExpedition;
+      confirmingTravelLogDeletion.delete(id);
+      renderExpeditionHistory();
+      Array.from(container.querySelectorAll('[data-delete-expedition]'))
+        .find(action => action.dataset.deleteExpedition === id)?.focus();
+    });
+  });
+  container.querySelectorAll('[data-confirm-delete-expedition]').forEach(button => {
+    button.addEventListener('click', () => {
+      const id = button.dataset.confirmDeleteExpedition;
+      const expedition = AppState.expeditions.find(exp => exp.id === id);
+      if (!expedition) {
+        confirmingTravelLogDeletion.delete(id);
+        refreshTravelUI();
+        return;
+      }
+      try {
+        const deleted = deleteExpeditionRecord(id);
+        confirmingTravelLogDeletion.delete(id);
+        openTravelLogs.delete(id);
+        travelJournalDrafts.delete(id);
+        refreshTravelUI();
+        showNotification('Travel log deleted', `${deleted.name} was deleted.`, '🗑️');
+      } catch (error) {
+        console.error('Travel log deletion failed', error);
+        confirmingTravelLogDeletion.delete(id);
+        refreshTravelUI();
+        showNotification('Travel log not deleted', error.message, '⚠️');
+      }
+    });
   });
   container.querySelectorAll('[data-trip-flags]').forEach(wireCountryFlagFallbacks);
   container.querySelectorAll('[data-trip-state-flags]').forEach(wireStateFlagInteractions);

@@ -192,7 +192,7 @@ check('character customization appears above the stage and progress summary', ()
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 10);
-  assert.ok(sources.every(source => source.endsWith('?v=20261027-route-stops-v1')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261027-delete-logs-v1')));
   assert.ok(sources.some(source => source.startsWith('./character-creator.js?')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
@@ -3103,6 +3103,84 @@ check('expedition history escapes names, shows date/elevation/tags and starts me
   assert.ok(achievements.includes('Thin Air'));
   assert.ok(achievements.includes('value="1" max="5"'));
 });
+check('editable travel logs expose a two-step delete confirmation', () => {
+  const history = element('travelLogFeed').innerHTML;
+  assert.match(history, /data-delete-expedition="exp_test"[^>]*>Delete trip<\/button>/);
+  assert.doesNotMatch(history, /data-confirm-delete-expedition="exp_test"/);
+});
+const feed = element('travelLogFeed');
+const originalFeedQuerySelectorAll = feed.querySelectorAll;
+const travelLogActionButtons = new Map();
+feed.querySelectorAll = selector => {
+  const selectors = {
+    '[data-delete-expedition]': ['data-delete-expedition', 'deleteExpedition'],
+    '[data-confirm-delete-expedition]': ['data-confirm-delete-expedition', 'confirmDeleteExpedition'],
+    '[data-cancel-delete-expedition]': ['data-cancel-delete-expedition', 'cancelDeleteExpedition']
+  };
+  const [attribute, field] = selectors[selector] || [];
+  if (!attribute) return [];
+  return [...feed.innerHTML.matchAll(new RegExp(`${attribute}="([^"]+)"`, 'g'))]
+    .map(match => {
+      const key = `${selector}:${match[1]}`;
+      if (!travelLogActionButtons.has(key)) {
+        travelLogActionButtons.set(key, {
+          dataset: { [field]: match[1] }, handlers: {},
+          addEventListener(name, handler) { this.handlers[name] = handler; },
+          focus() { this.focused = true; }
+        });
+      }
+      return travelLogActionButtons.get(key);
+    });
+};
+const previousCurrentTab = vm.runInContext('AppState.currentTab', context);
+vm.runInContext(`
+  AppState.currentTab='travel';
+  addExpedition({...testExpedition,id:'exp_delete_test',name:'Deletable trip'});
+  renderExpeditionHistory();
+`, context);
+feed.querySelectorAll('[data-delete-expedition]')
+  .find(button => button.dataset.deleteExpedition === 'exp_delete_test').handlers.click();
+check('travel log deletion requires explicit confirmation and can be cancelled', () => {
+  assert.match(feed.innerHTML, /Delete this travel log\? This cannot be undone\./);
+  assert.match(feed.innerHTML, /data-confirm-delete-expedition="exp_delete_test"/);
+  assert.match(feed.innerHTML, /data-cancel-delete-expedition="exp_delete_test"/);
+  assert.equal(vm.runInContext(
+    "confirmingTravelLogDeletion.has('exp_delete_test')", context), true);
+});
+feed.querySelectorAll('[data-cancel-delete-expedition]')
+  .find(button => button.dataset.cancelDeleteExpedition === 'exp_delete_test').handlers.click();
+check('cancelling a pending travel log deletion leaves the trip in place', () => {
+  assert.ok(feed.innerHTML.includes('data-delete-expedition="exp_delete_test"'));
+  assert.equal(vm.runInContext(
+    "AppState.expeditions.some(exp=>exp.id==='exp_delete_test')", context), true);
+});
+feed.querySelectorAll('[data-delete-expedition]')
+  .find(button => button.dataset.deleteExpedition === 'exp_delete_test').handlers.click();
+const originalLocalStorageSetItem = context.localStorage.setItem;
+context.localStorage.setItem = () => { throw new Error('Deletion storage full'); };
+feed.querySelectorAll('[data-confirm-delete-expedition]')
+  .find(button => button.dataset.confirmDeleteExpedition === 'exp_delete_test').handlers.click();
+context.localStorage.setItem = originalLocalStorageSetItem;
+check('failed deletion persistence rolls back the trip and resets its confirmation state', () => {
+  assert.equal(vm.runInContext(
+    "AppState.expeditions.some(exp=>exp.id==='exp_delete_test')", context), true);
+  assert.ok(feed.innerHTML.includes('data-delete-expedition="exp_delete_test"'));
+  assert.equal(vm.runInContext(
+    "confirmingTravelLogDeletion.has('exp_delete_test')", context), false);
+});
+feed.querySelectorAll('[data-delete-expedition]')
+  .find(button => button.dataset.deleteExpedition === 'exp_delete_test').handlers.click();
+feed.querySelectorAll('[data-confirm-delete-expedition]')
+  .find(button => button.dataset.confirmDeleteExpedition === 'exp_delete_test').handlers.click();
+check('confirmed travel log deletion persists and removes the log from the history and ledger', () => {
+  assert.equal(vm.runInContext(
+    "AppState.expeditions.some(exp=>exp.id==='exp_delete_test')", context), false);
+  assert.ok(!feed.innerHTML.includes('data-trip="exp_delete_test"'));
+  assert.equal(vm.runInContext(
+    "confirmingTravelLogDeletion.has('exp_delete_test')", context), false);
+});
+feed.querySelectorAll = originalFeedQuerySelectorAll;
+vm.runInContext(`AppState.currentTab=${JSON.stringify(previousCurrentTab)}`, context);
 const savedRarityExpeditions = vm.runInContext('JSON.stringify(AppState.expeditions)', context);
 try {
   vm.runInContext(`AppState.expeditions=[{
@@ -6117,6 +6195,8 @@ check('editing driving to flight removes driven-only county credit while preserv
 vm.runInContext('AppState.viewOnly=true;renderExpeditionHistory()',context);
 check('shared passports show expedition history but cannot open an editor or update records',()=>{
   assert.ok(!element('travelLogFeed').innerHTML.includes('data-edit-expedition'));
+  assert.ok(!element('travelLogFeed').innerHTML.includes('data-delete-expedition'));
+  assert.ok(!element('travelLogFeed').innerHTML.includes('data-confirm-delete-expedition'));
   assert.throws(()=>vm.runInContext('updateExpedition(AppState.expeditions[0])',context),/read-only/);
   vm.runInContext('openExpedition(AppState.expeditions[0].id)',context);
   assert.equal(vm.runInContext('expeditionEditingId',context),null);
