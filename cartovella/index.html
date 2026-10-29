@@ -425,11 +425,6 @@
 
     <!-- Quick Utilities -->
     <div class="flex items-center gap-1 shrink-0">
-      <button id="btnHomeConfig" aria-label="Change Home Base" title="Change Home Base" class="header-icon">
-        <span>🏰</span>
-        <span id="headerHometownText" class="sr-only">Home Base</span>
-      </button>
-
       <span id="headerSaveStatus" class="hidden max-w-[9rem] truncate rounded-lg border border-slate-700 bg-slate-900/80 px-2 py-1 text-[10px] text-slate-300 sm:text-xs" role="status" aria-live="polite"></span>
 
       <button id="btnCloudAuth" type="button" class="header-icon relative" aria-label="Account and cloud sync" title="Account &amp; Cloud Sync">
@@ -442,6 +437,10 @@
           ⚙️
         </summary>
         <div class="absolute right-0 mt-2 w-64 max-w-[calc(100vw-2rem)] py-2 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl">
+          <button id="btnHomeConfig" type="button" class="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-800 flex items-center gap-2">
+            <span aria-hidden="true">🏰</span> Change Home Base
+          </button>
+          <hr class="border-slate-800 my-1">
           <button id="btnShare" type="button" class="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-800 flex items-center gap-2">
             <span aria-hidden="true">🔗</span> Copy Public Profile Link
           </button>
@@ -7779,7 +7778,10 @@
       if (!homeModal.classList.contains('hidden')) return closeHomeModal();
       hideLevelUpNotification();
     });
-    document.getElementById('btnHomeConfig').addEventListener('click', openHomeModal);
+    document.getElementById('btnHomeConfig').addEventListener('click', () => {
+      document.getElementById('settingsMenu').open = false;
+      openHomeModal();
+    });
     document.getElementById('btnHomeSignIn').addEventListener('click', () => toggleAuthModal(true, 'signin'));
     document.getElementById('btnHomeImport').addEventListener('click', () => {
       document.getElementById('fileInput').click();

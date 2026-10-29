@@ -1015,10 +1015,15 @@ await checkAsync('different local and cloud passports are compared without repla
   assert.match(html, /Replace the cloud account's copy with this browser's version/);
   const settings = html.slice(html.indexOf('<details id="settingsMenu"'), html.indexOf('</details>'));
   const header = html.slice(html.indexOf('<header'), html.indexOf('<details id="settingsMenu"'));
+  assert.ok(settings.includes('id="btnHomeConfig"'));
+  assert.ok(settings.includes('Change Home Base'));
   assert.ok(settings.includes('id="btnManualSave"'));
   assert.ok(settings.includes('id="btnShare"'));
+  assert.ok(!header.includes('id="btnHomeConfig"'));
   assert.ok(!header.includes('id="btnManualSave"'));
   assert.ok(!header.includes('id="btnShare"'));
+  assert.match(html, /id="btnRecenterHome"[^>]*>[\s\S]*Jump to Home Citadel/);
+  assert.match(html, /settingsMenu'\)\.open = false;\s*openHomeModal\(\)/);
   assert.match(html, /id="headerSaveStatus"[^>]*role="status"/);
   assert.match(html, /function updateHeaderSaveStatus\(\)/);
   assert.match(html, /Saved \$\{age\}/);
