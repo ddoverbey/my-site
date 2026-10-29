@@ -269,14 +269,14 @@
     }
     #settingsMenu .header-icon:hover::after,
     #settingsMenu .header-icon:focus-visible::after { transform: translate(0, 0); }
-    .passport-flags { display: flex; flex-wrap: wrap; gap: 12px; list-style: none; padding: 0; }
+    .passport-flags { display: flex; flex-wrap: wrap; gap: 0.5rem; list-style: none; padding: 0; }
     .passport-flags li { position: relative; display: flex; }
     .country-flag, .state-flag { position: relative; display: inline-flex; align-items: center; justify-content: center; min-height: 44px; cursor: pointer; }
     .country-flag:focus-visible, .state-flag:focus-visible { outline: 2px solid #38bdf8; outline-offset: 3px; border-radius: 3px; }
     .country-flag-name { display: none; position: absolute; top: 100%; left: 0; z-index: 20; width: max-content; max-width: 180px; padding: 5px 8px; border-radius: 5px; background: #020617; color: #e2e8f0; font-size: 12px; pointer-events: none; }
     .country-flag:hover .country-flag-name, .country-flag:focus .country-flag-name,
     .state-flag:hover .country-flag-name, .state-flag:focus .country-flag-name { display: block; }
-    .passport-flags img { width: 48px; height: 32px; object-fit: contain; image-rendering: pixelated; }
+    .country-flag img, .state-flag img { width: 32px; height: 22px; object-fit: contain; image-rendering: pixelated; }
     #navTabs .header-icon { width: 2.125rem; height: 2.125rem; }
     .mode-classic #fogCanvasOverlay {
       opacity: 0;
@@ -493,7 +493,7 @@
         <button id="navQuestlines" type="button" data-tab="questlines" class="header-icon" data-tooltip="Main Questlines" title="Main Questlines" aria-label="Main Questlines" aria-pressed="false" aria-controls="tabContent-questlines">
           <span data-cartovella-icon="quest" data-icon-class="h-5 w-5" aria-hidden="true"></span>
         </button>
-        <button id="navAchievements" type="button" data-tab="achievements" class="header-icon" data-tooltip="Achievements" title="Achievements" aria-label="Achievements" aria-pressed="false" aria-controls="tabContent-achievements">
+        <button id="navAchievements" type="button" data-tab="achievements" class="header-icon" data-tooltip="Achievements" title="Achievements" aria-label="Achievements" aria-pressed="false" aria-controls="achievementsSection">
           <span data-cartovella-icon="trophy" data-icon-class="h-5 w-5" aria-hidden="true"></span>
         </button>
         <button id="navGuild" type="button" data-tab="guild" class="header-icon" data-tooltip="Explorers' Guild" title="Explorers' Guild" aria-label="Explorers' Guild" aria-pressed="false" aria-controls="tabContent-guild">
@@ -785,18 +785,20 @@
               </div>
             </div>
           </div>
-          <section class="relative z-10 mt-6 border-t border-slate-700/60 pt-4" aria-labelledby="passportFlagsTitle">
-            <p class="mb-4 text-[10px] text-slate-400">Land percentages are area estimates on an equal-area atlas: explored land counts visited/lived political boundaries; shroud cleared counts land revealed by your fog shapes and routes. Ocean is excluded.</p>
-            <h3 id="passportFlagsTitle" class="text-sm font-semibold text-amber-200 mb-3">Countries explored</h3>
-            <ul id="passportFlags" class="passport-flags" aria-label="Visited and lived country flags"></ul>
-            <p id="passportFlagsEmpty" class="text-xs text-slate-400">Visit a country to collect its flag.</p>
-            <p class="text-[10px] text-slate-500 mt-3">Pixel flags by DaFluffyPotato · Country codes: <a href="https://flaglog.com/country-codes" target="_blank" rel="noopener noreferrer" class="underline">Flaglog</a></p>
-          </section>
-          <section class="relative z-10 mt-5 border-t border-slate-700/60 pt-4" aria-labelledby="passportStateFlagsTitle">
-            <h3 id="passportStateFlagsTitle" class="text-sm font-semibold text-amber-200 mb-3">US States explored</h3>
-            <ul id="passportStateFlags" class="passport-flags" aria-label="Visited and lived US state flags"></ul>
-            <p id="passportStateFlagsEmpty" class="text-xs text-slate-400">Visit or live in a US state to collect its flag.</p>
-          </section>
+          <div class="relative z-10 mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-slate-700/60 pt-4">
+            <p class="md:col-span-2 text-[10px] text-slate-400">Land percentages are area estimates on an equal-area atlas: explored land counts visited/lived political boundaries; shroud cleared counts land revealed by your fog shapes and routes. Ocean is excluded.</p>
+            <section id="passportCountriesSection" class="min-w-0 scroll-mt-4" aria-labelledby="passportFlagsTitle">
+              <h3 id="passportFlagsTitle" class="text-sm font-semibold text-amber-200 mb-2">Countries explored</h3>
+              <ul id="passportFlags" class="passport-flags" aria-label="Visited and lived country flags"></ul>
+              <p id="passportFlagsEmpty" class="text-xs text-slate-400">Visit a country to collect its flag.</p>
+              <p class="text-[10px] text-slate-500 mt-2">Pixel flags by DaFluffyPotato · Country codes: <a href="https://flaglog.com/country-codes" target="_blank" rel="noopener noreferrer" class="underline">Flaglog</a></p>
+            </section>
+            <section id="passportStatesSection" class="min-w-0 scroll-mt-4" aria-labelledby="passportStateFlagsTitle">
+              <h3 id="passportStateFlagsTitle" class="text-sm font-semibold text-amber-200 mb-2">US States explored</h3>
+              <ul id="passportStateFlags" class="passport-flags" aria-label="Visited and lived US state flags"></ul>
+              <p id="passportStateFlagsEmpty" class="text-xs text-slate-400">Visit or live in a US state to collect its flag.</p>
+            </section>
+          </div>
           <section class="relative z-10 mt-5 border-t border-slate-700/60 pt-4" aria-labelledby="earnedBadgesTitle">
             <h3 id="earnedBadgesTitle" class="text-xs font-bold text-amber-200 mb-3">Earned Badges</h3>
             <div id="earnedAchievementBadges" class="flex flex-wrap gap-3"></div>
@@ -805,36 +807,36 @@
 
         <!-- Master Statistics Bento Box -->
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          <div class="rpg-panel p-4 rounded-2xl text-center">
+          <button type="button" data-profile-scroll-target="passportCountriesSection" aria-controls="passportCountriesSection" aria-label="Jump to countries explored" class="rpg-panel p-4 rounded-2xl text-center transition hover:ring-2 hover:ring-amber-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400">
             <span class="text-[10px] uppercase text-slate-400 font-mono">Countries</span>
-            <div class="text-2xl font-bold font-mono text-emerald-400 mt-1" id="statCountries">0</div>
+            <span class="block text-2xl font-bold font-mono text-emerald-400 mt-1" id="statCountries">0</span>
             <span class="text-[10px] text-slate-500">of 195</span>
-          </div>
-          <div class="rpg-panel p-4 rounded-2xl text-center">
+          </button>
+          <button type="button" data-profile-scroll-target="passportStatesSection" aria-controls="passportStatesSection" aria-label="Jump to US states explored" class="rpg-panel p-4 rounded-2xl text-center transition hover:ring-2 hover:ring-amber-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400">
             <span class="text-[10px] uppercase text-slate-400 font-mono">US States</span>
-            <div class="text-2xl font-bold font-mono text-sky-400 mt-1" id="statStates">0</div>
+            <span class="block text-2xl font-bold font-mono text-sky-400 mt-1" id="statStates">0</span>
             <span class="text-[10px] text-slate-500">of 50</span>
-          </div>
-          <div class="rpg-panel p-4 rounded-2xl text-center">
+          </button>
+          <button type="button" data-profile-scroll-target="cabinetOfCuriositiesSection" aria-controls="cabinetOfCuriositiesSection" aria-label="Jump to National Park Service units" class="rpg-panel p-4 rounded-2xl text-center transition hover:ring-2 hover:ring-amber-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400">
             <span class="text-[10px] uppercase text-slate-400 font-mono">NPS Units</span>
-            <div class="text-2xl font-bold font-mono text-amber-300 mt-1" id="statUsParks">0</div>
+            <span class="block text-2xl font-bold font-mono text-amber-300 mt-1" id="statUsParks">0</span>
             <span class="text-[10px] text-slate-500" id="statNpsTotal">Catalog loading</span>
-          </div>
-          <div class="rpg-panel p-4 rounded-2xl text-center">
+          </button>
+          <button type="button" data-profile-scroll-target="cabinetOfCuriositiesSection" aria-controls="cabinetOfCuriositiesSection" aria-label="Jump to global parks" class="rpg-panel p-4 rounded-2xl text-center transition hover:ring-2 hover:ring-amber-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400">
             <span class="text-[10px] uppercase text-slate-400 font-mono">Global Parks</span>
-            <div class="text-2xl font-bold font-mono text-purple-400 mt-1" id="statGlobalParks">0</div>
+            <span class="block text-2xl font-bold font-mono text-purple-400 mt-1" id="statGlobalParks">0</span>
             <span class="text-[10px] text-slate-500">total logged</span>
-          </div>
-          <div class="rpg-panel p-4 rounded-2xl text-center">
+          </button>
+          <button type="button" data-profile-scroll-target="biomedexContainer" aria-controls="biomedexContainer" aria-label="Jump to Biomedex" class="rpg-panel p-4 rounded-2xl text-center transition hover:ring-2 hover:ring-amber-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400">
             <span class="text-[10px] uppercase text-slate-400 font-mono">Biomes Unlocked</span>
-            <div class="text-2xl font-bold font-mono text-teal-400 mt-1" id="statBiomes">0</div>
+            <span class="block text-2xl font-bold font-mono text-teal-400 mt-1" id="statBiomes">0</span>
             <span class="text-[10px] text-slate-500">of 14 terrestrial biomes</span>
-          </div>
-          <div class="rpg-panel p-4 rounded-2xl text-center">
+          </button>
+          <button type="button" data-profile-scroll-target="biomedexContainer" aria-controls="biomedexContainer" aria-label="Jump to rare Biomedex entries" class="rpg-panel p-4 rounded-2xl text-center transition hover:ring-2 hover:ring-amber-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400">
             <span class="text-[10px] uppercase text-cyan-300 font-mono rarity-glow-text" data-rarity="rare" style="--rarity-color:#22d3ee">Rare+ Biomes</span>
-            <div class="text-2xl font-bold font-mono text-cyan-400 mt-1 rarity-glow-text" id="statRareBiomes" data-rarity="rare" style="--rarity-color:#22d3ee">0</div>
+            <span class="block text-2xl font-bold font-mono text-cyan-400 mt-1 rarity-glow-text" id="statRareBiomes" data-rarity="rare" style="--rarity-color:#22d3ee">0</span>
             <span class="text-[10px] text-slate-500" id="statRareTotal">Area-based rarity loading</span>
-          </div>
+          </button>
         </div>
 
         <!-- Biomédex Section -->
@@ -892,6 +894,24 @@
             View all questlines
           </button>
         </div>
+
+        <section id="achievementsSection" class="scroll-mt-4 max-w-6xl mx-auto space-y-6 pb-20" aria-labelledby="achievementsTitle">
+          <div class="rpg-panel p-6 rounded-2xl">
+            <h2 id="achievementsTitle" class="cinzel text-xl font-bold text-amber-200">Achievements</h2>
+            <p class="text-xs text-slate-400 mt-2">Discover special milestones through your travels. Related milestones are grouped into expandable classes, with your highest earned tier shown in the class summary. Expanded tiers run highest to lowest, with an unearned capstone at the bottom. Hints appear at 85% completion and remain blurred until earned.</p>
+            <p class="text-xs text-slate-400 mt-2">Overnight stays are inferred from expedition dates. Same-day distance badges use only single-day expeditions, never undated pins or assumed dates on multi-day trips.</p>
+            <p class="text-xs text-slate-400 mt-2">Rarity reflects achievement difficulty, not stat bonuses. Earned badges appear on your Explorer Profile.</p>
+            <div class="flex flex-wrap gap-x-4 gap-y-2 mt-3 text-[10px] uppercase font-bold" aria-label="Achievement rarity levels">
+              <span class="achievement-rarity" style="--rarity-color: #cbd5e1">Common</span>
+              <span class="achievement-rarity" style="--rarity-color: #4ade80">Uncommon</span>
+              <span class="achievement-rarity" data-rarity="rare" style="--rarity-color: #22d3ee">Rare</span>
+              <span class="achievement-rarity" data-rarity="epic" style="--rarity-color: #c084fc">Epic</span>
+              <span class="achievement-rarity" data-rarity="legendary" style="--rarity-color: #fbbf24">Legendary</span>
+              <span class="achievement-rarity" data-rarity="mythic" style="--rarity-color: #f0abfc">Mythic</span>
+            </div>
+          </div>
+          <div class="space-y-5" id="achievementsContainer" aria-live="polite"></div>
+        </section>
 
       </div>
     </div>
@@ -1049,26 +1069,6 @@
         </section>
       </div>
     </dialog>
-
-    <div id="tabContent-achievements" class="w-full h-full p-4 md:p-8 overflow-y-auto hidden">
-      <section class="max-w-6xl mx-auto space-y-6 pb-20" aria-labelledby="achievementsTitle">
-        <div class="rpg-panel p-6 rounded-2xl">
-          <h2 id="achievementsTitle" class="cinzel text-xl font-bold text-amber-200">Achievements</h2>
-          <p class="text-xs text-slate-400 mt-2">Discover special milestones through your travels. Related milestones are grouped into expandable classes, with your highest earned tier shown in the class summary. Expanded tiers run highest to lowest, with an unearned capstone at the bottom. Hints appear at 85% completion and remain blurred until earned.</p>
-          <p class="text-xs text-slate-400 mt-2">Overnight stays are inferred from expedition dates. Same-day distance badges use only single-day expeditions, never undated pins or assumed dates on multi-day trips.</p>
-          <p class="text-xs text-slate-400 mt-2">Rarity reflects achievement difficulty, not stat bonuses. Earned badges appear on your Explorer Profile.</p>
-          <div class="flex flex-wrap gap-x-4 gap-y-2 mt-3 text-[10px] uppercase font-bold" aria-label="Achievement rarity levels">
-            <span class="achievement-rarity" style="--rarity-color: #cbd5e1">Common</span>
-            <span class="achievement-rarity" style="--rarity-color: #4ade80">Uncommon</span>
-            <span class="achievement-rarity" data-rarity="rare" style="--rarity-color: #22d3ee">Rare</span>
-            <span class="achievement-rarity" data-rarity="epic" style="--rarity-color: #c084fc">Epic</span>
-            <span class="achievement-rarity" data-rarity="legendary" style="--rarity-color: #fbbf24">Legendary</span>
-            <span class="achievement-rarity" data-rarity="mythic" style="--rarity-color: #f0abfc">Mythic</span>
-          </div>
-        </div>
-        <div class="space-y-5" id="achievementsContainer" aria-live="polite"></div>
-      </section>
-    </div>
 
     <div id="tabContent-guild" class="hidden h-full w-full overflow-y-auto p-4 md:p-8">
       <section class="mx-auto max-w-7xl space-y-6 pb-20" aria-labelledby="guildTitle">
@@ -7381,7 +7381,6 @@
         }
       }
       if (AppState.currentTab === 'bucketlist') renderBucketListView();
-      if (AppState.currentTab === 'achievements') renderAchievementsView();
       if (AppState.currentTab === 'guild') {
         if (guildProfilesLoaded) {
           renderGuildDirectory();
@@ -7404,6 +7403,16 @@
 
     function switchTab(tabId) {
       if (profileOnlyView && tabId !== 'guild') return false;
+      if (tabId === 'achievements') {
+        if (!switchTab('passport')) return false;
+        setTimeout(() => {
+          document.getElementById('achievementsSection').scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+          });
+        }, 0);
+        return true;
+      }
       if (tabId === 'map' && AppState.mode !== 'rpg') {
         AppState.mode = 'rpg';
         saveState();
@@ -7423,7 +7432,6 @@
       document.getElementById('tabContent-questlines').classList.add('hidden');
       document.getElementById('tabContent-travel').classList.add('hidden');
       document.getElementById('tabContent-bucketlist').classList.add('hidden');
-      document.getElementById('tabContent-achievements').classList.add('hidden');
       document.getElementById('tabContent-guild').classList.add('hidden');
 
       if (tabId === 'map') {
@@ -7452,9 +7460,6 @@
       } else if (tabId === 'bucketlist') {
         document.getElementById('tabContent-bucketlist').classList.remove('hidden');
         renderBucketListView();
-      } else if (tabId === 'achievements') {
-        document.getElementById('tabContent-achievements').classList.remove('hidden');
-        renderAchievementsView();
       } else if (tabId === 'guild') {
         document.getElementById('tabContent-guild').classList.remove('hidden');
         if (guildProfilesLoaded) {
@@ -7468,6 +7473,14 @@
 
     document.querySelectorAll('#navTabs [data-tab]').forEach(btn => {
       btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+    });
+    document.querySelectorAll('#tabContent-passport [data-profile-scroll-target]').forEach(button => {
+      button.addEventListener('click', () => {
+        document.getElementById(button.dataset.profileScrollTarget).scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        });
+      });
     });
     document.getElementById('btnOpenQuestlines').addEventListener('click', () => switchTab('questlines'));
 

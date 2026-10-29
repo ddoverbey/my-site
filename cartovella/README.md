@@ -26,8 +26,9 @@ expeditions, track parks and regions, and earn achievements from your travel his
   at the bottom. Expanded tiers run highest to lowest, omit the highest earned tier already shown in
   the class summary, and keep an unearned capstone at the bottom. Single-tier achievements show their
   descriptions without a dropdown; rarity colors style labels and borders, while each achievement
-  has its own background art palette. International country milestones, including Terra Incognita,
-  Globetrotter, and How????, share one class.
+  has its own background art palette. The full collection is part of the Explorer Profile character
+  sheet, with the header trophy button scrolling directly to it. International country milestones,
+  including Terra Incognita, Globetrotter, and How????, share one class.
 - Waterfall achievements automatically recognize visited locations whose names or categories include
   “waterfall”; Focal Length counts photos saved to trip journals.
 
@@ -156,6 +157,8 @@ sheets, so each color choice is consistent between styles. Ranger hats are cente
 Character sprite catalogs, layer composition, unlock rules,
 backgrounds, and companion rendering live in `character-creator.js`;
 character settings are stored in the passport and included in local, cloud, export, and shared saves.
+The profile keeps country and state flags compact in a side-by-side layout, and its six summary cards
+smooth-scroll to the corresponding profile sections.
 Santa hats unlock for free starting December 1, 2026; pumpkin and witch hats unlock for free starting
 October 30, 2026. On December 24–25 all character sprites, including Miku, automatically wear Santa
 hats; on October 30–31 male sprites wear pumpkin hats and female sprites, including Miku, wear witch

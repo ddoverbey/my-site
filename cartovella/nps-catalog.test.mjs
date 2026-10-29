@@ -331,7 +331,7 @@ function element(id) {
         contains(name) { return classes.has(name); }
       },
       attributes: {}, handlers: {}, addEventListener(name, handler) { this.handlers[name] = handler; },
-      querySelectorAll: () => [], focus() {}, scrollTo() {},
+      querySelectorAll: () => [], focus() {}, scrollTo() {}, scrollIntoView() {},
       replaceChildren(...children) { this.children = children; this.innerHTML = ''; }, reset() {},
       setAttribute(name, value) { this.attributes[name] = value; },
       appendChild(child) { this.children.push(child); this.innerHTML += child.innerHTML; },
@@ -1650,9 +1650,10 @@ check('eight icon-only header tabs expose direct, always-available navigation', 
       buttons.map(button => button.dataset.tab === 'scratch'));
     for (const tab of ['map', 'bucketlist', 'scratch', 'travel', 'passport', 'questlines', 'achievements', 'guild']) {
       assert.equal(vm.runInContext(`switchTab('${tab}')`, context), true, `${tab} remains accessible`);
-      assert.equal(vm.runInContext('AppState.currentTab', context), tab);
+      const activeTab = tab === 'achievements' ? 'passport' : tab;
+      assert.equal(vm.runInContext('AppState.currentTab', context), activeTab);
       assert.deepEqual(buttons.map(button => button.attributes['aria-pressed'] === 'true'),
-        buttons.map(button => button.dataset.tab === tab), tab);
+        buttons.map(button => button.dataset.tab === activeTab), tab);
     }
     vm.runInContext("AppState.mode='classic';switchTab('map')", context);
     assert.equal(vm.runInContext('AppState.mode', context), 'rpg');
@@ -5990,13 +5991,33 @@ check('travel anywhere grows the starting home circle into its county without ch
   assert.equal(vm.runInContext('loggedCountyStatuses(false)["06073"]', context), undefined);
   vm.runInContext('map=null', context);
 });
-check('dedicated achievement page shows unmet classes without duplicating profile badges', () => {
+check('Explorer Profile contains the full achievement collection and the trophy tab scrolls to it', () => {
+  const passportStart = html.indexOf('<div id="tabContent-passport"');
+  const questlinesStart = html.indexOf('<div id="tabContent-questlines"', passportStart);
+  const passport = html.slice(passportStart, questlinesStart);
   assert.equal((html.match(/id="achievementsContainer"/g) || []).length, 1);
-  assert.ok(html.indexOf('id="achievementsContainer"') > html.indexOf('id="tabContent-achievements"'));
+  assert.ok(!html.includes('id="tabContent-achievements"'));
+  assert.ok(passport.includes('id="achievementsSection"'));
+  assert.ok(passport.indexOf('id="achievementsContainer"') > passport.indexOf('id="achievementsTitle"'));
+  assert.ok(passport.indexOf('id="achievementsSection"') > passport.indexOf('id="cabinetOfCuriositiesSection"'));
   assert.ok(html.includes('data-tab="achievements"'));
   vm.runInContext('applyPassport(migratePassport({}));PARKS=[];coordinateIndexes=null;map=null', context);
-  vm.runInContext("switchTab('achievements')", context);
-  assert.equal(vm.runInContext('AppState.currentTab', context), 'achievements');
+  const originalTimeout = context.setTimeout;
+  const achievementSection = element('achievementsSection');
+  const originalScroll = achievementSection.scrollIntoView;
+  const scrollCalls = [];
+  achievementSection.scrollIntoView = options => scrollCalls.push(options);
+  context.setTimeout = callback => { callback(); return 0; };
+  try {
+    vm.runInContext("switchTab('achievements')", context);
+  } finally {
+    context.setTimeout = originalTimeout;
+    if (originalScroll === undefined) delete achievementSection.scrollIntoView;
+    else achievementSection.scrollIntoView = originalScroll;
+  }
+  assert.equal(vm.runInContext('AppState.currentTab', context), 'passport');
+  assert.equal(element('tabContent-passport').classList.contains('hidden'), false);
+  assert.deepEqual(JSON.parse(JSON.stringify(scrollCalls)), [{ behavior: 'smooth', block: 'start' }]);
   assert.ok(element('achievementsContainer').innerHTML.includes('data-achievement-section="unmet"'));
   for (const title of ['Chasing Waterfalls', 'Southern Cross', 'Local Lore', 'Zero Meridian', 'Thin Air', 'Earth Sandwich']) {
     assert.ok(element('achievementsContainer').innerHTML.includes(title), title);
@@ -6010,6 +6031,21 @@ check('dedicated achievement page shows unmet classes without duplicating profil
   for (const id of ['borderlands', 'offGrid', 'ghostTown', 'dateLine', 'continents']) {
     assert.equal(vm.runInContext(`ACHIEVEMENTS.some(achievement=>achievement.id==='${id}')`, context), false);
   }
+});
+check('Explorer Profile bento cards jump to their matching sections and flags are compact', () => {
+  assert.deepEqual([...html.matchAll(/data-profile-scroll-target="([^"]+)"/g)].map(match => match[1]), [
+    'passportCountriesSection',
+    'passportStatesSection',
+    'cabinetOfCuriositiesSection',
+    'cabinetOfCuriositiesSection',
+    'biomedexContainer',
+    'biomedexContainer'
+  ]);
+  assert.equal([...html.matchAll(/<button[^>]*data-profile-scroll-target=/g)].length, 6);
+  assert.match(html, /\.passport-flags\s*\{[^}]*gap:\s*0\.5rem/);
+  assert.match(html, /\.country-flag img,\s*\.state-flag img\s*\{[^}]*width:\s*32px;\s*height:\s*22px/);
+  assert.match(html, /md:grid-cols-2[^"]*"[^>]*>[\s\S]*?id="passportCountriesSection"[\s\S]*?id="passportStatesSection"/);
+  assert.match(html, /data-profile-scroll-target[\s\S]*?scrollIntoView\(\{\s*behavior: 'smooth',\s*block: 'start'/);
 });
 check('biome milestone classes list 3, total minus one and total tiers at every progress level', () => {
   for (const count of [0, 1, 3, 13, 14]) {
@@ -6478,7 +6514,7 @@ check('character badges include every earned milestone without duplication or st
     }
     const waterfall = captured.find(badge => badge.attributes['data-achievement'] === 'waterfalls_1');
     waterfall.handlers.click();
-    assert.equal(vm.runInContext('AppState.currentTab', context), 'achievements');
+    assert.equal(vm.runInContext('AppState.currentTab', context), 'passport');
     captured.length = 0;
     vm.runInContext("AppState.customPois.forEach(poi=>poi.status='w');renderPassportView()", context);
     assert.equal(captured.length, 0);
