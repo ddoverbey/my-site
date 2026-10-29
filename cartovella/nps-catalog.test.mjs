@@ -220,7 +220,7 @@ check('character customization appears above the stage and progress summary', ()
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 10);
-  assert.ok(sources.every(source => source.endsWith('?v=20261029-five-tab-navigation-v1')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261029-flat-eight-icon-nav-v1')));
   assert.ok(sources.some(source => source.startsWith('./character-creator.js?')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
@@ -350,8 +350,8 @@ const context = vm.createContext({
   document: {
     body: { classList: { toggle() {}, add() {}, remove() {} } },
     getElementById: element,
-    querySelector: selector => selector === '#atlasSubNav [data-tab="scratch"]'
-      ? element('atlasScratch') : element(`query-${selector}`),
+    querySelector: selector => selector === '#navTabs [data-tab="scratch"]'
+      ? element('navScratch') : element(`query-${selector}`),
     querySelectorAll: () => [],
     addEventListener() {},
     createElement: tag => tag === 'canvas' ? { width: 0, height: 0, getContext: () => null } : element(`created-${elements.size}`)
@@ -1603,47 +1603,34 @@ await checkAsync('GeoJSON imports ordered stops and keeps only endpoint-matched 
       expeditionPending = ${originalPending}; AppState.viewOnly = ${originalViewOnly}`, context);
   }
 });
-check('five primary tabs expose the Atlas and Quests sub-navigation', () => {
+check('eight icon-only header tabs expose direct, always-available navigation', () => {
   const navStart = html.indexOf('<nav id="navTabs"');
   const nav = html.slice(navStart, html.indexOf('</nav>', navStart));
-  assert.match(nav, /aria-label="Primary navigation"/);
-  for (const [tab, label, icon] of [
-    ['atlas', 'Atlas', 'atlas'],
-    ['travel', 'Travel Log', 'journal'],
-    ['passport', 'Explorer', 'explorer'],
-    ['quests', 'Quests &amp; Badges', 'trophy'],
-    ['guild', 'Guild', 'guild']
+  assert.match(nav, /aria-label="Atlas pages"/);
+  for (const [id, tab, label, icon] of [
+    ['navMap', 'map', 'Fog Map', 'compass'],
+    ['navBucketlist', 'bucketlist', 'Checklist &amp; Catalog', 'checklist'],
+    ['navScratch', 'scratch', 'Scratch Maps', 'map'],
+    ['navTravel', 'travel', 'Travel Journal', 'journal'],
+    ['navExplorer', 'passport', 'Explorer Profile', 'explorer'],
+    ['navQuestlines', 'questlines', 'Main Questlines', 'quest'],
+    ['navAchievements', 'achievements', 'Achievements', 'trophy'],
+    ['navGuild', 'guild', "Explorers' Guild", 'globe']
   ]) {
-    assert.match(nav, new RegExp(`data-primary-tab="${tab}"`));
+    assert.match(nav, new RegExp(`<button id="${id}"[^>]*data-tab="${tab}"`));
     assert.ok(nav.includes(`data-cartovella-icon="${icon}"`));
-    assert.ok(nav.includes(`<span class="hidden md:inline">${label}</span>`));
+    assert.match(nav, new RegExp(`data-tooltip="${label}" title="${label}" aria-label="${label}"`));
   }
-  assert.equal([...nav.matchAll(/<button\b/g)].length, 5);
-  assert.match(html, /id="atlasSubNav"[^>]*class="hidden fixed top-32 xl:top-20 left-1\/2 z-\[500\] -translate-x-1\/2/);
-  assert.match(html, /id="questsSubNav"[^>]*class="hidden fixed top-32 xl:top-20 left-1\/2 z-\[500\] -translate-x-1\/2/);
-  for (const [navId, tabs] of [
-    ['atlasSubNav', [['map', 'Fog Map', 'atlas'], ['scratch', 'Scratch Maps', 'map'], ['bucketlist', 'Checklist &amp; Catalog', 'checklist']]],
-    ['questsSubNav', [['questlines', 'Main Questlines', 'quest'], ['achievements', 'Achievements', 'trophy']]]
-  ]) {
-    const start = html.indexOf(`<nav id="${navId}"`);
-    const subnav = html.slice(start, html.indexOf('</nav>', start));
-    for (const [tab, label, icon] of tabs) {
-      assert.match(subnav, new RegExp(`data-tab="${tab}"`));
-      assert.ok(subnav.includes(`<span>${label}</span>`));
-      assert.ok(subnav.includes(`data-cartovella-icon="${icon}"`));
-    }
-  }
-  assert.doesNotMatch(html, /id="toggleRpgMode"|id="toggleClassicMode"|atlasViewSwitcher|questViewSwitcher/);
+  assert.equal([...nav.matchAll(/<button\b/g)].length, 8);
+  assert.match(html, /\.header-icon::after[\s\S]*content: attr\(data-tooltip\)[\s\S]*transition: opacity 0ms/);
+  assert.match(html, /\.header-icon:hover::after,[\s\S]*\.header-icon:focus-visible::after/);
+  assert.doesNotMatch(html, /id="atlasSubNav"|id="questsSubNav"|data-primary-tab|primary-nav-button|subnav-button/);
   assert.doesNotMatch(html, /pt-20 md:pt-24|class="[^"]*\bpt-20\b/);
 
   const originalQuery = context.document.querySelectorAll;
   const originalSaveState = context.saveState;
   const originalState = vm.runInContext("({mode:AppState.mode,tab:AppState.currentTab,viewOnly:AppState.viewOnly,profileOnlyView,guildProfilesLoaded})", context);
-  const primaryButtons = ['atlas', 'travel', 'passport', 'quests', 'guild'].map(primaryTab => ({
-    dataset: { primaryTab }, attributes: {},
-    setAttribute(name, value) { this.attributes[name] = value; }
-  }));
-  const subButtons = ['map', 'scratch', 'bucketlist', 'questlines', 'achievements'].map(tab => ({
+  const buttons = ['map', 'bucketlist', 'scratch', 'travel', 'passport', 'questlines', 'achievements', 'guild'].map(tab => ({
     dataset: { tab }, attributes: {},
     setAttribute(name, value) { this.attributes[name] = value; }
   }));
@@ -1653,32 +1640,24 @@ check('five primary tabs expose the Atlas and Quests sub-navigation', () => {
     'renderAchievementsView', 'renderGuildDirectory', 'renderGuildExpeditions'
   ];
   const originalRenderers = pageRenderers.map(name => context[name]);
-  context.document.querySelectorAll = selector => selector === '#navTabs [data-primary-tab]'
-    ? primaryButtons : selector === '#atlasSubNav [data-tab], #questsSubNav [data-tab]'
-      ? subButtons : originalQuery(selector);
+  context.document.querySelectorAll = selector => selector === '#navTabs [data-tab]'
+    ? buttons : originalQuery(selector);
   context.saveState = () => {};
   pageRenderers.forEach(name => { context[name] = () => {}; });
   try {
-    vm.runInContext("AppState.mode='rpg';AppState.currentTab='scratch';updateHeaderNavigation()", context);
-    assert.deepEqual(primaryButtons.map(button => button.attributes['aria-pressed']), ['true', 'false', 'false', 'false', 'false']);
-    assert.deepEqual(subButtons.map(button => button.attributes['aria-pressed'] === 'true'),
-      [false, true, false, false, false]);
-    vm.runInContext("switchTab('achievements');switchPrimaryTab('atlas')", context);
-    assert.equal(vm.runInContext('AppState.currentTab', context), 'scratch');
-    vm.runInContext("switchPrimaryTab('quests')", context);
-    assert.equal(vm.runInContext('AppState.currentTab', context), 'achievements');
-    vm.runInContext("AppState.currentTab='travel';lastAtlasSubTab='map';lastQuestsSubTab='questlines';switchPrimaryTab('atlas')", context);
-    assert.equal(vm.runInContext('AppState.currentTab', context), 'map');
-    vm.runInContext("switchPrimaryTab('quests')", context);
-    assert.equal(vm.runInContext('AppState.currentTab', context), 'questlines');
+    vm.runInContext("AppState.mode='classic';AppState.currentTab='scratch';updateHeaderNavigation()", context);
+    assert.deepEqual(buttons.map(button => button.attributes['aria-pressed'] === 'true'),
+      buttons.map(button => button.dataset.tab === 'scratch'));
+    for (const tab of ['map', 'bucketlist', 'scratch', 'travel', 'passport', 'questlines', 'achievements', 'guild']) {
+      assert.equal(vm.runInContext(`switchTab('${tab}')`, context), true, `${tab} remains accessible`);
+      assert.equal(vm.runInContext('AppState.currentTab', context), tab);
+      assert.deepEqual(buttons.map(button => button.attributes['aria-pressed'] === 'true'),
+        buttons.map(button => button.dataset.tab === tab), tab);
+    }
     vm.runInContext("AppState.mode='classic';switchTab('map')", context);
     assert.equal(vm.runInContext('AppState.mode', context), 'rpg');
     vm.runInContext("switchTab('bucketlist')", context);
     assert.equal(vm.runInContext('AppState.mode', context), 'classic');
-    for (const tab of ['scratch', 'travel', 'passport', 'questlines', 'achievements', 'guild']) {
-      assert.equal(vm.runInContext(`switchTab('${tab}')`, context), true, `${tab} remains accessible`);
-      assert.equal(vm.runInContext('AppState.currentTab', context), tab);
-    }
   } finally {
     context.document.querySelectorAll = originalQuery;
     context.saveState = originalSaveState;
@@ -4253,7 +4232,7 @@ try {
   `, context);
 }
 check('the travel log is its own tab rendering a chronological feed with per-trip mini-maps', () => {
-  assert.ok(html.includes('data-primary-tab="travel"'));
+  assert.ok(html.includes('data-tab="travel"'));
   assert.ok(html.includes('id="tabContent-travel"'));
   assert.ok(html.includes('id="travelLogFeed"'));
   // Expedition history moved out of the passport tab entirely.
