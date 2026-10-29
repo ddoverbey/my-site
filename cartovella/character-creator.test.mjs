@@ -1597,9 +1597,9 @@ check('the shared stage animation loop advances pets and effects without moving 
     assert.equal(drawCalls.length, hiddenDrawCount);
     globalThis.document.visibilityState = 'visible';
     intervalCallbacks[0]();
-    assert.equal(drawCalls.length, hiddenDrawCount);
+    assert.ok(drawCalls.length > hiddenDrawCount,
+      'stage animations continue when the browser requests reduced motion');
     reducedMotion = false;
-    intervalCallbacks[0]();
     intervalCallbacks[0]();
     intervalCallbacks[0]();
     assert.deepEqual(dogCall().slice(1, 5), [33, 13, 29, 19]);

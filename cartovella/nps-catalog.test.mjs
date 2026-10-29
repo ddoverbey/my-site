@@ -159,8 +159,11 @@ check('passport loading displays an accessible animated dog and keeps nested loa
   assert.equal(loadingDogSprite.readUInt32BE(20), 256);
   assert.match(html, /id="appLoadingOverlay"[^>]*role="status"[^>]*aria-live="polite"/);
   assert.match(html, /background-image: url\("\.\/assets\/Loading%20Animations\/Topdown%20-%20Pet%20-%20Dog\/Root_Idle\.png"\)/);
-  assert.match(html, /animation: loadingDogIdle 900ms steps\(4, end\) infinite/);
+  assert.match(html, /width: 88px;\s+height: 88px;/);
+  assert.match(html, /background-size: 352px 352px/);
+  assert.match(html, /animation: loadingDogIdle 800ms steps\(4, end\) infinite/);
   assert.match(html, /@keyframes loadingDogIdle/);
+  assert.doesNotMatch(html, /prefers-reduced-motion/);
 });
 check('Travel Ledger header is compact with no description beneath its title', () => {
   const header=html.slice(html.indexOf('<div id="tabContent-bucketlist"'),html.indexOf('<section id="bucketCityMatches"'));
@@ -3078,7 +3081,13 @@ element('customLocationStatus').value = 'v';
 element('customLocationCategory').value = 'waterfall';
 const originalFetch = globalThis.fetch;
 const originalWarn = console.warn;
+const originalRequestAnimationFrame = context.requestAnimationFrame;
+const originalPerformance = context.performance;
+let queuedDiscoveryFrame = null;
+let motionTime = 0;
 const originalCustomRarityHelpers = vm.runInContext('({cachedRarity:CoordinateLookups.cachedRarity,lookupRarityWithFallback:CoordinateLookups.lookupRarityWithFallback})', context);
+context.requestAnimationFrame = callback => { queuedDiscoveryFrame = callback; return 1; };
+context.performance = { now: () => motionTime += 1300 };
 globalThis.fetch = async url => {
   if (url.includes('open-meteo')) return { ok: false, status: 503 };
   if (url.includes('api.devonoverbey.com')) return { ok: false, status: 503 };
@@ -3093,9 +3102,13 @@ console.warn = () => {};
 try {
   await element('customLocationForm').handlers.submit({ preventDefault() {} });
   await new Promise(resolve => setImmediate(resolve));
+  queuedDiscoveryFrame?.();
 } finally {
   globalThis.fetch = originalFetch;
   console.warn = originalWarn;
+  context.requestAnimationFrame = originalRequestAnimationFrame;
+  if (originalPerformance === undefined) delete context.performance;
+  else context.performance = originalPerformance;
   context.originalCustomRarityHelpers = originalCustomRarityHelpers;
   vm.runInContext(`
     CoordinateLookups.cachedRarity=originalCustomRarityHelpers.cachedRarity;
@@ -5060,7 +5073,12 @@ check('home aura pulses on the existing canvas and settles to the exact saved ra
   assert.equal(vm.runInContext('homeAuraFrame', context), null);
   context.window.matchMedia = () => ({ matches: true });
   vm.runInContext('pulseHomeAura()', context);
+  assert.equal(vm.runInContext('homeAuraPulseStarted', context), 1800);
+  assert.notEqual(vm.runInContext('homeAuraFrame', context), null);
+  animationTime = 3600;
+  animationCallback();
   assert.equal(vm.runInContext('homeAuraPulseStarted', context), null);
+  assert.equal(vm.runInContext('homeAuraFrame', context), null);
 });
 check('changing home never adds another Citadel bonus and oversized saved homes shrink on reload', () => {
   const previousXP = vm.runInContext('calculateStats().xp', context);
@@ -5380,13 +5398,17 @@ check('new custom POI saves and expedition promotions trigger pulses only after 
   animationTime = 3200;
   animationCallback();
 });
-check('reduced motion and classic mode do not schedule discovery pulses', () => {
+check('reduced-motion preference does not block discovery pulses, while classic mode still does', () => {
   context.window.matchMedia = () => ({ matches: true });
   vm.runInContext("addCustomPoi({...customLocation,id:'poi_reduced',status:'v'})", context);
+  assert.equal(vm.runInContext('discoveryPulses.has("poi:poi_reduced")', context), true);
+  animationTime = 4400;
+  animationCallback();
   assert.equal(vm.runInContext('discoveryPulses.size', context), 0);
   context.window.matchMedia = () => ({ matches: false });
-  vm.runInContext("AppState.mode='classic';addCustomPoi({...customLocation,id:'poi_classic',status:'l'})", context);
+  vm.runInContext("AppState.mode='classic';addCustomPoi({...customLocation,id:'poi_classic',status:'v'})", context);
   assert.equal(vm.runInContext('discoveryPulses.size', context), 0);
+  assert.equal(vm.runInContext('discoveryPulses.has("poi:poi_classic")', context), false);
   context.fogOperations.length = 0;
   vm.runInContext('drawFogOfWar()', context);
   assert.ok(!context.fogOperations.some(op => op[0] === 'fill'));

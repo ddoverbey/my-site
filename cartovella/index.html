@@ -237,10 +237,6 @@
       transform-origin: center;
       animation: microPing 1.2s ease-out infinite;
     }
-    @media (prefers-reduced-motion: reduce) {
-      .micro-locator-arrow, .micro-locator-ping { animation: none; stroke-dasharray: none; }
-    }
-
     /* Shimmer effect for XP bar */
     @keyframes xpShimmer {
       0% { background-position: -200% 0; }
@@ -251,9 +247,6 @@
       35% { box-shadow: 0 0 28px 8px rgba(245, 158, 11, 0.55); }
     }
     .level-up-banner > div { animation: levelUpFlash 850ms ease-out; }
-    @media (prefers-reduced-motion: reduce) {
-      .level-up-banner > div { animation: none; }
-    }
     .xp-glow {
       background: linear-gradient(90deg, #10b981 0%, #34d399 50%, #10b981 100%);
       background-size: 200% 100%;
@@ -267,19 +260,16 @@
     .app-loading-overlay.hidden { display: none; }
     .guild-avatar { image-rendering: pixelated; }
     .loading-dog {
-      width: 72px;
-      height: 72px;
+      width: 88px;
+      height: 88px;
       background-image: url("./assets/Loading%20Animations/Topdown%20-%20Pet%20-%20Dog/Root_Idle.png");
-      background-size: 288px 288px;
+      background-size: 352px 352px;
       image-rendering: pixelated;
-      animation: loadingDogIdle 900ms steps(4, end) infinite;
+      animation: loadingDogIdle 800ms steps(4, end) infinite;
     }
     @keyframes loadingDogIdle {
-      from { background-position: 0 -72px; }
-      to { background-position: -288px -72px; }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      .loading-dog { background-position: 0 -72px; animation: none; }
+      from { background-position: 0 -88px; }
+      to { background-position: -352px -88px; }
     }
     #achievementsContainer progress {
       appearance: none;
@@ -4233,7 +4223,7 @@
       if (homeAuraFrame !== null) cancelAnimationFrame(homeAuraFrame);
       homeAuraFrame = null;
       homeAuraPulseStarted = null;
-      if (!map || !fogCtx || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      if (!map || !fogCtx) {
         drawFogOfWar();
         return;
       }
@@ -4260,8 +4250,7 @@
     }
 
     function pulseDiscoveries(ids) {
-      if (!map || !fogCtx || AppState.mode === 'classic' ||
-          window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      if (!map || !fogCtx || AppState.mode === 'classic') return;
       const started = performance.now();
       ids.forEach(id => discoveryPulses.set(id, started));
       if (discoveryFrame !== null) return;

@@ -1308,8 +1308,7 @@
         return;
       }
       if (!isStageVisible(canvas) ||
-        (typeof document !== 'undefined' && document.visibilityState === 'hidden') ||
-        window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+        (typeof document !== 'undefined' && document.visibilityState === 'hidden')) return;
       animation.tick++;
       stageRenderers.get(canvas)?.();
     };
