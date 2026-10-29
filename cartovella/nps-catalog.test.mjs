@@ -167,9 +167,8 @@ check('passport loading displays an accessible animated dog and keeps nested loa
 });
 check('Travel Ledger header is compact with no description beneath its title', () => {
   const header=html.slice(html.indexOf('<div id="tabContent-bucketlist"'),html.indexOf('<section id="bucketCityMatches"'));
-  assert.ok(header.includes('>Travel Ledger</h2>'));
-  assert.ok(!header.includes('Traditional Travel Wishlist'));
-  assert.ok(!header.includes('Explore NPS parks'));
+  assert.ok(header.includes('>Checklist &amp; Catalog</h2>'));
+  assert.ok(header.includes('Travel Ledger · Search and track parks, cities, and destinations.'));
   assert.ok(header.includes('grid-cols-1 sm:grid-cols-4'));
   assert.ok(header.includes('aria-label="Search destinations"'));
   assert.ok(header.includes('aria-label="Visit status"'));
@@ -221,7 +220,7 @@ check('character customization appears above the stage and progress summary', ()
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 10);
-  assert.ok(sources.every(source => source.endsWith('?v=20261028-holiday-hats-v1')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261028-navigation-tutorial-v1')));
   assert.ok(sources.some(source => source.startsWith('./character-creator.js?')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
@@ -331,9 +330,10 @@ function element(id) {
         },
         contains(name) { return classes.has(name); }
       },
-      handlers: {}, addEventListener(name, handler) { this.handlers[name] = handler; },
+      attributes: {}, handlers: {}, addEventListener(name, handler) { this.handlers[name] = handler; },
       querySelectorAll: () => [], focus() {}, scrollTo() {},
-      replaceChildren(...children) { this.children = children; this.innerHTML = ''; }, reset() {}, setAttribute() {},
+      replaceChildren(...children) { this.children = children; this.innerHTML = ''; }, reset() {},
+      setAttribute(name, value) { this.attributes[name] = value; },
       appendChild(child) { this.children.push(child); this.innerHTML += child.innerHTML; },
       prepend(child) { this.innerHTML = child.innerHTML + this.innerHTML; }
     });
@@ -347,7 +347,15 @@ const context = vm.createContext({
   requestAnimationFrame: callback => callback(), setTimeout() {}, clearTimeout() {},
   localStorage, Headers,
   DOMParser: TestDOMParser,
-  document: { body: { classList: { toggle() {}, add() {}, remove() {} } }, getElementById: element, querySelectorAll: () => [], addEventListener() {}, createElement: tag => tag === 'canvas' ? { width: 0, height: 0, getContext: () => null } : element(`created-${elements.size}`) },
+  document: {
+    body: { classList: { toggle() {}, add() {}, remove() {} } },
+    getElementById: element,
+    querySelector: selector => selector === '#atlasViewSwitcher [data-tab="scratch"]'
+      ? element('navGroupScratch') : element(`query-${selector}`),
+    querySelectorAll: () => [],
+    addEventListener() {},
+    createElement: tag => tag === 'canvas' ? { width: 0, height: 0, getContext: () => null } : element(`created-${elements.size}`)
+  },
   window: { addEventListener() {}, matchMedia: () => ({ matches: true }) },
   fetch: async url => ({ ok: true, json: async () => url.includes('wikidata') ? wikidata : url.includes('worldwide') ? worldwide : snapshot })
 });
@@ -1595,46 +1603,232 @@ await checkAsync('GeoJSON imports ordered stops and keeps only endpoint-matched 
       expeditionPending = ${originalPending}; AppState.viewOnly = ${originalViewOnly}`, context);
   }
 });
-check('header navigation uses compact icons with accessible labels and synchronized pressed states', () => {
-  for (const label of ['Explore — RPG mode', 'Travel Ledger — Classic mode', 'Scratch Map', 'Explorer Profile — Character & Stats', 'Achievements']) {
-    assert.ok(html.includes(`aria-label="${label}"`));
-    assert.ok(html.includes(`title="${label}"`));
+check('five primary tabs and Atlas/Quests sub-switchers preserve existing tab selectors', () => {
+  const nav = html.slice(html.indexOf('<nav id="navTabs"'), html.indexOf('</nav>', html.indexOf('<nav id="navTabs"')));
+  assert.match(nav, /aria-label="Primary navigation"/);
+  for (const [id, label, icon] of [
+    ['navGroupAtlas', 'Atlas', 'compass'], ['navGroupTravel', 'Travel Log', 'journal'],
+    ['navGroupExplorer', 'Explorer', 'explorer'], ['navGroupQuests', 'Quests &amp; Badges', 'trophy'],
+    ['navGroupGuild', 'Guild', 'globe']
+  ]) {
+    assert.ok(nav.includes(`id="${id}"`));
+    assert.ok(nav.includes(`data-cartovella-icon="${icon}"`));
+    assert.ok(nav.includes(`>${label}</span>`));
   }
-  assert.ok(!html.includes('<span class="hidden md:inline">RPG Explorer</span>'));
-  assert.ok(html.includes('.header-icon:focus-visible'));
+  assert.equal([...nav.matchAll(/<button\b/g)].length, 5);
+  const atlas = html.slice(html.indexOf('<nav id="atlasViewSwitcher"'), html.indexOf('</nav>', html.indexOf('<nav id="atlasViewSwitcher"')));
+  assert.match(atlas, /id="toggleRpgMode"[^>]*aria-label="Fog Map"/);
+  assert.match(atlas, /data-tab="scratch"[^>]*aria-label="Scratch Maps"/);
+  assert.match(atlas, /id="toggleClassicMode"[^>]*aria-label="Checklist &amp; Catalog"/);
+  const quests = html.slice(html.indexOf('<nav id="questViewSwitcher"'), html.indexOf('</nav>', html.indexOf('<nav id="questViewSwitcher"')));
+  assert.match(quests, /data-tab="questlines"[^>]*aria-label="Main Questlines"/);
+  assert.match(quests, /data-tab="achievements"[^>]*aria-label="Achievements &amp; Badges"/);
+  assert.match(html, /\.primary-nav-button::after[\s\S]*transition: opacity 0ms/);
+  assert.match(html, /\.primary-nav-button:hover::after/);
+  assert.match(html, /hidden md:inline/);
   assert.ok(!html.includes('data-tab="map"'));
+  assert.ok(html.includes('.header-icon:focus-visible'));
+
   const originalQuery = context.document.querySelectorAll;
-  const buttons = ['map', 'scratch', 'passport', 'travel', 'achievements'].map(tab => ({
-    dataset: { tab }, attributes: {},
-    setAttribute(name, value) { this.attributes[name] = value; }
+  const originalState = vm.runInContext("({mode:AppState.mode,tab:AppState.currentTab,tutorialState,tutorialInitialized})", context);
+  const selector = '#navTabs [data-tab], #atlasViewSwitcher [data-tab], #questViewSwitcher [data-tab]';
+  const buttons = ['travel', 'passport', 'guild', 'scratch', 'questlines', 'achievements'].map(tab => ({
+    dataset: { tab }, attributes: {}, disabled: false,
+    setAttribute(name, value) { this.attributes[name] = value; },
+    classList: { contains() { return false; } }
   }));
-  context.document.querySelectorAll = selector => selector === '#navTabs button' ? buttons : originalQuery(selector);
-  const modeAttributes = {};
-  const originalSet = element('toggleClassicMode').setAttribute;
-  const originalRpgSet = element('toggleRpgMode').setAttribute;
+  context.document.querySelectorAll = value => value === selector ? buttons : originalQuery(value);
   const rpgAttributes = {};
+  const classicAttributes = {};
+  const atlasAttributes = {};
+  const questsAttributes = {};
+  const originalRpgSet = element('toggleRpgMode').setAttribute;
+  const originalClassicSet = element('toggleClassicMode').setAttribute;
+  const originalAtlasSet = element('navGroupAtlas').setAttribute;
+  const originalQuestsSet = element('navGroupQuests').setAttribute;
   element('toggleRpgMode').setAttribute = (name, value) => { rpgAttributes[name] = value; };
-  element('toggleClassicMode').setAttribute = (name, value) => { modeAttributes[name] = value; };
-  vm.runInContext("AppState.mode='classic';AppState.currentTab='scratch';updateHeaderNavigation()", context);
-  assert.equal(modeAttributes['aria-pressed'], 'false');
-  assert.equal(rpgAttributes['aria-pressed'], 'false');
-  assert.deepEqual(buttons.map(button => button.attributes['aria-pressed']), ['false', 'true', 'false', 'false', 'false']);
-  vm.runInContext("AppState.currentTab='bucketlist';updateHeaderNavigation()", context);
-  assert.equal(modeAttributes['aria-pressed'], 'true');
-  assert.equal(rpgAttributes['aria-pressed'], 'false');
-  for (const tab of ['scratch', 'passport', 'travel', 'achievements']) {
-    vm.runInContext(`AppState.mode='rpg';AppState.currentTab='${tab}';updateHeaderNavigation()`, context);
-    assert.equal(rpgAttributes['aria-pressed'], 'false', tab);
-    assert.equal(modeAttributes['aria-pressed'], 'false', tab);
-    assert.equal(buttons.filter(button => button.attributes['aria-pressed'] === 'true').length, 1);
+  element('toggleClassicMode').setAttribute = (name, value) => { classicAttributes[name] = value; };
+  element('navGroupAtlas').setAttribute = (name, value) => { atlasAttributes[name] = value; };
+  element('navGroupQuests').setAttribute = (name, value) => { questsAttributes[name] = value; };
+  try {
+    vm.runInContext("tutorialState=null;tutorialInitialized=false;AppState.mode='classic';AppState.currentTab='scratch';updateHeaderNavigation()", context);
+    assert.equal(classicAttributes['aria-pressed'], 'false');
+    assert.equal(rpgAttributes['aria-pressed'], 'false');
+    assert.deepEqual(buttons.map(button => button.attributes['aria-pressed']), ['false', 'false', 'false', 'true', 'false', 'false']);
+    vm.runInContext("AppState.currentTab='bucketlist';updateHeaderNavigation()", context);
+    assert.equal(classicAttributes['aria-pressed'], 'true');
+    assert.equal(atlasAttributes['aria-pressed'], 'true');
+    for (const tab of ['scratch', 'passport', 'travel', 'questlines', 'achievements', 'guild']) {
+      vm.runInContext(`AppState.mode='rpg';AppState.currentTab='${tab}';updateHeaderNavigation()`, context);
+      assert.equal(buttons.filter(button => button.attributes['aria-pressed'] === 'true').length, 1, tab);
+      assert.equal(questsAttributes['aria-pressed'], String(['questlines', 'achievements'].includes(tab)), tab);
+    }
+    vm.runInContext("AppState.mode='rpg';AppState.currentTab='map';updateHeaderNavigation()", context);
+    assert.equal(rpgAttributes['aria-pressed'], 'true');
+    assert.equal(atlasAttributes['aria-pressed'], 'true');
+    assert.equal(buttons.filter(button => button.attributes['aria-pressed'] === 'true').length, 0);
+  } finally {
+    context.document.querySelectorAll = originalQuery;
+    element('toggleRpgMode').setAttribute = originalRpgSet;
+    element('toggleClassicMode').setAttribute = originalClassicSet;
+    element('navGroupAtlas').setAttribute = originalAtlasSet;
+    element('navGroupQuests').setAttribute = originalQuestsSet;
+    vm.runInContext(`AppState.mode=${JSON.stringify(originalState.mode)};AppState.currentTab=${JSON.stringify(originalState.tab)};tutorialState=${JSON.stringify(originalState.tutorialState)};tutorialInitialized=${originalState.tutorialInitialized};updateHeaderNavigation()`, context);
   }
-  vm.runInContext("AppState.mode='rpg';AppState.currentTab='map';updateHeaderNavigation()", context);
-  assert.equal(modeAttributes['aria-pressed'], 'false');
-  assert.equal(rpgAttributes['aria-pressed'], 'true');
-  assert.deepEqual(buttons.map(button => button.attributes['aria-pressed']), ['true', 'false', 'false', 'false', 'false']);
-  context.document.querySelectorAll = originalQuery;
-  element('toggleClassicMode').setAttribute = originalSet;
-  element('toggleRpgMode').setAttribute = originalRpgSet;
+});
+check('Cartovella icons use distinct RPG colors and invalid icon names fail explicitly', () => {
+  const compass = vm.runInContext("cartovellaIcon('compass', 'test-icon')", context);
+  const journal = vm.runInContext("cartovellaIcon('journal', 'test-icon')", context);
+  assert.match(compass, /fill="#fbbf24"/);
+  assert.match(compass, /fill="#0f172a"/);
+  assert.match(compass, /fill="#fb7185"/);
+  assert.match(compass, /fill="#e2e8f0"/);
+  assert.match(journal, /fill="#b45309"/);
+  assert.match(journal, /fill="#fef3c7"/);
+  assert.match(journal, /fill="#34d399"/);
+  assert.throws(() => vm.runInContext("cartovellaIcon('not-an-icon')", context), /Unknown Cartovella icon/);
+});
+check('account pill switches between Sign In and Explorer Account while keeping sync status visible', () => {
+  const originalCloud = JSON.stringify(vm.runInContext('cloudSession', context));
+  const originalProfile = JSON.stringify(vm.runInContext('publicProfile', context));
+  const originalViewOnly = vm.runInContext('AppState.viewOnly', context);
+  const originalSavedAt = vm.runInContext('lastCloudSavedAt', context);
+  const originalStatus = JSON.stringify(vm.runInContext('latestCloudStatusMessage', context));
+  const originalFailed = vm.runInContext('latestCloudStatusFailed', context);
+  const originalDirty = localStorage.getItem('cartovella_cloud_dirty');
+  try {
+    vm.runInContext(`
+      cloudSession = {access_token:'pill-token',user:{id:'pill-user',email:'devon@example.com'}};
+      publicProfile = normalizePublicProfile({username:'devon'});
+      AppState.viewOnly = false;
+      lastCloudSavedAt = Date.now() - 10000;
+      latestCloudStatusMessage = 'Saved to cloud';
+      latestCloudStatusFailed = false;
+      localStorage.setItem('cartovella_cloud_dirty','false');
+      updateAuthUI();
+      setCloudStatus('Cloud connected');
+      updateHeaderSaveStatus();
+    `, context);
+    assert.equal(element('btnCloudAuthLabel').textContent, '@devon');
+    assert.equal(element('headerAccountAvatar').classList.contains('hidden'), false);
+    assert.equal(element('btnCloudAuthIcon').classList.contains('hidden'), true);
+    assert.match(element('btnCloudAuth').className, /emerald/);
+    assert.equal(element('btnCloudAuth').attributes['aria-label'], 'Explorer Account: @devon');
+    assert.equal(element('headerSaveStatus').classList.contains('hidden'), false);
+    assert.match(html, /id="headerAccountAvatar" width="24" height="24"/);
+    assert.match(html, /CharacterCreator\.renderAvatar\(authButtonAvatar, AppState\.character\)/);
+
+    vm.runInContext('cloudSession=null;updateAuthUI()', context);
+    assert.equal(element('btnCloudAuthLabel').textContent, 'Sign In');
+    assert.equal(element('headerAccountAvatar').classList.contains('hidden'), true);
+    assert.equal(element('btnCloudAuthIcon').classList.contains('hidden'), false);
+    assert.match(element('btnCloudAuth').className, /bg-amber-500/);
+  } finally {
+    vm.runInContext(`
+      cloudSession = ${originalCloud};
+      publicProfile = normalizePublicProfile(${originalProfile});
+      AppState.viewOnly = ${originalViewOnly};
+      lastCloudSavedAt = ${originalSavedAt === null ? 'null' : originalSavedAt};
+      latestCloudStatusMessage = ${originalStatus};
+      latestCloudStatusFailed = ${originalFailed};
+      updateAuthUI();
+    `, context);
+    if (originalDirty === null) localStorage.removeItem('cartovella_cloud_dirty');
+    else localStorage.setItem('cartovella_cloud_dirty', originalDirty);
+  }
+});
+check('progressive tutorial unlocks features in order, supports skip, and preserves existing passports', () => {
+  const fields = ['homeBase', 'pins', 'regions', 'counties', 'customPois', 'expeditions', 'viewOnly', 'mode', 'currentTab'];
+  const originalPassport = JSON.stringify(vm.runInContext(
+    `Object.fromEntries(${JSON.stringify(fields)}.map(field => [field, AppState[field]]))`, context
+  ));
+  const originalTutorialState = JSON.stringify(vm.runInContext('tutorialState', context));
+  const originalTutorialInitialized = vm.runInContext('tutorialInitialized', context);
+  const originalStoredTutorial = localStorage.getItem('cartovella_tutorial_state');
+  const originalRenderPassport = context.renderPassportView;
+  try {
+    vm.runInContext(`
+      AppState.homeBase=null; AppState.pins={}; AppState.regions={}; AppState.counties={};
+      AppState.customPois=[]; AppState.expeditions=[]; AppState.viewOnly=false;
+      AppState.currentTab='map'; AppState.mode='rpg';
+      tutorialState=null; tutorialInitialized=false;
+      localStorage.removeItem('cartovella_tutorial_state');
+      initializeProgressiveTutorial();
+    `, context);
+    assert.equal(vm.runInContext('tutorialState.step', context), 0);
+    assert.equal(vm.runInContext('tutorialState.completed', context), false);
+    assert.equal(localStorage.getItem('cartovella_tutorial_state') !== null, true);
+    assert.equal(element('tutorialProgressBanner').classList.contains('hidden'), false);
+    assert.equal(element('navGroupTravel').disabled, true);
+    assert.equal(vm.runInContext("tutorialCanOpenTab('travel')", context), false);
+    assert.equal(vm.runInContext("tutorialCanOpenTab('bucketlist')", context), true);
+
+    vm.runInContext("AppState.homeBase={name:'Tutorial Home'};advanceTutorialFromProgress()", context);
+    assert.equal(vm.runInContext('tutorialState.step', context), 1);
+    vm.runInContext("AppState.pins={firstVisit:'v'};advanceTutorialFromProgress()", context);
+    assert.equal(vm.runInContext('tutorialState.step', context), 2);
+    assert.equal(vm.runInContext("tutorialCanOpenTab('scratch')", context), true);
+    assert.equal(vm.runInContext("tutorialCanOpenTab('passport')", context), true);
+    assert.equal(vm.runInContext("tutorialCanOpenTab('questlines')", context), false);
+
+    context.renderPassportView = () => {};
+    assert.equal(vm.runInContext("switchTab('passport')", context), true);
+    assert.equal(vm.runInContext('tutorialState.step', context), 3);
+    assert.equal(vm.runInContext("tutorialCanOpenTab('questlines')", context), true);
+    assert.equal(vm.runInContext("tutorialCanOpenTab('travel')", context), false);
+    vm.runInContext("AppState.expeditions=[{id:'first-expedition'}];advanceTutorialFromProgress()", context);
+    assert.equal(vm.runInContext('tutorialState.completed', context), true);
+    assert.equal(vm.runInContext("tutorialCanOpenTab('travel')", context), true);
+
+    vm.runInContext("tutorialState={version:1,step:0,completed:false,unlockedAll:false};", context);
+    element('btnSkipTutorial').handlers.click();
+    assert.equal(vm.runInContext('tutorialState.completed && tutorialState.unlockedAll', context), true);
+    assert.match(element('tutorialToggleLabel').textContent, /Replay Tutorial/);
+    assert.match(html, /id="btnHomeSkipTutorial"/);
+    assert.match(html, /id="tutorialProgressBanner"[^>]*role="status"/);
+    assert.match(html, /btnHomeSkipTutorial'\)\.addEventListener\('click', \(\) => \{\s*completeTutorial\(\);\s*closeHomeModal\(\);/);
+
+    vm.runInContext(`
+      tutorialState={version:1,step:4,completed:true,unlockedAll:true};
+      AppState.homeBase=null; AppState.pins={}; AppState.expeditions=[];
+    `, context);
+    element('btnTutorialToggle').handlers.click();
+    assert.equal(vm.runInContext('tutorialState.completed', context), false);
+    assert.equal(vm.runInContext('tutorialState.unlockedAll', context), true);
+    assert.equal(vm.runInContext("tutorialCanOpenTab('travel')", context), true);
+    assert.equal(element('tutorialProgressBanner').classList.contains('hidden'), false);
+
+    vm.runInContext(`
+      AppState.homeBase=null; AppState.pins={}; AppState.regions={}; AppState.counties={};
+      AppState.customPois=[]; AppState.expeditions=[]; AppState.viewOnly=true;
+      tutorialState=null; tutorialInitialized=false;
+      localStorage.removeItem('cartovella_tutorial_state');
+      initializeProgressiveTutorial();
+    `, context);
+    assert.equal(vm.runInContext('tutorialState.completed', context), true);
+    assert.match(html, /if \(hasPassportData\(parsed\)\) completeTutorial\(\)/);
+
+    vm.runInContext(`
+      AppState.homeBase=null; AppState.pins={existing:'v'}; AppState.regions={}; AppState.counties={};
+      AppState.customPois=[]; AppState.expeditions=[]; AppState.viewOnly=false;
+      tutorialState=null; tutorialInitialized=false;
+      localStorage.removeItem('cartovella_tutorial_state');
+      initializeProgressiveTutorial();
+    `, context);
+    assert.equal(vm.runInContext('tutorialState.completed', context), true);
+    assert.equal(vm.runInContext("tutorialCanOpenTab('guild')", context), true);
+  } finally {
+    context.renderPassportView = originalRenderPassport;
+    vm.runInContext(`
+      const restore = ${originalPassport};
+      Object.entries(restore).forEach(([field,value]) => AppState[field] = value);
+      tutorialState = ${originalTutorialState};
+      tutorialInitialized = ${originalTutorialInitialized};
+      updateHeaderNavigation();
+    `, context);
+    if (originalStoredTutorial === null) localStorage.removeItem('cartovella_tutorial_state');
+    else localStorage.setItem('cartovella_tutorial_state', originalStoredTutorial);
+  }
 });
 check('Cartovella branding uses one subtitle, without a page-like badge, and preserves descriptive SEO metadata', () => {
   const header = html.slice(html.indexOf('<header'), html.indexOf('</header>'));

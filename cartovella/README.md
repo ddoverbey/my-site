@@ -292,9 +292,16 @@ browser copies, so keep regular exports.
 When signed in, the header shows the relative time since the last successful cloud save. **Save now**
 and **Copy Public Profile Link** are available from **Settings**.
 
+The header groups the app into five primary areas: Atlas, Travel Log, Explorer, Quests & Badges, and
+Guild. First-time explorers get a short, progressive tutorial; its progress is stored separately in
+this browser, and **Skip Tutorial · Unlock All Features** is available at any time. Existing
+passports with travel progress, imported/cloud passports, and read-only shared atlases bypass the
+tutorial. **Settings > Replay Tutorial** replays it without relocking features.
+
 If Cloud Sync reports that the session needs reconnection or that a refresh token was not found,
-open **Account and cloud sync** and sign in again. The rejected cloud session is cleared, but your
-local passport is kept. Do not clear browser storage just to fix a cloud sign-in problem.
+open the **Sign In** or **Explorer Account** pill and sign in again. The rejected cloud session is
+cleared, but your local passport is kept. Do not clear browser storage just to fix a cloud sign-in
+problem.
 
 After signing out and into a different account, Cartovella asks before replacing the browser's
 passport or copying that data into the new account.

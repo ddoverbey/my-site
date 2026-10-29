@@ -43,6 +43,46 @@
       }
     }
   </script>
+  <script>
+    function cartovellaIcon(name, className = 'h-5 w-5') {
+      const artwork = {
+        compass: '<circle cx="12" cy="12" r="10" fill="#fbbf24"/><circle cx="12" cy="12" r="7.5" fill="#0f172a"/><path d="m14.8 9.2-1.6 4-4 1.6 1.6-4 4-1.6Z" fill="#fb7185"/><path d="m9.2 14.8 1.6-4 4-1.6-1.6 4-4 1.6Z" fill="#e2e8f0"/><circle cx="12" cy="12" r="1.2" fill="#fef3c7"/>',
+        journal: '<path d="M5 2.5h11.5A2.5 2.5 0 0 1 19 5v15H6a3 3 0 0 1-3-3V4.5a2 2 0 0 1 2-2Z" fill="#b45309"/><path d="M6 4.5h10.5A1.5 1.5 0 0 1 18 6v11H6a2 2 0 0 0-2 2V6.5a2 2 0 0 1 2-2Z" fill="#fef3c7"/><path d="M13 4h3v7l-1.5-1.2L13 11V4Z" fill="#34d399"/><path d="M7 8h4M7 11h4M7 14h7" stroke="#78350f" stroke-width="1.2" stroke-linecap="round"/>',
+        trophy: '<path d="M7 3h10v5.5a5 5 0 0 1-10 0V3Z" fill="#fbbf24"/><path d="M7 5H3v2a4 4 0 0 0 4 4M17 5h4v2a4 4 0 0 1-4 4" fill="none" stroke="#fbbf24" stroke-width="2"/><path d="M10 13h4v4h-4z" fill="#38bdf8"/><path d="M7 19h10v2H7zM9 17h6v2H9z" fill="#78350f"/><path d="m12 4 1.1 2.1 2.3.3-1.7 1.6.4 2.3L12 9.2l-2.1 1.1.4-2.3-1.7-1.6 2.3-.3L12 4Z" fill="#fef3c7"/>',
+        globe: '<circle cx="12" cy="12" r="10" fill="#fbbf24"/><circle cx="12" cy="12" r="7.7" fill="#0369a1"/><path d="m7 7 2-1 1 2-1 2-2-1-1 2 2 2 2-1 1 2-1 2 2 1 2-2-1-2 2-1 2 1 1-2-2-2-2 1-1-2 1-2-2-1-2 2-2-1Z" fill="#10b981"/><path d="M4.6 9.2h1.8M17.3 16h2" stroke="#e2e8f0" stroke-width="1.2" stroke-linecap="round"/>',
+        citadel: '<path d="M3 21V8l3-2 3 2v13H3ZM9 21V4l3-2 3 2v17H9ZM15 21V8l3-2 3 2v13h-6Z" fill="#64748b"/><path d="M1.5 21h21v2h-21z" fill="#0f172a"/><path d="M5 11h2v3H5zM11 7h2v3h-2zM17 11h2v3h-2z" fill="#fbbf24"/><path d="M4 5V2h2v2l2 1-2 1-2-1-2 1V5h2ZM17 5V2h2v2l2 1-2 1-2-1-2 1V5h2Z" fill="#fb7185"/>',
+        checklist: '<path d="M5 2h12a2 2 0 0 1 2 2v18H5a3 3 0 0 1-3-3V5a3 3 0 0 1 3-3Z" fill="#b45309"/><path d="M6 4h11v15H6a2 2 0 0 0-2 2V6a2 2 0 0 1 2-2Z" fill="#fef3c7"/><path d="m7 8 1.2 1.2L10.5 7M7 13l1.2 1.2 2.3-2.2" fill="none" stroke="#10b981" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 8h3M12 13h3M7 17h8" stroke="#78350f" stroke-width="1.2" stroke-linecap="round"/>',
+        map: '<path d="m2 5 6-3 8 3 6-3v17l-6 3-8-3-6 3V5Z" fill="#0369a1"/><path d="m8 2 8 3v17l-8-3V2Z" fill="#10b981"/><path d="m2 5 6-3v17l-6 3V5ZM16 5l6-3v17l-6 3V5Z" fill="#fbbf24"/><path d="m11 10 1.5-2 1.5 2-1.5 2-1.5-2Z" fill="#fb7185"/>',
+        explorer: '<path d="M12 2a5 5 0 0 1 5 5v2H7V7a5 5 0 0 1 5-5Z" fill="#334155"/><path d="M8 8a4 4 0 1 1 8 0v3a4 4 0 0 1-8 0V8Z" fill="#fbbf24"/><path d="M4 22a8 8 0 0 1 16 0H4Z" fill="#10b981"/><path d="M10 10h.2M14 10h.2M10.5 13h3" stroke="#0f172a" stroke-width="1.2" stroke-linecap="round"/><path d="M3 22h18" stroke="#e2e8f0" stroke-width="1.3" stroke-linecap="round"/>',
+        quest: '<path d="M5 2h12l3 3v17H5a3 3 0 0 1-3-3V5a3 3 0 0 1 3-3Z" fill="#b45309"/><path d="M6 4h10l2 2v13H6a2 2 0 0 0-2 2V6a2 2 0 0 1 2-2Z" fill="#fef3c7"/><path d="m12 7 1.2 2.4 2.6.4-1.9 1.8.4 2.6-2.3-1.2-2.3 1.2.4-2.6-1.9-1.8 2.6-.4L12 7Z" fill="#38bdf8"/>',
+        cloud: '<path d="M7 18h10a4 4 0 0 0 .4-8 6 6 0 0 0-11.6 1A3.5 3.5 0 0 0 7 18Z" fill="#e2e8f0" stroke="#0369a1" stroke-width="1.5"/><circle cx="17.5" cy="17.5" r="4" fill="#fbbf24"/><path d="m17.5 15.3.7 1.5 1.6.2-1.2 1.1.3 1.6-1.4-.8-1.4.8.3-1.6-1.2-1.1 1.6-.2.7-1.5Z" fill="#78350f"/>',
+        settings: '<path d="m10 2 4 0 .6 2.2 1.8 1 2.1-.7 2 3.5-1.6 1.5v2l1.6 1.5-2 3.5-2.1-.7-1.8 1L14 20h-4l-.6-2.2-1.8-1-2.1.7-2-3.5L5.1 12v-2L3.5 8.5l2-3.5 2.1.7 1.8-1L10 2Z" fill="#64748b"/><circle cx="12" cy="11" r="3.1" fill="#fbbf24"/><circle cx="12" cy="11" r="1.3" fill="#0f172a"/>',
+        share: '<path d="M7 12 17 6M7 12l10 6" stroke="#e2e8f0" stroke-width="2"/><circle cx="5" cy="12" r="3" fill="#38bdf8"/><circle cx="19" cy="5" r="3" fill="#fbbf24"/><circle cx="19" cy="19" r="3" fill="#10b981"/>',
+        save: '<path d="M4 2h13l5 5v15H2V4a2 2 0 0 1 2-2Z" fill="#2563eb"/><path d="M6 2h10v6H6z" fill="#e2e8f0"/><path d="M7 14h10v8H7z" fill="#b45309"/><path d="M9 16h6v4H9z" fill="#fef3c7"/><path d="M17 3v4h2V5z" fill="#fbbf24"/>',
+        export: '<path d="M4 2h12l4 4v16H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z" fill="#fef3c7"/><path d="M16 2v5h5" fill="#b45309"/><path d="M12 17V9m0 0-3 3m3-3 3 3" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 20h10" stroke="#b45309" stroke-width="1.5"/>',
+        import: '<path d="M4 2h12l4 4v16H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z" fill="#fef3c7"/><path d="M16 2v5h5" fill="#b45309"/><path d="M12 9v8m0 0-3-3m3 3 3-3" fill="none" stroke="#0369a1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 20h10" stroke="#b45309" stroke-width="1.5"/>',
+        credits: '<circle cx="12" cy="12" r="10" fill="#0369a1"/><circle cx="12" cy="12" r="7.5" fill="#fef3c7"/><path d="M10 9a2 2 0 1 1 3.4 1.4c-.9.9-1.4 1.1-1.4 2.6M12 16.5v.1" fill="none" stroke="#b45309" stroke-width="2" stroke-linecap="round"/>',
+        warning: '<path d="M12 2 23 21H1L12 2Z" fill="#fbbf24"/><path d="M12 7v7" stroke="#78350f" stroke-width="2.5" stroke-linecap="round"/><circle cx="12" cy="17.5" r="1.3" fill="#fb7185"/>',
+        locator: '<path d="M12 22s8-7.5 8-13a8 8 0 1 0-16 0c0 5.5 8 13 8 13Z" fill="#fb7185"/><circle cx="12" cy="9" r="4.5" fill="#fbbf24"/><circle cx="12" cy="9" r="2" fill="#0369a1"/>',
+        lock: '<rect x="4" y="10" width="16" height="12" rx="2" fill="#64748b"/><path d="M8 10V7a4 4 0 1 1 8 0v3" fill="none" stroke="#fbbf24" stroke-width="2.5"/><circle cx="12" cy="15.5" r="1.5" fill="#fef3c7"/><path d="M12 17v2" stroke="#fef3c7" stroke-width="1.5"/>',
+        pin: '<path d="M12 22s8-7.5 8-13a8 8 0 1 0-16 0c0 5.5 8 13 8 13Z" fill="#fb7185"/><circle cx="12" cy="9" r="4.5" fill="#fbbf24"/><path d="m10 9 2-2 2 2-2 2-2-2Z" fill="#0f172a"/>',
+        route: '<path d="M4 3h6v6H4zM14 15h6v6h-6z" fill="#fbbf24"/><path d="M7 9v3a3 3 0 0 0 3 3h4" fill="none" stroke="#38bdf8" stroke-width="2.5" stroke-dasharray="2 2"/><path d="m12 12 3 3-3 3" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+        photo: '<rect x="2" y="3" width="20" height="18" rx="2" fill="#0369a1"/><circle cx="16.5" cy="8" r="2.5" fill="#fbbf24"/><path d="m3 18 6-7 4 4 3-3 5 6H3Z" fill="#10b981"/><path d="M3 20h18" stroke="#e2e8f0" stroke-width="1.2"/>',
+        shield: '<path d="M12 2 21 5v6c0 5.5-3.8 9-9 11-5.2-2-9-5.5-9-11V5l9-3Z" fill="#b45309"/><path d="M12 4.5 18.5 7v4c0 4-2.7 6.8-6.5 8.4C8.2 17.8 5.5 15 5.5 11V7L12 4.5Z" fill="#fbbf24"/><path d="m8.5 11.5 2.2 2.2 4.8-5" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
+      };
+      if (!Object.hasOwn(artwork, name)) throw new Error(`Unknown Cartovella icon: ${name}`);
+      return `<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" class="${className}">${artwork[name]}</svg>`;
+    }
+
+    function renderCartovellaIcons(root = document) {
+      root.querySelectorAll('[data-cartovella-icon]').forEach(element => {
+        element.innerHTML = cartovellaIcon(
+          element.dataset.cartovellaIcon,
+          element.dataset.iconClass || 'h-5 w-5'
+        );
+      });
+    }
+  </script>
 
   <style>
     :root {
@@ -196,6 +236,45 @@
     .header-icon:hover { background: #1e293b; color: #f8fafc; }
     .header-icon:focus-visible { outline: 2px solid #fbbf24; outline-offset: 2px; }
     .header-icon[aria-pressed="true"] { background: #1e3a5f; color: #fff; }
+    .primary-nav-button {
+      width: auto;
+      min-width: 2.25rem;
+      gap: 0.35rem;
+      padding: 0 0.55rem;
+      font-size: 0.75rem;
+      position: relative;
+    }
+    .primary-nav-button::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      top: calc(100% + 0.45rem);
+      left: 50%;
+      z-index: 1200;
+      width: max-content;
+      max-width: 14rem;
+      transform: translate(-50%, -2px);
+      border: 1px solid rgba(251, 191, 36, 0.45);
+      border-radius: 0.5rem;
+      background: #0c1222;
+      padding: 0.35rem 0.55rem;
+      color: #fef3c7;
+      font-size: 0.7rem;
+      font-weight: 600;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0ms, transform 0ms;
+    }
+    .primary-nav-button:hover::after,
+    .primary-nav-button:focus-visible::after { opacity: 1; transform: translate(-50%, 0); }
+    #atlasViewSwitcher [aria-pressed="true"],
+    #questViewSwitcher [aria-pressed="true"] { background: #1e3a5f; color: #fff; }
+    @media (min-width: 768px) {
+      .primary-nav-button::after { display: none; }
+    }
+    .tutorial-banner-visible { padding-top: 8rem !important; }
+    @media (min-width: 768px) {
+      .tutorial-banner-visible { padding-top: 9rem !important; }
+    }
     .passport-flags { display: flex; flex-wrap: wrap; gap: 12px; list-style: none; padding: 0; }
     .passport-flags li { position: relative; display: flex; }
     .country-flag, .state-flag { position: relative; display: inline-flex; align-items: center; justify-content: center; min-height: 44px; cursor: pointer; }
@@ -389,7 +468,7 @@
     </div>
   </div>
 
-  <header class="relative min-h-16 border-b border-slate-800 bg-[#0c1222]/95 px-3 py-2 sm:px-4 flex flex-wrap sm:flex-nowrap items-center justify-between gap-x-3 gap-y-2 z-[600] shrink-0 backdrop-blur-md">
+  <header class="relative min-h-16 border-b border-slate-800 bg-[#0c1222]/95 px-3 py-2 sm:px-4 flex flex-wrap xl:flex-nowrap items-center justify-between gap-x-3 gap-y-2 z-[600] shrink-0 backdrop-blur-md">
     <div class="flex items-center gap-3 min-w-0">
       <img src="assets/logos/cartovella-logo-1.svg" alt="" aria-hidden="true" class="h-12 w-12 object-contain">
       <div class="hidden lg:block">
@@ -400,67 +479,74 @@
       </div>
     </div>
 
-    <!-- Mode Selector & Nav Tabs -->
-    <div class="order-last sm:order-none w-full sm:w-auto flex items-center justify-center gap-2">
-      <!-- RPG vs Classic Bucket List Toggle -->
-      <div role="group" aria-label="Travel mode" class="bg-slate-900/60 p-1 rounded-xl border border-slate-800 flex gap-1">
-        <button id="toggleRpgMode" type="button" class="header-icon" title="Explore — RPG mode" aria-label="Explore — RPG mode" aria-pressed="true">
-          <span aria-hidden="true">🧭</span>
+    <div class="order-last xl:order-none w-full xl:w-auto flex items-center justify-center">
+      <nav id="navTabs" aria-label="Primary navigation" class="flex flex-wrap justify-center gap-1 bg-slate-900/60 p-1 rounded-xl border border-slate-800">
+        <button id="navGroupAtlas" type="button" class="header-icon primary-nav-button" data-tooltip="Atlas" aria-label="Atlas" aria-pressed="true" aria-controls="atlasViewSwitcher">
+          <span data-cartovella-icon="compass" data-icon-class="h-5 w-5" aria-hidden="true"></span><span class="hidden md:inline">Atlas</span>
         </button>
-        <button id="toggleClassicMode" type="button" class="header-icon" title="Travel Ledger — Classic mode" aria-label="Travel Ledger — Classic mode" aria-pressed="false">
-          <span aria-hidden="true">📋</span>
+        <button id="navGroupTravel" data-tab="travel" type="button" class="header-icon primary-nav-button" data-tooltip="Travel Log" aria-label="Travel Log" aria-pressed="false" aria-controls="tabContent-travel">
+          <span data-cartovella-icon="journal" data-icon-class="h-5 w-5" aria-hidden="true"></span><span class="hidden md:inline">Travel Log</span>
+          <span id="navLockTravel" class="hidden" data-cartovella-icon="lock" data-icon-class="h-3 w-3" aria-hidden="true"></span>
         </button>
-      </div>
-
-      <!-- Navigation Tabs -->
-      <nav id="navTabs" aria-label="Atlas pages" class="flex gap-1 bg-slate-900/60 p-1 rounded-xl border border-slate-800">
-        <button data-tab="scratch" type="button" class="header-icon" title="Scratch Map" aria-label="Scratch Map" aria-pressed="false" aria-controls="tabContent-scratch"><span aria-hidden="true">🗺️</span></button>
-        <button data-tab="travel" type="button" class="header-icon" title="Travel Log" aria-label="Travel Log" aria-pressed="false" aria-controls="tabContent-travel"><span aria-hidden="true">📖</span></button>
-        <button data-tab="passport" type="button" class="header-icon" title="Explorer Profile — Character & Stats" aria-label="Explorer Profile — Character & Stats" aria-pressed="false" aria-controls="tabContent-passport"><span aria-hidden="true">👤</span></button>
-        <button data-tab="questlines" type="button" class="header-icon" title="Main Questlines" aria-label="Main Questlines" aria-pressed="false" aria-controls="tabContent-questlines"><span aria-hidden="true">📜</span></button>
-        <button data-tab="achievements" type="button" class="header-icon" title="Achievements" aria-label="Achievements" aria-pressed="false" aria-controls="tabContent-achievements"><span aria-hidden="true">🏆</span></button>
-        <button data-tab="guild" type="button" class="header-icon" title="Explorers' Guild — Community Atlases &amp; Travel Logs" aria-label="Explorers' Guild — Community Atlases &amp; Travel Logs" aria-pressed="false" aria-controls="tabContent-guild"><span aria-hidden="true">🌐</span></button>
+        <button id="navGroupExplorer" data-tab="passport" type="button" class="header-icon primary-nav-button" data-tooltip="Explorer" aria-label="Explorer" aria-pressed="false" aria-controls="tabContent-passport">
+          <span data-cartovella-icon="explorer" data-icon-class="h-5 w-5" aria-hidden="true"></span><span class="hidden md:inline">Explorer</span>
+          <span id="navLockExplorer" class="hidden" data-cartovella-icon="lock" data-icon-class="h-3 w-3" aria-hidden="true"></span>
+        </button>
+        <button id="navGroupQuests" type="button" class="header-icon primary-nav-button" data-tooltip="Quests &amp; Badges" aria-label="Quests &amp; Badges" aria-pressed="false" aria-controls="questViewSwitcher">
+          <span data-cartovella-icon="trophy" data-icon-class="h-5 w-5" aria-hidden="true"></span><span class="hidden md:inline">Quests &amp; Badges</span>
+          <span id="navLockQuests" class="hidden" data-cartovella-icon="lock" data-icon-class="h-3 w-3" aria-hidden="true"></span>
+        </button>
+        <button id="navGroupGuild" data-tab="guild" type="button" class="header-icon primary-nav-button" data-tooltip="Guild" aria-label="Guild" aria-pressed="false" aria-controls="tabContent-guild">
+          <span data-cartovella-icon="globe" data-icon-class="h-5 w-5" aria-hidden="true"></span><span class="hidden md:inline">Guild</span>
+          <span id="navLockGuild" class="hidden" data-cartovella-icon="lock" data-icon-class="h-3 w-3" aria-hidden="true"></span>
+        </button>
       </nav>
     </div>
 
     <!-- Quick Utilities -->
     <div class="flex items-center gap-1 shrink-0">
-      <span id="headerSaveStatus" class="hidden max-w-[9rem] truncate rounded-lg border border-slate-700 bg-slate-900/80 px-2 py-1 text-[10px] text-slate-300 sm:text-xs" role="status" aria-live="polite"></span>
+      <span id="headerSaveStatus" class="hidden max-w-[7rem] truncate rounded-lg border border-slate-700 bg-slate-900/80 px-2 py-1 text-[10px] text-slate-300 sm:text-xs" role="status" aria-live="polite"></span>
 
-      <button id="btnCloudAuth" type="button" class="header-icon relative" aria-label="Account and cloud sync" title="Account &amp; Cloud Sync">
-        ☁️
+      <button id="btnCloudAuth" type="button" class="relative inline-flex min-h-10 items-center gap-2 rounded-full border border-amber-400/50 bg-amber-500 px-3 py-2 text-xs font-bold text-slate-950 shadow-lg shadow-amber-950/30 transition hover:bg-amber-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-200" aria-label="Sign In" title="Sign In">
+        <span id="btnCloudAuthIcon" data-cartovella-icon="cloud" data-icon-class="h-5 w-5" aria-hidden="true"></span>
+        <canvas id="headerAccountAvatar" width="24" height="24" aria-hidden="true" class="hidden h-6 w-6 rounded-full border border-amber-200/60 bg-slate-900" style="image-rendering:pixelated"></canvas>
+        <span id="btnCloudAuthLabel" class="max-w-24 truncate">Sign In</span>
         <span id="syncStatusDot" class="absolute top-1 right-1 w-2 h-2 rounded-full bg-slate-500" aria-hidden="true"></span>
       </button>
 
       <details id="settingsMenu" class="relative">
         <summary aria-label="Settings" title="Settings" class="header-icon cursor-pointer">
-          ⚙️
+          <span data-cartovella-icon="settings" data-icon-class="h-5 w-5" aria-hidden="true"></span>
         </summary>
         <div class="absolute right-0 mt-2 w-64 max-w-[calc(100vw-2rem)] py-2 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl">
           <button id="btnHomeConfig" type="button" class="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-800 flex items-center gap-2">
-            <span aria-hidden="true">🏰</span> Change Home Base
+            <span data-cartovella-icon="citadel" data-icon-class="h-4 w-4" aria-hidden="true"></span> Change Home Base
           </button>
           <hr class="border-slate-800 my-1">
           <button id="btnShare" type="button" class="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-800 flex items-center gap-2">
-            <span aria-hidden="true">🔗</span> Copy Public Profile Link
+            <span data-cartovella-icon="share" data-icon-class="h-4 w-4" aria-hidden="true"></span> Copy Public Profile Link
           </button>
           <button id="btnManualSave" type="button" class="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-800 flex items-center gap-2" aria-label="Save now">
-            <span aria-hidden="true">💾</span> Save now
+            <span data-cartovella-icon="save" data-icon-class="h-4 w-4" aria-hidden="true"></span> Save now
           </button>
           <hr class="border-slate-800 my-1">
           <button id="btnExport" class="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-800 flex items-center gap-2">
-            <span aria-hidden="true">📤</span> Export Passport (.json)
+            <span data-cartovella-icon="export" data-icon-class="h-4 w-4" aria-hidden="true"></span> Export Passport (.json)
           </button>
           <button id="btnImportTrigger" class="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-800 flex items-center gap-2">
-            <span>📂</span> Import Passport
+            <span data-cartovella-icon="import" data-icon-class="h-4 w-4" aria-hidden="true"></span> Import Passport
           </button>
           <button id="btnOpenCredits" type="button" class="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-800 flex items-center gap-2">
-            <span aria-hidden="true">ⓘ</span> Credits &amp; Data Sources
+            <span data-cartovella-icon="credits" data-icon-class="h-4 w-4" aria-hidden="true"></span> Credits &amp; Data Sources
+          </button>
+          <button id="btnTutorialToggle" type="button" class="w-full text-left px-4 py-2 text-xs text-amber-200 hover:bg-slate-800 flex items-center gap-2">
+            <span data-cartovella-icon="quest" data-icon-class="h-4 w-4" aria-hidden="true"></span>
+            <span id="tutorialToggleLabel">Skip Tutorial · Unlock All Features</span>
           </button>
           <input type="file" id="fileInput" accept=".json" class="hidden" />
           <hr class="border-slate-800 my-1">
           <button id="btnResetData" class="w-full text-left px-4 py-2 text-xs text-rose-400 hover:bg-rose-950/40 flex items-center gap-2">
-            <span>⚠️</span> Reset All Progress
+            <span data-cartovella-icon="warning" data-icon-class="h-4 w-4" aria-hidden="true"></span> Reset All Progress
           </button>
           <div class="border-t border-slate-700 mt-2 px-4 pt-3 pb-1 text-[11px] text-slate-400" role="status" aria-live="polite">
             <span id="npsCatalogStatus">Loading official NPS catalog...</span>
@@ -478,27 +564,57 @@
 
   <div id="viewingPublicAtlasBanner" class="hidden fixed inset-x-0 top-16 z-[650] border-y border-amber-300/50 bg-amber-950/95 px-4 py-3 text-amber-100 shadow-xl backdrop-blur-md" role="status" aria-live="polite">
     <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
-      <p id="viewingPublicAtlasMessage" class="text-sm font-semibold">🧭 Viewing a Public Atlas · Read-Only</p>
+      <p id="viewingPublicAtlasMessage" class="text-sm font-semibold">Viewing a Public Atlas · Read-Only</p>
       <button id="btnExitPublicAtlas" type="button" class="rounded-lg border border-amber-300/50 bg-amber-400 px-3 py-1.5 text-xs font-bold text-slate-950 hover:bg-amber-300">Return to My Atlas</button>
     </div>
   </div>
 
   <main class="flex-1 relative isolate z-0 overflow-hidden">
+    <div id="tutorialProgressBanner" class="hidden absolute top-14 left-1/2 z-[700] flex w-[min(calc(100%-1rem),38rem)] -translate-x-1/2 flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-400/50 bg-slate-950/95 px-3 py-2 text-xs shadow-xl backdrop-blur-md" role="status" aria-live="polite">
+      <p id="tutorialProgressText" class="min-w-0 flex-1 text-amber-100"></p>
+      <button id="btnSkipTutorial" type="button" class="shrink-0 rounded-lg bg-amber-400 px-3 py-2 text-[11px] font-bold text-slate-950 hover:bg-amber-300">Skip Tutorial · Unlock All Features</button>
+    </div>
+    <nav id="atlasViewSwitcher" aria-label="Atlas views" class="hidden absolute top-3 left-1/2 z-[700] -translate-x-1/2 rounded-xl border border-amber-400/30 bg-slate-950/95 p-1 shadow-xl backdrop-blur-md">
+      <div class="flex items-center gap-1">
+        <button id="toggleRpgMode" type="button" class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-white" title="Fog Map" aria-label="Fog Map" aria-pressed="true" aria-controls="tabContent-map">
+          <span data-cartovella-icon="compass" data-icon-class="h-4 w-4" aria-hidden="true"></span><span>Fog Map</span>
+        </button>
+        <button data-tab="scratch" type="button" class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-white" title="Scratch Maps" aria-label="Scratch Maps" aria-pressed="false" aria-controls="tabContent-scratch">
+          <span data-cartovella-icon="map" data-icon-class="h-4 w-4" aria-hidden="true"></span><span>Scratch Maps</span>
+          <span id="navLockScratch" class="hidden" data-cartovella-icon="lock" data-icon-class="h-3 w-3" aria-hidden="true"></span>
+        </button>
+        <button id="toggleClassicMode" type="button" class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-white" title="Checklist &amp; Catalog" aria-label="Checklist &amp; Catalog" aria-pressed="false" aria-controls="tabContent-bucketlist">
+          <span data-cartovella-icon="checklist" data-icon-class="h-4 w-4" aria-hidden="true"></span><span>Checklist &amp; Catalog</span>
+        </button>
+      </div>
+    </nav>
+    <nav id="questViewSwitcher" aria-label="Quests and badges views" class="hidden absolute top-3 left-1/2 z-[700] -translate-x-1/2 rounded-xl border border-amber-400/30 bg-slate-950/95 p-1 shadow-xl backdrop-blur-md">
+      <div class="flex items-center gap-1">
+        <button data-tab="questlines" type="button" class="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-white" title="Main Questlines" aria-label="Main Questlines" aria-pressed="false" aria-controls="tabContent-questlines">
+          <span data-cartovella-icon="quest" data-icon-class="h-4 w-4" aria-hidden="true"></span><span>Main Questlines</span>
+        </button>
+        <button data-tab="achievements" type="button" class="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-white" title="Achievements &amp; Badges" aria-label="Achievements &amp; Badges" aria-pressed="false" aria-controls="tabContent-achievements">
+          <span data-cartovella-icon="trophy" data-icon-class="h-4 w-4" aria-hidden="true"></span><span>Achievements &amp; Badges</span>
+        </button>
+      </div>
+    </nav>
 
     <!-- VIEW 1: INTERACTIVE FOG-OF-WAR & PARKS MAP -->
     <div id="tabContent-map" class="w-full h-full relative">
       <div id="leafletMap" class="w-full h-full z-0"></div>
       <canvas id="fogCanvasOverlay"></canvas>
-      <button id="btnCustomLocation" type="button" class="absolute top-4 right-4 z-[460] rpg-panel rounded-xl px-3 py-2 text-xs text-amber-200">
-        Add custom location
+      <button id="btnCustomLocation" type="button" class="absolute top-4 right-4 z-[460] rpg-panel rounded-xl px-3 py-2 text-xs text-amber-200 inline-flex items-center gap-2">
+        <span data-cartovella-icon="pin" data-icon-class="h-4 w-4" aria-hidden="true"></span> Add custom location
       </button>
-      <button id="btnExpedition" type="button" class="absolute top-16 right-4 z-[460] rpg-panel rounded-xl px-3 py-2 text-xs text-amber-200">🗺️ Log Expedition</button>
+      <button id="btnExpedition" type="button" class="absolute top-16 right-4 z-[460] rpg-panel rounded-xl px-3 py-2 text-xs text-amber-200 inline-flex items-center gap-2">
+        <span data-cartovella-icon="journal" data-icon-class="h-4 w-4" aria-hidden="true"></span> Log Expedition
+      </button>
 
       <!-- RPG Explorer Floating HUD (Top Left) -->
       <div id="rpgMapHud" class="absolute top-4 left-4 z-[460] rpg-panel rounded-2xl p-4 transition-all duration-300">
         <div id="rpgMapHudHeader" class="flex items-center justify-between border-b border-slate-700/80 pb-2 mb-3">
           <div class="flex items-center gap-2">
-            <span class="text-xl" id="hudClassIcon">⚔️</span>
+            <span class="inline-flex h-6 w-6 items-center justify-center" id="hudClassIcon" aria-hidden="true"></span>
             <div>
               <div class="cinzel text-xs font-bold text-amber-300 uppercase tracking-wider" id="hudClassName">Fresh Recruit</div>
               <div class="text-[11px] text-slate-400">Level <span id="hudLevel" class="text-amber-400 font-bold">1</span> Explorer</div>
@@ -564,12 +680,12 @@
 
       <!-- Quick Compass / Recenter on Home (Bottom Right) -->
       <button id="btnRecenterHome" class="absolute bottom-6 right-4 z-[460] rpg-panel rounded-xl px-3 py-2.5 text-xs font-semibold text-amber-300 hover:text-amber-200 flex items-center gap-2 hover:border-amber-400/50 transition-all">
-        <span>🏰</span> Jump to Home Citadel
+        <span data-cartovella-icon="citadel" data-icon-class="h-4 w-4" aria-hidden="true"></span> Jump to Home Citadel
       </button>
     </div>
 
     <!-- VIEW 2: SCRATCH-OFF ATLAS (SVG CHOROPLETH) -->
-    <div id="tabContent-scratch" class="w-full h-full p-4 md:p-6 overflow-y-auto hidden">
+    <div id="tabContent-scratch" class="w-full h-full p-4 pt-20 md:p-6 md:pt-24 overflow-y-auto hidden">
       <div class="max-w-6xl mx-auto space-y-4">
         <!-- Scratch Header Controls -->
         <div class="flex flex-wrap items-center justify-between gap-4 rpg-panel p-4 rounded-2xl">
@@ -657,7 +773,7 @@
     </div>
 
     <!-- VIEW 3: PASSPORT / RPG CHARACTER SHEET -->
-    <div id="tabContent-passport" class="w-full h-full p-4 md:p-8 overflow-y-auto hidden">
+    <div id="tabContent-passport" class="w-full h-full p-4 pt-20 md:p-8 md:pt-24 overflow-y-auto hidden">
       <div class="max-w-6xl mx-auto space-y-8 pb-16">
 
         <!-- Explorer Profile and Character -->
@@ -667,8 +783,8 @@
               <h2 class="cinzel text-2xl md:text-3xl font-extrabold text-amber-200" id="passportClassName">Alpine Ranger</h2>
               <p class="text-sm text-slate-300 mt-1" id="passportTitleDesc">Bound to the high peaks and wilderness.</p>
               <div class="flex flex-wrap gap-x-5 gap-y-2 mt-3 text-xs text-slate-400">
-                <span>🏰 Home: <b class="text-slate-200" id="passportHomeText">Not Assigned</b></span>
-                <span title="Share of global land covered by visited or lived country, state, county, and district boundaries. Area is estimated from the loaded atlas.">🗺️ Global Land Explored: <b class="text-amber-300 font-mono" id="passportExploredPct">—</b></span>
+                <span class="inline-flex items-center gap-1"><span data-cartovella-icon="citadel" data-icon-class="h-4 w-4" aria-hidden="true"></span> Home: <b class="text-slate-200" id="passportHomeText">Not Assigned</b></span>
+                <span class="inline-flex items-center gap-1" title="Share of global land covered by visited or lived country, state, county, and district boundaries. Area is estimated from the loaded atlas."><span data-cartovella-icon="map" data-icon-class="h-4 w-4" aria-hidden="true"></span> Global Land Explored: <b class="text-amber-300 font-mono" id="passportExploredPct">—</b></span>
               </div>
             </div>
             <div class="min-w-0">
@@ -813,7 +929,7 @@
       </div>
     </div>
 
-    <div id="tabContent-questlines" class="w-full h-full p-4 md:p-8 overflow-y-auto hidden">
+    <div id="tabContent-questlines" class="w-full h-full p-4 pt-20 md:p-8 md:pt-24 overflow-y-auto hidden">
       <div class="max-w-6xl mx-auto space-y-6 pb-20">
         <div class="rpg-panel rpg-panel-gold rounded-2xl p-5 md:p-6">
           <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
@@ -838,8 +954,8 @@
             <p class="text-xs text-slate-400 mt-2">Your trips, one story at a time.</p>
           </div>
           <div class="flex flex-wrap items-center gap-2">
-            <button id="btnToggleTravelRoutes" type="button" class="shrink-0 rounded-lg bg-slate-800 px-3 py-2 text-xs text-sky-200" aria-label="Show Route Map" aria-controls="travelGlobalRoutesPanel" aria-expanded="false" aria-pressed="false">🗺️ Route Map</button>
-            <button id="btnExportRoutesPng" type="button" class="hidden shrink-0 rounded-lg bg-amber-600 px-3 py-2 text-xs font-semibold text-slate-950">📸 Export Map (.png)</button>
+            <button id="btnToggleTravelRoutes" type="button" class="shrink-0 rounded-lg bg-slate-800 px-3 py-2 text-xs text-sky-200 inline-flex items-center gap-1.5" aria-label="Show Route Map" aria-controls="travelGlobalRoutesPanel" aria-expanded="false" aria-pressed="false"><span data-cartovella-icon="route" data-icon-class="h-4 w-4" aria-hidden="true"></span> Route Map</button>
+            <button id="btnExportRoutesPng" type="button" class="hidden shrink-0 rounded-lg bg-amber-600 px-3 py-2 text-xs font-semibold text-slate-950 inline-flex items-center gap-1.5"><span data-cartovella-icon="photo" data-icon-class="h-4 w-4" aria-hidden="true"></span> Export Map (.png)</button>
             <button id="btnShareAllTrips" type="button" aria-controls="bulkTripSharingDialog" class="shrink-0 rounded-lg bg-sky-800 px-3 py-2 text-xs text-sky-100">Share all trips</button>
             <button id="btnUnshareAllTrips" type="button" aria-controls="bulkTripSharingDialog" class="shrink-0 rounded-lg bg-slate-800 px-3 py-2 text-xs text-rose-200">Unshare all</button>
             <button id="btnHistoryExpedition" type="button" class="shrink-0 rounded-lg bg-emerald-600 px-3 py-2 text-xs">Log Expedition</button>
@@ -967,7 +1083,7 @@
       </div>
     </dialog>
 
-    <div id="tabContent-achievements" class="w-full h-full p-4 md:p-8 overflow-y-auto hidden">
+    <div id="tabContent-achievements" class="w-full h-full p-4 pt-20 md:p-8 md:pt-24 overflow-y-auto hidden">
       <section class="max-w-6xl mx-auto space-y-6 pb-20" aria-labelledby="achievementsTitle">
         <div class="rpg-panel p-6 rounded-2xl">
           <h2 id="achievementsTitle" class="cinzel text-xl font-bold text-amber-200">Achievements</h2>
@@ -1017,10 +1133,13 @@
     </div>
 
     <!-- VIEW 4: BUCKET LIST MODE (OVERLAY DRAWER / FULL VIEW) -->
-    <div id="tabContent-bucketlist" class="w-full h-full p-4 md:p-8 overflow-y-auto hidden">
+    <div id="tabContent-bucketlist" class="w-full h-full p-4 pt-20 md:p-8 md:pt-24 overflow-y-auto hidden">
       <div class="max-w-5xl mx-auto space-y-6 pb-20">
         <div class="rpg-panel p-4 md:p-6 rounded-2xl space-y-3">
-          <h2 class="cinzel text-xl font-bold text-amber-200">Travel Ledger</h2>
+          <div>
+            <h2 class="cinzel text-xl font-bold text-amber-200">Checklist &amp; Catalog</h2>
+            <p class="mt-1 text-xs text-slate-400">Travel Ledger · Search and track parks, cities, and destinations.</p>
+          </div>
           <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
             <input type="text" id="bucketSearch" aria-label="Search destinations" placeholder="Search destinations..." class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-amber-400 w-full min-w-0">
             <select id="bucketFilterStatus" aria-label="Visit status" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none w-full min-w-0">
@@ -1098,7 +1217,7 @@
         <span aria-hidden="true">&times;</span>
       </button>
       <div class="w-20 h-20 mx-auto rounded-3xl bg-gradient-to-tr from-amber-600 to-amber-300 flex items-center justify-center text-4xl shadow-xl shadow-amber-500/20">
-        🏰
+        <span data-cartovella-icon="citadel" data-icon-class="h-12 w-12" aria-hidden="true"></span>
       </div>
       <div>
         <h2 id="homeBaseModalTitle" class="cinzel text-2xl sm:text-3xl font-extrabold text-amber-200">Establish Your Home Citadel</h2>
@@ -1109,7 +1228,7 @@
 
       <div class="space-y-3">
         <button id="btnGeoDetect" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-sky-600 hover:from-blue-500 hover:to-sky-500 font-semibold text-white text-sm shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2 transition-all">
-          <span>📡</span> Detect My Location Automatically
+          <span data-cartovella-icon="locator" data-icon-class="h-5 w-5" aria-hidden="true"></span> Detect My Location Automatically
         </button>
 
         <div class="flex items-center gap-3 text-xs text-slate-500">
@@ -1133,6 +1252,9 @@
           <button class="quick-city-chip text-[11px] px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700" data-name="San Francisco, CA" data-lat="37.7749" data-lng="-122.4194">San Francisco</button>
           <button class="quick-city-chip text-[11px] px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700" data-name="London, UK" data-lat="51.5074" data-lng="-0.1278">London</button>
         </div>
+        <button id="btnHomeSkipTutorial" type="button" class="w-full rounded-xl border border-amber-400/60 bg-amber-400/10 px-4 py-2.5 text-sm font-bold text-amber-100 hover:bg-amber-400/20">
+          Skip Tutorial — Unlock All Features
+        </button>
 
         <div class="flex items-center gap-3 text-xs text-slate-500 pt-2">
           <div class="flex-1 h-px bg-slate-800"></div>
@@ -1140,10 +1262,10 @@
           <div class="flex-1 h-px bg-slate-800"></div>
         </div>
         <button id="btnHomeSignIn" type="button" class="w-full py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 font-semibold text-slate-950 text-sm flex items-center justify-center gap-2 transition-all">
-          <span aria-hidden="true">☁️</span> Sign In to an Existing Account
+          <span data-cartovella-icon="cloud" data-icon-class="h-5 w-5" aria-hidden="true"></span> Sign In to an Existing Account
         </button>
         <button id="btnHomeImport" type="button" class="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 font-semibold text-slate-200 text-sm flex items-center justify-center gap-2 transition-all">
-          <span aria-hidden="true">📂</span> Import Passport (.json)
+          <span data-cartovella-icon="import" data-icon-class="h-5 w-5" aria-hidden="true"></span> Import Passport (.json)
         </button>
       </div>
 
@@ -1221,7 +1343,7 @@
   </div>
 
   <div id="toastNotification" role="status" aria-live="polite" aria-atomic="true" class="fixed top-20 right-6 z-[1100] transform translate-y-4 opacity-0 pointer-events-none transition-all duration-300 rpg-panel rounded-2xl p-4 shadow-2xl flex items-center gap-3 border-amber-500/50 max-w-sm">
-    <div class="text-2xl" id="toastIcon">🏆</div>
+    <div class="flex items-center justify-center" id="toastIcon" aria-hidden="true"><span data-cartovella-icon="trophy" data-icon-class="h-7 w-7"></span></div>
     <div class="min-w-0">
       <h4 class="text-xs font-bold text-amber-300 uppercase tracking-wider" id="toastTitle">Achievement Unlocked</h4>
       <p class="text-xs text-slate-200 mt-0.5" id="toastMsg">You cleared the fog of your home!</p>
@@ -1233,7 +1355,7 @@
       <button id="btnDismissAchievement" type="button" aria-label="Close achievement notification" class="absolute top-3 right-3 rounded-lg px-2.5 py-1 text-xl leading-none text-slate-400 hover:text-white hover:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400">
         <span aria-hidden="true">&times;</span>
       </button>
-      <div class="text-5xl mb-3" aria-hidden="true">🏆</div>
+      <div class="mb-3 flex justify-center" aria-hidden="true"><span data-cartovella-icon="trophy" data-icon-class="h-12 w-12"></span></div>
       <h2 id="achievementNotificationTitle" class="cinzel text-xl sm:text-2xl font-extrabold text-amber-200">Achievements Unlocked</h2>
       <p class="text-sm text-slate-300 mt-2">Your travels have earned new achievements.</p>
       <ul id="achievementNotificationList" class="mt-5 grid max-h-[45vh] grid-cols-1 gap-3 overflow-y-auto text-left sm:grid-cols-2"></ul>
@@ -1401,15 +1523,15 @@
     </section>
   </div>
 
-  <script src="./nps-catalog.js?v=20261028-holiday-hats-v1"></script>
-  <script src="./national-parks-scratch.js?v=20261028-holiday-hats-v1"></script>
-  <script src="./international-parks.js?v=20261028-holiday-hats-v1"></script>
-  <script src="./ecoregions.js?v=20261028-holiday-hats-v1"></script>
-  <script src="./coordinate-lookups.js?v=20261028-holiday-hats-v1"></script>
-  <script src="./micro-states.js?v=20261028-holiday-hats-v1"></script>
-  <script src="./travel-ledger.js?v=20261028-holiday-hats-v1"></script>
-  <script src="./character-creator.js?v=20261028-holiday-hats-v1"></script>
-  <script src="./rarity-config.js?v=20261028-holiday-hats-v1"></script>
+  <script src="./nps-catalog.js?v=20261028-navigation-tutorial-v1"></script>
+  <script src="./national-parks-scratch.js?v=20261028-navigation-tutorial-v1"></script>
+  <script src="./international-parks.js?v=20261028-navigation-tutorial-v1"></script>
+  <script src="./ecoregions.js?v=20261028-navigation-tutorial-v1"></script>
+  <script src="./coordinate-lookups.js?v=20261028-navigation-tutorial-v1"></script>
+  <script src="./micro-states.js?v=20261028-navigation-tutorial-v1"></script>
+  <script src="./travel-ledger.js?v=20261028-navigation-tutorial-v1"></script>
+  <script src="./character-creator.js?v=20261028-navigation-tutorial-v1"></script>
+  <script src="./rarity-config.js?v=20261028-navigation-tutorial-v1"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -2579,6 +2701,7 @@
         showNotification('Travel record not saved', error.message, '⚠️');
         throw error;
       }
+      advanceTutorialFromProgress();
       const discovered = [
         ...PARKS.filter(p => TravelLedger.isVisited(AppState.pins[p.id]) && !visitedBefore.has(`park:${p.id}`))
           .map(p => `park:${p.id}`),
@@ -2803,10 +2926,20 @@
 
     function showNotification(title, message, icon = '🏆') {
       const messageElement = document.getElementById('toastMsg');
-      document.getElementById('toastTitle').textContent = title;
+      document.getElementById('toastTitle').textContent = title.replace(
+        /^(?:🏆|✨|🧭|⚠️|📂|📜|🗺️|🏰|🔗|🌐|💾|📡)\s*/,
+        ''
+      );
       messageElement.textContent = message;
       messageElement.classList.remove('hidden');
-      document.getElementById('toastIcon').textContent = icon;
+      const iconNames = {
+        '🏆': 'trophy', '✨': 'credits', '🧭': 'compass', '⚠️': 'warning',
+        '📂': 'import', '📜': 'journal', '🗺️': 'map', '🏰': 'citadel',
+        '🔗': 'share', '🌐': 'globe', '💾': 'save', '📡': 'locator',
+        '🏞️': 'map', '📌': 'pin', '📍': 'pin'
+      };
+      document.getElementById('toastIcon').innerHTML =
+        cartovellaIcon(iconNames[icon] || 'shield', 'h-7 w-7');
       displayNotificationToast();
     }
 
@@ -2834,7 +2967,7 @@
         } else {
           const icon = document.createElement('span');
           icon.className = 'flex h-14 w-14 shrink-0 items-center justify-center rounded-lg border border-amber-300/40 bg-amber-950/40 text-2xl';
-          icon.textContent = '🏆';
+          icon.innerHTML = cartovellaIcon('trophy', 'h-8 w-8');
           item.appendChild(icon);
         }
         const title = document.createElement('span');
@@ -4414,7 +4547,7 @@
             ${button('v', 'Visited', 'bg-emerald-600 hover:bg-emerald-500')}
             ${button('w', 'Wishlist', 'bg-pink-600 hover:bg-pink-500')}
             ${button('t', 'Transited', 'bg-slate-600')}
-            ${button('l', 'Lived 🏰', 'bg-blue-500')}
+            ${button('l', 'Lived', 'bg-blue-500')}
             <button onclick="setMicroStateStatus(${index}, 'un')" class="py-1 px-2 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 text-center">Clear</button>
           </div>
         </div>
@@ -4793,7 +4926,7 @@
               cur === 'w' ? 'bg-pink-950 text-pink-300 border border-pink-500/40' :
               'bg-slate-800 text-slate-400'
             }">
-              ${TravelLedger.labels[cur] || 'Unvisited'}${cur === 'l' ? ' 🏰' : ''}
+              ${TravelLedger.labels[cur] || 'Unvisited'}
             </span>
           </div>
           ${p.designation ? `<p class="text-xs text-amber-300">${escapeHtml(p.designation)}</p>` : ''}
@@ -4808,7 +4941,7 @@
             <button onclick="setPinStatus('${p.id}', 'v')" class="py-1 px-2 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-center transition-all ${cur==='v'?'ring-2 ring-emerald-300':''}">Visited</button>
             <button onclick="setPinStatus('${p.id}', 'w')" class="py-1 px-2 rounded bg-pink-600 hover:bg-pink-500 text-white text-center transition-all ${cur==='w'?'ring-2 ring-pink-300':''}">Wishlist</button>
             <button onclick="setPinStatus('${p.id}', 't')" class="py-1 px-2 rounded bg-slate-600 text-white">Transited</button>
-            <button onclick="setPinStatus('${p.id}', 'l')" class="py-1 px-2 rounded bg-blue-500 text-white">Lived 🏰</button>
+            <button onclick="setPinStatus('${p.id}', 'l')" class="py-1 px-2 rounded bg-blue-500 text-white">Lived</button>
             <button onclick="setPinStatus('${p.id}', 'un')" class="py-1 px-2 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 text-center transition-all">Clear</button>
           </div>
         </div>
@@ -6994,7 +7127,7 @@
             <button type="button" data-photon-id="${escapeHtml(place.photonId)}" data-photon-status="v" ${AppState.viewOnly ? 'disabled' : ''} class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-500 text-slate-950 disabled:opacity-40">Visited</button>
             <button type="button" data-photon-id="${escapeHtml(place.photonId)}" data-photon-status="w" ${AppState.viewOnly ? 'disabled' : ''} class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-pink-500 text-white disabled:opacity-40">Wishlist</button>
             <button type="button" data-photon-id="${escapeHtml(place.photonId)}" data-photon-status="t" ${AppState.viewOnly ? 'disabled' : ''} class="px-2 py-1 rounded-lg text-xs bg-slate-700 disabled:opacity-40">Transited</button>
-            <button type="button" data-photon-id="${escapeHtml(place.photonId)}" data-photon-status="l" ${AppState.viewOnly ? 'disabled' : ''} class="px-2 py-1 rounded-lg text-xs bg-blue-500 text-white disabled:opacity-40">Lived 🏰</button>
+            <button type="button" data-photon-id="${escapeHtml(place.photonId)}" data-photon-status="l" ${AppState.viewOnly ? 'disabled' : ''} class="px-2 py-1 rounded-lg text-xs bg-blue-500 text-white disabled:opacity-40">Lived</button>
           </div>
         </article>
       `).join('');
@@ -7214,7 +7347,7 @@
         card.innerHTML = `
           <div class="min-w-0 w-full sm:w-auto">
             <div class="flex flex-wrap items-center gap-2"><h4 class="font-bold text-sm text-slate-200"><button type="button" data-atlas-pin-kind="destination" data-atlas-pin-id="${escapeHtml(p.id)}" aria-label="View trips and details for ${escapeHtml(p.name)}" class="text-left hover:text-amber-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400">${escapeHtml(p.name)}</button></h4>${rarityBadgeMarkup(p.rarityTier || p.rarity?.rarityTier)}</div>
-            <p class="text-xs" style="color:${TravelLedger.colors[cur] || '#94a3b8'}">${TravelLedger.labels[cur] || 'Unexplored'}${cur === 'l' ? ' 🏰' : ''}</p>
+            <p class="text-xs" style="color:${TravelLedger.colors[cur] || '#94a3b8'}">${TravelLedger.labels[cur] || 'Unexplored'}</p>
             ${p.designation ? `<p class="text-[11px] text-amber-300">${escapeHtml(p.designation)}</p>` : ''}
             ${p.url ? `<a href="${escapeHtml(p.url)}" target="_blank" rel="noopener noreferrer" class="text-[11px] text-sky-300 underline">${p.intl ? 'Park information source' : 'Official NPS site'}</a>` : ''}
             ${internationalMetadata(p)}
@@ -7232,7 +7365,7 @@
             <button onclick="setPinStatus('${p.id}', 'v')" class="px-2.5 py-1 rounded-lg text-xs font-semibold ${cur==='v'?'bg-emerald-500 text-slate-950':'bg-slate-800 text-slate-400 hover:text-white'}">Visited</button>
             <button onclick="setPinStatus('${p.id}', 'w')" class="px-2.5 py-1 rounded-lg text-xs font-semibold ${cur==='w'?'bg-pink-500 text-white':'bg-slate-800 text-slate-400 hover:text-white'}">Wishlist</button>
             <button onclick="setPinStatus('${p.id}', 't')" class="px-2 py-1 rounded-lg text-xs bg-slate-700">Transited</button>
-            <button onclick="setPinStatus('${p.id}', 'l')" class="px-2 py-1 rounded-lg text-xs bg-blue-500 text-white">Lived 🏰</button>
+            <button onclick="setPinStatus('${p.id}', 'l')" class="px-2 py-1 rounded-lg text-xs bg-blue-500 text-white">Lived</button>
             <button onclick="setPinStatus('${p.id}', 'un')" class="px-2 py-1 rounded-lg text-xs bg-slate-800 text-slate-400 hover:text-white" title="Clear">✕</button>
           </div>
         `;
@@ -7261,11 +7394,12 @@
       document.getElementById('hudBiomesCount').textContent = `${biomeCatalogLoaded ? stats.biomesSet.size : '--'} / ${Object.keys(BIOMES).length}`;
       document.getElementById('hudQuestsCount').textContent = `${stats.completedQuestsCount} / ${QUESTLINES.length}`;
       document.getElementById('hudCountiesCount').textContent = `${stats.countiesCount} / ${stats.countyTotal || '--'}`;
-      document.getElementById('hudClassIcon').textContent = stats.avatar;
+      document.getElementById('hudClassIcon').innerHTML = cartovellaIcon('shield', 'h-5 w-5');
     }
 
     function updateAllUI({ updateNationalParksInPlace = false } = {}) {
       updateHeaderNavigation();
+      updateHeaderAccountPill();
       updateHeaderSaveStatus();
       renderCountyHitboxes();
       document.getElementById('btnCustomLocation').classList.toggle('hidden', AppState.viewOnly);
@@ -7296,26 +7430,181 @@
   </script>
 
   <script>
-    // Tab Switching
-    function updateHeaderNavigation() {
-      document.body.classList.toggle('mode-classic', AppState.mode === 'classic');
-      document.getElementById('rpgMapHud').classList.toggle('hidden', AppState.mode === 'classic');
-      const showRpgMapControls = AppState.mode === 'rpg' && AppState.currentTab === 'map';
-      document.getElementById('btnRecenterHome').classList.toggle('hidden', !showRpgMapControls);
-      document.getElementById('toggleRpgMode').setAttribute('aria-pressed', String(showRpgMapControls));
-      document.getElementById('toggleClassicMode').setAttribute('aria-pressed', String(AppState.mode === 'classic' && AppState.currentTab === 'bucketlist'));
-      document.querySelectorAll('#navTabs button').forEach(button => {
-        button.setAttribute('aria-pressed', String(button.dataset.tab === AppState.currentTab));
+    const TUTORIAL_STORAGE_KEY = 'cartovella_tutorial_state';
+    const TUTORIAL_GOALS = [
+      'Step 1 of 4 · Establish your Home Citadel.',
+      'Step 2 of 4 · Mark your first Visited place on the Fog Map or Checklist & Catalog.',
+      'Step 3 of 4 · Visit Explorer to unlock Quests & Badges.',
+      'Step 4 of 4 · Log your first Expedition to unlock Travel Log and Guild.'
+    ];
+    let tutorialState = null;
+    let tutorialInitialized = false;
+
+    function persistTutorialState() {
+      try {
+        localStorage.setItem(TUTORIAL_STORAGE_KEY, JSON.stringify(tutorialState));
+      } catch (error) {
+        console.error('Could not save Cartovella tutorial progress.', error);
+        showNotification('Tutorial progress not saved', error.message, '⚠️');
+      }
+    }
+
+    function tutorialHasVisitedPlace() {
+      const statuses = [
+        ...Object.values(AppState.pins || {}),
+        ...Object.values(AppState.regions || {}),
+        ...Object.values(AppState.counties || {}),
+        ...(AppState.customPois || []).map(poi => poi.status)
+      ];
+      return statuses.some(TravelLedger.isVisited);
+    }
+
+    function hasExistingPassportProgress() {
+      return AppState.viewOnly === true ||
+        (!!AppState.homeBase && TravelLedger.hasLoggedTravel(AppState)) ||
+        tutorialHasVisitedPlace() ||
+        (AppState.expeditions || []).length > 0;
+    }
+
+    function tutorialCanOpenTab(tabId) {
+      if (AppState.viewOnly || !tutorialInitialized || !tutorialState ||
+          tutorialState.completed || tutorialState.unlockedAll) return true;
+      if (tabId === 'map' || tabId === 'bucketlist') return true;
+      if (tabId === 'scratch' || tabId === 'passport') return tutorialState.step >= 2;
+      if (tabId === 'questlines' || tabId === 'achievements') return tutorialState.step >= 3;
+      if (tabId === 'travel' || tabId === 'guild') return false;
+      return true;
+    }
+
+    function updateTutorialUI() {
+      if (!tutorialState) return;
+      const banner = document.getElementById('tutorialProgressBanner');
+      const visible = tutorialInitialized && !tutorialState.completed && !AppState.viewOnly;
+      banner.classList.toggle('hidden', !visible);
+      ['tabContent-scratch', 'tabContent-passport', 'tabContent-questlines',
+        'tabContent-bucketlist', 'tabContent-achievements'].forEach(id => {
+        document.getElementById(id).classList.toggle('tutorial-banner-visible', visible);
+      });
+      document.getElementById('tutorialProgressText').textContent =
+        TUTORIAL_GOALS[Math.min(tutorialState.step, TUTORIAL_GOALS.length - 1)];
+      const toggleLabel = document.getElementById('tutorialToggleLabel');
+      toggleLabel.textContent = tutorialState.completed
+        ? 'Replay Tutorial' : 'Skip Tutorial · Unlock All Features';
+
+      const lockedFeatures = [
+        { tab: 'scratch', button: document.querySelector('#atlasViewSwitcher [data-tab="scratch"]'), lock: 'navLockScratch', label: 'Scratch Maps' },
+        { tab: 'travel', button: document.getElementById('navGroupTravel'), lock: 'navLockTravel', label: 'Travel Log' },
+        { tab: 'passport', button: document.getElementById('navGroupExplorer'), lock: 'navLockExplorer', label: 'Explorer' },
+        { tab: 'questlines', button: document.getElementById('navGroupQuests'), lock: 'navLockQuests', label: 'Quests & Badges' },
+        { tab: 'guild', button: document.getElementById('navGroupGuild'), lock: 'navLockGuild', label: 'Guild' }
+      ];
+      lockedFeatures.forEach(({ tab, button, lock, label }) => {
+        const isLocked = !tutorialCanOpenTab(tab);
+        const lockIcon = document.getElementById(lock);
+        lockIcon.classList.toggle('hidden', !isLocked);
+        button.disabled = isLocked;
+        button.setAttribute('aria-label', isLocked ? `${label} (locked during tutorial)` : label);
+        if (button.classList.contains('primary-nav-button')) {
+          button.dataset.tooltip = isLocked ? `${label} (locked during tutorial)` : label;
+          button.title = isLocked ? `${label} unlocks as you progress through the tutorial.` : '';
+        } else {
+          button.title = isLocked ? `${label} unlocks as you progress through the tutorial.` : label;
+        }
       });
     }
 
+    function completeTutorial() {
+      tutorialState = { version: 1, step: 4, completed: true, unlockedAll: true };
+      persistTutorialState();
+      updateTutorialUI();
+      updateHeaderNavigation();
+    }
+
+    function advanceTutorialTo(step) {
+      if (!tutorialInitialized || !tutorialState || tutorialState.completed || step <= tutorialState.step) return;
+      if (step >= TUTORIAL_GOALS.length) {
+        completeTutorial();
+        return;
+      }
+      tutorialState.step = step;
+      persistTutorialState();
+      updateTutorialUI();
+      updateHeaderNavigation();
+    }
+
+    function advanceTutorialFromProgress() {
+      if (!tutorialInitialized || !tutorialState || tutorialState.completed) return;
+      if (tutorialState.step === 0 && AppState.homeBase) advanceTutorialTo(1);
+      if (tutorialState.step === 1 && tutorialHasVisitedPlace()) advanceTutorialTo(2);
+      if (tutorialState.step === 3 && (AppState.expeditions || []).length > 0) completeTutorial();
+    }
+
+    function initializeProgressiveTutorial() {
+      let stored = null;
+      try {
+        stored = localStorage.getItem(TUTORIAL_STORAGE_KEY);
+      } catch (error) {
+        console.error('Could not read Cartovella tutorial progress.', error);
+        showNotification('Tutorial progress unavailable', error.message, '⚠️');
+      }
+      tutorialState = { version: 1, step: 0, completed: false, unlockedAll: false };
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (parsed?.version !== 1 || !Number.isInteger(parsed.step) ||
+              parsed.step < 0 || parsed.step > 4 ||
+              typeof parsed.completed !== 'boolean' || typeof parsed.unlockedAll !== 'boolean') {
+            throw new Error('Stored tutorial progress has an unsupported structure.');
+          }
+          tutorialState = parsed;
+        } catch (error) {
+          console.error('Stored Cartovella tutorial progress was invalid.', error);
+          showNotification('Tutorial restarted', 'Saved tutorial progress was invalid and has been restarted.', '⚠️');
+          persistTutorialState();
+        }
+      }
+      tutorialInitialized = true;
+      if (!stored) persistTutorialState();
+      if (hasExistingPassportProgress()) {
+        tutorialState = { version: 1, step: 4, completed: true, unlockedAll: true };
+        persistTutorialState();
+      } else {
+        advanceTutorialFromProgress();
+      }
+      updateTutorialUI();
+    }
+
+    function updateHeaderNavigation() {
+      document.body.classList.toggle('mode-classic', AppState.mode === 'classic');
+      document.getElementById('rpgMapHud').classList.toggle('hidden', AppState.mode === 'classic');
+      const isAtlasView = ['map', 'scratch', 'bucketlist'].includes(AppState.currentTab);
+      const isQuestView = ['questlines', 'achievements'].includes(AppState.currentTab);
+      const showRpgMapControls = AppState.mode === 'rpg' && AppState.currentTab === 'map';
+      document.getElementById('btnRecenterHome').classList.toggle('hidden', !showRpgMapControls);
+      document.getElementById('atlasViewSwitcher').classList.toggle('hidden', !isAtlasView);
+      document.getElementById('questViewSwitcher').classList.toggle('hidden', !isQuestView);
+      document.getElementById('toggleRpgMode').setAttribute('aria-pressed', String(showRpgMapControls));
+      document.getElementById('toggleClassicMode').setAttribute('aria-pressed', String(AppState.mode === 'classic' && AppState.currentTab === 'bucketlist'));
+      document.getElementById('navGroupAtlas').setAttribute('aria-pressed', String(isAtlasView));
+      document.getElementById('navGroupQuests').setAttribute('aria-pressed', String(isQuestView));
+      document.querySelectorAll('#navTabs [data-tab], #atlasViewSwitcher [data-tab], #questViewSwitcher [data-tab]').forEach(button => {
+        button.setAttribute('aria-pressed', String(button.dataset.tab === AppState.currentTab));
+      });
+      updateTutorialUI();
+    }
+
     function switchTab(tabId) {
-      if (profileOnlyView && tabId !== 'guild') return;
+      if (profileOnlyView && tabId !== 'guild') return false;
+      if (!tutorialCanOpenTab(tabId)) return false;
       if (tabId === 'map' && AppState.mode !== 'rpg') {
         AppState.mode = 'rpg';
         saveState();
       }
       AppState.currentTab = tabId;
+      if (tabId === 'passport' && tutorialState?.step === 2) {
+        advanceTutorialTo(3);
+        advanceTutorialFromProgress();
+      }
       updateHeaderNavigation();
       if (tabId === 'map') renderCountyHitboxes();
 
@@ -7366,10 +7655,34 @@
         }
         if (!profileOnlyView) void loadGuildProfiles();
       }
+      return true;
     }
 
-    document.querySelectorAll('#navTabs button').forEach(btn => {
+    document.querySelectorAll('#navTabs [data-tab], #atlasViewSwitcher [data-tab], #questViewSwitcher [data-tab]').forEach(btn => {
       btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+    });
+    document.getElementById('navGroupAtlas').addEventListener('click', () => {
+      switchTab(['map', 'scratch', 'bucketlist'].includes(AppState.currentTab) ? AppState.currentTab : 'map');
+    });
+    document.getElementById('navGroupQuests').addEventListener('click', () => {
+      switchTab(['questlines', 'achievements'].includes(AppState.currentTab) ? AppState.currentTab : 'questlines');
+    });
+    document.getElementById('btnSkipTutorial').addEventListener('click', completeTutorial);
+    document.getElementById('btnHomeSkipTutorial').addEventListener('click', () => {
+      completeTutorial();
+      closeHomeModal();
+    });
+    document.getElementById('btnTutorialToggle').addEventListener('click', () => {
+      if (tutorialState?.completed) {
+        tutorialState = { version: 1, step: 0, completed: false, unlockedAll: true };
+        persistTutorialState();
+        advanceTutorialFromProgress();
+        switchTab('map');
+        updateTutorialUI();
+      } else {
+        completeTutorial();
+      }
+      document.getElementById('settingsMenu').open = false;
     });
     document.getElementById('btnOpenQuestlines').addEventListener('click', () => switchTab('questlines'));
 
@@ -7690,6 +8003,7 @@
           showNotification('Importing passport', 'Saving records and updating your atlas...', '📂');
           await yieldToMain();
           commitLedger(() => applyPassport(parsed), { notifyProgress: false });
+          if (hasPassportData(parsed)) completeTutorial();
           let recoveryCleanupWarning = '';
           if (includesRecoveryDraft) {
             try {
@@ -7741,11 +8055,12 @@
       AppState.routes = [];
       AppState.customLocations = [];
       saveState();
+      localStorage.removeItem(TUTORIAL_STORAGE_KEY);
       location.reload();
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261028-holiday-hats-v1"></script>
+  <script src="./expedition-ui.js?v=20261028-navigation-tutorial-v1"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);
@@ -7911,7 +8226,7 @@
 
       status.textContent = label;
       status.title = latestCloudStatusMessage || label;
-      status.className = `max-w-[9rem] truncate rounded-lg border px-2 py-1 text-[10px] sm:text-xs ${
+      status.className = `max-w-[7rem] truncate rounded-lg border px-2 py-1 text-[10px] sm:text-xs ${
         latestCloudStatusFailed
           ? 'border-rose-500/40 bg-rose-950/50 text-rose-200'
           : saving
@@ -7952,9 +8267,34 @@
 
     if (typeof window.setInterval === 'function') window.setInterval(updateHeaderSaveStatus, 1000);
 
+    function updateHeaderAccountPill() {
+      const isLoggedIn = !!cloudSession?.user;
+      const authButton = document.getElementById('btnCloudAuth');
+      const authButtonIcon = document.getElementById('btnCloudAuthIcon');
+      const authButtonAvatar = document.getElementById('headerAccountAvatar');
+      const authButtonLabel = document.getElementById('btnCloudAuthLabel');
+      const accountName = publicProfile.username ||
+        String(cloudSession?.user?.email || '').split('@')[0] || 'Explorer';
+      authButtonLabel.textContent = isLoggedIn ? `@${accountName}` : 'Sign In';
+      authButtonIcon.classList.toggle('hidden', isLoggedIn);
+      authButtonAvatar.classList.toggle('hidden', !isLoggedIn);
+      authButton.className = isLoggedIn
+        ? 'relative inline-flex min-h-10 max-w-48 items-center gap-2 rounded-full border border-emerald-400/40 bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-100 shadow-lg transition hover:border-amber-300 hover:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-200'
+        : 'relative inline-flex min-h-10 items-center gap-2 rounded-full border border-amber-400/50 bg-amber-500 px-3 py-2 text-xs font-bold text-slate-950 shadow-lg shadow-amber-950/30 transition hover:bg-amber-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-200';
+      authButton.setAttribute('aria-label', isLoggedIn ? `Explorer Account: @${accountName}` : 'Sign In');
+      authButton.title = isLoggedIn ? `Explorer Account · @${accountName}` : 'Sign In';
+      const characterSnapshot = JSON.stringify(AppState.character);
+      if (isLoggedIn && typeof authButtonAvatar.getContext === 'function' &&
+          authButtonAvatar.dataset.characterSnapshot !== characterSnapshot) {
+        CharacterCreator.renderAvatar(authButtonAvatar, AppState.character);
+        authButtonAvatar.dataset.characterSnapshot = characterSnapshot;
+      }
+    }
+
     function updateAuthUI() {
       const isLoggedIn = !!cloudSession?.user;
       const hasConflict = !!pendingCloudConflict;
+      updateHeaderAccountPill();
       document.getElementById('btnHomeSignIn').classList.toggle('hidden', isLoggedIn);
       document.getElementById('cloudConflictView').classList.toggle('hidden', !hasConflict);
       document.getElementById('authViewLoggedIn').classList.toggle('hidden', !isLoggedIn || hasConflict);
@@ -8282,6 +8622,7 @@
 
     async function renderLoadedCloudPassport(parsed, cloudUpdatedAt = null) {
       applyPassport(parsed);
+      if (hasPassportData(parsed)) completeTutorial();
       await yieldToMain();
       syncDerivedState();
       await yieldToMain();
@@ -8691,6 +9032,7 @@
       }
       publicProfile = normalized;
       updatePublicProfileSettings();
+      updateHeaderAccountPill();
     }
 
     function updatePublicProfileSettings() {
@@ -8928,7 +9270,7 @@
       activePublicAtlasUsername = username;
       AppState.viewOnly = true;
       document.getElementById('viewingPublicAtlasMessage').textContent =
-        `🧭 Loading @${username}'s Public Atlas · Read-Only`;
+        `Loading @${username}'s Public Atlas · Read-Only`;
       document.getElementById('viewingPublicAtlasBanner').classList.remove('hidden');
       return username;
     }
@@ -8966,7 +9308,7 @@
       document.getElementById('guildSearchLabel').classList.add('hidden');
       document.getElementById('guildStatus').textContent = `Viewing @${username}'s public Explorer card and shared trips.`;
       document.getElementById('viewingPublicAtlasMessage').textContent =
-        `🧭 Viewing @${username}'s Explorer Profile · Read-Only`;
+        `Viewing @${username}'s Explorer Profile · Read-Only`;
       renderGuildDirectory();
       renderGuildExpeditions();
       switchTab('guild');
@@ -8993,10 +9335,11 @@
       if (!activePublicAtlasUsername) localAtlasReturnTab = AppState.currentTab;
       activePublicAtlasUsername = normalizedUsername;
       AppState.viewOnly = true;
+      completeTutorial();
       const requestId = ++publicAtlasRequestId;
       updatePublicAtlasUrl(normalizedUsername);
       document.getElementById('viewingPublicAtlasMessage').textContent =
-        `🧭 Loading @${normalizedUsername}'s Public Atlas · Read-Only`;
+        `Loading @${normalizedUsername}'s Public Atlas · Read-Only`;
       document.getElementById('viewingPublicAtlasBanner').classList.remove('hidden');
       try {
         const response = await fetch(
@@ -9034,13 +9377,13 @@
         const displayName = typeof record.display_name === 'string' && record.display_name.trim()
           ? record.display_name.trim() : calculateStats().cls;
         document.getElementById('viewingPublicAtlasMessage').textContent =
-          `🧭 Viewing @${normalizedUsername}'s Public Atlas (${displayName}) · Read-Only`;
+          `Viewing @${normalizedUsername}'s Public Atlas (${displayName}) · Read-Only`;
         return true;
       } catch (error) {
         if (requestId !== publicAtlasRequestId) return false;
         console.error(`Could not load public Atlas for @${normalizedUsername}.`, error);
         document.getElementById('viewingPublicAtlasMessage').textContent =
-          `🧭 @${normalizedUsername}'s Public Atlas is unavailable · ${error.message}`;
+          `@${normalizedUsername}'s Public Atlas is unavailable · ${error.message}`;
         document.getElementById('guildStatus').textContent = error.message;
         return false;
       } finally {
@@ -9394,8 +9737,10 @@
     });
 
     window.addEventListener('DOMContentLoaded', async () => {
+      renderCartovellaIcons(document);
       const publicUsername = beginPublicAtlasView();
       await loadPersistedState();
+      initializeProgressiveTutorial();
       if (cloudSession?.user?.id) preparePublicProfileForAccount(cloudSession.user.id);
       updateStorageWarning();
       updateAuthUI();
