@@ -1020,6 +1020,7 @@ await checkAsync('different local and cloud passports are compared without repla
   assert.ok(settings.includes('id="btnManualSave"'));
   assert.ok(settings.includes('id="btnShare"'));
   assert.ok(!header.includes('id="btnHomeConfig"'));
+  assert.doesNotMatch(html, /headerHometownText/);
   assert.ok(!header.includes('id="btnManualSave"'));
   assert.ok(!header.includes('id="btnShare"'));
   assert.match(html, /id="btnRecenterHome"[^>]*>[\s\S]*Jump to Home Citadel/);

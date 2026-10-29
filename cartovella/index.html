@@ -7262,10 +7262,6 @@
       document.getElementById('hudQuestsCount').textContent = `${stats.completedQuestsCount} / ${QUESTLINES.length}`;
       document.getElementById('hudCountiesCount').textContent = `${stats.countiesCount} / ${stats.countyTotal || '--'}`;
       document.getElementById('hudClassIcon').textContent = stats.avatar;
-
-      if (AppState.homeBase) {
-        document.getElementById('headerHometownText').textContent = AppState.homeBase.name;
-      }
     }
 
     function updateAllUI({ updateNationalParksInPlace = false } = {}) {
