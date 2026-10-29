@@ -1631,6 +1631,26 @@ check('the shared stage animation loop advances pets and effects without moving 
     assert.ok(avatarDrawCalls.every(call =>
       call.length === 9 && call.slice(1).join(',') === '0,0,80,48,0,0,80,48'
     ), 'avatar thumbnails use the centered 80x48 bust crop');
+    const portraitTransforms = [];
+    const portraitDrawCalls = [];
+    const portraitContext = {
+      clearRect() {},
+      save() {},
+      translate(...values) { portraitTransforms.push(['translate', ...values]); },
+      scale(...values) { portraitTransforms.push(['scale', ...values]); },
+      restore() {},
+      drawImage(...args) { portraitDrawCalls.push(args); }
+    };
+    const portraitCanvas = {
+      width: 24, height: 24, isConnected: true,
+      getContext: () => portraitContext
+    };
+    characterCreator.renderAvatar(portraitCanvas, character, { portrait: true });
+    assert.deepEqual(portraitTransforms.slice(0, 2), [
+      ['translate', -48, -28.5],
+      ['scale', 0.75, 0.75]
+    ], 'header portrait frames the character head and shoulders in a 24x24 canvas');
+    assert.ok(portraitDrawCalls.some(call => call.slice(5).join(',') === '62,39,36,43'));
     const avatarTransforms = [];
     const guildAvatarContext = {
       clearRect() {},

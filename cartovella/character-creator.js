@@ -1494,17 +1494,29 @@
     drawStage(canvas, value, { animate: false, avatarZoom: 2.1 });
   }
 
-  function renderAvatar(canvas, value) {
+  function renderAvatar(canvas, value, { portrait = false } = {}) {
     if (!canvas || typeof canvas.getContext !== 'function') return;
     const character = normalizeCharacter(value);
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     const redraw = () => {
-      if (canvas.isConnected !== false) renderAvatar(canvas, character);
+      if (canvas.isConnected !== false) renderAvatar(canvas, character, { portrait });
     };
     ctx.imageSmoothingEnabled = false;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();
+    if (portrait) {
+      const cropSize = 32;
+      const scale = Math.min(canvas.width / cropSize, canvas.height / cropSize);
+      ctx.translate(
+        (canvas.width - cropSize * scale) / 2 - 64 * scale,
+        (canvas.height - cropSize * scale) / 2 - 38 * scale
+      );
+      ctx.scale(scale, scale);
+      drawCharacterSprite(ctx, character, redraw);
+      ctx.restore();
+      return;
+    }
     const scale = Math.min(canvas.width / 80, canvas.height / 48);
     ctx.translate((canvas.width - 80 * scale) / 2, (canvas.height - 48 * scale) / 2);
     ctx.scale(scale, scale);
