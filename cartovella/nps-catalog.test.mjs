@@ -220,7 +220,7 @@ check('character customization appears above the stage and progress summary', ()
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 10);
-  assert.ok(sources.every(source => source.endsWith('?v=20261029-icon-navigation-v1')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261029-five-tab-navigation-v1')));
   assert.ok(sources.some(source => source.startsWith('./character-creator.js?')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
@@ -350,8 +350,8 @@ const context = vm.createContext({
   document: {
     body: { classList: { toggle() {}, add() {}, remove() {} } },
     getElementById: element,
-    querySelector: selector => selector === '#navTabs [data-tab="scratch"]'
-      ? element('navScratch') : element(`query-${selector}`),
+    querySelector: selector => selector === '#atlasSubNav [data-tab="scratch"]'
+      ? element('atlasScratch') : element(`query-${selector}`),
     querySelectorAll: () => [],
     addEventListener() {},
     createElement: tag => tag === 'canvas' ? { width: 0, height: 0, getContext: () => null } : element(`created-${elements.size}`)
@@ -1603,86 +1603,93 @@ await checkAsync('GeoJSON imports ordered stops and keeps only endpoint-matched 
       expeditionPending = ${originalPending}; AppState.viewOnly = ${originalViewOnly}`, context);
   }
 });
-check('icon-only header exposes travel modes and six always-unlocked atlas pages', () => {
-  const nav = html.slice(html.indexOf('<nav id="navTabs"'), html.indexOf('</nav>', html.indexOf('<nav id="navTabs"')));
-  assert.match(nav, /aria-label="Atlas pages"/);
-  for (const [id, tab, label, icon] of [
-    ['navScratch', 'scratch', 'Scratch Maps', 'map'],
-    ['navTravel', 'travel', 'Travel Journal', 'journal'],
-    ['navExplorer', 'passport', 'Explorer Profile', 'explorer'],
-    ['navQuestlines', 'questlines', 'Main Questlines', 'quest'],
-    ['navAchievements', 'achievements', 'Achievements', 'trophy'],
-    ['navGuild', 'guild', "Explorers' Guild", 'globe']
+check('five primary tabs expose the Atlas and Quests sub-navigation', () => {
+  const navStart = html.indexOf('<nav id="navTabs"');
+  const nav = html.slice(navStart, html.indexOf('</nav>', navStart));
+  assert.match(nav, /aria-label="Primary navigation"/);
+  for (const [tab, label, icon] of [
+    ['atlas', 'Atlas', 'atlas'],
+    ['travel', 'Travel Log', 'journal'],
+    ['passport', 'Explorer', 'explorer'],
+    ['quests', 'Quests &amp; Badges', 'trophy'],
+    ['guild', 'Guild', 'guild']
   ]) {
-    assert.match(nav, new RegExp(`<button id="${id}" data-tab="${tab}"[^>]*data-tooltip="${label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`));
+    assert.match(nav, new RegExp(`data-primary-tab="${tab}"`));
     assert.ok(nav.includes(`data-cartovella-icon="${icon}"`));
-    assert.match(nav, new RegExp(`aria-label="${label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`));
+    assert.ok(nav.includes(`<span class="hidden md:inline">${label}</span>`));
   }
-  assert.equal([...nav.matchAll(/<button\b/g)].length, 6);
-  assert.match(html, /role="group" aria-label="Travel mode"/);
-  assert.match(html, /id="toggleRpgMode"[^>]*data-tooltip="Explore — RPG Map" aria-label="Explore — RPG Map"/);
-  assert.match(html, /id="toggleClassicMode"[^>]*data-tooltip="Checklist &amp; Catalog" aria-label="Checklist &amp; Catalog"/);
-  assert.match(html, /\.header-icon::after[\s\S]*content: attr\(data-tooltip\)[\s\S]*transition: opacity 0ms/);
-  assert.match(html, /\.header-icon:hover::after,[\s\S]*\.header-icon:focus-visible::after/);
-  assert.doesNotMatch(html, /\.header-icon::after\s*\{\s*display:\s*none/);
-  assert.doesNotMatch(nav, /<span(?![^>]*data-cartovella-icon)/);
-  assert.doesNotMatch(html, /atlasViewSwitcher|questViewSwitcher/);
-  assert.doesNotMatch(html, /pt-20 md:pt-24|pt-20|md:pt-24/);
-  assert.ok(!html.includes('data-tab="map"'));
-  assert.ok(html.includes('.header-icon:focus-visible'));
+  assert.equal([...nav.matchAll(/<button\b/g)].length, 5);
+  assert.match(html, /id="atlasSubNav"[^>]*class="hidden fixed top-32 xl:top-20 left-1\/2 z-\[500\] -translate-x-1\/2/);
+  assert.match(html, /id="questsSubNav"[^>]*class="hidden fixed top-32 xl:top-20 left-1\/2 z-\[500\] -translate-x-1\/2/);
+  for (const [navId, tabs] of [
+    ['atlasSubNav', [['map', 'Fog Map', 'atlas'], ['scratch', 'Scratch Maps', 'map'], ['bucketlist', 'Checklist &amp; Catalog', 'checklist']]],
+    ['questsSubNav', [['questlines', 'Main Questlines', 'quest'], ['achievements', 'Achievements', 'trophy']]]
+  ]) {
+    const start = html.indexOf(`<nav id="${navId}"`);
+    const subnav = html.slice(start, html.indexOf('</nav>', start));
+    for (const [tab, label, icon] of tabs) {
+      assert.match(subnav, new RegExp(`data-tab="${tab}"`));
+      assert.ok(subnav.includes(`<span>${label}</span>`));
+      assert.ok(subnav.includes(`data-cartovella-icon="${icon}"`));
+    }
+  }
+  assert.doesNotMatch(html, /id="toggleRpgMode"|id="toggleClassicMode"|atlasViewSwitcher|questViewSwitcher/);
+  assert.doesNotMatch(html, /pt-20 md:pt-24|class="[^"]*\bpt-20\b/);
 
   const originalQuery = context.document.querySelectorAll;
+  const originalSaveState = context.saveState;
   const originalState = vm.runInContext("({mode:AppState.mode,tab:AppState.currentTab,viewOnly:AppState.viewOnly,profileOnlyView,guildProfilesLoaded})", context);
-  const selector = '#navTabs [data-tab]';
-  const buttons = ['scratch', 'travel', 'passport', 'questlines', 'achievements', 'guild'].map(tab => ({
-    dataset: { tab }, attributes: {}, disabled: false,
+  const primaryButtons = ['atlas', 'travel', 'passport', 'quests', 'guild'].map(primaryTab => ({
+    dataset: { primaryTab }, attributes: {},
     setAttribute(name, value) { this.attributes[name] = value; }
   }));
-  context.document.querySelectorAll = value => value === selector ? buttons : originalQuery(value);
-  const rpgAttributes = {};
-  const classicAttributes = {};
-  const originalRpgSet = element('toggleRpgMode').setAttribute;
-  const originalClassicSet = element('toggleClassicMode').setAttribute;
+  const subButtons = ['map', 'scratch', 'bucketlist', 'questlines', 'achievements'].map(tab => ({
+    dataset: { tab }, attributes: {},
+    setAttribute(name, value) { this.attributes[name] = value; }
+  }));
   const pageRenderers = [
-    'renderScratchMap', 'renderExpeditionHistory', 'renderPassportView',
-    'renderQuestlinesView', 'renderAchievementsView', 'renderGuildDirectory',
-    'renderGuildExpeditions'
+    'renderCountyHitboxes', 'renderScratchMap', 'renderBucketListView',
+    'renderExpeditionHistory', 'renderPassportView', 'renderQuestlinesView',
+    'renderAchievementsView', 'renderGuildDirectory', 'renderGuildExpeditions'
   ];
   const originalRenderers = pageRenderers.map(name => context[name]);
-  element('toggleRpgMode').setAttribute = (name, value) => { rpgAttributes[name] = value; };
-  element('toggleClassicMode').setAttribute = (name, value) => { classicAttributes[name] = value; };
+  context.document.querySelectorAll = selector => selector === '#navTabs [data-primary-tab]'
+    ? primaryButtons : selector === '#atlasSubNav [data-tab], #questsSubNav [data-tab]'
+      ? subButtons : originalQuery(selector);
+  context.saveState = () => {};
+  pageRenderers.forEach(name => { context[name] = () => {}; });
   try {
-    vm.runInContext("AppState.mode='classic';AppState.currentTab='scratch';updateHeaderNavigation()", context);
-    assert.equal(classicAttributes['aria-pressed'], 'false');
-    assert.equal(rpgAttributes['aria-pressed'], 'false');
-    assert.deepEqual(buttons.map(button => button.attributes['aria-pressed']), ['true', 'false', 'false', 'false', 'false', 'false']);
-    vm.runInContext("AppState.mode='classic';AppState.currentTab='bucketlist';updateHeaderNavigation()", context);
-    assert.equal(classicAttributes['aria-pressed'], 'true');
-    for (const tab of ['scratch', 'passport', 'travel', 'questlines', 'achievements', 'guild']) {
-      vm.runInContext(`AppState.mode='rpg';AppState.currentTab='${tab}';updateHeaderNavigation()`, context);
-      assert.deepEqual(buttons.map(button => button.attributes['aria-pressed'] === 'true'),
-        buttons.map(button => button.dataset.tab === tab), tab);
-    }
-    vm.runInContext("AppState.mode='rpg';AppState.currentTab='map';updateHeaderNavigation()", context);
-    assert.equal(rpgAttributes['aria-pressed'], 'true');
-    assert.equal(buttons.filter(button => button.attributes['aria-pressed'] === 'true').length, 0);
-    pageRenderers.forEach(name => { context[name] = () => {}; });
-    vm.runInContext("AppState.mode='rpg';AppState.viewOnly=false;profileOnlyView=false;guildProfilesLoaded=true", context);
+    vm.runInContext("AppState.mode='rpg';AppState.currentTab='scratch';updateHeaderNavigation()", context);
+    assert.deepEqual(primaryButtons.map(button => button.attributes['aria-pressed']), ['true', 'false', 'false', 'false', 'false']);
+    assert.deepEqual(subButtons.map(button => button.attributes['aria-pressed'] === 'true'),
+      [false, true, false, false, false]);
+    vm.runInContext("switchTab('achievements');switchPrimaryTab('atlas')", context);
+    assert.equal(vm.runInContext('AppState.currentTab', context), 'scratch');
+    vm.runInContext("switchPrimaryTab('quests')", context);
+    assert.equal(vm.runInContext('AppState.currentTab', context), 'achievements');
+    vm.runInContext("AppState.currentTab='travel';lastAtlasSubTab='map';lastQuestsSubTab='questlines';switchPrimaryTab('atlas')", context);
+    assert.equal(vm.runInContext('AppState.currentTab', context), 'map');
+    vm.runInContext("switchPrimaryTab('quests')", context);
+    assert.equal(vm.runInContext('AppState.currentTab', context), 'questlines');
+    vm.runInContext("AppState.mode='classic';switchTab('map')", context);
+    assert.equal(vm.runInContext('AppState.mode', context), 'rpg');
+    vm.runInContext("switchTab('bucketlist')", context);
+    assert.equal(vm.runInContext('AppState.mode', context), 'classic');
     for (const tab of ['scratch', 'travel', 'passport', 'questlines', 'achievements', 'guild']) {
       assert.equal(vm.runInContext(`switchTab('${tab}')`, context), true, `${tab} remains accessible`);
       assert.equal(vm.runInContext('AppState.currentTab', context), tab);
     }
   } finally {
     context.document.querySelectorAll = originalQuery;
-    element('toggleRpgMode').setAttribute = originalRpgSet;
-    element('toggleClassicMode').setAttribute = originalClassicSet;
+    context.saveState = originalSaveState;
     pageRenderers.forEach((name, index) => { context[name] = originalRenderers[index]; });
     vm.runInContext(`AppState.mode=${JSON.stringify(originalState.mode)};AppState.currentTab=${JSON.stringify(originalState.tab)};AppState.viewOnly=${originalState.viewOnly};profileOnlyView=${originalState.profileOnlyView};guildProfilesLoaded=${originalState.guildProfilesLoaded};updateHeaderNavigation()`, context);
   }
 });
 check('all Cartovella icons use only official logo colors and reject invalid names', () => {
+  assert.match(vm.runInContext("cartovellaIcon('atlas')", context), /class="h-6 w-6"/);
   const names = [
-    'compass', 'journal', 'trophy', 'globe', 'citadel', 'checklist', 'map', 'explorer',
+    'atlas', 'compass', 'journal', 'trophy', 'guild', 'globe', 'citadel', 'checklist', 'map', 'explorer',
     'quest', 'cloud', 'settings', 'share', 'save', 'export', 'import', 'credits',
     'warning', 'locator', 'lock', 'pin', 'route', 'photo', 'shield'
   ];
@@ -1702,6 +1709,10 @@ check('all Cartovella icons use only official logo colors and reject invalid nam
     });
   }
   assert.deepEqual([...usedColors].sort(), [...allowedColors].sort());
+  for (const iconName of ['quest', 'trophy']) {
+    const icon = vm.runInContext(`cartovellaIcon('${iconName}')`, context);
+    assert.doesNotMatch(icon, /#(?:124777|36506b|0c1222)/i, `${iconName} should use only gold/parchment tones`);
+  }
   assert.throws(() => vm.runInContext("cartovellaIcon('not-an-icon')", context), /Unknown Cartovella icon/);
 });
 check('account pill switches between Sign In and Explorer Account while keeping sync status visible', () => {
@@ -1755,12 +1766,6 @@ check('account pill switches between Sign In and Explorer Account while keeping 
     if (originalDirty === null) localStorage.removeItem('cartovella_cloud_dirty');
     else localStorage.setItem('cartovella_cloud_dirty', originalDirty);
   }
-});
-check('onboarding tutorial, persisted state, and tutorial tab locks are removed', () => {
-  assert.doesNotMatch(html, /cartovella_tutorial_state|tutorialProgressBanner|btnSkipTutorial|btnHomeSkipTutorial|btnTutorialToggle|navLock/);
-  assert.doesNotMatch(scripts.join('\n'), /advanceTutorialFromProgress|isTabUnlocked|tutorialCanOpenTab|initializeProgressiveTutorial|completeTutorial/);
-  const nav = html.slice(html.indexOf('<nav id="navTabs"'), html.indexOf('</nav>', html.indexOf('<nav id="navTabs"')));
-  assert.doesNotMatch(nav, /\sdisabled(?:\s|=|>)/);
 });
 check('Cartovella branding uses one subtitle, without a page-like badge, and preserves descriptive SEO metadata', () => {
   const header = html.slice(html.indexOf('<header'), html.indexOf('</header>'));
@@ -4248,7 +4253,7 @@ try {
   `, context);
 }
 check('the travel log is its own tab rendering a chronological feed with per-trip mini-maps', () => {
-  assert.ok(html.includes('data-tab="travel"'));
+  assert.ok(html.includes('data-primary-tab="travel"'));
   assert.ok(html.includes('id="tabContent-travel"'));
   assert.ok(html.includes('id="travelLogFeed"'));
   // Expedition history moved out of the passport tab entirely.

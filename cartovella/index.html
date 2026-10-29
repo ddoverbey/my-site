@@ -44,17 +44,21 @@
     }
   </script>
   <script>
-    function cartovellaIcon(name, className = 'h-5 w-5') {
+    function cartovellaIcon(name, className = 'h-6 w-6') {
+      const atlasArtwork = '<circle cx="12" cy="12" r="10" fill="#fac60b"/><circle cx="12" cy="12" r="7.5" fill="#0c1222"/><path d="m15.5 8.5-2.7 5-5 2.7 2.7-5 5-2.7Z" fill="#eba400"/><path d="m8.5 15.5 2.7-5 5-2.7-2.7 5-5 2.7Z" fill="#f4c98c"/><circle cx="12" cy="12" r="1.2" fill="#fac60b"/>';
+      const guildArtwork = '<circle cx="12" cy="12" r="10" fill="#fac60b"/><circle cx="12" cy="12" r="7.5" fill="#124777"/><path d="M5 8.5c2 .8 4 .8 7 0s5-.8 7 0M5 15.5c2-.8 4-.8 7 0s5 .8 7 0M12 4.5c2 2 3 4.5 3 7.5s-1 5.5-3 7.5c-2-2-3-4.5-3-7.5s1-5.5 3-7.5Z" fill="none" stroke="#f4c98c" stroke-width="1.2"/><path d="M4.6 12h14.8" stroke="#36506b" stroke-width="1.2"/>';
       const artwork = {
-        compass: '<circle cx="12" cy="12" r="10" fill="#fac60b"/><circle cx="12" cy="12" r="7.5" fill="#0c1222"/><path d="m14.8 9.2-1.6 4-4 1.6 1.6-4 4-1.6Z" fill="#eba400"/><path d="m9.2 14.8 1.6-4 4-1.6-1.6 4-4 1.6Z" fill="#f4c98c"/><circle cx="12" cy="12" r="1.2" fill="#36506b"/>',
-        journal: '<path d="M5 2.5h11.5A2.5 2.5 0 0 1 19 5v15H6a3 3 0 0 1-3-3V4.5a2 2 0 0 1 2-2Z" fill="#eba400"/><path d="M6 4.5h10.5A1.5 1.5 0 0 1 18 6v11H6a2 2 0 0 0-2 2V6.5a2 2 0 0 1 2-2Z" fill="#f4c98c"/><path d="M13 4h3v7l-1.5-1.2L13 11V4Z" fill="#36506b"/><path d="M7 8h4M7 11h4M7 14h7" stroke="#124777" stroke-width="1.2" stroke-linecap="round"/>',
-        trophy: '<path d="M7 3h10v5.5a5 5 0 0 1-10 0V3Z" fill="#fac60b"/><path d="M7 5H3v2a4 4 0 0 0 4 4M17 5h4v2a4 4 0 0 1-4 4" fill="none" stroke="#eba400" stroke-width="2"/><path d="M10 13h4v4h-4z" fill="#36506b"/><path d="M7 19h10v2H7zM9 17h6v2H9z" fill="#124777"/><path d="m12 4 1.1 2.1 2.3.3-1.7 1.6.4 2.3L12 9.2l-2.1 1.1.4-2.3-1.7-1.6 2.3-.3L12 4Z" fill="#f4c98c"/>',
-        globe: '<circle cx="12" cy="12" r="10" fill="#eba400"/><circle cx="12" cy="12" r="7.7" fill="#124777"/><path d="m7 7 2-1 1 2-1 2-2-1-1 2 2 2 2-1 1 2-1 2 2 1 2-2-1-2 2-1 2 1 1-2-2-2-2 1-1-2 1-2-2-1-2 2-2-1Z" fill="#36506b"/><path d="M4.6 9.2h1.8M17.3 16h2" stroke="#f4c98c" stroke-width="1.2" stroke-linecap="round"/>',
+        atlas: atlasArtwork,
+        compass: atlasArtwork,
+        journal: '<path d="M12 7C9 4.5 5 4 2 5v14c3-1 7-.5 10 2 3-2.5 7-3 10-2V5c-3-1-7-.5-10 2Z" fill="#eba400"/><path d="M12 8.5C9.5 6.7 6 6.3 4 7v10c2.8-.7 5.8-.1 8 1.7 2.2-1.8 5.2-2.4 8-1.7V7c-2-.7-5.5-.3-8 1.5Z" fill="#f4c98c"/><path d="M12 8v10M6 9.5c1.7-.2 3.2.1 4.5.8M6 12.5c1.7-.2 3.2.1 4.5.8M18 9.5c-1.7-.2-3.2.1-4.5.8M18 12.5c-1.7-.2-3.2.1-4.5.8" fill="none" stroke="#124777" stroke-width="1.1" stroke-linecap="round"/>',
+        trophy: '<path d="M7 3h10v5a5 5 0 0 1-10 0V3Z" fill="#fac60b"/><path d="M7 5H3v2a4 4 0 0 0 4 4M17 5h4v2a4 4 0 0 1-4 4" fill="none" stroke="#eba400" stroke-width="2"/><path d="M10 13h4v4h-4zM7 19h10v2H7zM9 17h6v2H9z" fill="#eba400"/><path d="M9 5h6v3a3 3 0 0 1-6 0V5Z" fill="#f4c98c"/><path d="M11 6h2v4h-2z" fill="#fac60b"/>',
+        guild: guildArtwork,
+        globe: guildArtwork,
         citadel: '<path d="M3 21V8l3-2 3 2v13H3ZM9 21V4l3-2 3 2v17H9ZM15 21V8l3-2 3 2v13h-6Z" fill="#36506b"/><path d="M1.5 21h21v2h-21z" fill="#0c1222"/><path d="M5 11h2v3H5zM11 7h2v3h-2zM17 11h2v3h-2z" fill="#fac60b"/><path d="M4 5V2h2v2l2 1-2 1-2-1-2 1V5h2ZM17 5V2h2v2l2 1-2 1-2-1-2 1V5h2Z" fill="#eba400"/>',
-        checklist: '<path d="M5 2h12a2 2 0 0 1 2 2v18H5a3 3 0 0 1-3-3V5a3 3 0 0 1 3-3Z" fill="#eba400"/><path d="M6 4h11v15H6a2 2 0 0 0-2 2V6a2 2 0 0 1 2-2Z" fill="#f4c98c"/><path d="m7 8 1.2 1.2L10.5 7M7 13l1.2 1.2 2.3-2.2" fill="none" stroke="#36506b" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 8h3M12 13h3M7 17h8" stroke="#124777" stroke-width="1.2" stroke-linecap="round"/>',
-        map: '<path d="m2 5 6-3 8 3 6-3v17l-6 3-8-3-6 3V5Z" fill="#124777"/><path d="m8 2 8 3v17l-8-3V2Z" fill="#36506b"/><path d="m2 5 6-3v17l-6 3V5ZM16 5l6-3v17l-6 3V5Z" fill="#fac60b"/><path d="m11 10 1.5-2 1.5 2-1.5 2-1.5-2Z" fill="#eba400"/>',
-        explorer: '<path d="M12 2a5 5 0 0 1 5 5v2H7V7a5 5 0 0 1 5-5Z" fill="#36506b"/><path d="M8 8a4 4 0 1 1 8 0v3a4 4 0 0 1-8 0V8Z" fill="#f4c98c"/><path d="M4 22a8 8 0 0 1 16 0H4Z" fill="#124777"/><path d="M10 10h.2M14 10h.2M10.5 13h3" stroke="#0c1222" stroke-width="1.2" stroke-linecap="round"/><path d="M3 22h18" stroke="#fac60b" stroke-width="1.3" stroke-linecap="round"/>',
-        quest: '<path d="M5 2h12l3 3v17H5a3 3 0 0 1-3-3V5a3 3 0 0 1 3-3Z" fill="#eba400"/><path d="M6 4h10l2 2v13H6a2 2 0 0 0-2 2V6a2 2 0 0 1 2-2Z" fill="#f4c98c"/><path d="m12 7 1.2 2.4 2.6.4-1.9 1.8.4 2.6-2.3-1.2-2.3 1.2.4-2.6-1.9-1.8 2.6-.4L12 7Z" fill="#36506b"/>',
+        checklist: '<rect x="3" y="4" width="18" height="18" rx="2" fill="#eba400"/><path d="M7 5h10v3H7z" fill="#fac60b"/><rect x="9" y="2" width="6" height="4" rx="1.5" fill="#f4c98c"/><path d="m6 11 1.2 1.2L9.5 10M6 16l1.2 1.2 2.3-2.2M12 11h6M12 16h6" fill="none" stroke="#124777" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
+        map: '<path d="m2 5 6-3 8 3 6-3v17l-6 3-8-3-6 3V5Z" fill="#124777"/><path d="m8 2 8 3v17l-8-3V2Z" fill="#36506b"/><path d="m2 5 6-3v17l-6 3V5ZM16 5l6-3v17l-6 3V5Z" fill="#fac60b"/><path d="m7.5 5 1-.5v17l-1 .5ZM15.5 5l1 .5v17l-1-.5Z" fill="#f4c98c"/><circle cx="12" cy="11" r="2" fill="#eba400"/>',
+        explorer: '<circle cx="12" cy="7" r="4.5" fill="#fac60b"/><path d="M3 21c0-4.7 3.7-7.5 9-7.5s9 2.8 9 7.5H3Z" fill="#124777"/><path d="M6 20c1.2-2.6 3.1-4 6-4s4.8 1.4 6 4" fill="none" stroke="#36506b" stroke-width="1.3" stroke-linecap="round"/>',
+        quest: '<path d="M6 4h12v16H6z" fill="#f4c98c"/><path d="M6 4c-2.2-1.5-4 0-4 2s1.8 3.5 4 2M18 4c2.2-1.5 4 0 4 2s-1.8 3.5-4 2M6 16c-2.2-1.5-4 0-4 2s1.8 3.5 4 2M18 16c2.2-1.5 4 0 4 2s-1.8 3.5-4 2" fill="#fac60b" stroke="#eba400" stroke-width="1.2"/><path d="M8 9h8M8 12h8M8 15h6" stroke="#eba400" stroke-width="1.2" stroke-linecap="round"/>',
         cloud: '<path d="M7 18h10a4 4 0 0 0 .4-8 6 6 0 0 0-11.6 1A3.5 3.5 0 0 0 7 18Z" fill="#f4c98c" stroke="#124777" stroke-width="1.5"/><circle cx="17.5" cy="17.5" r="4" fill="#fac60b"/><path d="m17.5 15.3.7 1.5 1.6.2-1.2 1.1.3 1.6-1.4-.8-1.4.8.3-1.6-1.2-1.1 1.6-.2.7-1.5Z" fill="#124777"/>',
         settings: '<path d="m10 2 4 0 .6 2.2 1.8 1 2.1-.7 2 3.5-1.6 1.5v2l1.6 1.5-2 3.5-2.1-.7-1.8 1L14 20h-4l-.6-2.2-1.8-1-2.1.7-2-3.5L5.1 12v-2L3.5 8.5l2-3.5 2.1.7 1.8-1L10 2Z" fill="#36506b"/><circle cx="12" cy="11" r="3.1" fill="#fac60b"/><circle cx="12" cy="11" r="1.3" fill="#0c1222"/>',
         share: '<path d="M7 12 17 6M7 12l10 6" stroke="#f4c98c" stroke-width="2"/><circle cx="5" cy="12" r="3" fill="#124777"/><circle cx="19" cy="5" r="3" fill="#fac60b"/><circle cx="19" cy="19" r="3" fill="#36506b"/>',
@@ -78,7 +82,7 @@
       root.querySelectorAll('[data-cartovella-icon]').forEach(element => {
         element.innerHTML = cartovellaIcon(
           element.dataset.cartovellaIcon,
-          element.dataset.iconClass || 'h-5 w-5'
+          element.dataset.iconClass || 'h-6 w-6'
         );
       });
     }
@@ -258,13 +262,6 @@
     }
     .header-icon:hover::after,
     .header-icon:focus-visible::after { opacity: 1; transform: translate(-50%, 0); }
-    #navTabs .header-icon:last-child::after {
-      left: auto;
-      right: 0;
-      transform: translate(0, -2px);
-    }
-    #navTabs .header-icon:last-child:hover::after,
-    #navTabs .header-icon:last-child:focus-visible::after { transform: translate(0, 0); }
     #settingsMenu .header-icon::after {
       left: auto;
       right: 0;
@@ -280,7 +277,24 @@
     .country-flag:hover .country-flag-name, .country-flag:focus .country-flag-name,
     .state-flag:hover .country-flag-name, .state-flag:focus .country-flag-name { display: block; }
     .passport-flags img { width: 48px; height: 32px; object-fit: contain; image-rendering: pixelated; }
-    #toggleRpgMode[aria-pressed="true"] { background: #124777; color: #f4c98c; }
+    .primary-nav-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      min-height: 2.5rem;
+      flex-shrink: 0;
+      border-radius: 0.75rem;
+      padding: 0.5rem 0.75rem;
+      color: #cbd5e1;
+      font-size: 0.75rem;
+      font-weight: 600;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+    .primary-nav-button:hover { background: #36506b; color: #f4c98c; }
+    .primary-nav-button:focus-visible { outline: 2px solid #fac60b; outline-offset: 2px; }
+    .primary-nav-button[aria-pressed="true"] { background: #124777; color: #f4c98c; }
+    .subnav-button[aria-pressed="true"] { background: #124777; color: #f4c98c; }
     .mode-classic #fogCanvasOverlay {
       opacity: 0;
     }
@@ -465,7 +479,7 @@
     </div>
   </div>
 
-  <header class="relative min-h-16 border-b border-slate-800 bg-[#0c1222]/95 px-3 py-2 sm:px-4 flex flex-wrap lg:flex-nowrap items-center justify-between gap-x-3 gap-y-2 z-[600] shrink-0 backdrop-blur-md">
+  <header class="relative min-h-16 border-b border-slate-800 bg-[#0c1222]/95 px-3 py-2 sm:px-4 flex flex-wrap xl:flex-nowrap items-center justify-between gap-x-3 gap-y-2 z-[600] shrink-0 backdrop-blur-md">
     <div class="flex items-center gap-3 min-w-0">
       <img src="assets/logos/cartovella-logo-1.svg" alt="" aria-hidden="true" class="h-12 w-12 object-contain">
       <div class="hidden lg:block">
@@ -476,33 +490,22 @@
       </div>
     </div>
 
-    <div class="order-last lg:order-none w-full lg:w-auto flex items-center justify-center gap-2">
-      <div role="group" aria-label="Travel mode" class="flex items-center gap-1 rounded-xl border border-slate-800 bg-slate-900/60 p-1">
-        <button id="toggleRpgMode" type="button" class="header-icon" data-tooltip="Explore — RPG Map" aria-label="Explore — RPG Map" aria-pressed="true" aria-controls="tabContent-map">
-          <span data-cartovella-icon="compass" data-icon-class="h-5 w-5" aria-hidden="true"></span>
+    <div class="order-last xl:order-none w-full xl:w-auto flex items-center justify-center">
+      <nav id="navTabs" aria-label="Primary navigation" class="flex flex-wrap items-center justify-center gap-1 rounded-xl border border-slate-800 bg-slate-900/60 p-1">
+        <button type="button" data-primary-tab="atlas" class="primary-nav-button" aria-label="Atlas" aria-pressed="true" aria-controls="atlasSubNav">
+          <span data-cartovella-icon="atlas" data-icon-class="h-6 w-6" aria-hidden="true"></span><span class="hidden md:inline">Atlas</span>
         </button>
-        <button id="toggleClassicMode" type="button" class="header-icon" data-tooltip="Checklist &amp; Catalog" aria-label="Checklist &amp; Catalog" aria-pressed="false" aria-controls="tabContent-bucketlist">
-          <span data-cartovella-icon="checklist" data-icon-class="h-5 w-5" aria-hidden="true"></span>
+        <button type="button" data-primary-tab="travel" class="primary-nav-button" aria-label="Travel Log" aria-pressed="false" aria-controls="tabContent-travel">
+          <span data-cartovella-icon="journal" data-icon-class="h-6 w-6" aria-hidden="true"></span><span class="hidden md:inline">Travel Log</span>
         </button>
-      </div>
-      <nav id="navTabs" aria-label="Atlas pages" class="flex items-center justify-center gap-1 rounded-xl border border-slate-800 bg-slate-900/60 p-1">
-        <button id="navScratch" data-tab="scratch" type="button" class="header-icon" data-tooltip="Scratch Maps" aria-label="Scratch Maps" aria-pressed="false" aria-controls="tabContent-scratch">
-          <span data-cartovella-icon="map" data-icon-class="h-5 w-5" aria-hidden="true"></span>
+        <button type="button" data-primary-tab="passport" class="primary-nav-button" aria-label="Explorer" aria-pressed="false" aria-controls="tabContent-passport">
+          <span data-cartovella-icon="explorer" data-icon-class="h-6 w-6" aria-hidden="true"></span><span class="hidden md:inline">Explorer</span>
         </button>
-        <button id="navTravel" data-tab="travel" type="button" class="header-icon" data-tooltip="Travel Journal" aria-label="Travel Journal" aria-pressed="false" aria-controls="tabContent-travel">
-          <span data-cartovella-icon="journal" data-icon-class="h-5 w-5" aria-hidden="true"></span>
+        <button type="button" data-primary-tab="quests" class="primary-nav-button" aria-label="Quests &amp; Badges" aria-pressed="false" aria-controls="questsSubNav">
+          <span data-cartovella-icon="trophy" data-icon-class="h-6 w-6" aria-hidden="true"></span><span class="hidden md:inline">Quests &amp; Badges</span>
         </button>
-        <button id="navExplorer" data-tab="passport" type="button" class="header-icon" data-tooltip="Explorer Profile" aria-label="Explorer Profile" aria-pressed="false" aria-controls="tabContent-passport">
-          <span data-cartovella-icon="explorer" data-icon-class="h-5 w-5" aria-hidden="true"></span>
-        </button>
-        <button id="navQuestlines" data-tab="questlines" type="button" class="header-icon" data-tooltip="Main Questlines" aria-label="Main Questlines" aria-pressed="false" aria-controls="tabContent-questlines">
-          <span data-cartovella-icon="quest" data-icon-class="h-5 w-5" aria-hidden="true"></span>
-        </button>
-        <button id="navAchievements" data-tab="achievements" type="button" class="header-icon" data-tooltip="Achievements" aria-label="Achievements" aria-pressed="false" aria-controls="tabContent-achievements">
-          <span data-cartovella-icon="trophy" data-icon-class="h-5 w-5" aria-hidden="true"></span>
-        </button>
-        <button id="navGuild" data-tab="guild" type="button" class="header-icon" data-tooltip="Explorers' Guild" aria-label="Explorers' Guild" aria-pressed="false" aria-controls="tabContent-guild">
-          <span data-cartovella-icon="globe" data-icon-class="h-5 w-5" aria-hidden="true"></span>
+        <button type="button" data-primary-tab="guild" class="primary-nav-button" aria-label="Guild" aria-pressed="false" aria-controls="tabContent-guild">
+          <span data-cartovella-icon="guild" data-icon-class="h-6 w-6" aria-hidden="true"></span><span class="hidden md:inline">Guild</span>
         </button>
       </nav>
     </div>
@@ -570,6 +573,30 @@
   </div>
 
   <main class="flex-1 relative isolate z-0 overflow-hidden">
+
+    <nav id="atlasSubNav" aria-label="Atlas views" class="hidden fixed top-32 xl:top-20 left-1/2 z-[500] -translate-x-1/2 rounded-xl border border-amber-400/30 bg-slate-950/95 p-1 shadow-xl backdrop-blur-md">
+      <div class="flex items-center gap-1">
+        <button type="button" data-tab="map" class="subnav-button inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-white" aria-label="Fog Map" aria-pressed="false" aria-controls="tabContent-map">
+          <span data-cartovella-icon="atlas" data-icon-class="h-5 w-5" aria-hidden="true"></span><span>Fog Map</span>
+        </button>
+        <button type="button" data-tab="scratch" class="subnav-button inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-white" aria-label="Scratch Maps" aria-pressed="false" aria-controls="tabContent-scratch">
+          <span data-cartovella-icon="map" data-icon-class="h-5 w-5" aria-hidden="true"></span><span>Scratch Maps</span>
+        </button>
+        <button type="button" data-tab="bucketlist" class="subnav-button inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-white" aria-label="Checklist &amp; Catalog" aria-pressed="false" aria-controls="tabContent-bucketlist">
+          <span data-cartovella-icon="checklist" data-icon-class="h-5 w-5" aria-hidden="true"></span><span>Checklist &amp; Catalog</span>
+        </button>
+      </div>
+    </nav>
+    <nav id="questsSubNav" aria-label="Quests and badges views" class="hidden fixed top-32 xl:top-20 left-1/2 z-[500] -translate-x-1/2 rounded-xl border border-amber-400/30 bg-slate-950/95 p-1 shadow-xl backdrop-blur-md">
+      <div class="flex items-center gap-1">
+        <button type="button" data-tab="questlines" class="subnav-button inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-white" aria-label="Main Questlines" aria-pressed="false" aria-controls="tabContent-questlines">
+          <span data-cartovella-icon="quest" data-icon-class="h-5 w-5" aria-hidden="true"></span><span>Main Questlines</span>
+        </button>
+        <button type="button" data-tab="achievements" class="subnav-button inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-white" aria-label="Achievements" aria-pressed="false" aria-controls="tabContent-achievements">
+          <span data-cartovella-icon="trophy" data-icon-class="h-5 w-5" aria-hidden="true"></span><span>Achievements</span>
+        </button>
+      </div>
+    </nav>
 
     <!-- VIEW 1: INTERACTIVE FOG-OF-WAR & PARKS MAP -->
     <div id="tabContent-map" class="w-full h-full relative">
@@ -1491,15 +1518,15 @@
     </section>
   </div>
 
-  <script src="./nps-catalog.js?v=20261029-icon-navigation-v1"></script>
-  <script src="./national-parks-scratch.js?v=20261029-icon-navigation-v1"></script>
-  <script src="./international-parks.js?v=20261029-icon-navigation-v1"></script>
-  <script src="./ecoregions.js?v=20261029-icon-navigation-v1"></script>
-  <script src="./coordinate-lookups.js?v=20261029-icon-navigation-v1"></script>
-  <script src="./micro-states.js?v=20261029-icon-navigation-v1"></script>
-  <script src="./travel-ledger.js?v=20261029-icon-navigation-v1"></script>
-  <script src="./character-creator.js?v=20261029-icon-navigation-v1"></script>
-  <script src="./rarity-config.js?v=20261029-icon-navigation-v1"></script>
+  <script src="./nps-catalog.js?v=20261029-five-tab-navigation-v1"></script>
+  <script src="./national-parks-scratch.js?v=20261029-five-tab-navigation-v1"></script>
+  <script src="./international-parks.js?v=20261029-five-tab-navigation-v1"></script>
+  <script src="./ecoregions.js?v=20261029-five-tab-navigation-v1"></script>
+  <script src="./coordinate-lookups.js?v=20261029-five-tab-navigation-v1"></script>
+  <script src="./micro-states.js?v=20261029-five-tab-navigation-v1"></script>
+  <script src="./travel-ledger.js?v=20261029-five-tab-navigation-v1"></script>
+  <script src="./character-creator.js?v=20261029-five-tab-navigation-v1"></script>
+  <script src="./rarity-config.js?v=20261029-five-tab-navigation-v1"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -7397,17 +7424,67 @@
   </script>
 
   <script>
+    const atlasTabIds = ['map', 'scratch', 'bucketlist'];
+    const questsTabIds = ['questlines', 'achievements'];
+    let lastAtlasSubTab = atlasTabIds.includes(AppState.currentTab) ? AppState.currentTab : 'map';
+    let lastQuestsSubTab = questsTabIds.includes(AppState.currentTab) ? AppState.currentTab : 'questlines';
+
+    function positionAtlasSubNavigation() {
+      const navs = [
+        document.getElementById('atlasSubNav'),
+        document.getElementById('questsSubNav')
+      ];
+      const isDesktop = window.matchMedia('(min-width: 1280px)').matches;
+      if (isDesktop) {
+        navs.forEach(nav => { if (nav.style) nav.style.top = ''; });
+        return;
+      }
+
+      const header = document.querySelector('header');
+      if (!header || typeof header.getBoundingClientRect !== 'function') return;
+      let top = header.getBoundingClientRect().bottom + 5;
+      if (AppState.currentTab === 'map' && AppState.mode === 'rpg') {
+        for (const id of ['rpgMapHud', 'btnCustomLocation', 'btnExpedition']) {
+          const element = document.getElementById(id);
+          if (typeof element.getBoundingClientRect !== 'function') continue;
+          const bounds = element.getBoundingClientRect();
+          if (bounds.height > 0) top = Math.max(top, bounds.bottom + 8);
+        }
+      }
+      navs.forEach(nav => { if (nav.style) nav.style.top = `${Math.ceil(top)}px`; });
+    }
+
     function updateHeaderNavigation() {
       document.body.classList.toggle('mode-classic', AppState.mode === 'classic');
       document.getElementById('rpgMapHud').classList.toggle('hidden', AppState.mode === 'classic');
       const showRpgMapControls = AppState.mode === 'rpg' && AppState.currentTab === 'map';
-      const showClassicControls = AppState.mode === 'classic' && AppState.currentTab === 'bucketlist';
+      const isAtlasView = atlasTabIds.includes(AppState.currentTab);
+      const isQuestsView = questsTabIds.includes(AppState.currentTab);
       document.getElementById('btnRecenterHome').classList.toggle('hidden', !showRpgMapControls);
-      document.getElementById('toggleRpgMode').setAttribute('aria-pressed', String(showRpgMapControls));
-      document.getElementById('toggleClassicMode').setAttribute('aria-pressed', String(showClassicControls));
-      document.querySelectorAll('#navTabs [data-tab]').forEach(button => {
+      document.getElementById('atlasSubNav').classList.toggle('hidden', !isAtlasView);
+      document.getElementById('questsSubNav').classList.toggle('hidden', !isQuestsView);
+      document.querySelectorAll('#navTabs [data-primary-tab]').forEach(button => {
+        const tab = button.dataset.primaryTab;
+        const active = tab === 'atlas' ? isAtlasView
+          : tab === 'quests' ? isQuestsView : tab === AppState.currentTab;
+        button.setAttribute('aria-pressed', String(active));
+      });
+      document.querySelectorAll('#atlasSubNav [data-tab], #questsSubNav [data-tab]').forEach(button => {
         button.setAttribute('aria-pressed', String(button.dataset.tab === AppState.currentTab));
       });
+      positionAtlasSubNavigation();
+    }
+
+    if (typeof ResizeObserver === 'function') {
+      const subNavigationPositionObserver = new ResizeObserver(positionAtlasSubNavigation);
+      for (const element of [
+        document.querySelector('header'),
+        document.getElementById('rpgMapHud'),
+        document.getElementById('btnCustomLocation'),
+        document.getElementById('btnExpedition')
+      ]) {
+        if (element) subNavigationPositionObserver.observe(element);
+      }
     }
 
     function switchTab(tabId) {
@@ -7416,6 +7493,14 @@
         AppState.mode = 'rpg';
         saveState();
       }
+      if (tabId === 'bucketlist' && AppState.mode !== 'classic') {
+        AppState.mode = 'classic';
+        saveState();
+      }
+      if (atlasTabIds.includes(AppState.currentTab)) lastAtlasSubTab = AppState.currentTab;
+      if (questsTabIds.includes(AppState.currentTab)) lastQuestsSubTab = AppState.currentTab;
+      if (atlasTabIds.includes(tabId)) lastAtlasSubTab = tabId;
+      if (questsTabIds.includes(tabId)) lastQuestsSubTab = tabId;
       AppState.currentTab = tabId;
       updateHeaderNavigation();
       if (tabId === 'map') renderCountyHitboxes();
@@ -7470,8 +7555,17 @@
       return true;
     }
 
-    document.querySelectorAll('#navTabs [data-tab]').forEach(btn => {
+    function switchPrimaryTab(tabId) {
+      if (tabId === 'atlas') return switchTab(lastAtlasSubTab);
+      if (tabId === 'quests') return switchTab(lastQuestsSubTab);
+      return switchTab(tabId);
+    }
+
+    document.querySelectorAll('#atlasSubNav [data-tab], #questsSubNav [data-tab]').forEach(btn => {
       btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+    });
+    document.querySelectorAll('#navTabs [data-primary-tab]').forEach(btn => {
+      btn.addEventListener('click', () => switchPrimaryTab(btn.dataset.primaryTab));
     });
     document.getElementById('btnOpenQuestlines').addEventListener('click', () => switchTab('questlines'));
 
@@ -7479,29 +7573,6 @@
       switchTab(AppState.mode === 'classic' ? 'bucketlist' : 'map');
       drawFogOfWar();
     }
-
-    // Toggle Mode: RPG vs Classic
-    document.getElementById('toggleRpgMode').addEventListener('click', () => {
-      AppState.mode = 'rpg';
-      document.body.classList.remove('mode-classic');
-      document.getElementById('rpgMapHud').classList.remove('hidden');
-      // Optional fog toggle: document.getElementById('fogToggleCheckbox').checked = true;
-      saveState();
-      switchTab('map');
-      renderCountyHitboxes();
-      drawFogOfWar();
-    });
-
-    document.getElementById('toggleClassicMode').addEventListener('click', () => {
-      AppState.mode = 'classic';
-      document.body.classList.add('mode-classic');
-      document.getElementById('rpgMapHud').classList.add('hidden');
-      // Optional fog toggle: document.getElementById('fogToggleCheckbox').checked = false;
-      saveState();
-      switchTab('bucketlist');
-      renderCountyHitboxes();
-      drawFogOfWar();
-    });
 
     // Scratch Map Dataset Switch
     for (const [id, dataset] of [['btnScratchWorld', 'world'], ['btnScratchUsa', 'usa'],
@@ -7847,7 +7918,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261029-icon-navigation-v1"></script>
+  <script src="./expedition-ui.js?v=20261029-five-tab-navigation-v1"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);
