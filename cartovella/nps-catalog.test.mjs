@@ -825,6 +825,32 @@ await checkAsync('an invalid refresh token clears only the cloud session and pro
     passportBeforeRefreshFailure);
   assert.equal(localStorage.getItem('cartovella_state'), cloudTestStoredPassport);
 });
+await checkAsync('stalled cloud requests time out with an explicit retry message', async () => {
+  const previousFetch = context.fetch;
+  const previousSetTimeout = context.setTimeout;
+  const previousClearTimeout = context.clearTimeout;
+  let receivedAbortedSignal = false;
+  context.setTimeout = callback => {
+    callback();
+    return 1;
+  };
+  context.clearTimeout = () => {};
+  context.fetch = async (url, options = {}) => {
+    receivedAbortedSignal = options.signal?.aborted === true;
+    throw new Error(`Request stalled: ${url}`);
+  };
+  try {
+    await assert.rejects(
+      vm.runInContext('fetchWithCloudTimeout("/test/stalled")', context),
+      /timed out after 30 seconds/
+    );
+    assert.equal(receivedAbortedSignal, true);
+  } finally {
+    context.fetch = previousFetch;
+    context.setTimeout = previousSetTimeout;
+    context.clearTimeout = previousClearTimeout;
+  }
+});
 context.fetch = cloudTestFetch;
 vm.runInContext(`
   cloudSession = ${JSON.stringify(cloudTestSession)};
@@ -837,6 +863,7 @@ else localStorage.setItem('cartovella_cloud_session', cloudTestStoredSession);
 const originalCloudUiFunctions = Object.fromEntries([
   'closeHomeModal', 'updateHomeBaseMarker', 'renderParkMarkers', 'drawFogOfWar', 'updateAllUI'
 ].map(name => [name, context[name]]));
+localStorage.removeItem('cartovella_last_signed_out_cloud_account');
 await checkAsync('existing cloud passport sign-in hydrates local state', async () => {
   const cloudSession = {
     access_token: 'test-access', refresh_token: 'test-refresh',
@@ -877,6 +904,69 @@ await checkAsync('existing cloud passport sign-in hydrates local state', async (
   assert.equal(vm.runInContext('cloudHydrated', context), true, element('authSyncStatusText').textContent);
   assert.equal(vm.runInContext('authRequestInProgress', context), false);
   assert.equal(element('appLoadingOverlay').classList.contains('hidden'), true);
+});
+await checkAsync('switching cloud accounts keeps the previous passport local until the user chooses', async () => {
+  const previousSession = JSON.parse(vm.runInContext('JSON.stringify(cloudSession)', context));
+  const previousPassport = vm.runInContext('JSON.stringify(passportPayload())', context);
+  const previousProfile = vm.runInContext('JSON.stringify(publicProfile)', context);
+  const storageBefore = Object.fromEntries([
+    'cartovella_cloud_session', 'cartovella_state', 'cartovella_public_profile',
+    'cartovella_last_signed_out_cloud_account', 'cartovella_public_profile_owner'
+  ].map(key => [key, localStorage.getItem(key)]));
+  const newSession = {
+    access_token: 'devon-access', refresh_token: 'devon-refresh',
+    user: { id: 'devon-account', email: 'devonoverbey@gmail.com' }
+  };
+  vm.runInContext(`
+    pendingCloudConflict = null;
+    cloudHydrated = false;
+    AppState.homeBase = { name: 'Taylor Home', lat: 41, lng: -104, radiusKm: TravelLedger.homeRadiusKm };
+    AppState.regions = { 'c:Taylorland': 'v' };
+    setPublicProfile({
+      username: 'taylorswift',
+      display_name: 'Taylor Swift in ONE YEAR',
+      visibility: 'passport'
+    });
+  `, context);
+  localStorage.setItem('cartovella_last_signed_out_cloud_account', 'taylor-account');
+  element('authEmail').value = newSession.user.email;
+  element('authPassword').value = 'password';
+  const requests = [];
+  context.fetch = async (url, options = {}) => {
+    requests.push({ url: String(url), options });
+    if (String(url).includes('/auth/v1/token?grant_type=password')) {
+      return { ok: true, status: 200, json: async () => newSession };
+    }
+    if (String(url).includes('/rest/v1/cartovella_passports?')) {
+      return { ok: true, status: 200, json: async () => [] };
+    }
+    throw new Error(`Unexpected account-switch request: ${url}`);
+  };
+  try {
+    await vm.runInContext('handleLogin()', context);
+    assert.equal(requests.length, 2);
+    assert.equal(requests.some(request =>
+      request.url.includes('/rest/v1/cartovella_passports') && request.options.method === 'POST'), false);
+    assert.equal(vm.runInContext('AppState.homeBase.name', context), 'Taylor Home');
+    assert.ok(vm.runInContext('pendingCloudConflict', context));
+    assert.equal(vm.runInContext('publicProfile.username', context), '');
+    assert.match(element('authSyncStatusText').textContent, /another signed-in account/i);
+    assert.equal(localStorage.getItem('cartovella_last_signed_out_cloud_account'), 'taylor-account');
+  } finally {
+    vm.runInContext(`
+      cloudSession = ${JSON.stringify(previousSession)};
+      cloudHydrated = false;
+      pendingCloudConflict = null;
+      applyPassport(migratePassport(${previousPassport}));
+      publicProfile = normalizePublicProfile(${previousProfile});
+      updatePublicProfileSettings();
+    `, context);
+    for (const [key, value] of Object.entries(storageBefore)) {
+      if (value === null) localStorage.removeItem(key);
+      else localStorage.setItem(key, value);
+    }
+    context.fetch = cloudTestFetch;
+  }
 });
 await checkAsync('different local and cloud passports are compared without replacing either copy', async () => {
   const cloudUpdatedAt = '2026-05-14T12:30:00.000Z';
@@ -2572,14 +2662,23 @@ check('fog radius scales continuously with zoom without a 25-pixel floor', () =>
   assert.equal(vm.runInContext('calculatePixelRadius(90, 85)', context),
     vm.runInContext('calculatePixelRadius(85.05112878, 85)', context));
 });
-check('zoom bitmap overscan and transforms follow Leaflet scale and target center', () => {
-  vm.runInContext('resizeFogCanvas(); animateFogZoom({ zoom: 5, center: { lat: 1, lng: 2 } });', context);
+check('fog canvas overscan is positioned in a Leaflet pane for shared map transforms', () => {
+  vm.runInContext('resizeFogCanvas()', context);
   assert.equal(element('fogCanvasOverlay').width, 2400);
   assert.equal(element('fogCanvasOverlay').height, 1800);
   assert.equal(element('fogCanvasOverlay').style.left, '-800px');
   assert.equal(element('fogCanvasOverlay').style.transformOrigin, '1200px 900px');
-  assert.equal(element('fogCanvasOverlay').style.transform, 'translate(-64px, -32px) scale(2)');
-  assert.equal(vm.runInContext('fogZoomAnimating', context), true);
+  assert.equal(element('fogCanvasOverlay').style.transform || '', '');
+  assert.match(html, /map\.createPane\('fogCanvasPane'\)/);
+  assert.match(html, /map\.getPane\('fogCanvasPane'\)\.appendChild\(fogCanvas\)/);
+  assert.match(html, /map\.on\('zoomstart', \(\) => \{ fogZoomAnimating = true; \}\)/);
+});
+check('fog geometry uses Leaflet layer coordinates inside its map pane', () => {
+  vm.runInContext('map.latLngToLayerPoint = () => ({ x: 123, y: 456 });', context);
+  assert.equal(vm.runInContext('fogLayerPoint([0, 0]).x', context), 123);
+  assert.equal(vm.runInContext('fogLayerPoint([0, 0]).y', context), 456);
+  vm.runInContext('delete map.latLngToLayerPoint;', context);
+  assert.equal(vm.runInContext('fogLayerPoint([0, 0]).x', context), -500);
 });
 context.fogOperations = [];
 vm.runInContext(`
@@ -2600,6 +2699,7 @@ vm.runInContext(`
   };
   document.getElementById('fogToggleCheckbox').checked = true;
   AppState.mode = 'rpg';
+  fogZoomAnimating = true;
   drawFogOfWar();
 `, context);
 check('fog redraws do not interrupt a running zoom animation', () => {
@@ -2622,11 +2722,20 @@ context.markerOptions = [];
 context.L = {
   circleMarker: (point, options) => {
     context.markerOptions.push(options);
-    return { addTo() { return this; }, bindTooltip() {}, bindPopup() {}, on() {} };
+    return {
+      addTo() { return this; },
+      bindTooltip() {},
+      bindPopup() {},
+      on() {},
+      setRadius() {},
+      setStyle() {},
+      setTooltipContent() {}
+    };
   }
 };
 vm.runInContext(`
   map.removeLayer = marker => removedMarkers.push(marker);
+  map.getBounds = () => ({ pad: () => ({ contains: () => true }) });
   PARKS = [
     { id: 'visited', lat: 1, lng: 1, name: 'Visited' },
     { id: 'wish', lat: 2, lng: 2, name: 'Wishlist' },
@@ -2641,7 +2750,7 @@ check('all pin filters work and None removes previously rendered markers', () =>
     vm.runInContext(`AppState.pinFilter = '${filter}'; renderParkMarkers();`, context);
     assert.deepEqual(Array.from(vm.runInContext('Object.keys(leafletMarkers)', context)), ids);
   }
-  assert.equal(context.removedMarkers.length, 5);
+  assert.equal(context.removedMarkers.length, 4);
   assert.ok(context.markerOptions.every(options => options.pane === 'destinationMarkerPane'));
   assert.equal(vm.runInContext('AppState.pins.visited', context), 'v');
 });
@@ -5164,6 +5273,7 @@ vm.runInContext(`
   applyPassport(migratePassport({}));PARKS=[{id:'pulse',name:'Pulse Park',lat:37,lng:-120,biomes:[],states:[]}];
   countyGeoJson=null;coordinateIndexes=null;AppState.currentTab='map';
   map={options:{crs:{scale:zoom=>256*2**zoom}},getZoom:()=>8,
+    getBounds:()=>({pad:()=>({contains:()=>true})}),
     latLngToContainerPoint:()=>({x:100,y:100}),removeLayer(){}};
 `, context);
 context.window.matchMedia = () => ({ matches: false });
@@ -6421,29 +6531,11 @@ check('hidden map work is deferred and move events coalesce to one fog redraw pe
     vm.runInContext('fogDrawFrame=null;map=null;leafletMarkers={};', context);
   }
 });
-check('pans slide the cached fog bitmap and only redraw near the overscan edge', () => {
-  const source = html.match(/function panFogCanvas\(\) \{[\s\S]*?\n    \}/)[0];
-  assert.ok(html.includes("map.on('move', panFogCanvas)") && html.includes("map.on('moveend', scheduleFogDraw)"));
+check('fog canvas pans with its Leaflet pane instead of a separate CSS transform', () => {
+  assert.ok(html.includes("map.on('moveend', () => {"));
+  assert.ok(!html.includes('function panFogCanvas('));
+  assert.ok(!html.includes("map.on('move', panFogCanvas)"));
   assert.ok(!html.includes("window.addEventListener('resize'"));
-  const originalRaf = context.requestAnimationFrame;
-  let frames = 0;
-  let offset = { x: 0, y: 0 };
-  context.requestAnimationFrame = () => ++frames;
-  context.panMap = { latLngToContainerPoint: () => offset };
-  try {
-    vm.runInContext(`AppState.currentTab='map';AppState.mode='rpg';fogZoomAnimating=false;fogDrawFrame=null;
-      map=panMap;fogPadding={x:400,y:300};fogDrawAnchor={lat:1,lng:2};fogCanvas.style.transform=''`, context);
-    offset = { x: 120, y: -80 };
-    vm.runInContext('panFogCanvas()', context);
-    assert.equal(frames, 0, source);
-    assert.equal(vm.runInContext('fogCanvas.style.transform', context), 'translate3d(120px, -80px, 0)');
-    offset = { x: 301, y: 0 };
-    vm.runInContext('panFogCanvas()', context);
-    assert.equal(frames, 1);
-  } finally {
-    context.requestAnimationFrame = originalRaf;
-    vm.runInContext("fogDrawFrame=null;fogDrawAnchor=null;map=null;fogCanvas.style.transform=''", context);
-  }
 });
 check('fog tiles render the viewport first, fill overscan when idle, survive pans and drop on data changes', () => {
   const saved = { raf: context.requestAnimationFrame, ric: context.requestIdleCallback, off: context.OffscreenCanvas };

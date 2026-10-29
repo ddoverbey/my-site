@@ -179,10 +179,6 @@
       transition: opacity 0.5s ease;
       will-change: transform;
     }
-    #fogCanvasOverlay.fog-zoom-animating {
-      transition: transform 0.25s cubic-bezier(0, 0, 0.25, 1), opacity 0.5s ease;
-      will-change: transform;
-    }
     #settingsMenu summary { list-style: none; }
     #settingsMenu summary::-webkit-details-marker { display: none; }
     .header-icon {
@@ -2166,7 +2162,9 @@
     const PASSPORT_STORAGE_KEY = 'cartovella_state';
     const LOCAL_EDITED_AT_KEY = 'cartovella_local_edited_at';
     const LOCAL_CLOUD_DIRTY_KEY = 'cartovella_cloud_dirty';
+    const LAST_SIGNED_OUT_CLOUD_ACCOUNT_KEY = 'cartovella_last_signed_out_cloud_account';
     const PUBLIC_PROFILE_STORAGE_KEY = 'cartovella_public_profile';
+    const PUBLIC_PROFILE_OWNER_KEY = 'cartovella_public_profile_owner';
     const PUBLIC_USERNAME_PATTERN = /^[a-z0-9_-]{3,24}$/;
     const LEGACY_PASSPORT_STORAGE_KEYS = ['terra_incognita_state'];
     const SUPABASE_URL = 'https://mrgdthihogxrqsfnknxd.supabase.co';
@@ -3232,6 +3230,7 @@
     const discoveryPulses = new Map();
     let discoveryFrame = null;
     let leafletMarkers = {};
+    let parkMarkerRenderFrame = null;
     let homeMarker = null;
     let countyLayer = null;
     let countyRenderer = null;
@@ -3271,8 +3270,11 @@
       map.createPane('destinationMarkerPane');
       map.getPane('destinationMarkerPane').style.zIndex = '460';
 
-      // Initialize Fog Canvas Overlay
+      // Let Leaflet transform the fog and atlas together during pan and zoom.
+      map.createPane('fogCanvasPane');
+      map.getPane('fogCanvasPane').style.zIndex = '450';
       fogCanvas = document.getElementById('fogCanvasOverlay');
+      map.getPane('fogCanvasPane').appendChild(fogCanvas);
       fogCtx = fogCanvas.getContext('2d');
       resizeFogCanvas();
 
@@ -3281,15 +3283,16 @@
       renderCountyHitboxes();
 
       // Setup map event listeners to re-render the fog canvas on pan/zoom
-      map.on('move', panFogCanvas);
-      map.on('moveend', scheduleFogDraw);
+      map.on('moveend', () => {
+        scheduleFogDraw();
+        scheduleParkMarkerRender();
+      });
       map.on('contextmenu', event => openCustomLocation(event.latlng.lat, event.latlng.lng));
-      map.on('zoomanim', animateFogZoom);
+      map.on('zoomstart', () => { fogZoomAnimating = true; });
       map.on('zoomend', () => {
         fogZoomAnimating = false;
-        fogCanvas.classList.remove('fog-zoom-animating');
-        fogCanvas.style.transform = '';
         showFog();
+        scheduleParkMarkerRender();
       });
       // Leaflet already tracks window resizes, so a second window listener only doubled the redraw.
       map.on('resize', () => {
@@ -3318,17 +3321,6 @@
       fogCanvas.style.transformOrigin = `${fogPadding.x + size.x / 2}px ${fogPadding.y + size.y / 2}px`;
     }
 
-    function animateFogZoom(event) {
-      if (AppState.currentTab !== 'map') return;
-      const scale = map.getZoomScale(event.zoom);
-      const offset = map.project(map.getCenter(), event.zoom).subtract(map.project(event.center, event.zoom));
-      // Carry any pending pan slide into the zoom transform so the bitmap does not jump.
-      const pan = fogDrawAnchor ? map.latLngToContainerPoint(fogDrawAnchor) : { x: 0, y: 0 };
-      fogZoomAnimating = true;
-      fogCanvas.classList.add('fog-zoom-animating');
-      fogCanvas.style.transform = `translate(${offset.x + pan.x * scale}px, ${offset.y + pan.y * scale}px) scale(${scale})`;
-    }
-
     /* Fog of War Rendering Routine */
     let fogDrawFrame = null;
     function scheduleFogDraw() {
@@ -3340,15 +3332,6 @@
     }
 
     // Pans slide the overscanned bitmap on the compositor; a full redraw happens only near its edge or at moveend.
-    let fogDrawAnchor = null;
-    function panFogCanvas() {
-      if (fogZoomAnimating || AppState.currentTab !== 'map' || AppState.mode === 'classic') return;
-      if (!fogDrawAnchor || !map) return scheduleFogDraw();
-      const offset = map.latLngToContainerPoint(fogDrawAnchor);
-      if (Math.abs(offset.x) > fogPadding.x * 0.75 || Math.abs(offset.y) > fogPadding.y * 0.75) return scheduleFogDraw();
-      fogCanvas.style.transform = `translate3d(${offset.x}px, ${offset.y}px, 0)`;
-    }
-
     function oceanFogOpacity() {
       const count = AppState.expeditions.filter(exp => exp.transitTags.includes('ferry') ||
         exp.routeLegs?.some(leg => leg.mode === 'ferry')).length;
@@ -3368,6 +3351,11 @@
       return typeof OffscreenCanvas !== 'undefined' && !!map?.project && !!map.getSize;
     }
 
+    function fogLayerPoint(latLng) {
+      return map.latLngToLayerPoint
+        ? map.latLngToLayerPoint(latLng) : map.latLngToContainerPoint(latLng);
+    }
+
     function fogPulsing() {
       return homeAuraPulseStarted !== null || discoveryPulses.size > 0;
     }
@@ -3380,7 +3368,7 @@
     }
 
     function fogWorldOrigin(zoom) {
-      const origin = map.latLngToContainerPoint([0, 0]).subtract(map.project([0, 0], zoom).round());
+      const origin = fogLayerPoint([0, 0]).subtract(map.project([0, 0], zoom).round());
       return { x: Math.round(origin.x), y: Math.round(origin.y) };
     }
 
@@ -3395,8 +3383,6 @@
 
     function showFog() {
       if (!fogCtx || !map || fogZoomAnimating || AppState.currentTab !== 'map') return;
-      fogCanvas.style.transform = '';
-      fogDrawAnchor = null;
       if (AppState.mode !== 'classic' && fogTilesAvailable() && !fogPulsing()) {
         compositeFogTiles();
       } else {
@@ -3419,7 +3405,6 @@
         fogComposite = origin ? { zoom, ox: origin.x, oy: origin.y, padX: fogPadding.x, padY: fogPadding.y,
           version: -1 } : null;
       }
-      fogDrawAnchor = map.containerPointToLatLng ? map.containerPointToLatLng([0, 0]) : null;
     }
 
     function renderFogTile(zoom, i, j) {
@@ -3596,7 +3581,7 @@
 
       // Punch out hole for Home Base
       if (AppState.homeBase) {
-        const homePoint = map.latLngToContainerPoint([AppState.homeBase.lat, AppState.homeBase.lng]);
+        const homePoint = fogLayerPoint([AppState.homeBase.lat, AppState.homeBase.lng]);
         const pulse = homeAuraPulseStarted === null ? 1 :
           0.925 + 0.075 * Math.cos((performance.now() - homeAuraPulseStarted) / 1800 * Math.PI * 4);
         const radius = calculatePixelRadius(AppState.homeBase.lat, AppState.homeBase.radiusKm) * pulse;
@@ -3617,7 +3602,7 @@
           return;
         }
         if (TravelLedger.clearsFog(status) && p.lat !== null && p.lng !== null) {
-          const pt = map.latLngToContainerPoint([p.lat, p.lng]);
+          const pt = fogLayerPoint([p.lat, p.lng]);
           const radius = calculatePixelRadius(p.lat, status === 't' ? 85 * 0.6 : 85) * pulse;
           if (pt.x + radius >= -fogPadding.x && pt.x - radius <= width - fogPadding.x &&
               pt.y + radius >= -fogPadding.y && pt.y - radius <= height - fogPadding.y) {
@@ -3634,7 +3619,7 @@
       });
       AppState.customLocations.forEach(p => {
         if (!TravelLedger.clearsFog(p.status)) return;
-        const point = map.latLngToContainerPoint([p.lat, p.lng]);
+        const point = fogLayerPoint([p.lat, p.lng]);
         const pulse = TravelLedger.isVisited(p.status) ? discoveryPulseScale(`poi:${p.id}`) : 1;
         fogCtx.globalAlpha = pulse;
         punchFogAura(point.x, point.y, calculatePixelRadius(p.lat, p.status === 't' ? 85 * 0.6 : 85) * pulse, 0.95);
@@ -3643,7 +3628,7 @@
       microStateCatalog.forEach(entry => {
         const status = AppState.regions[entry.key];
         if (!TravelLedger.clearsFog(status)) return;
-        const point = map.latLngToContainerPoint([entry.lat, entry.lng]);
+        const point = fogLayerPoint([entry.lat, entry.lng]);
         const pulse = TravelLedger.isVisited(status) ? discoveryPulseScale(`micro:${entry.name}`) : 1;
         const radiusKm = MicroStates.FOG_RADIUS_KM * (status === 't' ? 0.6 : 1);
         fogCtx.globalAlpha = pulse;
@@ -3656,7 +3641,7 @@
         .map(([id]) => id));
 
       AppState.expeditions.forEach(exp => TravelLedger.flightStops(exp).forEach(([lat, lng]) => {
-        const point = map.latLngToContainerPoint([lat, lng]);
+        const point = fogLayerPoint([lat, lng]);
         const radius = calculatePixelRadius(lat, FLIGHT_STOP_FOG_RADIUS_KM);
         if (point.x + radius >= -fogPadding.x && point.x - radius <= width - fogPadding.x &&
             point.y + radius >= -fogPadding.y && point.y - radius <= height - fogPadding.y) {
@@ -3692,7 +3677,7 @@
           const points = [];
           const project = (latitude, longitude) => {
             const coordinate = [Math.max(-85.05112878, Math.min(85.05112878, latitude)), longitude];
-            const point = map.project ? map.project(coordinate, zoom) : map.latLngToContainerPoint(coordinate);
+            const point = map.project ? map.project(coordinate, zoom) : fogLayerPoint(coordinate);
             points.push(point);
           };
           // Include the implicit closing edge so polar rings close at the Mercator floor.
@@ -3751,7 +3736,7 @@
     function fillFogPieces(pieces, fallbackPath, zoom, copies, rule, marginPixels) {
       const scale = map.options.crs.scale(zoom) / map.options.crs.scale(FOG_REFERENCE_ZOOM);
       const worldWidth = map.options.crs.scale(zoom);
-      const origin = map.latLngToContainerPoint([0, 0]).subtract(map.project([0, 0], zoom).round());
+      const origin = fogLayerPoint([0, 0]).subtract(map.project([0, 0], zoom).round());
       const canAdd = pieces && typeof Path2D.prototype.addPath === 'function';
       for (const copy of copies) {
         const tx = origin.x + copy * worldWidth;
@@ -3897,7 +3882,7 @@
           fogPolygonCache.set(geometry, cached);
         }
         // World-pixel paths stay fixed during a pan; only their canvas translation changes.
-        const origin = map.latLngToContainerPoint([0, 0]).subtract(map.project([0, 0], zoom).round());
+        const origin = fogLayerPoint([0, 0]).subtract(map.project([0, 0], zoom).round());
         const margin = Math.max(0, featherPixels) * 2;
         fogCtx.save();
         fogCtx.translate(origin.x, origin.y);
@@ -3930,7 +3915,7 @@
             if (!Array.isArray(coordinate) || coordinate.length < 2) return;
             const [lng, lat] = coordinate;
             if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-            const point = map.latLngToContainerPoint([lat, lng]);
+            const point = fogLayerPoint([lat, lng]);
             if (!hasPoint) fogCtx.moveTo(point.x, point.y);
             else fogCtx.lineTo(point.x, point.y);
             hasPoint = true;
@@ -4031,7 +4016,7 @@
         }
         const lineWidth = calculatePixelRadius(cached.averageLat, radiusKm) * 2;
         const margin = lineWidth / 2 + 50;
-        const origin = map.latLngToContainerPoint([0, 0]).subtract(map.project([0, 0], zoom).round());
+        const origin = fogLayerPoint([0, 0]).subtract(map.project([0, 0], zoom).round());
         const { bounds } = cached;
         if (bounds.maxY + origin.y + margin < -fogPadding.y ||
             bounds.minY + origin.y - margin > fogCanvas.height - fogPadding.y) return;
@@ -4066,7 +4051,7 @@
       const validRoute = route
         .filter(point => Array.isArray(point) && Number.isFinite(point[0]) && Number.isFinite(point[1]));
       const points = validRoute
-        .map(([lat, lng]) => map.latLngToContainerPoint([lat, lng]));
+        .map(([lat, lng]) => fogLayerPoint([lat, lng]));
       if (points.length < 2) return;
 
       const averageLat = validRoute.reduce((sum, point) => sum + point[0], 0) / validRoute.length;
@@ -4161,66 +4146,117 @@
       return km * 1000 / metersPerPixel;
     }
 
+    function scheduleParkMarkerRender() {
+      if (!map || AppState.currentTab !== 'map' || parkMarkerRenderFrame !== null) return;
+      const requestFrame = globalThis.requestAnimationFrame || (callback => setTimeout(callback, 0));
+      parkMarkerRenderFrame = requestFrame(() => {
+        parkMarkerRenderFrame = null;
+        renderParkMarkers();
+      });
+    }
+
+    function markerMatchesFilter(status) {
+      if (expeditionPicking || AppState.pinFilter === 'all') return true;
+      if (AppState.pinFilter === 'none') return false;
+      return AppState.pinFilter === 'v'
+        ? TravelLedger.isVisited(status) : status === AppState.pinFilter;
+    }
+
+    function removeParkMarker(id) {
+      const marker = leafletMarkers[id];
+      if (!marker) return;
+      map.removeLayer(marker);
+      delete leafletMarkers[id];
+    }
+
+    function updateParkMarkerStyle(marker, status) {
+      const visited = TravelLedger.isVisited(status);
+      const color = TravelLedger.colors[status] || '#475569';
+      marker.setRadius(visited ? 8 : 6);
+      marker.setStyle({
+        fillColor: color,
+        fillOpacity: 0.9,
+        color: visited ? '#fde68a' : '#94a3b8',
+        weight: 2
+      });
+    }
+
+    function createParkMarker(p, status) {
+      const marker = L.circleMarker([p.lat, p.lng], { pane: 'destinationMarkerPane' }).addTo(map);
+      updateParkMarkerStyle(marker, status);
+      marker.bindTooltip(`<b>${escapeHtml(p.name)}</b>`, {
+        direction: 'top',
+        offset: [0, -8],
+        className: 'rpg-tooltip'
+      });
+      marker.bindPopup(() => createPopupContent(p), { maxWidth: 280 });
+      marker.on('click', () => {
+        if (expeditionPicking) {
+          addExpeditionStop(p.custom ? 'poi' : 'park', p.id);
+          marker.closePopup();
+        }
+      });
+      marker.cartovellaDataKey = JSON.stringify([p.name, p.lat, p.lng, !!p.custom]);
+      return marker;
+    }
+
     function renderParkMarkers() {
       if (!map || AppState.currentTab !== 'map') return;
-      // Clear existing
-      Object.values(leafletMarkers).forEach(m => map.removeLayer(m));
-      leafletMarkers = {};
-      if (AppState.pinFilter === 'none' && !expeditionPicking) return;
-
+      const bounds = map.getBounds().pad(0.5);
+      const visibleIds = new Set();
       [...PARKS, ...customDestinations()].forEach(p => {
-        if (p.lat === null || p.lng === null) return;
+        if (!Number.isFinite(p.lat) || !Number.isFinite(p.lng) ||
+            !bounds.contains([p.lat, p.lng])) return;
         const status = destinationStatus(p);
-        
-        // Filter by pin visibility state
-        if (!expeditionPicking && !['all', 'none'].includes(AppState.pinFilter) &&
-            (AppState.pinFilter === 'v' ? !TravelLedger.isVisited(status) : status !== AppState.pinFilter)) return;
-
-        // Custom pin color based on status
-        const color = TravelLedger.colors[status] || '#475569';
-        const borderColor = TravelLedger.isVisited(status) ? '#fde68a' : '#94a3b8';
-
-        const marker = L.circleMarker([p.lat, p.lng], {
-          pane: 'destinationMarkerPane',
-          radius: TravelLedger.isVisited(status) ? 8 : 6,
-          fillColor: color,
-          fillOpacity: 0.9,
-          color: borderColor,
-          weight: 2
-        }).addTo(map);
-
-        // Tooltip
-        marker.bindTooltip(`<b>${escapeHtml(p.name)}</b>`, {
-          direction: 'top',
-          offset: [0, -8],
-          className: 'rpg-tooltip'
-        });
-
-        // Popup with interactive status toggling
-        marker.bindPopup(() => createPopupContent(p), {
-          maxWidth: 280
-        });
-        marker.on('click', () => {
-          if (expeditionPicking) {
-            addExpeditionStop(p.custom ? 'poi' : 'park', p.id);
-            marker.closePopup();
-          }
-        });
-
-        leafletMarkers[p.id] = marker;
+        if (!markerMatchesFilter(status)) return;
+        const key = String(p.id);
+        visibleIds.add(key);
+        const dataKey = JSON.stringify([p.name, p.lat, p.lng, !!p.custom]);
+        let marker = leafletMarkers[key];
+        if (marker && marker.cartovellaDataKey !== dataKey) {
+          removeParkMarker(key);
+          marker = null;
+        }
+        if (!marker) {
+          marker = createParkMarker(p, status);
+          leafletMarkers[key] = marker;
+        } else {
+          updateParkMarkerStyle(marker, status);
+        }
       });
-      renderMicroStateMarkers();
+      renderMicroStateMarkers(bounds, visibleIds);
+      Object.keys(leafletMarkers).forEach(id => {
+        if (!visibleIds.has(id)) removeParkMarker(id);
+      });
     }
 
     // Micro-states are too small for polygons at world zoom, so each gets a fixed-pixel halo that never shrinks.
-    function renderMicroStateMarkers() {
+    function renderMicroStateMarkers(bounds, visibleIds) {
       microStateCatalog.forEach((entry, index) => {
         const status = AppState.regions[entry.key];
-        if (!expeditionPicking && !['all', 'none'].includes(AppState.pinFilter) &&
-            (AppState.pinFilter === 'v' ? !TravelLedger.isVisited(status) : status !== AppState.pinFilter)) return;
+        const key = `micro:${entry.name}`;
+        if (!bounds.contains([entry.lat, entry.lng]) || !markerMatchesFilter(status)) return;
+        visibleIds.add(key);
         const color = TravelLedger.colors[status] || '#94a3b8';
-        const marker = L.circleMarker([entry.lat, entry.lng], {
-          pane: 'destinationMarkerPane',
+        let marker = leafletMarkers[key];
+        if (!marker) {
+          marker = L.circleMarker([entry.lat, entry.lng], { pane: 'destinationMarkerPane' }).addTo(map);
+          marker.setRadius(6);
+          marker.bindTooltip('', {
+            direction: 'top',
+            offset: [0, -8],
+            className: 'rpg-tooltip'
+          });
+          marker.bindPopup(() => createMicroStatePopup(index), { maxWidth: 260 });
+          marker.on('click', () => {
+            if (expeditionPicking) {
+              addMicroStateStop(entry);
+              marker.closePopup();
+            }
+          });
+          leafletMarkers[key] = marker;
+        }
+        marker.setStyle({
           radius: 6,
           color,
           weight: 2,
@@ -4228,20 +4264,8 @@
           fillColor: color,
           fillOpacity: status ? 0.35 : 0.08,
           dashArray: status ? null : '2 3'
-        }).addTo(map);
-        marker.bindTooltip(`<b>${escapeHtml(entry.name)}</b> · ${TravelLedger.labels[status] || 'Unexplored'}`, {
-          direction: 'top',
-          offset: [0, -8],
-          className: 'rpg-tooltip'
         });
-        marker.bindPopup(() => createMicroStatePopup(index), { maxWidth: 260 });
-        marker.on('click', () => {
-          if (expeditionPicking) {
-            addMicroStateStop(entry);
-            marker.closePopup();
-          }
-        });
-        leafletMarkers[`micro:${entry.name}`] = marker;
+        marker.setTooltipContent(`<b>${escapeHtml(entry.name)}</b> · ${TravelLedger.labels[status] || 'Unexplored'}`);
       });
     }
 
@@ -5360,8 +5384,6 @@
       const status = NationalParksScratch.status(park, AppState);
       const cycle = ['un', 'v', 'w', 't', 'l'];
       const next = cycle[(cycle.indexOf(status) + 1) % cycle.length];
-      const fromChecklist = document.activeElement?.dataset.nationalPark === park.id;
-      const fromMap = document.activeElement?.getAttribute('data-park') === park.id;
       try {
         commitLedger(() => {
           if (park.ledgerId === 'seki') {
@@ -5385,9 +5407,7 @@
       }
       renderParkMarkers();
       drawFogOfWar();
-      updateAllUI();
-      if (fromChecklist) document.querySelector(`[data-national-park="${park.id}"]`)?.focus();
-      else if (fromMap) document.querySelector(`[data-park="${park.id}"]`)?.focus();
+      updateAllUI({ updateNationalParksInPlace: true });
     }
 
     function renderNationalParksScratch() {
@@ -5428,11 +5448,13 @@
       gradient.append('stop').attr('offset', '100%').attr('stop-color', '#80702c');
       const mapBackdrop = region => region?.tier === 'mastered' ? 'url(#nationalParkMasteredGradient)' : backdrop(region);
       const layer = svg.append('g');
+      const stateLayer = layer.append('g');
       const projection = d3.geoAlbersUsa().fitExtent([[20, 20], [940, 495]], {
         type: 'FeatureCollection', features: usaGeoJson
       });
       const mainPath = d3.geoPath(projection);
-      layer.append('g').selectAll('path').data(usaGeoJson).join('path')
+      stateLayer.selectAll('path').data(usaGeoJson).join('path')
+        .attr('data-national-park-state', feature => feature.properties.name)
         .attr('d', mainPath)
         .attr('fill', feature => mapBackdrop(progress.find(region => region.states.includes(feature.properties.name))))
         .attr('stroke', feature => progress.find(region => region.states.includes(feature.properties.name))?.visited ? '#10b981' : '#1e293b')
@@ -5482,6 +5504,7 @@
           .attr('stroke-width', 1).attr('vector-effect', 'non-scaling-stroke');
         const button = document.createElement('button');
         button.type = 'button';
+        button.id = `national-park-${park.id}`;
         button.dataset.nationalPark = park.id;
         button.className = 'rounded-lg border border-slate-700 bg-slate-900 p-2 text-left text-xs';
         button.style.color = status === 'un' ? '#94a3b8' : color;
@@ -5496,6 +5519,66 @@
           layer.attr('transform', event.transform);
         });
       svg.call(nationalParksZoomBehavior).call(nationalParksZoomBehavior.transform, nationalParksZoom || d3.zoomIdentity);
+    }
+
+    function updateNationalParksScratchStatus() {
+      const parks = NationalParksScratch.parks(PARKS);
+      if (!parks.length || !usaGeoJson?.length) return;
+      const progress = NationalParksScratch.progress(parks, AppState);
+      const progressById = new Map(progress.map(region => [region.id, region]));
+      const progressByState = new Map();
+      progress.forEach(region => region.states.forEach(state => progressByState.set(state, region)));
+      const visited = progress.reduce((sum, region) => sum + region.visited, 0);
+      const stats = document.getElementById('nationalParksStats');
+      stats.textContent = `${visited} / ${parks.length} Visited · ${parks.filter(p =>
+        NationalParksScratch.status(p, AppState) === 'w').length} Wishlist`;
+      if (!Object.keys(npsBoundariesByCode).length) {
+        stats.textContent += ' · Boundaries unavailable; showing location badges. Retry datasets in Settings.';
+      }
+      const backdrop = region => region?.tier === 'mastered' ? '#065f46' :
+        region?.tier === 'progress' ? '#102d28' : '#090d1a';
+      const mapBackdrop = region => region?.tier === 'mastered'
+        ? 'url(#nationalParkMasteredGradient)' : backdrop(region);
+      const regionList = document.getElementById('nationalParksRegions');
+      progress.forEach((region, index) => {
+        const chip = regionList.children[index];
+        if (!chip) return;
+        chip.style.backgroundColor = backdrop(region);
+        chip.style.borderColor = region.tier === 'unstarted' ? '#334155' : '#10b981';
+        chip.textContent = `${region.name}: ${region.visited}/${region.total}${region.tier === 'mastered' ? ' · Mastered' : ''}`;
+      });
+
+      const svg = d3.select('#svgNationalParks');
+      svg.selectAll('[data-national-park-state]').each(function (feature) {
+        const region = progressByState.get(feature.properties.name);
+        d3.select(this)
+          .attr('fill', mapBackdrop(region))
+          .attr('stroke', region?.visited ? '#10b981' : '#1e293b');
+      });
+      const parksById = new Map(parks.map(park => [park.id, park]));
+      svg.selectAll('[data-park]').each(function () {
+        const park = parksById.get(this.getAttribute('data-park'));
+        if (!park) return;
+        const status = NationalParksScratch.status(park, AppState);
+        const mastered = progressById.get(park.regionId)?.tier === 'mastered';
+        const color = status === 'v' ? (mastered ? '#a7f3d0' : '#10b981') :
+          status === 'w' ? TravelLedger.colors.w : '#334155';
+        const group = d3.select(this)
+          .attr('aria-label', `${park.name}: ${status === 'un' ? 'Unexplored' : TravelLedger.labels[status]}`);
+        group.select('title').text(`${park.name} · ${status === 'un' ? 'Unexplored' : TravelLedger.labels[status]}`);
+        group.select('circle.park-hit-halo')
+          .attr('fill', color)
+          .attr('fill-opacity', status === 'un' ? 0.35 : 0.7)
+          .attr('stroke', status === 'un' ? '#94a3b8' : color);
+        group.select('path')
+          .attr('fill', status === 'un' ? '#0f172a' : color)
+          .attr('stroke', color);
+        const button = document.getElementById(`national-park-${park.id}`);
+        if (button) {
+          button.style.color = status === 'un' ? '#94a3b8' : color;
+          button.textContent = `${park.name} — ${status === 'un' ? 'Unexplored' : TravelLedger.labels[status]}`;
+        }
+      });
     }
 
     document.getElementById('btnResetNationalParksZoom').addEventListener('click', () => {
@@ -7059,7 +7142,7 @@
       }
     }
 
-    function updateAllUI() {
+    function updateAllUI({ updateNationalParksInPlace = false } = {}) {
       updateHeaderNavigation();
       updateHeaderSaveStatus();
       renderCountyHitboxes();
@@ -7072,7 +7155,13 @@
       if (AppState.currentTab === 'passport') renderPassportView();
       if (AppState.currentTab === 'questlines') renderQuestlinesView();
       if (AppState.currentTab === 'travel') renderExpeditionHistory();
-      if (AppState.currentTab === 'scratch') renderScratchMap();
+      if (AppState.currentTab === 'scratch') {
+        if (updateNationalParksInPlace && AppState.scratchDataset === 'nationalparks') {
+          updateNationalParksScratchStatus();
+        } else {
+          renderScratchMap();
+        }
+      }
       if (AppState.currentTab === 'bucketlist') renderBucketListView();
       if (AppState.currentTab === 'achievements') renderAchievementsView();
       if (AppState.currentTab === 'guild') {
@@ -7784,6 +7873,22 @@
       }
     }
 
+    const CLOUD_REQUEST_TIMEOUT_MS = 30000;
+    async function fetchWithCloudTimeout(url, options = {}) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), CLOUD_REQUEST_TIMEOUT_MS);
+      try {
+        return await fetch(url, { ...options, signal: controller.signal });
+      } catch (error) {
+        if (controller.signal.aborted) {
+          throw new Error('Cloud request timed out after 30 seconds. Check your connection and retry.');
+        }
+        throw error;
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
+
     async function refreshCloudSession() {
       if (cloudSessionRefreshPromise) return cloudSessionRefreshPromise;
       const sessionAtRequest = cloudSession;
@@ -7806,7 +7911,7 @@
           }
 
           const sessionToRefresh = cloudSession;
-          const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+          const response = await fetchWithCloudTimeout(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY },
             body: JSON.stringify({ refresh_token: sessionToRefresh.refresh_token })
@@ -7892,6 +7997,9 @@
       if (!session || cloudSession !== session) return false;
       const storedSession = readStoredCloudSession();
       if (adoptNewerCloudSession(storedSession, session)) return false;
+      if (session.user?.id) {
+        localStorage.setItem(LAST_SIGNED_OUT_CLOUD_ACCOUNT_KEY, session.user.id);
+      }
       cloudSession = null;
       cloudHydrated = false;
       pendingCloudConflict = null;
@@ -7907,7 +8015,7 @@
       const headers = new Headers(options.headers || {});
       headers.set('apikey', SUPABASE_ANON_KEY);
       headers.set('Authorization', `Bearer ${cloudSession.access_token}`);
-      const response = await fetch(url, { ...options, headers });
+      const response = await fetchWithCloudTimeout(url, { ...options, headers });
       if ((response.status === 401 || response.status === 403) && !retried) {
         if (await refreshCloudSession()) return cloudFetch(url, options, true);
         if (!cloudSession?.access_token) {
@@ -7957,6 +8065,15 @@
       if (typeof candidate !== 'string') return '';
       const username = candidate.trim().toLowerCase();
       return PUBLIC_USERNAME_PATTERN.test(username) ? username : '';
+    }
+
+    function preparePublicProfileForAccount(userId) {
+      const profileOwnerId = localStorage.getItem(PUBLIC_PROFILE_OWNER_KEY);
+      const signedOutAccountId = localStorage.getItem(LAST_SIGNED_OUT_CLOUD_ACCOUNT_KEY);
+      if (profileOwnerId !== userId ||
+          (signedOutAccountId && signedOutAccountId !== userId)) {
+        setPublicProfile(normalizePublicProfile(), { persist: false });
+      }
     }
 
     function ensureAuthPublicUsername() {
@@ -8028,7 +8145,11 @@
         `Cloud save last updated: ${formatSaveDate(cloudUpdatedAt)}\n` +
         `This device last edited: ${localEditedAt ? formatSaveDate(localEditedAt) : 'Unknown (this save predates local edit tracking)'}`;
       cloudHydrated = false;
-      setCloudStatus('Your browser and cloud saves differ. Choose which copy to keep.', true);
+      const signedOutAccountId = localStorage.getItem(LAST_SIGNED_OUT_CLOUD_ACCOUNT_KEY);
+      const accountChanged = signedOutAccountId && signedOutAccountId !== cloudSession?.user?.id;
+      setCloudStatus(accountChanged
+        ? 'This browser has data from another signed-in account. Choose which passport to keep.'
+        : 'Your browser and cloud saves differ. Choose which copy to keep.', true);
       toggleAuthModal(true);
       updateAuthUI();
       document.getElementById('btnKeepCloudPassport').focus();
@@ -8046,6 +8167,7 @@
         localStorage.setItem(LOCAL_EDITED_AT_KEY, new Date(cloudUpdatedAt).toISOString());
       }
       localStorage.setItem(LOCAL_CLOUD_DIRTY_KEY, 'false');
+      localStorage.removeItem(LAST_SIGNED_OUT_CLOUD_ACCOUNT_KEY);
       cloudHydrated = true;
       if (AppState.homeBase) closeHomeModal();
       updateHomeBaseMarker();
@@ -8116,7 +8238,7 @@
       const loadingTask = beginAppLoading('Signing in to Cartovella…');
       document.getElementById('btnAuthLogin').disabled = true;
       try {
-        const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+        const response = await fetchWithCloudTimeout(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY },
           body: JSON.stringify({
@@ -8131,6 +8253,7 @@
         }
         cloudSession = session;
         localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(cloudSession));
+        preparePublicProfileForAccount(session.user.id);
         ensureAuthPublicUsername();
         cloudHydrated = false;
         pendingCloudConflict = null;
@@ -8178,7 +8301,7 @@
           usernameInput.focus();
           return;
         }
-        const response = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+        const response = await fetchWithCloudTimeout(`${SUPABASE_URL}/auth/v1/signup`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY },
           body: JSON.stringify({
@@ -8199,6 +8322,7 @@
         }
         cloudSession = result.session;
         localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(cloudSession));
+        localStorage.setItem(PUBLIC_PROFILE_OWNER_KEY, cloudSession.user.id);
         ensureAuthPublicUsername();
         cloudHydrated = false;
         pendingCloudConflict = null;
@@ -8220,9 +8344,12 @@
     }
 
     async function handleLogout() {
+      if (cloudSession?.user?.id) {
+        localStorage.setItem(LAST_SIGNED_OUT_CLOUD_ACCOUNT_KEY, cloudSession.user.id);
+      }
       if (cloudSession?.access_token) {
         try {
-          const response = await fetch(`${SUPABASE_URL}/auth/v1/logout`, {
+          const response = await fetchWithCloudTimeout(`${SUPABASE_URL}/auth/v1/logout`, {
             method: 'POST',
             headers: {
               apikey: SUPABASE_ANON_KEY,
@@ -8431,7 +8558,12 @@
 
     function setPublicProfile(profile, { persist = true } = {}) {
       const normalized = normalizePublicProfile(profile);
-      if (persist) localStorage.setItem(PUBLIC_PROFILE_STORAGE_KEY, JSON.stringify(normalized));
+      if (persist) {
+        localStorage.setItem(PUBLIC_PROFILE_STORAGE_KEY, JSON.stringify(normalized));
+        if (cloudSession?.user?.id) {
+          localStorage.setItem(PUBLIC_PROFILE_OWNER_KEY, cloudSession.user.id);
+        }
+      }
       publicProfile = normalized;
       updatePublicProfileSettings();
     }
@@ -8867,6 +8999,7 @@
             body.message || body.details || `Cloud save failed (HTTP ${response.status}).`);
         }
         lastCloudSavedAt = cloudSavedAt.getTime();
+        localStorage.removeItem(LAST_SIGNED_OUT_CLOUD_ACCOUNT_KEY);
         const currentSnapshot = stablePassportStringify(compactPassportForStorage(passportPayload()));
         let savedCurrentState = currentSnapshot === uploadedSnapshot &&
           publicProfileSnapshot() === uploadedProfileSnapshot;
@@ -8980,6 +9113,8 @@
         const records = await response.json();
         if (!Array.isArray(records)) throw new Error('Supabase returned an unexpected passport response.');
         const localPassport = passportPayload();
+        const signedOutAccountId = localStorage.getItem(LAST_SIGNED_OUT_CLOUD_ACCOUNT_KEY);
+        const accountChanged = !!signedOutAccountId && signedOutAccountId !== cloudSession.user.id;
         if (records.length) {
           const cloudProfile = normalizePublicProfile(records[0]);
           if (!cloudProfile.username) {
@@ -8993,12 +9128,15 @@
           const cloudHasPassportData = hasPassportData(cloudPassport);
           const passportsDiffer =
             stablePassportStringify(localSnapshot) !== stablePassportStringify(cloudSnapshot);
-          if (localSnapshot.homeBase && localHasProgress && cloudHasPassportData &&
-              passportsDiffer && hasUnsyncedLocalChanges(records[0].updated_at)) {
+          setPublicProfile(cloudProfile);
+          const localNeedsConflictProtection = accountChanged
+            ? passportsDiffer
+            : localSnapshot.homeBase && localHasProgress && cloudHasPassportData &&
+              passportsDiffer && hasUnsyncedLocalChanges(records[0].updated_at);
+          if (localNeedsConflictProtection) {
             showCloudConflict(cloudPassport, records[0].updated_at, cloudProfile);
             return false;
           }
-          setPublicProfile(cloudProfile);
           if (localHasPassportData && !cloudHasPassportData) {
             cloudHydrated = true;
             if (!await syncToCloud(notifySeed)) {
@@ -9010,15 +9148,25 @@
             setCloudStatus('Cloud passport loaded and ready.');
           }
         } else {
+          const emptyCloudPassport = migratePassport({ version: 2 });
+          const localDiffersFromEmptyCloud = stablePassportStringify(
+            compactPassportForStorage(localPassport)
+          ) !== stablePassportStringify(compactPassportForStorage(emptyCloudPassport));
+          if (accountChanged && localDiffersFromEmptyCloud) {
+            showCloudConflict(emptyCloudPassport, null, publicProfile);
+            return false;
+          }
           cloudHydrated = true;
           if (hasPassportData(localPassport)) {
             if (!await syncToCloud(notifySeed)) {
               throw new Error('No cloud passport exists and the local passport could not be uploaded.');
             }
           } else {
+            setPublicProfile(publicProfile);
             setCloudStatus('Cloud account ready. Add a home base or travel record to begin syncing.');
           }
         }
+        localStorage.removeItem(LAST_SIGNED_OUT_CLOUD_ACCOUNT_KEY);
         return true;
       } catch (error) {
         cloudHydrated = false;
@@ -9123,6 +9271,7 @@
     window.addEventListener('DOMContentLoaded', () => {
       const publicUsername = beginPublicAtlasView();
       loadPersistedState();
+      if (cloudSession?.user?.id) preparePublicProfileForAccount(cloudSession.user.id);
       updateStorageWarning();
       updateAuthUI();
       if (cloudSession?.access_token && !AppState.viewOnly) {
@@ -9146,7 +9295,7 @@
         } else if (!AppState.viewOnly) {
           cloudHydrated = true;
         }
-        startupLoadingTask?.update('Finishing atlas setup…');
+        startupLoadingTask?.update('Loading park catalogs…');
         await finishStartupDatasets();
         startupLoadingTask?.finish();
         startupLoadingTask = null;
@@ -9217,11 +9366,30 @@
     async function finishStartupDatasets() {
       await Promise.all([
         loadNpsCatalog(),
-        loadWorldwideCatalog(),
-        loadSupplementalGeoDatasets()
+        loadWorldwideCatalog()
       ]);
-      await loadBiomeCatalog();
-      await Promise.all([loadNpsBoundaries(), loadCoordinateGeography()]);
+      syncDerivedState();
+      if (map) {
+        renderCountyHitboxes();
+        renderParkMarkers();
+        drawFogOfWar();
+      }
+      updateAllUI();
+      startupLoadingTask?.finish();
+      startupLoadingTask = null;
+      await new Promise(resolve => {
+        if (typeof requestIdleCallback === 'function') {
+          requestIdleCallback(() => resolve(), { timeout: 1500 });
+        } else {
+          setTimeout(resolve, 250);
+        }
+      });
+      await Promise.all([
+        loadSupplementalGeoDatasets(),
+        loadBiomeCatalog(),
+        loadNpsBoundaries()
+      ]);
+      await loadCoordinateGeography();
       syncDerivedState();
       if (map) {
         renderCountyHitboxes();

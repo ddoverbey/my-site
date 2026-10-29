@@ -19,6 +19,8 @@ expeditions, track parks and regions, and earn achievements from your travel his
   pixel-crisp character avatars, total logged travel miles, and compressed snapshots of the same
   complete Global Route Map, including its trip routes and stops.
 - Progress for parks, regions, elevations, rarity, and terrestrial biomes.
+- Large park and geography datasets are prepared in stages; the map creates markers for the visible
+  area and updates existing markers when travel statuses change.
 - Clickable biome and destination pins show the trips, stops, and saved places contributing to them.
 - Achievements are grouped into expandable milestone classes and sorted by rarity, with unmet classes
   at the bottom. Expanded tiers run highest to lowest, omit the highest earned tier already shown in
@@ -289,6 +291,10 @@ and **Copy Public Profile Link** are available from **Settings**.
 If Cloud Sync reports that the session needs reconnection or that a refresh token was not found,
 open **Account and cloud sync** and sign in again. The rejected cloud session is cleared, but your
 local passport is kept. Do not clear browser storage just to fix a cloud sign-in problem.
+
+After signing out and into a different account, Cartovella asks before replacing the browser's
+passport or copying that data into the new account.
+Cloud requests time out after 30 seconds and report a retryable error; local passport data is kept.
 
 Searches and some coordinate lookups contact external services. The app's **Map services & privacy**
 section describes which information is sent for each feature. Imported route files are processed
