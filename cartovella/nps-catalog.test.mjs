@@ -2812,17 +2812,66 @@ check('custom ledger and popup show elevation, regions, source credits, and clea
   assert.ok(!popup.includes('Official NPS'));
 });
 let savedJson;
+const passportLocalValues = new Map();
 context.localStorage = {
-  setItem(key, value) { if (key === 'cartovella_state') savedJson = value; },
-  getItem(key) { return key === 'cartovella_state' ? savedJson : null; }
+  get length() { return passportLocalValues.size; },
+  key(index) { return [...passportLocalValues.keys()][index] ?? null; },
+  setItem(key, value) {
+    passportLocalValues.set(key, String(value));
+    if (key === 'cartovella_state') savedJson = String(value);
+  },
+  getItem(key) { return key === 'cartovella_state' ? savedJson ?? null : passportLocalValues.get(key) ?? null; },
+  removeItem(key) {
+    passportLocalValues.delete(key);
+    if (key === 'cartovella_state') savedJson = null;
+  }
+};
+const indexedPassportValues = new Map();
+const fakePassportDatabase = {
+  objectStoreNames: { contains: () => true },
+  transaction() {
+    const transaction = {
+      objectStore: () => ({
+        put(value, key) { indexedPassportValues.set(key, value); },
+        get(key) {
+          const request = {};
+          queueMicrotask(() => {
+            request.result = indexedPassportValues.get(key);
+            request.onsuccess?.();
+          });
+          return request;
+        },
+        delete(key) { indexedPassportValues.delete(key); }
+      })
+    };
+    queueMicrotask(() => transaction.oncomplete?.());
+    return transaction;
+  },
+  close() {}
+};
+context.window.indexedDB = {
+  open() {
+    const request = {};
+    queueMicrotask(() => {
+      request.result = fakePassportDatabase;
+      request.onsuccess?.();
+    });
+    return request;
+  }
 };
 context.window.location = { search: '' };
 context.atob = value => Buffer.from(value, 'base64').toString('binary');
 vm.runInContext('AppState.viewOnly = false; saveState(); AppState.customLocations = []; loadPersistedState();', context);
-check('local-storage capacity preflight rejects a payload above the conservative budget', () => {
-  assert.throws(() => vm.runInContext(
-    `assertPassportStorageCapacity({version:2,expeditions:[],test:'x'.repeat(2400000)})`, context
-  ), /conservative 4\.5 MiB browser-storage budget/);
+check('passport storage preflight routes oversized saves to IndexedDB', () => {
+  const smallSave = vm.runInContext(
+    `preparePassportForStorage({version:2,expeditions:[],test:'small'})`, context
+  );
+  const largeSave = vm.runInContext(
+    `preparePassportForStorage({version:2,expeditions:[],test:'x'.repeat(2400000)})`, context
+  );
+  assert.equal(smallSave.useIndexedDb, false);
+  assert.equal(largeSave.useIndexedDb, true);
+  assert.ok(largeSave.bytes > 4.5 * 1024 * 1024);
 });
 check('custom metadata survives local save/load and read-only shared passports; legacy files default to empty custom locations', () => {
   assert.equal(vm.runInContext('AppState.customLocations[0].name', context), customLocation.name);
@@ -2842,6 +2891,28 @@ check('custom metadata survives local save/load and read-only shared passports; 
   vm.runInContext('AppState.viewOnly = false; loadPersistedState()', context);
   assert.equal(vm.runInContext('AppState.customLocations.length', context), 0);
 });
+const indexedDbSave = await vm.runInContext(`(async () => {
+  AppState.viewOnly = false;
+  AppState.extraPassportFields = { largeTestValue: 'x'.repeat(2400000) };
+  const saved = await saveState({ recordEdit: false });
+  const stored = await readPassportFromIndexedDb();
+  AppState.extraPassportFields = {};
+  await loadPersistedState();
+  return {
+    saved,
+    backend: localStorage.getItem('cartovella_state_backend'),
+    storedLargePassport: stored?.includes('"largeTestValue') && stored.includes('x'.repeat(100)),
+    restoredLength: AppState.extraPassportFields.largeTestValue?.length
+  };
+})()`, context);
+check('oversized passports are persisted in IndexedDB and selected as the active local copy', () => {
+  assert.equal(indexedDbSave.saved, true, JSON.stringify(indexedDbSave));
+  assert.equal(indexedDbSave.backend, 'indexeddb');
+  assert.equal(indexedDbSave.storedLargePassport, true);
+  assert.equal(indexedDbSave.restoredLength, 2400000);
+  assert.equal(savedJson, null);
+});
+vm.runInContext('AppState.extraPassportFields = {}; saveState({ recordEdit: false });', context);
 check('legacy Terra Incognita passport storage migrates to Cartovella without losing data', () => {
   const previousStorage = context.localStorage;
   const previousPassport = savedJson;

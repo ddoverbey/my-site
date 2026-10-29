@@ -2160,6 +2160,11 @@
 
     const PASSPORT_STORAGE_FORMAT = 'encoded-route-polyline-v1';
     const PASSPORT_STORAGE_KEY = 'cartovella_state';
+    const PASSPORT_STORAGE_BACKEND_KEY = 'cartovella_state_backend';
+    const PASSPORT_DATABASE_NAME = 'cartovella';
+    const PASSPORT_DATABASE_VERSION = 1;
+    const PASSPORT_DATABASE_STORE = 'passports';
+    const PASSPORT_DATABASE_RECORD = 'current';
     const LOCAL_EDITED_AT_KEY = 'cartovella_local_edited_at';
     const LOCAL_CLOUD_DIRTY_KEY = 'cartovella_cloud_dirty';
     const LAST_SIGNED_OUT_CLOUD_ACCOUNT_KEY = 'cartovella_last_signed_out_cloud_account';
@@ -2222,6 +2227,11 @@
     });
     const LOCAL_STORAGE_WARNING_BYTES = 3.5 * 1024 * 1024;
     const LOCAL_STORAGE_SAFE_LIMIT_BYTES = 4.5 * 1024 * 1024;
+    let passportDatabasePromise = null;
+    let passportStorageWriteQueue = Promise.resolve();
+    let passportStorageRevision = 0;
+    let passportStoredBytes = null;
+    let passportUsesIndexedDb = false;
     let cloudSession = null;
     try {
       cloudSession = JSON.parse(localStorage.getItem(AUTH_SESSION_KEY) || 'null');
@@ -2316,35 +2326,103 @@
       return bytes + (PASSPORT_STORAGE_KEY.length + value.length) * 2;
     }
 
+    function openPassportDatabase() {
+      if (!window.indexedDB) {
+        return Promise.reject(new Error('This browser does not provide IndexedDB for large passport storage.'));
+      }
+      if (!passportDatabasePromise) {
+        passportDatabasePromise = new Promise((resolve, reject) => {
+          const request = window.indexedDB.open(PASSPORT_DATABASE_NAME, PASSPORT_DATABASE_VERSION);
+          request.onupgradeneeded = () => {
+            const database = request.result;
+            if (!database.objectStoreNames.contains(PASSPORT_DATABASE_STORE)) {
+              database.createObjectStore(PASSPORT_DATABASE_STORE);
+            }
+          };
+          request.onsuccess = () => {
+            request.result.onversionchange = () => request.result.close();
+            resolve(request.result);
+          };
+          request.onerror = () => reject(request.error || new Error('Could not open browser passport storage.'));
+          request.onblocked = () => reject(new Error('Browser passport storage is blocked by another open Cartovella tab.'));
+        }).catch(error => {
+          passportDatabasePromise = null;
+          throw error;
+        });
+      }
+      return passportDatabasePromise;
+    }
+
+    async function readPassportFromIndexedDb() {
+      const database = await openPassportDatabase();
+      return new Promise((resolve, reject) => {
+        const transaction = database.transaction(PASSPORT_DATABASE_STORE, 'readonly');
+        const request = transaction.objectStore(PASSPORT_DATABASE_STORE).get(PASSPORT_DATABASE_RECORD);
+        request.onsuccess = () => resolve(typeof request.result === 'string' ? request.result : null);
+        request.onerror = () => reject(request.error || new Error('Could not read the saved passport from browser storage.'));
+        transaction.onabort = () => reject(transaction.error || new Error('Reading the saved passport was interrupted.'));
+      });
+    }
+
+    async function writePassportToIndexedDb(serialized) {
+      const database = await openPassportDatabase();
+      return new Promise((resolve, reject) => {
+        const transaction = database.transaction(PASSPORT_DATABASE_STORE, 'readwrite');
+        transaction.objectStore(PASSPORT_DATABASE_STORE).put(serialized, PASSPORT_DATABASE_RECORD);
+        transaction.oncomplete = resolve;
+        transaction.onerror = () => reject(transaction.error || new Error('Could not save the passport to browser storage.'));
+        transaction.onabort = () => reject(transaction.error || new Error('Saving the passport was interrupted.'));
+      });
+    }
+
+    async function clearPassportFromIndexedDb() {
+      const database = await openPassportDatabase();
+      return new Promise((resolve, reject) => {
+        const transaction = database.transaction(PASSPORT_DATABASE_STORE, 'readwrite');
+        transaction.objectStore(PASSPORT_DATABASE_STORE).delete(PASSPORT_DATABASE_RECORD);
+        transaction.oncomplete = resolve;
+        transaction.onerror = () => reject(transaction.error || new Error('Could not remove the old browser passport copy.'));
+        transaction.onabort = () => reject(transaction.error || new Error('Removing the old browser passport copy was interrupted.'));
+      });
+    }
+
+    function enqueuePassportStorageWrite(operation) {
+      const write = passportStorageWriteQueue.catch(() => {}).then(operation);
+      passportStorageWriteQueue = write;
+      return write;
+    }
+
+    function preparePassportForStorage(payload, replacingKeys = [PASSPORT_STORAGE_KEY]) {
+      const serialized = JSON.stringify(compactPassportForStorage(payload));
+      const bytes = localStorageBytesWith(serialized, replacingKeys);
+      updateStorageWarning(bytes);
+      return { serialized, bytes, useIndexedDb: bytes > LOCAL_STORAGE_SAFE_LIMIT_BYTES };
+    }
+
     function updateStorageWarning(projectedBytes = null) {
       const warning = document.getElementById('storageWarning');
       if (!warning) return;
       const stored = localStorage.getItem(PASSPORT_STORAGE_KEY) ??
         LEGACY_PASSPORT_STORAGE_KEYS.map(key => localStorage.getItem(key)).find(value => value !== null) ?? '';
       const currentBytes = localStorageBytesWith(stored);
-      const bytes = projectedBytes === null ? currentBytes : projectedBytes;
+      const bytes = projectedBytes === null
+        ? passportUsesIndexedDb && Number.isFinite(passportStoredBytes) ? passportStoredBytes : currentBytes
+        : projectedBytes;
       const status = document.getElementById('expeditionStorageStatus');
       const format = value => `${(value / (1024 * 1024)).toFixed(1)} MiB`;
       warning.classList.toggle('hidden', AppState.viewOnly || bytes < LOCAL_STORAGE_WARNING_BYTES);
       if (bytes >= LOCAL_STORAGE_WARNING_BYTES) {
-        document.getElementById('storageWarningText').textContent =
-          `This browser is storing about ${format(bytes)} of passport data. Browser storage limits vary, and a large trip may not save. Download a backup before continuing.`;
+        document.getElementById('storageWarningText').textContent = bytes > LOCAL_STORAGE_SAFE_LIMIT_BYTES
+          ? `This passport is about ${format(bytes)} and exceeds the safe local-storage budget. ${passportUsesIndexedDb ? 'It is saved' : 'It will be saved'} in this browser's larger database storage; export backups regularly.`
+          : `This browser is storing about ${format(bytes)} of passport data. Browser storage limits vary, and a large trip may not save. Download a backup before continuing.`;
       }
       if (status) {
-        status.textContent = bytes >= LOCAL_STORAGE_WARNING_BYTES
-          ? `Passport storage use is about ${format(bytes)}. A save may fail as the browser's limit approaches; download a backup first.`
-          : `Passport storage use is about ${format(bytes)}. This passport is saved only in this browser; export backups regularly.`;
+        status.textContent = bytes > LOCAL_STORAGE_SAFE_LIMIT_BYTES
+          ? `Passport storage use is about ${format(bytes)}. ${passportUsesIndexedDb ? 'This large passport is saved in this browser\'s database storage.' : 'This large passport will be saved in this browser\'s database storage.'} Export backups regularly.`
+          : bytes >= LOCAL_STORAGE_WARNING_BYTES
+            ? `Passport storage use is about ${format(bytes)}. A save may fail as the browser's limit approaches; download a backup first.`
+            : `Passport storage use is about ${format(bytes)}. This passport is saved only in this browser; export backups regularly.`;
       }
-    }
-
-    function assertPassportStorageCapacity(payload, replacingKeys = [PASSPORT_STORAGE_KEY]) {
-      const serialized = JSON.stringify(compactPassportForStorage(payload));
-      const bytes = localStorageBytesWith(serialized, replacingKeys);
-      updateStorageWarning(bytes);
-      if (bytes > LOCAL_STORAGE_SAFE_LIMIT_BYTES) {
-        throw new Error(`This save would use about ${(bytes / (1024 * 1024)).toFixed(1)} MiB, above the app's conservative 4.5 MiB browser-storage budget. Your expedition draft is retained; export a passport backup and remove large route histories before retrying.`);
-      }
-      return serialized;
     }
 
     function expandStoredPassport(parsed) {
@@ -2577,7 +2655,7 @@
     }
 
     // Load state from localStorage or URL hash
-    function loadPersistedState() {
+    async function loadPersistedState() {
       // Check query param for share link
       const params = new URLSearchParams(window.location.search);
       const sharedData = params.get('d');
@@ -2598,7 +2676,22 @@
 
       let stored = localStorage.getItem(PASSPORT_STORAGE_KEY);
       let migrationSourceKey = null;
-      if (stored === null) {
+      const storageBackend = localStorage.getItem(PASSPORT_STORAGE_BACKEND_KEY);
+      if (storageBackend === 'indexeddb') {
+        try {
+          stored = await readPassportFromIndexedDb();
+          if (stored === null) throw new Error('The saved browser database does not contain a passport.');
+          passportUsesIndexedDb = true;
+          passportStoredBytes = localStorageBytesWith(stored);
+        } catch (error) {
+          console.error('Could not load the saved passport from browser database storage.', error);
+          AppState.viewOnly = true;
+          showNotification('Saved passport unavailable',
+            `Could not read the large passport from browser storage: ${error.message} No saved data was overwritten.`,
+            '⚠️');
+          return;
+        }
+      } else if (stored === null) {
         migrationSourceKey = LEGACY_PASSPORT_STORAGE_KEYS.find(key => localStorage.getItem(key) !== null) || null;
         if (migrationSourceKey) stored = localStorage.getItem(migrationSourceKey);
       }
@@ -2606,7 +2699,7 @@
         try {
           const parsed = migratePassport(JSON.parse(stored));
           applyPassport(parsed);
-          if (!AppState.viewOnly) saveState({ migrationSourceKey, recordEdit: false });
+          if (!AppState.viewOnly && !passportUsesIndexedDb) saveState({ migrationSourceKey, recordEdit: false });
         } catch (e) {
           console.error("Failed to load local storage state", e);
           AppState.viewOnly = true;
@@ -2620,7 +2713,39 @@
       const replacingKeys = migrationSourceKey
         ? [PASSPORT_STORAGE_KEY, migrationSourceKey]
         : [PASSPORT_STORAGE_KEY];
-      const serialized = assertPassportStorageCapacity(passportPayload(), replacingKeys);
+      const { serialized, bytes, useIndexedDb } = preparePassportForStorage(passportPayload(), replacingKeys);
+      const revision = ++passportStorageRevision;
+      if (useIndexedDb) {
+        return enqueuePassportStorageWrite(async () => {
+          await writePassportToIndexedDb(serialized);
+          if (revision !== passportStorageRevision) return false;
+          localStorage.setItem(PASSPORT_STORAGE_BACKEND_KEY, 'indexeddb');
+          localStorage.removeItem(PASSPORT_STORAGE_KEY);
+          if (migrationSourceKey) localStorage.removeItem(migrationSourceKey);
+          passportUsesIndexedDb = true;
+          passportStoredBytes = bytes;
+          if (recordEdit) {
+            localStorage.setItem(LOCAL_EDITED_AT_KEY, new Date().toISOString());
+            localStorage.setItem(LOCAL_CLOUD_DIRTY_KEY, 'true');
+          }
+          updateStorageWarning(bytes);
+          if (recordEdit && cloudHydrated && !AppState.viewOnly) scheduleCloudSync();
+          return true;
+        }).catch(error => {
+          console.error('Large passport could not be saved to browser database storage.', error);
+          const message = `Large passport storage failed: ${error.message}. Your current passport remains open; export a backup before closing this page.`;
+          const warningText = document.getElementById('storageWarningText');
+          if (warningText) warningText.textContent = message;
+          const storageStatus = document.getElementById('expeditionStorageStatus');
+          if (storageStatus) storageStatus.textContent = message;
+          setCloudStatus(message, true);
+          showNotification('Large Passport Not Saved', message, '⚠️');
+          if (recordEdit && cloudHydrated && cloudSession?.access_token) scheduleCloudSync();
+          return false;
+        });
+      }
+
+      const previousBackend = localStorage.getItem(PASSPORT_STORAGE_BACKEND_KEY);
       let legacyValue = null;
       try {
         if (migrationSourceKey) {
@@ -2629,12 +2754,25 @@
         }
         try {
           localStorage.setItem(PASSPORT_STORAGE_KEY, serialized);
+          localStorage.setItem(PASSPORT_STORAGE_BACKEND_KEY, 'localStorage');
         } catch (error) {
           if (legacyValue !== null) {
             try { localStorage.setItem(migrationSourceKey, legacyValue); }
             catch (restoreError) { console.error('Legacy passport recovery failed after storage migration.', restoreError); }
           }
+          if (previousBackend === 'indexeddb') {
+            try { localStorage.setItem(PASSPORT_STORAGE_BACKEND_KEY, previousBackend); }
+            catch (restoreError) { console.error('Browser passport backend recovery failed.', restoreError); }
+          }
           throw error;
+        }
+        passportUsesIndexedDb = false;
+        passportStoredBytes = null;
+        if (previousBackend === 'indexeddb') {
+          void enqueuePassportStorageWrite(() => {
+            if (revision !== passportStorageRevision) return;
+            return clearPassportFromIndexedDb();
+          }).catch(error => console.error('Could not remove the previous large browser passport.', error));
         }
         if (recordEdit) {
           localStorage.setItem(LOCAL_EDITED_AT_KEY, new Date().toISOString());
@@ -9268,9 +9406,9 @@
       if (event.key === 'Escape' && !atlasPinModal.classList.contains('hidden')) closeAtlasPinModal();
     });
 
-    window.addEventListener('DOMContentLoaded', () => {
+    window.addEventListener('DOMContentLoaded', async () => {
       const publicUsername = beginPublicAtlasView();
-      loadPersistedState();
+      await loadPersistedState();
       if (cloudSession?.user?.id) preparePublicProfileForAccount(cloudSession.user.id);
       updateStorageWarning();
       updateAuthUI();

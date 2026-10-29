@@ -284,6 +284,9 @@ internet connection.
 Your editable passport is saved in the browser. Use the in-app JSON export to create a backup or
 move it to another browser or device; import that file there to continue. Keep backups before
 resetting browser data.
+Large passports that exceed the safe `localStorage` size are saved in IndexedDB instead, which
+supports larger route histories on browsers such as iPhone Safari. Clearing site data removes both
+browser copies, so keep regular exports.
 
 When signed in, the header shows the relative time since the last successful cloud save. **Save now**
 and **Copy Public Profile Link** are available from **Settings**.

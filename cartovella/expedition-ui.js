@@ -1069,7 +1069,7 @@ async function saveExpedition(event) {
       projectedExpeditions[index] = exp;
     } else projectedExpeditions.push(exp);
     await persistExpeditionDraftRecovery();
-    assertPassportStorageCapacity({ ...passportPayload(), expeditions: projectedExpeditions });
+    preparePassportForStorage({ ...passportPayload(), expeditions: projectedExpeditions });
     setExpeditionBusy(true);
     status.textContent = 'Sampling stop elevations. The expedition is not saved yet...';
     // Bounded batches avoid sending one hundred concurrent public API requests.
