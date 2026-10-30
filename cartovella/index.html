@@ -920,17 +920,29 @@
               <button id="btnRefreshGuild" type="button" class="rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-xs text-slate-200 hover:bg-slate-800">Refresh Guild</button>
             </div>
           </div>
-          <label class="mt-4 block max-w-xl text-xs text-slate-300">Search explorers
-            <input id="guildSearchInput" type="search" autocomplete="off" placeholder="Username, display name, class, or home base" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100">
-          </label>
           <p id="guildStatus" class="mt-3 text-xs text-slate-400" role="status" aria-live="polite"></p>
         </div>
-        <section class="space-y-3" aria-labelledby="guildExplorersTitle">
-          <h3 id="guildExplorersTitle" class="cinzel text-lg font-bold text-sky-200">Explorer Directory</h3>
+        <nav id="guildViewSwitcher" class="inline-flex rounded-xl border border-slate-700 bg-slate-950 p-1" role="tablist" aria-label="Guild views">
+          <button id="btnGuildExploreView" type="button" role="tab" tabindex="0" aria-selected="true" aria-controls="guildExploreView" data-guild-view="explore" class="rounded-lg bg-sky-900/70 px-4 py-2 text-xs font-semibold text-sky-100">Explore</button>
+          <button id="btnGuildDispatchesView" type="button" role="tab" tabindex="-1" aria-selected="false" aria-controls="guildDispatchesView" data-guild-view="dispatches" class="rounded-lg px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white">Field Dispatches</button>
+        </nav>
+        <section id="guildExploreView" role="tabpanel" aria-labelledby="btnGuildExploreView" class="space-y-4">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h3 id="guildExplorersTitle" class="cinzel text-lg font-bold text-sky-200">Public Explorers</h3>
+              <p class="mt-1 text-xs text-slate-400">Choose an explorer to inspect their calling card and shared atlas.</p>
+            </div>
+            <label id="guildSearchLabel" class="block w-full text-xs text-slate-300 sm:max-w-sm">Search explorers
+              <input id="guildSearchInput" type="search" autocomplete="off" placeholder="Username, display name, class, or home base" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100">
+            </label>
+          </div>
           <div id="guildExplorersGrid" class="grid gap-4 md:grid-cols-2 xl:grid-cols-3"></div>
         </section>
-        <section class="space-y-3" aria-labelledby="guildExpeditionsTitle">
-          <h3 id="guildExpeditionsTitle" class="cinzel text-lg font-bold text-amber-200">Recent Public Expeditions</h3>
+        <section id="guildDispatchesView" role="tabpanel" aria-labelledby="btnGuildDispatchesView" class="hidden space-y-4">
+          <div>
+            <h3 id="guildExpeditionsTitle" class="cinzel text-lg font-bold text-amber-200">Field Dispatches</h3>
+            <p class="mt-1 text-xs text-slate-400">Stories and stops explorers have chosen to share. Save a stop to your Wishlist for later.</p>
+          </div>
           <div id="guildExpeditionsFeed" class="grid gap-4 lg:grid-cols-2"></div>
         </section>
       </section>
@@ -2096,11 +2108,13 @@
 
     let publicProfile = readLocalPublicProfile();
     let activePublicAtlasUsername = null;
+    let activePublicAtlasLoaded = false;
     let publicAtlasRequestId = 0;
     let localAtlasReturnTab = 'map';
     let guildProfiles = [];
     let guildProfilesLoaded = false;
     let guildProfilesLoadPromise = null;
+    let guildCurrentView = 'explore';
     let publicRouteMapThumbnailCacheKey = null;
     let publicRouteMapThumbnailCache = null;
     const PASSPORT_FIELDS = Object.freeze({
@@ -7259,7 +7273,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261027-hairstyle-render-v2"></script>
+  <script src="./expedition-ui.js?v=20261030-guild-dispatches-v1"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);
@@ -8003,7 +8017,12 @@
       }).filter(Boolean).sort((a, b) =>
         ACHIEVEMENT_RARITY_ORDER.indexOf(b.rarity) - ACHIEVEMENT_RARITY_ORDER.indexOf(a.rarity)
       ).slice(0, 4);
-      const recentExpeditions = [...AppState.expeditions]
+      const publicExpeditions = publicProfile.is_public
+        ? AppState.expeditions.filter(expedition =>
+          TravelLedger.normalizePublicSharing(expedition.publicSharing, expedition.photos?.length || 0).enabled
+        )
+        : [];
+      const recentExpeditions = [...publicExpeditions]
         .sort((a, b) => (b.startDate || b.endDate || '').localeCompare(a.startDate || a.endDate || ''))
         .slice(0, 3);
       return {
@@ -8018,23 +8037,51 @@
         statesCount: stats.statesCount,
         parksCount: (stats.visitedParks || []).length,
         biomesCount: stats.biomesSet?.size || 0,
-        totalMiles: Math.round(AppState.expeditions.reduce((total, expedition) =>
-          total + expeditionDistanceMiles(expedition), 0) * 10) / 10,
+        totalMiles: Math.round(publicExpeditions.filter(expedition => {
+          const sharing = TravelLedger.normalizePublicSharing(expedition.publicSharing, expedition.photos?.length || 0);
+          return sharing.includeDetails;
+        }).reduce((total, expedition) => total + expeditionDistanceMiles(expedition), 0) * 10) / 10,
+        totalTrips: publicExpeditions.length,
         clearedPct: Number.isFinite(stats.clearedPct) ? stats.clearedPct : null,
         topBadges,
-        recentExpeditions: await Promise.all(recentExpeditions.map(async expedition => ({
-          id: expedition.id,
-          name: expedition.name,
-          startDate: expedition.startDate || null,
-          endDate: expedition.endDate || null,
-          dayTrip: expedition.dayTrip === true,
-          reason: expedition.reason || '',
-          journalSnippet: (expedition.journal || '').slice(0, 240),
-          highlightPhoto: await publicHighlightThumbnail(expedition.photos?.[0]),
-          distanceMiles: Math.round(expeditionDistanceMiles(expedition) * 10) / 10,
-          transitTags: Array.isArray(expedition.transitTags) ? [...expedition.transitTags] : [],
-          stopNames: (expedition.routeStops || []).map(stop => stop?.name).filter(Boolean).slice(0, 16)
-        })))
+        recentExpeditions: await Promise.all(recentExpeditions.map(async expedition => {
+          const sharing = TravelLedger.normalizePublicSharing(
+            expedition.publicSharing, expedition.photos?.length || 0
+          );
+          const detailsShared = sharing.includeDetails;
+          const sharedStops = detailsShared
+            ? (expedition.routeStops || []).filter(stop =>
+              typeof stop?.name === 'string' && Array.isArray(stop.coords) &&
+              stop.coords.length === 2 && stop.coords.every(Number.isFinite) &&
+              Math.abs(stop.coords[0]) <= 90 && Math.abs(stop.coords[1]) <= 180
+            ).slice(0, 16).map(stop => ({
+              kind: ['park', 'poi', 'place'].includes(stop.kind) ? stop.kind : 'place',
+              id: typeof stop.id === 'string' ? stop.id : '',
+              name: stop.name.slice(0, 150),
+              coords: [stop.coords[0], stop.coords[1]]
+            }))
+            : [];
+          const photos = await Promise.all(sharing.photoIndexes.slice(0, 1).map(index =>
+            publicHighlightThumbnail(expedition.photos?.[index])
+          ));
+          const sharedPhotos = photos.filter(Boolean);
+          return {
+            id: expedition.id,
+            detailsShared,
+            name: detailsShared ? expedition.name : 'Shared expedition',
+            startDate: detailsShared ? expedition.startDate || null : null,
+            endDate: detailsShared ? expedition.endDate || null : null,
+            dayTrip: detailsShared && expedition.dayTrip === true,
+            reason: detailsShared ? expedition.reason || '' : '',
+            journalShared: sharing.includeJournal,
+            journalSnippet: sharing.includeJournal ? (expedition.journal || '').slice(0, 240) : '',
+            photos: sharedPhotos,
+            distanceMiles: detailsShared ? Math.round(expeditionDistanceMiles(expedition) * 10) / 10 : null,
+            transitTags: detailsShared && Array.isArray(expedition.transitTags) ? [...expedition.transitTags] : [],
+            stopNames: sharedStops.map(stop => stop.name),
+            sharedStops
+          };
+        }))
       };
     }
 
@@ -8162,32 +8209,74 @@
       const stat = value => Number.isFinite(Number(value)) ? Number(value).toLocaleString('en') : '0';
       const totalMiles = Number.isFinite(stats.totalMiles) && stats.totalMiles >= 0
         ? `${stats.totalMiles.toLocaleString('en', { maximumFractionDigits: 1 })} mi` : 'Not synced';
+      const recentExpeditions = (Array.isArray(stats.recentExpeditions) ? stats.recentExpeditions : [])
+        .filter(expedition => expedition.detailsShared === true || expedition.journalShared === true ||
+          (Array.isArray(expedition.photos) && expedition.photos.length > 0));
       const routeMapThumbnail = typeof stats.routeMapThumbnail === 'string' &&
         stats.routeMapThumbnail.length <= 64000 &&
         /^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/.test(stats.routeMapThumbnail)
         ? stats.routeMapThumbnail : null;
-      return `<article class="rpg-panel rounded-2xl p-4">
-        <div class="flex items-center gap-3">
-          <canvas width="160" height="90" data-guild-avatar="${escapeHtml(profile.username)}" class="h-[54px] w-24 shrink-0 rounded-lg bg-slate-950" role="img" aria-label="Explorer avatar and chosen background for @${escapeHtml(profile.username)}"></canvas>
-          <div class="min-w-0"><p class="truncate text-sm font-bold text-sky-200">@${escapeHtml(profile.username)}</p>
-            <p class="truncate text-xs text-slate-300">${escapeHtml(profile.display_name || stats.cls || 'Explorer')}</p>
-            <p class="text-[11px] text-amber-200">Level ${escapeHtml(stat(stats.level))} · ${escapeHtml(stats.cls || 'Explorer')}</p></div>
+      const visibility = profile.visibility || profile.profile_visibility || 'profile';
+      const atlasButton = visibility === 'passport'
+        ? `<button type="button" data-guild-explore="${escapeHtml(profile.username)}" class="mt-4 rounded-lg border border-sky-400/40 bg-sky-950/40 px-3 py-2 text-xs text-sky-200 hover:bg-sky-900/50">Open Full Public Atlas</button>`
+        : '<p class="mt-4 text-[11px] text-slate-400">This explorer shares a calling card, not their full atlas.</p>';
+      const expeditionList = recentExpeditions.length
+        ? `<ul class="mt-2 space-y-1">${recentExpeditions.map(expedition =>
+          `<li class="truncate text-xs text-slate-300">${escapeHtml(expedition.detailsShared === true ? expedition.name || 'Shared expedition' : 'Shared expedition')}</li>`
+        ).join('')}</ul>`
+        : '<p class="mt-2 text-xs text-slate-500">No public dispatches yet.</p>';
+      return `<details class="guild-explorer-card rpg-panel overflow-hidden rounded-2xl">
+        <summary class="cursor-pointer list-none p-3 transition hover:bg-slate-900/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400">
+          <div class="flex items-center gap-3">
+            <canvas width="160" height="90" data-guild-avatar="${escapeHtml(profile.username)}" class="h-16 w-28 shrink-0 rounded-lg bg-slate-950" role="img" aria-label="Explorer avatar and chosen background for @${escapeHtml(profile.username)}"></canvas>
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-sm font-bold text-sky-200">${escapeHtml(profile.display_name || stats.cls || 'Explorer')}</p>
+              <p class="truncate text-xs text-slate-400">@${escapeHtml(profile.username)}</p>
+              <p class="mt-1 truncate text-[11px] text-amber-200">Level ${escapeHtml(stat(stats.level))} · ${escapeHtml(stats.cls || 'Explorer')}</p>
+            </div>
+          </div>
+          <div class="mt-3 grid grid-cols-3 gap-2 text-[10px] text-slate-400">
+            <span class="rounded-lg bg-slate-950/70 px-2 py-1.5">Miles <b class="mt-0.5 block text-xs text-sky-200">${escapeHtml(totalMiles)}</b></span>
+            <span class="rounded-lg bg-slate-950/70 px-2 py-1.5">Countries <b class="mt-0.5 block text-xs text-sky-200">${escapeHtml(stat(stats.countriesCount))}</b></span>
+            <span class="rounded-lg bg-slate-950/70 px-2 py-1.5">Land revealed <b class="mt-0.5 block text-xs text-sky-200">${Number.isFinite(stats.clearedPct) ? `${escapeHtml(stats.clearedPct.toFixed(1))}%` : '—'}</b></span>
+          </div>
+          <span class="mt-2 block text-[10px] text-slate-500">Select to inspect explorer</span>
+        </summary>
+        <div class="border-t border-slate-700/70 p-4">
+          <p class="truncate text-xs text-slate-300">Home Citadel: <b class="text-amber-100">${escapeHtml(stats.homeName || 'Not selected')}</b></p>
+          <div class="mt-3 grid grid-cols-2 gap-2 text-[11px] text-slate-300">
+            <span>States <b>${escapeHtml(stat(stats.statesCount))}</b></span>
+            <span>Parks <b>${escapeHtml(stat(stats.parksCount))}</b></span>
+            <span>Biomes <b>${escapeHtml(stat(stats.biomesCount))}</b></span>
+            <span>Shared trips <b>${escapeHtml(stat(stats.totalTrips))}</b></span>
+          </div>
+          ${routeMapThumbnail ? `<img src="${escapeHtml(routeMapThumbnail)}" alt="Route map preview for @${escapeHtml(profile.username)}" loading="lazy" decoding="async" class="mt-3 aspect-[320/168] w-full rounded-lg border border-slate-700 object-cover">` : ''}
+          ${badges ? `<div class="mt-3 flex flex-wrap gap-1.5" aria-label="Recent earned achievements">${badges}</div>` : ''}
+          <div class="mt-3 border-t border-slate-800 pt-3">
+            <h4 class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Recent shared dispatches</h4>
+            ${expeditionList}
+          </div>
+          ${atlasButton}
         </div>
-        <p class="mt-3 truncate text-xs text-slate-400">🏰 Home Citadel: ${escapeHtml(stats.homeName || 'Not selected')}</p>
-        <div class="mt-3 grid grid-cols-2 gap-2 text-[11px] text-slate-300">
-          <span>Countries <b>${escapeHtml(stat(stats.countriesCount))}</b></span>
-          <span>States <b>${escapeHtml(stat(stats.statesCount))}</b></span>
-          <span>Parks <b>${escapeHtml(stat(stats.parksCount))}</b></span>
-          <span>Biomes <b>${escapeHtml(stat(stats.biomesCount))}</b></span>
-        </div>
-        <p class="mt-3 rounded-lg border border-sky-400/20 bg-sky-950/30 px-3 py-2 text-xs text-slate-300">
-          Total miles traveled <b class="ml-1 text-sky-200">${escapeHtml(totalMiles)}</b>
-        </p>
-        ${routeMapThumbnail ? `<img src="${escapeHtml(routeMapThumbnail)}" alt="Route map preview for @${escapeHtml(profile.username)}" loading="lazy" decoding="async" class="mt-3 aspect-[320/168] w-full rounded-lg border border-slate-700 object-cover">` : ''}
-        ${Number.isFinite(stats.clearedPct) ? `<p class="mt-2 text-[11px] text-emerald-200">${stats.clearedPct.toFixed(1)}% of mapped land cleared</p>` : ''}
-        ${badges ? `<div class="mt-3 flex flex-wrap gap-1.5" aria-label="Recent earned achievements">${badges}</div>` : ''}
-        <button type="button" data-guild-explore="${escapeHtml(profile.username)}" class="mt-4 rounded-lg border border-sky-400/40 bg-sky-950/40 px-3 py-2 text-xs text-sky-200 hover:bg-sky-900/50">Explore Atlas (🗺️)</button>
-      </article>`;
+      </details>`;
+    }
+
+    function switchGuildView(view) {
+      if (!['explore', 'dispatches'].includes(view)) throw new Error(`Unknown Guild view: ${view}`);
+      guildCurrentView = view;
+      for (const [tab, panel] of [
+        ['explore', 'guildExploreView'],
+        ['dispatches', 'guildDispatchesView']
+      ]) {
+        const selected = tab === view;
+        const button = document.getElementById(tab === 'explore' ? 'btnGuildExploreView' : 'btnGuildDispatchesView');
+        button.setAttribute('aria-selected', String(selected));
+        button.setAttribute('tabindex', selected ? '0' : '-1');
+        button.classList.toggle('bg-sky-900/70', selected);
+        button.classList.toggle('text-sky-100', selected);
+        button.classList.toggle('text-slate-400', !selected);
+        document.getElementById(panel).classList.toggle('hidden', !selected);
+      }
     }
 
     function renderGuildDirectory() {
@@ -8208,6 +8297,8 @@
     function renderGuildExpeditions() {
       const expeditions = guildProfiles.flatMap(profile =>
         (Array.isArray(profile.summary_stats?.recentExpeditions) ? profile.summary_stats.recentExpeditions : [])
+          .filter(expedition => expedition.detailsShared === true || expedition.journalShared === true ||
+            (Array.isArray(expedition.photos) && expedition.photos.length > 0))
           .map(expedition => ({ profile, expedition, timestamp: Date.parse(
             expedition.startDate || expedition.endDate || profile.updated_at || ''
           ) || 0 }))
@@ -8219,6 +8310,71 @@
       renderGuildAvatarCanvases();
     }
 
+    async function saveGuildStopToWishlist(button) {
+      if (AppState.viewOnly) throw new Error('Return to your own Atlas before adding a stop to your Wishlist.');
+      const name = button.dataset.stopName?.trim();
+      const lat = Number(button.dataset.stopLat);
+      const lng = Number(button.dataset.stopLng);
+      if (!name || name.length > 150 || !Number.isFinite(lat) || !Number.isFinite(lng) ||
+          Math.abs(lat) > 90 || Math.abs(lng) > 180) {
+        throw new Error('This shared stop does not include valid coordinates.');
+      }
+
+      const park = button.dataset.stopKind === 'park'
+        ? PARKS.find(item => item.id === button.dataset.stopId) : null;
+      if (park) {
+        const status = AppState.statusOverrides.pins[park.id] ?? AppState.pins[park.id];
+        if (status === 'w' || TravelLedger.isVisited(status)) {
+          showNotification('Stop already saved', `${park.name} is already in your travel records.`, '📌');
+          return;
+        }
+        setPinStatus(park.id, 'w');
+        showNotification('Added to Wishlist', `${park.name} was added to your Travel Ledger.`, '📌');
+        return;
+      }
+
+      const existing = AppState.customPois.find(poi =>
+        poi.name.trim().toLocaleLowerCase() === name.toLocaleLowerCase() &&
+        TravelLedger.distanceMiles({ lat: poi.lat, lng: poi.lng }, { lat, lng }) < 0.1 / 1.609344
+      );
+      if (existing) {
+        if (existing.status === 'w' || TravelLedger.isVisited(existing.status)) {
+          showNotification('Stop already saved', `${existing.name} is already in your travel records.`, '📌');
+          return;
+        }
+        setPinStatus(existing.id, 'w');
+        showNotification('Added to Wishlist', `${existing.name} was added to your Travel Ledger.`, '📌');
+        return;
+      }
+
+      const metadata = await CoordinateLookups.lookupCoordinate(lat, lng, {
+        indexes: coordinateIndexes, geoContains: d3.geoContains, storage: coordinateRarityStorage(),
+        rarityEndpoint: CartovellaConfig.rarityEndpoint,
+        skipRarityLookup: true, placeName: name
+      });
+      const { lookupWarnings = [], ...locationMetadata } = metadata;
+      const location = {
+        ...locationMetadata,
+        id: `poi_guild_${crypto.randomUUID()}`,
+        name,
+        status: 'w',
+        category: 'Shared stop',
+        source: 'Guild'
+      };
+      CoordinateLookups.validateCustomLocations([location]);
+      addCustomPoi(location);
+      renderParkMarkers();
+      drawFogOfWar();
+      updateAllUI();
+      showNotification(
+        lookupWarnings.length ? 'Wishlist stop saved with fallback metadata' : 'Added to Wishlist',
+        lookupWarnings.length
+          ? lookupWarnings.join(' ')
+          : `${name} was added to your Travel Ledger.`,
+        lookupWarnings.length ? '⚠️' : '📌'
+      );
+    }
+
     async function loadGuildProfiles() {
       if (guildProfilesLoadPromise) return guildProfilesLoadPromise;
       const status = document.getElementById('guildStatus');
@@ -8226,7 +8382,7 @@
       guildProfilesLoadPromise = (async () => {
         try {
           const response = await fetch(
-          `${SUPABASE_URL}/rest/v1/cartovella_passports?is_public=eq.true&select=username,display_name,updated_at,summary_stats&order=updated_at.desc&limit=50`,
+          `${SUPABASE_URL}/rest/v1/cartovella_public_profiles?profile_visibility=in.(profile,passport)&select=username,display_name,updated_at,summary_stats,profile_visibility&order=updated_at.desc&limit=1000`,
           { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
         );
           if (!response.ok) throw new Error(`Guild request failed (HTTP ${response.status}).`);
@@ -8234,10 +8390,12 @@
           if (!Array.isArray(records)) throw new Error('Supabase returned an unexpected public explorer response.');
           guildProfiles = records.filter(record =>
             typeof record?.username === 'string' && PUBLIC_USERNAME_PATTERN.test(record.username)
+            && ['profile', 'passport'].includes(record.profile_visibility)
           ).map(record => ({
             username: record.username,
             display_name: typeof record.display_name === 'string' ? record.display_name.slice(0, 60) : '',
             updated_at: typeof record.updated_at === 'string' ? record.updated_at : '',
+            visibility: record.profile_visibility,
             summary_stats: record.summary_stats && typeof record.summary_stats === 'object' &&
               !Array.isArray(record.summary_stats) ? record.summary_stats : {}
           }));
@@ -8266,6 +8424,7 @@
       }
       localAtlasReturnTab = AppState.currentTab;
       activePublicAtlasUsername = username;
+      activePublicAtlasLoaded = false;
       AppState.viewOnly = true;
       document.getElementById('viewingPublicAtlasMessage').textContent =
         `🧭 Loading @${username}'s Public Atlas · Read-Only`;
@@ -8286,8 +8445,12 @@
       if (!PUBLIC_USERNAME_PATTERN.test(normalizedUsername)) {
         throw new Error('The public explorer username is invalid.');
       }
+      const previousUsername = activePublicAtlasUsername;
+      const previousAtlasLoaded = activePublicAtlasLoaded;
+      const previousViewOnly = AppState.viewOnly;
       if (!activePublicAtlasUsername) localAtlasReturnTab = AppState.currentTab;
       activePublicAtlasUsername = normalizedUsername;
+      activePublicAtlasLoaded = false;
       AppState.viewOnly = true;
       const requestId = ++publicAtlasRequestId;
       updatePublicAtlasUrl(normalizedUsername);
@@ -8296,15 +8459,17 @@
       document.getElementById('viewingPublicAtlasBanner').classList.remove('hidden');
       try {
         const response = await fetch(
-          `${SUPABASE_URL}/rest/v1/cartovella_passports?username=eq.${encodeURIComponent(normalizedUsername)}&is_public=eq.true&select=username,display_name,updated_at,passport_data,summary_stats`,
+          `${SUPABASE_URL}/rest/v1/cartovella_public_profiles?username=eq.${encodeURIComponent(normalizedUsername)}&select=username,display_name,updated_at,public_passport_data,summary_stats,profile_visibility`,
           { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
         );
         if (!response.ok) throw new Error(`Public Atlas request failed (HTTP ${response.status}).`);
         const records = await response.json();
         if (!Array.isArray(records)) throw new Error('Supabase returned an unexpected public passport response.');
         const record = records.find(item => item.username === normalizedUsername);
-        if (!record?.passport_data) throw new Error(`@${normalizedUsername} does not have a public Atlas.`);
-        const parsed = migratePassport(record.passport_data);
+        if (record?.profile_visibility !== 'passport' || !record.public_passport_data) {
+          throw new Error(`@${normalizedUsername} shares a public profile, but not a full Atlas.`);
+        }
+        const parsed = migratePassport(record.public_passport_data);
         await preparePassportGeography(parsed);
         if (requestId !== publicAtlasRequestId || activePublicAtlasUsername !== normalizedUsername) return false;
         applyPassport(parsed);
@@ -8320,12 +8485,29 @@
           ? record.display_name.trim() : calculateStats().cls;
         document.getElementById('viewingPublicAtlasMessage').textContent =
           `🧭 Viewing @${normalizedUsername}'s Public Atlas (${displayName}) · Read-Only`;
+        activePublicAtlasLoaded = true;
         return true;
       } catch (error) {
         if (requestId !== publicAtlasRequestId) return false;
         console.error(`Could not load public Atlas for @${normalizedUsername}.`, error);
-        document.getElementById('viewingPublicAtlasMessage').textContent =
-          `🧭 @${normalizedUsername}'s Public Atlas is unavailable · ${error.message}`;
+        if (previousAtlasLoaded && previousUsername) {
+          activePublicAtlasUsername = previousUsername;
+          activePublicAtlasLoaded = true;
+          AppState.viewOnly = previousViewOnly;
+          updatePublicAtlasUrl(previousUsername);
+          document.getElementById('viewingPublicAtlasMessage').textContent =
+            `🧭 Viewing @${previousUsername}'s Public Atlas · Read-Only`;
+        } else {
+          activePublicAtlasUsername = null;
+          activePublicAtlasLoaded = false;
+          AppState.viewOnly = false;
+          document.getElementById('viewingPublicAtlasBanner').classList.add('hidden');
+          if (window.history?.replaceState && window.location) {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('u');
+            window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
+          }
+        }
         document.getElementById('guildStatus').textContent = error.message;
         return false;
       }
@@ -8345,6 +8527,7 @@
         return;
       }
       activePublicAtlasUsername = null;
+      activePublicAtlasLoaded = false;
       AppState.viewOnly = false;
       syncDerivedState();
       document.getElementById('viewingPublicAtlasBanner').classList.add('hidden');
@@ -8613,12 +8796,32 @@
       guildProfilesLoaded = false;
       void loadGuildProfiles();
     });
+    document.querySelectorAll('#guildViewSwitcher [data-guild-view]').forEach(button => {
+      button.addEventListener('click', () => switchGuildView(button.dataset.guildView));
+      button.addEventListener('keydown', event => {
+        const view = event.key === 'ArrowLeft' || event.key === 'Home' ? 'explore'
+          : event.key === 'ArrowRight' || event.key === 'End' ? 'dispatches' : null;
+        if (!view) return;
+        event.preventDefault();
+        switchGuildView(view);
+        document.getElementById(view === 'explore' ? 'btnGuildExploreView' : 'btnGuildDispatchesView').focus();
+      });
+    });
     document.getElementById('guildSearchInput').addEventListener('input', renderGuildDirectory);
     document.getElementById('guildExplorersGrid').addEventListener('click', event => {
       const button = event.target.closest('button[data-guild-explore]');
       if (button) void loadPublicAtlas(button.dataset.guildExplore, 'map');
     });
     document.getElementById('guildExpeditionsFeed').addEventListener('click', event => {
+      const wishlistButton = event.target.closest('button[data-guild-wishlist-stop]');
+      if (wishlistButton) {
+        wishlistButton.disabled = true;
+        saveGuildStopToWishlist(wishlistButton).catch(error => {
+          console.error('Could not add a Guild stop to the Wishlist.', error);
+          showNotification('Wishlist stop not saved', error.message, '⚠️');
+        }).finally(() => { wishlistButton.disabled = false; });
+        return;
+      }
       const button = event.target.closest('button[data-guild-open-travel]');
       if (button) void loadPublicAtlas(button.dataset.guildOpenTravel, 'travel');
     });

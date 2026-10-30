@@ -1631,7 +1631,7 @@ check('six icon-only header tabs keep primary navigation clean', () => {
 
   const originalQuery = context.document.querySelectorAll;
   const originalSaveState = context.saveState;
-  const originalState = vm.runInContext("({mode:AppState.mode,tab:AppState.currentTab,viewOnly:AppState.viewOnly,profileOnlyView,guildProfilesLoaded})", context);
+  const originalState = vm.runInContext("({mode:AppState.mode,tab:AppState.currentTab,viewOnly:AppState.viewOnly,guildProfilesLoaded})", context);
   const buttons = ['map', 'bucketlist', 'scratch', 'travel', 'passport', 'guild'].map(tab => ({
     dataset: { tab }, attributes: {},
     setAttribute(name, value) { this.attributes[name] = value; }
@@ -1664,7 +1664,7 @@ check('six icon-only header tabs keep primary navigation clean', () => {
     context.document.querySelectorAll = originalQuery;
     context.saveState = originalSaveState;
     pageRenderers.forEach((name, index) => { context[name] = originalRenderers[index]; });
-    vm.runInContext(`AppState.mode=${JSON.stringify(originalState.mode)};AppState.currentTab=${JSON.stringify(originalState.tab)};AppState.viewOnly=${originalState.viewOnly};profileOnlyView=${originalState.profileOnlyView};guildProfilesLoaded=${originalState.guildProfilesLoaded};updateHeaderNavigation()`, context);
+    vm.runInContext(`AppState.mode=${JSON.stringify(originalState.mode)};AppState.currentTab=${JSON.stringify(originalState.tab)};AppState.viewOnly=${originalState.viewOnly};guildProfilesLoaded=${originalState.guildProfilesLoaded};updateHeaderNavigation()`, context);
   }
 });
 check('all Cartovella icons use only official logo colors and reject invalid names', () => {
@@ -2120,6 +2120,7 @@ await checkAsync('public summary stats contain compact profile, achievement, and
     assert.equal(summary.statesCount, 5);
     assert.equal(summary.parksCount, 2);
     assert.equal(summary.biomesCount, 2);
+    assert.equal(summary.totalTrips, 4, 'only trips explicitly enabled for public sharing count as shared trips');
     assert.equal(summary.totalMiles, vm.runInContext(
       'Math.round(AppState.expeditions.filter(expedition => expedition.publicSharing?.enabled && expedition.publicSharing?.includeDetails).reduce((total, expedition) => total + expeditionDistanceMiles(expedition), 0) * 10) / 10',
       context
@@ -2159,14 +2160,24 @@ await checkAsync('public summary stats contain compact profile, achievement, and
     assert.deepEqual(summary.recentExpeditions[0], {
       id: 'public-trip', name: 'Waterfall Weekend', startDate: '2026-10-01', endDate: '2026-10-02',
       dayTrip: false, reason: 'Chasing waterfalls', journalSnippet: 'A memorable public story.',
-      detailsShared: true, photos: [], distanceMiles: summary.recentExpeditions[0].distanceMiles,
-      transitTags: ['road'], stopNames: ['Cloud Citadel', 'Spirit Falls']
+      detailsShared: true, journalShared: true, photos: [],
+      distanceMiles: summary.recentExpeditions[0].distanceMiles,
+      transitTags: ['road'], stopNames: ['Cloud Citadel', 'Spirit Falls'],
+      sharedStops: [
+        { kind: 'place', id: 'citadel', name: 'Cloud Citadel', coords: [45, -121] },
+        { kind: 'place', id: 'falls', name: 'Spirit Falls', coords: [45.1, -121.1] }
+      ]
     });
     const storyOnly = summary.recentExpeditions.find(expedition => expedition.id === 'story-only');
     assert.equal(storyOnly.name, 'Shared expedition');
     assert.equal(storyOnly.detailsShared, false);
     assert.equal(storyOnly.startDate, null);
     assert.equal(storyOnly.reason, '');
+    assert.deepEqual(storyOnly.sharedStops, []);
+    assert.deepEqual(storyOnly.stopNames, []);
+    assert.deepEqual(storyOnly.transitTags, []);
+    assert.equal(storyOnly.distanceMiles, null);
+    assert.equal(storyOnly.journalShared, true);
     assert.equal(storyOnly.journalSnippet, 'A story shared without its details.');
     assert.deepEqual(storyOnly.photos, ['data:image/jpeg;base64,dGVzdA==']);
     assert.ok(JSON.stringify(summary).length < 10000, 'profile summary remains lightweight');
@@ -2337,9 +2348,10 @@ await checkAsync('Explorers’ Guild renders mocked public profiles and expediti
       topBadges: [{ title: 'Grand Voyager', icon: '🏕️', rarity: 'epic' }],
       recentExpeditions: [{
         id: 'guild-trip', name: 'Spirit Falls Weekend', startDate: '2026-10-20', endDate: '2026-10-21',
-        dayTrip: false, reason: 'A long-planned hike', journalSnippet: 'The falls were roaring.',
-        highlightPhoto: 'data:image/jpeg;base64,YWJjZA==', distanceMiles: 42.5,
-        transitTags: ['road'], stopNames: ['Trailhead', 'Spirit Falls']
+        detailsShared: true, journalShared: true, dayTrip: false, reason: 'A long-planned hike',
+        journalSnippet: 'The falls were roaring.', photos: ['data:image/jpeg;base64,YWJjZA=='],
+        distanceMiles: 42.5, transitTags: ['road'], stopNames: ['Trailhead', 'Spirit Falls'],
+        sharedStops: [{ kind: 'place', id: 'spirit-falls', name: 'Spirit Falls', coords: [45, -121] }]
       }]
     }
   }];
@@ -2351,7 +2363,7 @@ await checkAsync('Explorers’ Guild renders mocked public profiles and expediti
   context.fetch = async url => {
     requests++;
     assert.match(String(url), /cartovella_public_profiles/);
-    assert.match(String(url), /limit=50/);
+    assert.match(String(url), /limit=1000/);
     return { ok: true, status: 200, json: async () => profiles };
   };
   context.document.querySelectorAll = selector =>
@@ -2370,31 +2382,56 @@ await checkAsync('Explorers’ Guild renders mocked public profiles and expediti
     assert.equal(requests, 2, 'opening the Guild tab again refreshes the directory');
     assert.match(element('guildExplorersGrid').innerHTML, /@devon/);
     assert.match(element('guildExplorersGrid').innerHTML, /Cloud Citadel/);
-    assert.match(element('guildExplorersGrid').innerHTML, /Total miles traveled/);
     assert.match(element('guildExplorersGrid').innerHTML, /12,345\.6 mi/);
     assert.match(element('guildExplorersGrid').innerHTML, /Shared trips/);
     const unsyncedCard = vm.runInContext(
       `renderGuildExplorerCard({username:'legacy',summary_stats:{}})`, context
     );
-    assert.match(unsyncedCard, /Total miles traveled[\s\S]*Not synced/);
+    assert.match(unsyncedCard, /Not synced/);
     assert.match(element('guildExplorersGrid').innerHTML, /Grand Voyager/);
     assert.match(element('guildExplorersGrid').innerHTML, /data:image\/jpeg;base64,YWJjZA==/);
     assert.match(element('guildExplorersGrid').innerHTML, /Route map preview for @devon/);
-    assert.match(element('guildExplorersGrid').innerHTML, /guild-avatar h-24 w-24 shrink-0 rounded-full/);
+    assert.match(element('guildExplorersGrid').innerHTML, /guild-explorer-card/);
+    assert.match(element('guildExplorersGrid').innerHTML, /<summary/);
+    assert.match(element('guildExplorersGrid').innerHTML, /Open Full Public Atlas/);
+    assert.match(element('guildExplorersGrid').innerHTML, /Countries[\s\S]*Land revealed/);
     assert.match(html, /\.guild-avatar\s*\{\s*image-rendering:\s*pixelated;/);
     assert.match(element('guildExpeditionsFeed').innerHTML, /Spirit Falls Weekend/);
     assert.match(element('guildExpeditionsFeed').innerHTML, /The falls were roaring/);
     assert.match(element('guildExpeditionsFeed').innerHTML, /data:image\/jpeg;base64,YWJjZA==/);
     assert.match(element('guildExpeditionsFeed').innerHTML, /data-guild-open-travel="devon"/);
     assert.match(element('guildExpeditionsFeed').innerHTML, /guild-avatar h-16 w-16 shrink-0 rounded-full/);
+    assert.match(element('guildExpeditionsFeed').innerHTML, /data-guild-wishlist-stop/);
+    assert.match(element('guildExpeditionsFeed').innerHTML, /Spirit Falls/);
+    assert.match(html, /id="guildExploreView"[^>]*role="tabpanel"/);
+    assert.match(html, /id="guildDispatchesView"[^>]*role="tabpanel"/);
+    assert.match(html, /id="guildViewSwitcher"[^>]*role="tablist"/);
+    vm.runInContext("switchGuildView('dispatches')", context);
+    assert.equal(element('guildDispatchesView').classList.contains('hidden'), false);
+    assert.equal(element('guildExploreView').classList.contains('hidden'), true);
+    assert.equal(element('btnGuildDispatchesView').attributes['aria-selected'], 'true');
+    vm.runInContext("switchGuildView('explore')", context);
+    assert.equal(element('guildExploreView').classList.contains('hidden'), false);
+    const profileOnlyCard = vm.runInContext(
+      `renderGuildExplorerCard({username:'profile-only',visibility:'profile',summary_stats:{}})`,
+      context
+    );
+    assert.doesNotMatch(profileOnlyCard, /data-guild-explore/);
+    assert.match(profileOnlyCard, /not their full atlas/);
     const privateDetailsPost = vm.runInContext(`renderPublicExpeditionSummary(
       {username:'devon',summary_stats:{}},
       {id:'private-post',detailsShared:false,name:'Secret trip',reason:'Secret reason',
-        startDate:'2026-01-01',stopNames:['Secret stop'],journalSnippet:'Public story'}
+        startDate:'2026-01-01',stopNames:['Secret stop'],journalSnippet:'Public story',journalShared:true}
     )`, context);
     assert.match(privateDetailsPost, /Shared expedition/);
     assert.match(privateDetailsPost, /Public story/);
     assert.doesNotMatch(privateDetailsPost, /Secret trip|Secret reason|Secret stop|data-guild-open-travel/);
+    const privateStopPost = vm.runInContext(`renderPublicExpeditionSummary(
+      {username:'devon',summary_stats:{}},
+      {id:'private-stop',name:'Private route',detailsShared:false,
+        stopNames:['Secret stop'],sharedStops:[{kind:'place',id:'secret',name:'Secret stop',coords:[10,10]}]}
+    )`, context);
+    assert.doesNotMatch(privateStopPost, /Secret stop|data-guild-wishlist-stop/);
     assert.ok(stageRenders.length >= 2);
     assert.ok(stageRenders.every(render =>
       render.width >= 64 && render.height >= 64 && render.background === 'bg_yosemite'));
@@ -2409,6 +2446,77 @@ await checkAsync('Explorers’ Guild renders mocked public profiles and expediti
       guildProfilesLoadPromise = null;
       AppState.currentTab = ${JSON.stringify(originalCurrentTab)};
     `, context);
+  }
+});
+await checkAsync('Guild wishlist actions save explicitly shared parks and coordinate stops locally', async () => {
+  const originalViewOnly = vm.runInContext('AppState.viewOnly', context);
+  const originalParkId = JSON.parse(vm.runInContext('JSON.stringify(PARKS[0].id)', context));
+  const originalPinStatus = vm.runInContext(`AppState.pins[${JSON.stringify(originalParkId)}]`, context);
+  const originalPinOverride = vm.runInContext(`AppState.statusOverrides.pins[${JSON.stringify(originalParkId)}]`, context);
+  const originalSetPinStatus = context.setPinStatus;
+  const originalShowNotification = context.showNotification;
+  const originalLookup = context.CoordinateLookups.lookupCoordinate;
+  const originalValidate = context.CoordinateLookups.validateCustomLocations;
+  const originalAddCustomPoi = context.addCustomPoi;
+  const originalRenderParkMarkers = context.renderParkMarkers;
+  const originalDrawFogOfWar = context.drawFogOfWar;
+  const originalUpdateAllUI = context.updateAllUI;
+  const originalCrypto = context.crypto;
+  const saved = [];
+  const notices = [];
+  try {
+    vm.runInContext(`AppState.viewOnly=false; delete AppState.pins[${JSON.stringify(originalParkId)}];
+      delete AppState.statusOverrides.pins[${JSON.stringify(originalParkId)}]`, context);
+    context.setPinStatus = (id, status) => saved.push({ id, status });
+    context.showNotification = (...args) => notices.push(args);
+    context.crypto = { randomUUID: () => 'guild-stop-test' };
+    context.CoordinateLookups.lookupCoordinate = async (lat, lng) => ({
+      lat, lng, elevationFt: 12, biomes: [],
+      political: { countries: [], states: [], admin1: [], counties: [] },
+      ecoregions: [], biomeStatus: 'available'
+    });
+    context.CoordinateLookups.validateCustomLocations = () => {};
+    context.addCustomPoi = poi => saved.push({ poi });
+    context.renderParkMarkers = () => {};
+    context.drawFogOfWar = () => {};
+    context.updateAllUI = () => {};
+    context.guildWishlistButton = { dataset: {
+      stopKind: 'park', stopId: originalParkId, stopName: 'Shared Park',
+      stopLat: '40', stopLng: '-105'
+    } };
+    await vm.runInContext('saveGuildStopToWishlist(guildWishlistButton)', context);
+    assert.deepEqual(saved.pop(), { id: originalParkId, status: 'w' });
+
+    context.guildWishlistButton = { dataset: {
+      stopKind: 'place', stopId: 'remote-place', stopName: 'Hidden Gem Falls',
+      stopLat: '41.25', stopLng: '-111.5'
+    } };
+    await vm.runInContext('saveGuildStopToWishlist(guildWishlistButton)', context);
+    assert.equal(saved[0].poi.name, 'Hidden Gem Falls');
+    assert.equal(saved[0].poi.status, 'w');
+    assert.equal(saved[0].poi.category, 'Shared stop');
+    assert.equal(saved[0].poi.source, 'Guild');
+    assert.equal(saved[0].poi.lat, 41.25);
+    assert.equal(saved[0].poi.lng, -111.5);
+    assert.equal(notices.length, 2);
+  } finally {
+    const restorePin = originalPinStatus === undefined
+      ? `delete AppState.pins[${JSON.stringify(originalParkId)}];`
+      : `AppState.pins[${JSON.stringify(originalParkId)}]=${JSON.stringify(originalPinStatus)};`;
+    const restoreOverride = originalPinOverride === undefined
+      ? `delete AppState.statusOverrides.pins[${JSON.stringify(originalParkId)}];`
+      : `AppState.statusOverrides.pins[${JSON.stringify(originalParkId)}]=${JSON.stringify(originalPinOverride)};`;
+    vm.runInContext(`AppState.viewOnly=${originalViewOnly};${restorePin}${restoreOverride}`, context);
+    context.setPinStatus = originalSetPinStatus;
+    context.showNotification = originalShowNotification;
+    context.CoordinateLookups.lookupCoordinate = originalLookup;
+    context.CoordinateLookups.validateCustomLocations = originalValidate;
+    context.addCustomPoi = originalAddCustomPoi;
+    context.renderParkMarkers = originalRenderParkMarkers;
+    context.drawFogOfWar = originalDrawFogOfWar;
+    context.updateAllUI = originalUpdateAllUI;
+    context.crypto = originalCrypto;
+    delete context.guildWishlistButton;
   }
 });
 await checkAsync('clean ?u links load a read-only public Atlas without changing the local passport', async () => {
@@ -2439,6 +2547,7 @@ await checkAsync('clean ?u links load a read-only public Atlas without changing 
       ok: true, status: 200,
       json: async () => [{
         username: 'devon', display_name: 'Devon · Alpine Ranger',
+        profile_visibility: 'passport',
         public_passport_data: {
           version: 2,
           homeBase: { name: 'Devon Cloud Citadel', lat: 45, lng: -121, radiusKm: travelLedger.homeRadiusKm }
@@ -2488,8 +2597,9 @@ await checkAsync('Explorer-card links expose only the card and shared posts, the
   const originalLoaded = vm.runInContext('guildProfilesLoaded', context);
   const originalCurrentTab = vm.runInContext('AppState.currentTab', context);
   const originalReturnTab = vm.runInContext('localAtlasReturnTab', context);
+  const originalViewOnly = vm.runInContext('AppState.viewOnly', context);
+  const originalAtlasLoaded = vm.runInContext('activePublicAtlasLoaded', context);
   const originalSearch = element('guildSearchInput').value;
-  const originalOnlyView = vm.runInContext('profileOnlyView', context);
   const localPassport = JSON.stringify({
     version: 2,
     homeBase: { name: 'My Local Citadel', lat: 40, lng: -105, radiusKm: travelLedger.homeRadiusKm }
@@ -2513,7 +2623,7 @@ await checkAsync('Explorer-card links expose only the card and shared posts, the
   context.renderGuildDirectory = () => {};
   context.renderGuildExpeditions = () => {};
   context.fetch = async url => {
-    assert.match(String(url), /profile_visibility,updated_at,public_passport_data,summary_stats/);
+    assert.match(String(url), /select=username,display_name,updated_at,public_passport_data,summary_stats,profile_visibility/);
     return {
       ok: true, status: 200,
       json: async () => [{
@@ -2529,20 +2639,17 @@ await checkAsync('Explorer-card links expose only the card and shared posts, the
       }]
     };
   };
-  vm.runInContext(`activePublicAtlasUsername = null; profileOnlyView = false;
-    guildStateBeforeProfileView = null; AppState.viewOnly = false; AppState.currentTab = 'guild';
+  vm.runInContext(`activePublicAtlasUsername = null; activePublicAtlasLoaded = false;
+    AppState.viewOnly = false; AppState.currentTab = 'guild';
     localAtlasReturnTab = 'guild'; guildProfiles = [{username:'local-explorer'}];
     guildProfilesLoaded = true`, context);
   element('guildSearchInput').value = 'local query';
   try {
-    assert.equal(await vm.runInContext('loadPublicAtlas("trailfriend")', context), true);
-    assert.equal(vm.runInContext('profileOnlyView', context), true);
-    assert.equal(vm.runInContext('AppState.viewOnly', context), true);
-    assert.deepEqual(JSON.parse(vm.runInContext('JSON.stringify(guildProfiles.map(profile => profile.username))', context)), ['trailfriend']);
-    assert.equal(element('guildSearchLabel').classList.contains('hidden'), true);
-    assert.equal(element('guildDirectoryActions').classList.contains('hidden'), true);
-    assert.match(element('viewingPublicAtlasMessage').textContent, /Explorer Profile/);
-    vm.runInContext("switchTab('map')", context);
+    assert.equal(await vm.runInContext('loadPublicAtlas("trailfriend")', context), false);
+    assert.equal(vm.runInContext('AppState.viewOnly', context), false);
+    assert.deepEqual(JSON.parse(vm.runInContext('JSON.stringify(guildProfiles.map(profile => profile.username))', context)), ['local-explorer']);
+    assert.equal(element('viewingPublicAtlasBanner').classList.contains('hidden'), true);
+    assert.match(element('guildStatus').textContent, /not a full Atlas/);
     assert.equal(vm.runInContext('AppState.currentTab', context), 'guild');
     const card = vm.runInContext(`renderGuildExplorerCard({
       username:'trailfriend',visibility:'profile',summary_stats:{totalTrips:2}
@@ -2555,7 +2662,6 @@ await checkAsync('Explorer-card links expose only the card and shared posts, the
     )`, context);
     assert.doesNotMatch(post, /data-guild-open-travel/);
     vm.runInContext('returnToMyAtlas()', context);
-    assert.equal(vm.runInContext('profileOnlyView', context), false);
     assert.equal(vm.runInContext('AppState.viewOnly', context), false);
     assert.deepEqual(JSON.parse(vm.runInContext('JSON.stringify(guildProfiles.map(profile => profile.username))', context)), ['local-explorer']);
     assert.equal(element('guildSearchInput').value, 'local query');
@@ -2573,11 +2679,10 @@ await checkAsync('Explorer-card links expose only the card and shared posts, the
       guildProfiles = JSON.parse(${JSON.stringify(originalProfiles)});
       guildProfilesLoaded = ${originalLoaded};
       activePublicAtlasUsername = null;
-      profileOnlyView = ${originalOnlyView};
-      guildStateBeforeProfileView = null;
+      activePublicAtlasLoaded = ${originalAtlasLoaded};
       AppState.currentTab = ${JSON.stringify(originalCurrentTab)};
       localAtlasReturnTab = ${JSON.stringify(originalReturnTab)};
-      AppState.viewOnly = false`, context);
+      AppState.viewOnly = ${originalViewOnly}`, context);
   }
 });
 check('rare-and-higher rarity text and achievement borders receive glow styling', () => {
