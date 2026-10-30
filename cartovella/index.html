@@ -628,6 +628,8 @@
             </div>
           </div>
 
+          <div id="hudActiveQuests" class="mt-3 pt-3 border-t border-slate-700/60 space-y-2" role="region" aria-label="Active quest tracker"></div>
+
           <!-- Temporarily disabled: pin filtering is unreliable and not useful in the RPG HUD.
           <div class="mt-3 pt-3 border-t border-slate-700/60 flex flex-wrap gap-2 items-center justify-between text-[11px]">
             <span class="text-slate-400">Show pins:</span>
@@ -7335,6 +7337,46 @@
       });
     }
 
+    function renderHudActiveQuests(stats) {
+      const tracker = document.getElementById('hudActiveQuests');
+      const activeQuests = QUESTLINES
+        .map(quest => ({ quest, progress: stats.questProgress[quest.id] }))
+        .filter(entry => entry.progress && !entry.progress.complete)
+        .sort((left, right) => {
+          const leftRatio = left.progress.total > 0 ? left.progress.progress / left.progress.total : 0;
+          const rightRatio = right.progress.total > 0 ? right.progress.progress / right.progress.total : 0;
+          return rightRatio - leftRatio;
+        })
+        .slice(0, 2);
+
+      if (!activeQuests.length) {
+        tracker.innerHTML = '<p class="text-[11px] font-semibold text-amber-200">All Quests Complete!</p>';
+        return;
+      }
+
+      tracker.innerHTML = activeQuests.map(({ quest, progress }) => {
+        const ratio = progress.total > 0 ? progress.progress / progress.total : 0;
+        const pct = Math.round(Math.max(0, Math.min(1, ratio)) * 100);
+        const label = progress.label || `${progress.progress} / ${progress.total}`;
+        return `
+          <button type="button" data-quest-id="${escapeHtml(quest.id)}" onclick="switchTab('questlines')"
+            aria-label="Open ${escapeHtml(quest.title)} in Questlines"
+            class="w-full text-left rounded-lg bg-slate-900/80 p-2 border border-slate-700 hover:border-amber-400/50 transition-colors">
+            <div class="flex justify-between items-center mb-1 gap-2">
+              <span class="min-w-0 flex items-center gap-1 text-[10px] font-bold text-amber-200 uppercase truncate">
+                ${cartovellaIcon('quest', 'h-3 w-3 shrink-0')}
+                <span class="truncate">${escapeHtml(quest.title)}</span>
+              </span>
+              <span class="shrink-0 text-[10px] text-slate-400">${escapeHtml(label)}</span>
+            </div>
+            <div class="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
+              <div class="h-full bg-amber-500 transition-all" style="width: ${pct}%"></div>
+            </div>
+          </button>
+        `;
+      }).join('');
+    }
+
     function updateHud() {
       const stats = calculateStats();
       const activeIds = new Set(PARKS.map(p => p.id));
@@ -7357,6 +7399,7 @@
       document.getElementById('hudQuestsCount').textContent = `${stats.completedQuestsCount} / ${QUESTLINES.length}`;
       document.getElementById('hudCountiesCount').textContent = `${stats.countiesCount} / ${stats.countyTotal || '--'}`;
       document.getElementById('hudClassIcon').innerHTML = cartovellaIcon('shield', 'h-5 w-5');
+      renderHudActiveQuests(stats);
     }
 
     function updateAllUI({ updateNationalParksInPlace = false } = {}) {

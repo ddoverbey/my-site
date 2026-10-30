@@ -190,6 +190,9 @@ check('mobile RPG HUD starts collapsed with an accessible stats toggle', () => {
   assert.match(hudBody, /id="hudXpBar"/);
   assert.match(hudBody, /id="hudClearedPct"/);
   assert.match(hudBody, /id="hudCountiesCount"/);
+  assert.match(hudBody, /id="hudActiveQuests"[^>]*aria-label="Active quest tracker"/);
+  assert.ok(hudBody.indexOf('id="hudCountiesCount"') < hudBody.indexOf('id="hudActiveQuests"'));
+  assert.ok(hudBody.indexOf('id="hudActiveQuests"') < hudBody.indexOf('Temporarily disabled: pin filtering'));
 });
 check('home citadel setup can be dismissed by its close button, backdrop, or Escape', () => {
   assert.match(html, /id="homeBaseModal" role="dialog" aria-modal="true" aria-labelledby="homeBaseModalTitle"/);
@@ -1786,6 +1789,48 @@ check('dynamic counters and multi-state stats', () => {
   assert.equal(vm.runInContext('calculateStats().statesCount', context), 3);
   assert.ok(vm.runInContext("ACHIEVEMENTS.find(a => a.id === 'nps').progress(calculateStats()) < ACHIEVEMENTS.find(a => a.id === 'nps').tiers[0].goal(calculateStats())", context));
   assert.equal(vm.runInContext("QUESTLINES.find(q => q.id === 'giants').parkIds.length", context), 3);
+});
+check('HUD quest tracker ranks incomplete quests and links to Questlines', () => {
+  const originalPins = vm.runInContext('JSON.stringify(AppState.pins)', context);
+  const originalExpeditions = vm.runInContext('JSON.stringify(AppState.expeditions)', context);
+  try {
+    vm.runInContext(`
+      AppState.pins = {};
+      AppState.expeditions = [];
+      QUESTLINES.find(quest => quest.id === 'mighty5').parkIds.forEach(id => { AppState.pins[id] = 'v'; });
+      QUESTLINES.find(quest => quest.id === 'cascades').parkIds.slice(0, 2).forEach(id => { AppState.pins[id] = 'v'; });
+      QUESTLINES.find(quest => quest.id === 'alaska').parkIds.slice(0, 3).forEach(id => { AppState.pins[id] = 'v'; });
+      updateHud();
+    `, context);
+
+    const tracker = element('hudActiveQuests').innerHTML;
+    assert.equal((tracker.match(/<button\b/g) || []).length, 2);
+    assert.ok(tracker.indexOf('data-quest-id="cascades"') < tracker.indexOf('data-quest-id="alaska"'));
+    assert.ok(!tracker.includes('data-quest-id="mighty5"'));
+    assert.ok(tracker.includes('2 / 3'));
+    assert.ok(tracker.includes('3 / 5'));
+    assert.match(tracker, /onclick="switchTab\('questlines'\)"/);
+
+    const questIds = JSON.parse(vm.runInContext('JSON.stringify(QUESTLINES.map(quest => quest.id))', context));
+    context.hudCompleteTestStats = {
+      questProgress: Object.fromEntries(questIds.map(id => [id, {
+        progress: 1, total: 1, complete: true, label: '1 / 1'
+      }]))
+    };
+    vm.runInContext('renderHudActiveQuests(hudCompleteTestStats)', context);
+    assert.ok(element('hudActiveQuests').innerHTML.includes('All Quests Complete!'));
+    delete context.hudCompleteTestStats;
+  } finally {
+    context.originalHudPins = originalPins;
+    context.originalHudExpeditions = originalExpeditions;
+    vm.runInContext(`
+      AppState.pins = JSON.parse(originalHudPins);
+      AppState.expeditions = JSON.parse(originalHudExpeditions);
+      updateHud();
+    `, context);
+    delete context.originalHudPins;
+    delete context.originalHudExpeditions;
+  }
 });
 element('bucketSearch').value = 'national seashore';
 vm.runInContext('renderBucketListView()', context);

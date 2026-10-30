@@ -86,6 +86,8 @@ destination is visited; expedition questlines use distinct saved trip records:
 Questlines are available both on the Explorer Profile and on their own Main Questlines page. Open a
 quest card to see its exact requirement, park visit statuses, and the saved expedition logs that
 qualify or are closest to qualifying.
+The RPG Map HUD also surfaces the two closest-to-completion active quests; selecting one opens the
+full Questlines page.
 
 | Questline | Bonus XP |
 | --- | ---: |
