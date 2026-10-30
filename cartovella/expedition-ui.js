@@ -1584,41 +1584,15 @@ function travelLogMetrics(exp) {
 function renderPublicExpeditionSummary(profile, expedition) {
   const username = String(profile.username || '');
   const stats = profile.summary_stats || {};
-  const detailsShared = expedition.detailsShared === true;
+  const detailsShared = expedition.detailsShared !== false;
   const dates = [expedition.startDate, expedition.endDate].filter(Boolean).join(' – ');
   const transitTags = (detailsShared && Array.isArray(expedition.transitTags) ? expedition.transitTags : [])
     .map(mode => TravelLedger.transitTags[mode] || mode);
   const stopNames = (detailsShared && Array.isArray(expedition.stopNames) ? expedition.stopNames : [])
     .filter(name => typeof name === 'string' && name.trim());
-  const sharedStops = (detailsShared && Array.isArray(expedition.sharedStops) ? expedition.sharedStops : [])
-    .filter(stop => stop && typeof stop.name === 'string' && stop.name.trim() &&
-      ['park', 'poi', 'place'].includes(stop.kind) &&
-      Array.isArray(stop.coords) && stop.coords.length === 2 &&
-      stop.coords.every(Number.isFinite) && Math.abs(stop.coords[0]) <= 90 &&
-      Math.abs(stop.coords[1]) <= 180);
-  const wishlistState = stop => {
-    if (AppState.viewOnly) return { disabled: true, label: 'Return to your Atlas to save' };
-    const park = stop.kind === 'park' ? PARKS.find(item => item.id === stop.id) : null;
-    if (park) {
-      const status = AppState.statusOverrides?.pins?.[park.id] ?? AppState.pins[park.id];
-      if (status === 'w') return { disabled: true, label: 'In your Wishlist' };
-      if (TravelLedger.isVisited(status)) return { disabled: true, label: 'Already explored' };
-    }
-    const existing = AppState.customPois.find(poi => {
-      if (poi.name.trim().toLocaleLowerCase() !== stop.name.trim().toLocaleLowerCase()) return false;
-      return TravelLedger.distanceMiles(
-        { lat: poi.lat, lng: poi.lng },
-        { lat: stop.coords[0], lng: stop.coords[1] }
-      ) < 0.1 / 1.609344;
-    });
-    if (existing?.status === 'w') return { disabled: true, label: 'In your Wishlist' };
-    if (existing && TravelLedger.isVisited(existing.status)) return { disabled: true, label: 'Already explored' };
-    return { disabled: false, label: '+ Wishlist Stop' };
-  };
-  const photos = (Array.isArray(expedition.photos) ? expedition.photos : [])
+  const photos = (Array.isArray(expedition.photos) ? expedition.photos :
+    typeof expedition.highlightPhoto === 'string' ? [expedition.highlightPhoto] : [])
     .filter(photo => typeof photo === 'string' && /^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/.test(photo));
-  const journalSnippet = expedition.journalShared === true &&
-    typeof expedition.journalSnippet === 'string' ? expedition.journalSnippet : '';
   const distance = detailsShared && Number.isFinite(expedition.distanceMiles)
     ? `${expedition.distanceMiles.toLocaleString('en', { maximumFractionDigits: 1 })} mi`
     : '';
@@ -1632,26 +1606,9 @@ function renderPublicExpeditionSummary(profile, expedition) {
     <h4 class="mt-3 text-base font-bold text-amber-200">${escapeHtml(title)}</h4>
     ${detailsShared ? `<p class="mt-1 text-xs text-slate-400">${escapeHtml(dates || 'Dates not set')}${expedition.dayTrip ? ' · Day trip' : ''} · ${escapeHtml(distance || 'Distance not recorded')}</p>` : ''}
     ${transitTags.length ? `<p class="mt-2 text-xs text-sky-200">Transit: ${escapeHtml(transitTags.join(' · '))}</p>` : ''}
-    ${sharedStops.length ? `<section class="mt-3" aria-label="Shared expedition stops">
-      <h5 class="text-[11px] font-semibold text-slate-400">Stops · Save for later</h5>
-      <ul class="mt-1.5 space-y-1.5">${sharedStops.map(stop => {
-        const state = wishlistState(stop);
-        return `<li class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-950/50 px-2.5 py-2">
-          <span class="min-w-0 truncate text-xs text-slate-200">${escapeHtml(stop.name)}</span>
-          <button type="button" data-guild-wishlist-stop
-            data-stop-kind="${escapeHtml(stop.kind)}"
-            data-stop-id="${escapeHtml(typeof stop.id === 'string' ? stop.id : '')}"
-            data-stop-name="${escapeHtml(stop.name.slice(0, 150))}"
-            data-stop-lat="${stop.coords[0]}" data-stop-lng="${stop.coords[1]}"
-            ${state.disabled ? 'disabled' : ''}
-            class="shrink-0 rounded-md border border-amber-400/30 bg-amber-950/40 px-2 py-1 text-[10px] font-semibold text-amber-200 hover:bg-amber-900/60 disabled:cursor-not-allowed disabled:opacity-60">
-            ${escapeHtml(state.label)}
-          </button>
-        </li>`;
-      }).join('')}</ul>
-    </section>` : stopNames.length ? `<p class="mt-2 text-xs text-slate-300"><span class="font-semibold text-slate-400">Stops:</span> ${escapeHtml(stopNames.join(' · '))}</p>` : ''}
+    ${stopNames.length ? `<p class="mt-2 text-xs text-slate-300"><span class="font-semibold text-slate-400">Stops:</span> ${escapeHtml(stopNames.join(' · '))}</p>` : ''}
     ${detailsShared && expedition.reason ? `<p class="mt-2 text-xs text-slate-400">${escapeHtml(expedition.reason)}</p>` : ''}
-    ${journalSnippet ? `<p class="mt-2 whitespace-pre-line text-sm text-slate-200">${escapeHtml(journalSnippet)}</p>` : ''}
+    ${expedition.journalSnippet ? `<p class="mt-2 whitespace-pre-line text-sm text-slate-200">${escapeHtml(expedition.journalSnippet)}</p>` : ''}
     ${photos.length ? `<div class="mt-3 flex flex-wrap gap-2">${photos.map((photo, index) =>
       `<figure class="rotate-1 rounded bg-white p-2 pb-3 shadow-lg"><img src="${photo}" alt="Shared trip photo ${index + 1}" class="max-h-40 max-w-full object-cover" loading="lazy" decoding="async"></figure>`
     ).join('')}</div>` : ''}

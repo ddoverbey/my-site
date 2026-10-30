@@ -15,10 +15,9 @@ expeditions, track parks and regions, and earn achievements from your travel his
   Gaps between files remain as legs to route in the app. Connected track-only imports create the
   itinerary; choose a transit mode for every leg. The Global Route Map can be exported as a PNG route poster.
   Water Transit routes are blue, while flights use a neutral gray in the map and trip logs.
-- The Explorers' Guild separates public explorer discovery from Field Dispatches. Explore shows
-  expandable character calling cards with headline stats and a link to each full public Atlas when
-  the owner shares it. Dispatches includes only trips explicitly shared by public profiles; readers
-  can add shared, coordinate-backed stops to their own Wishlist without exposing private route data.
+- The Explorers' Guild refreshes its directory when opened and shows opted-in explorers' zoomed,
+  pixel-crisp character avatars, total logged travel miles, and compressed snapshots of the same
+  complete Global Route Map, including its trip routes and stops.
 - Progress for parks, regions, elevations, rarity, and terrestrial biomes.
 - Large park and geography datasets are prepared in stages; the map creates markers for the visible
   area and updates existing markers when travel statuses change.
