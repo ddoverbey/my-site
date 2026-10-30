@@ -16,7 +16,7 @@ expeditions, track parks and regions, and earn achievements from your travel his
   itinerary; choose a transit mode for every leg. The Global Route Map can be exported as a PNG route poster.
   Water Transit routes are blue, while flights use a neutral gray in the map and trip logs.
 - The Explorers' Guild separates public explorers into an expandable Explore directory and a
-  Field Dispatches feed. Dispatches show only explicitly shared trip details, journal entries, and
+  Travels feed of public expeditions. Travels show only explicitly shared trip details, journal entries, and
   selected photos; coordinate-backed shared stops can be saved to your Wishlist.
 - Progress for parks, regions, elevations, rarity, and terrestrial biomes.
 - Large park and geography datasets are prepared in stages; the map creates markers for the visible

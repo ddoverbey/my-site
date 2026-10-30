@@ -2395,6 +2395,14 @@ await checkAsync('Explorers’ Guild renders mocked public profiles and expediti
     assert.match(element('guildExplorersGrid').innerHTML, /Route map preview for @devon/);
     assert.match(element('guildExplorersGrid').innerHTML, /guild-avatar h-16 w-28 shrink-0 rounded-lg/);
     assert.match(html, /\.guild-avatar\s*\{\s*image-rendering:\s*pixelated;/);
+    assert.match(html, /id="btnGuildDispatchesView"[^>]*>Travels<\/button>/);
+    element('btnGuildDispatchesView').handlers.click();
+    assert.equal(element('guildDispatchesView').classList.contains('hidden'), false);
+    assert.equal(element('guildExploreView').classList.contains('hidden'), true);
+    assert.equal(element('btnGuildDispatchesView').attributes['aria-selected'], 'true');
+    element('btnGuildExploreView').handlers.click();
+    assert.equal(element('guildDispatchesView').classList.contains('hidden'), true);
+    assert.equal(element('guildExploreView').classList.contains('hidden'), false);
     assert.match(element('guildExpeditionsFeed').innerHTML, /Spirit Falls Weekend/);
     assert.match(element('guildExpeditionsFeed').innerHTML, /The falls were roaring/);
     assert.match(element('guildExpeditionsFeed').innerHTML, /data:image\/jpeg;base64,YWJjZA==/);

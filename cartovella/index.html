@@ -1054,7 +1054,7 @@
             <div class="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h2 id="guildTitle" class="cinzel text-xl font-bold text-amber-200">Explorers' Guild</h2>
-                <p class="mt-2 text-xs text-slate-400">Explore public explorers or browse their Field Dispatches.</p>
+                <p class="mt-2 text-xs text-slate-400">Explore public explorers or browse their shared travels.</p>
               </div>
               <div id="guildDirectoryActions" class="flex flex-wrap gap-2">
                 <button id="btnManagePublicProfile" type="button" class="rounded-lg border border-amber-400/40 bg-amber-950/40 px-3 py-2 text-xs text-amber-200 hover:bg-amber-900/50">Manage My Public Profile</button>
@@ -1065,7 +1065,7 @@
           </div>
           <div id="guildViewSwitcher" role="tablist" aria-label="Guild views" class="inline-flex gap-1 rounded-xl border border-slate-800 bg-slate-900/70 p-1">
             <button id="btnGuildExploreView" type="button" role="tab" aria-selected="true" aria-controls="guildExploreView" tabindex="0" class="rounded-lg bg-sky-900/70 px-4 py-2 text-xs font-semibold text-sky-100">Explore</button>
-            <button id="btnGuildDispatchesView" type="button" role="tab" aria-selected="false" aria-controls="guildDispatchesView" tabindex="-1" class="rounded-lg px-4 py-2 text-xs font-semibold text-slate-400">Field Dispatches</button>
+            <button id="btnGuildDispatchesView" type="button" role="tab" aria-selected="false" aria-controls="guildDispatchesView" tabindex="-1" class="rounded-lg px-4 py-2 text-xs font-semibold text-slate-400">Travels</button>
           </div>
           <section id="guildExploreView" role="tabpanel" aria-labelledby="btnGuildExploreView" class="space-y-3">
             <label id="guildSearchLabel" class="block max-w-xl text-xs text-slate-300">Search explorers
@@ -1076,8 +1076,8 @@
           </section>
           <section id="guildDispatchesView" role="tabpanel" aria-labelledby="btnGuildDispatchesView" class="hidden space-y-3">
             <div>
-              <h3 id="guildExpeditionsTitle" class="cinzel text-lg font-bold text-amber-200">Field Dispatches</h3>
-              <p class="mt-1 text-xs text-slate-400">Routes, photos, and stories explorers chose to share.</p>
+              <h3 id="guildExpeditionsTitle" class="cinzel text-lg font-bold text-amber-200">Shared Travels</h3>
+              <p class="mt-1 text-xs text-slate-400">Public expeditions, routes, photos, and stories explorers chose to share.</p>
             </div>
             <div id="guildExpeditionsFeed" class="grid gap-4 lg:grid-cols-2"></div>
           </section>
@@ -9623,6 +9623,8 @@
         ? 'Save Visibility' : 'Save Visibility & Copy Share Link';
     });
     document.getElementById('btnManagePublicProfile').addEventListener('click', () => toggleAuthModal(true));
+    document.getElementById('btnGuildExploreView').addEventListener('click', () => switchGuildView('explore'));
+    document.getElementById('btnGuildDispatchesView').addEventListener('click', () => switchGuildView('dispatches'));
     document.getElementById('btnRefreshGuild').addEventListener('click', () => {
       guildProfilesLoaded = false;
       void loadGuildProfiles();
