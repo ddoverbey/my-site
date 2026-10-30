@@ -490,12 +490,6 @@
         <button id="navExplorer" type="button" data-tab="passport" class="header-icon" data-tooltip="Explorer Profile" title="Explorer Profile" aria-label="Explorer Profile" aria-pressed="false" aria-controls="tabContent-passport">
           <span data-cartovella-icon="explorer" data-icon-class="h-5 w-5" aria-hidden="true"></span>
         </button>
-        <button id="navQuestlines" type="button" data-tab="questlines" class="header-icon" data-tooltip="Main Questlines" title="Main Questlines" aria-label="Main Questlines" aria-pressed="false" aria-controls="tabContent-questlines">
-          <span data-cartovella-icon="quest" data-icon-class="h-5 w-5" aria-hidden="true"></span>
-        </button>
-        <button id="navAchievements" type="button" data-tab="achievements" class="header-icon" data-tooltip="Achievements" title="Achievements" aria-label="Achievements" aria-pressed="false" aria-controls="achievementsSection">
-          <span data-cartovella-icon="trophy" data-icon-class="h-5 w-5" aria-hidden="true"></span>
-        </button>
         <button id="navGuild" type="button" data-tab="guild" class="header-icon" data-tooltip="Explorers' Guild" title="Explorers' Guild" aria-label="Explorers' Guild" aria-pressed="false" aria-controls="tabContent-guild">
           <span data-cartovella-icon="globe" data-icon-class="h-5 w-5" aria-hidden="true"></span>
         </button>
@@ -882,20 +876,18 @@
           </div>
         </section>
 
-        <!-- Questlines Section -->
-        <div>
-          <div class="mb-4">
-            <h3 class="cinzel text-xl font-bold text-amber-200">Active Questlines & Expeditions</h3>
-            <p class="text-xs text-slate-400">Open a questline to see its requirements and the visits or trip logs that count.</p>
+        <section id="questlinesSection" class="scroll-mt-4 space-y-4" aria-labelledby="questlinesTitle">
+          <div class="mb-4 flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+            <div>
+              <h3 id="questlinesTitle" class="cinzel text-xl font-bold text-amber-200">Active Questlines & Expeditions</h3>
+              <p class="text-xs text-slate-400">Open a questline to see its requirements and the visits or trip logs that count.</p>
+            </div>
+            <span id="questlineCompletionSummary" class="shrink-0 rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-xs font-mono text-amber-200"></span>
           </div>
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="questsContainer">
             <!-- Dynamically populated -->
           </div>
-          <button id="btnOpenQuestlines" type="button" aria-controls="tabContent-questlines"
-            class="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-200 hover:bg-amber-500/20">
-            View all questlines
-          </button>
-        </div>
+        </section>
 
         <section id="achievementsSection" class="scroll-mt-4 max-w-6xl mx-auto space-y-6 pb-20" aria-labelledby="achievementsTitle">
           <div class="rpg-panel p-6 rounded-2xl">
@@ -915,23 +907,6 @@
           <div class="space-y-5" id="achievementsContainer" aria-live="polite"></div>
         </section>
 
-      </div>
-    </div>
-
-    <div id="tabContent-questlines" class="w-full h-full p-4 md:p-8 overflow-y-auto hidden">
-      <div class="max-w-6xl mx-auto space-y-6 pb-20">
-        <div class="rpg-panel rpg-panel-gold rounded-2xl p-5 md:p-6">
-          <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
-            <div>
-              <h2 class="cinzel text-2xl font-bold text-amber-200">Main Questlines</h2>
-              <p class="text-sm text-slate-300 mt-2">Open any quest to see exactly what completes it and which park visits or trip logs are contributing.</p>
-            </div>
-            <span id="questlineCompletionSummary" class="shrink-0 rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-xs font-mono text-amber-200"></span>
-          </div>
-        </div>
-        <div id="mainQuestlinesContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <!-- Dynamically populated -->
-        </div>
       </div>
     </div>
 
@@ -1943,19 +1918,10 @@
     function renderQuestlineViews(stats) {
       const distancesByExpedition = new Map(AppState.expeditions.map(expedition =>
         [expedition.id, expeditionDistanceMiles(expedition)]));
-      if (AppState.currentTab === 'passport') {
-        renderQuestlinesContainer(document.getElementById('questsContainer'), stats, distancesByExpedition);
-      }
-      if (AppState.currentTab === 'questlines') {
-        renderQuestlinesContainer(document.getElementById('mainQuestlinesContainer'), stats, distancesByExpedition);
-      }
+      renderQuestlinesContainer(document.getElementById('questsContainer'), stats, distancesByExpedition);
       const completed = Object.values(stats.questProgress).filter(progress => progress.complete).length;
       document.getElementById('questlineCompletionSummary').textContent =
         `${completed} / ${QUESTLINES.length} complete`;
-    }
-
-    function renderQuestlinesView() {
-      renderQuestlineViews(calculateStats());
     }
 
     /* Dynamic Achievements */
@@ -6517,6 +6483,7 @@
       renderProfileFlags(stats.visitedCountries);
       renderProfileStateFlags(stats.visitedStates);
       renderCabinetOfCuriosities(stats);
+      renderQuestlineViews(stats);
 
       // Hero banner
       document.getElementById('passportClassName').textContent = stats.cls;
@@ -7414,7 +7381,6 @@
       document.getElementById('btnUnshareAllTrips').classList.toggle('hidden', AppState.viewOnly);
       updateHud();
       if (AppState.currentTab === 'passport') renderPassportView();
-      if (AppState.currentTab === 'questlines') renderQuestlinesView();
       if (AppState.currentTab === 'travel') renderExpeditionHistory();
       if (AppState.currentTab === 'scratch') {
         if (updateNationalParksInPlace && AppState.scratchDataset === 'nationalparks') {
@@ -7446,10 +7412,14 @@
 
     function switchTab(tabId) {
       if (profileOnlyView && tabId !== 'guild') return false;
-      if (tabId === 'achievements') {
+      const profileSectionByTab = {
+        questlines: 'questlinesSection',
+        achievements: 'achievementsSection'
+      };
+      if (profileSectionByTab[tabId]) {
         if (!switchTab('passport')) return false;
         setTimeout(() => {
-          document.getElementById('achievementsSection').scrollIntoView({
+          document.getElementById(profileSectionByTab[tabId]).scrollIntoView({
             behavior: 'smooth',
             block: 'start'
           });
@@ -7472,7 +7442,6 @@
       document.getElementById('tabContent-map').classList.add('hidden');
       document.getElementById('tabContent-scratch').classList.add('hidden');
       document.getElementById('tabContent-passport').classList.add('hidden');
-      document.getElementById('tabContent-questlines').classList.add('hidden');
       document.getElementById('tabContent-travel').classList.add('hidden');
       document.getElementById('tabContent-bucketlist').classList.add('hidden');
       document.getElementById('tabContent-guild').classList.add('hidden');
@@ -7494,9 +7463,6 @@
       } else if (tabId === 'passport') {
         document.getElementById('tabContent-passport').classList.remove('hidden');
         renderPassportView();
-      } else if (tabId === 'questlines') {
-        document.getElementById('tabContent-questlines').classList.remove('hidden');
-        renderQuestlinesView();
       } else if (tabId === 'travel') {
         document.getElementById('tabContent-travel').classList.remove('hidden');
         renderExpeditionHistory();
@@ -7525,8 +7491,6 @@
         });
       });
     });
-    document.getElementById('btnOpenQuestlines').addEventListener('click', () => switchTab('questlines'));
-
     function restoreModeView() {
       switchTab(AppState.mode === 'classic' ? 'bucketlist' : 'map');
       drawFogOfWar();

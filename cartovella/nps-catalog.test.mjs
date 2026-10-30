@@ -467,7 +467,7 @@ check('passport field registry round-trips defaults and unknown future fields', 
   assert.deepEqual(payload.character, characterCreator.DEFAULT_CHARACTER);
 });
 check('character stage and Explorer Profile share one section without a redundant heading', () => {
-  const passportContent = html.slice(html.indexOf('id="tabContent-passport"'), html.indexOf('id="tabContent-questlines"'));
+  const passportContent = html.slice(html.indexOf('id="tabContent-passport"'), html.indexOf('id="tabContent-travel"'));
   const profileSection = passportContent.slice(
     passportContent.indexOf('<!-- Explorer Profile and Character -->'),
     passportContent.indexOf('<!-- Master Statistics Bento Box -->')
@@ -497,14 +497,14 @@ check('character stage and Explorer Profile share one section without a redundan
   vm.runInContext('applyPassport(migratePassport({version:2}))', context);
   assert.equal(vm.runInContext('hasPassportData(passportPayload())', context), false);
 });
-check('questlines have a dedicated page and remain available from the Explorer Profile', () => {
-  assert.match(html, /data-tab="questlines"[^>]*aria-controls="tabContent-questlines"/);
-  assert.match(html, /id="tabContent-questlines"/);
-  assert.match(html, /id="mainQuestlinesContainer"/);
-  assert.match(html, /id="btnOpenQuestlines"[^>]*aria-controls="tabContent-questlines"/);
+check('questlines render in the Explorer Profile and use one shared destination', () => {
+  assert.match(html, /id="questlinesSection"[^>]*aria-labelledby="questlinesTitle"/);
+  assert.match(html, /id="questsContainer"/);
+  assert.match(html, /id="questlineCompletionSummary"/);
+  assert.doesNotMatch(html, /data-tab="questlines"|id="tabContent-questlines"|id="mainQuestlinesContainer"/);
   assert.match(html, /function questEvidence\(/);
   assert.match(html, /function questEvidenceMarkup\(/);
-  assert.match(html, /function renderQuestlineViews\(/);
+  assert.match(html, /function renderQuestlineViews\(stats\)[\s\S]*renderQuestlinesContainer\(document\.getElementById\('questsContainer'\), stats/);
 });
 await checkAsync('bulk passport geography preparation yields without modifying current travel data', async () => {
   await vm.runInContext(`(async () => {
@@ -1606,7 +1606,7 @@ await checkAsync('GeoJSON imports ordered stops and keeps only endpoint-matched 
       expeditionPending = ${originalPending}; AppState.viewOnly = ${originalViewOnly}`, context);
   }
 });
-check('eight icon-only header tabs expose direct, always-available navigation', () => {
+check('six icon-only header tabs keep primary navigation clean', () => {
   const navStart = html.indexOf('<nav id="navTabs"');
   const nav = html.slice(navStart, html.indexOf('</nav>', navStart));
   assert.match(nav, /aria-label="Atlas pages"/);
@@ -1616,15 +1616,14 @@ check('eight icon-only header tabs expose direct, always-available navigation', 
     ['navScratch', 'scratch', 'Scratch Maps', 'map'],
     ['navTravel', 'travel', 'Travel Journal', 'journal'],
     ['navExplorer', 'passport', 'Explorer Profile', 'explorer'],
-    ['navQuestlines', 'questlines', 'Main Questlines', 'quest'],
-    ['navAchievements', 'achievements', 'Achievements', 'trophy'],
     ['navGuild', 'guild', "Explorers' Guild", 'globe']
   ]) {
     assert.match(nav, new RegExp(`<button id="${id}"[^>]*data-tab="${tab}"`));
     assert.ok(nav.includes(`data-cartovella-icon="${icon}"`));
     assert.match(nav, new RegExp(`data-tooltip="${label}" title="${label}" aria-label="${label}"`));
   }
-  assert.equal([...nav.matchAll(/<button\b/g)].length, 8);
+  assert.equal([...nav.matchAll(/<button\b/g)].length, 6);
+  assert.doesNotMatch(nav, /navQuestlines|navAchievements|data-tab="questlines"|data-tab="achievements"/);
   assert.match(html, /\.header-icon::after[\s\S]*content: attr\(data-tooltip\)[\s\S]*transition: opacity 0ms/);
   assert.match(html, /\.header-icon:hover::after,[\s\S]*\.header-icon:focus-visible::after/);
   assert.doesNotMatch(html, /id="atlasSubNav"|id="questsSubNav"|data-primary-tab|primary-nav-button|subnav-button/);
@@ -1633,14 +1632,14 @@ check('eight icon-only header tabs expose direct, always-available navigation', 
   const originalQuery = context.document.querySelectorAll;
   const originalSaveState = context.saveState;
   const originalState = vm.runInContext("({mode:AppState.mode,tab:AppState.currentTab,viewOnly:AppState.viewOnly,profileOnlyView,guildProfilesLoaded})", context);
-  const buttons = ['map', 'bucketlist', 'scratch', 'travel', 'passport', 'questlines', 'achievements', 'guild'].map(tab => ({
+  const buttons = ['map', 'bucketlist', 'scratch', 'travel', 'passport', 'guild'].map(tab => ({
     dataset: { tab }, attributes: {},
     setAttribute(name, value) { this.attributes[name] = value; }
   }));
   const pageRenderers = [
     'renderCountyHitboxes', 'renderScratchMap', 'renderBucketListView',
-    'renderExpeditionHistory', 'renderPassportView', 'renderQuestlinesView',
-    'renderAchievementsView', 'renderGuildDirectory', 'renderGuildExpeditions'
+    'renderExpeditionHistory', 'renderPassportView',
+    'renderGuildDirectory', 'renderGuildExpeditions'
   ];
   const originalRenderers = pageRenderers.map(name => context[name]);
   context.document.querySelectorAll = selector => selector === '#navTabs [data-tab]'
@@ -1651,12 +1650,11 @@ check('eight icon-only header tabs expose direct, always-available navigation', 
     vm.runInContext("AppState.mode='classic';AppState.currentTab='scratch';updateHeaderNavigation()", context);
     assert.deepEqual(buttons.map(button => button.attributes['aria-pressed'] === 'true'),
       buttons.map(button => button.dataset.tab === 'scratch'));
-    for (const tab of ['map', 'bucketlist', 'scratch', 'travel', 'passport', 'questlines', 'achievements', 'guild']) {
+    for (const tab of ['map', 'bucketlist', 'scratch', 'travel', 'passport', 'guild']) {
       assert.equal(vm.runInContext(`switchTab('${tab}')`, context), true, `${tab} remains accessible`);
-      const activeTab = tab === 'achievements' ? 'passport' : tab;
-      assert.equal(vm.runInContext('AppState.currentTab', context), activeTab);
+      assert.equal(vm.runInContext('AppState.currentTab', context), tab);
       assert.deepEqual(buttons.map(button => button.attributes['aria-pressed'] === 'true'),
-        buttons.map(button => button.dataset.tab === activeTab), tab);
+        buttons.map(button => button.dataset.tab === tab), tab);
     }
     vm.runInContext("AppState.mode='classic';switchTab('map')", context);
     assert.equal(vm.runInContext('AppState.mode', context), 'rpg');
@@ -6036,33 +6034,47 @@ check('travel anywhere grows the starting home circle into its county without ch
   assert.equal(vm.runInContext('loggedCountyStatuses(false)["06073"]', context), undefined);
   vm.runInContext('map=null', context);
 });
-check('Explorer Profile contains the full achievement collection and the trophy tab scrolls to it', () => {
+check('Explorer Profile contains questlines and achievements and both links scroll to their sections', () => {
   const passportStart = html.indexOf('<div id="tabContent-passport"');
-  const questlinesStart = html.indexOf('<div id="tabContent-questlines"', passportStart);
-  const passport = html.slice(passportStart, questlinesStart);
+  const travelStart = html.indexOf('<div id="tabContent-travel"', passportStart);
+  const passport = html.slice(passportStart, travelStart);
   assert.equal((html.match(/id="achievementsContainer"/g) || []).length, 1);
   assert.ok(!html.includes('id="tabContent-achievements"'));
+  assert.ok(!html.includes('id="tabContent-questlines"'));
+  assert.ok(passport.includes('id="questlinesSection"'));
+  assert.ok(passport.includes('id="questsContainer"'));
+  assert.ok(passport.indexOf('id="questlinesSection"') < passport.indexOf('id="achievementsSection"'));
   assert.ok(passport.includes('id="achievementsSection"'));
   assert.ok(passport.indexOf('id="achievementsContainer"') > passport.indexOf('id="achievementsTitle"'));
   assert.ok(passport.indexOf('id="achievementsSection"') > passport.indexOf('id="cabinetOfCuriositiesSection"'));
-  assert.ok(html.includes('data-tab="achievements"'));
+  assert.doesNotMatch(html, /data-tab="(?:questlines|achievements)"/);
   vm.runInContext('applyPassport(migratePassport({}));PARKS=[];coordinateIndexes=null;map=null', context);
   const originalTimeout = context.setTimeout;
+  const questlinesSection = element('questlinesSection');
   const achievementSection = element('achievementsSection');
+  const originalQuestlinesScroll = questlinesSection.scrollIntoView;
   const originalScroll = achievementSection.scrollIntoView;
   const scrollCalls = [];
-  achievementSection.scrollIntoView = options => scrollCalls.push(options);
+  questlinesSection.scrollIntoView = options => scrollCalls.push({ section: 'questlines', ...options });
+  achievementSection.scrollIntoView = options => scrollCalls.push({ section: 'achievements', ...options });
   context.setTimeout = callback => { callback(); return 0; };
   try {
+    vm.runInContext("switchTab('questlines')", context);
     vm.runInContext("switchTab('achievements')", context);
   } finally {
     context.setTimeout = originalTimeout;
+    if (originalQuestlinesScroll === undefined) delete questlinesSection.scrollIntoView;
+    else questlinesSection.scrollIntoView = originalQuestlinesScroll;
     if (originalScroll === undefined) delete achievementSection.scrollIntoView;
     else achievementSection.scrollIntoView = originalScroll;
   }
   assert.equal(vm.runInContext('AppState.currentTab', context), 'passport');
   assert.equal(element('tabContent-passport').classList.contains('hidden'), false);
-  assert.deepEqual(JSON.parse(JSON.stringify(scrollCalls)), [{ behavior: 'smooth', block: 'start' }]);
+  assert.deepEqual(JSON.parse(JSON.stringify(scrollCalls)), [
+    { section: 'questlines', behavior: 'smooth', block: 'start' },
+    { section: 'achievements', behavior: 'smooth', block: 'start' }
+  ]);
+  assert.ok(element('questsContainer').innerHTML.includes('The Mighty 5'));
   assert.ok(element('achievementsContainer').innerHTML.includes('data-achievement-section="unmet"'));
   for (const title of ['Chasing Waterfalls', 'Southern Cross', 'Local Lore', 'Zero Meridian', 'Thin Air', 'Earth Sandwich']) {
     assert.ok(element('achievementsContainer').innerHTML.includes(title), title);

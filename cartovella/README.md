@@ -27,8 +27,8 @@ expeditions, track parks and regions, and earn achievements from your travel his
   the class summary, and keep an unearned capstone at the bottom. Single-tier achievements show their
   descriptions without a dropdown; rarity colors style labels and borders, while each achievement
   has its own background art palette. The full collection is part of the Explorer Profile character
-  sheet, with the header trophy button scrolling directly to it. International country milestones,
-  including Terra Incognita, Globetrotter, and How????, share one class.
+  sheet. International country milestones, including Terra Incognita, Globetrotter, and How????, share
+  one class.
 - Waterfall achievements automatically recognize visited locations whose names or categories include
   “waterfall”; Focal Length counts photos saved to trip journals.
 
@@ -83,11 +83,10 @@ included while a home base is set; changing the home location does not award ano
 bonuses are calculated once from the current passport. Park questlines complete when every listed
 destination is visited; expedition questlines use distinct saved trip records:
 
-Questlines are available both on the Explorer Profile and on their own Main Questlines page. Open a
-quest card to see its exact requirement, park visit statuses, and the saved expedition logs that
-qualify or are closest to qualifying.
-The RPG Map HUD also surfaces the two closest-to-completion active quests; selecting one opens the
-full Questlines page.
+Questlines and achievements live together on the Explorer Profile character sheet. Open a quest card
+to see its exact requirement, park visit statuses, and the saved expedition logs that qualify or are
+closest to qualifying. The RPG Map HUD surfaces the two closest-to-completion active quests; selecting
+one opens the matching section of the character sheet.
 
 | Questline | Bonus XP |
 | --- | ---: |
@@ -297,9 +296,9 @@ browser copies, so keep regular exports.
 When signed in, the header shows the relative time since the last successful cloud save. **Save now**
 and **Copy Public Profile Link** are available from **Settings**.
 
-The header uses eight icon-only navigation buttons for the Fog Map, Checklist & Catalog, Scratch
-Maps, Travel Journal, Explorer Profile, Main Questlines, Achievements, and Explorers' Guild. Hover
-or focus a button to reveal its label.
+The header uses six icon-only navigation buttons for the Fog Map, Checklist & Catalog, Scratch Maps,
+Travel Journal, Explorer Profile, and Explorers' Guild. Questlines and achievements are accessed
+within the Explorer Profile. Hover or focus a header button to reveal its label.
 
 If Cloud Sync reports that the session needs reconnection or that a refresh token was not found,
 open the **Sign In** or **Explorer Account** pill and sign in again. The rejected cloud session is
