@@ -1491,7 +1491,7 @@
     const bitmapSize = Math.round(displaySize * deviceScale);
     if (canvas.width !== bitmapSize) canvas.width = bitmapSize;
     if (canvas.height !== bitmapSize) canvas.height = bitmapSize;
-    drawStage(canvas, value, { animate: false, avatarZoom: 2.1 });
+    drawStage(canvas, value, { animate: false, avatarZoom: 2.7 });
   }
 
   function renderAvatar(canvas, value, { portrait = false } = {}) {

@@ -1668,8 +1668,8 @@ check('the shared stage animation loop advances pets and effects without moving 
     characterCreator.drawGuildAvatar(guildAvatarCanvas, character);
     assert.deepEqual([guildAvatarCanvas.width, guildAvatarCanvas.height], [192, 192]);
     assert.deepEqual(avatarTransforms.slice(0, 3), [
-      ['translate', -106, -55],
-      ['scale', 2.1, 2.1],
+      ['translate', -163, -98],
+      ['scale', 2.7, 2.7],
       ['scale', 1.2, 1.2]
     ], 'Guild avatars center and zoom the character using the high-DPI canvas scale');
     assert.equal(guildAvatarContext.imageSmoothingEnabled, false);

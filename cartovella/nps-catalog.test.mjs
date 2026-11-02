@@ -2393,8 +2393,8 @@ await checkAsync('Explorers’ Guild renders mocked public profiles and expediti
     assert.match(element('guildExplorersGrid').innerHTML, /Grand Voyager/);
     assert.match(element('guildExplorersGrid').innerHTML, /data:image\/jpeg;base64,YWJjZA==/);
     assert.match(element('guildExplorersGrid').innerHTML, /Route map preview for @devon/);
-    assert.match(element('guildExplorersGrid').innerHTML, /guild-avatar h-16 w-28 shrink-0 rounded-lg/);
-    assert.match(html, /\.guild-avatar\s*\{\s*image-rendering:\s*pixelated;/);
+    assert.match(element('guildExplorersGrid').innerHTML, /canvas width="96" height="96"[^>]*data-guild-avatar-size="96"[^>]*class="guild-avatar h-16 w-16 shrink-0 rounded-full/);
+    assert.match(html, /\.guild-avatar\s*\{\s*image-rendering:\s*pixelated;\s*aspect-ratio:\s*1;/);
     assert.match(html, /id="btnGuildDispatchesView"[^>]*>Travels<\/button>/);
     element('btnGuildDispatchesView').handlers.click();
     assert.equal(element('guildDispatchesView').classList.contains('hidden'), false);
