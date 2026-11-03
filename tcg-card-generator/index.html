@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#10110f">
+  <meta name="description" content="Build a collection of custom pixel-art trading cards.">
+  <title>Card Foundry — Trading Card Workshop</title>
+  <link rel="stylesheet" href="./editor.css">
+  <script src="./editor.js" defer></script>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="Card Foundry home">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M7 3.75h7.5L19 8.3v11.95H7z" />
+            <path d="M14.5 3.9v4.7H19M4.5 7.5v13" />
+            <path d="m10 15 2-4 2 4m-3.3-1.2h2.6" />
+          </svg>
+        </span>
+        <span>
+          <span class="brand-name">Card Foundry</span>
+          <span class="brand-caption">Pixel card workshop</span>
+        </span>
+      </a>
+      <span class="private-badge"><span aria-hidden="true"></span>Unlisted workshop</span>
+    </header>
+
+    <main>
+      <section class="intro" aria-labelledby="page-title">
+        <div class="eyebrow">Trading card workshop</div>
+        <h1 id="page-title">Build your collection.</h1>
+        <p>Shape each card with your own art, words, and world details. Changes are saved in this browser; your artwork never leaves your device.</p>
+      </section>
+
+      <div class="workspace">
+        <aside class="library-panel panel" aria-labelledby="collection-title">
+          <div class="section-heading">
+            <div>
+              <span class="step-label">Workspace</span>
+              <h2 id="collection-title">Your cards <span id="card-count" class="count-badge">1</span></h2>
+            </div>
+            <button id="new-card" class="icon-button" type="button" aria-label="Create a new card" title="Create a new card">+</button>
+          </div>
+          <div id="card-list" class="card-list" aria-label="Card collection"></div>
+          <div class="library-footer">
+            <span class="storage-dot" aria-hidden="true"></span>
+            <span id="storage-label">Saved on this device</span>
+          </div>
+        </aside>
+
+        <section class="editor-panel panel" aria-labelledby="details-title">
+          <div class="panel-topline">
+            <div>
+              <span class="step-label">Card editor</span>
+              <h2 id="details-title">Card details</h2>
+            </div>
+            <div class="card-actions">
+              <button id="duplicate-card" class="quiet-button" type="button">Duplicate</button>
+              <button id="delete-card" class="quiet-button delete-button" type="button">Delete</button>
+            </div>
+          </div>
+
+          <form id="card-form">
+            <div class="field-grid">
+              <div class="field field-wide">
+                <label for="card-name">Card name</label>
+                <input id="card-name" name="name" type="text" maxlength="48" autocomplete="off" placeholder="Name this card">
+              </div>
+              <div class="field">
+                <label for="card-points">Points</label>
+                <input id="card-points" name="points" type="number" min="0" max="99" inputmode="numeric">
+              </div>
+              <div class="field">
+                <label for="card-rarity">Rarity</label>
+                <select id="card-rarity" name="rarity">
+                  <option value="Common">Common · white</option>
+                  <option value="Uncommon">Uncommon · green</option>
+                  <option value="Rare">Rare · cyan / blue</option>
+                  <option value="Epic">Epic · purple</option>
+                  <option value="Legendary">Legendary · gold</option>
+                  <option value="Mythic">Mythic · rainbow</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="card-moisture">Top-right icon</label>
+                <select id="card-moisture" name="moisture">
+                  <option value="wet">Wet</option>
+                  <option value="dry">Dry</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="card-climate">Bottom-left icon</label>
+                <select id="card-climate" name="climate">
+                  <option value="cool">Cool</option>
+                  <option value="temperate">Temperate</option>
+                  <option value="hot">Warm / hot</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="card-finish">Background finish</label>
+                <select id="card-finish" name="finish">
+                  <option value="classic">Classic</option>
+                  <option value="sparkle" selected>Sparkle</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="card-border">Outer border</label>
+                <select id="card-border" name="border">
+                  <option value="steel" selected>Steel</option>
+                  <option value="copper">Copper</option>
+                  <option value="gold">Gold</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+            <div class="section-heading compact-heading">
+              <div>
+                <span class="step-label">Artwork</span>
+                <h3>Card illustration</h3>
+              </div>
+              <button id="clear-art" class="text-button" type="button" disabled>Remove image</button>
+            </div>
+            <label class="art-picker" for="card-art">
+              <span class="upload-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                  <rect x="3.5" y="4.5" width="17" height="15" rx="2" />
+                  <circle cx="9" cy="10" r="1.7" />
+                  <path d="m5 17 4.5-4 3.1 2.5 2.7-2 3.7 3.5" />
+                </svg>
+              </span>
+              <span class="upload-copy">
+                <strong id="art-filename">Choose a photo for this card</strong>
+                <span>PNG, JPG, GIF, or WebP · up to 10 MB</span>
+              </span>
+              <input id="card-art" name="art" type="file" accept="image/png,image/jpeg,image/gif,image/webp">
+            </label>
+
+            <div class="divider"></div>
+            <div class="section-heading compact-heading body-heading">
+              <div>
+                <span class="step-label">Card copy</span>
+                <h3>Body text</h3>
+              </div>
+              <span class="tiny-hint">Select a phrase to color it</span>
+            </div>
+            <label class="sr-only" for="card-body">Card body text</label>
+            <textarea id="card-body" name="body" maxlength="260" placeholder="Write the story, facts, or ability for this card"></textarea>
+            <div class="color-tools">
+              <label class="color-control" for="body-color">Text color <input id="body-color" type="color" value="#00a766"></label>
+              <button id="apply-body-color" class="small-button" type="button">Color selection</button>
+              <button id="clear-body-colors" class="text-button" type="button">Clear colors</button>
+            </div>
+            <p class="field-hint">Choose text in the body, pick a color, then apply it. Color formatting stays with the selected words.</p>
+          </form>
+
+          <p id="status-message" class="status" role="status" aria-live="polite"></p>
+        </section>
+
+        <aside class="preview-panel panel" aria-labelledby="preview-title">
+          <div class="preview-heading">
+            <div>
+              <span class="step-label">2560 × 2560 canvas</span>
+              <h2 id="preview-title">Live card preview</h2>
+            </div>
+            <span class="live-label"><span aria-hidden="true"></span>Live</span>
+          </div>
+          <div class="card-stage">
+            <canvas id="card-preview" width="768" height="768" role="img" aria-label="Trading card preview">Your browser does not support canvas.</canvas>
+          </div>
+          <button id="download-card" class="download-button" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path d="M12 3.75v11.5m0 0 4.25-4.25M12 15.25l-4.25-4.25M5 16.5v3h14v-3" />
+            </svg>
+            Download 2560 × 2560 PNG
+          </button>
+          <p class="preview-note">Transparent canvas · card placed at 359 × 71</p>
+          <p class="preview-note">Photos and cards are stored locally in this browser.</p>
+        </aside>
+      </div>
+    </main>
+    <footer class="footer-note">Made for original ideas, made-up worlds, and the people you want to surprise.</footer>
+  </div>
+</body>
+</html>
