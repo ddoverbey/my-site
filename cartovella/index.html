@@ -269,7 +269,7 @@
     }
     #settingsMenu .header-icon:hover::after,
     #settingsMenu .header-icon:focus-visible::after { transform: translate(0, 0); }
-    .passport-flags { display: flex; flex-wrap: wrap; gap: 0.5rem; list-style: none; padding: 0; }
+    .passport-flags { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; padding: 0; }
     .passport-flags li { position: relative; display: flex; }
     .country-flag, .state-flag { position: relative; display: inline-flex; align-items: center; justify-content: center; min-height: 44px; cursor: pointer; }
     .country-flag:focus-visible, .state-flag:focus-visible { outline: 2px solid #38bdf8; outline-offset: 3px; border-radius: 3px; }
@@ -475,22 +475,22 @@
 
     <div class="order-last xl:order-none w-full xl:w-auto flex items-center justify-center">
       <nav id="navTabs" aria-label="Atlas pages" class="flex items-center justify-center gap-0.5 rounded-xl border border-slate-800 bg-slate-900/60 p-1">
-        <button id="navMap" type="button" data-tab="map" class="header-icon" data-tooltip="Fog Map" title="Fog Map" aria-label="Fog Map" aria-pressed="true" aria-controls="tabContent-map">
+        <button id="navMap" type="button" data-tab="map" class="header-icon" data-tooltip="Explore RPG Map" title="Explore RPG Map" aria-label="Explore RPG Map" aria-pressed="true" aria-controls="tabContent-map">
           <span data-cartovella-icon="compass" data-icon-class="h-5 w-5" aria-hidden="true"></span>
         </button>
-        <button id="navBucketlist" type="button" data-tab="bucketlist" class="header-icon" data-tooltip="Checklist &amp; Catalog" title="Checklist &amp; Catalog" aria-label="Checklist &amp; Catalog" aria-pressed="false" aria-controls="tabContent-bucketlist">
+        <button id="navBucketlist" type="button" data-tab="bucketlist" class="header-icon hidden" data-tooltip="Checklist &amp; Catalog" title="Checklist &amp; Catalog" aria-label="Checklist &amp; Catalog" aria-pressed="false" aria-controls="tabContent-bucketlist">
           <span data-cartovella-icon="checklist" data-icon-class="h-5 w-5" aria-hidden="true"></span>
         </button>
-        <button id="navScratch" type="button" data-tab="scratch" class="header-icon" data-tooltip="Scratch Maps" title="Scratch Maps" aria-label="Scratch Maps" aria-pressed="false" aria-controls="tabContent-scratch">
+        <button id="navScratch" type="button" data-tab="scratch" class="header-icon hidden" data-tooltip="Scratch Maps" title="Scratch Maps" aria-label="Scratch Maps" aria-pressed="false" aria-controls="tabContent-scratch">
           <span data-cartovella-icon="map" data-icon-class="h-5 w-5" aria-hidden="true"></span>
         </button>
-        <button id="navTravel" type="button" data-tab="travel" class="header-icon" data-tooltip="Travel Journal" title="Travel Journal" aria-label="Travel Journal" aria-pressed="false" aria-controls="tabContent-travel">
+        <button id="navTravel" type="button" data-tab="travel" class="header-icon hidden" data-tooltip="Travel Log" title="Travel Log" aria-label="Travel Log" aria-pressed="false" aria-controls="tabContent-travel">
           <span data-cartovella-icon="journal" data-icon-class="h-5 w-5" aria-hidden="true"></span>
         </button>
-        <button id="navExplorer" type="button" data-tab="passport" class="header-icon" data-tooltip="Explorer Profile" title="Explorer Profile" aria-label="Explorer Profile" aria-pressed="false" aria-controls="tabContent-passport">
+        <button id="navExplorer" type="button" data-tab="passport" class="header-icon hidden" data-tooltip="Explorer Profile" title="Explorer Profile" aria-label="Explorer Profile" aria-pressed="false" aria-controls="tabContent-passport">
           <span data-cartovella-icon="explorer" data-icon-class="h-5 w-5" aria-hidden="true"></span>
         </button>
-        <button id="navGuild" type="button" data-tab="guild" class="header-icon" data-tooltip="Explorers' Guild" title="Explorers' Guild" aria-label="Explorers' Guild" aria-pressed="false" aria-controls="tabContent-guild">
+        <button id="navGuild" type="button" data-tab="guild" class="header-icon hidden" data-tooltip="Explorers' Guild" title="Explorers' Guild" aria-label="Explorers' Guild" aria-pressed="false" aria-controls="tabContent-guild">
           <span data-cartovella-icon="globe" data-icon-class="h-5 w-5" aria-hidden="true"></span>
         </button>
       </nav>
@@ -528,6 +528,9 @@
           </button>
           <button id="btnImportTrigger" class="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-800 flex items-center gap-2">
             <span data-cartovella-icon="import" data-icon-class="h-4 w-4" aria-hidden="true"></span> Import Passport
+          </button>
+          <button id="btnUnlockAllFeatures" type="button" class="w-full text-left px-4 py-2 text-xs text-amber-200 hover:bg-slate-800">
+            Unlock All Primary Features
           </button>
           <button id="btnOpenCredits" type="button" class="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-800 flex items-center gap-2">
             <span data-cartovella-icon="credits" data-icon-class="h-4 w-4" aria-hidden="true"></span> Credits &amp; Data Sources
@@ -773,8 +776,29 @@
                 </div>
               </div>
             </div>
-            <div class="mt-4 grid grid-cols-1 xl:grid-cols-4 gap-4 items-center">
-              <div id="characterProgressSummary" class="grid grid-cols-1 sm:grid-cols-3 gap-2 xl:col-span-3"></div>
+            <div class="mt-4 grid grid-cols-1 xl:grid-cols-4 gap-4 items-start">
+              <div class="min-w-0 space-y-3 xl:col-span-3">
+                <div id="characterProgressSummary" class="grid grid-cols-1 sm:grid-cols-3 gap-2"></div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <section id="passportCountriesSection" class="min-w-0 scroll-mt-4 rounded-xl border border-slate-700/60 bg-slate-950/50 p-3" aria-labelledby="passportFlagsTitle">
+                    <h3 id="passportFlagsTitle" class="text-sm font-semibold text-amber-200 mb-2">Countries explored</h3>
+                    <ul id="passportFlags" class="passport-flags" aria-label="Visited and lived country flags"></ul>
+                    <p id="passportFlagsEmpty" class="text-xs text-slate-400">Visit a country to collect its flag.</p>
+                    <p class="text-[10px] text-slate-500 mt-2">Pixel flags by DaFluffyPotato · Country codes: <a href="https://flaglog.com/country-codes" target="_blank" rel="noopener noreferrer" class="underline">Flaglog</a></p>
+                  </section>
+                  <section id="passportStatesSection" class="min-w-0 scroll-mt-4 rounded-xl border border-slate-700/60 bg-slate-950/50 p-3" aria-labelledby="passportStateFlagsTitle">
+                    <h3 id="passportStateFlagsTitle" class="text-sm font-semibold text-amber-200 mb-2">US States explored</h3>
+                    <ul id="passportStateFlags" class="passport-flags" aria-label="Visited and lived US state flags"></ul>
+                    <p id="passportStateFlagsEmpty" class="text-xs text-slate-400">Visit or live in a US state to collect its flag.</p>
+                  </section>
+                  <section class="min-w-0 rounded-xl border border-slate-700/60 bg-slate-950/50 p-3" aria-labelledby="earnedBadgesTitle">
+                    <h3 id="earnedBadgesTitle" class="text-xs font-bold text-amber-200 mb-2">
+                      <button type="button" data-profile-scroll-target="passportAchievementsSection" aria-controls="passportAchievementsSection" class="hover:text-amber-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400">Earned Badges</button>
+                    </h3>
+                    <div id="earnedAchievementBadges" class="flex max-h-24 flex-wrap gap-2 overflow-y-auto"></div>
+                  </section>
+                </div>
+              </div>
               <div class="w-56 h-56 mx-auto flex flex-col items-center justify-center">
                 <span class="text-[10px] uppercase font-mono tracking-wider text-slate-400 mb-1">Traveler Archetype</span>
                 <svg id="radarSvg" viewBox="0 0 240 240" class="w-full h-full drop-shadow-lg"></svg>
@@ -783,32 +807,17 @@
           </div>
           <div class="relative z-10 mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-slate-700/60 pt-4">
             <p class="md:col-span-2 text-[10px] text-slate-400">Land percentages are area estimates on an equal-area atlas: explored land counts visited/lived political boundaries; shroud cleared counts land revealed by your fog shapes and routes. Ocean is excluded.</p>
-            <section id="passportCountriesSection" class="min-w-0 scroll-mt-4" aria-labelledby="passportFlagsTitle">
-              <h3 id="passportFlagsTitle" class="text-sm font-semibold text-amber-200 mb-2">Countries explored</h3>
-              <ul id="passportFlags" class="passport-flags" aria-label="Visited and lived country flags"></ul>
-              <p id="passportFlagsEmpty" class="text-xs text-slate-400">Visit a country to collect its flag.</p>
-              <p class="text-[10px] text-slate-500 mt-2">Pixel flags by DaFluffyPotato · Country codes: <a href="https://flaglog.com/country-codes" target="_blank" rel="noopener noreferrer" class="underline">Flaglog</a></p>
-            </section>
-            <section id="passportStatesSection" class="min-w-0 scroll-mt-4" aria-labelledby="passportStateFlagsTitle">
-              <h3 id="passportStateFlagsTitle" class="text-sm font-semibold text-amber-200 mb-2">US States explored</h3>
-              <ul id="passportStateFlags" class="passport-flags" aria-label="Visited and lived US state flags"></ul>
-              <p id="passportStateFlagsEmpty" class="text-xs text-slate-400">Visit or live in a US state to collect its flag.</p>
-            </section>
           </div>
-          <section class="relative z-10 mt-5 border-t border-slate-700/60 pt-4" aria-labelledby="earnedBadgesTitle">
-            <h3 id="earnedBadgesTitle" class="text-xs font-bold text-amber-200 mb-3">Earned Badges</h3>
-            <div id="earnedAchievementBadges" class="flex flex-wrap gap-3"></div>
-          </section>
         </section>
 
         <!-- Master Statistics Bento Box -->
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          <button type="button" data-profile-scroll-target="passportCountriesSection" aria-controls="passportCountriesSection" aria-label="Jump to countries explored" class="rpg-panel p-4 rounded-2xl text-center transition hover:ring-2 hover:ring-amber-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400">
+          <button type="button" data-profile-scroll-target="passportFlagsTitle" aria-controls="passportFlagsTitle" aria-label="Jump to countries explored" class="rpg-panel p-4 rounded-2xl text-center transition hover:ring-2 hover:ring-amber-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400">
             <span class="text-[10px] uppercase text-slate-400 font-mono">Countries</span>
             <span class="block text-2xl font-bold font-mono text-emerald-400 mt-1" id="statCountries">0</span>
             <span class="text-[10px] text-slate-500">of 195</span>
           </button>
-          <button type="button" data-profile-scroll-target="passportStatesSection" aria-controls="passportStatesSection" aria-label="Jump to US states explored" class="rpg-panel p-4 rounded-2xl text-center transition hover:ring-2 hover:ring-amber-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400">
+          <button type="button" data-profile-scroll-target="passportStateFlagsTitle" aria-controls="passportStateFlagsTitle" aria-label="Jump to US states explored" class="rpg-panel p-4 rounded-2xl text-center transition hover:ring-2 hover:ring-amber-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400">
             <span class="text-[10px] uppercase text-slate-400 font-mono">US States</span>
             <span class="block text-2xl font-bold font-mono text-sky-400 mt-1" id="statStates">0</span>
             <span class="text-[10px] text-slate-500">of 50</span>
@@ -876,20 +885,7 @@
           </div>
         </section>
 
-        <section id="questlinesSection" class="scroll-mt-4 space-y-4" aria-labelledby="questlinesTitle">
-          <div class="mb-4 flex flex-col sm:flex-row sm:items-end justify-between gap-3">
-            <div>
-              <h3 id="questlinesTitle" class="cinzel text-xl font-bold text-amber-200">Active Questlines & Expeditions</h3>
-              <p class="text-xs text-slate-400">Open a questline to see its requirements and the visits or trip logs that count.</p>
-            </div>
-            <span id="questlineCompletionSummary" class="shrink-0 rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-xs font-mono text-amber-200"></span>
-          </div>
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="questsContainer">
-            <!-- Dynamically populated -->
-          </div>
-        </section>
-
-        <section id="achievementsSection" class="scroll-mt-4 max-w-6xl mx-auto space-y-6 pb-20" aria-labelledby="achievementsTitle">
+        <section id="passportAchievementsSection" class="scroll-mt-4 max-w-6xl mx-auto space-y-6 pb-20" aria-labelledby="achievementsTitle">
           <div class="rpg-panel p-6 rounded-2xl">
             <h2 id="achievementsTitle" class="cinzel text-xl font-bold text-amber-200">Achievements</h2>
             <p class="text-xs text-slate-400 mt-2">Discover special milestones through your travels. Related milestones are grouped into expandable classes, with your highest earned tier shown in the class summary. Expanded tiers run highest to lowest, with an unearned capstone at the bottom. Hints appear at 85% completion and remain blurred until earned.</p>
@@ -905,6 +901,19 @@
             </div>
           </div>
           <div class="space-y-5" id="achievementsContainer" aria-live="polite"></div>
+        </section>
+
+        <section id="passportQuestlinesSection" class="scroll-mt-4 space-y-4" aria-labelledby="questlinesTitle">
+          <div class="mb-4 flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+            <div>
+              <h3 id="questlinesTitle" class="cinzel text-xl font-bold text-amber-200">Active Questlines & Expeditions</h3>
+              <p class="text-xs text-slate-400">Open a questline to see its requirements and the visits or trip logs that count.</p>
+            </div>
+            <span id="questlineCompletionSummary" class="shrink-0 rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-xs font-mono text-amber-200"></span>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="questsContainer">
+            <!-- Dynamically populated -->
+          </div>
         </section>
 
       </div>
@@ -1174,7 +1183,7 @@
       <div>
         <h2 id="homeBaseModalTitle" class="cinzel text-2xl sm:text-3xl font-extrabold text-amber-200">Establish Your Home Citadel</h2>
         <p class="text-sm text-slate-300 mt-2">
-          Every explorer begins somewhere. Set your home to reveal a small circle 15 miles across (7.5-mile radius) and permanently claim its county, state, and country as Lived. Your first logged travel anywhere unlocks the whole home county. Establishing your first Citadel grants +50 XP and unlocks the Scout class.
+          Every explorer begins somewhere. Set your home to reveal a small circle 15 miles across (7.5-mile radius) and permanently claim its county, state, and country as Lived. Your first logged travel anywhere unlocks the whole home county. Establishing your first Citadel grants +50 XP; your starting tool sets your first Explorer Class.
         </p>
       </div>
 
@@ -1220,6 +1229,19 @@
       <div class="text-[11px] text-slate-500">
         You can always change your home base or customize fog clearing later.
       </div>
+    </div>
+  </div>
+
+  <div id="toolUnlockModal" role="dialog" aria-modal="true" aria-labelledby="toolUnlockTitle" aria-describedby="toolUnlockDescription" class="hidden fixed inset-0 z-[1000] bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="rpg-panel rpg-panel-gold max-w-2xl w-full max-h-[90vh] overflow-y-auto rounded-3xl p-6 sm:p-8 space-y-5">
+      <header class="text-center">
+        <h2 id="toolUnlockTitle" class="cinzel text-2xl font-extrabold text-amber-200">Choose Your Starting Tool</h2>
+        <p id="toolUnlockDescription" class="mt-2 text-sm text-slate-300">Choose whichever feels easiest to start—you'll unlock the other two as you level up.</p>
+      </header>
+      <div id="toolUnlockOptions" class="grid gap-3 sm:grid-cols-3"></div>
+      <button id="btnUnlockAllFromStarter" type="button" class="mx-auto block text-xs text-slate-400 underline hover:text-amber-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400">
+        Skip &amp; unlock all features
+      </button>
     </div>
   </div>
 
@@ -1882,7 +1904,7 @@
       const { progress, total, complete, label } = stats.questProgress[quest.id];
       const pct = Math.round((progress / total) * 100);
       return `
-        <details class="questline-details rounded-2xl border ${complete
+        <details data-quest-id="${escapeHtml(quest.id)}" class="questline-details rounded-2xl border ${complete
           ? 'border-emerald-500/40 bg-emerald-950/20'
           : 'border-slate-800 bg-slate-900/70'}">
           <summary class="cursor-pointer list-none p-4">
@@ -2207,6 +2229,66 @@
       get() { return this.customPois; },
       set(value) { this.customPois = value; }
     });
+
+    const ONBOARDING_STORAGE_KEY = 'cartovella_onboarding_v1';
+    const LEGACY_FEATURE_PROGRESS_STORAGE_KEY = 'cartovella_feature_progress';
+    const LOGGING_FEATURES = Object.freeze([
+      {
+        id: 'scratch',
+        name: 'Scratch Maps',
+        description: 'Color in countries, states & counties',
+        icon: 'map'
+      },
+      {
+        id: 'bucketlist',
+        name: 'Travel Ledger',
+        description: 'Check off parks & cities from a catalog',
+        icon: 'checklist'
+      },
+      {
+        id: 'travel',
+        name: 'Travel Log',
+        description: 'Map routes & write trip stories',
+        icon: 'journal'
+      }
+    ]);
+
+    function normalizeOnboarding(value) {
+      const chosenTools = Array.isArray(value?.chosenTools)
+        ? [...new Set(value.chosenTools.filter(tool => LOGGING_FEATURES.some(feature => feature.id === tool)))]
+        : [];
+      return { unlockedAll: value?.unlockedAll === true, chosenTools };
+    }
+
+    function readOnboarding() {
+      const currentValue = localStorage.getItem(ONBOARDING_STORAGE_KEY);
+      const legacyValue = currentValue === null
+        ? localStorage.getItem(LEGACY_FEATURE_PROGRESS_STORAGE_KEY) : null;
+      const stored = currentValue ?? legacyValue;
+      if (!stored) return { unlockedAll: false, chosenTools: [] };
+      let parsed;
+      try {
+        parsed = JSON.parse(stored);
+      } catch (error) {
+        console.error('Saved onboarding state is invalid.', error);
+        showNotification('Onboarding state unavailable',
+          `Saved onboarding state could not be read: ${error.message}`, '⚠️');
+        return { unlockedAll: false, chosenTools: [] };
+      }
+      const onboarding = normalizeOnboarding(parsed);
+      if (legacyValue !== null) {
+        try {
+          localStorage.setItem(ONBOARDING_STORAGE_KEY, JSON.stringify(onboarding));
+          localStorage.removeItem(LEGACY_FEATURE_PROGRESS_STORAGE_KEY);
+        } catch (error) {
+          console.error('Legacy onboarding state could not be migrated.', error);
+          showNotification('Onboarding migration failed', error.message, '⚠️');
+        }
+      }
+      return onboarding;
+    }
+
+    let onboarding = readOnboarding();
 
     const PASSPORT_STORAGE_FORMAT = 'encoded-route-polyline-v1';
     const PASSPORT_STORAGE_KEY = 'cartovella_state';
@@ -2538,10 +2620,30 @@
       );
     }
 
+    function hasExistingTravelProgressOnLoad() {
+      const visitedCountries = new Set(Object.entries(AppState.regions)
+        .filter(([id, status]) => id.startsWith('c:') && TravelLedger.isVisited(status))
+        .map(([id]) => id));
+      const visitedStates = new Set(Object.entries(AppState.regions)
+        .filter(([id, status]) => id.startsWith('s:') && TravelLedger.isVisited(status))
+        .map(([id]) => id));
+      const visitedCounties = Object.values(AppState.counties)
+        .filter(status => TravelLedger.isVisited(status)).length;
+      return TravelLedger.hasLoggedTravel(AppState) ||
+        AppState.expeditions.length > 0 ||
+        AppState.customPois.length > 0 ||
+        visitedCountries.size > 1 ||
+        visitedStates.size > 1 ||
+        visitedCounties > 1;
+    }
+
     function applyPassport(parsed) {
       Object.entries(PASSPORT_FIELDS).forEach(([field, createDefault]) => {
         AppState[field] = parsed[field] ?? createDefault();
       });
+      if (AppState.viewOnly || hasExistingTravelProgressOnLoad()) {
+        unlockAllPrimaryFeatures({ refresh: false });
+      }
       const knownFields = new Set(['version', ...Object.keys(PASSPORT_FIELDS), 'extraPassportFields']);
       AppState.extraPassportFields = {
         ...(parsed.extraPassportFields && typeof parsed.extraPassportFields === 'object'
@@ -2957,7 +3059,7 @@
   </script>
 
   <script>
-    const LEVEL_TWO_XP_THRESHOLD = 300;
+    const LEVEL_TWO_XP_THRESHOLD = 200;
     const LEVEL_XP_CURVE = 35;
 
     function levelFromXp(xp) {
@@ -3293,12 +3395,23 @@
         (p.political?.countries || []).forEach(country => visitedCountries.add(country));
       });
 
+      const countyIds = new Set([
+        ...(countyGeoJson || []).map(feature => String(feature.id).padStart(5, '0')),
+        ...(internationalCountyGeoJson || []).map(feature => String(feature.id)),
+        ...(coordinateIndexes?.counties || []).map(entry =>
+          String(entry.feature?.id || '').padStart(5, '0')).filter(Boolean),
+        ...(AppState.homeBase?.countyId ? [String(AppState.homeBase.countyId).padStart(5, '0')] : [])
+      ]);
+      const countiesCount = [...countyIds].filter(id => TravelLedger.isVisited(AppState.counties[id])).length;
+
       // Experience Points Calculation
       let xp = 0;
       xp += visitedParks.length * 25;
       xp += visitedCustomLocations.length * 25;
       xp += visitedStates.size * 10;
       xp += visitedCountries.size * 20;
+      const countyXp = Math.min(countiesCount, 50) * 3 + Math.max(0, countiesCount - 50);
+      xp += countyXp;
       xp += AppState.expeditions.reduce((total, expedition) =>
         total + expeditionExperiencePoints(expedition, expeditionDistances.get(expedition.id)), 0);
 
@@ -3331,8 +3444,6 @@
 
       // Archetype classification
       const visitedLocations = [...visitedParks, ...visitedCustomLocations];
-      const countiesCount = (countyGeoJson || []).filter(feature =>
-        TravelLedger.isVisited(AppState.counties[String(feature.id).padStart(5, '0')])).length;
       const tripsWith = (tags, field = 'transitTags') => AppState.expeditions.filter(exp =>
         tags.some(tag => exp[field].includes(tag))).length;
       const archetypes = {
@@ -3346,8 +3457,14 @@
       };
 
       const sortedAxes = Object.entries(archetypes).sort((a,b) => b[1] - a[1]);
-      let cls = AppState.homeBase ? 'Scout' : 'Fresh Recruit';
-      let titleDesc = AppState.homeBase ? 'Citadel established. Your first expedition awaits.' :
+      const starterTool = onboarding.chosenTools[0];
+      const starterClass = {
+        scratch: ['Cartographer', 'A keeper of maps, borders, and colored-in places.'],
+        bucketlist: ['Field Ranger', 'A cataloger of parks, landmarks, and wild places.'],
+        travel: ['Chronicler', 'A storyteller of journeys, routes, and faraway places.']
+      }[starterTool];
+      let cls = AppState.homeBase ? starterClass?.[0] || 'Scout' : 'Fresh Recruit';
+      let titleDesc = AppState.homeBase ? starterClass?.[1] || 'Citadel established. Your first expedition awaits.' :
         'The journey of ten thousand leagues begins with a single step.';
       let avatar = '🧭';
 
@@ -3402,7 +3519,7 @@
           microStateCatalog.filter(entry => visitedCountries.has(entry.name)).length,
         atlasCountriesTotal: (worldGeoJson?.length || 0) + microStateCatalog.length,
         countiesCount,
-        countyTotal: countyGeoJson?.length || 0,
+        countyTotal: countyIds.size,
         completedQuestsCount,
         xp,
         level,
@@ -7336,7 +7453,7 @@
         const pct = Math.round(Math.max(0, Math.min(1, ratio)) * 100);
         const label = progress.label || `${progress.progress} / ${progress.total}`;
         return `
-          <button type="button" data-quest-id="${escapeHtml(quest.id)}" onclick="switchTab('questlines')"
+          <button type="button" data-quest-id="${escapeHtml(quest.id)}"
             aria-label="Open ${escapeHtml(quest.title)} in Questlines"
             class="w-full text-left rounded-lg bg-slate-900/80 p-2 border border-slate-700 hover:border-amber-400/50 transition-colors">
             <div class="flex justify-between items-center mb-1 gap-2">
@@ -7352,6 +7469,21 @@
           </button>
         `;
       }).join('');
+    }
+
+    function openQuestline(questId) {
+      if (!switchTab('questlines')) return false;
+      setTimeout(() => {
+        const details = [...document.querySelectorAll('#questsContainer details[data-quest-id]')]
+          .find(card => card.dataset.questId === questId);
+        if (!details) {
+          console.error(`Questline card not found for "${questId}".`);
+          return;
+        }
+        details.open = true;
+        details.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 0);
+      return true;
     }
 
     function updateHud() {
@@ -7410,21 +7542,140 @@
   </script>
 
   <script>
+    function persistOnboarding() {
+      localStorage.setItem(ONBOARDING_STORAGE_KEY, JSON.stringify(onboarding));
+    }
+
+    function unlockAllPrimaryFeatures({ notify = false, refresh = true } = {}) {
+      if (onboarding.unlockedAll) return;
+      const previous = onboarding;
+      onboarding = { ...onboarding, unlockedAll: true };
+      try {
+        persistOnboarding();
+      } catch (error) {
+        onboarding = previous;
+        throw error;
+      }
+      if (refresh) updateAllUI();
+      if (notify) showNotification('Primary Features Unlocked', 'All six primary Cartovella features are now available.', '✨');
+    }
+
+    function renderFeatureChoiceModal(stats) {
+      const modal = document.getElementById('toolUnlockModal');
+      const needsSecondChoice = onboarding.chosenTools.length < 2 && stats.level === 2;
+      const shouldChoose = AppState.homeBase && !AppState.viewOnly && !onboarding.unlockedAll &&
+        ((onboarding.chosenTools.length === 0 && stats.level < 3) || needsSecondChoice);
+      modal.classList.toggle('hidden', !shouldChoose);
+      if (!shouldChoose) return;
+
+      const available = LOGGING_FEATURES.filter(feature => !onboarding.chosenTools.includes(feature.id));
+      document.getElementById('toolUnlockTitle').textContent = needsSecondChoice
+        ? 'Choose Your Next Tool' : 'Choose Your Starting Tool';
+      document.getElementById('toolUnlockDescription').textContent = needsSecondChoice
+        ? 'You reached Level 2. Choose one more tool; the final tool unlocks at Level 3.'
+        : "Choose whichever feels easiest to start—you'll unlock the other two as you level up.";
+      document.getElementById('toolUnlockOptions').innerHTML = available.map(feature => `
+        <button type="button" data-feature-tool="${feature.id}" class="rpg-panel rounded-2xl p-4 text-left transition hover:border-amber-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400">
+          <span class="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-slate-950 text-amber-200">
+            ${cartovellaIcon(feature.icon, 'h-6 w-6')}
+          </span>
+          <span class="block text-sm font-bold text-amber-200">${feature.name}</span>
+          <span class="mt-1 block text-xs leading-5 text-slate-200">${feature.description}</span>
+        </button>
+      `).join('');
+    }
+
+    function chooseFeatureTool(toolId) {
+      if (!AppState.homeBase || AppState.viewOnly || onboarding.unlockedAll ||
+          !LOGGING_FEATURES.some(feature => feature.id === toolId) ||
+          onboarding.chosenTools.includes(toolId)) return;
+      const choiceLimit = calculateStats().level >= 2 ? 2 : 1;
+      if (onboarding.chosenTools.length >= choiceLimit) return;
+      const previous = onboarding;
+      onboarding = {
+        ...onboarding,
+        chosenTools: [...onboarding.chosenTools, toolId]
+      };
+      statsCache = null;
+      try {
+        persistOnboarding();
+      } catch (error) {
+        onboarding = previous;
+        console.error('Feature choice could not be saved.', error);
+        showNotification('Choice not saved', error.message, '⚠️');
+        return;
+      }
+      updateAllUI();
+      switchTab(toolId);
+    }
+
     function updateHeaderNavigation() {
       document.body.classList.toggle('mode-classic', AppState.mode === 'classic');
       document.getElementById('rpgMapHud').classList.toggle('hidden', AppState.mode === 'classic');
       const showRpgMapControls = AppState.mode === 'rpg' && AppState.currentTab === 'map';
       document.getElementById('btnRecenterHome').classList.toggle('hidden', !showRpgMapControls);
+      const stats = calculateStats();
+
+      if (AppState.viewOnly && !onboarding.unlockedAll) {
+        try {
+          unlockAllPrimaryFeatures({ refresh: false });
+        } catch (error) {
+          console.error('Read-only feature access could not be saved.', error);
+          showNotification('Feature access not saved', error.message, '⚠️');
+        }
+      }
+      if (stats.level >= 4 && !onboarding.unlockedAll) {
+        try {
+          unlockAllPrimaryFeatures({ refresh: false });
+        } catch (error) {
+          console.error('Level 4 feature access could not be saved.', error);
+          showNotification('Feature access not saved', error.message, '⚠️');
+        }
+      }
+      if (stats.level >= 3 && onboarding.chosenTools.length < LOGGING_FEATURES.length) {
+        const previous = onboarding;
+        const chosenTools = [
+          ...onboarding.chosenTools,
+          ...LOGGING_FEATURES.map(feature => feature.id)
+            .filter(tool => !onboarding.chosenTools.includes(tool))
+        ];
+        onboarding = { ...onboarding, chosenTools };
+        statsCache = null;
+        try {
+          persistOnboarding();
+        } catch (error) {
+          onboarding = previous;
+          console.error('Level 3 tool unlocks could not be saved.', error);
+          showNotification('Tool unlocks not saved', error.message, '⚠️');
+        }
+      }
+
+      const unlockedTabs = new Set(['map']);
+      if (onboarding.unlockedAll || stats.level >= 4 || AppState.viewOnly) {
+        ['bucketlist', 'scratch', 'travel', 'passport', 'guild'].forEach(tab => unlockedTabs.add(tab));
+      } else if (AppState.homeBase && stats.level >= 3) {
+        ['bucketlist', 'scratch', 'travel', 'passport'].forEach(tab => unlockedTabs.add(tab));
+      } else if (AppState.homeBase) {
+        onboarding.chosenTools.forEach(tab => unlockedTabs.add(tab));
+      }
+      if (profileOnlyView) {
+        unlockedTabs.clear();
+        unlockedTabs.add('guild');
+      }
       document.querySelectorAll('#navTabs [data-tab]').forEach(button => {
         button.setAttribute('aria-pressed', String(button.dataset.tab === AppState.currentTab));
+        button.classList.toggle('hidden', !unlockedTabs.has(button.dataset.tab));
       });
+      document.getElementById('hudActiveQuests').classList.toggle('hidden',
+        !onboarding.unlockedAll && stats.level < 3);
+      renderFeatureChoiceModal(stats);
     }
 
     function switchTab(tabId) {
       if (profileOnlyView && tabId !== 'guild') return false;
       const profileSectionByTab = {
-        questlines: 'questlinesSection',
-        achievements: 'achievementsSection'
+        questlines: 'passportQuestlinesSection',
+        achievements: 'passportAchievementsSection'
       };
       if (profileSectionByTab[tabId]) {
         if (!switchTab('passport')) return false;
@@ -7492,6 +7743,10 @@
 
     document.querySelectorAll('#navTabs [data-tab]').forEach(btn => {
       btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+    });
+    document.getElementById('hudActiveQuests').addEventListener('click', event => {
+      const card = event.target.closest('button[data-quest-id]');
+      if (card) openQuestline(card.dataset.questId);
     });
     document.querySelectorAll('#tabContent-passport [data-profile-scroll-target]').forEach(button => {
       button.addEventListener('click', () => {
@@ -7795,6 +8050,7 @@
           showNotification('Importing passport', 'Saving records and updating your atlas...', '📂');
           await yieldToMain();
           commitLedger(() => applyPassport(parsed), { notifyProgress: false });
+          unlockAllPrimaryFeatures({ refresh: false });
           let recoveryCleanupWarning = '';
           if (includesRecoveryDraft) {
             try {
@@ -7845,6 +8101,10 @@
       AppState.clearedPolygons = [];
       AppState.routes = [];
       AppState.customLocations = [];
+      localStorage.removeItem(ONBOARDING_STORAGE_KEY);
+      localStorage.removeItem(LEGACY_FEATURE_PROGRESS_STORAGE_KEY);
+      onboarding = { unlockedAll: false, chosenTools: [] };
+      statsCache = null;
       saveState();
       location.reload();
     });
@@ -7882,6 +8142,27 @@
     document.getElementById('btnHomeConfig').addEventListener('click', () => {
       document.getElementById('settingsMenu').open = false;
       openHomeModal();
+    });
+    document.getElementById('btnUnlockAllFeatures').addEventListener('click', () => {
+      document.getElementById('settingsMenu').open = false;
+      try {
+        unlockAllPrimaryFeatures({ notify: true });
+      } catch (error) {
+        console.error('All primary features could not be unlocked.', error);
+        showNotification('Features not unlocked', error.message, '⚠️');
+      }
+    });
+    document.getElementById('btnUnlockAllFromStarter').addEventListener('click', () => {
+      try {
+        unlockAllPrimaryFeatures({ notify: true });
+      } catch (error) {
+        console.error('All primary features could not be unlocked.', error);
+        showNotification('Features not unlocked', error.message, '⚠️');
+      }
+    });
+    document.getElementById('toolUnlockOptions').addEventListener('click', event => {
+      const option = event.target.closest('button[data-feature-tool]');
+      if (option) chooseFeatureTool(option.dataset.featureTool);
     });
     document.getElementById('btnHomeSignIn').addEventListener('click', () => toggleAuthModal(true, 'signin'));
     document.getElementById('btnHomeImport').addEventListener('click', () => {
@@ -7925,7 +8206,7 @@
       updateAllUI();
       AudioEngine.playChime('discover');
       showNotification('🏰 Citadel Established!', firstCitadel
-        ? `${name} is now your home base! +50 Citadel XP — Scout Class Unlocked.`
+        ? `${name} is now your home base! +50 Citadel XP.`
         : `${name} is now your home base! Citadel XP is retained, not awarded again.`, '✨');
     }
 
@@ -9509,6 +9790,13 @@
         const signedOutAccountId = localStorage.getItem(LAST_SIGNED_OUT_CLOUD_ACCOUNT_KEY);
         const accountChanged = !!signedOutAccountId && signedOutAccountId !== cloudSession.user.id;
         if (records.length) {
+          try {
+            unlockAllPrimaryFeatures({ refresh: false });
+          } catch (error) {
+            console.error('Existing cloud passport feature access could not be saved.', error);
+            showNotification('Feature access not saved', error.message, '⚠️');
+          }
+          if (onboarding.unlockedAll) updateHeaderNavigation();
           const cloudProfile = normalizePublicProfile(records[0]);
           if (!cloudProfile.username) {
             cloudProfile.username = authPublicUsernameFallback();

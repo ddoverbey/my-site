@@ -498,7 +498,7 @@ check('character stage and Explorer Profile share one section without a redundan
   assert.equal(vm.runInContext('hasPassportData(passportPayload())', context), false);
 });
 check('questlines render in the Explorer Profile and use one shared destination', () => {
-  assert.match(html, /id="questlinesSection"[^>]*aria-labelledby="questlinesTitle"/);
+  assert.match(html, /id="passportQuestlinesSection"[^>]*aria-labelledby="questlinesTitle"/);
   assert.match(html, /id="questsContainer"/);
   assert.match(html, /id="questlineCompletionSummary"/);
   assert.doesNotMatch(html, /data-tab="questlines"|id="tabContent-questlines"|id="mainQuestlinesContainer"/);
@@ -879,6 +879,8 @@ const originalCloudUiFunctions = Object.fromEntries([
 ].map(name => [name, context[name]]));
 localStorage.removeItem('cartovella_last_signed_out_cloud_account');
 await checkAsync('existing cloud passport sign-in hydrates local state', async () => {
+  const originalOnboarding = vm.runInContext('JSON.stringify(onboarding)', context);
+  const originalOnboardingStorage = localStorage.getItem('cartovella_onboarding_v1');
   const cloudSession = {
     access_token: 'test-access', refresh_token: 'test-refresh',
     user: { id: 'user-test', email: 'traveler@example.com' }
@@ -893,6 +895,8 @@ await checkAsync('existing cloud passport sign-in hydrates local state', async (
   context.drawFogOfWar = () => {};
   vm.runInContext('appReady = Promise.resolve()', context);
   vm.runInContext(`
+    AppState.viewOnly = false;
+    onboarding = { unlockedAll: false, chosenTools: [] };
     applyPassport(migratePassport({ version: 2 }));
     AppState.homeBase = { name: 'Cloud Home', lat: 40, lng: -105, radiusKm: TravelLedger.homeRadiusKm };
   `, context);
@@ -914,10 +918,15 @@ await checkAsync('existing cloud passport sign-in hydrates local state', async (
   assert.ok(requests[1].url.includes('/rest/v1/cartovella_passports?user_id=eq.user-test'));
   assert.deepEqual(JSON.parse(localStorage.getItem('cartovella_cloud_session')), cloudSession);
   assert.equal(vm.runInContext('AppState.homeBase.name', context), 'Cloud Home');
+  assert.equal(vm.runInContext('onboarding.unlockedAll', context), true);
+  assert.equal(JSON.parse(localStorage.getItem('cartovella_onboarding_v1')).unlockedAll, true);
   assert.equal(element('authCurrentEmail').textContent, cloudSession.user.email);
   assert.equal(vm.runInContext('cloudHydrated', context), true, element('authSyncStatusText').textContent);
   assert.equal(vm.runInContext('authRequestInProgress', context), false);
   assert.equal(element('appLoadingOverlay').classList.contains('hidden'), true);
+  vm.runInContext(`onboarding = JSON.parse(${JSON.stringify(originalOnboarding)})`, context);
+  if (originalOnboardingStorage === null) localStorage.removeItem('cartovella_onboarding_v1');
+  else localStorage.setItem('cartovella_onboarding_v1', originalOnboardingStorage);
 });
 await checkAsync('switching cloud accounts keeps the previous passport local until the user chooses', async () => {
   const previousSession = JSON.parse(vm.runInContext('JSON.stringify(cloudSession)', context));
@@ -1611,10 +1620,10 @@ check('six icon-only header tabs keep primary navigation clean', () => {
   const nav = html.slice(navStart, html.indexOf('</nav>', navStart));
   assert.match(nav, /aria-label="Atlas pages"/);
   for (const [id, tab, label, icon] of [
-    ['navMap', 'map', 'Fog Map', 'compass'],
+    ['navMap', 'map', 'Explore RPG Map', 'compass'],
     ['navBucketlist', 'bucketlist', 'Checklist &amp; Catalog', 'checklist'],
     ['navScratch', 'scratch', 'Scratch Maps', 'map'],
-    ['navTravel', 'travel', 'Travel Journal', 'journal'],
+    ['navTravel', 'travel', 'Travel Log', 'journal'],
     ['navExplorer', 'passport', 'Explorer Profile', 'explorer'],
     ['navGuild', 'guild', "Explorers' Guild", 'globe']
   ]) {
@@ -1633,7 +1642,7 @@ check('six icon-only header tabs keep primary navigation clean', () => {
   const originalSaveState = context.saveState;
   const originalState = vm.runInContext("({mode:AppState.mode,tab:AppState.currentTab,viewOnly:AppState.viewOnly,profileOnlyView,guildProfilesLoaded})", context);
   const buttons = ['map', 'bucketlist', 'scratch', 'travel', 'passport', 'guild'].map(tab => ({
-    dataset: { tab }, attributes: {},
+    dataset: { tab }, attributes: {}, classList: { toggle() {} },
     setAttribute(name, value) { this.attributes[name] = value; }
   }));
   const pageRenderers = [
@@ -1666,6 +1675,168 @@ check('six icon-only header tabs keep primary navigation clean', () => {
     pageRenderers.forEach((name, index) => { context[name] = originalRenderers[index]; });
     vm.runInContext(`AppState.mode=${JSON.stringify(originalState.mode)};AppState.currentTab=${JSON.stringify(originalState.tab)};AppState.viewOnly=${originalState.viewOnly};profileOnlyView=${originalState.profileOnlyView};guildProfilesLoaded=${originalState.guildProfilesLoaded};updateHeaderNavigation()`, context);
   }
+});
+check('primary feature choices unlock by level and can be skipped', () => {
+  const originalQuery = context.document.querySelectorAll;
+  const originalCalculateStats = context.calculateStats;
+  const originalUpdateAllUI = context.updateAllUI;
+  const originalFeatureStorage = context.localStorage.getItem('cartovella_onboarding_v1');
+  const originalState = vm.runInContext(`({
+    homeBase: AppState.homeBase, mode: AppState.mode, currentTab: AppState.currentTab,
+    viewOnly: AppState.viewOnly, profileOnlyView, onboarding
+  })`, context);
+  const hiddenTabs = new Map();
+  const buttons = ['map', 'bucketlist', 'scratch', 'travel', 'passport', 'guild'].map(tab => {
+    const hidden = new Set();
+    hiddenTabs.set(tab, hidden);
+    return {
+      dataset: { tab }, attributes: {},
+      classList: {
+        toggle(name, force) { if (force) hidden.add(name); else hidden.delete(name); },
+        contains(name) { return hidden.has(name); }
+      },
+      setAttribute(name, value) { this.attributes[name] = value; }
+    };
+  });
+  context.document.querySelectorAll = selector => selector === '#navTabs [data-tab]'
+    ? buttons : originalQuery(selector);
+  context.calculateStats = () => ({ level: context.onboardingLevel });
+  const visibleTabs = () => buttons.filter(button => !hiddenTabs.get(button.dataset.tab).has('hidden'))
+    .map(button => button.dataset.tab);
+  try {
+    vm.runInContext(`AppState.homeBase=null;AppState.viewOnly=false;profileOnlyView=false;
+      onboarding={unlockedAll:false,chosenTools:[]};onboardingLevel=1;updateHeaderNavigation()`, context);
+    assert.deepEqual(visibleTabs(), ['map']);
+    assert.equal(element('toolUnlockModal').classList.contains('hidden'), true);
+
+    vm.runInContext(`AppState.homeBase={name:'Test Citadel'};AppState.mode='rpg';
+      AppState.currentTab='map';
+      onboarding={unlockedAll:false,chosenTools:[]};onboardingLevel=1;
+      updateHeaderNavigation()`, context);
+    assert.deepEqual(visibleTabs(), ['map']);
+    assert.equal(element('toolUnlockModal').classList.contains('hidden'), false);
+    assert.match(element('toolUnlockDescription').textContent,
+      /Choose whichever feels easiest to start—you'll unlock the other two as you level up\./);
+    assert.match(element('toolUnlockOptions').innerHTML, /Scratch Maps/);
+    assert.match(element('toolUnlockOptions').innerHTML, /Travel Ledger/);
+    assert.match(element('toolUnlockOptions').innerHTML, /Travel Log/);
+
+    vm.runInContext(`onboarding.chosenTools=['scratch'];persistOnboarding();updateHeaderNavigation()`, context);
+    assert.deepEqual(visibleTabs(), ['map', 'scratch']);
+    assert.equal(element('toolUnlockModal').classList.contains('hidden'), true);
+
+    vm.runInContext('onboardingLevel=2;updateHeaderNavigation()', context);
+    assert.deepEqual(visibleTabs(), ['map', 'scratch']);
+    assert.equal(element('toolUnlockModal').classList.contains('hidden'), false);
+    assert.ok(element('toolUnlockOptions').innerHTML.includes('data-feature-tool="bucketlist"'));
+    assert.ok(element('toolUnlockOptions').innerHTML.includes('data-feature-tool="travel"'));
+    assert.ok(!element('toolUnlockOptions').innerHTML.includes('data-feature-tool="scratch"'));
+
+    vm.runInContext('onboardingLevel=3;updateHeaderNavigation()', context);
+    assert.deepEqual(visibleTabs(), ['map', 'bucketlist', 'scratch', 'travel', 'passport']);
+    assert.deepEqual(JSON.parse(vm.runInContext('JSON.stringify(onboarding.chosenTools)', context)),
+      ['scratch', 'bucketlist', 'travel']);
+    assert.deepEqual(JSON.parse(context.localStorage.getItem('cartovella_onboarding_v1')).chosenTools,
+      ['scratch', 'bucketlist', 'travel']);
+    assert.equal(element('toolUnlockModal').classList.contains('hidden'), true);
+    assert.equal(element('hudActiveQuests').classList.contains('hidden'), false);
+
+    vm.runInContext('onboardingLevel=4;updateHeaderNavigation()', context);
+    assert.deepEqual(visibleTabs(), ['map', 'bucketlist', 'scratch', 'travel', 'passport', 'guild']);
+    assert.equal(vm.runInContext('onboarding.unlockedAll', context), true);
+    assert.equal(JSON.parse(context.localStorage.getItem('cartovella_onboarding_v1')).unlockedAll, true);
+
+    vm.runInContext("onboarding={unlockedAll:false,chosenTools:['scratch']};onboardingLevel=1;updateHeaderNavigation()", context);
+    context.updateAllUI = () => context.updateHeaderNavigation();
+    element('btnUnlockAllFeatures').handlers.click();
+    assert.equal(vm.runInContext('onboarding.unlockedAll', context), true);
+    assert.deepEqual(visibleTabs(), ['map', 'bucketlist', 'scratch', 'travel', 'passport', 'guild']);
+    assert.equal(JSON.parse(context.localStorage.getItem('cartovella_onboarding_v1')).unlockedAll, true);
+
+    vm.runInContext("onboarding={unlockedAll:false,chosenTools:[]};AppState.viewOnly=true;updateHeaderNavigation()", context);
+    assert.equal(vm.runInContext('onboarding.unlockedAll', context), true);
+    assert.deepEqual(visibleTabs(), ['map', 'bucketlist', 'scratch', 'travel', 'passport', 'guild']);
+  } finally {
+    context.document.querySelectorAll = originalQuery;
+    context.calculateStats = originalCalculateStats;
+    context.updateAllUI = originalUpdateAllUI;
+    delete context.onboardingLevel;
+    vm.runInContext(`AppState.homeBase=${JSON.stringify(originalState.homeBase)};
+      AppState.mode=${JSON.stringify(originalState.mode)};
+      AppState.currentTab=${JSON.stringify(originalState.currentTab)};
+      AppState.viewOnly=${originalState.viewOnly};
+      profileOnlyView=${originalState.profileOnlyView};
+      updateHeaderNavigation();
+      onboarding=${JSON.stringify(originalState.onboarding)}`, context);
+    if (originalFeatureStorage === null) context.localStorage.removeItem('cartovella_onboarding_v1');
+    else context.localStorage.setItem('cartovella_onboarding_v1', originalFeatureStorage);
+  }
+});
+check('existing travel progress and read-only passports automatically unlock all primary features', () => {
+  const originalPassport = vm.runInContext('JSON.stringify(passportPayload())', context);
+  const originalOnboarding = vm.runInContext('JSON.stringify(onboarding)', context);
+  const originalViewOnly = vm.runInContext('AppState.viewOnly', context);
+  const originalOnboardingStorage = context.localStorage.getItem('cartovella_onboarding_v1');
+  try {
+    vm.runInContext(`Object.assign(AppState, {
+      homeBase:{name:'Home',countyId:'06073'},
+      pins:{},regions:{'s:California':'l','c:United States of America':'l'},
+      counties:{'06073':'l'},customPois:[],expeditions:[],routes:[],
+      nationalParkScratch:{},
+      statusOverrides:{pins:{},regions:{},counties:{},nationalParks:{}}
+    });
+    onboarding={unlockedAll:false,chosenTools:[]}`, context);
+    assert.equal(vm.runInContext('hasExistingTravelProgressOnLoad()', context), false);
+    vm.runInContext("AppState.pins={'visited-place':'v'}", context);
+    assert.equal(vm.runInContext('hasExistingTravelProgressOnLoad()', context), true);
+    vm.runInContext(`AppState.pins={};AppState.expeditions=[{
+      id:'existing-trip',countyIds:[],parkIds:[],customPoiIds:[],routeCoords:[],routeStops:[]
+    }]`, context);
+    assert.equal(vm.runInContext('hasExistingTravelProgressOnLoad()', context), true);
+    vm.runInContext('AppState.expeditions=[];AppState.customPois=[{status:"w"}]', context);
+    assert.equal(vm.runInContext('hasExistingTravelProgressOnLoad()', context), true);
+    vm.runInContext(`AppState.customPois=[];AppState.regions={
+      'c:United States of America':'v','c:Canada':'v'
+    }`, context);
+    assert.equal(vm.runInContext('hasExistingTravelProgressOnLoad()', context), true);
+
+    vm.runInContext(`AppState.viewOnly=true;onboarding={unlockedAll:false,chosenTools:[]};
+      applyPassport(migratePassport({version:2}))`, context);
+    assert.equal(vm.runInContext('onboarding.unlockedAll', context), true);
+  } finally {
+    vm.runInContext(`Object.assign(AppState,JSON.parse(${JSON.stringify(originalPassport)}));
+      AppState.viewOnly=${originalViewOnly};
+      onboarding=JSON.parse(${JSON.stringify(originalOnboarding)})`, context);
+    if (originalOnboardingStorage === null) context.localStorage.removeItem('cartovella_onboarding_v1');
+    else context.localStorage.setItem('cartovella_onboarding_v1', originalOnboardingStorage);
+  }
+});
+check('HUD quest links open the profile and expand the matching quest card', () => {
+  const originalQuery = context.document.querySelectorAll;
+  const originalSwitchTab = context.switchTab;
+  const originalTimeout = context.setTimeout;
+  const card = {
+    dataset: { questId: 'cascades' },
+    open: false,
+    scrollIntoView(options) { this.scrollOptions = options; }
+  };
+  const openedTabs = [];
+  context.document.querySelectorAll = selector => selector === '#questsContainer details[data-quest-id]'
+    ? [card] : originalQuery(selector);
+  context.switchTab = tab => { openedTabs.push(tab); return true; };
+  context.setTimeout = callback => { callback(); return 0; };
+  try {
+    assert.equal(vm.runInContext("openQuestline('cascades')", context), true);
+  } finally {
+    context.document.querySelectorAll = originalQuery;
+    context.switchTab = originalSwitchTab;
+    context.setTimeout = originalTimeout;
+  }
+  assert.deepEqual(openedTabs, ['questlines']);
+  assert.equal(card.open, true);
+  assert.deepEqual(JSON.parse(JSON.stringify(card.scrollOptions)), {
+    behavior: 'smooth', block: 'start'
+  });
 });
 check('all Cartovella icons use only official logo colors and reject invalid names', () => {
   assert.match(vm.runInContext("cartovellaIcon('atlas')", context), /class="h-6 w-6"/);
@@ -1807,7 +1978,8 @@ check('HUD quest tracker ranks incomplete quests and links to Questlines', () =>
     assert.ok(!tracker.includes('data-quest-id="mighty5"'));
     assert.ok(tracker.includes('2 / 3'));
     assert.ok(tracker.includes('3 / 5'));
-    assert.match(tracker, /onclick="switchTab\('questlines'\)"/);
+    assert.match(tracker, /data-quest-id="cascades"/);
+    assert.match(html, /function openQuestline\(questId\)[\s\S]*?details\.open = true/);
 
     const questIds = JSON.parse(vm.runInContext('JSON.stringify(QUESTLINES.map(quest => quest.id))', context));
     context.hudCompleteTestStats = {
@@ -5293,33 +5465,37 @@ vm.runInContext(`
     states:[{feature:{properties:{name:'California'}},bounds:[[-180,-90],[180,90]]}],
     counties:[{feature:{id:'06073',properties:{name:'San Diego'}},bounds:[[-180,-90],[180,90]]}]
   };
+  onboarding={unlockedAll:false,chosenTools:[]};
   map.once=mapOnce;map.flyTo=mapFly;
 `, context);
-check('first Citadel marks containing geography Lived, uses a 15-mile diameter, flies at zoom 8 and unlocks Scout', () => {
+check('first Citadel marks containing geography Lived, uses a 15-mile diameter, flies at zoom 8 and applies the chosen starter class', () => {
   vm.runInContext("setHometownCoordinates('Test Citadel',37,-120)", context);
   assert.equal(vm.runInContext('AppState.homeBase.radiusKm', context), 15 * 1.609344 / 2);
   assert.equal(vm.runInContext('AppState.homeBase.countyId', context), '06073');
   assert.equal(vm.runInContext('AppState.counties["06073"]', context), 'l');
   assert.equal(vm.runInContext('AppState.regions["s:California"]', context), 'l');
   assert.equal(vm.runInContext('calculateStats().cls', context), 'Scout');
+  vm.runInContext("onboarding.chosenTools=['scratch'];statsCache=null", context);
+  assert.equal(vm.runInContext('calculateStats().cls', context), 'Cartographer');
+  vm.runInContext("onboarding.chosenTools=[];statsCache=null", context);
   const stats = vm.runInContext('calculateStats()', context);
-  assert.equal(stats.xp - stats.statesCount * 10 - stats.countriesCount * 20, 50);
+  assert.equal(stats.xp - stats.statesCount * 10 - stats.countriesCount * 20, 53);
   assert.equal(stats.level, 1);
-  assert.equal(stats.nextLevelXp, 300);
-  assert.ok(Math.abs(stats.levelProgressPct - (80 / 300 * 100)) < 1e-9);
+  assert.equal(stats.nextLevelXp, 200);
+  assert.ok(Math.abs(stats.levelProgressPct - (83 / 200 * 100)) < 1e-9);
   assert.equal(flight[1], 8);
   assert.equal(flight[2].duration, 1.8);
   assert.ok(element('toastMsg').textContent.includes('+50'));
 });
 check('Citadel-only XP stays below Level 2 and later thresholds follow the recalibrated curve', () => {
   const progress = vm.runInContext(`({
-    homeOnlyMaxLevel: levelFromXp(50 + 10 + 20 + 200),
-    levels: [299,300,404,405,579,580,824,825,1139,1140].map(levelFromXp),
+    homeOnlyMaxLevel: levelFromXp(50 + 10 + 20 + 3),
+    levels: [199,200,304,305,479,480,724,725,1039,1040].map(levelFromXp),
     thresholds: [1,2,3,4,5,6].map(xpThresholdForLevel)
   })`, context);
   assert.equal(progress.homeOnlyMaxLevel, 1);
   assert.deepEqual(Array.from(progress.levels), [1,2,2,3,3,4,4,5,5,6]);
-  assert.deepEqual(Array.from(progress.thresholds), [0,300,405,580,825,1140]);
+  assert.deepEqual(Array.from(progress.thresholds), [0,200,305,480,725,1040]);
 });
 check('home aura pulses on the existing canvas and settles to the exact saved radius', () => {
   movementCallback();
@@ -6144,17 +6320,17 @@ check('Explorer Profile contains questlines and achievements and both links scro
   assert.equal((html.match(/id="achievementsContainer"/g) || []).length, 1);
   assert.ok(!html.includes('id="tabContent-achievements"'));
   assert.ok(!html.includes('id="tabContent-questlines"'));
-  assert.ok(passport.includes('id="questlinesSection"'));
+  assert.ok(passport.includes('id="passportQuestlinesSection"'));
   assert.ok(passport.includes('id="questsContainer"'));
-  assert.ok(passport.indexOf('id="questlinesSection"') < passport.indexOf('id="achievementsSection"'));
-  assert.ok(passport.includes('id="achievementsSection"'));
+  assert.ok(passport.indexOf('id="passportAchievementsSection"') < passport.indexOf('id="passportQuestlinesSection"'));
+  assert.ok(passport.includes('id="passportAchievementsSection"'));
   assert.ok(passport.indexOf('id="achievementsContainer"') > passport.indexOf('id="achievementsTitle"'));
-  assert.ok(passport.indexOf('id="achievementsSection"') > passport.indexOf('id="cabinetOfCuriositiesSection"'));
+  assert.ok(passport.indexOf('id="passportAchievementsSection"') > passport.indexOf('id="cabinetOfCuriositiesSection"'));
   assert.doesNotMatch(html, /data-tab="(?:questlines|achievements)"/);
   vm.runInContext('applyPassport(migratePassport({}));PARKS=[];coordinateIndexes=null;map=null', context);
   const originalTimeout = context.setTimeout;
-  const questlinesSection = element('questlinesSection');
-  const achievementSection = element('achievementsSection');
+  const questlinesSection = element('passportQuestlinesSection');
+  const achievementSection = element('passportAchievementsSection');
   const originalQuestlinesScroll = questlinesSection.scrollIntoView;
   const originalScroll = achievementSection.scrollIntoView;
   const scrollCalls = [];
@@ -6192,19 +6368,21 @@ check('Explorer Profile contains questlines and achievements and both links scro
     assert.equal(vm.runInContext(`ACHIEVEMENTS.some(achievement=>achievement.id==='${id}')`, context), false);
   }
 });
-check('Explorer Profile bento cards jump to their matching sections and flags are compact', () => {
+check('Explorer Profile bento cards and badge summary jump to their matching sections and flags are compact', () => {
   assert.deepEqual([...html.matchAll(/data-profile-scroll-target="([^"]+)"/g)].map(match => match[1]), [
-    'passportCountriesSection',
-    'passportStatesSection',
+    'passportAchievementsSection',
+    'passportFlagsTitle',
+    'passportStateFlagsTitle',
     'cabinetOfCuriositiesSection',
     'cabinetOfCuriositiesSection',
     'biomedexContainer',
     'biomedexContainer'
   ]);
-  assert.equal([...html.matchAll(/<button[^>]*data-profile-scroll-target=/g)].length, 6);
-  assert.match(html, /\.passport-flags\s*\{[^}]*gap:\s*0\.5rem/);
+  assert.equal([...html.matchAll(/<button[^>]*data-profile-scroll-target=/g)].length, 7);
+  assert.match(html, /\.passport-flags\s*\{[^}]*gap:\s*6px/);
+  assert.match(html, /\.country-flag img, \.state-flag img\s*\{[^}]*width:\s*32px; height:\s*22px/);
   assert.match(html, /\.country-flag img,\s*\.state-flag img\s*\{[^}]*width:\s*32px;\s*height:\s*22px/);
-  assert.match(html, /md:grid-cols-2[^"]*"[^>]*>[\s\S]*?id="passportCountriesSection"[\s\S]*?id="passportStatesSection"/);
+  assert.match(html, /md:grid-cols-3[^"]*"[^>]*>[\s\S]*?id="passportCountriesSection"[\s\S]*?id="passportStatesSection"/);
   assert.match(html, /data-profile-scroll-target[\s\S]*?scrollIntoView\(\{\s*behavior: 'smooth',\s*block: 'start'/);
 });
 check('biome milestone classes list 3, total minus one and total tiers at every progress level', () => {
