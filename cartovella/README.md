@@ -127,12 +127,13 @@ progress from the current level's threshold to the next one. Gaining a level dis
 level-up banner with a chime; newly earned achievements appear separately in a centered, dismissible
 notification with their artwork.
 
-After establishing a Citadel, a new explorer chooses one of the Scratch Maps, Checklist & Catalog, or
-Travel Log tools. Level 2 offers a choice of a second tool; Level 3 unlocks the remaining tool and the
-Explorer Profile; Level 4 unlocks the Explorers' Guild. Existing passports with travel progress,
-signing in, importing a passport, or using **Unlock All Primary Features** in Settings skips feature
-gating. The starting tool also sets the initial class title to Cartographer, Field Ranger, or
-Chronicler until a travel archetype takes over.
+After establishing a Citadel, a new explorer chooses one of Scratch Maps, Travel Ledger, or Travel
+Log. Level 2 offers a choice of a second tool; Level 3 unlocks the remaining tool and Explorer
+Profile; Level 4 unlocks the Explorers' Guild. The first choice sets the initial class title to
+Cartographer, Field Ranger, or Chronicler until a travel archetype takes over. Existing travel
+progress, a read-only passport, an existing cloud passport, importing a `.json` passport, or using
+**Unlock All Primary Features** in Settings unlocks all six primary features. Onboarding choices are
+stored locally under `cartovella_onboarding_v1`.
 
 **America the Beautiful** is a Legendary achievement for visiting all 64 US National Parks.
 It uses the National Parks scratch-map ledger, including separate Sequoia and Kings Canyon

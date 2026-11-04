@@ -879,6 +879,8 @@ const originalCloudUiFunctions = Object.fromEntries([
 ].map(name => [name, context[name]]));
 localStorage.removeItem('cartovella_last_signed_out_cloud_account');
 await checkAsync('existing cloud passport sign-in hydrates local state', async () => {
+  const originalOnboarding = vm.runInContext('JSON.stringify(onboarding)', context);
+  const originalOnboardingStorage = localStorage.getItem('cartovella_onboarding_v1');
   const cloudSession = {
     access_token: 'test-access', refresh_token: 'test-refresh',
     user: { id: 'user-test', email: 'traveler@example.com' }
@@ -893,6 +895,8 @@ await checkAsync('existing cloud passport sign-in hydrates local state', async (
   context.drawFogOfWar = () => {};
   vm.runInContext('appReady = Promise.resolve()', context);
   vm.runInContext(`
+    AppState.viewOnly = false;
+    onboarding = { unlockedAll: false, chosenTools: [] };
     applyPassport(migratePassport({ version: 2 }));
     AppState.homeBase = { name: 'Cloud Home', lat: 40, lng: -105, radiusKm: TravelLedger.homeRadiusKm };
   `, context);
@@ -914,10 +918,15 @@ await checkAsync('existing cloud passport sign-in hydrates local state', async (
   assert.ok(requests[1].url.includes('/rest/v1/cartovella_passports?user_id=eq.user-test'));
   assert.deepEqual(JSON.parse(localStorage.getItem('cartovella_cloud_session')), cloudSession);
   assert.equal(vm.runInContext('AppState.homeBase.name', context), 'Cloud Home');
+  assert.equal(vm.runInContext('onboarding.unlockedAll', context), true);
+  assert.equal(JSON.parse(localStorage.getItem('cartovella_onboarding_v1')).unlockedAll, true);
   assert.equal(element('authCurrentEmail').textContent, cloudSession.user.email);
   assert.equal(vm.runInContext('cloudHydrated', context), true, element('authSyncStatusText').textContent);
   assert.equal(vm.runInContext('authRequestInProgress', context), false);
   assert.equal(element('appLoadingOverlay').classList.contains('hidden'), true);
+  vm.runInContext(`onboarding = JSON.parse(${JSON.stringify(originalOnboarding)})`, context);
+  if (originalOnboardingStorage === null) localStorage.removeItem('cartovella_onboarding_v1');
+  else localStorage.setItem('cartovella_onboarding_v1', originalOnboardingStorage);
 });
 await checkAsync('switching cloud accounts keeps the previous passport local until the user chooses', async () => {
   const previousSession = JSON.parse(vm.runInContext('JSON.stringify(cloudSession)', context));
@@ -1670,10 +1679,11 @@ check('six icon-only header tabs keep primary navigation clean', () => {
 check('primary feature choices unlock by level and can be skipped', () => {
   const originalQuery = context.document.querySelectorAll;
   const originalCalculateStats = context.calculateStats;
-  const originalFeatureStorage = context.localStorage.getItem('cartovella_feature_progress');
+  const originalUpdateAllUI = context.updateAllUI;
+  const originalFeatureStorage = context.localStorage.getItem('cartovella_onboarding_v1');
   const originalState = vm.runInContext(`({
     homeBase: AppState.homeBase, mode: AppState.mode, currentTab: AppState.currentTab,
-    viewOnly: AppState.viewOnly, profileOnlyView, progression: featureProgress
+    viewOnly: AppState.viewOnly, profileOnlyView, onboarding
   })`, context);
   const hiddenTabs = new Map();
   const buttons = ['map', 'bucketlist', 'scratch', 'travel', 'passport', 'guild'].map(tab => {
@@ -1690,57 +1700,83 @@ check('primary feature choices unlock by level and can be skipped', () => {
   });
   context.document.querySelectorAll = selector => selector === '#navTabs [data-tab]'
     ? buttons : originalQuery(selector);
-  context.calculateStats = () => ({ level: context.featureProgressLevel });
+  context.calculateStats = () => ({ level: context.onboardingLevel });
+  const visibleTabs = () => buttons.filter(button => !hiddenTabs.get(button.dataset.tab).has('hidden'))
+    .map(button => button.dataset.tab);
   try {
+    vm.runInContext(`AppState.homeBase=null;AppState.viewOnly=false;profileOnlyView=false;
+      onboarding={unlockedAll:false,chosenTools:[]};onboardingLevel=1;updateHeaderNavigation()`, context);
+    assert.deepEqual(visibleTabs(), ['map']);
+    assert.equal(element('toolUnlockModal').classList.contains('hidden'), true);
+
     vm.runInContext(`AppState.homeBase={name:'Test Citadel'};AppState.mode='rpg';
-      AppState.currentTab='map';AppState.viewOnly=false;profileOnlyView=false;
-      featureProgress={unlockedAll:false,chosenTools:[]};featureProgressLevel=1;
+      AppState.currentTab='map';
+      onboarding={unlockedAll:false,chosenTools:[]};onboardingLevel=1;
       updateHeaderNavigation()`, context);
-    assert.deepEqual(buttons.filter(button => !hiddenTabs.get(button.dataset.tab).has('hidden'))
-      .map(button => button.dataset.tab), ['map']);
-    assert.equal(element('featureChoiceModal').classList.contains('hidden'), false);
+    assert.deepEqual(visibleTabs(), ['map']);
+    assert.equal(element('toolUnlockModal').classList.contains('hidden'), false);
+    assert.match(element('toolUnlockDescription').textContent,
+      /Choose whichever feels easiest to start—you'll unlock the other two as you level up\./);
+    assert.match(element('toolUnlockOptions').innerHTML, /Scratch Maps/);
+    assert.match(element('toolUnlockOptions').innerHTML, /Travel Ledger/);
+    assert.match(element('toolUnlockOptions').innerHTML, /Travel Log/);
 
-    vm.runInContext(`featureProgress.chosenTools=['scratch'];updateHeaderNavigation()`, context);
-    assert.deepEqual(buttons.filter(button => !hiddenTabs.get(button.dataset.tab).has('hidden'))
-      .map(button => button.dataset.tab), ['map', 'scratch']);
-    assert.equal(element('featureChoiceModal').classList.contains('hidden'), true);
+    vm.runInContext(`onboarding.chosenTools=['scratch'];persistOnboarding();updateHeaderNavigation()`, context);
+    assert.deepEqual(visibleTabs(), ['map', 'scratch']);
+    assert.equal(element('toolUnlockModal').classList.contains('hidden'), true);
 
-    vm.runInContext('featureProgressLevel=2;updateHeaderNavigation()', context);
-    assert.equal(element('featureChoiceModal').classList.contains('hidden'), false);
-    assert.ok(element('featureChoiceOptions').innerHTML.includes('data-feature-tool="bucketlist"'));
-    assert.ok(element('featureChoiceOptions').innerHTML.includes('data-feature-tool="travel"'));
-    assert.ok(!element('featureChoiceOptions').innerHTML.includes('data-feature-tool="scratch"'));
+    vm.runInContext('onboardingLevel=2;updateHeaderNavigation()', context);
+    assert.deepEqual(visibleTabs(), ['map', 'scratch']);
+    assert.equal(element('toolUnlockModal').classList.contains('hidden'), false);
+    assert.ok(element('toolUnlockOptions').innerHTML.includes('data-feature-tool="bucketlist"'));
+    assert.ok(element('toolUnlockOptions').innerHTML.includes('data-feature-tool="travel"'));
+    assert.ok(!element('toolUnlockOptions').innerHTML.includes('data-feature-tool="scratch"'));
 
-    vm.runInContext('featureProgressLevel=3;updateHeaderNavigation()', context);
-    assert.deepEqual(buttons.filter(button => !hiddenTabs.get(button.dataset.tab).has('hidden'))
-      .map(button => button.dataset.tab), ['map', 'bucketlist', 'scratch', 'travel', 'passport']);
-    assert.equal(element('featureChoiceModal').classList.contains('hidden'), true);
+    vm.runInContext('onboardingLevel=3;updateHeaderNavigation()', context);
+    assert.deepEqual(visibleTabs(), ['map', 'bucketlist', 'scratch', 'travel', 'passport']);
+    assert.deepEqual(JSON.parse(vm.runInContext('JSON.stringify(onboarding.chosenTools)', context)),
+      ['scratch', 'bucketlist', 'travel']);
+    assert.deepEqual(JSON.parse(context.localStorage.getItem('cartovella_onboarding_v1')).chosenTools,
+      ['scratch', 'bucketlist', 'travel']);
+    assert.equal(element('toolUnlockModal').classList.contains('hidden'), true);
     assert.equal(element('hudActiveQuests').classList.contains('hidden'), false);
 
-    vm.runInContext('featureProgressLevel=4;updateHeaderNavigation()', context);
-    assert.deepEqual(buttons.filter(button => !hiddenTabs.get(button.dataset.tab).has('hidden'))
-      .map(button => button.dataset.tab), ['map', 'bucketlist', 'scratch', 'travel', 'passport', 'guild']);
+    vm.runInContext('onboardingLevel=4;updateHeaderNavigation()', context);
+    assert.deepEqual(visibleTabs(), ['map', 'bucketlist', 'scratch', 'travel', 'passport', 'guild']);
+    assert.equal(vm.runInContext('onboarding.unlockedAll', context), true);
+    assert.equal(JSON.parse(context.localStorage.getItem('cartovella_onboarding_v1')).unlockedAll, true);
 
-    vm.runInContext("featureProgress={unlockedAll:false,chosenTools:['scratch']};unlockAllPrimaryFeatures({refresh:false})", context);
-    assert.equal(vm.runInContext('featureProgress.unlockedAll', context), true);
+    vm.runInContext("onboarding={unlockedAll:false,chosenTools:['scratch']};onboardingLevel=1;updateHeaderNavigation()", context);
+    context.updateAllUI = () => context.updateHeaderNavigation();
+    element('btnUnlockAllFeatures').handlers.click();
+    assert.equal(vm.runInContext('onboarding.unlockedAll', context), true);
+    assert.deepEqual(visibleTabs(), ['map', 'bucketlist', 'scratch', 'travel', 'passport', 'guild']);
+    assert.equal(JSON.parse(context.localStorage.getItem('cartovella_onboarding_v1')).unlockedAll, true);
+
+    vm.runInContext("onboarding={unlockedAll:false,chosenTools:[]};AppState.viewOnly=true;updateHeaderNavigation()", context);
+    assert.equal(vm.runInContext('onboarding.unlockedAll', context), true);
+    assert.deepEqual(visibleTabs(), ['map', 'bucketlist', 'scratch', 'travel', 'passport', 'guild']);
   } finally {
     context.document.querySelectorAll = originalQuery;
     context.calculateStats = originalCalculateStats;
-    delete context.featureProgressLevel;
-    if (originalFeatureStorage === null) context.localStorage.removeItem('cartovella_feature_progress');
-    else context.localStorage.setItem('cartovella_feature_progress', originalFeatureStorage);
+    context.updateAllUI = originalUpdateAllUI;
+    delete context.onboardingLevel;
     vm.runInContext(`AppState.homeBase=${JSON.stringify(originalState.homeBase)};
       AppState.mode=${JSON.stringify(originalState.mode)};
       AppState.currentTab=${JSON.stringify(originalState.currentTab)};
       AppState.viewOnly=${originalState.viewOnly};
       profileOnlyView=${originalState.profileOnlyView};
-      featureProgress=${JSON.stringify(originalState.progression)};
-      updateHeaderNavigation()`, context);
+      updateHeaderNavigation();
+      onboarding=${JSON.stringify(originalState.onboarding)}`, context);
+    if (originalFeatureStorage === null) context.localStorage.removeItem('cartovella_onboarding_v1');
+    else context.localStorage.setItem('cartovella_onboarding_v1', originalFeatureStorage);
   }
 });
-check('Citadel-only Lived geography does not count as prior travel for feature unlocks', () => {
+check('existing travel progress and read-only passports automatically unlock all primary features', () => {
   const originalPassport = vm.runInContext('JSON.stringify(passportPayload())', context);
-  const originalProgression = vm.runInContext('JSON.stringify(featureProgress)', context);
+  const originalOnboarding = vm.runInContext('JSON.stringify(onboarding)', context);
+  const originalViewOnly = vm.runInContext('AppState.viewOnly', context);
+  const originalOnboardingStorage = context.localStorage.getItem('cartovella_onboarding_v1');
   try {
     vm.runInContext(`Object.assign(AppState, {
       homeBase:{name:'Home',countyId:'06073'},
@@ -1749,13 +1785,30 @@ check('Citadel-only Lived geography does not count as prior travel for feature u
       nationalParkScratch:{},
       statusOverrides:{pins:{},regions:{},counties:{},nationalParks:{}}
     });
-    featureProgress={unlockedAll:false,chosenTools:[]}`, context);
-    assert.equal(vm.runInContext('hasPassportTravelProgress()', context), false);
+    onboarding={unlockedAll:false,chosenTools:[]}`, context);
+    assert.equal(vm.runInContext('hasExistingTravelProgressOnLoad()', context), false);
     vm.runInContext("AppState.pins={'visited-place':'v'}", context);
-    assert.equal(vm.runInContext('hasPassportTravelProgress()', context), true);
+    assert.equal(vm.runInContext('hasExistingTravelProgressOnLoad()', context), true);
+    vm.runInContext(`AppState.pins={};AppState.expeditions=[{
+      id:'existing-trip',countyIds:[],parkIds:[],customPoiIds:[],routeCoords:[],routeStops:[]
+    }]`, context);
+    assert.equal(vm.runInContext('hasExistingTravelProgressOnLoad()', context), true);
+    vm.runInContext('AppState.expeditions=[];AppState.customPois=[{status:"w"}]', context);
+    assert.equal(vm.runInContext('hasExistingTravelProgressOnLoad()', context), true);
+    vm.runInContext(`AppState.customPois=[];AppState.regions={
+      'c:United States of America':'v','c:Canada':'v'
+    }`, context);
+    assert.equal(vm.runInContext('hasExistingTravelProgressOnLoad()', context), true);
+
+    vm.runInContext(`AppState.viewOnly=true;onboarding={unlockedAll:false,chosenTools:[]};
+      applyPassport(migratePassport({version:2}))`, context);
+    assert.equal(vm.runInContext('onboarding.unlockedAll', context), true);
   } finally {
     vm.runInContext(`Object.assign(AppState,JSON.parse(${JSON.stringify(originalPassport)}));
-      featureProgress=JSON.parse(${JSON.stringify(originalProgression)})`, context);
+      AppState.viewOnly=${originalViewOnly};
+      onboarding=JSON.parse(${JSON.stringify(originalOnboarding)})`, context);
+    if (originalOnboardingStorage === null) context.localStorage.removeItem('cartovella_onboarding_v1');
+    else context.localStorage.setItem('cartovella_onboarding_v1', originalOnboardingStorage);
   }
 });
 check('HUD quest links open the profile and expand the matching quest card', () => {
@@ -5412,15 +5465,19 @@ vm.runInContext(`
     states:[{feature:{properties:{name:'California'}},bounds:[[-180,-90],[180,90]]}],
     counties:[{feature:{id:'06073',properties:{name:'San Diego'}},bounds:[[-180,-90],[180,90]]}]
   };
+  onboarding={unlockedAll:false,chosenTools:[]};
   map.once=mapOnce;map.flyTo=mapFly;
 `, context);
-check('first Citadel marks containing geography Lived, uses a 15-mile diameter, flies at zoom 8 and preserves Scout until a tool is chosen', () => {
+check('first Citadel marks containing geography Lived, uses a 15-mile diameter, flies at zoom 8 and applies the chosen starter class', () => {
   vm.runInContext("setHometownCoordinates('Test Citadel',37,-120)", context);
   assert.equal(vm.runInContext('AppState.homeBase.radiusKm', context), 15 * 1.609344 / 2);
   assert.equal(vm.runInContext('AppState.homeBase.countyId', context), '06073');
   assert.equal(vm.runInContext('AppState.counties["06073"]', context), 'l');
   assert.equal(vm.runInContext('AppState.regions["s:California"]', context), 'l');
   assert.equal(vm.runInContext('calculateStats().cls', context), 'Scout');
+  vm.runInContext("onboarding.chosenTools=['scratch'];statsCache=null", context);
+  assert.equal(vm.runInContext('calculateStats().cls', context), 'Cartographer');
+  vm.runInContext("onboarding.chosenTools=[];statsCache=null", context);
   const stats = vm.runInContext('calculateStats()', context);
   assert.equal(stats.xp - stats.statesCount * 10 - stats.countriesCount * 20, 53);
   assert.equal(stats.level, 1);

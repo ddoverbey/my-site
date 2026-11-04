@@ -1232,15 +1232,15 @@
     </div>
   </div>
 
-  <div id="featureChoiceModal" role="dialog" aria-modal="true" aria-labelledby="featureChoiceTitle" aria-describedby="featureChoiceDescription" class="hidden fixed inset-0 z-[1000] bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+  <div id="toolUnlockModal" role="dialog" aria-modal="true" aria-labelledby="toolUnlockTitle" aria-describedby="toolUnlockDescription" class="hidden fixed inset-0 z-[1000] bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
     <div class="rpg-panel rpg-panel-gold max-w-2xl w-full max-h-[90vh] overflow-y-auto rounded-3xl p-6 sm:p-8 space-y-5">
       <header class="text-center">
-        <h2 id="featureChoiceTitle" class="cinzel text-2xl font-extrabold text-amber-200">Choose Your Starting Style</h2>
-        <p id="featureChoiceDescription" class="mt-2 text-sm text-slate-300">Pick whichever feels easiest to start—you'll unlock the other tools as you level up.</p>
+        <h2 id="toolUnlockTitle" class="cinzel text-2xl font-extrabold text-amber-200">Choose Your Starting Tool</h2>
+        <p id="toolUnlockDescription" class="mt-2 text-sm text-slate-300">Choose whichever feels easiest to start—you'll unlock the other two as you level up.</p>
       </header>
-      <div id="featureChoiceOptions" class="grid gap-3 sm:grid-cols-3"></div>
+      <div id="toolUnlockOptions" class="grid gap-3 sm:grid-cols-3"></div>
       <button id="btnUnlockAllFromStarter" type="button" class="mx-auto block text-xs text-slate-400 underline hover:text-amber-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400">
-        Unlock All Primary Features
+        Skip &amp; unlock all features
       </button>
     </div>
   </div>
@@ -2230,52 +2230,65 @@
       set(value) { this.customPois = value; }
     });
 
-    const FEATURE_PROGRESS_STORAGE_KEY = 'cartovella_feature_progress';
+    const ONBOARDING_STORAGE_KEY = 'cartovella_onboarding_v1';
+    const LEGACY_FEATURE_PROGRESS_STORAGE_KEY = 'cartovella_feature_progress';
     const LOGGING_FEATURES = Object.freeze([
       {
         id: 'scratch',
-        title: 'The Cartographer',
         name: 'Scratch Maps',
-        description: 'Color in the countries, states, and counties you have visited.',
+        description: 'Color in countries, states & counties',
         icon: 'map'
       },
       {
         id: 'bucketlist',
-        title: 'The Field Ranger',
-        name: 'Checklist & Catalog',
-        description: 'Check off national parks, monuments, and cities from a searchable list.',
+        name: 'Travel Ledger',
+        description: 'Check off parks & cities from a catalog',
         icon: 'checklist'
       },
       {
         id: 'travel',
-        title: 'The Chronicler',
         name: 'Travel Log',
-        description: 'Plot a road trip or flight route and write its story.',
+        description: 'Map routes & write trip stories',
         icon: 'journal'
       }
     ]);
 
-    function normalizeFeatureProgress(value) {
+    function normalizeOnboarding(value) {
       const chosenTools = Array.isArray(value?.chosenTools)
         ? [...new Set(value.chosenTools.filter(tool => LOGGING_FEATURES.some(feature => feature.id === tool)))]
         : [];
       return { unlockedAll: value?.unlockedAll === true, chosenTools };
     }
 
-    function readFeatureProgress() {
-      const stored = localStorage.getItem(FEATURE_PROGRESS_STORAGE_KEY);
+    function readOnboarding() {
+      const currentValue = localStorage.getItem(ONBOARDING_STORAGE_KEY);
+      const legacyValue = currentValue === null
+        ? localStorage.getItem(LEGACY_FEATURE_PROGRESS_STORAGE_KEY) : null;
+      const stored = currentValue ?? legacyValue;
       if (!stored) return { unlockedAll: false, chosenTools: [] };
+      let parsed;
       try {
-        return normalizeFeatureProgress(JSON.parse(stored));
+        parsed = JSON.parse(stored);
       } catch (error) {
-        console.error('Saved feature progression is invalid.', error);
-        showNotification('Feature progression unavailable',
-          `Saved feature progression could not be read: ${error.message}`, '⚠️');
+        console.error('Saved onboarding state is invalid.', error);
+        showNotification('Onboarding state unavailable',
+          `Saved onboarding state could not be read: ${error.message}`, '⚠️');
         return { unlockedAll: false, chosenTools: [] };
       }
+      const onboarding = normalizeOnboarding(parsed);
+      if (legacyValue !== null) {
+        try {
+          localStorage.setItem(ONBOARDING_STORAGE_KEY, JSON.stringify(onboarding));
+          localStorage.removeItem(LEGACY_FEATURE_PROGRESS_STORAGE_KEY);
+        } catch (error) {
+          console.error('Legacy onboarding state could not be migrated.', error);
+          showNotification('Onboarding migration failed', error.message, '⚠️');
+        }
+      }
+      return onboarding;
     }
 
-    let featureProgress = readFeatureProgress();
+    let onboarding = readOnboarding();
 
     const PASSPORT_STORAGE_FORMAT = 'encoded-route-polyline-v1';
     const PASSPORT_STORAGE_KEY = 'cartovella_state';
@@ -2607,29 +2620,30 @@
       );
     }
 
-    function hasPassportTravelProgress() {
-      const visited = status => TravelLedger.isVisited(status);
-      const homeCountyId = AppState.homeBase?.countyId
-        ? String(AppState.homeBase.countyId).padStart(5, '0') : null;
-      const hasNonHomeCounty = Object.entries(AppState.counties).some(([id, status]) =>
-        visited(status) && (status === 'v' || !AppState.homeBase || id !== homeCountyId));
-      const hasVisitedRegion = Object.values(AppState.regions).some(status =>
-        status === 'v' || (!AppState.homeBase && visited(status)));
-      const hasVisitedOverride = Object.values(AppState.statusOverrides).some(overrides =>
-        Object.values(overrides || {}).some(visited));
-      return AppState.expeditions.length > 0 ||
-        AppState.routes.length > 0 ||
-        AppState.customPois.some(poi => visited(poi.status)) ||
-        Object.values(AppState.pins).some(visited) ||
-        Object.values(AppState.nationalParkScratch).some(visited) ||
-        hasNonHomeCounty || hasVisitedRegion || hasVisitedOverride;
+    function hasExistingTravelProgressOnLoad() {
+      const visitedCountries = new Set(Object.entries(AppState.regions)
+        .filter(([id, status]) => id.startsWith('c:') && TravelLedger.isVisited(status))
+        .map(([id]) => id));
+      const visitedStates = new Set(Object.entries(AppState.regions)
+        .filter(([id, status]) => id.startsWith('s:') && TravelLedger.isVisited(status))
+        .map(([id]) => id));
+      const visitedCounties = Object.values(AppState.counties)
+        .filter(status => TravelLedger.isVisited(status)).length;
+      return TravelLedger.hasLoggedTravel(AppState) ||
+        AppState.expeditions.length > 0 ||
+        AppState.customPois.length > 0 ||
+        visitedCountries.size > 1 ||
+        visitedStates.size > 1 ||
+        visitedCounties > 1;
     }
 
     function applyPassport(parsed) {
       Object.entries(PASSPORT_FIELDS).forEach(([field, createDefault]) => {
         AppState[field] = parsed[field] ?? createDefault();
       });
-      if (hasPassportTravelProgress()) unlockAllPrimaryFeatures({ refresh: false });
+      if (AppState.viewOnly || hasExistingTravelProgressOnLoad()) {
+        unlockAllPrimaryFeatures({ refresh: false });
+      }
       const knownFields = new Set(['version', ...Object.keys(PASSPORT_FIELDS), 'extraPassportFields']);
       AppState.extraPassportFields = {
         ...(parsed.extraPassportFields && typeof parsed.extraPassportFields === 'object'
@@ -3443,7 +3457,7 @@
       };
 
       const sortedAxes = Object.entries(archetypes).sort((a,b) => b[1] - a[1]);
-      const starterTool = featureProgress.chosenTools[0];
+      const starterTool = onboarding.chosenTools[0];
       const starterClass = {
         scratch: ['Cartographer', 'A keeper of maps, borders, and colored-in places.'],
         bucketlist: ['Field Ranger', 'A cataloger of parks, landmarks, and wild places.'],
@@ -7528,18 +7542,18 @@
   </script>
 
   <script>
-    function persistFeatureProgress() {
-      localStorage.setItem(FEATURE_PROGRESS_STORAGE_KEY, JSON.stringify(featureProgress));
+    function persistOnboarding() {
+      localStorage.setItem(ONBOARDING_STORAGE_KEY, JSON.stringify(onboarding));
     }
 
     function unlockAllPrimaryFeatures({ notify = false, refresh = true } = {}) {
-      if (AppState.viewOnly || featureProgress.unlockedAll) return;
-      const previous = featureProgress;
-      featureProgress = { ...featureProgress, unlockedAll: true };
+      if (onboarding.unlockedAll) return;
+      const previous = onboarding;
+      onboarding = { ...onboarding, unlockedAll: true };
       try {
-        persistFeatureProgress();
+        persistOnboarding();
       } catch (error) {
-        featureProgress = previous;
+        onboarding = previous;
         throw error;
       }
       if (refresh) updateAllUI();
@@ -7547,46 +7561,46 @@
     }
 
     function renderFeatureChoiceModal(stats) {
-      const modal = document.getElementById('featureChoiceModal');
-      const needsSecondChoice = featureProgress.chosenTools.length === 1 && stats.level === 2;
-      const shouldChoose = AppState.homeBase && !AppState.viewOnly && !featureProgress.unlockedAll &&
-        ((featureProgress.chosenTools.length === 0 && stats.level < 3) || needsSecondChoice);
+      const modal = document.getElementById('toolUnlockModal');
+      const needsSecondChoice = onboarding.chosenTools.length < 2 && stats.level === 2;
+      const shouldChoose = AppState.homeBase && !AppState.viewOnly && !onboarding.unlockedAll &&
+        ((onboarding.chosenTools.length === 0 && stats.level < 3) || needsSecondChoice);
       modal.classList.toggle('hidden', !shouldChoose);
       if (!shouldChoose) return;
 
-      const available = LOGGING_FEATURES.filter(feature => !featureProgress.chosenTools.includes(feature.id));
-      document.getElementById('featureChoiceTitle').textContent = needsSecondChoice
-        ? 'Choose Your Next Tool' : 'Choose Your Starting Style';
-      document.getElementById('featureChoiceDescription').textContent = needsSecondChoice
+      const available = LOGGING_FEATURES.filter(feature => !onboarding.chosenTools.includes(feature.id));
+      document.getElementById('toolUnlockTitle').textContent = needsSecondChoice
+        ? 'Choose Your Next Tool' : 'Choose Your Starting Tool';
+      document.getElementById('toolUnlockDescription').textContent = needsSecondChoice
         ? 'You reached Level 2. Choose one more tool; the final tool unlocks at Level 3.'
-        : "Pick whichever feels easiest to start—you'll unlock the other tools as you level up.";
-      document.getElementById('featureChoiceOptions').innerHTML = available.map(feature => `
+        : "Choose whichever feels easiest to start—you'll unlock the other two as you level up.";
+      document.getElementById('toolUnlockOptions').innerHTML = available.map(feature => `
         <button type="button" data-feature-tool="${feature.id}" class="rpg-panel rounded-2xl p-4 text-left transition hover:border-amber-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400">
           <span class="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-slate-950 text-amber-200">
             ${cartovellaIcon(feature.icon, 'h-6 w-6')}
           </span>
-          <span class="block text-sm font-bold text-amber-200">${feature.title}</span>
-          <span class="mt-1 block text-xs font-semibold text-slate-200">${feature.name}</span>
-          <span class="mt-2 block text-[11px] leading-5 text-slate-400">${feature.description}</span>
+          <span class="block text-sm font-bold text-amber-200">${feature.name}</span>
+          <span class="mt-1 block text-xs leading-5 text-slate-200">${feature.description}</span>
         </button>
       `).join('');
     }
 
     function chooseFeatureTool(toolId) {
-      if (!AppState.homeBase || AppState.viewOnly || featureProgress.unlockedAll ||
+      if (!AppState.homeBase || AppState.viewOnly || onboarding.unlockedAll ||
           !LOGGING_FEATURES.some(feature => feature.id === toolId) ||
-          featureProgress.chosenTools.includes(toolId)) return;
+          onboarding.chosenTools.includes(toolId)) return;
       const choiceLimit = calculateStats().level >= 2 ? 2 : 1;
-      if (featureProgress.chosenTools.length >= choiceLimit) return;
-      const previous = featureProgress;
-      featureProgress = {
-        ...featureProgress,
-        chosenTools: [...featureProgress.chosenTools, toolId]
+      if (onboarding.chosenTools.length >= choiceLimit) return;
+      const previous = onboarding;
+      onboarding = {
+        ...onboarding,
+        chosenTools: [...onboarding.chosenTools, toolId]
       };
+      statsCache = null;
       try {
-        persistFeatureProgress();
+        persistOnboarding();
       } catch (error) {
-        featureProgress = previous;
+        onboarding = previous;
         console.error('Feature choice could not be saved.', error);
         showNotification('Choice not saved', error.message, '⚠️');
         return;
@@ -7601,15 +7615,48 @@
       const showRpgMapControls = AppState.mode === 'rpg' && AppState.currentTab === 'map';
       document.getElementById('btnRecenterHome').classList.toggle('hidden', !showRpgMapControls);
       const stats = calculateStats();
-      const unlockedTabs = new Set(['map']);
-      if (featureProgress.unlockedAll) {
-        ['bucketlist', 'scratch', 'travel', 'passport', 'guild'].forEach(tab => unlockedTabs.add(tab));
-      } else {
-        featureProgress.chosenTools.forEach(tab => unlockedTabs.add(tab));
-        if (stats.level >= 3) {
-          ['bucketlist', 'scratch', 'travel', 'passport'].forEach(tab => unlockedTabs.add(tab));
+
+      if (AppState.viewOnly && !onboarding.unlockedAll) {
+        try {
+          unlockAllPrimaryFeatures({ refresh: false });
+        } catch (error) {
+          console.error('Read-only feature access could not be saved.', error);
+          showNotification('Feature access not saved', error.message, '⚠️');
         }
-        if (stats.level >= 4) unlockedTabs.add('guild');
+      }
+      if (stats.level >= 4 && !onboarding.unlockedAll) {
+        try {
+          unlockAllPrimaryFeatures({ refresh: false });
+        } catch (error) {
+          console.error('Level 4 feature access could not be saved.', error);
+          showNotification('Feature access not saved', error.message, '⚠️');
+        }
+      }
+      if (stats.level >= 3 && onboarding.chosenTools.length < LOGGING_FEATURES.length) {
+        const previous = onboarding;
+        const chosenTools = [
+          ...onboarding.chosenTools,
+          ...LOGGING_FEATURES.map(feature => feature.id)
+            .filter(tool => !onboarding.chosenTools.includes(tool))
+        ];
+        onboarding = { ...onboarding, chosenTools };
+        statsCache = null;
+        try {
+          persistOnboarding();
+        } catch (error) {
+          onboarding = previous;
+          console.error('Level 3 tool unlocks could not be saved.', error);
+          showNotification('Tool unlocks not saved', error.message, '⚠️');
+        }
+      }
+
+      const unlockedTabs = new Set(['map']);
+      if (onboarding.unlockedAll || stats.level >= 4 || AppState.viewOnly) {
+        ['bucketlist', 'scratch', 'travel', 'passport', 'guild'].forEach(tab => unlockedTabs.add(tab));
+      } else if (AppState.homeBase && stats.level >= 3) {
+        ['bucketlist', 'scratch', 'travel', 'passport'].forEach(tab => unlockedTabs.add(tab));
+      } else if (AppState.homeBase) {
+        onboarding.chosenTools.forEach(tab => unlockedTabs.add(tab));
       }
       if (profileOnlyView) {
         unlockedTabs.clear();
@@ -7620,7 +7667,7 @@
         button.classList.toggle('hidden', !unlockedTabs.has(button.dataset.tab));
       });
       document.getElementById('hudActiveQuests').classList.toggle('hidden',
-        !featureProgress.unlockedAll && stats.level < 3);
+        !onboarding.unlockedAll && stats.level < 3);
       renderFeatureChoiceModal(stats);
     }
 
@@ -8054,8 +8101,10 @@
       AppState.clearedPolygons = [];
       AppState.routes = [];
       AppState.customLocations = [];
-      localStorage.removeItem(FEATURE_PROGRESS_STORAGE_KEY);
-      featureProgress = { unlockedAll: false, chosenTools: [] };
+      localStorage.removeItem(ONBOARDING_STORAGE_KEY);
+      localStorage.removeItem(LEGACY_FEATURE_PROGRESS_STORAGE_KEY);
+      onboarding = { unlockedAll: false, chosenTools: [] };
+      statsCache = null;
       saveState();
       location.reload();
     });
@@ -8111,7 +8160,7 @@
         showNotification('Features not unlocked', error.message, '⚠️');
       }
     });
-    document.getElementById('featureChoiceOptions').addEventListener('click', event => {
+    document.getElementById('toolUnlockOptions').addEventListener('click', event => {
       const option = event.target.closest('button[data-feature-tool]');
       if (option) chooseFeatureTool(option.dataset.featureTool);
     });
@@ -8316,14 +8365,6 @@
     function updateAuthUI() {
       const isLoggedIn = !!cloudSession?.user;
       const hasConflict = !!pendingCloudConflict;
-      if (isLoggedIn && !AppState.viewOnly) {
-        try {
-          unlockAllPrimaryFeatures({ refresh: false });
-        } catch (error) {
-          console.error('Signed-in feature access could not be saved.', error);
-          showNotification('Feature access not saved', error.message, '⚠️');
-        }
-      }
       updateHeaderAccountPill();
       document.getElementById('btnHomeSignIn').classList.toggle('hidden', isLoggedIn);
       document.getElementById('cloudConflictView').classList.toggle('hidden', !hasConflict);
@@ -9749,6 +9790,13 @@
         const signedOutAccountId = localStorage.getItem(LAST_SIGNED_OUT_CLOUD_ACCOUNT_KEY);
         const accountChanged = !!signedOutAccountId && signedOutAccountId !== cloudSession.user.id;
         if (records.length) {
+          try {
+            unlockAllPrimaryFeatures({ refresh: false });
+          } catch (error) {
+            console.error('Existing cloud passport feature access could not be saved.', error);
+            showNotification('Feature access not saved', error.message, '⚠️');
+          }
+          if (onboarding.unlockedAll) updateHeaderNavigation();
           const cloudProfile = normalizePublicProfile(records[0]);
           if (!cloudProfile.username) {
             cloudProfile.username = authPublicUsernameFallback();
