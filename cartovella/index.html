@@ -94,7 +94,7 @@
         cloud: 'cloudCheck'
       };
       if (Object.hasOwn(phosphorAliases, name)) {
-        return cartovellaIcon(phosphorAliases[name], className);
+        return cartovellaIcon(phosphorAliases[name], className, color);
       }
       if (Object.hasOwn(iconFiles, name)) {
         return `<img src="assets/icons/${iconFiles[name]}" alt="" class="${className} object-contain">`;
@@ -7663,12 +7663,13 @@
         ? 'Your starting class lasts through Level 2. Choose one more tool; at Level 3, your Archetype Radar Chart shapes your Explorer Class and the final tool unlocks.'
         : 'Choose a path. Your class title lasts through Levels 1–2; at Level 3, your Archetype Radar Chart shapes your Explorer Class. Your other tools unlock as you level up.';
       document.getElementById('toolUnlockOptions').innerHTML = available.map(feature => `
-        <button type="button" data-feature-tool="${feature.id}" aria-label="${feature.classTitle} — ${feature.name}" class="rpg-panel rounded-2xl p-4 text-left transition hover:border-amber-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400">
-          <span class="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-slate-950 text-amber-200">
-            ${cartovellaIcon(feature.icon, 'h-6 w-6')}
+        <button type="button" data-feature-tool="${feature.id}" aria-label="${feature.classTitle} — ${feature.name}" class="rpg-panel flex min-h-56 flex-col items-center rounded-2xl p-5 text-center transition hover:border-amber-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400">
+          <span class="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-xl bg-slate-950">
+            ${cartovellaIcon(feature.icon, 'h-9 w-9', '#eba400')}
           </span>
-          <span class="block text-sm font-bold text-amber-200 inline-flex items-center gap-2">${cartovellaIcon(feature.icon, 'h-5 w-5')} ${feature.classTitle} — ${feature.name}</span>
-          <span class="mt-1 block text-xs leading-5 text-slate-200">${feature.description}</span>
+          <span class="block text-base font-bold text-[#fac60b]">${feature.classTitle}</span>
+          <span class="mt-1 block text-xs font-bold uppercase tracking-wider text-[#eba400]">${feature.name}</span>
+          <span class="mt-auto block pt-4 text-xs leading-5 text-slate-200">${feature.description}</span>
         </button>
       `).join('');
     }

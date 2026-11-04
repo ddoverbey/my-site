@@ -1742,10 +1742,16 @@ check('primary feature choices unlock by level and can be skipped', () => {
     assert.deepEqual(visibleTabs(), ['map']);
     assert.equal(element('toolUnlockModal').classList.contains('hidden'), false);
     assert.match(element('toolUnlockDescription').textContent,
-      /Choose whichever feels easiest to start—you'll unlock the other two as you level up\./);
-    assert.match(element('toolUnlockOptions').innerHTML, /Scratch Maps/);
-    assert.match(element('toolUnlockOptions').innerHTML, /Travel Ledger/);
-    assert.match(element('toolUnlockOptions').innerHTML, /Travel Log/);
+      /Choose a path\. Your class title lasts through Levels 1–2/);
+    const pathOptions = element('toolUnlockOptions').innerHTML;
+    assert.match(pathOptions, /flex min-h-56 flex-col items-center/);
+    assert.equal([...pathOptions.matchAll(/style="color:#eba400"/g)].length, 3);
+    assert.ok(pathOptions.includes('text-[#fac60b]">Wayward Scribe</span>'));
+    assert.ok(pathOptions.includes('text-[#eba400]">Travel Log</span>'));
+    assert.ok(pathOptions.includes('mt-auto block pt-4 text-xs leading-5 text-slate-200">Map routes & write trip stories</span>'));
+    assert.match(pathOptions, /Scratch Maps/);
+    assert.match(pathOptions, /Travel Ledger/);
+    assert.match(pathOptions, /Travel Log/);
 
     vm.runInContext(`onboarding.chosenTools=['scratch'];persistOnboarding();updateHeaderNavigation()`, context);
     assert.deepEqual(visibleTabs(), ['map', 'scratch']);
@@ -1869,17 +1875,29 @@ check('all Cartovella icons use only official logo colors and reject invalid nam
   const names = [
     'atlas', 'compass', 'journal', 'trophy', 'guild', 'globe', 'citadel', 'checklist', 'map', 'explorer',
     'quest', 'cloud', 'settings', 'share', 'save', 'export', 'import', 'credits',
-    'warning', 'locator', 'lock', 'pin', 'route', 'photo', 'shield'
+    'warning', 'locator', 'lock', 'pin', 'route', 'photo', 'shield',
+    'compassRose', 'listChecks', 'path', 'notebook', 'userCircle', 'house',
+    'shareFat', 'shareNetwork', 'floppyDisk', 'downloadSimple', 'uploadSimple',
+    'cloudCheck', 'cloudSlash', 'cloudWarning', 'cloudX', 'gear', 'mapTrifold'
   ];
+  const phosphorNames = new Set([
+    'compass', 'journal', 'citadel', 'checklist', 'cloud', 'settings', 'share', 'save', 'export', 'import',
+    'compassRose', 'listChecks', 'path', 'notebook', 'userCircle', 'house',
+    'shareFat', 'shareNetwork', 'floppyDisk', 'downloadSimple', 'uploadSimple',
+    'cloudCheck', 'cloudSlash', 'cloudWarning', 'cloudX', 'gear', 'mapTrifold'
+  ]);
   const allowedColors = new Set([
     '#eba400', '#fac60b', '#124777', '#36506b', '#f4c98c', '#0c1222'
   ]);
   const usedColors = new Set();
   for (const name of names) {
     const icon = vm.runInContext(`cartovellaIcon('${name}', 'test-icon')`, context);
-    assert.match(icon, /<svg/);
-    const colors = [...icon.matchAll(/(?:fill|stroke)="(#[0-9a-f]{6})"/gi)]
-      .map(match => match[1].toLowerCase());
+    if (phosphorNames.has(name)) assert.match(icon, /class="phosphor-icon/);
+    else assert.match(icon, /<svg/);
+    const colors = [
+      ...[...icon.matchAll(/(?:fill|stroke)="(#[0-9a-f]{6})"/gi)].map(match => match[1].toLowerCase()),
+      ...(icon.match(/style="color:(#[0-9a-f]{6})"/i) || []).slice(1).map(color => color.toLowerCase())
+    ];
     assert.ok(colors.length > 0, name);
     colors.forEach(color => {
       assert.ok(allowedColors.has(color), `${name} uses off-palette color ${color}`);
@@ -5503,7 +5521,7 @@ check('first Citadel marks containing geography Lived, uses a 15-mile diameter, 
   assert.equal(vm.runInContext('AppState.regions["s:California"]', context), 'l');
   assert.equal(vm.runInContext('calculateStats().cls', context), 'Scout');
   vm.runInContext("onboarding.chosenTools=['scratch'];statsCache=null", context);
-  assert.equal(vm.runInContext('calculateStats().cls', context), 'Cartographer');
+  assert.equal(vm.runInContext('calculateStats().cls', context), 'Realm Cartographer');
   vm.runInContext("onboarding.chosenTools=[];statsCache=null", context);
   const stats = vm.runInContext('calculateStats()', context);
   assert.equal(stats.xp - stats.statesCount * 10 - stats.countriesCount * 20, 53);
@@ -6068,7 +6086,9 @@ check('catalog rarity badges appear on Travel Ledger cards and park popups', () 
   assert.ok(element('bucketListGrid').innerHTML.includes('💎 Hidden Gem'));
   assert.ok(vm.runInContext('createPopupContent(PARKS[0])', context).includes('💎 Hidden Gem'));
   assert.ok(element('bucketListGrid').innerHTML.includes('🥾 Beaten Path'));
-  assert.ok(vm.runInContext('createPopupContent(PARKS[1])', context).includes('🧭 Regional Staple'));
+  const regionalStaplePopup = vm.runInContext('createPopupContent(PARKS[1])', context);
+  assert.ok(regionalStaplePopup.includes(String.fromCodePoint(0xE1C6)));
+  assert.ok(regionalStaplePopup.includes('Regional Staple'));
 });
 const originalCatalogRenderHelpers = vm.runInContext('({lookupRarityWithFallback:CoordinateLookups.lookupRarityWithFallback,showNotification})', context);
 try {
