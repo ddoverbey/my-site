@@ -45,6 +45,18 @@
   </script>
   <script>
     function cartovellaIcon(name, className = 'h-6 w-6') {
+      const iconFiles = {
+        rpgMap: 'route-map.svg',
+        travelLedger: 'travel-ledger.svg',
+        scratchMap: 'scratch-map.svg',
+        travelLog: 'travel-journal.svg',
+        explorerProfile: 'profile-icon.svg',
+        explorersGuild: 'explorer-guild.svg'
+      };
+      if (Object.hasOwn(iconFiles, name)) {
+        return `<img src="assets/icons/${iconFiles[name]}" alt="" class="${className} object-contain">`;
+      }
+
       const atlasArtwork = '<circle cx="12" cy="12" r="10" fill="#eba400"/><circle cx="12" cy="12" r="7.8" fill="#0c1222"/><path d="m12 4 3.1 8.1-8.1 3.8L12 4Z" fill="#fac60b"/><path d="m12 20-3.1-8.1 8.1-3.8L12 20Z" fill="#f4c98c"/><circle cx="12" cy="12" r="1.4" fill="#eba400"/>';
       const guildArtwork = '<circle cx="12" cy="12" r="10" fill="#fac60b"/><circle cx="12" cy="12" r="7.5" fill="#124777"/><path d="M5 8.5c2 .8 4 .8 7 0s5-.8 7 0M5 15.5c2-.8 4-.8 7 0s5 .8 7 0M12 4.5c2 2 3 4.5 3 7.5s-1 5.5-3 7.5c-2-2-3-4.5-3-7.5s1-5.5 3-7.5Z" fill="none" stroke="#f4c98c" stroke-width="1.2"/><path d="M4.6 12h14.8" stroke="#36506b" stroke-width="1.2"/>';
       const artwork = {
@@ -476,22 +488,22 @@
     <div class="order-last xl:order-none w-full xl:w-auto flex items-center justify-center">
       <nav id="navTabs" aria-label="Atlas pages" class="flex items-center justify-center gap-0.5 rounded-xl border border-slate-800 bg-slate-900/60 p-1">
         <button id="navMap" type="button" data-tab="map" class="header-icon" data-tooltip="Explore RPG Map" title="Explore RPG Map" aria-label="Explore RPG Map" aria-pressed="true" aria-controls="tabContent-map">
-          <span data-cartovella-icon="compass" data-icon-class="h-5 w-5" aria-hidden="true"></span>
+          <span data-cartovella-icon="rpgMap" data-icon-class="h-5 w-5" aria-hidden="true"></span>
         </button>
         <button id="navBucketlist" type="button" data-tab="bucketlist" class="header-icon hidden" data-tooltip="Checklist &amp; Catalog" title="Checklist &amp; Catalog" aria-label="Checklist &amp; Catalog" aria-pressed="false" aria-controls="tabContent-bucketlist">
-          <span data-cartovella-icon="checklist" data-icon-class="h-5 w-5" aria-hidden="true"></span>
+          <span data-cartovella-icon="travelLedger" data-icon-class="h-5 w-5" aria-hidden="true"></span>
         </button>
         <button id="navScratch" type="button" data-tab="scratch" class="header-icon hidden" data-tooltip="Scratch Maps" title="Scratch Maps" aria-label="Scratch Maps" aria-pressed="false" aria-controls="tabContent-scratch">
-          <span data-cartovella-icon="map" data-icon-class="h-5 w-5" aria-hidden="true"></span>
+          <span data-cartovella-icon="scratchMap" data-icon-class="h-5 w-5" aria-hidden="true"></span>
         </button>
         <button id="navTravel" type="button" data-tab="travel" class="header-icon hidden" data-tooltip="Travel Log" title="Travel Log" aria-label="Travel Log" aria-pressed="false" aria-controls="tabContent-travel">
-          <span data-cartovella-icon="journal" data-icon-class="h-5 w-5" aria-hidden="true"></span>
+          <span data-cartovella-icon="travelLog" data-icon-class="h-5 w-5" aria-hidden="true"></span>
         </button>
         <button id="navExplorer" type="button" data-tab="passport" class="header-icon hidden" data-tooltip="Explorer Profile" title="Explorer Profile" aria-label="Explorer Profile" aria-pressed="false" aria-controls="tabContent-passport">
-          <span data-cartovella-icon="explorer" data-icon-class="h-5 w-5" aria-hidden="true"></span>
+          <span data-cartovella-icon="explorerProfile" data-icon-class="h-5 w-5" aria-hidden="true"></span>
         </button>
         <button id="navGuild" type="button" data-tab="guild" class="header-icon hidden" data-tooltip="Explorers' Guild" title="Explorers' Guild" aria-label="Explorers' Guild" aria-pressed="false" aria-controls="tabContent-guild">
-          <span data-cartovella-icon="globe" data-icon-class="h-5 w-5" aria-hidden="true"></span>
+          <span data-cartovella-icon="explorersGuild" data-icon-class="h-5 w-5" aria-hidden="true"></span>
         </button>
       </nav>
     </div>
