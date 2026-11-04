@@ -4,6 +4,12 @@ const DATABASE_VERSION = 1;
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 const EXPORT_SIZE = 2560;
 const CARD_BOUNDS = { x: 359.1, y: 71.3, width: 1841.9, height: 2417.3 };
+const CARD_ELEMENTS = {
+  pointsBanner: { x: 359.1, y: 71.3, width: 355.6, height: 515.3 },
+  points: { x: 444.8, y: 100.6, width: 153.1, height: 204 },
+  moisture: { x: 1676.4, y: 202.6, width: 416.5, height: 416.5 },
+  climate: { x: 495.9, y: 2160.5, width: 268.6, height: 268.6 }
+};
 const NAME_FONT = '"SCR-N Seven Extra", "Courier New", monospace';
 const BODY_FONT = '"partita 1990", "Courier New", monospace';
 const borderPositions = { copper: 456, steel: 532, gold: 608 };
@@ -456,71 +462,104 @@ function colorAt(ranges, index) {
   return range ? range.color : '#181911';
 }
 
-function drawColoredBody(ctx, text, ranges, x, startY, maxWidth, lineHeight, maxLines) {
-  const font = `2.65px ${BODY_FONT}`;
-  ctx.font = font;
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'top';
-  let line = 0;
-  let cursorX = x;
-  let clipped = false;
-  const tokens = [...text.matchAll(/\n|[^\S\n]+|[^\s]+/g)];
+function cardLocalRect(rect) {
+  const scaleX = CARD_BOUNDS.width / 76;
+  const scaleY = CARD_BOUNDS.height / 103;
+  return {
+    x: (rect.x - CARD_BOUNDS.x) / scaleX,
+    y: (rect.y - CARD_BOUNDS.y) / scaleY,
+    width: rect.width / scaleX,
+    height: rect.height / scaleY
+  };
+}
 
-  for (const match of tokens) {
+function wrapName(ctx, text, maxWidth, fontSize) {
+  ctx.font = `${fontSize}px ${NAME_FONT}`;
+  const lines = [''];
+
+  for (const word of text.trim().split(/\s+/)) {
+    const lineIndex = lines.length - 1;
+    const candidate = lines[lineIndex] ? `${lines[lineIndex]} ${word}` : word;
+    if (ctx.measureText(candidate).width <= maxWidth) {
+      lines[lineIndex] = candidate;
+      continue;
+    }
+    if (lines[lineIndex]) lines.push('');
+    for (const character of word) {
+      const currentIndex = lines.length - 1;
+      const nextLine = `${lines[currentIndex]}${character}`;
+      if (lines[currentIndex] && ctx.measureText(nextLine).width > maxWidth) lines.push(character);
+      else lines[currentIndex] = nextLine;
+    }
+  }
+
+  return lines.filter(Boolean);
+}
+
+function layoutColoredBody(ctx, text, ranges, maxWidth, fontSize) {
+  ctx.font = `${fontSize}px ${BODY_FONT}`;
+  const lines = [[]];
+  let lineWidth = 0;
+
+  const nextLine = () => {
+    lines.push([]);
+    lineWidth = 0;
+  };
+  const appendCharacter = (character, color) => {
+    if (character === ' ' && lineWidth === 0) return;
+    const characterWidth = ctx.measureText(character).width;
+    if (lineWidth > 0 && lineWidth + characterWidth > maxWidth) nextLine();
+    const line = lines[lines.length - 1];
+    const lastSegment = line[line.length - 1];
+    if (lastSegment && lastSegment.color === color) lastSegment.text += character;
+    else line.push({ text: character, color });
+    lineWidth += characterWidth;
+  };
+
+  for (const match of text.matchAll(/\n|[^\S\n]+|[^\s]+/g)) {
     const token = match[0];
     const start = match.index;
-    if (token === '\n') {
-      line += 1;
-      cursorX = x;
-      if (line >= maxLines) { clipped = true; break; }
-      continue;
-    }
     if (/^\s+$/.test(token)) {
-      const gap = ctx.measureText(token).width;
-      if (cursorX + gap > x + maxWidth) {
-        line += 1;
-        cursorX = x;
-        if (line >= maxLines) { clipped = true; break; }
-      } else {
-        cursorX += gap;
-      }
+      appendCharacter(' ', colorAt(ranges, start));
       continue;
     }
-
-    const chunks = [];
-    let chunkStart = 0;
-    let chunkColor = colorAt(ranges, start);
-    for (let offset = 1; offset <= token.length; offset += 1) {
-      const nextColor = offset < token.length ? colorAt(ranges, start + offset) : null;
-      if (nextColor !== chunkColor) {
-        chunks.push({ text: token.slice(chunkStart, offset), color: chunkColor });
-        chunkStart = offset;
-        chunkColor = nextColor;
-      }
+    const characters = [];
+    let offset = 0;
+    for (const character of token) {
+      characters.push({ character, color: colorAt(ranges, start + offset) });
+      offset += character.length;
     }
-    const wordWidth = chunks.reduce((width, chunk) => width + ctx.measureText(chunk.text).width, 0);
-    if (cursorX > x && cursorX + wordWidth > x + maxWidth) {
-      line += 1;
-      cursorX = x;
-      if (line >= maxLines) { clipped = true; break; }
-    }
-
-    for (const chunk of chunks) {
-      ctx.fillStyle = chunk.color;
-      ctx.fillText(chunk.text, cursorX, startY + line * lineHeight);
-      cursorX += ctx.measureText(chunk.text).width;
-    }
-    if (cursorX > x + maxWidth) {
-      line += 1;
-      cursorX = x;
-      if (line >= maxLines) { clipped = true; break; }
-    }
+    const wordWidth = characters.reduce((width, item) => width + ctx.measureText(item.character).width, 0);
+    if (lineWidth > 0 && lineWidth + wordWidth > maxWidth) nextLine();
+    for (const item of characters) appendCharacter(item.character, item.color);
   }
 
-  if (clipped && maxLines > 0) {
-    ctx.fillStyle = '#181911';
-    ctx.fillText('…', x + maxWidth - ctx.measureText('…').width, startY + (maxLines - 1) * lineHeight);
+  while (lines.length > 1 && lines[lines.length - 1].length === 0) lines.pop();
+  return lines;
+}
+
+function drawColoredBody(ctx, text, ranges, x, startY, maxWidth, maxHeight) {
+  let fontSize = 2.65;
+  let lines = layoutColoredBody(ctx, text, ranges, maxWidth, fontSize);
+  let lineHeight = fontSize * 1.35;
+
+  while (lines.length * lineHeight > maxHeight && fontSize > .9) {
+    fontSize = Math.max(.9, fontSize - .1);
+    lines = layoutColoredBody(ctx, text, ranges, maxWidth, fontSize);
+    lineHeight = fontSize * 1.35;
   }
+
+  ctx.font = `${fontSize}px ${BODY_FONT}`;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  lines.forEach((line, lineIndex) => {
+    let cursorX = x;
+    for (const segment of line) {
+      ctx.fillStyle = segment.color;
+      ctx.fillText(segment.text, cursorX, startY + lineIndex * lineHeight);
+      cursorX += ctx.measureText(segment.text).width;
+    }
+  });
 }
 
 function drawCard(ctx, card, photo, outputWidth) {
@@ -552,45 +591,28 @@ function drawCard(ctx, card, photo, outputWidth) {
 
   drawArtwork(ctx, photo);
 
-  drawSprite(ctx, 7, 60, 62, 36, 463, 164, 62, 36);
-  drawSprite(ctx, 6, 52, 64, 10, 536, 231, 64, 10);
+  drawSprite(ctx, 7, 62, 62, 36, 463, 164, 62, 36);
+  drawSprite(ctx, 6, 52, 64, 8, 536, 231, 64, 10);
 
   ctx.save();
   const title = card.name || 'Untitled card';
-  const titleWords = title.split(/\s+/);
-  const titleLines = [];
-  let titleLine = '';
-  ctx.font = `4.2px ${NAME_FONT}`;
-  for (const word of titleWords) {
-    const candidate = titleLine ? `${titleLine} ${word}` : word;
-    if (ctx.measureText(candidate).width > 59 && titleLine) {
-      titleLines.push(titleLine);
-      titleLine = word;
-    } else {
-      titleLine = candidate;
-    }
-  }
-  if (titleLine) titleLines.push(titleLine);
-  if (titleLines.length > 2) {
-    titleLines.splice(1, titleLines.length - 1, titleLines.slice(1).join(' '));
-    while (titleLines[1].length > 0 && ctx.measureText(`${titleLines[1]}…`).width > 59) {
-      titleLines[1] = titleLines[1].slice(0, -1);
-    }
-    titleLines[1] = `${titleLines[1].trimEnd()}…`;
-  }
   let titleSize = 4.2;
-  while (titleLines.some((line) => ctx.measureText(line).width > 59) && titleSize > 2.2) {
-    titleSize -= .1;
-    ctx.font = `${titleSize}px ${NAME_FONT}`;
+  let titleLines = wrapName(ctx, title, 59, titleSize);
+  while ((titleLines.length > 2 || titleLines.length * titleSize > 8) && titleSize > 1) {
+    titleSize = Math.max(1, titleSize - .1);
+    titleLines = wrapName(ctx, title, 59, titleSize);
   }
+  ctx.font = `${titleSize}px ${NAME_FONT}`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillStyle = '#171610';
   if (titleLines.length === 1) {
-    ctx.fillText(titleLines[0], 38, 57);
+    ctx.fillText(titleLines[0], 38, 56);
   } else {
-    ctx.fillText(titleLines[0], 38, 54.8);
-    ctx.fillText(titleLines[1], 38, 59.2);
+    const lineHeight = titleSize;
+    const firstLineY = 56 - lineHeight / 2;
+    ctx.fillText(titleLines[0], 38, firstLineY);
+    ctx.fillText(titleLines[1], 38, firstLineY + lineHeight);
   }
   ctx.restore();
 
@@ -599,39 +621,51 @@ function drawCard(ctx, card, photo, outputWidth) {
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
   ctx.fillStyle = style.label;
-  ctx.fillText(`Rarity: ${card.rarity}`, 10, 62.5);
-  drawColoredBody(ctx, card.body, card.bodyColors || [], 10, 67, 55, 5.2, 5);
+  ctx.fillText(`Rarity: ${card.rarity}`, 10, 63.5);
+  drawColoredBody(ctx, card.body, card.bodyColors || [], 10, 67, 55, 28);
   ctx.restore();
 
   const banner = style.bannerY;
-  drawSprite(ctx, 2, 0, 12, 20, 685, banner, 15, 20);
+  const bannerRect = cardLocalRect(CARD_ELEMENTS.pointsBanner);
+  drawSprite(ctx, bannerRect.x, bannerRect.y, bannerRect.width, bannerRect.height, 685, banner, 15, 20);
+
+  const pointRect = cardLocalRect(CARD_ELEMENTS.points);
+  const pointValue = String(card.points || '0');
   ctx.save();
-  ctx.font = `5px ${NAME_FONT}`;
+  let pointSize = 5;
+  ctx.font = `${pointSize}px ${NAME_FONT}`;
+  while (ctx.measureText(pointValue).width > pointRect.width * .78 && pointSize > 1) {
+    pointSize -= .1;
+    ctx.font = `${pointSize}px ${NAME_FONT}`;
+  }
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.lineWidth = .4;
   ctx.strokeStyle = '#17140d';
   ctx.fillStyle = '#fffdf5';
-  ctx.strokeText(String(card.points || '0'), 8, 7.5);
-  ctx.fillText(String(card.points || '0'), 8, 7.5);
+  ctx.strokeText(pointValue, pointRect.x + pointRect.width / 2, pointRect.y + pointRect.height / 2);
+  ctx.fillText(pointValue, pointRect.x + pointRect.width / 2, pointRect.y + pointRect.height / 2);
   ctx.restore();
+
+  drawSprite(ctx, 0, 0, 76, 103, borderPositions[card.border] || borderPositions.steel, 0, 76, 103);
 
   const moistureIcon = climateIcons[card.moisture === 'dry' ? 'dry' : 'wet'];
   const climateIcon = climateIcons[card.climate] || climateIcons.temperate;
+  const moistureRect = cardLocalRect(CARD_ELEMENTS.moisture);
+  const climateRect = cardLocalRect(CARD_ELEMENTS.climate);
   if (moistureIcon) {
     ctx.save();
     ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(moistureIcon, 61, 3, 12, 12);
+    ctx.drawImage(moistureIcon, moistureRect.x, moistureRect.y, moistureRect.width, moistureRect.height);
     ctx.restore();
   }
   if (climateIcon) {
     ctx.save();
     ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(climateIcon, -1, 80, 13, 13);
+    ctx.drawImage(climateIcon, climateRect.x, climateRect.y, climateRect.width, climateRect.height);
     ctx.restore();
   }
 
-  drawSprite(ctx, 0, 0, 76, 103, borderPositions[card.border] || borderPositions.steel, 0, 76, 103);
   ctx.restore();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
 }
