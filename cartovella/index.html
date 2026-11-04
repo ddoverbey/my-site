@@ -46,7 +46,8 @@
   <script>
     function cartovellaIcon(name, className = 'h-6 w-6') {
       const iconFiles = {
-        rpgMap: 'route-map.svg',
+        rpgMap: 'fog-of-war-icon.svg',
+        routeMap: 'route-map.svg',
         travelLedger: 'travel-ledger.svg',
         scratchMap: 'scratch-map.svg',
         travelLog: 'travel-journal.svg',
@@ -939,7 +940,7 @@
             <p class="text-xs text-slate-400 mt-2">Your trips, one story at a time.</p>
           </div>
           <div class="flex flex-wrap items-center gap-2">
-            <button id="btnToggleTravelRoutes" type="button" class="shrink-0 rounded-lg bg-slate-800 px-3 py-2 text-xs text-sky-200 inline-flex items-center gap-1.5" aria-label="Show Route Map" aria-controls="travelGlobalRoutesPanel" aria-expanded="false" aria-pressed="false"><span data-cartovella-icon="route" data-icon-class="h-4 w-4" aria-hidden="true"></span> Route Map</button>
+            <button id="btnToggleTravelRoutes" type="button" class="shrink-0 rounded-lg bg-slate-800 px-3 py-2 text-xs text-sky-200 inline-flex items-center gap-1.5" aria-label="Show Route Map" aria-controls="travelGlobalRoutesPanel" aria-expanded="false" aria-pressed="false"><span data-cartovella-icon="routeMap" data-icon-class="h-4 w-4" aria-hidden="true"></span> Route Map</button>
             <button id="btnExportRoutesPng" type="button" class="hidden shrink-0 rounded-lg bg-amber-600 px-3 py-2 text-xs font-semibold text-slate-950 inline-flex items-center gap-1.5"><span data-cartovella-icon="photo" data-icon-class="h-4 w-4" aria-hidden="true"></span> Export Map (.png)</button>
             <button id="btnShareAllTrips" type="button" aria-controls="bulkTripSharingDialog" class="shrink-0 rounded-lg bg-sky-800 px-3 py-2 text-xs text-sky-100">Share all trips</button>
             <button id="btnUnshareAllTrips" type="button" aria-controls="bulkTripSharingDialog" class="shrink-0 rounded-lg bg-slate-800 px-3 py-2 text-xs text-rose-200">Unshare all</button>

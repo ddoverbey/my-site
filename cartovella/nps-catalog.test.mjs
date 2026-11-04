@@ -145,6 +145,12 @@ const legacyRoute = await readFile(new URL('../wanderlog/index.html', import.met
 const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)]
   .map(match => /src="\.\/expedition-ui\.js(?:\?[^"]*)?"/.test(match[0]) ? expeditionUi : match[1]);
 check('every inline script parses', () => scripts.forEach(script => new vm.Script(script)));
+check('RPG Map uses the fog-of-war icon and Route Map uses the route-map icon', () => {
+  assert.match(html, /rpgMap: 'fog-of-war-icon\.svg'/);
+  assert.match(html, /routeMap: 'route-map\.svg'/);
+  assert.match(html, /id="navMap"[^>]*>[\s\S]*?data-cartovella-icon="rpgMap"/);
+  assert.match(html, /id="btnToggleTravelRoutes"[^>]*>[\s\S]*?data-cartovella-icon="routeMap"/);
+});
 check('refresh restores the signed-in UI and local atlas before supplemental data finishes loading', () => {
   const startup = html.slice(html.indexOf("window.addEventListener('DOMContentLoaded'"));
   const startApp = html.slice(html.indexOf('async function startApp()'));
@@ -1620,12 +1626,12 @@ check('six icon-only header tabs keep primary navigation clean', () => {
   const nav = html.slice(navStart, html.indexOf('</nav>', navStart));
   assert.match(nav, /aria-label="Atlas pages"/);
   for (const [id, tab, label, icon] of [
-    ['navMap', 'map', 'Explore RPG Map', 'compass'],
-    ['navBucketlist', 'bucketlist', 'Checklist &amp; Catalog', 'checklist'],
-    ['navScratch', 'scratch', 'Scratch Maps', 'map'],
-    ['navTravel', 'travel', 'Travel Log', 'journal'],
-    ['navExplorer', 'passport', 'Explorer Profile', 'explorer'],
-    ['navGuild', 'guild', "Explorers' Guild", 'globe']
+    ['navMap', 'map', 'Explore RPG Map', 'rpgMap'],
+    ['navBucketlist', 'bucketlist', 'Checklist &amp; Catalog', 'travelLedger'],
+    ['navScratch', 'scratch', 'Scratch Maps', 'scratchMap'],
+    ['navTravel', 'travel', 'Travel Log', 'travelLog'],
+    ['navExplorer', 'passport', 'Explorer Profile', 'explorerProfile'],
+    ['navGuild', 'guild', "Explorers' Guild", 'explorersGuild']
   ]) {
     assert.match(nav, new RegExp(`<button id="${id}"[^>]*data-tab="${tab}"`));
     assert.ok(nav.includes(`data-cartovella-icon="${icon}"`));
