@@ -1195,7 +1195,7 @@
       <div>
         <h2 id="homeBaseModalTitle" class="cinzel text-2xl sm:text-3xl font-extrabold text-amber-200">Establish Your Home Citadel</h2>
         <p class="text-sm text-slate-300 mt-2">
-          Every explorer begins somewhere. Set your home to reveal a small circle 15 miles across (7.5-mile radius) and permanently claim its county, state, and country as Lived. Your first logged travel anywhere unlocks the whole home county. Establishing your first Citadel grants +50 XP; your starting tool sets your first Explorer Class.
+          Every explorer begins somewhere. Set your home to reveal a small circle 15 miles across (7.5-mile radius) and permanently claim its county, state, and country as Lived. Your first logged travel anywhere unlocks the whole home county. Establishing your first Citadel grants +50 XP; your starting path gives you a class title through Level 2, then your Archetype Radar Chart shapes your Explorer Class from Level 3.
         </p>
       </div>
 
@@ -1247,8 +1247,8 @@
   <div id="toolUnlockModal" role="dialog" aria-modal="true" aria-labelledby="toolUnlockTitle" aria-describedby="toolUnlockDescription" class="hidden fixed inset-0 z-[1000] bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
     <div class="rpg-panel rpg-panel-gold max-w-2xl w-full max-h-[90vh] overflow-y-auto rounded-3xl p-6 sm:p-8 space-y-5">
       <header class="text-center">
-        <h2 id="toolUnlockTitle" class="cinzel text-2xl font-extrabold text-amber-200">Choose Your Starting Tool</h2>
-        <p id="toolUnlockDescription" class="mt-2 text-sm text-slate-300">Choose whichever feels easiest to start—you'll unlock the other two as you level up.</p>
+        <h2 id="toolUnlockTitle" class="cinzel text-2xl font-extrabold text-amber-200">Choose Your Starting Path</h2>
+        <p id="toolUnlockDescription" class="mt-2 text-sm text-slate-300">Choose a path. Your class title lasts through Levels 1–2; at Level 3, your Archetype Radar Chart shapes your Explorer Class. Your other tools unlock as you level up.</p>
       </header>
       <div id="toolUnlockOptions" class="grid gap-3 sm:grid-cols-3"></div>
       <button id="btnUnlockAllFromStarter" type="button" class="mx-auto block text-xs text-slate-400 underline hover:text-amber-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400">
@@ -2248,18 +2248,24 @@
       {
         id: 'scratch',
         name: 'Scratch Maps',
+        classTitle: 'Realm Cartographer',
+        emoji: '🗺️',
         description: 'Color in countries, states & counties',
         icon: 'map'
       },
       {
         id: 'bucketlist',
         name: 'Travel Ledger',
+        classTitle: 'Field Ranger',
+        emoji: '📋',
         description: 'Check off parks & cities from a catalog',
         icon: 'checklist'
       },
       {
         id: 'travel',
         name: 'Travel Log',
+        classTitle: 'Wayward Scribe',
+        emoji: '📖',
         description: 'Map routes & write trip stories',
         icon: 'journal'
       }
@@ -3471,16 +3477,16 @@
       const sortedAxes = Object.entries(archetypes).sort((a,b) => b[1] - a[1]);
       const starterTool = onboarding.chosenTools[0];
       const starterClass = {
-        scratch: ['Cartographer', 'A keeper of maps, borders, and colored-in places.'],
+        scratch: ['Realm Cartographer', 'A keeper of maps, borders, and colored-in places.'],
         bucketlist: ['Field Ranger', 'A cataloger of parks, landmarks, and wild places.'],
-        travel: ['Chronicler', 'A storyteller of journeys, routes, and faraway places.']
+        travel: ['Wayward Scribe', 'A storyteller of journeys, routes, and faraway places.']
       }[starterTool];
       let cls = AppState.homeBase ? starterClass?.[0] || 'Scout' : 'Fresh Recruit';
       let titleDesc = AppState.homeBase ? starterClass?.[1] || 'Citadel established. Your first expedition awaits.' :
         'The journey of ten thousand leagues begins with a single step.';
       let avatar = '🧭';
 
-      if (sortedAxes[0][1] > 0.05 &&
+      if (level >= 3 && sortedAxes[0][1] > 0.05 &&
           (!AppState.homeBase || visitedLocations.length || AppState.expeditions.length || countiesCount > 1 ||
             visitedCountries.size > 1 || visitedStates.size > 1)) {
         switch(sortedAxes[0][0]) {
@@ -7582,16 +7588,16 @@
 
       const available = LOGGING_FEATURES.filter(feature => !onboarding.chosenTools.includes(feature.id));
       document.getElementById('toolUnlockTitle').textContent = needsSecondChoice
-        ? 'Choose Your Next Tool' : 'Choose Your Starting Tool';
+        ? 'Choose Your Next Tool' : 'Choose Your Starting Path';
       document.getElementById('toolUnlockDescription').textContent = needsSecondChoice
-        ? 'You reached Level 2. Choose one more tool; the final tool unlocks at Level 3.'
-        : "Choose whichever feels easiest to start—you'll unlock the other two as you level up.";
+        ? 'Your starting class lasts through Level 2. Choose one more tool; at Level 3, your Archetype Radar Chart shapes your Explorer Class and the final tool unlocks.'
+        : 'Choose a path. Your class title lasts through Levels 1–2; at Level 3, your Archetype Radar Chart shapes your Explorer Class. Your other tools unlock as you level up.';
       document.getElementById('toolUnlockOptions').innerHTML = available.map(feature => `
-        <button type="button" data-feature-tool="${feature.id}" class="rpg-panel rounded-2xl p-4 text-left transition hover:border-amber-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400">
+        <button type="button" data-feature-tool="${feature.id}" aria-label="${feature.emoji} ${feature.classTitle} — ${feature.name}" class="rpg-panel rounded-2xl p-4 text-left transition hover:border-amber-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400">
           <span class="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-slate-950 text-amber-200">
             ${cartovellaIcon(feature.icon, 'h-6 w-6')}
           </span>
-          <span class="block text-sm font-bold text-amber-200">${feature.name}</span>
+          <span class="block text-sm font-bold text-amber-200">${feature.emoji} ${feature.classTitle} — ${feature.name}</span>
           <span class="mt-1 block text-xs leading-5 text-slate-200">${feature.description}</span>
         </button>
       `).join('');
