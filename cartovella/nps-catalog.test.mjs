@@ -149,7 +149,10 @@ check('RPG Map uses the fog-of-war icon and Route Map uses the route-map icon', 
   assert.match(html, /rpgMap: 'fog-of-war-icon\.svg'/);
   assert.match(html, /routeMap: 'route-map\.svg'/);
   assert.match(html, /id="navMap"[^>]*>[\s\S]*?data-cartovella-icon="rpgMap"/);
+  assert.match(html, /#navTabs \.header-icon \{ width: 2\.5rem; height: 2\.5rem; \}/);
+  assert.match(html, /id="navMap"[^>]*>[\s\S]*?data-icon-class="h-6 w-6"/);
   assert.match(html, /id="btnToggleTravelRoutes"[^>]*>[\s\S]*?data-cartovella-icon="routeMap"/);
+  assert.match(html, /id="btnToggleTravelRoutes"[^>]*>[\s\S]*?data-icon-class="h-5 w-5"/);
 });
 check('refresh restores the signed-in UI and local atlas before supplemental data finishes loading', () => {
   const startup = html.slice(html.indexOf("window.addEventListener('DOMContentLoaded'"));
@@ -1635,6 +1638,7 @@ check('six icon-only header tabs keep primary navigation clean', () => {
   ]) {
     assert.match(nav, new RegExp(`<button id="${id}"[^>]*data-tab="${tab}"`));
     assert.ok(nav.includes(`data-cartovella-icon="${icon}"`));
+    assert.ok(nav.includes(`data-cartovella-icon="${icon}" data-icon-class="h-6 w-6"`));
     assert.match(nav, new RegExp(`data-tooltip="${label}" title="${label}" aria-label="${label}"`));
   }
   assert.equal([...nav.matchAll(/<button\b/g)].length, 6);

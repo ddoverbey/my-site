@@ -290,7 +290,7 @@
     .country-flag:hover .country-flag-name, .country-flag:focus .country-flag-name,
     .state-flag:hover .country-flag-name, .state-flag:focus .country-flag-name { display: block; }
     .country-flag img, .state-flag img { width: 32px; height: 22px; object-fit: contain; image-rendering: pixelated; }
-    #navTabs .header-icon { width: 2.125rem; height: 2.125rem; }
+    #navTabs .header-icon { width: 2.5rem; height: 2.5rem; }
     .mode-classic #fogCanvasOverlay {
       opacity: 0;
     }
@@ -489,22 +489,22 @@
     <div class="order-last xl:order-none w-full xl:w-auto flex items-center justify-center">
       <nav id="navTabs" aria-label="Atlas pages" class="flex items-center justify-center gap-0.5 rounded-xl border border-slate-800 bg-slate-900/60 p-1">
         <button id="navMap" type="button" data-tab="map" class="header-icon" data-tooltip="Explore RPG Map" title="Explore RPG Map" aria-label="Explore RPG Map" aria-pressed="true" aria-controls="tabContent-map">
-          <span data-cartovella-icon="rpgMap" data-icon-class="h-5 w-5" aria-hidden="true"></span>
+          <span data-cartovella-icon="rpgMap" data-icon-class="h-6 w-6" aria-hidden="true"></span>
         </button>
         <button id="navBucketlist" type="button" data-tab="bucketlist" class="header-icon hidden" data-tooltip="Checklist &amp; Catalog" title="Checklist &amp; Catalog" aria-label="Checklist &amp; Catalog" aria-pressed="false" aria-controls="tabContent-bucketlist">
-          <span data-cartovella-icon="travelLedger" data-icon-class="h-5 w-5" aria-hidden="true"></span>
+          <span data-cartovella-icon="travelLedger" data-icon-class="h-6 w-6" aria-hidden="true"></span>
         </button>
         <button id="navScratch" type="button" data-tab="scratch" class="header-icon hidden" data-tooltip="Scratch Maps" title="Scratch Maps" aria-label="Scratch Maps" aria-pressed="false" aria-controls="tabContent-scratch">
-          <span data-cartovella-icon="scratchMap" data-icon-class="h-5 w-5" aria-hidden="true"></span>
+          <span data-cartovella-icon="scratchMap" data-icon-class="h-6 w-6" aria-hidden="true"></span>
         </button>
         <button id="navTravel" type="button" data-tab="travel" class="header-icon hidden" data-tooltip="Travel Log" title="Travel Log" aria-label="Travel Log" aria-pressed="false" aria-controls="tabContent-travel">
-          <span data-cartovella-icon="travelLog" data-icon-class="h-5 w-5" aria-hidden="true"></span>
+          <span data-cartovella-icon="travelLog" data-icon-class="h-6 w-6" aria-hidden="true"></span>
         </button>
         <button id="navExplorer" type="button" data-tab="passport" class="header-icon hidden" data-tooltip="Explorer Profile" title="Explorer Profile" aria-label="Explorer Profile" aria-pressed="false" aria-controls="tabContent-passport">
-          <span data-cartovella-icon="explorerProfile" data-icon-class="h-5 w-5" aria-hidden="true"></span>
+          <span data-cartovella-icon="explorerProfile" data-icon-class="h-6 w-6" aria-hidden="true"></span>
         </button>
         <button id="navGuild" type="button" data-tab="guild" class="header-icon hidden" data-tooltip="Explorers' Guild" title="Explorers' Guild" aria-label="Explorers' Guild" aria-pressed="false" aria-controls="tabContent-guild">
-          <span data-cartovella-icon="explorersGuild" data-icon-class="h-5 w-5" aria-hidden="true"></span>
+          <span data-cartovella-icon="explorersGuild" data-icon-class="h-6 w-6" aria-hidden="true"></span>
         </button>
       </nav>
     </div>
@@ -940,7 +940,7 @@
             <p class="text-xs text-slate-400 mt-2">Your trips, one story at a time.</p>
           </div>
           <div class="flex flex-wrap items-center gap-2">
-            <button id="btnToggleTravelRoutes" type="button" class="shrink-0 rounded-lg bg-slate-800 px-3 py-2 text-xs text-sky-200 inline-flex items-center gap-1.5" aria-label="Show Route Map" aria-controls="travelGlobalRoutesPanel" aria-expanded="false" aria-pressed="false"><span data-cartovella-icon="routeMap" data-icon-class="h-4 w-4" aria-hidden="true"></span> Route Map</button>
+            <button id="btnToggleTravelRoutes" type="button" class="shrink-0 rounded-lg bg-slate-800 px-3 py-2 text-xs text-sky-200 inline-flex items-center gap-1.5" aria-label="Show Route Map" aria-controls="travelGlobalRoutesPanel" aria-expanded="false" aria-pressed="false"><span data-cartovella-icon="routeMap" data-icon-class="h-5 w-5" aria-hidden="true"></span> Route Map</button>
             <button id="btnExportRoutesPng" type="button" class="hidden shrink-0 rounded-lg bg-amber-600 px-3 py-2 text-xs font-semibold text-slate-950 inline-flex items-center gap-1.5"><span data-cartovella-icon="photo" data-icon-class="h-4 w-4" aria-hidden="true"></span> Export Map (.png)</button>
             <button id="btnShareAllTrips" type="button" aria-controls="bulkTripSharingDialog" class="shrink-0 rounded-lg bg-sky-800 px-3 py-2 text-xs text-sky-100">Share all trips</button>
             <button id="btnUnshareAllTrips" type="button" aria-controls="bulkTripSharingDialog" class="shrink-0 rounded-lg bg-slate-800 px-3 py-2 text-xs text-rose-200">Unshare all</button>
