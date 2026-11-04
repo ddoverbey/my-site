@@ -68,6 +68,7 @@ trip updates its XP rather than leaving a separate balance behind.
 | Each visited custom location | 25 |
 | Each distinct visited US state | 10 |
 | Each distinct visited country | 20 |
+| Each visited or lived county/district | 3 for the first 50; 1 for each additional one |
 | Establishing a home Citadel | 50 |
 | First collection of a biome | 15–200, based on its rarity tier above |
 | Each logged expedition | 5 base XP, plus 1 XP per full 25 route miles (up to 30 distance XP) |
@@ -82,6 +83,9 @@ Home-base geography can also count its state, country, and home-county biome. Th
 included while a home base is set; changing the home location does not award another 50 XP. Quest
 bonuses are calculated once from the current passport. Park questlines complete when every listed
 destination is visited; expedition questlines use distinct saved trip records:
+
+Visited or lived US counties and mapped international Admin-2 districts count toward county XP.
+Their combined total awards 3 XP per district for the first 50, then 1 XP per additional district.
 
 Questlines and achievements live together on the Explorer Profile character sheet. Open a quest card
 to see its exact requirement, park visit statuses, and the saved expedition logs that qualify or are
@@ -104,25 +108,31 @@ one opens the matching section of the character sheet.
 Local Rambler counts trips with measurable route distance; a trip with no recorded stops or route
 geometry earns its base expedition XP but cannot count toward the 100-mile quest.
 
-Level 1 begins at 0 XP. Level 2 requires 300 XP, so establishing a home Citadel alone will not
-advance a new explorer to Level 2. Later thresholds rise quadratically:
+Level 1 begins at 0 XP. Level 2 requires 200 XP; later thresholds rise quadratically:
 
 | Level reached | Total XP required |
 | ---: | ---: |
-| 2 | 300 |
-| 3 | 405 |
-| 4 | 580 |
-| 5 | 825 |
-| 6 | 1,140 |
-| 7 | 1,525 |
-| 8 | 1,980 |
-| 9 | 2,505 |
-| 10 | 3,100 |
+| 2 | 200 |
+| 3 | 305 |
+| 4 | 480 |
+| 5 | 725 |
+| 6 | 1,040 |
+| 7 | 1,425 |
+| 8 | 1,880 |
+| 9 | 2,405 |
+| 10 | 3,000 |
 
-For level `n` (2 or higher), the threshold is `265 + 35 × (n − 1)²` total XP. The XP bar shows
+For level `n` (2 or higher), the threshold is `165 + 35 × (n − 1)²` total XP. The XP bar shows
 progress from the current level's threshold to the next one. Gaining a level displays a top-center
 level-up banner with a chime; newly earned achievements appear separately in a centered, dismissible
 notification with their artwork.
+
+After establishing a Citadel, a new explorer chooses one of the Scratch Maps, Checklist & Catalog, or
+Travel Log tools. Level 2 offers a choice of a second tool; Level 3 unlocks the remaining tool and the
+Explorer Profile; Level 4 unlocks the Explorers' Guild. Existing passports with travel progress,
+signing in, importing a passport, or using **Unlock All Primary Features** in Settings skips feature
+gating. The starting tool also sets the initial class title to Cartographer, Field Ranger, or
+Chronicler until a travel archetype takes over.
 
 **America the Beautiful** is a Legendary achievement for visiting all 64 US National Parks.
 It uses the National Parks scratch-map ledger, including separate Sequoia and Kings Canyon
@@ -139,7 +149,10 @@ Completionist class. The current hard-coded Explorer Classes are:
 | Explorer Class | Description |
 | --- | --- |
 | Fresh Recruit | Default class before establishing a home Citadel. |
-| Scout | Default class after establishing a home Citadel, until a travel archetype qualifies. |
+| Scout | Fallback class after establishing a Citadel before choosing a starting tool. |
+| Cartographer | Starting class when Scratch Maps is the first tool chosen. |
+| Field Ranger | Starting class when Checklist & Catalog is the first tool chosen. |
+| Chronicler | Starting class when Travel Log is the first tool chosen. |
 | Alpine Ranger | Explorer of conifer forests, montane grasslands, and arid shrublands. |
 | Park Completionist | Devoted explorer of national preserves and wild sanctuaries. |
 | Biome Hunter | Explorer of boreal forests and tundra ecoregions. |
