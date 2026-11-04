@@ -18,7 +18,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Cinzel+Decorative:wght@700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/duotone/style.css">
   
   <script>
     tailwind.config = {
@@ -46,30 +46,32 @@
   </script>
   <script>
     const PHOSPHOR_ICONS = {
-      compass: { codePoint: 0xE1C8, color: '#fac60b' },
-      compassRose: { codePoint: 0xE1C6, color: '#eba400' },
-      listChecks: { codePoint: 0xEADC, color: '#fac60b' },
-      path: { codePoint: 0xE39C, color: '#f4c98c' },
-      notebook: { codePoint: 0xE34E, color: '#fac60b' },
-      userCircle: { codePoint: 0xE4C4, color: '#fac60b' },
-      house: { codePoint: 0xE2C2, color: '#eba400' },
-      shareFat: { codePoint: 0xED52, color: '#f4c98c' },
-      shareNetwork: { codePoint: 0xE408, color: '#fac60b' },
-      floppyDisk: { codePoint: 0xE248, color: '#eba400' },
-      downloadSimple: { codePoint: 0xE20C, color: '#fac60b' },
-      uploadSimple: { codePoint: 0xE4C0, color: '#fac60b' },
-      cloudCheck: { codePoint: 0xE1B0, color: '#fac60b' },
-      cloudSlash: { codePoint: 0xE1B6, color: '#36506b' },
-      cloudWarning: { codePoint: 0xEA98, color: '#eba400' },
-      cloudX: { codePoint: 0xEA96, color: '#f4c98c' },
-      gear: { codePoint: 0xE270, color: '#fac60b' },
-      mapTrifold: { codePoint: 0xE31A, color: '#fac60b' }
+      compass: { className: 'ph-compass', color: '#fac60b', secondaryColor: '#124777' },
+      compassRose: { className: 'ph-compass-rose', color: '#eba400', secondaryColor: '#36506b' },
+      listChecks: { className: 'ph-list-checks', color: '#fac60b', secondaryColor: '#124777' },
+      path: { className: 'ph-path', color: '#f4c98c', secondaryColor: '#36506b' },
+      notebook: { className: 'ph-notebook', color: '#fac60b', secondaryColor: '#124777' },
+      userCircle: { className: 'ph-user-circle', color: '#fac60b', secondaryColor: '#36506b' },
+      house: { className: 'ph-house', color: '#eba400', secondaryColor: '#124777' },
+      shareFat: { className: 'ph-share-fat', color: '#f4c98c', secondaryColor: '#36506b' },
+      shareNetwork: { className: 'ph-share-network', color: '#fac60b', secondaryColor: '#124777' },
+      floppyDisk: { className: 'ph-floppy-disk', color: '#eba400', secondaryColor: '#36506b' },
+      downloadSimple: { className: 'ph-download-simple', color: '#fac60b', secondaryColor: '#124777' },
+      uploadSimple: { className: 'ph-upload-simple', color: '#fac60b', secondaryColor: '#36506b' },
+      cloudCheck: { className: 'ph-cloud-check', color: '#fac60b', secondaryColor: '#36506b' },
+      cloudSlash: { className: 'ph-cloud-slash', color: '#36506b', secondaryColor: '#124777' },
+      cloudWarning: { className: 'ph-cloud-warning', color: '#eba400', secondaryColor: '#36506b' },
+      cloudX: { className: 'ph-cloud-x', color: '#f4c98c', secondaryColor: '#124777' },
+      gear: { className: 'ph-gear', color: '#fac60b', secondaryColor: '#36506b' },
+      mapTrifold: { className: 'ph-map-trifold', color: '#fac60b', secondaryColor: '#124777' }
     };
 
-    function cartovellaIcon(name, className = 'h-6 w-6', color) {
+    function cartovellaIcon(name, className = 'h-6 w-6', color, secondaryColor) {
       const phosphorIcon = PHOSPHOR_ICONS[name];
       if (phosphorIcon) {
-        return `<span aria-hidden="true" class="phosphor-icon inline-flex items-center justify-center ${className}" style="color:${color || phosphorIcon.color}">${String.fromCodePoint(phosphorIcon.codePoint)}</span>`;
+        const primaryColor = color || phosphorIcon.color;
+        const duotoneColor = secondaryColor || phosphorIcon.secondaryColor;
+        return `<span aria-hidden="true" class="phosphor-icon ph-duotone ${phosphorIcon.className} inline-flex items-center justify-center ${className}" style="color:${primaryColor};--phosphor-primary-color:${primaryColor};--phosphor-secondary-color:${duotoneColor}"></span>`;
       }
 
       const iconFiles = {
@@ -94,7 +96,7 @@
         cloud: 'cloudCheck'
       };
       if (Object.hasOwn(phosphorAliases, name)) {
-        return cartovellaIcon(phosphorAliases[name], className, color);
+        return cartovellaIcon(phosphorAliases[name], className, color, secondaryColor);
       }
       if (Object.hasOwn(iconFiles, name)) {
         return `<img src="assets/icons/${iconFiles[name]}" alt="" class="${className} object-contain">`;
@@ -137,7 +139,9 @@
       root.querySelectorAll('[data-cartovella-icon]').forEach(element => {
         element.innerHTML = cartovellaIcon(
           element.dataset.cartovellaIcon,
-          element.dataset.iconClass || 'h-6 w-6'
+          element.dataset.iconClass || 'h-6 w-6',
+          element.dataset.iconColor,
+          element.dataset.iconSecondaryColor
         );
       });
     }
@@ -166,7 +170,13 @@
     }
     .cinzel { font-family: 'Cinzel', serif; }
     .cinzel-deco { font-family: 'Cinzel Decorative', serif; }
-    .phosphor-icon { font-family: 'Phosphor' !important; font-weight: normal; font-style: normal; line-height: 1; }
+    .phosphor-icon { font-weight: normal; font-style: normal; line-height: 1; }
+    .phosphor-icon.ph-duotone { font-family: 'Phosphor-Duotone' !important; }
+    .phosphor-icon.ph-duotone::before {
+      color: var(--phosphor-secondary-color);
+      opacity: 1;
+    }
+    .phosphor-icon.ph-duotone::after { color: var(--phosphor-primary-color); }
     .phosphor-icon[class~="h-3"] { font-size: 0.75rem; }
     .phosphor-icon[class~="h-4"] { font-size: 1rem; }
     .phosphor-icon[class~="h-5"] { font-size: 1.25rem; }
@@ -1255,7 +1265,7 @@
         <span aria-hidden="true">&times;</span>
       </button>
       <div class="w-20 h-20 mx-auto rounded-3xl bg-gradient-to-tr from-amber-600 to-amber-300 flex items-center justify-center text-4xl shadow-xl shadow-amber-500/20">
-        <span data-cartovella-icon="citadel" data-icon-class="h-12 w-12" aria-hidden="true"></span>
+        <span data-cartovella-icon="citadel" data-icon-class="h-12 w-12" data-icon-color="#124777" data-icon-secondary-color="#36506b" aria-hidden="true"></span>
       </div>
       <div>
         <h2 id="homeBaseModalTitle" class="cinzel text-2xl sm:text-3xl font-extrabold text-amber-200">Establish Your Home Citadel</h2>
@@ -1296,7 +1306,7 @@
           <div class="flex-1 h-px bg-slate-800"></div>
         </div>
         <button id="btnHomeSignIn" type="button" class="w-full py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 font-semibold text-slate-950 text-sm flex items-center justify-center gap-2 transition-all">
-          <span data-cartovella-icon="cloud" data-icon-class="h-5 w-5" aria-hidden="true"></span> Sign In to an Existing Account
+          <span data-cartovella-icon="cloud" data-icon-class="h-5 w-5" data-icon-color="#124777" data-icon-secondary-color="#36506b" aria-hidden="true"></span> Sign In to an Existing Account
         </button>
         <button id="btnHomeImport" type="button" class="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 font-semibold text-slate-200 text-sm flex items-center justify-center gap-2 transition-all">
           <span data-cartovella-icon="import" data-icon-class="h-5 w-5" aria-hidden="true"></span> Import Passport (.json)

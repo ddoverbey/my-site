@@ -158,15 +158,17 @@ check('RPG Map keeps its fog-of-war icon and Route Map uses the Phosphor Path ic
   assert.match(html, /id="navTravel"[^>]*>[\s\S]*?data-icon-class="h-7 w-7 md:h-12 md:w-12"/);
   assert.match(html, /id="btnToggleTravelRoutes"[^>]*>[\s\S]*?data-cartovella-icon="routeMap"/);
   assert.match(html, /id="btnToggleTravelRoutes"[^>]*>[\s\S]*?data-icon-class="h-5 w-5"/);
-  assert.match(html, /href="https:\/\/cdn\.jsdelivr\.net\/npm\/@phosphor-icons\/web@2\.1\.1\/src\/regular\/style\.css"/);
-  for (const [name, codePoint] of Object.entries({
-    compass: 'E1C8', compassRose: 'E1C6', listChecks: 'EADC', path: 'E39C',
-    notebook: 'E34E', userCircle: 'E4C4', house: 'E2C2', shareFat: 'ED52',
-    shareNetwork: 'E408', floppyDisk: 'E248', downloadSimple: 'E20C',
-    uploadSimple: 'E4C0', cloudCheck: 'E1B0', cloudSlash: 'E1B6',
-    cloudWarning: 'EA98', cloudX: 'EA96', gear: 'E270', mapTrifold: 'E31A'
+  assert.match(html, /href="https:\/\/cdn\.jsdelivr\.net\/npm\/@phosphor-icons\/web@2\.1\.1\/src\/duotone\/style\.css"/);
+  assert.match(html, /id="homeBaseModal"[\s\S]*?data-cartovella-icon="citadel"[^>]*data-icon-color="#124777"[^>]*data-icon-secondary-color="#36506b"/);
+  assert.match(html, /id="btnHomeSignIn"[\s\S]*?data-cartovella-icon="cloud"[^>]*data-icon-color="#124777"[^>]*data-icon-secondary-color="#36506b"/);
+  for (const [name, className] of Object.entries({
+    compass: 'ph-compass', compassRose: 'ph-compass-rose', listChecks: 'ph-list-checks', path: 'ph-path',
+    notebook: 'ph-notebook', userCircle: 'ph-user-circle', house: 'ph-house', shareFat: 'ph-share-fat',
+    shareNetwork: 'ph-share-network', floppyDisk: 'ph-floppy-disk', downloadSimple: 'ph-download-simple',
+    uploadSimple: 'ph-upload-simple', cloudCheck: 'ph-cloud-check', cloudSlash: 'ph-cloud-slash',
+    cloudWarning: 'ph-cloud-warning', cloudX: 'ph-cloud-x', gear: 'ph-gear', mapTrifold: 'ph-map-trifold'
   })) {
-    assert.match(html, new RegExp(`${name}: \\{ codePoint: 0x${codePoint},`));
+    assert.match(html, new RegExp(`${name}: \\{ className: '${className}',`));
   }
 });
 check('refresh restores the signed-in UI and local atlas before supplemental data finishes loading', () => {
@@ -1746,7 +1748,7 @@ check('primary feature choices unlock by level and can be skipped', () => {
     const pathOptions = element('toolUnlockOptions').innerHTML;
     assert.match(pathOptions, /flex min-h-56 flex-col items-center/);
     assert.match(pathOptions, /whitespace-nowrap text-base font-bold text-\[#fac60b\]/);
-    assert.equal([...pathOptions.matchAll(/style="color:#eba400"/g)].length, 3);
+    assert.equal([...pathOptions.matchAll(/--phosphor-primary-color:#eba400/g)].length, 3);
     assert.ok(pathOptions.includes('text-[#fac60b]">Wayward Scribe</span>'));
     assert.ok(pathOptions.includes('text-[#eba400]">Travel Log</span>'));
     assert.ok(pathOptions.includes('mt-3 block text-xs leading-5 text-slate-200">Map routes & write trip stories</span>'));
@@ -1896,11 +1898,12 @@ check('all Cartovella icons use only official logo colors and reject invalid nam
   const usedColors = new Set();
   for (const name of names) {
     const icon = vm.runInContext(`cartovellaIcon('${name}', 'test-icon')`, context);
-    if (phosphorNames.has(name)) assert.match(icon, /class="phosphor-icon/);
+    if (phosphorNames.has(name)) assert.match(icon, /class="phosphor-icon ph-duotone ph-/);
     else assert.match(icon, /<svg/);
     const colors = [
       ...[...icon.matchAll(/(?:fill|stroke)="(#[0-9a-f]{6})"/gi)].map(match => match[1].toLowerCase()),
-      ...(icon.match(/style="color:(#[0-9a-f]{6})"/i) || []).slice(1).map(color => color.toLowerCase())
+      ...(icon.match(/style="color:(#[0-9a-f]{6})"/i) || []).slice(1).map(color => color.toLowerCase()),
+      ...[...icon.matchAll(/--phosphor-(?:primary|secondary)-color:(#[0-9a-f]{6})/gi)].map(match => match[1].toLowerCase())
     ];
     assert.ok(colors.length > 0, name);
     colors.forEach(color => {
@@ -4584,7 +4587,7 @@ try {
   vm.runInContext('renderExpeditionHistory()', context);
   check('missing expedition-stop rarity resolves asynchronously and displays its badge', () => {
     assert.equal(vm.runInContext("AppState.expeditions[0].routeStops[0].rarityTier", context), 'Deep Cut');
-    assert.ok(element('travelLogFeed').innerHTML.includes(String.fromCodePoint(0xE31A)));
+    assert.ok(element('travelLogFeed').innerHTML.includes('ph-map-trifold'));
     assert.ok(element('travelLogFeed').innerHTML.includes('Deep Cut'));
   });
 } finally {
@@ -6091,7 +6094,7 @@ check('catalog rarity badges appear on Travel Ledger cards and park popups', () 
   assert.ok(vm.runInContext('createPopupContent(PARKS[0])', context).includes('💎 Hidden Gem'));
   assert.ok(element('bucketListGrid').innerHTML.includes('🥾 Beaten Path'));
   const regionalStaplePopup = vm.runInContext('createPopupContent(PARKS[1])', context);
-  assert.ok(regionalStaplePopup.includes(String.fromCodePoint(0xE1C6)));
+  assert.ok(regionalStaplePopup.includes('ph-compass-rose'));
   assert.ok(regionalStaplePopup.includes('Regional Staple'));
 });
 const originalCatalogRenderHelpers = vm.runInContext('({lookupRarityWithFallback:CoordinateLookups.lookupRarityWithFallback,showNotification})', context);
@@ -8560,7 +8563,7 @@ check('Global Route Map renders country and expedition paths and toggles indepen
     assert.equal(classLists.get('btnExportRoutesPng').state.hidden, false);
     assert.equal(toggleAttributes['aria-expanded'], 'true');
     assert.equal(toggleAttributes['aria-pressed'], 'true');
-    assert.ok(toggle.innerHTML.includes(String.fromCodePoint(0xE34E)));
+    assert.ok(toggle.innerHTML.includes('ph-notebook'));
     assert.ok(toggle.innerHTML.includes('Travel Log'));
     assert.equal(toggleAttributes['aria-label'], 'Return to Travel Log');
     assert.equal(routeYear.value, 'all');
@@ -8677,7 +8680,7 @@ check('Global Route Map renders country and expedition paths and toggles indepen
     assert.equal(classLists.get('btnExportRoutesPng').state.hidden, true);
     assert.equal(toggleAttributes['aria-expanded'], 'false');
     assert.equal(toggleAttributes['aria-pressed'], 'false');
-    assert.ok(toggle.innerHTML.includes(String.fromCodePoint(0xE39C)));
+    assert.ok(toggle.innerHTML.includes('ph-path'));
     assert.ok(toggle.innerHTML.includes('Route Map'));
     assert.equal(toggleAttributes['aria-label'], 'Show Route Map');
   } finally {
