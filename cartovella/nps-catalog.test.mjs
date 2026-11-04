@@ -1745,10 +1745,14 @@ check('primary feature choices unlock by level and can be skipped', () => {
       /Choose a path\. Your class title lasts through Levels 1–2/);
     const pathOptions = element('toolUnlockOptions').innerHTML;
     assert.match(pathOptions, /flex min-h-56 flex-col items-center/);
+    assert.match(pathOptions, /whitespace-nowrap text-base font-bold text-\[#fac60b\]/);
     assert.equal([...pathOptions.matchAll(/style="color:#eba400"/g)].length, 3);
     assert.ok(pathOptions.includes('text-[#fac60b]">Wayward Scribe</span>'));
     assert.ok(pathOptions.includes('text-[#eba400]">Travel Log</span>'));
-    assert.ok(pathOptions.includes('mt-auto block pt-4 text-xs leading-5 text-slate-200">Map routes & write trip stories</span>'));
+    assert.ok(pathOptions.includes('mt-3 block text-xs leading-5 text-slate-200">Map routes & write trip stories</span>'));
+    assert.doesNotMatch(pathOptions, /mt-auto/);
+    assert.match(html, /id="toolUnlockOptions" class="grid gap-3 md:grid-cols-3"/);
+    assert.match(html, /id="toolUnlockModal"[\s\S]*?class="rpg-panel rpg-panel-gold max-w-3xl/);
     assert.match(pathOptions, /Scratch Maps/);
     assert.match(pathOptions, /Travel Ledger/);
     assert.match(pathOptions, /Travel Log/);
