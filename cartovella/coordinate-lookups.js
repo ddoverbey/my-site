@@ -15,8 +15,8 @@
   const RARITY_TIERS = Object.freeze({
     'Tourist Trap': Object.freeze({ icon: '📸', color: '#cbd5e1' }),
     'Beaten Path': Object.freeze({ icon: '🥾', color: '#4ade80' }),
-    'Regional Staple': Object.freeze({ icon: '🧭', color: '#22d3ee' }),
-    'Deep Cut': Object.freeze({ icon: '🗺️', color: '#c084fc' }),
+    'Regional Staple': Object.freeze({ icon: 'phosphor:compassRose', color: '#fac60b' }),
+    'Deep Cut': Object.freeze({ icon: 'phosphor:mapTrifold', color: '#f4c98c' }),
     'Hidden Gem': Object.freeze({ icon: '💎', color: '#fbbf24' }),
     Uncharted: Object.freeze({ icon: '🌌', color: '#f0abfc' })
   });

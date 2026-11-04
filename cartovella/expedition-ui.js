@@ -23,7 +23,10 @@ let expeditionDraftSaveTimer = null;
 function rarityBadgeMarkup(tier) {
   const rarity = CoordinateLookups.RARITY_TIERS[tier];
   if (!rarity) return '';
-  return `<span class="inline-flex items-center gap-1 rounded-full border bg-slate-950/70 px-2 py-0.5 text-[10px] font-semibold" data-rarity-tier="${escapeHtml(tier)}" style="color:${rarity.color};border-color:${rarity.color}" title="Location rarity: ${escapeHtml(tier)}">${escapeHtml(rarity.icon)} ${escapeHtml(tier)}</span>`;
+  const icon = rarity.icon.startsWith('phosphor:')
+    ? cartovellaIcon(rarity.icon.slice('phosphor:'.length), 'h-3 w-3')
+    : escapeHtml(rarity.icon);
+  return `<span class="inline-flex items-center gap-1 rounded-full border bg-slate-950/70 px-2 py-0.5 text-[10px] font-semibold" data-rarity-tier="${escapeHtml(tier)}" style="color:${rarity.color};border-color:${rarity.color}" title="Location rarity: ${escapeHtml(tier)}">${icon} ${escapeHtml(tier)}</span>`;
 }
 
 function expeditionDraftDatabase() {
@@ -1628,7 +1631,7 @@ function renderPublicExpeditionSummary(profile, expedition) {
       `<figure class="rotate-1 rounded bg-white p-2 pb-3 shadow-lg"><img src="${photo}" alt="Shared trip photo ${index + 1}" class="max-h-40 max-w-full object-cover" loading="lazy" decoding="async"></figure>`
     ).join('')}</div>` : ''}
     ${wishlistStops}
-    ${detailsShared && profile.visibility !== 'profile' ? `<button type="button" data-guild-open-travel="${escapeHtml(username)}" class="mt-3 rounded-lg border border-sky-400/40 bg-sky-950/40 px-3 py-2 text-xs text-sky-200 hover:bg-sky-900/50">Open in Explorer's Travel Log (📖)</button>` : ''}
+    ${detailsShared && profile.visibility !== 'profile' ? `<button type="button" data-guild-open-travel="${escapeHtml(username)}" class="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-sky-400/40 bg-sky-950/40 px-3 py-2 text-xs text-sky-200 hover:bg-sky-900/50">${cartovellaIcon('notebook', 'h-4 w-4')} Open in Explorer's Travel Log</button>` : ''}
   </article>`;
 }
 
@@ -1879,7 +1882,7 @@ function setGlobalRoutesView(open) {
   document.getElementById('travelLogFeed').classList.toggle('hidden', open);
   document.getElementById('btnExportRoutesPng').classList.toggle('hidden', !open);
   const toggle = document.getElementById('btnToggleTravelRoutes');
-  toggle.textContent = open ? '📖 Travel Log' : '🗺️ Route Map';
+  toggle.innerHTML = `${cartovellaIcon(open ? 'notebook' : 'path', 'h-5 w-5')} ${open ? 'Travel Log' : 'Route Map'}`;
   toggle.setAttribute('aria-label', open ? 'Return to Travel Log' : 'Show Route Map');
   toggle.setAttribute('aria-expanded', String(open));
   toggle.setAttribute('aria-pressed', String(open));

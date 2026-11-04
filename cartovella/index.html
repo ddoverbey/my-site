@@ -18,6 +18,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Cinzel+Decorative:wght@700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css">
   
   <script>
     tailwind.config = {
@@ -44,16 +45,57 @@
     }
   </script>
   <script>
-    function cartovellaIcon(name, className = 'h-6 w-6') {
+    const PHOSPHOR_ICONS = {
+      compass: { codePoint: 0xE1C8, color: '#fac60b' },
+      compassRose: { codePoint: 0xE1C6, color: '#eba400' },
+      listChecks: { codePoint: 0xEADC, color: '#fac60b' },
+      path: { codePoint: 0xE39C, color: '#f4c98c' },
+      notebook: { codePoint: 0xE34E, color: '#fac60b' },
+      userCircle: { codePoint: 0xE4C4, color: '#fac60b' },
+      house: { codePoint: 0xE2C2, color: '#eba400' },
+      shareFat: { codePoint: 0xED52, color: '#f4c98c' },
+      shareNetwork: { codePoint: 0xE408, color: '#fac60b' },
+      floppyDisk: { codePoint: 0xE248, color: '#eba400' },
+      downloadSimple: { codePoint: 0xE20C, color: '#fac60b' },
+      uploadSimple: { codePoint: 0xE4C0, color: '#fac60b' },
+      cloudCheck: { codePoint: 0xE1B0, color: '#fac60b' },
+      cloudSlash: { codePoint: 0xE1B6, color: '#36506b' },
+      cloudWarning: { codePoint: 0xEA98, color: '#eba400' },
+      cloudX: { codePoint: 0xEA96, color: '#f4c98c' },
+      gear: { codePoint: 0xE270, color: '#fac60b' },
+      mapTrifold: { codePoint: 0xE31A, color: '#fac60b' }
+    };
+
+    function cartovellaIcon(name, className = 'h-6 w-6', color) {
+      const phosphorIcon = PHOSPHOR_ICONS[name];
+      if (phosphorIcon) {
+        return `<span aria-hidden="true" class="phosphor-icon inline-flex items-center justify-center ${className}" style="color:${color || phosphorIcon.color}">${String.fromCodePoint(phosphorIcon.codePoint)}</span>`;
+      }
+
       const iconFiles = {
         rpgMap: 'fog-of-war-icon.svg',
-        routeMap: 'route-map.svg',
-        travelLedger: 'travel-ledger.svg',
-        scratchMap: 'scratch-map.svg',
         travelLog: 'travel-journal.svg',
-        explorerProfile: 'profile-icon.svg',
         explorersGuild: 'explorer-guild.svg'
       };
+      const phosphorAliases = {
+        routeMap: 'path',
+        travelLedger: 'listChecks',
+        scratchMap: 'mapTrifold',
+        explorerProfile: 'userCircle',
+        citadel: 'house',
+        checklist: 'listChecks',
+        compassRose: 'compassRose',
+        journal: 'notebook',
+        share: 'shareNetwork',
+        save: 'floppyDisk',
+        export: 'downloadSimple',
+        import: 'uploadSimple',
+        settings: 'gear',
+        cloud: 'cloudCheck'
+      };
+      if (Object.hasOwn(phosphorAliases, name)) {
+        return cartovellaIcon(phosphorAliases[name], className);
+      }
       if (Object.hasOwn(iconFiles, name)) {
         return `<img src="assets/icons/${iconFiles[name]}" alt="" class="${className} object-contain">`;
       }
@@ -99,6 +141,12 @@
         );
       });
     }
+
+    function cartovellaIconTokenMarkup(value, className = 'h-4 w-4') {
+      return String(value || '').split('+').map(token => token.startsWith('phosphor:')
+        ? cartovellaIcon(token.slice('phosphor:'.length), className)
+        : `<span aria-hidden="true">${escapeHtml(token)}</span>`).join('');
+    }
   </script>
 
   <style>
@@ -118,6 +166,19 @@
     }
     .cinzel { font-family: 'Cinzel', serif; }
     .cinzel-deco { font-family: 'Cinzel Decorative', serif; }
+    .phosphor-icon { font-family: 'Phosphor' !important; font-weight: normal; font-style: normal; line-height: 1; }
+    .phosphor-icon[class~="h-3"] { font-size: 0.75rem; }
+    .phosphor-icon[class~="h-4"] { font-size: 1rem; }
+    .phosphor-icon[class~="h-5"] { font-size: 1.25rem; }
+    .phosphor-icon[class~="h-6"] { font-size: 1.5rem; }
+    .phosphor-icon[class~="h-7"] { font-size: 1.75rem; }
+    .phosphor-icon[class~="h-8"] { font-size: 2rem; }
+    .phosphor-icon[class~="h-10"] { font-size: 2.5rem; }
+    .phosphor-icon[class~="h-12"] { font-size: 3rem; }
+    @media (min-width: 768px) {
+      .phosphor-icon[class~="md:h-10"] { font-size: 2.5rem; }
+      .phosphor-icon[class~="md:h-12"] { font-size: 3rem; }
+    }
     #characterCustomization { position: relative; z-index: 30; }
     #characterCustomization details[open] { z-index: 60; }
     #characterCustomization details.drop-up > .visual-dropdown-options {
@@ -501,7 +562,7 @@
           <span data-cartovella-icon="scratchMap" data-icon-class="h-6 w-6 md:h-10 md:w-10" aria-hidden="true"></span>
         </button>
         <button id="navTravel" type="button" data-tab="travel" class="header-icon hidden" data-tooltip="Travel Log" title="Travel Log" aria-label="Travel Log" aria-pressed="false" aria-controls="tabContent-travel">
-          <span data-cartovella-icon="travelLog" data-icon-class="h-6 w-6 md:h-10 md:w-10" aria-hidden="true"></span>
+          <span data-cartovella-icon="travelLog" data-icon-class="h-7 w-7 md:h-12 md:w-12" aria-hidden="true"></span>
         </button>
         <button id="navExplorer" type="button" data-tab="passport" class="header-icon hidden" data-tooltip="Explorer Profile" title="Explorer Profile" aria-label="Explorer Profile" aria-pressed="false" aria-controls="tabContent-passport">
           <span data-cartovella-icon="explorerProfile" data-icon-class="h-6 w-6 md:h-10 md:w-10" aria-hidden="true"></span>
@@ -517,10 +578,10 @@
       <span id="headerSaveStatus" class="hidden max-w-[7rem] truncate rounded-lg border border-slate-700 bg-slate-900/80 px-2 py-1 text-[10px] text-slate-300 sm:text-xs" role="status" aria-live="polite"></span>
 
       <button id="btnCloudAuth" type="button" class="relative inline-flex min-h-10 items-center gap-2 rounded-full border border-[#eba400] bg-[#fac60b] px-3 py-2 text-xs font-bold text-[#124777] shadow-lg shadow-amber-950/30 transition hover:bg-[#eba400] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#f4c98c]" aria-label="Sign In">
-        <span id="btnCloudAuthIcon" data-cartovella-icon="cloud" data-icon-class="h-5 w-5" aria-hidden="true"></span>
+        <span id="btnCloudAuthIcon" data-cartovella-icon="cloudSlash" data-icon-class="h-5 w-5" aria-hidden="true"></span>
         <canvas id="headerAccountAvatar" width="24" height="24" aria-hidden="true" class="hidden h-6 w-6 rounded-full border border-amber-200/60 bg-slate-900" style="image-rendering:pixelated"></canvas>
         <span id="btnCloudAuthLabel" class="max-w-24 truncate">Sign In</span>
-        <span id="syncStatusDot" class="absolute top-1 right-1 w-2 h-2 rounded-full bg-slate-500" aria-hidden="true"></span>
+        <span id="syncStatusDot" class="absolute -top-1 -right-1 hidden h-5 w-5 items-center justify-center rounded-full border border-slate-700 bg-slate-950" aria-hidden="true"></span>
       </button>
 
       <details id="settingsMenu" class="relative">
@@ -533,7 +594,7 @@
           </button>
           <hr class="border-slate-800 my-1">
           <button id="btnShare" type="button" class="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-800 flex items-center gap-2">
-            <span data-cartovella-icon="share" data-icon-class="h-4 w-4" aria-hidden="true"></span> Copy Public Profile Link
+            <span data-cartovella-icon="shareNetwork" data-icon-class="h-4 w-4" aria-hidden="true"></span> Copy Public Profile Link
           </button>
           <button id="btnManualSave" type="button" class="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-800 flex items-center gap-2" aria-label="Save now">
             <span data-cartovella-icon="save" data-icon-class="h-4 w-4" aria-hidden="true"></span> Save now
@@ -943,7 +1004,7 @@
             <p class="text-xs text-slate-400 mt-2">Your trips, one story at a time.</p>
           </div>
           <div class="flex flex-wrap items-center gap-2">
-            <button id="btnToggleTravelRoutes" type="button" class="shrink-0 rounded-lg bg-slate-800 px-3 py-2 text-xs text-sky-200 inline-flex items-center gap-1.5" aria-label="Show Route Map" aria-controls="travelGlobalRoutesPanel" aria-expanded="false" aria-pressed="false"><span data-cartovella-icon="routeMap" data-icon-class="h-5 w-5" aria-hidden="true"></span> Route Map</button>
+            <button id="btnToggleTravelRoutes" type="button" class="shrink-0 rounded-lg bg-slate-800 px-3 py-2 text-xs text-[#f4c98c] inline-flex items-center gap-1.5" aria-label="Show Route Map" aria-controls="travelGlobalRoutesPanel" aria-expanded="false" aria-pressed="false"><span data-cartovella-icon="routeMap" data-icon-class="h-5 w-5" aria-hidden="true"></span> Route Map</button>
             <button id="btnExportRoutesPng" type="button" class="hidden shrink-0 rounded-lg bg-amber-600 px-3 py-2 text-xs font-semibold text-slate-950 inline-flex items-center gap-1.5"><span data-cartovella-icon="photo" data-icon-class="h-4 w-4" aria-hidden="true"></span> Export Map (.png)</button>
             <button id="btnShareAllTrips" type="button" aria-controls="bulkTripSharingDialog" class="shrink-0 rounded-lg bg-sky-800 px-3 py-2 text-xs text-sky-100">Share all trips</button>
             <button id="btnUnshareAllTrips" type="button" aria-controls="bulkTripSharingDialog" class="shrink-0 rounded-lg bg-slate-800 px-3 py-2 text-xs text-rose-200">Unshare all</button>
@@ -1439,7 +1500,7 @@
       </div>
       <div id="authViewLoggedIn" class="hidden space-y-4">
         <div class="rounded-xl border border-emerald-500/30 bg-slate-950/60 p-3">
-          <p id="authCloudStatusLabel" class="text-xs font-semibold text-slate-300">● Cloud account</p>
+          <p id="authCloudStatusLabel" class="inline-flex items-center gap-1 text-xs font-semibold text-[#36506b]"><span data-cartovella-icon="cloudSlash" data-icon-class="h-4 w-4" aria-hidden="true"></span><span>Not signed in</span></p>
           <p id="authCurrentEmail" class="mt-1 truncate text-xs text-slate-200"></p>
           <p id="authSyncStatusText" class="mt-2 text-[11px] text-slate-400" role="status" aria-live="polite">Waiting for cloud data…</p>
         </div>
@@ -2137,8 +2198,8 @@
       mariner: ['⛴️', '#14532d', ['uncommon']],
       focal: ['📷', '#3b0764', ['rare']],
       southernCross: ['🌌', '#172554', ['rare']],
-      localLore: ['🏰💎', '#134e4a', ['rare']],
-      zeroMeridian: ['🏰', '#334155', ['common']],
+      localLore: ['phosphor:house+💎', '#134e4a', ['rare']],
+      zeroMeridian: ['phosphor:house', '#334155', ['common']],
       beyondHorizon: ['🌅', '#0e4f5c', ['rare']],
       international: ['🌍✈️', '#14532d', ['uncommon']],
       touchGrass: ['🌿', '#14532d', ['common']],
@@ -2146,7 +2207,7 @@
       earthSandwich: ['🌍🥪', '#172554', ['mythic']],
       longDark: ['❄️🌙', '#172554', ['epic']],
       latitudeSpan: ['🌐↕️', '#1e3a5f', ['epic']],
-      counties: ['🗺️', '#422006', ['mythic']],
+      counties: ['phosphor:mapTrifold', '#422006', ['mythic']],
       worldAtlas: ['🌍👑', '#2e1065', ['mythic']],
       countryRoads: ['🛣️🏡', '#155e75', ['rare']],
       rockyMountainHigh: ['🏔️🎵', '#365314', ['uncommon']]
@@ -2253,23 +2314,20 @@
         id: 'scratch',
         name: 'Scratch Maps',
         classTitle: 'Realm Cartographer',
-        emoji: '🗺️',
         description: 'Color in countries, states & counties',
-        icon: 'map'
+        icon: 'mapTrifold'
       },
       {
         id: 'bucketlist',
         name: 'Travel Ledger',
         classTitle: 'Field Ranger',
-        emoji: '📋',
         description: 'Check off parks & cities from a catalog',
-        icon: 'checklist'
+        icon: 'listChecks'
       },
       {
         id: 'travel',
         name: 'Travel Log',
         classTitle: 'Wayward Scribe',
-        emoji: '📖',
         description: 'Map routes & write trip stories',
         icon: 'journal'
       }
@@ -2998,12 +3056,12 @@
       messageElement.classList.remove('hidden');
       const iconNames = {
         '🏆': 'trophy', '✨': 'credits', '🧭': 'compass', '⚠️': 'warning',
-        '📂': 'import', '📜': 'journal', '🗺️': 'map', '🏰': 'citadel',
-        '🔗': 'share', '🌐': 'globe', '💾': 'save', '📡': 'locator',
+        '📂': 'uploadSimple', '📜': 'journal', '🗺️': 'mapTrifold', '🏰': 'house',
+        '🔗': 'shareFat', '🌐': 'globe', '💾': 'floppyDisk', '📡': 'locator', '☁️': 'cloudCheck',
         '🏞️': 'map', '📌': 'pin', '📍': 'pin'
       };
       document.getElementById('toastIcon').innerHTML =
-        cartovellaIcon(iconNames[icon] || 'shield', 'h-7 w-7');
+        cartovellaIcon(iconNames[icon] || (Object.hasOwn(PHOSPHOR_ICONS, icon) ? icon : 'shield'), 'h-7 w-7');
       displayNotificationToast();
     }
 
@@ -3488,7 +3546,7 @@
       let cls = AppState.homeBase ? starterClass?.[0] || 'Scout' : 'Fresh Recruit';
       let titleDesc = AppState.homeBase ? starterClass?.[1] || 'Citadel established. Your first expedition awaits.' :
         'The journey of ten thousand leagues begins with a single step.';
-      let avatar = '🧭';
+      let avatar = 'phosphor:compass';
 
       if (level >= 3 && sortedAxes[0][1] > 0.05 &&
           (!AppState.homeBase || visitedLocations.length || AppState.expeditions.length || countiesCount > 1 ||
@@ -5102,7 +5160,7 @@
           <div class="relative flex items-center justify-center">
             <div class="absolute w-12 h-12 rounded-full bg-amber-400/20 aura-ring"></div>
             <div class="w-8 h-8 rounded-full bg-amber-500 border-2 border-white shadow-xl flex items-center justify-center text-sm shadow-amber-500/50">
-              🏰
+              ${cartovellaIcon('house', 'h-5 w-5', '#124777')}
             </div>
           </div>
         `,
@@ -6720,7 +6778,10 @@
       if (!locations.length) return '<p class="text-xs text-slate-500">No saved locations or logged stops are linked to this record.</p>';
       return `<ul class="max-h-64 space-y-1.5 overflow-y-auto pr-1">${locations.map(location => {
         const clickable = ['park', 'poi', 'county'].includes(location.kind);
-        const label = `${location.kind === 'county' ? '🗺️' : location.kind === 'park' ? '🏞️' : location.kind === 'poi' ? '📌' : '📍'} ${escapeHtml(location.name)}`;
+        const icon = location.kind === 'county'
+          ? cartovellaIcon('mapTrifold', 'h-4 w-4')
+          : location.kind === 'park' ? '🏞️' : location.kind === 'poi' ? '📌' : '📍';
+        const label = `${icon} ${escapeHtml(location.name)}`;
         const button = clickable
           ? `<button type="button" data-atlas-pin-kind="${location.kind === 'county' ? 'county' : 'destination'}" data-atlas-pin-id="${escapeHtml(location.id)}" class="text-left text-sm text-slate-200 hover:text-amber-200 underline decoration-slate-600 underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400">${label}</button>`
           : `<span class="text-sm text-slate-200">${label}</span>`;
@@ -6749,6 +6810,7 @@
       }
 
       let title = '';
+      let titleIcon = '';
       let subtitle = '';
       let locations = [];
       let trips = [];
@@ -6779,7 +6841,8 @@
             : '').join('')}</div></section>` : '';
       } else if (kind === 'county') {
         const county = countyFeaturesById[id];
-        title = `🗺️ ${county?.properties?.name || `County ${id}`}`;
+        title = county?.properties?.name || `County ${id}`;
+        titleIcon = cartovellaIcon('mapTrifold', 'h-5 w-5 mr-2');
         subtitle = `County ${id}`;
         locations = [{ kind: 'county', id, name: county?.properties?.name || `County ${id}` }];
         trips = AppState.expeditions.filter(trip => trip.countyIds.includes(id) ||
@@ -6788,7 +6851,7 @@
         return;
       }
 
-      document.getElementById('atlasPinTitle').textContent = title;
+      document.getElementById('atlasPinTitle').innerHTML = `${titleIcon}${escapeHtml(title)}`;
       document.getElementById('atlasPinSubtitle').textContent = subtitle;
       document.getElementById('atlasPinContent').innerHTML = `
         ${extraMarkup}
@@ -6920,7 +6983,7 @@
     function achievementIconMarkup(achievement, tier, unmet = false) {
       const image = unmet ? UNMET_ACHIEVEMENT_IMAGE : ACHIEVEMENT_IMAGES[tier.title];
       return image ? `<img src="./assets/achievements/${image}" alt="" loading="lazy" decoding="async">`
-        : `<span aria-hidden="true">${achievement.icon}</span>`;
+        : cartovellaIconTokenMarkup(achievement.icon, 'h-7 w-7');
     }
 
     function renderEarnedAchievementBadges(stats) {
@@ -7529,7 +7592,10 @@
       document.getElementById('hudBiomesCount').textContent = `${biomeCatalogLoaded ? stats.biomesSet.size : '--'} / ${Object.keys(BIOMES).length}`;
       document.getElementById('hudQuestsCount').textContent = `${stats.completedQuestsCount} / ${QUESTLINES.length}`;
       document.getElementById('hudCountiesCount').textContent = `${stats.countiesCount} / ${stats.countyTotal || '--'}`;
-      document.getElementById('hudClassIcon').innerHTML = cartovellaIcon('shield', 'h-5 w-5');
+      document.getElementById('hudClassIcon').innerHTML = cartovellaIcon(
+        stats.avatar === 'phosphor:compass' ? 'compass' : 'shield',
+        'h-5 w-5'
+      );
       renderHudActiveQuests(stats);
     }
 
@@ -7597,11 +7663,11 @@
         ? 'Your starting class lasts through Level 2. Choose one more tool; at Level 3, your Archetype Radar Chart shapes your Explorer Class and the final tool unlocks.'
         : 'Choose a path. Your class title lasts through Levels 1–2; at Level 3, your Archetype Radar Chart shapes your Explorer Class. Your other tools unlock as you level up.';
       document.getElementById('toolUnlockOptions').innerHTML = available.map(feature => `
-        <button type="button" data-feature-tool="${feature.id}" aria-label="${feature.emoji} ${feature.classTitle} — ${feature.name}" class="rpg-panel rounded-2xl p-4 text-left transition hover:border-amber-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400">
+        <button type="button" data-feature-tool="${feature.id}" aria-label="${feature.classTitle} — ${feature.name}" class="rpg-panel rounded-2xl p-4 text-left transition hover:border-amber-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400">
           <span class="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-slate-950 text-amber-200">
             ${cartovellaIcon(feature.icon, 'h-6 w-6')}
           </span>
-          <span class="block text-sm font-bold text-amber-200">${feature.emoji} ${feature.classTitle} — ${feature.name}</span>
+          <span class="block text-sm font-bold text-amber-200 inline-flex items-center gap-2">${cartovellaIcon(feature.icon, 'h-5 w-5')} ${feature.classTitle} — ${feature.name}</span>
           <span class="mt-1 block text-xs leading-5 text-slate-200">${feature.description}</span>
         </button>
       `).join('');
@@ -8002,8 +8068,9 @@
         const shareUrl = currentShareUrl();
         if (!shareUrl) throw new Error('A public profile link is unavailable. Save your profile visibility first.');
         await copyTextToClipboard(shareUrl);
-        showNotification('🔗 Link Copied!', publicProfile.visibility === 'profile'
-          ? 'Your Explorer card and shared trips link was copied.' : 'Your public passport link was copied.', '📜');
+        showNotification('Link Copied!', publicProfile.visibility === 'profile'
+          ? 'Your Explorer card and shared trips link was copied.' : 'Your public passport link was copied.',
+          publicProfile.visibility === 'profile' ? 'shareNetwork' : 'shareFat');
       } catch (error) {
         console.error('Share link copy failed.', error);
         showNotification('Could not copy link', error.message, '⚠️');
@@ -8335,24 +8402,26 @@
       latestCloudStatusFailed = failed;
       const status = document.getElementById('authSyncStatusText');
       if (status) status.textContent = message;
+      const saving = message.startsWith('Saving') || message.startsWith('A newer change');
+      const connecting = /^(Loading|Restoring|Checking)/.test(message);
+      const iconName = failed ? 'cloudX' : !cloudSession?.user ? 'cloudSlash'
+        : saving || connecting ? 'cloudWarning' : 'cloudCheck';
       const cloudLabel = document.getElementById('authCloudStatusLabel');
       if (cloudLabel) {
         const label = !cloudSession?.user
-          ? '● Not signed in'
+          ? 'Not signed in'
           : failed
-            ? '● Cloud sync issue'
-            : /^(Loading|Restoring|Checking)/.test(message)
-              ? '● Connecting to cloud'
-              : '● Cloud connected';
-        cloudLabel.textContent = label;
-        cloudLabel.className = `text-xs font-semibold ${failed ? 'text-rose-300' : cloudSession?.user ? 'text-emerald-300' : 'text-slate-400'}`;
+            ? 'Cloud sync issue'
+            : saving || connecting ? 'Connecting to cloud' : 'Cloud connected';
+        cloudLabel.innerHTML = `${cartovellaIcon(iconName, 'h-4 w-4')}<span>${label}</span>`;
+        cloudLabel.className = `inline-flex items-center gap-1 text-xs font-semibold ${
+          failed ? 'text-[#f4c98c]' : cloudSession?.user ? 'text-[#fac60b]' : 'text-[#36506b]'
+        }`;
       }
       const dot = document.getElementById('syncStatusDot');
       if (dot) {
-        const saving = message.startsWith('Saving') || message.startsWith('A newer change');
-        dot.className = `absolute top-1 right-1 w-2 h-2 rounded-full ${
-          failed ? 'bg-rose-500' : saving ? 'bg-amber-400' : cloudSession ? 'bg-emerald-400' : 'bg-slate-500'
-        }`;
+        dot.innerHTML = cartovellaIcon(iconName, 'h-4 w-4');
+        dot.className = `absolute -top-1 -right-1 ${!cloudSession?.user && !failed ? 'hidden' : 'inline-flex'} h-5 w-5 items-center justify-center rounded-full border border-slate-700 bg-slate-950`;
         dot.title = message;
       }
       updateHeaderSaveStatus();
@@ -9262,7 +9331,7 @@
     function renderGuildExplorerCard(profile) {
       const stats = profile.summary_stats || {};
       const badges = (Array.isArray(stats.topBadges) ? stats.topBadges : []).slice(0, 4)
-        .map(badge => `<span class="rounded-full border border-amber-300/20 bg-amber-950/40 px-2 py-1 text-[10px] text-amber-100" title="${escapeHtml(badge.title || '')}">${escapeHtml(badge.icon || '🏆')} ${escapeHtml(badge.title || '')}</span>`)
+        .map(badge => `<span class="rounded-full border border-amber-300/20 bg-amber-950/40 px-2 py-1 text-[10px] text-amber-100" title="${escapeHtml(badge.title || '')}">${cartovellaIconTokenMarkup(badge.icon || '🏆', 'h-3 w-3')} ${escapeHtml(badge.title || '')}</span>`)
         .join('');
       const stat = value => Number.isFinite(Number(value)) ? Number(value).toLocaleString('en') : '0';
       const totalMiles = Number.isFinite(stats.totalMiles) && stats.totalMiles >= 0

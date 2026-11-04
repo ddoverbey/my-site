@@ -273,6 +273,10 @@ await check('30-day browser cache reuses rounded coordinate grids, expires, and 
   await assert.rejects(lookups.lookupRarity(1, 1, async () => response({ remark: 'runtime timeout', elements: [] }), failedCache), /timeout/);
   assert.equal(failedCache.values.size, 0);
 });
+await check('Regional Staple and Deep Cut use their requested Phosphor icons', async () => {
+  assert.equal(lookups.RARITY_TIERS['Regional Staple'].icon, 'phosphor:compassRose');
+  assert.equal(lookups.RARITY_TIERS['Deep Cut'].icon, 'phosphor:mapTrifold');
+});
 await check('catalog park rarity prefers saved and cached values before deterministic offline metadata', async () => {
   const park = { id: 'offline', name: 'Offline Park', designation: 'National Monument', lat: 1, lng: 1 };
   assert.equal(lookups.catalogParkRarity(park).rarityTier, 'Regional Staple');

@@ -76,8 +76,8 @@ check('all rarity tiers expose their canonical badge icons and colors', () => {
   assert.deepEqual(JSON.parse(JSON.stringify(coordinateLookups.RARITY_TIERS)), {
     'Tourist Trap': { icon: '📸', color: '#cbd5e1' },
     'Beaten Path': { icon: '🥾', color: '#4ade80' },
-    'Regional Staple': { icon: '🧭', color: '#22d3ee' },
-    'Deep Cut': { icon: '🗺️', color: '#c084fc' },
+    'Regional Staple': { icon: 'phosphor:compassRose', color: '#fac60b' },
+    'Deep Cut': { icon: 'phosphor:mapTrifold', color: '#f4c98c' },
     'Hidden Gem': { icon: '💎', color: '#fbbf24' },
     'Uncharted': { icon: '🌌', color: '#f0abfc' }
   });
@@ -145,15 +145,29 @@ const legacyRoute = await readFile(new URL('../wanderlog/index.html', import.met
 const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)]
   .map(match => /src="\.\/expedition-ui\.js(?:\?[^"]*)?"/.test(match[0]) ? expeditionUi : match[1]);
 check('every inline script parses', () => scripts.forEach(script => new vm.Script(script)));
-check('RPG Map uses the fog-of-war icon and Route Map uses the route-map icon', () => {
+check('RPG Map keeps its fog-of-war icon and Route Map uses the Phosphor Path icon', () => {
   assert.match(html, /rpgMap: 'fog-of-war-icon\.svg'/);
-  assert.match(html, /routeMap: 'route-map\.svg'/);
+  assert.match(html, /routeMap: 'path'/);
   assert.match(html, /id="navMap"[^>]*>[\s\S]*?data-cartovella-icon="rpgMap"/);
   assert.match(html, /#navTabs \.header-icon \{ width: 2\.5rem; height: 2\.5rem; \}/);
   assert.match(html, /@media \(min-width: 768px\) \{\s*#navTabs \.header-icon \{ width: 4rem; height: 4rem; \}\s*\}/);
   assert.match(html, /id="navMap"[^>]*>[\s\S]*?data-icon-class="h-6 w-6 md:h-10 md:w-10"/);
+  assert.match(html, /id="navBucketlist"[^>]*>[\s\S]*?data-cartovella-icon="travelLedger"/);
+  assert.match(html, /id="navExplorer"[^>]*>[\s\S]*?data-cartovella-icon="explorerProfile"/);
+  assert.match(html, /id="navScratch"[^>]*>[\s\S]*?data-cartovella-icon="scratchMap"/);
+  assert.match(html, /id="navTravel"[^>]*>[\s\S]*?data-icon-class="h-7 w-7 md:h-12 md:w-12"/);
   assert.match(html, /id="btnToggleTravelRoutes"[^>]*>[\s\S]*?data-cartovella-icon="routeMap"/);
   assert.match(html, /id="btnToggleTravelRoutes"[^>]*>[\s\S]*?data-icon-class="h-5 w-5"/);
+  assert.match(html, /href="https:\/\/cdn\.jsdelivr\.net\/npm\/@phosphor-icons\/web@2\.1\.1\/src\/regular\/style\.css"/);
+  for (const [name, codePoint] of Object.entries({
+    compass: 'E1C8', compassRose: 'E1C6', listChecks: 'EADC', path: 'E39C',
+    notebook: 'E34E', userCircle: 'E4C4', house: 'E2C2', shareFat: 'ED52',
+    shareNetwork: 'E408', floppyDisk: 'E248', downloadSimple: 'E20C',
+    uploadSimple: 'E4C0', cloudCheck: 'E1B0', cloudSlash: 'E1B6',
+    cloudWarning: 'EA98', cloudX: 'EA96', gear: 'E270', mapTrifold: 'E31A'
+  })) {
+    assert.match(html, new RegExp(`${name}: \\{ codePoint: 0x${codePoint},`));
+  }
 });
 check('refresh restores the signed-in UI and local atlas before supplemental data finishes loading', () => {
   const startup = html.slice(html.indexOf("window.addEventListener('DOMContentLoaded'"));
@@ -1639,7 +1653,8 @@ check('six icon-only header tabs keep primary navigation clean', () => {
   ]) {
     assert.match(nav, new RegExp(`<button id="${id}"[^>]*data-tab="${tab}"`));
     assert.ok(nav.includes(`data-cartovella-icon="${icon}"`));
-    assert.ok(nav.includes(`data-cartovella-icon="${icon}" data-icon-class="h-6 w-6 md:h-10 md:w-10"`));
+    const iconClass = id === 'navTravel' ? 'h-7 w-7 md:h-12 md:w-12' : 'h-6 w-6 md:h-10 md:w-10';
+    assert.ok(nav.includes(`data-cartovella-icon="${icon}" data-icon-class="${iconClass}"`));
     assert.match(nav, new RegExp(`data-tooltip="${label}" title="${label}" aria-label="${label}"`));
   }
   assert.equal([...nav.matchAll(/<button\b/g)].length, 6);
@@ -4547,7 +4562,8 @@ try {
   vm.runInContext('renderExpeditionHistory()', context);
   check('missing expedition-stop rarity resolves asynchronously and displays its badge', () => {
     assert.equal(vm.runInContext("AppState.expeditions[0].routeStops[0].rarityTier", context), 'Deep Cut');
-    assert.ok(element('travelLogFeed').innerHTML.includes('🗺️ Deep Cut'));
+    assert.ok(element('travelLogFeed').innerHTML.includes(String.fromCodePoint(0xE31A)));
+    assert.ok(element('travelLogFeed').innerHTML.includes('Deep Cut'));
   });
 } finally {
   context.rarityEnrichmentHelpers = rarityEnrichmentHelpers;
@@ -8520,7 +8536,8 @@ check('Global Route Map renders country and expedition paths and toggles indepen
     assert.equal(classLists.get('btnExportRoutesPng').state.hidden, false);
     assert.equal(toggleAttributes['aria-expanded'], 'true');
     assert.equal(toggleAttributes['aria-pressed'], 'true');
-    assert.equal(toggle.textContent, '📖 Travel Log');
+    assert.ok(toggle.innerHTML.includes(String.fromCodePoint(0xE34E)));
+    assert.ok(toggle.innerHTML.includes('Travel Log'));
     assert.equal(toggleAttributes['aria-label'], 'Return to Travel Log');
     assert.equal(routeYear.value, 'all');
     assert.match(routeYear.innerHTML, /value="2026">2026/);
@@ -8636,7 +8653,8 @@ check('Global Route Map renders country and expedition paths and toggles indepen
     assert.equal(classLists.get('btnExportRoutesPng').state.hidden, true);
     assert.equal(toggleAttributes['aria-expanded'], 'false');
     assert.equal(toggleAttributes['aria-pressed'], 'false');
-    assert.equal(toggle.textContent, '🗺️ Route Map');
+    assert.ok(toggle.innerHTML.includes(String.fromCodePoint(0xE39C)));
+    assert.ok(toggle.innerHTML.includes('Route Map'));
     assert.equal(toggleAttributes['aria-label'], 'Show Route Map');
   } finally {
     for (const [id, entry] of classLists) element(id).classList = entry.original;
