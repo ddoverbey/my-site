@@ -412,6 +412,29 @@
       background: linear-gradient(90deg, #10b981 0%, #34d399 50%, #10b981 100%);
       background-size: 200% 100%;
     }
+    @keyframes xpFloaterRise {
+      0% { opacity: 0; transform: translateY(12px) scale(.92); }
+      14% { opacity: 1; transform: translateY(0) scale(1); }
+      72% { opacity: 1; }
+      100% { opacity: 0; transform: translateY(-76px) scale(1.04); }
+    }
+    .xp-floater {
+      display: inline-block;
+      white-space: nowrap;
+      font: 700 1rem/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+      animation: xpFloaterRise 1.5s cubic-bezier(.2,.7,.25,1) forwards;
+    }
+    .xp-floater[data-rarity="common"] { color: #cbd5e1; text-shadow: 0 0 10px #cbd5e180; }
+    .xp-floater[data-rarity="uncommon"] { color: #4ade80; text-shadow: 0 0 10px #4ade8080; }
+    .xp-floater[data-rarity="rare"] { color: #22d3ee; text-shadow: 0 0 12px #22d3eea6; }
+    .xp-floater[data-rarity="epic"] { color: #c084fc; text-shadow: 0 0 12px #c084fca6; }
+    .xp-floater[data-rarity="legendary"] { color: #fbbf24; text-shadow: 0 0 14px #fbbf24b3; }
+    .xp-floater[data-rarity="mythic"] {
+      color: transparent;
+      background: linear-gradient(90deg, #fb7185, #fbbf24, #4ade80, #38bdf8, #c084fc);
+      background-clip: text;
+      filter: drop-shadow(0 0 7px #f0abfc99);
+    }
     .app-loading-overlay {
       display: grid;
       place-items: center;
@@ -1412,6 +1435,7 @@
       <p class="text-xs text-slate-200 mt-0.5" id="toastMsg">You cleared the fog of your home!</p>
     </div>
   </div>
+  <div id="xpFloaterLayer" aria-hidden="true" class="pointer-events-none fixed bottom-6 right-6 z-[1150] flex flex-col-reverse items-end gap-1"></div>
 
   <div id="achievementNotification" role="dialog" aria-modal="true" aria-labelledby="achievementNotificationTitle" class="hidden fixed inset-0 z-[1200] bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4">
     <section class="relative rpg-panel rpg-panel-gold max-w-md w-full rounded-3xl p-7 sm:p-9 text-center shadow-2xl shadow-amber-950/50">
@@ -2867,7 +2891,11 @@
           !visitedBefore.has(`micro:${entry.name}`)).map(entry => `micro:${entry.name}`)
       ];
       if (discovered.length) pulseDiscoveries(discovered);
-      if (previousStats && currentStats) notifyProgressUnlocks(previousStats, currentStats);
+      if (previousStats && currentStats) {
+        const xpGained = currentStats.xp - previousStats.xp;
+        if (xpGained > 0) showXpFloater(xpGained);
+        notifyProgressUnlocks(previousStats, currentStats);
+      }
     }
 
     function addCustomPoi(poi) {
@@ -3067,6 +3095,29 @@
     }
 
     let notificationTimeout = null;
+
+    function xpGainRarity(xp) {
+      if (!Number.isFinite(xp) || xp <= 0) return null;
+      if (xp >= 100) return 'mythic';
+      if (xp >= 75) return 'legendary';
+      if (xp >= 50) return 'epic';
+      if (xp >= 35) return 'rare';
+      if (xp >= 20) return 'uncommon';
+      return 'common';
+    }
+
+    function showXpFloater(amount) {
+      const xp = Math.round(amount);
+      const rarity = xpGainRarity(xp);
+      if (!rarity) return null;
+      const floater = document.createElement('span');
+      floater.className = 'xp-floater';
+      floater.dataset.rarity = rarity;
+      floater.textContent = `+${xp.toLocaleString('en')} XP`;
+      document.getElementById('xpFloaterLayer').appendChild(floater);
+      setTimeout(() => { if (floater.isConnected) floater.remove(); }, 1600);
+      return floater;
+    }
 
     function displayNotificationToast() {
       const toast = document.getElementById('toastNotification');

@@ -282,6 +282,10 @@ check('storage-risk banner and unfinished-trip recovery controls are present', (
   assert.match(expeditionUi, /btnRestoreDraftFromTravel/);
   assert.match(expeditionUi, /downloadExpeditionRecovery/);
 });
+check('floating XP UI has an accessible, fixed-position output layer and rainbow Mythic styling', () => {
+  assert.match(html, /id="xpFloaterLayer"[^>]*aria-hidden="true"/);
+  assert.match(html, /\.xp-floater\[data-rarity="mythic"\][\s\S]*?background-clip:\s*text/);
+});
 check('National Parks is a Scratch Map dataset, not a separate navigation page, with an expanded checklist', () => {
   assert.ok(html.includes('id="btnScratchNationalParks"'));
   assert.ok(html.includes('id="btnScratchWorldSubdivisions"'));
@@ -414,6 +418,20 @@ check('loading overlay reports nested operations and hides after the last operat
   assert.equal(element('appLoadingMessage').textContent, 'Reading passport…');
   firstTask.finish();
   assert.equal(element('appLoadingOverlay').classList.contains('hidden'), true);
+});
+check('XP gain amounts map to the common-through-mythic rarity thresholds', () => {
+  for (const [xp, rarity] of [
+    [15, 'common'], [19, 'common'], [20, 'uncommon'], [34, 'uncommon'],
+    [35, 'rare'], [49, 'rare'], [50, 'epic'], [74, 'epic'],
+    [75, 'legendary'], [99, 'legendary'], [100, 'mythic']
+  ]) {
+    assert.equal(vm.runInContext(`xpGainRarity(${xp})`, context), rarity);
+  }
+  assert.equal(vm.runInContext('xpGainRarity(0)', context), null);
+  const floater = vm.runInContext('showXpFloater(100)', context);
+  assert.equal(floater.textContent, '+100 XP');
+  assert.equal(floater.dataset.rarity, 'mythic');
+  assert.equal(vm.runInContext('showXpFloater(0)', context), null);
 });
 check('public profile visibility migrates legacy consent without widening access', () => {
   assert.equal(vm.runInContext(`normalizePublicProfile({username:'Devon',is_public:true}).visibility`, context), 'passport');
@@ -5597,7 +5615,16 @@ vm.runInContext(`
   map.once=mapOnce;map.flyTo=mapFly;
 `, context);
 check('first Citadel marks containing geography Lived, uses a 15-mile diameter, flies at zoom 8 and applies the chosen starter class', () => {
-  vm.runInContext("setHometownCoordinates('Test Citadel',37,-120)", context);
+  const originalShowXpFloater = context.showXpFloater;
+  const xpGains = [];
+  context.showXpFloater = amount => xpGains.push(amount);
+  try {
+    vm.runInContext("setHometownCoordinates('Test Citadel',37,-120)", context);
+  } finally {
+    context.showXpFloater = originalShowXpFloater;
+  }
+  assert.equal(xpGains.length, 1);
+  assert.ok(xpGains[0] > 0);
   assert.equal(vm.runInContext('AppState.homeBase.radiusKm', context), 15 * 1.609344 / 2);
   assert.equal(vm.runInContext('AppState.homeBase.countyId', context), '06073');
   assert.equal(vm.runInContext('AppState.counties["06073"]', context), 'l');

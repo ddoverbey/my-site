@@ -140,6 +140,9 @@ There is no maximum level. For any level `n` (2 or higher), the threshold is
 as well. The XP bar shows progress from the current level's threshold to the next one. Gaining a
 level displays a top-center level-up banner with a chime; newly earned achievements appear
 separately in a centered, dismissible notification with their artwork.
+Positive XP gains also appear briefly as floating text at the bottom right. Its color is based on
+the XP gained in that action: 1–19 is common (white), 20–34 uncommon (green), 35–49 rare (cyan),
+50–74 epic (purple), 75–99 legendary (gold), and 100 or more mythic (rainbow).
 
 New explorers establish a Home Citadel before choosing their starting tool. Before the Citadel is
 set, the setup dialog opens first and only the Map tab is available. The tool choices are Scratch
