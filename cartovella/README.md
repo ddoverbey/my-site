@@ -89,8 +89,9 @@ Their combined total awards 3 XP per district for the first 50, then 1 XP per ad
 
 Questlines and achievements live together on the Explorer Profile character sheet. Open a quest card
 to see its exact requirement, park visit statuses, and the saved expedition logs that qualify or are
-closest to qualifying. The RPG Map HUD surfaces the two closest-to-completion active quests; selecting
-one opens the matching section of the character sheet.
+closest to qualifying. From Level 3 onward—or immediately after unlocking all features—the RPG Map
+HUD surfaces the two closest-to-completion active quests; selecting one opens the matching section
+of the character sheet.
 
 | Questline | Bonus XP |
 | --- | ---: |
@@ -127,13 +128,30 @@ progress from the current level's threshold to the next one. Gaining a level dis
 level-up banner with a chime; newly earned achievements appear separately in a centered, dismissible
 notification with their artwork.
 
-After establishing a Citadel, a new explorer chooses one of Scratch Maps, Travel Ledger, or Travel
-Log. Level 2 offers a choice of a second tool; Level 3 unlocks the remaining tool and Explorer
-Profile; Level 4 unlocks the Explorers' Guild. The first choice sets the initial class title to
-Cartographer, Field Ranger, or Chronicler until a travel archetype takes over. Existing travel
-progress, a read-only passport, an existing cloud passport, importing a `.json` passport, or using
-**Unlock All Primary Features** in Settings unlocks all six primary features. Onboarding choices are
-stored locally under `cartovella_onboarding_v1`.
+New explorers establish a Home Citadel before choosing their starting tool. Before the Citadel is
+set, the setup dialog opens first and only the Map tab is available. The tool choices are Scratch
+Maps (color in countries, states, and counties), Travel Ledger (check off parks and cities), and
+Travel Log (map routes and write trip stories).
+
+| Progress point | Primary tabs available | Unlock or choice |
+| --- | --- | --- |
+| Before establishing a Citadel | Map | Establish a Home Citadel to begin choosing tools. |
+| Level 1, after the first choice | Map and the chosen tool | Choose one logging tool; it sets your starting Explorer Class through Level 2. |
+| Level 2, after the second choice | Map and both chosen tools | Choose one of the two remaining logging tools. |
+| Level 3 | Map, all three logging tools, and Explorer Profile | The final logging tool and Explorer Profile unlock automatically; the active-quest HUD appears. |
+| Level 4 and higher | All six primary tabs | The Explorers' Guild unlocks automatically and all-feature access is recorded. |
+
+The six primary tabs are Map, Travel Ledger, Scratch Map, Travel Log, Explorer Profile, and the
+Explorers' Guild. At Level 3, the Explorer Class can shift from its starting title to the leading
+travel archetype when that archetype has progressed beyond 5%; otherwise, the starting title remains.
+
+You can bypass the progression at any time with **Skip & unlock all features** in the tool chooser
+or **Unlock All Primary Features** in Settings. All features also unlock automatically for read-only
+passports, when existing travel progress is found on load, when signing in to an account with an
+existing passport, or after importing a `.json` passport. Existing travel progress includes logged
+travel, saved expeditions or custom places, or more than one visited country, state, or county.
+Onboarding state is saved locally under `cartovella_onboarding_v1` as `unlockedAll` and `chosenTools`;
+**Reset All Progress** clears it and restarts the flow.
 
 **America the Beautiful** is a Legendary achievement for visiting all 64 US National Parks.
 It uses the National Parks scratch-map ledger, including separate Sequoia and Kings Canyon
@@ -151,9 +169,9 @@ Completionist class. The current hard-coded Explorer Classes are:
 | --- | --- |
 | Fresh Recruit | Default class before establishing a home Citadel. |
 | Scout | Fallback class after establishing a Citadel before choosing a starting tool. |
-| Cartographer | Starting class when Scratch Maps is the first tool chosen. |
-| Field Ranger | Starting class when Checklist & Catalog is the first tool chosen. |
-| Chronicler | Starting class when Travel Log is the first tool chosen. |
+| Realm Cartographer | Starting class when Scratch Maps is the first tool chosen. |
+| Field Ranger | Starting class when Travel Ledger is the first tool chosen. |
+| Wayward Scribe | Starting class when Travel Log is the first tool chosen. |
 | Alpine Ranger | Explorer of conifer forests, montane grasslands, and arid shrublands. |
 | Park Completionist | Devoted explorer of national preserves and wild sanctuaries. |
 | Biome Hunter | Explorer of boreal forests and tundra ecoregions. |
