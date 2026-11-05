@@ -1314,10 +1314,12 @@ const travelJournalDrafts = new Map();
 const confirmingTravelLogDeletion = new Set();
 const TRAVEL_ROUTE_COLORS = { road: '#22d3ee', awd: '#22d3ee', ferry: '#38bdf8',
   flight: '#94a3b8', rail: '#a78bfa', foot: '#4ade80' };
-const GLOBAL_ROUTE_COLORS = {
-  road: '#f59e0b', awd: '#f59e0b', flight: '#94a3b8',
-  ferry: '#38bdf8', rail: '#c084fc', foot: '#f472b6'
-};
+const GLOBAL_ROUTE_SINGLE_COLORS = Object.freeze({
+  gold: '#fac60b',
+  arcane: '#38bdf8',
+  emerald: '#34d399',
+  crimson: '#f43f5e'
+});
 const TRAVEL_TRANSIT_BADGE_TONES = Object.freeze({
   road: 'bg-amber-950 text-amber-300 border-amber-500/40',
   awd: 'bg-amber-950 text-amber-300 border-amber-500/40',
@@ -1329,20 +1331,15 @@ const TRAVEL_TRANSIT_BADGE_TONES = Object.freeze({
 const GLOBAL_ROUTE_MAP_STYLES = Object.freeze({
   midnight: {
     ocean: '#040814', land: '#0f172a', visited: '#13233f',
-    border: '#1e293b', graticule: '#1e293b', text: '#e2e8f0',
-    routes: GLOBAL_ROUTE_COLORS
+    border: '#1e293b', graticule: '#1e293b', text: '#e2e8f0'
   },
   classic: {
     ocean: '#dceaf2', land: '#f5f1e6', visited: '#c6dfc4',
-    border: '#82919c', graticule: '#afbdc4', text: '#1e293b',
-    routes: { road: '#b45309', awd: '#b45309', flight: '#64748b',
-      ferry: '#0369a1', rail: '#7e22ce', foot: '#be185d' }
+    border: '#82919c', graticule: '#afbdc4', text: '#1e293b'
   },
   parchment: {
     ocean: '#e9dec5', land: '#d3c19d', visited: '#a7bd91',
-    border: '#907d5a', graticule: '#bcac8c', text: '#3b3428',
-    routes: { road: '#92400e', awd: '#92400e', flight: '#475569',
-      ferry: '#1d4ed8', rail: '#6b21a8', foot: '#9d174d' }
+    border: '#907d5a', graticule: '#bcac8c', text: '#3b3428'
   }
 });
 // Continent membership follows Annexare Countries (MIT): https://github.com/annexare/Countries.
@@ -1402,10 +1399,6 @@ function routeMapAvailableYears() {
   const years = new Set();
   AppState.expeditions.forEach(exp => routeMapExpeditionYears(exp).forEach(year => years.add(year)));
   return [...years].sort((a, b) => b - a);
-}
-
-function globalRoutesExportYearLabel() {
-  return globalRoutesYear === 'all' ? 'ALL YEARS' : globalRoutesYear;
 }
 
 function travelLogStopNames(exp) {
@@ -1764,6 +1757,11 @@ function renderGlobalRoutesMap() {
   const continentOption = document.getElementById('globalRoutesContinentOption');
   const yearControl = document.getElementById('globalRoutesYear');
   const atlasStyleControl = document.getElementById('globalRoutesAtlasStyle');
+  const colorModeControl = document.getElementById('globalRoutesColorMode');
+  const lineStyleControl = document.getElementById('globalRoutesLineStyle');
+  const showStopsControl = document.getElementById('globalRoutesShowStops');
+  const showTitleControl = document.getElementById('globalRoutesShowTitle');
+  const customTitleControl = document.getElementById('globalRoutesCustomTitle');
   domesticOption.textContent = homeCountryName ? `Domestic · ${homeCountryName}` :
     AppState.homeBase ? 'Domestic (unavailable)' : 'Domestic (set home base)';
   continentOption.textContent = homeContinent ? `Continental · ${homeContinent}` :
@@ -1782,6 +1780,13 @@ function renderGlobalRoutesMap() {
     .map(year => `<option value="${year}">${year}</option>`).join('')}`;
   yearControl.value = globalRoutesYear;
   atlasStyleControl.value = globalRoutesAtlasStyle;
+  document.getElementById('globalRoutesTransitLegend').classList.toggle(
+    'hidden', colorModeControl.value !== 'mode'
+  );
+  document.getElementById('globalRoutesCustomTitleWrap').classList.toggle(
+    'hidden', !showTitleControl.checked
+  );
+  customTitleControl.disabled = !showTitleControl.checked;
   const yearFilteredExpeditions = globalRoutesYear === 'all'
     ? AppState.expeditions
     : AppState.expeditions.filter(exp => routeMapExpeditionYears(exp).includes(Number(globalRoutesYear)));
@@ -1868,9 +1873,17 @@ function renderGlobalRoutesMap() {
         return path({ type: 'LineString', coordinates }) || '';
       }).join('');
       if (!routePath) return;
-      const color = mapStyle.routes[leg.mode] || '#94a3b8';
-      routes.push(`<path class="global-route" data-mode="${escapeHtml(leg.mode)}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"${leg.mode === 'flight' ? ' stroke-dasharray="6 5"' : ''} d="${routePath}"><title>${escapeHtml(title)}</title></path>`);
+      const color = colorModeControl.value === 'mode'
+        ? TRAVEL_ROUTE_COLORS[leg.mode] || '#94a3b8'
+        : GLOBAL_ROUTE_SINGLE_COLORS[colorModeControl.value] || TRAVEL_ROUTE_COLORS[leg.mode] || '#94a3b8';
+      const dashArray = lineStyleControl.value === 'auto'
+        ? (leg.mode === 'flight' ? '6 5' : '')
+        : lineStyleControl.value === 'dashed' ? '7 5'
+          : lineStyleControl.value === 'dotted' ? '2 5' : '';
+      const dashAttribute = dashArray ? ` stroke-dasharray="${dashArray}"` : '';
+      routes.push(`<path class="global-route" data-mode="${escapeHtml(leg.mode)}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"${dashAttribute} d="${routePath}"><title>${escapeHtml(title)}</title></path>`);
     });
+    if (!showStopsControl.checked) return;
     (exp.routeStops || []).forEach(stop => {
       if (!travelLogPoint(stop?.coords)) return;
       if (scopeCodes &&
@@ -1878,7 +1891,9 @@ function renderGlobalRoutesMap() {
       const projected = projection([stop.coords[1], stop.coords[0]]);
       if (!projected) return;
       const [cx, cy] = projected;
-      markers.push(`<circle class="global-route-stop" cx="${cx}" cy="${cy}" r="2.5" fill="#e2e8f0" stroke="#020617" stroke-width="1"><title>${escapeHtml(`${exp.name || 'Expedition'} · ${stop.name || 'Stop'}`)}</title></circle>`);
+      const markerColor = colorModeControl.value === 'mode'
+        ? '#e2e8f0' : GLOBAL_ROUTE_SINGLE_COLORS[colorModeControl.value] || '#e2e8f0';
+      markers.push(`<circle class="global-route-stop" cx="${cx}" cy="${cy}" r="2.5" fill="${markerColor}" stroke="${mapStyle.ocean}" stroke-width="1"><title>${escapeHtml(`${exp.name || 'Expedition'} · ${stop.name || 'Stop'}`)}</title></circle>`);
     });
   });
 
@@ -1888,7 +1903,24 @@ function renderGlobalRoutesMap() {
     ? `<g class="global-route-home"><title>${escapeHtml(`Home Base · ${AppState.homeBase.name}`)}</title><circle cx="${homePosition[0]}" cy="${homePosition[1]}" r="11" fill="#f59e0b" fill-opacity="0.2" stroke="#fbbf24" stroke-width="1.5"></circle><text x="${homePosition[0]}" y="${homePosition[1] + 6}" text-anchor="middle" font-size="17" fill="#fbbf24">★</text></g>`
     : '';
 
-  svg.innerHTML = `<rect class="global-routes-ocean" width="1200" height="630" fill="${mapStyle.ocean}"></rect><g class="global-routes-zoom"><path class="global-routes-graticule" fill="none" stroke="${mapStyle.graticule}" stroke-width="0.6" d="${graticule}"></path>${countries}${routes.join('')}${markers.join('')}${homeMarker}</g>`;
+  const titleText = customTitleControl.value.trim() ||
+    `${globalRoutesYear === 'all' ? 'All Years' : globalRoutesYear} · ${scopeLabel}`;
+  const titleOverlay = showTitleControl.checked
+    ? `<g class="global-routes-title-overlay" pointer-events="none"><text x="600" y="48" text-anchor="middle" fill="${mapStyle.text}" stroke="${mapStyle.ocean}" stroke-width="5" paint-order="stroke" font-family="Cinzel, Georgia, serif" font-size="24" font-weight="700">${escapeHtml(titleText)}</text></g>`
+    : '';
+  const watermarkAccent = globalRoutesAtlasStyle === 'midnight' ? '#fac60b' :
+    globalRoutesAtlasStyle === 'classic' ? '#124777' : '#7c4a03';
+  const watermarkPanel = globalRoutesAtlasStyle === 'midnight' ? '#020617' : mapStyle.ocean;
+  const watermark = `<g id="globalRoutesBrandWatermark" transform="translate(24 582)" aria-label="Cartovella">
+    <rect width="220" height="36" rx="9" fill="${watermarkPanel}" fill-opacity="0.88" stroke="${mapStyle.border}" stroke-width="1"></rect>
+    <g transform="translate(5 4)">
+      <path d="M15 0 18.5 10.5 29 14 18.5 17.5 15 28 11.5 17.5 1 14 11.5 10.5Z" fill="${watermarkAccent}"></path>
+      <path d="M4 14.5c4-1.8 7-1 11 1.1 4-2.1 7-2.9 11-1.1v12c-4-1.8-7-1-11 1.1-4-2.1-7-2.9-11-1.1z" fill="${watermarkPanel}" stroke="${mapStyle.text}" stroke-width="1.2" stroke-linejoin="round"></path>
+      <path d="M15 15.6v12" fill="none" stroke="${mapStyle.text}" stroke-width="1.2"></path>
+    </g>
+    <text x="49" y="23" fill="${mapStyle.text}" font-family="Cinzel, Georgia, serif" font-size="16" font-weight="700" letter-spacing="1.2">CARTOVELLA</text>
+  </g>`;
+  svg.innerHTML = `<rect class="global-routes-ocean" width="1200" height="630" fill="${mapStyle.ocean}"></rect><g class="global-routes-zoom"><path class="global-routes-graticule" fill="none" stroke="${mapStyle.graticule}" stroke-width="0.6" d="${graticule}"></path>${countries}${routes.join('')}${markers.join('')}${homeMarker}</g>${titleOverlay}${watermark}`;
   svg.setAttribute('aria-label', `${scopeLabel} route map showing ${expeditions.length} expeditions`);
   svg.setAttribute('data-atlas-style', globalRoutesAtlasStyle);
   globalRoutesZoomBehavior = d3.zoom().scaleExtent([1, 14]).on('zoom', event => {
@@ -1933,20 +1965,6 @@ function prepareGlobalRoutesExportSvg(svg) {
   svg.querySelector('.global-routes-zoom')?.setAttribute('transform', 'translate(0,120) scale(1)');
 }
 
-function appendGlobalRoutesExportYearTitle(svg, mapStyle) {
-  const group = appendSvgElement(svg, 'g', { class: 'global-routes-export-year' });
-  appendSvgElement(group, 'rect', {
-    x: 360, y: 10, width: 480, height: 100, rx: 14,
-    fill: mapStyle.land, 'fill-opacity': 0.94, stroke: mapStyle.border, 'stroke-width': 2
-  });
-  const title = appendSvgElement(group, 'text', {
-    x: 600, y: 80, fill: mapStyle.text, 'font-family': 'Inter, Arial, sans-serif',
-    'font-size': globalRoutesYear === 'all' ? 58 : 78, 'font-weight': 700, 'text-anchor': 'middle'
-  });
-  title.textContent = globalRoutesExportYearLabel();
-  return title;
-}
-
 function canvasPngBlob(canvas) {
   const fallback = () => {
     const dataUrl = canvas.toDataURL('image/png');
@@ -1974,22 +1992,15 @@ async function exportGlobalRoutesPng() {
   const svg = document.getElementById('svgGlobalRoutesMap').cloneNode(true);
   prepareGlobalRoutesExportSvg(svg);
 
-  const mapStyle = GLOBAL_ROUTE_MAP_STYLES[globalRoutesAtlasStyle];
   const stats = calculateStats();
-  appendGlobalRoutesExportYearTitle(svg, mapStyle);
   const footer = appendSvgElement(svg, 'g', { class: 'global-routes-export-footer' });
+  const mapStyle = GLOBAL_ROUTE_MAP_STYLES[globalRoutesAtlasStyle];
   appendSvgElement(footer, 'rect', { x: 0, y: 690, width: 1200, height: 60, fill: mapStyle.land });
   const banner = appendSvgElement(footer, 'text', {
     x: 32, y: 728, fill: mapStyle.text, 'font-family': 'Inter, Arial, sans-serif',
     'font-size': 20, 'font-weight': 600
   });
   banner.textContent = `${stats.cls} (Level ${stats.level}) • ${globalRoutesVisibleExpeditions.length} Expeditions • ${stats.countriesCount} Countries`;
-  const watermark = appendSvgElement(footer, 'text', {
-    x: 1168, y: 728, fill: mapStyle.text, 'fill-opacity': 0.7,
-    'font-family': 'Cinzel, Georgia, serif', 'font-size': 14, 'font-weight': 600, 'text-anchor': 'end'
-  });
-  watermark.textContent = 'Cartovella';
-
   const svgBlob = new Blob([new XMLSerializer().serializeToString(svg)], { type: 'image/svg+xml;charset=utf-8' });
   const svgUrl = URL.createObjectURL(svgBlob);
   let png;
@@ -2558,6 +2569,32 @@ document.getElementById('globalRoutesAtlasStyle').addEventListener('change', eve
   globalRoutesAtlasStyle = style;
   renderGlobalRoutesMap();
 });
+document.getElementById('globalRoutesColorMode').addEventListener('change', event => {
+  const colorMode = event.currentTarget.value;
+  if (colorMode !== 'mode' && !Object.prototype.hasOwnProperty.call(GLOBAL_ROUTE_SINGLE_COLORS, colorMode)) {
+    event.currentTarget.value = 'mode';
+    document.getElementById('globalRoutesScopeStatus').textContent = 'Choose a valid route color mode.';
+    return;
+  }
+  document.getElementById('globalRoutesTransitLegend').classList.toggle('hidden', colorMode !== 'mode');
+  renderGlobalRoutesMap();
+});
+document.getElementById('globalRoutesLineStyle').addEventListener('change', event => {
+  if (!['auto', 'solid', 'dashed', 'dotted'].includes(event.currentTarget.value)) {
+    event.currentTarget.value = 'auto';
+    document.getElementById('globalRoutesScopeStatus').textContent = 'Choose a valid route line style.';
+    return;
+  }
+  renderGlobalRoutesMap();
+});
+document.getElementById('globalRoutesShowStops').addEventListener('change', renderGlobalRoutesMap);
+document.getElementById('globalRoutesShowTitle').addEventListener('change', event => {
+  const showTitle = event.currentTarget.checked;
+  document.getElementById('globalRoutesCustomTitleWrap').classList.toggle('hidden', !showTitle);
+  document.getElementById('globalRoutesCustomTitle').disabled = !showTitle;
+  renderGlobalRoutesMap();
+});
+document.getElementById('globalRoutesCustomTitle').addEventListener('input', renderGlobalRoutesMap);
 document.getElementById('btnResetGlobalRoutesZoom').addEventListener('click', resetGlobalRoutesZoom);
 document.getElementById('btnExportRoutesPng').addEventListener('click', () => {
   exportGlobalRoutesPng().catch(error => {

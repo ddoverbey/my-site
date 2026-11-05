@@ -1065,12 +1065,12 @@
         <p class="text-[11px] text-slate-500">Your passport is saved in this browser on this device. Export a backup regularly; browser storage limits vary.</p>
         <section id="travelGlobalRoutesPanel" class="hidden rpg-panel p-4 rounded-2xl space-y-3">
           <div class="flex flex-wrap items-center justify-between gap-3">
-            <div class="flex flex-wrap items-center gap-2 text-[11px]">
-              <span class="rounded-full border border-amber-400/30 bg-amber-400/10 px-2 py-1 text-amber-300">● Drive/AWD</span>
+            <div id="globalRoutesTransitLegend" class="flex flex-wrap items-center gap-2 text-[11px]">
+              <span class="rounded-full border border-cyan-400/30 bg-cyan-400/10 px-2 py-1 text-cyan-300">● Drive/AWD</span>
               <span class="rounded-full border border-slate-400/30 bg-slate-400/10 px-2 py-1 text-slate-300">● Flight</span>
               <span class="rounded-full border border-sky-400/30 bg-sky-400/10 px-2 py-1 text-sky-300">● Water Transit</span>
-              <span class="rounded-full border border-purple-400/30 bg-purple-400/10 px-2 py-1 text-purple-300">● Rail</span>
-              <span class="rounded-full border border-pink-400/30 bg-pink-400/10 px-2 py-1 text-pink-300">● Walk</span>
+              <span class="rounded-full border border-violet-400/30 bg-violet-400/10 px-2 py-1 text-violet-300">● Rail</span>
+              <span class="rounded-full border border-green-400/30 bg-green-400/10 px-2 py-1 text-green-300">● Walk</span>
             </div>
             <div class="flex flex-wrap items-center gap-2">
               <label for="globalRoutesScope" class="text-xs text-slate-300">Map area</label>
@@ -1092,6 +1092,35 @@
               <button id="btnResetGlobalRoutesZoom" type="button" class="shrink-0 rounded-lg bg-slate-800 px-3 py-2 text-xs text-slate-200">Reset zoom</button>
               <button id="btnReturnToTravelLog" type="button" class="shrink-0 rounded-lg bg-slate-800 px-3 py-2 text-xs text-sky-200" aria-label="Return to Travel Log">← Travel Log</button>
             </div>
+          </div>
+          <div class="flex flex-wrap items-center gap-3 border-t border-slate-700/70 pt-3" aria-label="Route map appearance">
+            <label for="globalRoutesColorMode" class="text-xs text-slate-300">Line color</label>
+            <select id="globalRoutesColorMode" class="rounded-lg border border-slate-700 bg-slate-900 px-2 py-2 text-xs text-slate-100">
+              <option value="mode">By Transit Mode</option>
+              <option value="gold">Single Color — Cartovella Gold (#fac60b)</option>
+              <option value="arcane">Single Color — Arcane Blue (#38bdf8)</option>
+              <option value="emerald">Single Color — Emerald (#34d399)</option>
+              <option value="crimson">Single Color — Vintage Crimson (#f43f5e)</option>
+            </select>
+            <label for="globalRoutesLineStyle" class="text-xs text-slate-300">Line style</label>
+            <select id="globalRoutesLineStyle" class="rounded-lg border border-slate-700 bg-slate-900 px-2 py-2 text-xs text-slate-100">
+              <option value="auto">By Mode (Solid overland / Dashed air)</option>
+              <option value="solid">All Solid Lines</option>
+              <option value="dashed">All Dashed Lines</option>
+              <option value="dotted">All Dotted Lines</option>
+            </select>
+            <label for="globalRoutesShowStops" class="inline-flex items-center gap-2 text-xs text-slate-300">
+              <input id="globalRoutesShowStops" type="checkbox" checked class="accent-amber-400">
+              Show Stop Dots
+            </label>
+            <label for="globalRoutesShowTitle" class="inline-flex items-center gap-2 text-xs text-slate-300">
+              <input id="globalRoutesShowTitle" type="checkbox" class="accent-amber-400">
+              Show Title Overlay
+            </label>
+            <label id="globalRoutesCustomTitleWrap" for="globalRoutesCustomTitle" class="hidden inline-flex items-center gap-2 text-xs text-slate-300">
+              Custom title
+              <input id="globalRoutesCustomTitle" type="text" maxlength="60" placeholder="Optional map title..." disabled class="w-48 rounded-lg border border-slate-700 bg-slate-900 px-2 py-2 text-xs text-slate-100 placeholder:text-slate-500">
+            </label>
           </div>
           <p class="text-[10px] text-slate-500">Atlas styles recolor the built-in vector map; no external basemap tiles are loaded.</p>
           <p id="globalRoutesScopeStatus" class="text-[11px] text-slate-400" role="status" aria-live="polite"></p>
@@ -1628,15 +1657,15 @@
     </section>
   </div>
 
-  <script src="./nps-catalog.js?v=20261105-guild-travel-cleanup-v1"></script>
-  <script src="./national-parks-scratch.js?v=20261105-guild-travel-cleanup-v1"></script>
-  <script src="./international-parks.js?v=20261105-guild-travel-cleanup-v1"></script>
-  <script src="./ecoregions.js?v=20261105-guild-travel-cleanup-v1"></script>
-  <script src="./coordinate-lookups.js?v=20261105-guild-travel-cleanup-v1"></script>
-  <script src="./micro-states.js?v=20261105-guild-travel-cleanup-v1"></script>
-  <script src="./travel-ledger.js?v=20261105-guild-travel-cleanup-v1"></script>
-  <script src="./character-creator.js?v=20261105-guild-travel-cleanup-v1"></script>
-  <script src="./rarity-config.js?v=20261105-guild-travel-cleanup-v1"></script>
+  <script src="./nps-catalog.js?v=20261105-global-route-customization-v1"></script>
+  <script src="./national-parks-scratch.js?v=20261105-global-route-customization-v1"></script>
+  <script src="./international-parks.js?v=20261105-global-route-customization-v1"></script>
+  <script src="./ecoregions.js?v=20261105-global-route-customization-v1"></script>
+  <script src="./coordinate-lookups.js?v=20261105-global-route-customization-v1"></script>
+  <script src="./micro-states.js?v=20261105-global-route-customization-v1"></script>
+  <script src="./travel-ledger.js?v=20261105-global-route-customization-v1"></script>
+  <script src="./character-creator.js?v=20261105-global-route-customization-v1"></script>
+  <script src="./rarity-config.js?v=20261105-global-route-customization-v1"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -8463,7 +8492,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261105-guild-travel-cleanup-v1"></script>
+  <script src="./expedition-ui.js?v=20261105-global-route-customization-v1"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);

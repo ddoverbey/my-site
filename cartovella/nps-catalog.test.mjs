@@ -246,7 +246,7 @@ check('mobile RPG HUD starts collapsed with an accessible stats toggle', () => {
 });
 check('home citadel setup can be dismissed by its close button, backdrop, or Escape', () => {
   assert.match(html, /id="homeBaseModal" role="dialog" aria-modal="true" aria-labelledby="homeBaseModalTitle"/);
-  assert.match(html, /id="btnCloseHomeModal" type="button" aria-label="Close home citadel setup"/);
+  assert.match(html, /id="btnCloseHomeModal" type="button" aria-label="Close home base setup"/);
   assert.match(html, /id="btnHomeSignIn"[^>]*>[\s\S]*?Sign In to an Existing Account/);
   assert.match(html, /btnHomeSignIn'\)\.addEventListener\('click', \(\) => toggleAuthModal\(true, 'signin'\)\)/);
   assert.match(html, /btnCloseHomeModal'\)\.addEventListener\('click', closeHomeModal\)/);
@@ -273,7 +273,7 @@ check('character customization appears above the stage and progress summary', ()
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 10);
-  assert.ok(sources.every(source => source.endsWith('?v=20261105-guild-travel-cleanup-v1')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261105-global-route-customization-v1')));
   assert.ok(sources.some(source => source.startsWith('./character-creator.js?')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
@@ -374,7 +374,11 @@ function element(id) {
   if (!elements.has(id)) {
     const classes = new Set(id === 'viewingPublicAtlasBanner' ? ['hidden'] : []);
     elements.set(id, {
-      value: ['bucketFilterStatus', 'bucketFilterType', 'bucketFilterRarity'].includes(id) ? 'all' : '',
+      value: ['bucketFilterStatus', 'bucketFilterType', 'bucketFilterRarity'].includes(id) ? 'all' :
+        id === 'globalRoutesColorMode' ? 'mode' :
+          id === 'globalRoutesLineStyle' ? 'auto' : '',
+      checked: id === 'globalRoutesShowStops',
+      disabled: id === 'globalRoutesCustomTitle',
       textContent: '', innerHTML: '', style: {}, dataset: {}, children: [],
       classList: {
         add(...names) { names.forEach(name => classes.add(name)); },
@@ -1163,7 +1167,7 @@ await checkAsync('different local and cloud passports are compared without repla
   assert.doesNotMatch(html, /headerHometownText/);
   assert.ok(!header.includes('id="btnManualSave"'));
   assert.ok(!header.includes('id="btnShare"'));
-  assert.match(html, /id="btnRecenterHome"[^>]*>[\s\S]*Jump to Home Citadel/);
+  assert.match(html, /id="btnRecenterHome"[^>]*>[\s\S]*Jump to Home Base/);
   assert.match(html, /settingsMenu'\)\.open = false;\s*openHomeModal\(\)/);
   assert.match(html, /id="headerSaveStatus"[^>]*role="status"/);
   assert.match(html, /function updateHeaderSaveStatus\(\)/);
@@ -8974,9 +8978,23 @@ check('Global Route Map renders country and expedition paths and toggles indepen
   const originalSetAttribute = toggle.setAttribute;
   const originalPoliticalAt = context.cachedPoliticalAt;
   const originalCreateElementNS = context.document.createElementNS;
+  const routeMapSvg = element('svgGlobalRoutesMap');
+  const originalSvgCloneNode = routeMapSvg.cloneNode;
+  routeMapSvg.cloneNode = () => ({ innerHTML: routeMapSvg.innerHTML });
   const routeScope = element('globalRoutesScope');
   const routeYear = element('globalRoutesYear');
   const atlasStyle = element('globalRoutesAtlasStyle');
+  const colorMode = element('globalRoutesColorMode');
+  const lineStyle = element('globalRoutesLineStyle');
+  const showStops = element('globalRoutesShowStops');
+  const showTitle = element('globalRoutesShowTitle');
+  const customTitle = element('globalRoutesCustomTitle');
+  const routeLegend = element('globalRoutesTransitLegend');
+  const customTitleWrap = element('globalRoutesCustomTitleWrap');
+  const routeControlStates = [colorMode, lineStyle, showStops, showTitle, customTitle]
+    .map(control => ({ control, value: control.value, checked: control.checked, disabled: control.disabled }));
+  const routeClassStates = [routeLegend, customTitleWrap]
+    .map(control => ({ control, hidden: control.classList.contains('hidden') }));
   const domesticOption = element('globalRoutesDomesticOption');
   const continentOption = element('globalRoutesContinentOption');
   const flightInterpolations = [];
@@ -9085,6 +9103,12 @@ check('Global Route Map renders country and expedition paths and toggles indepen
     globalRoutesAtlasStyle = 'midnight';
     globalRoutesVisibleExpeditions = [];
   `, context);
+  colorMode.value = 'mode';
+  lineStyle.value = 'auto';
+  showStops.checked = true;
+  showTitle.checked = false;
+  customTitle.value = '';
+  customTitle.disabled = true;
   try {
     toggle.handlers.click();
     assert.equal(albersUsaProjectionCalls, 0);
@@ -9099,6 +9123,62 @@ check('Global Route Map renders country and expedition paths and toggles indepen
     assert.match(svg, /stroke="#94a3b8"/);
     assert.match(svg, /stroke="#38bdf8"/);
     assert.match(svg, /stroke-dasharray="6 5"/);
+    assert.doesNotMatch(svg, /class="global-routes-title-overlay"/);
+    assert.match(svg, /id="globalRoutesBrandWatermark" transform="translate\(24 582\)"/);
+    assert.match(html, /<option value="mode">By Transit Mode<\/option>/);
+    assert.match(html, /id="globalRoutesShowStops" type="checkbox" checked/);
+    assert.match(html, /id="globalRoutesShowTitle" type="checkbox" class=/);
+    assert.match(html, /placeholder="Optional map title\.\.\."/);
+    assert.match(html, /id="globalRoutesTransitLegend"/);
+
+    colorMode.value = 'gold';
+    colorMode.handlers.change({ currentTarget: colorMode });
+    let routePaths = [...element('svgGlobalRoutesMap').innerHTML.matchAll(/<path class="global-route"[^>]*>/g)]
+      .map(([tag]) => tag);
+    assert.ok(routePaths.length > 0);
+    assert.ok(routePaths.every(tag => tag.includes('stroke="#fac60b"')));
+    assert.match(element('svgGlobalRoutesMap').innerHTML, /<circle class="global-route-stop"[^>]*fill="#fac60b"/);
+    assert.equal(routeLegend.classList.contains('hidden'), true);
+
+    lineStyle.value = 'solid';
+    lineStyle.handlers.change({ currentTarget: lineStyle });
+    routePaths = [...element('svgGlobalRoutesMap').innerHTML.matchAll(/<path class="global-route"[^>]*>/g)]
+      .map(([tag]) => tag);
+    assert.ok(routePaths.every(tag => !tag.includes('stroke-dasharray=')));
+    lineStyle.value = 'dotted';
+    lineStyle.handlers.change({ currentTarget: lineStyle });
+    routePaths = [...element('svgGlobalRoutesMap').innerHTML.matchAll(/<path class="global-route"[^>]*>/g)]
+      .map(([tag]) => tag);
+    assert.ok(routePaths.every(tag => tag.includes('stroke-dasharray="2 5"') &&
+      tag.includes('stroke-linecap="round"')));
+    lineStyle.value = 'auto';
+    lineStyle.handlers.change({ currentTarget: lineStyle });
+
+    customTitle.value = '  Custom route poster  ';
+    showTitle.checked = true;
+    showTitle.handlers.change({ currentTarget: showTitle });
+    assert.equal(customTitle.disabled, false);
+    assert.equal(customTitleWrap.classList.contains('hidden'), false);
+    assert.match(element('svgGlobalRoutesMap').innerHTML, /class="global-routes-title-overlay"[^>]*><text[^>]*>Custom route poster<\/text>/);
+    const exportedTitleMap = routeMapSvg.cloneNode(true);
+    assert.match(exportedTitleMap.innerHTML, /class="global-routes-title-overlay"/);
+    assert.match(exportedTitleMap.innerHTML, /id="globalRoutesBrandWatermark"/);
+    customTitle.value = ' ';
+    customTitle.handlers.input();
+    assert.match(element('svgGlobalRoutesMap').innerHTML, /All Years · Global/);
+    showTitle.checked = false;
+    showTitle.handlers.change({ currentTarget: showTitle });
+    assert.doesNotMatch(element('svgGlobalRoutesMap').innerHTML, /class="global-routes-title-overlay"/);
+    assert.equal(customTitle.disabled, true);
+    assert.equal(customTitleWrap.classList.contains('hidden'), true);
+    showStops.checked = false;
+    showStops.handlers.change({ currentTarget: showStops });
+    assert.doesNotMatch(element('svgGlobalRoutesMap').innerHTML, /class="global-route-stop"/);
+    showStops.checked = true;
+    showStops.handlers.change({ currentTarget: showStops });
+    colorMode.value = 'mode';
+    colorMode.handlers.change({ currentTarget: colorMode });
+    assert.equal(routeLegend.classList.contains('hidden'), false);
     assert.equal(classLists.get('travelGlobalRoutesPanel').state.hidden, false);
     assert.equal(classLists.get('travelLogFeed').state.hidden, true);
     assert.equal(classLists.get('btnExportRoutesPng').state.hidden, false);
@@ -9120,25 +9200,12 @@ check('Global Route Map renders country and expedition paths and toggles indepen
     assert.doesNotMatch(yearlySvg, /Atlantic Flight/);
     assert.match(yearlySvg, /European Weekend/);
     assert.match(element('globalRoutesScopeStatus').textContent, /for 2025/);
-    assert.equal(vm.runInContext('globalRoutesExportYearLabel()', context), '2025');
-
-    const exportElements = [];
     context.document.createElementNS = (namespace, name) => ({
       namespace, name, attributes: {}, children: [], textContent: '',
       setAttribute(key, value) { this.attributes[key] = value; },
       appendChild(child) { this.children.push(child); }
     });
-    context.routeMapExportSvg = { children: [], appendChild(child) { this.children.push(child); } };
-    const yearTitle = vm.runInContext(
-      'appendGlobalRoutesExportYearTitle(routeMapExportSvg, GLOBAL_ROUTE_MAP_STYLES[globalRoutesAtlasStyle])',
-      context
-    );
-    exportElements.push(...context.routeMapExportSvg.children);
-    assert.equal(yearTitle.textContent, '2025');
-    assert.equal(yearTitle.attributes['font-size'], 78);
-    assert.equal(exportElements[0].attributes.class, 'global-routes-export-year');
-    const exportRect = exportElements[0].children[0];
-    assert.ok(exportRect.attributes.y + exportRect.attributes.height < 120);
+    assert.doesNotMatch(expeditionUi, /appendGlobalRoutesExportYearTitle\(svg,/);
 
     const exportLayoutAttributes = {};
     const exportOcean = { attributes: {}, setAttribute(key, value) { this.attributes[key] = value; } };
@@ -9157,7 +9224,6 @@ check('Global Route Map renders country and expedition paths and toggles indepen
 
     routeYear.value = 'all';
     routeYear.handlers.change({ currentTarget: routeYear });
-    assert.equal(vm.runInContext('globalRoutesExportYearLabel()', context), 'ALL YEARS');
     atlasStyle.value = 'classic';
     atlasStyle.handlers.change({ currentTarget: atlasStyle });
     assert.match(element('svgGlobalRoutesMap').innerHTML, /fill="#dceaf2"/);
@@ -9226,11 +9292,18 @@ check('Global Route Map renders country and expedition paths and toggles indepen
     assert.equal(toggleAttributes['aria-label'], 'Show Route Map');
   } finally {
     for (const [id, entry] of classLists) element(id).classList = entry.original;
+    if (originalSvgCloneNode === undefined) delete routeMapSvg.cloneNode;
+    else routeMapSvg.cloneNode = originalSvgCloneNode;
+    routeControlStates.forEach(({ control, value, checked, disabled }) => {
+      control.value = value;
+      control.checked = checked;
+      control.disabled = disabled;
+    });
+    routeClassStates.forEach(({ control, hidden }) => control.classList.toggle('hidden', hidden));
     toggle.setAttribute = originalSetAttribute;
     context.cachedPoliticalAt = originalPoliticalAt;
     if (originalCreateElementNS === undefined) delete context.document.createElementNS;
     else context.document.createElementNS = originalCreateElementNS;
-    delete context.routeMapExportSvg;
     delete context.routeMapLayoutSvg;
     context.d3 = previousD3;
     vm.runInContext(`
