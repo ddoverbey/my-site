@@ -174,7 +174,8 @@ check('RPG Map keeps its fog-of-war icon and Route Map uses the Phosphor Path ic
     notebook: 'ph-notebook', userCircle: 'ph-user-circle', house: 'ph-house', shareFat: 'ph-share-fat',
     shareNetwork: 'ph-share-network', floppyDisk: 'ph-floppy-disk', downloadSimple: 'ph-download-simple',
     uploadSimple: 'ph-upload-simple', cloudCheck: 'ph-cloud-check', cloudSlash: 'ph-cloud-slash',
-    cloudWarning: 'ph-cloud-warning', cloudX: 'ph-cloud-x', gear: 'ph-gear', mapTrifold: 'ph-map-trifold'
+    cloudWarning: 'ph-cloud-warning', cloudX: 'ph-cloud-x', gear: 'ph-gear', info: 'ph-info',
+    mapTrifold: 'ph-map-trifold'
   })) {
     assert.match(html, new RegExp(`${name}: \\{ className: '${className}',`));
   }
@@ -1888,17 +1889,17 @@ check('all Cartovella icons use only official logo colors and reject invalid nam
   assert.match(vm.runInContext("cartovellaIcon('atlas')", context), /class="h-6 w-6"/);
   const names = [
     'atlas', 'compass', 'journal', 'trophy', 'guild', 'globe', 'citadel', 'checklist', 'map', 'explorer',
-    'quest', 'cloud', 'settings', 'share', 'save', 'export', 'import', 'credits',
+    'quest', 'cloud', 'settings', 'share', 'save', 'export', 'import', 'credits', 'info',
     'warning', 'locator', 'lock', 'pin', 'route', 'photo', 'shield',
     'compassRose', 'listChecks', 'path', 'notebook', 'userCircle', 'house',
     'shareFat', 'shareNetwork', 'floppyDisk', 'downloadSimple', 'uploadSimple',
     'cloudCheck', 'cloudSlash', 'cloudWarning', 'cloudX', 'gear', 'mapTrifold'
   ];
   const phosphorNames = new Set([
-    'compass', 'journal', 'citadel', 'checklist', 'cloud', 'settings', 'share', 'save', 'export', 'import',
+    'compass', 'journal', 'citadel', 'checklist', 'cloud', 'settings', 'share', 'save', 'export', 'import', 'credits',
     'compassRose', 'listChecks', 'path', 'notebook', 'userCircle', 'house',
     'shareFat', 'shareNetwork', 'floppyDisk', 'downloadSimple', 'uploadSimple',
-    'cloudCheck', 'cloudSlash', 'cloudWarning', 'cloudX', 'gear', 'mapTrifold'
+    'cloudCheck', 'cloudSlash', 'cloudWarning', 'cloudX', 'gear', 'info', 'mapTrifold'
   ]);
   const allowedColors = new Set([
     '#eba400', '#fac60b', '#124777', '#36506b', '#f4c98c', '#0c1222'
