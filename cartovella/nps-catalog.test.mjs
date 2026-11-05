@@ -18,6 +18,7 @@ const publicTripSharingSql = await readFile(new URL('./public-trip-sharing.sql',
 const loadingDogSprite = await readFile(new URL(
   './assets/Loading%20Animations/Topdown%20-%20Pet%20-%20Dog/Root_Idle.png', import.meta.url
 ));
+const faviconSvg = await readFile(new URL('./assets/logos/cartovella-logo-1.svg', import.meta.url), 'utf8');
 
 const records = Array.from({ length: 405 }, (_, index) => ({
   id: `official-${index}`, parkCode: index.toString(36).padStart(4, '0'),
@@ -61,6 +62,8 @@ async function checkAsync(name, action) {
   checks++;
   console.log(`PASS ${name}`);
 }
+
+
 
 const normalized = catalog.normalizeParks(records);
 const yellowstone = normalized.find(p => p.id === 'yell');
@@ -142,6 +145,11 @@ console.log('PASS changing API totals rejected');
 const html = (await readFile(new URL('./index.html', import.meta.url), 'utf8')).replace(/\r\n/g, '\n');
 const expeditionUi = await readFile(new URL('./expedition-ui.js', import.meta.url), 'utf8');
 const legacyRoute = await readFile(new URL('../wanderlog/index.html', import.meta.url), 'utf8');
+check('favicon enlarges the mark within a safe, uncropped viewBox', () => {
+  assert.match(html, /rel="icon"[^>]*href="assets\/logos\/cartovella-logo-1\.svg"/);
+  assert.match(faviconSvg.slice(0, 500), /viewBox="350 350 1220 1220"/);
+  assert.match(html, /class="flex h-12 w-12 shrink-0 items-center justify-center"[\s\S]*?class="h-8 w-8 object-contain"/);
+});
 const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)]
   .map(match => /src="\.\/expedition-ui\.js(?:\?[^"]*)?"/.test(match[0]) ? expeditionUi : match[1]);
 check('every inline script parses', () => scripts.forEach(script => new vm.Script(script)));
