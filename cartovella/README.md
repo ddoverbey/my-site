@@ -159,8 +159,8 @@ Travel Log (map routes and write trip stories).
 | Level 4 and higher | All six primary tabs | The Explorers' Guild unlocks automatically and all-feature access is recorded. |
 
 The six primary tabs are Map, Travel Ledger, Scratch Map, Travel Log, Explorer Profile, and the
-Explorers' Guild. At Level 3, the Explorer Class can shift from its starting title to the leading
-travel archetype when that archetype has progressed beyond 5%; otherwise, the starting title remains.
+Explorers' Guild. The chosen starting Explorer Class remains through Level 2. From Level 3 onward,
+logged travel can evolve it into a tiered Explorer Class based on the Traveler Archetype radar.
 
 While features are locked, you can bypass the progression with **Skip & unlock all features** in
 the tool chooser or **Unlock All Primary Features** in Settings. The Settings option is hidden once
@@ -179,22 +179,35 @@ including other NPS designations such as monuments and historic sites. Both join
 in the expandable Park Explorer path, so the full park progression is visible together.
 
 Numeric levels do not have individual hard-coded names or a maximum level. The Explorer Class shown
-alongside a level is a separate title based on travel progress; for example, **Level 9 · Park
-Completionist** means the explorer has reached the Level 9 XP threshold and currently has the Park
-Completionist class. The current hard-coded Explorer Classes are:
+alongside a level is a separate title based on travel progress. Starting classes remain in place through
+Level 2; archetype classes evolve at Levels 3–5, 6–9, and 10+.
 
-| Explorer Class | Description |
-| --- | --- |
-| Fresh Recruit | Default class before establishing a home Citadel. |
-| Scout | Fallback class after establishing a Citadel before choosing a starting tool. |
-| Realm Cartographer | Starting class when Scratch Maps is the first tool chosen. |
-| Field Ranger | Starting class when Travel Ledger is the first tool chosen. |
-| Wayward Scribe | Starting class when Travel Log is the first tool chosen. |
-| Alpine Ranger | Explorer of conifer forests, montane grasslands, and arid shrublands. |
-| Park Completionist | Devoted explorer of national preserves and wild sanctuaries. |
-| Biome Hunter | Explorer of boreal forests and tundra ecoregions. |
-| Globetrotter | Crosser of oceans and student of international cultures. |
-| Pioneer Wayfarer | Master of highways, state borders, and open skylines. |
+| Traveler Archetype axis | Levels 3–5 | Levels 6–9 | Level 10+ | Focus |
+| --- | --- | --- | --- | --- |
+| Naturalist | Trail Ranger | Alpine Warden | Wilderness Sovereign | Parks, wild biomes, and backcountry trails |
+| Culturalist | Heritage Seeker | Cultural Envoy | Metropolitan Luminary | Cities, historic sites, and local culture |
+| Overlander | Highway Drifter | Pioneer Wayfarer | Continental Overlander | States, counties, and overland routes |
+| Voyager | Border Hopper | Globetrotter | Grand Cosmopolitan | International parks, flights, and water transit |
+| Pathfinder | Backcountry Scout | Anomaly Seeker | Keeper of Curiosities | Uncharted places, custom coordinates, and rare biomes |
+
+The Traveler Archetype radar scores five dimensions, clamped from 0 to 1:
+
+- **Naturalist** combines visited nature parks and nature-category custom places, collected terrestrial
+  biomes, and foot/AWD expeditions.
+- **Culturalist** combines visited cities and cultural custom places, historic or cultural NPS units,
+  and trips whose reason mentions culture, urban activities, events, or people.
+- **Overlander** combines visited states and counties with road, AWD, and rail expeditions.
+- **Voyager** combines countries, international parks, flights, and ferry trips.
+- **Pathfinder** combines visited Uncharted, Hidden Gem, and Deep Cut discoveries, non-Photon custom
+  coordinates, and Rare-or-higher biomes.
+
+The hidden balanced track is awarded when at least four radar axes reach 0.25 and the fourth-highest
+axis is at least 65% of the leading axis: **Renaissance Wayfarer** (Levels 3–5), **Grand Polymath**
+(Levels 6–9), then **Cartographer Royale** (Level 10+).
+
+Before reaching Level 3, the starting class is **Fresh Recruit** before establishing a home Citadel,
+**Scout** if no starting tool has been chosen, **Realm Cartographer** when Scratch Maps is chosen first,
+**Field Ranger** when Travel Ledger is chosen first, or **Wayward Scribe** when Travel Log is chosen first.
 
 ### Explorer character
 

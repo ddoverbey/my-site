@@ -1820,8 +1820,7 @@ check('primary feature choices unlock by level and can be skipped', () => {
       updateHeaderNavigation()`, context);
     assert.deepEqual(visibleTabs(), ['map']);
     assert.equal(element('toolUnlockModal').classList.contains('hidden'), false);
-    assert.match(element('toolUnlockDescription').textContent,
-      /Choose a path\. Your class title lasts through Levels 1–2/);
+    assert.match(html, /Choose a path\. Your class title lasts through Levels 1–2/);
     const pathOptions = element('toolUnlockOptions').innerHTML;
     assert.match(pathOptions, /flex min-h-56 flex-col items-center/);
     assert.match(pathOptions, /whitespace-nowrap text-base font-bold text-\[#fac60b\]/);
@@ -6062,38 +6061,223 @@ check('Chasing Waterfalls is one achievement unlocked after visiting two waterfa
     );
   }
 });
-check('radar includes full custom visits and their biomes, loaded counties and each supported trip tag', () => {
+check('traveler archetypes use nature, culture, overland, voyage and pathfinder progress', () => {
   vm.runInContext(`
-    applyPassport(migratePassport({}));PARKS=[];coordinateIndexes=null;
-    countyGeoJson=[{id:'06001'},{id:'06013'},{id:'06041'}];
-    AppState.counties={'06001':'l','06013':'v','06041':'t','99999':'v'};
-    AppState.customPois=[
-      {...customLocation,id:'nature',biomes:['5'],status:'v'},
-      {...customLocation,id:'remote',biomes:['11'],status:'l'},
-      {...customLocation,id:'wishlist',biomes:['10'],status:'w'},
-      {...customLocation,id:'transit',biomes:['6'],status:'t'}
+    applyPassport(migratePassport({}));
+    coordinateIndexes=null;
+    PARKS=[
+      {id:'nature-park',designation:'National Park',states:['California'],biomes:[]},
+      {id:'historic-site',designation:'National Historic Site',states:[],biomes:[]},
+      {id:'monument',designation:'National Monument',states:[],biomes:[]},
+      {id:'international-park',designation:'National Park',states:[],intl:true,country:'Canada',countryCode:'CA',biomes:[]}
     ];
+    AppState.homeBase={name:'Test',lat:0,lng:0,radiusKm:0,countyId:'06001'};
+    AppState.pins={'nature-park':'v','historic-site':'v','monument':'v','international-park':'v'};
+    AppState.regions={'s:California':'v','s:Oregon':'l','c:United States of America':'v','c:Canada':'v'};
+    AppState.counties={'06001':'v'};
+    AppState.customLocations=[
+      {id:'nature-poi',name:'Trail',status:'v',source:'Manual',category:'trail',biomes:['5'],
+        political:{countries:[],states:[],counties:[]}},
+      {id:'photon-city',name:'City',status:'v',source:'Photon',category:'City',biomes:[],
+        political:{countries:[],states:[],counties:[]}},
+      {id:'museum-poi',name:'Museum',status:'l',source:'Manual',category:'museum',biomes:[],
+        political:{countries:[],states:[],counties:[]}},
+      {id:'remote-poi',name:'Outpost',status:'v',source:'Manual',category:'outpost',biomes:[],
+        political:{countries:[],states:[],counties:[]}}
+    ];
+    AppState.customPois=[
+      ...AppState.customLocations,
+      {id:'remote-poi',name:'Outpost',status:'v',source:'Manual',category:'outpost',biomes:[],
+        rarityTier:'Deep Cut'}
+    ];
+    AppState.expeditions=[{...testExpedition,id:'all-modes',transitTags:[],routeCoords:[],routeStops:[],
+      routeLegs:['foot','awd','road','rail','flight','ferry'].map(mode=>({mode,routeCoords:[]})),
+      reason:'City museum family festival'}];
+    statsCache=null;
   `, context);
-  const before = vm.runInContext('calculateStats().archetypes', context);
-  assert.equal(before.Nature, 2 / 25);
-  assert.equal(before.Adventure, 1 / 10);
-  assert.equal(before.Remoteness, 1 / 6);
-  assert.equal(before.Worldly, 1 / 15);
-  assert.equal(before.Roadtrip, 2 / 100);
-  vm.runInContext(`AppState.expeditions=[{...testExpedition,transitTags:['awd','foot','ferry','flight']}];`, context);
-  const after = vm.runInContext('calculateStats().archetypes', context);
-  assert.equal(after.Nature, 2 / 25);
-  assert.equal(after.Adventure, 2 / 10);
-  assert.equal(after.Remoteness, 2 / 6);
-  assert.equal(after.Worldly, 2 / 15);
-  assert.equal(after.Roadtrip, 2 / 100 + 1 / 30);
-  for (const [tag, axis] of [['awd','Adventure'],['awd','Roadtrip'],['foot','Adventure'],
-    ['foot','Remoteness'],['ferry','Worldly'],['flight','Worldly'],['rail','Worldly']]) {
-    vm.runInContext(`AppState.expeditions=[{...testExpedition,transitTags:['${tag}']}];`, context);
-    assert.ok(vm.runInContext(`calculateStats().archetypes.${axis}`, context) > before[axis], tag);
+  const stats = vm.runInContext('calculateStats()', context);
+  const axes = stats.archetypes;
+  assert.deepEqual(Object.keys(axes), ['Naturalist', 'Culturalist', 'Overlander', 'Voyager', 'Pathfinder']);
+  const rareDiscoveryCount = stats.metadataProgress.rarityEntities.filter(entity =>
+    ['Uncharted', 'Hidden Gem', 'Deep Cut'].includes(entity.tier)).length;
+  const customCoordinateCount = vm.runInContext(
+    "AppState.customLocations.filter(place=>place.source!=='Photon').length", context
+  );
+  const expected = {
+    Naturalist: Math.min(1, 3 / 20 + stats.biomesSet.size / 14 + 1 / 8),
+    Culturalist: Math.min(1, (2 + 2 + 1) / 12),
+    Overlander: Math.min(1, stats.statesCount / 25 + stats.countiesCount / 100 + 1 / 15),
+    Voyager: Math.min(1, Math.max(0, stats.countriesCount - 1) / 8 + 1 / 10 + 1 / 10 + 0.08),
+    Pathfinder: Math.min(1, rareDiscoveryCount / 10 + customCoordinateCount / 8 + stats.rareBiomesCount / 4)
+  };
+  for (const name of Object.keys(expected)) assert.equal(axes[name], expected[name], name);
+
+  context.clampedArchetypeTrips = Array.from({length:20},(_,index)=>({
+    ...context.testExpedition,id:`clamped-archetype-${index}`,
+    transitTags:['foot','awd','road','rail','flight','ferry'],routeLegs:[],
+    routeCoords:[],routeStops:[],countyIds:[],parkIds:[],customPoiIds:[],
+    reason:'City culture museum festival'
+  }));
+  context.clampedArchetypePois = Array.from({length:10},(_,index)=>({
+    id:`clamped-archetype-poi-${index}`,name:'Remote outpost',status:'v',source:'Manual',
+    category:'outpost',rarityTier:'Deep Cut',biomes:[]
+  }));
+  vm.runInContext(`
+    AppState.expeditions=clampedArchetypeTrips;
+    AppState.customLocations=clampedArchetypePois;AppState.customPois=clampedArchetypePois;statsCache=null;
+  `, context);
+  assert.deepEqual(Array.from(Object.values(vm.runInContext('calculateStats().archetypes', context))),
+    [1, 1, 1, 1, 1]);
+});
+check('each leading archetype evolves across its three Explorer Class tiers', () => {
+  vm.runInContext(`
+    globalThis.archetypeTestSaved={
+      state:Object.fromEntries(['homeBase','pins','regions','counties','customLocations','customPois','expeditions']
+        .map(key=>[key,AppState[key]])),
+      parks:PARKS,countyGeoJson,coordinateIndexes,onboarding,levelFromXp,statsCache
+    };
+    globalThis.archetypeTestLevel=3;
+    levelFromXp=()=>archetypeTestLevel;
+  `, context);
+  const clearArchetypeState = () => vm.runInContext(`
+    AppState.homeBase=null;AppState.pins={};AppState.regions={};AppState.counties={};
+    AppState.customLocations=[];AppState.customPois=[];AppState.expeditions=[];
+    PARKS=[];countyGeoJson=null;coordinateIndexes=null;
+    onboarding={...onboarding,chosenTools:['scratch']};statsCache=null;
+  `, context);
+  const tracks = [
+    {axis:'Naturalist',mode:'foot',reason:'',titles:['Trail Ranger','Alpine Warden','Wilderness Sovereign']},
+    {axis:'Culturalist',mode:null,reason:'Museum visit',titles:['Heritage Seeker','Cultural Envoy','Metropolitan Luminary']},
+    {axis:'Overlander',mode:'road',reason:'',titles:['Highway Drifter','Pioneer Wayfarer','Continental Overlander']},
+    {axis:'Voyager',mode:'flight',reason:'',titles:['Border Hopper','Globetrotter','Grand Cosmopolitan']},
+    {axis:'Pathfinder',mode:null,reason:'',titles:['Backcountry Scout','Anomaly Seeker','Keeper of Curiosities']}
+  ];
+  const levels = [[3,0],[5,0],[6,1],[9,1],[10,2]];
+  try {
+    for (const track of tracks) {
+      for (const [level, tier] of levels) {
+        clearArchetypeState();
+        context.archetypeTestLevel = level;
+        context.archetypeTestTrip = {
+          ...context.testExpedition,id:`class-${track.axis}-${level}`,
+          transitTags:track.mode ? [track.mode] : [],routeLegs:[],routeCoords:[],routeStops:[],
+          countyIds:[],parkIds:[],customPoiIds:[],reason:track.reason
+        };
+        context.archetypeTestPoi = track.axis === 'Pathfinder' ? {
+          id:'class-pathfinder-poi',name:'Remote outpost',status:'v',source:'Manual',category:'outpost',
+          rarityTier:'Deep Cut',biomes:[]
+        } : null;
+        vm.runInContext(`
+          AppState.expeditions=[archetypeTestTrip];
+          AppState.customLocations=archetypeTestPoi?[archetypeTestPoi]:[];
+          AppState.customPois=archetypeTestPoi?[archetypeTestPoi]:[];
+          statsCache=null;
+        `, context);
+        const stats = vm.runInContext('calculateStats()', context);
+        const leader = Object.entries(stats.archetypes).sort((a, b) => b[1] - a[1])[0][0];
+        assert.equal(leader, track.axis, `${track.axis} leads at Level ${level}`);
+        assert.equal(stats.cls, track.titles[tier], `${track.axis} class at Level ${level}`);
+      }
+    }
+
+    clearArchetypeState();
+    context.archetypeTestLevel = 2;
+    vm.runInContext("AppState.homeBase={name:'Test',lat:0,lng:0,radiusKm:0};", context);
+    context.archetypeTestTrip = {
+      ...context.testExpedition,id:'starter-class',transitTags:['foot'],routeLegs:[],
+      routeCoords:[],routeStops:[],countyIds:[],parkIds:[],customPoiIds:[]
+    };
+    vm.runInContext('AppState.expeditions=[archetypeTestTrip];statsCache=null', context);
+    assert.equal(vm.runInContext('calculateStats().cls', context), 'Realm Cartographer');
+  } finally {
+    vm.runInContext(`
+      (()=>{const saved=archetypeTestSaved;
+        Object.assign(AppState,saved.state);
+        PARKS=saved.parks;countyGeoJson=saved.countyGeoJson;coordinateIndexes=saved.coordinateIndexes;
+        onboarding=saved.onboarding;levelFromXp=saved.levelFromXp;statsCache=saved.statsCache;
+        delete globalThis.archetypeTestSaved;delete globalThis.archetypeTestLevel;
+        delete globalThis.archetypeTestTrip;delete globalThis.archetypeTestPoi;
+      })();
+    `, context);
   }
-  vm.runInContext(`AppState.expeditions=Array.from({length:200},()=>({...testExpedition,transitTags:['awd','foot','ferry','flight']}));`, context);
-  assert.deepEqual(Object.values(vm.runInContext('calculateStats().archetypes', context)), [2 / 25,1,1,1,1]);
+});
+check('balanced archetype progress unlocks its hidden three-tier class track', () => {
+  vm.runInContext(`
+    globalThis.archetypeTestSaved={
+      state:Object.fromEntries(['homeBase','pins','regions','counties','customLocations','customPois','expeditions']
+        .map(key=>[key,AppState[key]])),
+      parks:PARKS,countyGeoJson,coordinateIndexes,onboarding,levelFromXp,statsCache
+    };
+    globalThis.archetypeTestLevel=3;
+    levelFromXp=()=>archetypeTestLevel;
+    AppState.homeBase=null;AppState.pins={};AppState.regions={};AppState.counties={};
+    AppState.customLocations=[];AppState.customPois=[];AppState.expeditions=[];
+    PARKS=[];countyGeoJson=null;coordinateIndexes=null;
+    onboarding={...onboarding,chosenTools:['scratch']};
+  `, context);
+  const balancedTrip = (id, mode, reason = '') => ({
+    ...context.testExpedition,id,transitTags:mode ? [mode] : [],routeLegs:[],
+    routeCoords:[],routeStops:[],countyIds:[],parkIds:[],customPoiIds:[],reason
+  });
+  const trips = [
+    ...Array.from({length:4},(_,i)=>balancedTrip(`balanced-foot-${i}`,'foot')),
+    ...Array.from({length:4},(_,i)=>balancedTrip(`balanced-road-${i}`,'road')),
+    ...Array.from({length:4},(_,i)=>balancedTrip(`balanced-culture-${i}`,null,'museum festival')),
+    ...Array.from({length:4},(_,i)=>balancedTrip(`balanced-flight-${i}`,'flight'))
+  ];
+  const pois = ['a','b'].map(id=>({
+    id:`balanced-${id}`,name:'Remote outpost',status:'v',source:'Manual',category:'outpost',
+    rarityTier:'Deep Cut',biomes:[]
+  }));
+  context.balancedTrips=trips;
+  context.balancedPois=pois;
+  try {
+    vm.runInContext(`
+      AppState.expeditions=balancedTrips;AppState.customLocations=balancedPois;AppState.customPois=balancedPois;
+      statsCache=null;
+    `, context);
+    for (const [level, expectedClass] of [
+      [3,'Renaissance Wayfarer'],[6,'Grand Polymath'],[10,'Cartographer Royale']
+    ]) {
+      context.archetypeTestLevel = level;
+      vm.runInContext('statsCache=null', context);
+      const stats = vm.runInContext('calculateStats()', context);
+      const sorted = Object.values(stats.archetypes).sort((a, b) => b - a);
+      assert.ok(sorted.slice(0, 4).every(value => value >= 0.25));
+      assert.ok(sorted[3] >= sorted[0] * 0.65);
+      assert.equal(stats.cls, expectedClass, `balanced class at Level ${level}`);
+      assert.equal(stats.avatar, 'phosphor:compassRose');
+    }
+    assert.equal(
+      vm.runInContext('calculateStats().titleDesc', context),
+      'Master of every horizon—equally at home in wild parks, storied cities, open highways, and distant lands.'
+    );
+  } finally {
+    vm.runInContext(`
+      (()=>{const saved=archetypeTestSaved;
+        Object.assign(AppState,saved.state);
+        PARKS=saved.parks;countyGeoJson=saved.countyGeoJson;coordinateIndexes=saved.coordinateIndexes;
+        onboarding=saved.onboarding;levelFromXp=saved.levelFromXp;statsCache=saved.statsCache;
+        delete globalThis.archetypeTestSaved;delete globalThis.archetypeTestLevel;
+        delete globalThis.balancedTrips;delete globalThis.balancedPois;
+      })();
+    `, context);
+  }
+});
+check('traveler radar labels fit inside the SVG viewBox', () => {
+  context.radarAxes = {
+    Naturalist:0.1,Culturalist:0.2,Overlander:0.3,Voyager:0.4,Pathfinder:0.5
+  };
+  vm.runInContext('renderRadarChart(radarAxes)', context);
+  const markup = element('radarSvg').innerHTML;
+  const labels = [...markup.matchAll(/<text x="([-\d.]+)" y="([-\d.]+)"[^>]*font-size="9.5"[^>]*>([^<]+)<\/text>/g)];
+  assert.deepEqual(labels.map(match => match[3]),
+    ['Naturalist', 'Culturalist', 'Overlander', 'Voyager', 'Pathfinder']);
+  for (const [, x, , label] of labels) {
+    const estimatedWidth = label.length * 9.5 * 0.58;
+    assert.ok(Number(x) - estimatedWidth / 2 >= 0, `${label} does not clip on the left`);
+    assert.ok(Number(x) + estimatedWidth / 2 <= 240, `${label} does not clip on the right`);
+  }
 });
 vm.runInContext(`
   applyPassport(migratePassport({}));PARKS=[{id:'pulse',name:'Pulse Park',lat:37,lng:-120,biomes:[],states:[]}];

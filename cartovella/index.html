@@ -1349,7 +1349,7 @@
       <header class="text-center">
         <h2 id="toolUnlockTitle" class="cinzel text-2xl font-extrabold text-amber-200">Choose Your Starting Path</h2>
         <div id="toolUnlockDescription" class="mt-2 space-y-3 text-sm text-slate-300">
-          <p>Choose a path.</p>
+          <p>Choose a path. Your class title lasts through Levels 1–2.</p>
           <p>Your other tools will unlock as you level up.</p>
           <p class="text-xs italic text-slate-400">You can enable all app features at any time via the settings menu.</p>
         </div>
@@ -1461,7 +1461,7 @@
         <li><strong class="text-amber-200">All three logging tools:</strong> Scratch Maps, Travel Ledger, and Travel Log.</li>
         <li><strong class="text-amber-200">Explorer Profile:</strong> your passport, Explorer Class, quests, and achievements.</li>
         <li><strong class="text-amber-200">Active Quest HUD:</strong> track your closest quests from the RPG Map.</li>
-        <li><strong class="text-amber-200">Explorer Class:</strong> your title can now reflect your leading travel archetype.</li>
+        <li><strong class="text-amber-200">Explorer Class:</strong> your leading archetype evolves at Levels 3, 6, and 10.</li>
       </ul>
       <button id="btnContinueLevel3Unlock" type="button" class="mt-7 w-full rounded-xl bg-amber-500 px-5 py-3 text-sm font-bold text-slate-950 hover:bg-amber-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300">Continue Exploring</button>
     </section>
@@ -3669,15 +3669,35 @@
       // Archetype classification
       const visitedLocations = [...visitedParks, ...visitedCustomLocations];
       const tripsWith = (tags, field = 'transitTags') => AppState.expeditions.filter(exp =>
-        tags.some(tag => exp[field].includes(tag))).length;
+        tags.some(tag => (exp[field] || []).includes(tag) ||
+          (field === 'transitTags' && (exp.routeLegs || []).some(leg => leg.mode === tag)))).length;
+      const culturalDesignation = /\b(?:Monument|Historic(?:al)?|Memorial|Battlefield|Military Park|Parkway)\b/i;
+      const natureLocationsCount = visitedParks.filter(park =>
+        !culturalDesignation.test(park.designation || '')).length +
+        visitedCustomLocations.filter(place =>
+          /\b(?:park|waterfall|peak|trail|forest|lake|river|beach|canyon|camp|nature)\b/i.test(place.category || '')).length;
+      const culturalLocationsCount = visitedCustomLocations.filter(place =>
+        place.category === 'City' || place.source === 'Photon' ||
+        /\b(?:city|town|village|museum|historic|monument|memorial|landmark|food|culture|architecture)\b/i
+          .test(place.category || '')).length +
+        visitedParks.filter(park => culturalDesignation.test(park.designation || '')).length;
+      const culturalTripsCount = AppState.expeditions.filter(expedition =>
+        typeof expedition.reason === 'string' &&
+        /\b(?:city|culture|museum|food|family|friends?|work|history|festival|concert|urban)\b/i
+          .test(expedition.reason)).length;
+      const rareDiscoveryCount = (metadataProgress.rarityEntities || []).filter(entity =>
+        ['Uncharted', 'Hidden Gem', 'Deep Cut'].includes(entity.tier)).length;
+      const customCoordinateCount = visitedCustomLocations.filter(place => place.source !== 'Photon').length;
       const archetypes = {
-        Nature: Math.min(1, visitedLocations.length / 25),
-        Adventure: Math.min(1, (visitedLocations.filter(p => (p.biomes || []).some(b => ['5','10','13'].includes(String(b)))).length +
-          tripsWith(['awd', 'foot'])) / 10),
-        Remoteness: Math.min(1, (visitedLocations.filter(p => (p.biomes || []).some(b => ['6','11'].includes(String(b)))).length +
-          tripsWith(['foot'])) / 6),
-        Worldly: Math.min(1, (visitedCountries.size + tripsWith(['ferry', 'flight', 'rail'])) / 15),
-        Roadtrip: Math.min(1, visitedStates.size / 30 + countiesCount / 100 + tripsWith(['road', 'awd']) / 30)
+        Naturalist: Math.min(1, natureLocationsCount / 20 + biomesSet.size / 14 +
+          tripsWith(['foot', 'awd']) / 8),
+        Culturalist: Math.min(1, (culturalLocationsCount + culturalTripsCount) / 12),
+        Overlander: Math.min(1, visitedStates.size / 25 + countiesCount / 100 +
+          tripsWith(['road', 'awd', 'rail']) / 15),
+        Voyager: Math.min(1, Math.max(0, visitedCountries.size - 1) / 8 +
+          visitedParks.filter(park => park.intl).length / 10 +
+          tripsWith(['flight', 'ferry']) / 10 + (visitedCountries.size > 0 ? 0.08 : 0)),
+        Pathfinder: Math.min(1, rareDiscoveryCount / 10 + customCoordinateCount / 8 + unlockedRare.length / 4)
       };
 
       const sortedAxes = Object.entries(archetypes).sort((a,b) => b[1] - a[1]);
@@ -3692,35 +3712,48 @@
         'The journey of ten thousand leagues begins with a single step.';
       let avatar = 'phosphor:compass';
 
-      if (level >= 3 && sortedAxes[0][1] > 0.05 &&
-          (!AppState.homeBase || visitedLocations.length || AppState.expeditions.length || countiesCount > 1 ||
-            visitedCountries.size > 1 || visitedStates.size > 1)) {
-        switch(sortedAxes[0][0]) {
-          case 'Adventure':
-            cls = 'Alpine Ranger';
-            titleDesc = 'Explorer of conifer forests, montane grasslands, and arid shrublands.';
-            avatar = '🧗';
-            break;
-          case 'Nature':
-            cls = 'Park Completionist';
-            titleDesc = 'Devoted explorer of national preserves and wild sanctuaries.';
-            avatar = '🏕️';
-            break;
-          case 'Remoteness':
-            cls = 'Biome Hunter';
-            titleDesc = 'Explorer of boreal forests and tundra ecoregions.';
-            avatar = '❄️';
-            break;
-          case 'Worldly':
-            cls = 'Globetrotter';
-            titleDesc = 'Crosser of oceans and student of international cultures.';
-            avatar = '✈️';
-            break;
-          case 'Roadtrip':
-            cls = 'Pioneer Wayfarer';
-            titleDesc = 'Master of highways, state borders, and open skylines.';
-            avatar = '🚙';
-            break;
+      const balancedAxes = sortedAxes.filter(([, value]) => value >= 0.25).length >= 4 &&
+        sortedAxes[3][1] >= sortedAxes[0][1] * 0.65;
+      const hasLoggedTravel = visitedLocations.length > 0 || AppState.expeditions.length > 0 ||
+        countiesCount > 1 || visitedCountries.size > 1 || visitedStates.size > 1;
+      if (level >= 3 && sortedAxes[0][1] > 0.05 && hasLoggedTravel) {
+        const classTier = level >= 10 ? 2 : level >= 6 ? 1 : 0;
+        if (balancedAxes) {
+          cls = ['Renaissance Wayfarer', 'Grand Polymath', 'Cartographer Royale'][classTier];
+          titleDesc = 'Master of every horizon—equally at home in wild parks, storied cities, open highways, and distant lands.';
+          avatar = 'phosphor:compassRose';
+        } else {
+          const tracks = {
+            Naturalist: [
+              ['Trail Ranger', 'Alpine Warden', 'Wilderness Sovereign'],
+              'Devoted explorer of national parks, wild biomes, and backcountry trails.',
+              '🏕️'
+            ],
+            Culturalist: [
+              ['Heritage Seeker', 'Cultural Envoy', 'Metropolitan Luminary'],
+              'Connoisseur of storied cities, historic monuments, and vibrant local culture.',
+              '🏛️'
+            ],
+            Overlander: [
+              ['Highway Drifter', 'Pioneer Wayfarer', 'Continental Overlander'],
+              'Master of open highways, state borders, and cross-country routes.',
+              '🚙'
+            ],
+            Voyager: [
+              ['Border Hopper', 'Globetrotter', 'Grand Cosmopolitan'],
+              'Crosser of oceans and collector of distant horizons across the globe.',
+              '✈️'
+            ],
+            Pathfinder: [
+              ['Backcountry Scout', 'Anomaly Seeker', 'Keeper of Curiosities'],
+              'Hunter of uncharted coordinates, rare biomes, and hidden gems off the beaten path.',
+              '🔮'
+            ]
+          };
+          const track = tracks[sortedAxes[0][0]];
+          cls = track[0][classTier];
+          titleDesc = track[1];
+          avatar = track[2];
         }
       }
 
@@ -6700,15 +6733,16 @@
     function renderRadarChart(axes) {
       const names = Object.keys(axes);
       const n = names.length;
-      const R = 85;
+      const R = 76;
+      const labelRadius = R + 14;
       const C = 120;
       const pt = (i, r) => [C + Math.sin(2 * Math.PI * i / n) * r, C - Math.cos(2 * Math.PI * i / n) * r];
       const ring = k => names.map((_, i) => pt(i, R * k).join(',')).join(' ');
       const shape = names.map((k, i) => pt(i, R * Math.max(0.08, axes[k])).join(',')).join(' ');
 
       const labels = names.map((k, i) => {
-        const [x, y] = pt(i, R + 18);
-        return `<text x="${x}" y="${y}" fill="#94a3b8" font-size="10" font-family="Inter" text-anchor="middle" dominant-baseline="middle">${k}</text>`;
+        const [x, y] = pt(i, labelRadius);
+        return `<text x="${x}" y="${y}" fill="#94a3b8" font-size="9.5" font-family="Inter" text-anchor="middle" dominant-baseline="middle">${k}</text>`;
       }).join('');
 
       const svgEl = document.getElementById('radarSvg');
