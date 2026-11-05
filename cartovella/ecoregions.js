@@ -17,9 +17,22 @@
   const colors = ['#22c55e', '#a3e635', '#16a34a', '#10b981', '#059669', '#0d9488',
     '#eab308', '#84cc16', '#14b8a6', '#06b6d4', '#c084fc', '#d97706', '#f59e0b', '#38bdf8'];
   const icons = ['🌴', '🌳', '🌲', '🌳', '🌲', '🌲', '🌾', '🌾', '🐊', '⛰️', '❄️', '🌿', '🏜️', '🌱'];
+  const biomeIconAssets = Object.freeze({
+    '3': 'tropical-conifer-icon.svg',
+    '5': 'temperate-coniferous-icon.svg',
+    '6': 'taiga-icon.svg',
+    '7': 'tropical-grasslands-icon.svg',
+    '8': 'temp-grasslands-icon.svg',
+    '12': 'Mediterranean-icon.svg',
+    '14': 'mangrove-icon.svg'
+  });
   const xpByRarity = Object.freeze({
     common: 15, uncommon: 30, rare: 65, epic: 100, legendary: 150, mythic: 200
   });
+
+  function biomeIconAsset(id) {
+    return biomeIconAssets[String(id)] || null;
+  }
 
   function rarityForShare(share) {
     if (!Number.isFinite(share) || share < 0 || share > 100) {
@@ -110,7 +123,7 @@
     return { parks: locations, biomes };
   }
 
-  const api = { SOURCE, names, rarityForShare, biomeDefinitions, validateSnapshot, applySnapshot };
+  const api = { SOURCE, names, rarityForShare, biomeDefinitions, biomeIconAsset, validateSnapshot, applySnapshot };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Ecoregions = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

@@ -2030,7 +2030,7 @@ function renderExpeditionHistory() {
       .filter(id => BIOMES[id])
       .map(id => {
         const biome = BIOMES[id];
-        return `<button type="button" data-atlas-pin-kind="biome" data-atlas-pin-id="${escapeHtml(id)}" aria-label="View trips and locations for ${escapeHtml(biome.name)}" class="px-2 py-0.5 rounded-full text-[11px] border border-emerald-500/30 bg-emerald-950/40 text-emerald-200 hover:border-emerald-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400" title="${escapeHtml(biome.name)}">${escapeHtml(biome.icon)} ${escapeHtml(biome.name)}</button>`;
+        return `<button type="button" data-atlas-pin-kind="biome" data-atlas-pin-id="${escapeHtml(id)}" aria-label="View trips and locations for ${escapeHtml(biome.name)}" class="px-2 py-0.5 rounded-full text-[11px] border border-emerald-500/30 bg-emerald-950/40 text-emerald-200 hover:border-emerald-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400" title="${escapeHtml(biome.name)}">${window.biomeIconMarkup(id, 'h-4 w-4 shrink-0')} ${escapeHtml(biome.name)}</button>`;
       }).join('');
     const badgeMarkup = badges.map(badge => badge.kind
       ? `<button type="button" data-atlas-pin-kind="${badge.kind}" data-atlas-pin-id="${escapeHtml(badge.id)}" aria-label="View trips and locations for ${escapeHtml(badge.label)}" class="px-2 py-0.5 rounded-full text-[11px] border ${badge.tone} hover:brightness-125 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400">${badge.icon} ${escapeHtml(badge.label)}</button>`

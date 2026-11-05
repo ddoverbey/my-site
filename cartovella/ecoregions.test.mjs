@@ -22,6 +22,25 @@ check('six rarity tiers use exact area-share thresholds, not rounded labels', ()
   }
   for (const invalid of [-1, NaN, Infinity, 101]) assert.throws(() => ecoregions.rarityForShare(invalid));
 });
+check('seven biomes use their supplied SVG emoji replacements while other biome emojis remain', () => {
+  assert.deepEqual(Object.fromEntries(['3', '5', '6', '7', '8', '12', '14']
+    .map(id => [id, ecoregions.biomeIconAsset(id)])), {
+    '3': 'tropical-conifer-icon.svg',
+    '5': 'temperate-coniferous-icon.svg',
+    '6': 'taiga-icon.svg',
+    '7': 'tropical-grasslands-icon.svg',
+    '8': 'temp-grasslands-icon.svg',
+    '12': 'Mediterranean-icon.svg',
+    '14': 'mangrove-icon.svg'
+  });
+  const biomes = ecoregions.biomeDefinitions();
+  for (const id of ['1', '2', '4', '9', '10', '11', '13']) {
+    assert.equal(ecoregions.biomeIconAsset(id), null);
+    assert.ok(biomes[id].icon);
+  }
+  assert.equal(biomes['3'].icon, '🌲');
+  assert.equal(biomes['4'].icon, '🌳');
+});
 
 const polygon = (rings, id = 1, biomeId = 13) => ({
   type: 'Feature',

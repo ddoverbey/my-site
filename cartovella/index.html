@@ -1628,15 +1628,15 @@
     </section>
   </div>
 
-  <script src="./nps-catalog.js?v=20261104-miku-easter-egg-v1"></script>
-  <script src="./national-parks-scratch.js?v=20261104-miku-easter-egg-v1"></script>
-  <script src="./international-parks.js?v=20261104-miku-easter-egg-v1"></script>
-  <script src="./ecoregions.js?v=20261104-miku-easter-egg-v1"></script>
-  <script src="./coordinate-lookups.js?v=20261104-miku-easter-egg-v1"></script>
-  <script src="./micro-states.js?v=20261104-miku-easter-egg-v1"></script>
-  <script src="./travel-ledger.js?v=20261104-miku-easter-egg-v1"></script>
-  <script src="./character-creator.js?v=20261104-miku-easter-egg-v1"></script>
-  <script src="./rarity-config.js?v=20261104-miku-easter-egg-v1"></script>
+  <script src="./nps-catalog.js?v=20261105-biome-icon-svgs-v1"></script>
+  <script src="./national-parks-scratch.js?v=20261105-biome-icon-svgs-v1"></script>
+  <script src="./international-parks.js?v=20261105-biome-icon-svgs-v1"></script>
+  <script src="./ecoregions.js?v=20261105-biome-icon-svgs-v1"></script>
+  <script src="./coordinate-lookups.js?v=20261105-biome-icon-svgs-v1"></script>
+  <script src="./micro-states.js?v=20261105-biome-icon-svgs-v1"></script>
+  <script src="./travel-ledger.js?v=20261105-biome-icon-svgs-v1"></script>
+  <script src="./character-creator.js?v=20261105-biome-icon-svgs-v1"></script>
+  <script src="./rarity-config.js?v=20261105-biome-icon-svgs-v1"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -1645,6 +1645,13 @@
     let wikidataCatalogLoaded = false;
     let biomeCatalogLoaded = false;
     const escapeHtml = NpsCatalog.escapeHtml;
+    function biomeIconMarkup(id, className = 'h-4 w-4 align-middle object-contain', fallbackIcon = BIOMES[id]?.icon || '') {
+      const asset = Ecoregions.biomeIconAsset(id);
+      return asset
+        ? `<img src="assets/icons/${asset}" class="${escapeHtml(className)}" alt="" aria-hidden="true">`
+        : escapeHtml(fallbackIcon);
+    }
+    window.biomeIconMarkup = biomeIconMarkup;
 
     async function loadBiomeCatalog() {
       const status = document.getElementById('biomeCatalogStatus');
@@ -5271,7 +5278,7 @@
       const biomeTags = (p.biomes || []).map(b => {
         const info = BIOMES[b] || { name: b, icon: '🌿' };
         return `<span class="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-200">
-          <span>${info.icon}</span> ${info.name} (${info.rarity})
+          <span>${biomeIconMarkup(b, 'h-4 w-4 shrink-0', info.icon)}</span> ${info.name} (${info.rarity})
         </span>`;
       }).join(' ');
 
@@ -7068,7 +7075,8 @@
         const biome = BIOMES[id];
         if (!biome) return;
         const source = calculateStats().metadataProgress.biomePins[id] || { locations: [], trips: [] };
-        title = `${biome.icon} ${biome.name}`;
+        titleIcon = biomeIconMarkup(id, 'h-5 w-5 mr-2');
+        title = biome.name;
         subtitle = `${source.trips.length} contributing trip${source.trips.length === 1 ? '' : 's'} · ${source.locations.length} contributing location${source.locations.length === 1 ? '' : 's'}`;
         locations = source.locations;
         trips = source.trips.map(tripId => AppState.expeditions.find(item => item.id === tripId)).filter(Boolean);
@@ -7086,7 +7094,7 @@
           (trip.routeStops || []).some(stop => stop.kind === (park ? 'park' : 'poi') && stop.id === id));
         extraMarkup = destination.biomes?.length
           ? `<section><h3 class="mb-2 text-xs font-bold uppercase tracking-wide text-emerald-300">Biomes</h3><div class="flex flex-wrap gap-1.5">${(destination.biomes || []).map(biomeId => BIOMES[biomeId]
-            ? `<button type="button" data-atlas-pin-kind="biome" data-atlas-pin-id="${escapeHtml(biomeId)}" class="rounded-full border border-emerald-500/30 bg-emerald-950/40 px-2 py-1 text-xs text-emerald-200 hover:border-emerald-300">${escapeHtml(BIOMES[biomeId].icon)} ${escapeHtml(BIOMES[biomeId].name)}</button>`
+            ? `<button type="button" data-atlas-pin-kind="biome" data-atlas-pin-id="${escapeHtml(biomeId)}" class="rounded-full border border-emerald-500/30 bg-emerald-950/40 px-2 py-1 text-xs text-emerald-200 hover:border-emerald-300">${biomeIconMarkup(biomeId, 'h-4 w-4 shrink-0')} ${escapeHtml(BIOMES[biomeId].name)}</button>`
             : '').join('')}</div></section>` : '';
       } else if (kind === 'county') {
         const county = countyFeaturesById[id];
@@ -7753,7 +7761,7 @@
             <div class="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
               <span>${escapeHtml(p.state || p.country || '')}</span>
               <span>•</span>
-              <span class="text-[11px] text-amber-300">${(p.biomes || []).map(b => BIOMES[b] ? BIOMES[b].icon : '').join('')}</span>
+              <span class="inline-flex items-center gap-1 text-[11px] text-amber-300">${(p.biomes || []).map(b => BIOMES[b] ? biomeIconMarkup(b, 'h-4 w-4 shrink-0') : '').join('')}</span>
             </div>
           </div>
           <div class="flex flex-wrap max-w-full sm:max-w-44 gap-1 shrink-0">
@@ -8455,7 +8463,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261104-miku-easter-egg-v1"></script>
+  <script src="./expedition-ui.js?v=20261105-biome-icon-svgs-v1"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);
