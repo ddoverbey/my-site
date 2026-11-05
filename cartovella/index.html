@@ -3803,6 +3803,7 @@
     let fogCtx = null;
     let fogPadding = { x: 0, y: 0 };
     let fogZoomAnimating = false;
+    let fogCanvasExpandedForZoom = false;
     let homeAuraPulseStarted = null;
     let homeAuraFrame = null;
     const discoveryPulses = new Map();
@@ -3869,8 +3870,13 @@
       });
       map.on('contextmenu', event => openCustomLocation(event.latlng.lat, event.latlng.lng));
       map.on('zoomstart', () => { fogZoomAnimating = true; });
+      map.on('zoomanim', event => expandFogCanvasForZoom(event.zoom));
       map.on('zoomend', () => {
         fogZoomAnimating = false;
+        if (fogCanvasExpandedForZoom) {
+          resizeFogCanvas();
+          fogCanvasExpandedForZoom = false;
+        }
         showFog();
         scheduleParkMarkerRender();
       });
@@ -3899,6 +3905,43 @@
       fogCanvas.style.left = `${-fogPadding.x}px`;
       fogCanvas.style.top = `${-fogPadding.y}px`;
       fogCanvas.style.transformOrigin = `${fogPadding.x + size.x / 2}px ${fogPadding.y + size.y / 2}px`;
+    }
+
+    function expandFogCanvasForZoom(targetZoom) {
+      if (!fogCanvas || !map || AppState.currentTab !== 'map') return;
+      const scale = map.getZoomScale(targetZoom, map.getZoom());
+      if (!Number.isFinite(scale) || scale >= 1) return;
+
+      const size = map.getSize();
+      const extraScreenMargin = 16;
+      const padX = Math.max(fogPadding.x,
+        Math.ceil((size.x / scale - size.x) / 2) + Math.ceil(extraScreenMargin / scale));
+      const padY = Math.max(fogPadding.y,
+        Math.ceil((size.y / scale - size.y) / 2) + Math.ceil(extraScreenMargin / scale));
+      if (padX === fogPadding.x && padY === fogPadding.y) return;
+
+      const previousCanvas = document.createElement('canvas');
+      previousCanvas.width = fogCanvas.width;
+      previousCanvas.height = fogCanvas.height;
+      const previousContext = previousCanvas.getContext('2d');
+      if (!previousContext) throw new Error('Unable to preserve the fog canvas during zoom animation.');
+      previousContext.drawImage(fogCanvas, 0, 0);
+
+      const previousPadding = fogPadding;
+      fogCanvas.width = size.x + padX * 2;
+      fogCanvas.height = size.y + padY * 2;
+      fogPadding = { x: padX, y: padY };
+      fogCanvas.style.width = `${fogCanvas.width}px`;
+      fogCanvas.style.height = `${fogCanvas.height}px`;
+      fogCanvas.style.left = `${-padX}px`;
+      fogCanvas.style.top = `${-padY}px`;
+      fogCanvas.style.transformOrigin = `${padX + size.x / 2}px ${padY + size.y / 2}px`;
+
+      fogCtx = fogCanvas.getContext('2d');
+      fogCtx.fillStyle = `rgba(235, 239, 245, ${oceanFogOpacity()})`;
+      fogCtx.fillRect(0, 0, fogCanvas.width, fogCanvas.height);
+      fogCtx.drawImage(previousCanvas, padX - previousPadding.x, padY - previousPadding.y);
+      fogCanvasExpandedForZoom = true;
     }
 
     /* Fog of War Rendering Routine */

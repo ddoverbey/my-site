@@ -3303,6 +3303,53 @@ check('fog canvas overscan is positioned in a Leaflet pane for shared map transf
   assert.match(html, /map\.on\('zoomstart', \(\) => \{ fogZoomAnimating = true; \}\)/);
   assert.match(html, /zoomAnimationThreshold:\s*1/);
 });
+check('fog canvas expands only when a zoom-out would otherwise expose its edges', () => {
+  const saved = vm.runInContext('({ map, fogCanvas, fogCtx, fogPadding, fogCanvasExpandedForZoom })', context);
+  const originalCreateElement = context.document.createElement;
+  const operations = [];
+  const ctx = {
+    fillRect(...args) { operations.push(['fillRect', ...args]); },
+    drawImage(...args) { operations.push(['drawImage', ...args]); }
+  };
+  const canvas = {
+    width: 2400, height: 1800, style: {},
+    getContext: () => ctx
+  };
+  try {
+    context.document.createElement = () => ({
+      width: 0, height: 0,
+      getContext: () => ({ drawImage(...args) { operations.push(['snapshot', ...args]); } })
+    });
+    context.testFogZoomMap = {
+      getZoom: () => 6,
+      getZoomScale: (target, current) => 2 ** (target - current),
+      getSize: () => ({ x: 800, y: 600 })
+    };
+    context.testFogCanvas = canvas;
+    context.testFogCtx = ctx;
+    vm.runInContext(`
+      map=testFogZoomMap;fogCanvas=testFogCanvas;fogCtx=testFogCtx;fogPadding={x:800,y:600};
+      fogCanvasExpandedForZoom=false;AppState.currentTab='map';expandFogCanvasForZoom(5);
+    `, context);
+    assert.equal(canvas.width, 2400, 'the normal one-level zoom stays within the existing overscan');
+    vm.runInContext('expandFogCanvasForZoom(4)', context);
+    assert.ok(canvas.width * 0.25 >= 800);
+    assert.ok(canvas.height * 0.25 >= 600);
+    assert.ok(vm.runInContext('fogPadding.x', context) > 800);
+    assert.ok(operations.some(operation => operation[0] === 'snapshot'));
+    assert.ok(operations.some(operation => operation[0] === 'fillRect'));
+    assert.ok(operations.some(operation => operation[0] === 'drawImage'));
+    assert.match(html, /map\.on\('zoomanim', event => expandFogCanvasForZoom\(event\.zoom\)\)/);
+    assert.match(html, /if \(fogCanvasExpandedForZoom\) \{\s*resizeFogCanvas\(\)/);
+  } finally {
+    context.document.createElement = originalCreateElement;
+    context.testFogZoomState = saved;
+    vm.runInContext(`
+      map=testFogZoomState.map;fogCanvas=testFogZoomState.fogCanvas;fogCtx=testFogZoomState.fogCtx;
+      fogPadding=testFogZoomState.fogPadding;fogCanvasExpandedForZoom=testFogZoomState.fogCanvasExpandedForZoom;
+    `, context);
+  }
+});
 check('fog geometry uses Leaflet layer coordinates inside its map pane', () => {
   vm.runInContext('map.latLngToLayerPoint = () => ({ x: 123, y: 456 });', context);
   assert.equal(vm.runInContext('fogLayerPoint([0, 0]).x', context), 123);
