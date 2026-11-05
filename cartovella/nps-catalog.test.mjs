@@ -6610,11 +6610,13 @@ check('achievement and XP level-ups notify once while passport imports suppress 
     const playChime = AudioEngine.playChime;
     const notify = showProgressNotification;
     const timeout = setTimeout;
+    const savedOnboarding = JSON.stringify(onboarding);
+    const savedViewOnly = AppState.viewOnly;
     const chimes = [], notices = [], timers = [];
     let progress = 0, level = 1;
     AudioEngine.playChime = sound => chimes.push(sound);
-    showProgressNotification = (unlocked, reachedLevel) => notices.push({
-      titles:unlocked.map(tier => tier.title), level:reachedLevel
+    showProgressNotification = (unlocked, reachedLevel, level3Unlocked) => notices.push({
+      titles:unlocked.map(tier => tier.title), level:reachedLevel, level3Unlocked
     });
     calculateStats = () => ({testProgress:progress, level});
     syncDerivedState = () => {};
@@ -6622,6 +6624,8 @@ check('achievement and XP level-ups notify once while passport imports suppress 
     TravelLedger.restoreExpeditionPromotions = () => {};
     setTimeout = callback => { timers.push(callback); return timers.length; };
     try {
+      AppState.viewOnly = false;
+      onboarding = {unlockedAll:false, chosenTools:['scratch','bucketlist']};
       ACHIEVEMENTS.splice(0, ACHIEVEMENTS.length,
         {
           id: 'firstAchievement', progress: stats => stats.testProgress,
@@ -6649,6 +6653,8 @@ check('achievement and XP level-ups notify once while passport imports suppress 
       AudioEngine.playChime = playChime;
       showProgressNotification = notify;
       setTimeout = timeout;
+      onboarding = JSON.parse(savedOnboarding);
+      AppState.viewOnly = savedViewOnly;
     }
   })()`, context);
   assert.deepEqual(Array.from(result.chimes), ['levelup', 'levelup']);
@@ -6656,8 +6662,10 @@ check('achievement and XP level-ups notify once while passport imports suppress 
     'First milestone', 'Second milestone', 'Another achievement'
   ]);
   assert.equal(result.notices[0].level, 2);
+  assert.equal(result.notices[0].level3Unlocked, false);
   assert.deepEqual(Array.from(result.notices[1].titles), []);
   assert.equal(result.notices[1].level, 3);
+  assert.equal(result.notices[1].level3Unlocked, true);
   assert.equal(result.notices.length, 2);
   assert.equal(result.importTimers, 2);
   assert.match(html, /commitLedger\(\(\) => applyPassport\(parsed\), \{\s*notifyProgress: false\s*\}\)/);
@@ -6690,6 +6698,8 @@ check('achievement modal shows rounded artwork cards and level-up banner stays a
     achievementNotification: { classList: classList('hidden') },
     achievementNotificationTitle: { textContent: '' },
     btnDismissAchievement: { focus() {} },
+    level3UnlockNotification: { classList: classList('hidden') },
+    btnDismissLevel3Unlock: { focus() {} },
     achievementNotificationList: {
       children: [], replaceChildren() { this.children = []; },
       appendChild(child) { this.children.push(child); }
@@ -6706,7 +6716,7 @@ check('achievement modal shows rounded artwork cards and level-up banner stays a
   });
   try {
     vm.runInContext(`
-      showProgressNotification([{title:'First Steps'},{title:'Anomaly Seeker'}]);
+      showProgressNotification([{title:'First Steps'},{title:'Anomaly Seeker'}], null, true);
     `, context);
     assert.equal(notificationElements.achievementNotificationTitle.textContent, 'Achievements Unlocked');
     const cards = notificationElements.achievementNotificationList.children;
@@ -6718,11 +6728,18 @@ check('achievement modal shows rounded artwork cards and level-up banner stays a
     assert.equal(cards[1].children[0].src, './assets/achievements/anomaly-seeker.png');
     assert.equal(cards[1].children[1].textContent, 'Anomaly Seeker');
     assert.equal(notificationElements.achievementNotification.classList.contains('hidden'), false);
+    assert.equal(notificationElements.level3UnlockNotification.classList.contains('hidden'), true);
+    vm.runInContext('dismissAchievementNotification()', context);
+    assert.equal(notificationElements.level3UnlockNotification.classList.contains('hidden'), false);
+    assert.match(html, /id="level3UnlockNotification" role="dialog" aria-modal="true"/);
+    assert.match(html, /Level 3: New Features Unlocked/);
+    assert.match(html, /All three logging tools/);
+    assert.match(html, /Active Quest HUD/);
     vm.runInContext('showProgressNotification([], 3)', context);
     assert.equal(notificationElements.levelUpMessage.textContent, 'You reached Level 3!');
     assert.equal(notificationElements.levelUpNotification.classList.contains('level-up-banner'), true);
-    vm.runInContext('dismissAchievementNotification(); hideLevelUpNotification()', context);
-    assert.equal(notificationElements.achievementNotification.classList.contains('hidden'), true);
+    vm.runInContext('dismissLevel3UnlockNotification(); hideLevelUpNotification()', context);
+    assert.equal(notificationElements.level3UnlockNotification.classList.contains('hidden'), true);
     assert.equal(notificationElements.levelUpNotification.classList.contains('opacity-0'), true);
   } finally {
     context.document.getElementById = originalGetElement;

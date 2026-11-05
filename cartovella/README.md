@@ -150,7 +150,7 @@ Travel Log (map routes and write trip stories).
 | Before establishing a Citadel | Map | Establish a Home Citadel to begin choosing tools. |
 | Level 1, after the first choice | Map and the chosen tool | Choose one logging tool; it sets your starting Explorer Class through Level 2. |
 | Level 2, after the second choice | Map and both chosen tools | Choose one of the two remaining logging tools. |
-| Level 3 | Map, all three logging tools, and Explorer Profile | The final logging tool and Explorer Profile unlock automatically; the active-quest HUD appears. |
+| Level 3 | Map, all three logging tools, and Explorer Profile | The final logging tool, Explorer Profile, and active-quest HUD unlock automatically; a popup explains the new features. |
 | Level 4 and higher | All six primary tabs | The Explorers' Guild unlocks automatically and all-feature access is recorded. |
 
 The six primary tabs are Map, Travel Ledger, Scratch Map, Travel Log, Explorer Profile, and the

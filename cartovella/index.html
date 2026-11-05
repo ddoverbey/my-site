@@ -1422,6 +1422,24 @@
     </section>
   </div>
 
+  <div id="level3UnlockNotification" role="dialog" aria-modal="true" aria-labelledby="level3UnlockTitle" aria-describedby="level3UnlockDescription" class="hidden fixed inset-0 z-[1400] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
+    <section class="relative rpg-panel rpg-panel-gold max-w-lg w-full rounded-3xl p-7 sm:p-9 shadow-2xl shadow-amber-950/50">
+      <button id="btnDismissLevel3Unlock" type="button" aria-label="Close Level 3 unlock notification" class="absolute top-3 right-3 rounded-lg px-2.5 py-1 text-xl leading-none text-slate-400 hover:text-white hover:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400">
+        <span aria-hidden="true">&times;</span>
+      </button>
+      <div class="mb-3 flex justify-center" aria-hidden="true"><span data-cartovella-icon="compass" data-icon-class="h-12 w-12"></span></div>
+      <h2 id="level3UnlockTitle" class="cinzel text-center text-xl sm:text-2xl font-extrabold text-amber-200">Level 3: New Features Unlocked</h2>
+      <p id="level3UnlockDescription" class="mt-2 text-center text-sm text-slate-300">Your Archetype Radar Chart is active. Here is what is now available:</p>
+      <ul class="mt-5 space-y-3 text-sm text-slate-100">
+        <li><strong class="text-amber-200">All three logging tools:</strong> Scratch Maps, Travel Ledger, and Travel Log.</li>
+        <li><strong class="text-amber-200">Explorer Profile:</strong> your passport, Explorer Class, quests, and achievements.</li>
+        <li><strong class="text-amber-200">Active Quest HUD:</strong> track your closest quests from the RPG Map.</li>
+        <li><strong class="text-amber-200">Explorer Class:</strong> your title can now reflect your leading travel archetype.</li>
+      </ul>
+      <button id="btnContinueLevel3Unlock" type="button" class="mt-7 w-full rounded-xl bg-amber-500 px-5 py-3 text-sm font-bold text-slate-950 hover:bg-amber-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300">Continue Exploring</button>
+    </section>
+  </div>
+
   <div id="levelUpNotification" role="status" aria-live="polite" aria-atomic="true" class="fixed top-20 left-1/2 z-[1300] w-[min(92vw,28rem)] transform -translate-x-1/2 -translate-y-4 opacity-0 pointer-events-none transition-all duration-300">
     <div class="rpg-panel rounded-2xl p-4 shadow-2xl border-amber-500/60 flex items-center gap-3">
       <div class="text-3xl" aria-hidden="true">⬆️</div>
@@ -3117,10 +3135,33 @@
       document.getElementById('btnDismissAchievement').focus();
     }
 
+    let level3UnlockNotificationPending = false;
+    let level3UnlockNotificationReturnFocus = null;
+
+    function showLevel3UnlockNotification(returnFocus = null) {
+      const modal = document.getElementById('level3UnlockNotification');
+      if (!modal.classList.contains('hidden')) return;
+      level3UnlockNotificationReturnFocus = returnFocus || document.activeElement;
+      modal.classList.remove('hidden');
+      document.getElementById('btnDismissLevel3Unlock').focus();
+    }
+
+    function dismissLevel3UnlockNotification() {
+      document.getElementById('level3UnlockNotification').classList.add('hidden');
+      const returnFocus = level3UnlockNotificationReturnFocus;
+      level3UnlockNotificationReturnFocus = null;
+      if (returnFocus && returnFocus.isConnected && typeof returnFocus.focus === 'function') returnFocus.focus();
+    }
+
     function dismissAchievementNotification() {
       document.getElementById('achievementNotification').classList.add('hidden');
       const returnFocus = achievementNotificationReturnFocus;
       achievementNotificationReturnFocus = null;
+      if (level3UnlockNotificationPending) {
+        level3UnlockNotificationPending = false;
+        showLevel3UnlockNotification(returnFocus);
+        return;
+      }
       if (returnFocus && returnFocus.isConnected && typeof returnFocus.focus === 'function') returnFocus.focus();
     }
 
@@ -3145,8 +3186,13 @@
       levelUpTimeout = setTimeout(hideLevelUpNotification, 8000);
     }
 
-    function showProgressNotification(unlocked, level = null) {
-      if (unlocked.length) showAchievementNotification(unlocked);
+    function showProgressNotification(unlocked, level = null, level3Unlocked = false) {
+      if (unlocked.length) {
+        showAchievementNotification(unlocked);
+        if (level3Unlocked) level3UnlockNotificationPending = true;
+      } else if (level3Unlocked) {
+        showLevel3UnlockNotification();
+      }
       if (level !== null) showLevelUpNotification(level);
     }
   </script>
@@ -6913,10 +6959,12 @@
     function notifyProgressUnlocks(previousStats, currentStats) {
       const unlocked = newlyCompletedAchievementTiers(previousStats, currentStats);
       const level = currentStats.level > previousStats.level ? currentStats.level : null;
+      const level3Unlocked = previousStats.level < 3 && currentStats.level >= 3 &&
+        !onboarding.unlockedAll && !AppState.viewOnly;
       if (!unlocked.length && level === null) return;
       setTimeout(() => {
         AudioEngine.playChime('levelup');
-        showProgressNotification(unlocked, level);
+        showProgressNotification(unlocked, level, level3Unlocked);
       }, 0);
     }
 
@@ -8233,9 +8281,16 @@
     document.getElementById('achievementNotification').addEventListener('click', event => {
       if (event.target === event.currentTarget) dismissAchievementNotification();
     });
+    document.getElementById('btnDismissLevel3Unlock').addEventListener('click', dismissLevel3UnlockNotification);
+    document.getElementById('btnContinueLevel3Unlock').addEventListener('click', dismissLevel3UnlockNotification);
+    document.getElementById('level3UnlockNotification').addEventListener('click', event => {
+      if (event.target === event.currentTarget) dismissLevel3UnlockNotification();
+    });
     document.getElementById('btnDismissLevelUp').addEventListener('click', hideLevelUpNotification);
     window.addEventListener('keydown', event => {
       if (event.key !== 'Escape') return;
+      const level3Unlock = document.getElementById('level3UnlockNotification');
+      if (!level3Unlock.classList.contains('hidden')) return dismissLevel3UnlockNotification();
       const achievement = document.getElementById('achievementNotification');
       if (!achievement.classList.contains('hidden')) return dismissAchievementNotification();
       const homeModal = document.getElementById('homeBaseModal');
