@@ -273,7 +273,7 @@ check('character customization appears above the stage and progress summary', ()
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 10);
-  assert.ok(sources.every(source => source.endsWith('?v=20261105-biome-icon-svgs-v1')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261105-biome-icon-layout-v1')));
   assert.ok(sources.some(source => source.startsWith('./character-creator.js?')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
@@ -421,9 +421,13 @@ scripts.forEach(script => vm.runInContext(script, context));
 check('biome SVG emoji replacements are limited to supplied icons and preserve other emojis', () => {
   assert.equal(vm.runInContext("biomeIconMarkup('3')", context),
     '<img src="assets/icons/tropical-conifer-icon.svg" class="h-4 w-4 align-middle object-contain" alt="" aria-hidden="true">');
+  assert.equal(vm.runInContext("biomeIconMarkup('3','h-4 w-4 shrink-0')", context),
+    '<img src="assets/icons/tropical-conifer-icon.svg" class="h-4 w-4 shrink-0" alt="" aria-hidden="true">');
   assert.equal(vm.runInContext("biomeIconMarkup('4')", context), '🌳');
   assert.equal(vm.runInContext("window.biomeIconMarkup === biomeIconMarkup", context), true);
   assert.match(expeditionUi, /window\.biomeIconMarkup\(id, 'h-4 w-4 shrink-0'\)/);
+  assert.match(expeditionUi, /class="inline-flex items-start gap-1[^"]*"[^>]*>\$\{window\.biomeIconMarkup/);
+  assert.match(html, /data-atlas-pin-kind="biome"[^>]*class="inline-flex items-start gap-1/);
 });
 check('loading overlay reports nested operations and hides after the last operation finishes', () => {
   const firstTask = vm.runInContext("beginAppLoading('Reading passport…')", context);
@@ -4604,6 +4608,7 @@ check('expedition history escapes names, shows date/elevation/tags and starts me
   assert.ok(history.includes('data-trip-biomes'));
   assert.ok(history.includes('src="assets/icons/temperate-coniferous-icon.svg"'));
   assert.ok(history.includes('src="assets/icons/mangrove-icon.svg"'));
+  assert.ok(history.includes('class="inline-flex items-start gap-1 px-2 py-0.5 rounded-full text-[11px]'));
   assert.ok(history.includes('Temperate Conifer Forests'));
   assert.ok(history.includes('Mangroves'));
   const achievements = element('achievementsContainer').innerHTML;

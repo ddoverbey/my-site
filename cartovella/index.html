@@ -1628,15 +1628,15 @@
     </section>
   </div>
 
-  <script src="./nps-catalog.js?v=20261105-biome-icon-svgs-v1"></script>
-  <script src="./national-parks-scratch.js?v=20261105-biome-icon-svgs-v1"></script>
-  <script src="./international-parks.js?v=20261105-biome-icon-svgs-v1"></script>
-  <script src="./ecoregions.js?v=20261105-biome-icon-svgs-v1"></script>
-  <script src="./coordinate-lookups.js?v=20261105-biome-icon-svgs-v1"></script>
-  <script src="./micro-states.js?v=20261105-biome-icon-svgs-v1"></script>
-  <script src="./travel-ledger.js?v=20261105-biome-icon-svgs-v1"></script>
-  <script src="./character-creator.js?v=20261105-biome-icon-svgs-v1"></script>
-  <script src="./rarity-config.js?v=20261105-biome-icon-svgs-v1"></script>
+  <script src="./nps-catalog.js?v=20261105-biome-icon-layout-v1"></script>
+  <script src="./national-parks-scratch.js?v=20261105-biome-icon-layout-v1"></script>
+  <script src="./international-parks.js?v=20261105-biome-icon-layout-v1"></script>
+  <script src="./ecoregions.js?v=20261105-biome-icon-layout-v1"></script>
+  <script src="./coordinate-lookups.js?v=20261105-biome-icon-layout-v1"></script>
+  <script src="./micro-states.js?v=20261105-biome-icon-layout-v1"></script>
+  <script src="./travel-ledger.js?v=20261105-biome-icon-layout-v1"></script>
+  <script src="./character-creator.js?v=20261105-biome-icon-layout-v1"></script>
+  <script src="./rarity-config.js?v=20261105-biome-icon-layout-v1"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -7094,7 +7094,7 @@
           (trip.routeStops || []).some(stop => stop.kind === (park ? 'park' : 'poi') && stop.id === id));
         extraMarkup = destination.biomes?.length
           ? `<section><h3 class="mb-2 text-xs font-bold uppercase tracking-wide text-emerald-300">Biomes</h3><div class="flex flex-wrap gap-1.5">${(destination.biomes || []).map(biomeId => BIOMES[biomeId]
-            ? `<button type="button" data-atlas-pin-kind="biome" data-atlas-pin-id="${escapeHtml(biomeId)}" class="rounded-full border border-emerald-500/30 bg-emerald-950/40 px-2 py-1 text-xs text-emerald-200 hover:border-emerald-300">${biomeIconMarkup(biomeId, 'h-4 w-4 shrink-0')} ${escapeHtml(BIOMES[biomeId].name)}</button>`
+            ? `<button type="button" data-atlas-pin-kind="biome" data-atlas-pin-id="${escapeHtml(biomeId)}" class="inline-flex items-start gap-1 rounded-full border border-emerald-500/30 bg-emerald-950/40 px-2 py-1 text-xs text-emerald-200 hover:border-emerald-300">${biomeIconMarkup(biomeId, 'h-4 w-4 shrink-0')} ${escapeHtml(BIOMES[biomeId].name)}</button>`
             : '').join('')}</div></section>` : '';
       } else if (kind === 'county') {
         const county = countyFeaturesById[id];
@@ -8463,7 +8463,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261105-biome-icon-svgs-v1"></script>
+  <script src="./expedition-ui.js?v=20261105-biome-icon-layout-v1"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);
