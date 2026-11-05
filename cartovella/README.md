@@ -67,7 +67,7 @@ trip updates its XP rather than leaving a separate balance behind.
 | Each visited park destination | 25 |
 | Each visited custom location | 25 |
 | Each distinct visited US state | 10 |
-| Each distinct visited country | 20 |
+| Each distinct visited country (home or non-home, once) | 20 |
 | Each visited or lived county/district | 3 for the first 50; 1 for each additional one |
 | Establishing a home Citadel | 50 |
 | First collection of a biome | 15–200, based on its rarity tier above |
@@ -109,10 +109,11 @@ of the character sheet.
 Local Rambler counts trips with measurable route distance; a trip with no recorded stops or route
 geometry earns its base expedition XP but cannot count toward the 100-mile quest.
 
-Level 1 begins at 0 XP. Level 2 requires 200 XP; later thresholds rise quadratically:
+Level 1 begins at 0 XP. The first 20 level thresholds are:
 
 | Level reached | Total XP required |
 | ---: | ---: |
+| 1 | 0 |
 | 2 | 200 |
 | 3 | 305 |
 | 4 | 480 |
@@ -122,11 +123,22 @@ Level 1 begins at 0 XP. Level 2 requires 200 XP; later thresholds rise quadratic
 | 8 | 1,880 |
 | 9 | 2,405 |
 | 10 | 3,000 |
+| 11 | 3,665 |
+| 12 | 4,400 |
+| 13 | 5,205 |
+| 14 | 6,080 |
+| 15 | 7,025 |
+| 16 | 8,040 |
+| 17 | 9,125 |
+| 18 | 10,280 |
+| 19 | 11,505 |
+| 20 | 12,800 |
 
-For level `n` (2 or higher), the threshold is `165 + 35 × (n − 1)²` total XP. The XP bar shows
-progress from the current level's threshold to the next one. Gaining a level displays a top-center
-level-up banner with a chime; newly earned achievements appear separately in a centered, dismissible
-notification with their artwork.
+There is no maximum level. For any level `n` (2 or higher), the threshold is
+`165 + 35 × (n − 1)²` total XP, so the formula gives the exact threshold for every level above 20
+as well. The XP bar shows progress from the current level's threshold to the next one. Gaining a
+level displays a top-center level-up banner with a chime; newly earned achievements appear
+separately in a centered, dismissible notification with their artwork.
 
 New explorers establish a Home Citadel before choosing their starting tool. Before the Citadel is
 set, the setup dialog opens first and only the Map tab is available. The tool choices are Scratch
@@ -256,9 +268,27 @@ so the loading indicator can stay responsive. Cartovella's in-app animations int
 the browser's reduced-motion preference. Back up real travel data before importing synthetic
 test passports, and keep test passports separate from accounts used for real cloud saves.
 
-Level, worldwide-destination, and existing achievement milestones unlock wardrobe and companion
-cosmetics. Cartovella does not yet verify Pro purchases or
-donations, so client-side profile values do not establish paid entitlements.
+Level rewards unlock cumulatively: items remain available at later levels. This table lists the
+level-based clothing, hair, and wardrobe accessories; handheld tools and weapons from the same
+reward track are not included.
+
+| Level | Clothing and wardrobe appearance unlocks |
+| ---: | --- |
+| 1 | Classic Adventurer starter outfit; Starter Shirt, Starter Pants, Simple Shoes |
+| 2 | Trail Pith Hat, Trail Boots, Pine Trail Flannel |
+| 3 | Forest Green outfit, Explorer Backpack, Traveler Cap, Scout Cargo Pants |
+| 4 | Farming Hat, Meadow Forager Tunic, Walking Stick accessory |
+| 5 | River Blue outfit, Wayfarer Gloves, Back Lantern, Wayfarer Field Vest |
+| 6 | Mining Helmet, Canyon Work Denim, Trail Lantern accessory |
+| 7 | Ember Orange outfit, Traveler Cape, Bandit Scarf, Redwood Flannel Jacket |
+| 8 | Guard Helmet, Circle Shield, Vanguard Tabard |
+| 9 | Chainmail Tunic, Viking Helmet, Highlander Breeches, Field Spyglass accessory |
+| 10 | Royal Purple outfit, Royal Chaperon / Headdress, Sovereign Cartographer Coat, Fancy Hair, Queen Hair, Shield Maiden Hair |
+
+Level-based wardrobe rewards currently end at Level 10, though levels continue beyond that. Other
+wardrobe and companion cosmetics unlock through worldwide-destination and achievement milestones,
+holidays, or coins. Cartovella does not yet verify Pro purchases or donations, so client-side profile
+values do not establish paid entitlements.
 
 ### Location rarity
 
