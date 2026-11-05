@@ -3296,7 +3296,14 @@ check('custom coordinates collect real biomes and countries without counting as 
   assert.equal(vm.runInContext('calculateStats().visitedParks.length', context), 0);
   assert.equal(vm.runInContext('calculateStats().countriesCount', context), 1);
   assert.deepEqual(Array.from(vm.runInContext('calculateStats().biomesSet', context)), ['12']);
-  assert.equal(vm.runInContext('calculateStats().xp', context), 75);
+  const firstCountryXp = vm.runInContext('calculateStats().xp', context);
+  assert.equal(firstCountryXp, 75);
+  vm.runInContext(`AppState.customLocations[0].political.countries = ['Italy','France','Japan'];
+    statsCache = null`, context);
+  assert.equal(vm.runInContext('calculateStats().countriesCount', context), 3);
+  assert.equal(vm.runInContext('calculateStats().xp', context) - firstCountryXp, 100);
+  vm.runInContext(`AppState.customLocations[0].political.countries = ['Italy'];
+    statsCache = null`, context);
   vm.runInContext("AppState.customLocations[0].status = 'w'", context);
   assert.equal(vm.runInContext('calculateStats().countriesCount', context), 0);
   assert.equal(vm.runInContext('calculateStats().biomesSet.size', context), 0);

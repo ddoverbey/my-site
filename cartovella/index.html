@@ -3548,7 +3548,7 @@
       xp += visitedParks.length * 25;
       xp += visitedCustomLocations.length * 25;
       xp += visitedStates.size * 10;
-      xp += visitedCountries.size * 20;
+      xp += visitedCountries.size ? 20 + (visitedCountries.size - 1) * 50 : 0;
       const countyXp = Math.min(countiesCount, 50) * 3 + Math.max(0, countiesCount - 50);
       xp += countyXp;
       xp += AppState.expeditions.reduce((total, expedition) =>

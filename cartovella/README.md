@@ -67,7 +67,8 @@ trip updates its XP rather than leaving a separate balance behind.
 | Each visited park destination | 25 |
 | Each visited custom location | 25 |
 | Each distinct visited US state | 10 |
-| Each distinct visited country (home or non-home, once) | 20 |
+| First distinct country (your Home Citadel country) | 20 |
+| Each additional distinct country | 50 |
 | Each visited or lived county/district | 3 for the first 50; 1 for each additional one |
 | Establishing a home Citadel | 50 |
 | First collection of a biome | 15–200, based on its rarity tier above |
