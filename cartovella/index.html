@@ -1352,7 +1352,11 @@
     <div class="rpg-panel rpg-panel-gold max-w-3xl w-full max-h-[90vh] overflow-y-auto rounded-3xl p-6 sm:p-8 space-y-5">
       <header class="text-center">
         <h2 id="toolUnlockTitle" class="cinzel text-2xl font-extrabold text-amber-200">Choose Your Starting Path</h2>
-        <p id="toolUnlockDescription" class="mt-2 text-sm text-slate-300">Choose a path. Your class title lasts through Levels 1–2; at Level 3, your Archetype Radar Chart shapes your Explorer Class. Your other tools unlock as you level up.</p>
+        <div id="toolUnlockDescription" class="mt-2 space-y-3 text-sm text-slate-300">
+          <p>Choose a path.</p>
+          <p>Your other tools will unlock as you level up.</p>
+          <p class="text-xs italic text-slate-400">You can enable all app features at any time via the settings menu.</p>
+        </div>
       </header>
       <div id="toolUnlockOptions" class="grid gap-3 md:grid-cols-3"></div>
       <button id="btnUnlockAllFromStarter" type="button" class="mx-auto block text-xs text-slate-400 underline hover:text-amber-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400">
@@ -7796,9 +7800,6 @@
       const available = LOGGING_FEATURES.filter(feature => !onboarding.chosenTools.includes(feature.id));
       document.getElementById('toolUnlockTitle').textContent = needsSecondChoice
         ? 'Choose Your Next Tool' : 'Choose Your Starting Path';
-      document.getElementById('toolUnlockDescription').textContent = needsSecondChoice
-        ? 'Your starting class lasts through Level 2. Choose one more tool; at Level 3, your Archetype Radar Chart shapes your Explorer Class and the final tool unlocks.'
-        : 'Choose a path. Your class title lasts through Levels 1–2; at Level 3, your Archetype Radar Chart shapes your Explorer Class. Your other tools unlock as you level up.';
       document.getElementById('toolUnlockOptions').innerHTML = available.map(feature => `
         <button type="button" data-feature-tool="${feature.id}" aria-label="${feature.classTitle} — ${feature.name}" class="rpg-panel flex min-h-56 flex-col items-center rounded-2xl p-6 text-center transition hover:border-amber-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400 md:min-h-60">
           <span class="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-xl bg-slate-950">
