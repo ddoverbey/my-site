@@ -3291,6 +3291,7 @@ check('fog canvas overscan is positioned in a Leaflet pane for shared map transf
   assert.match(html, /map\.createPane\('fogCanvasPane'\)/);
   assert.match(html, /map\.getPane\('fogCanvasPane'\)\.appendChild\(fogCanvas\)/);
   assert.match(html, /map\.on\('zoomstart', \(\) => \{ fogZoomAnimating = true; \}\)/);
+  assert.match(html, /zoomAnimationThreshold:\s*1/);
 });
 check('fog geometry uses Leaflet layer coordinates inside its map pane', () => {
   vm.runInContext('map.latLngToLayerPoint = () => ({ x: 123, y: 456 });', context);

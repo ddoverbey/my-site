@@ -3787,6 +3787,8 @@
         attributionControl: false,
         minZoom: 2,
         maxZoom: 14,
+        // The 3x fog canvas covers the viewport only while zooming by at most one level.
+        zoomAnimationThreshold: 1,
         preferCanvas: true
       });
 
