@@ -175,7 +175,7 @@ check('RPG Map keeps its fog-of-war icon and Route Map uses the Phosphor Path ic
     shareNetwork: 'ph-share-network', floppyDisk: 'ph-floppy-disk', downloadSimple: 'ph-download-simple',
     uploadSimple: 'ph-upload-simple', cloudCheck: 'ph-cloud-check', cloudSlash: 'ph-cloud-slash',
     cloudWarning: 'ph-cloud-warning', cloudX: 'ph-cloud-x', gear: 'ph-gear', info: 'ph-info',
-    mapTrifold: 'ph-map-trifold'
+    warning: 'ph-warning', mapTrifold: 'ph-map-trifold'
   })) {
     assert.match(html, new RegExp(`${name}: \\{ className: '${className}',`));
   }
@@ -1899,7 +1899,7 @@ check('all Cartovella icons use only official logo colors and reject invalid nam
     'compass', 'journal', 'citadel', 'checklist', 'cloud', 'settings', 'share', 'save', 'export', 'import', 'credits',
     'compassRose', 'listChecks', 'path', 'notebook', 'userCircle', 'house',
     'shareFat', 'shareNetwork', 'floppyDisk', 'downloadSimple', 'uploadSimple',
-    'cloudCheck', 'cloudSlash', 'cloudWarning', 'cloudX', 'gear', 'info', 'mapTrifold'
+    'cloudCheck', 'cloudSlash', 'cloudWarning', 'cloudX', 'gear', 'info', 'warning', 'mapTrifold'
   ]);
   const allowedColors = new Set([
     '#eba400', '#fac60b', '#124777', '#36506b', '#f4c98c', '#0c1222'
@@ -1925,6 +1925,10 @@ check('all Cartovella icons use only official logo colors and reject invalid nam
     const icon = vm.runInContext(`cartovellaIcon('${iconName}')`, context);
     assert.doesNotMatch(icon, /#(?:124777|36506b|0c1222)/i, `${iconName} should use only gold/parchment tones`);
   }
+  const warningIcon = vm.runInContext("cartovellaIcon('warning')", context);
+  assert.match(warningIcon, /class="phosphor-icon ph-duotone ph-warning/);
+  assert.match(warningIcon, /--phosphor-primary-color:#124777;--phosphor-secondary-color:#fac60b/);
+  assert.match(html, /'⚠️': 'warning'/);
   assert.throws(() => vm.runInContext("cartovellaIcon('not-an-icon')", context), /Unknown Cartovella icon/);
 });
 check('account pill switches between Sign In and Explorer Account while keeping sync status visible', () => {
