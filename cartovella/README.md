@@ -379,6 +379,9 @@ Cloud requests time out after 30 seconds and report a retryable error; local pas
 Searches and some coordinate lookups contact external services. The app's **Map services & privacy**
 section describes which information is sent for each feature. Imported route files are processed
 locally; imported driving and AWD tracks are not sent to the road router.
+When you choose **Detect My Location Automatically** while setting your Home Citadel, your GPS
+coordinates are sent to Photon by Komoot to look up a city name. If that lookup fails or finds no
+city, the Citadel is still saved as **Home Sanctuary**, and you can choose a city manually.
 
 Public Explorer Directory listings include the saved character scene (including its selected
 background), summary stats, recent shared expedition details, and a low-resolution image of logged

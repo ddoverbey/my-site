@@ -5615,6 +5615,105 @@ check('first Citadel marks containing geography Lived, uses a 15-mile diameter, 
   assert.equal(flight[2].duration, 1.8);
   assert.ok(element('toastMsg').textContent.includes('+50'));
 });
+await checkAsync('automatic Citadel city lookup uses Photon and formats city, state, and country', async () => {
+  const originalFetch = context.fetch;
+  const originalSetTimeout = context.setTimeout;
+  const originalClearTimeout = context.clearTimeout;
+  const requests = [];
+  context.setTimeout = () => 1;
+  context.clearTimeout = () => {};
+  context.fetch = async (url, options) => {
+    requests.push({ url: String(url), options });
+    return {
+      ok: true,
+      json: async () => ({ features: [{ properties: {
+        city: 'Seattle', state: 'Washington', country: 'United States'
+      } }] })
+    };
+  };
+  try {
+    assert.equal(await vm.runInContext('lookupHomeCityName(47.6062,-122.3321)', context),
+      'Seattle, Washington, United States');
+    const requestUrl = new URL(requests[0].url);
+    assert.equal(requestUrl.origin + requestUrl.pathname, 'https://photon.komoot.io/reverse');
+    assert.equal(requestUrl.searchParams.get('lat'), '47.6062');
+    assert.equal(requestUrl.searchParams.get('lon'), '-122.3321');
+    assert.ok(requests[0].options.signal instanceof AbortSignal);
+  } finally {
+    context.fetch = originalFetch;
+    context.setTimeout = originalSetTimeout;
+    context.clearTimeout = originalClearTimeout;
+  }
+});
+await checkAsync('automatic Citadel city lookup rejects responses without a city for fallback handling', async () => {
+  const originalFetch = context.fetch;
+  const originalSetTimeout = context.setTimeout;
+  const originalClearTimeout = context.clearTimeout;
+  context.setTimeout = () => 1;
+  context.clearTimeout = () => {};
+  context.fetch = async () => ({
+    ok: true,
+    json: async () => ({ features: [{ properties: { name: 'Highway 1', osm_key: 'highway' } }] })
+  });
+  try {
+    await assert.rejects(vm.runInContext('lookupHomeCityName(47.6062,-122.3321)', context),
+      /could not identify a city/i);
+  } finally {
+    context.fetch = originalFetch;
+    context.setTimeout = originalSetTimeout;
+    context.clearTimeout = originalClearTimeout;
+  }
+});
+await checkAsync('automatic Citadel detection saves Home Sanctuary and reports Photon lookup failures', async () => {
+  const originalFetch = context.fetch;
+  const originalSetTimeout = context.setTimeout;
+  const originalClearTimeout = context.clearTimeout;
+  const originalSetHometownCoordinates = context.setHometownCoordinates;
+  const originalShowNotification = context.showNotification;
+  const originalConsole = context.console;
+  const hadNavigator = Object.prototype.hasOwnProperty.call(context, 'navigator');
+  const originalNavigator = context.navigator;
+  let successCallback;
+  const savedNames = [];
+  const notifications = [];
+  context.setTimeout = () => 1;
+  context.clearTimeout = () => {};
+  context.fetch = async () => { throw new Error('Photon unavailable'); };
+  context.setHometownCoordinates = (name) => {
+    savedNames.push(name);
+    return true;
+  };
+  context.showNotification = (...args) => notifications.push(args);
+  context.console = { ...console, error() {} };
+  context.navigator = {
+    geolocation: {
+      getCurrentPosition(success, error, options) {
+        successCallback = success;
+        assert.equal(options.timeout, 15000);
+      }
+    }
+  };
+  try {
+    element('btnGeoDetect').handlers.click();
+    assert.equal(element('btnGeoDetect').disabled, true);
+    assert.match(element('homeLookupStatus').textContent, /Waiting for location permission/);
+    await successCallback({ coords: { latitude: 47.6062, longitude: -122.3321 } });
+    assert.deepEqual(savedNames, ['Home Sanctuary']);
+    assert.ok(notifications.some(([title, message]) =>
+      title === 'City lookup unavailable' && message.includes('Home Sanctuary')));
+    assert.equal(element('btnGeoDetect').disabled, false);
+    assert.equal(element('homeLookupStatus').textContent, '');
+  } finally {
+    context.fetch = originalFetch;
+    context.setTimeout = originalSetTimeout;
+    context.clearTimeout = originalClearTimeout;
+    context.setHometownCoordinates = originalSetHometownCoordinates;
+    context.showNotification = originalShowNotification;
+    context.console = originalConsole;
+    if (hadNavigator) context.navigator = originalNavigator;
+    else delete context.navigator;
+  }
+});
 check('Citadel-only XP stays below Level 2 and later thresholds follow the recalibrated curve', () => {
   const progress = vm.runInContext(`({
     homeOnlyMaxLevel: levelFromXp(50 + 10 + 20 + 3),
