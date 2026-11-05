@@ -187,6 +187,13 @@ check('RPG Map keeps its fog-of-war icon and Route Map uses the Phosphor Path ic
   })) {
     assert.match(html, new RegExp(`${name}: \\{ className: '${className}',`));
   }
+  for (const [name, className] of Object.entries({
+    listChecks: 'ph-list-checks',
+    mapTrifold: 'ph-map-trifold',
+    userCircle: 'ph-user-circle'
+  })) {
+    assert.ok(html.includes(`${name}: { className: '${className}', color: '#fac60b', secondaryColor: '#eba400' }`));
+  }
 });
 check('refresh restores the signed-in UI and local atlas before supplemental data finishes loading', () => {
   const startup = html.slice(html.indexOf("window.addEventListener('DOMContentLoaded'"));
@@ -6868,6 +6875,10 @@ check('Explorer Profile bento cards and badge summary jump to their matching sec
   assert.match(html, /\.country-flag img,\s*\.state-flag img\s*\{[^}]*width:\s*32px;\s*height:\s*22px/);
   assert.match(html, /md:grid-cols-3[^"]*"[^>]*>[\s\S]*?id="passportCountriesSection"[\s\S]*?id="passportStatesSection"/);
   assert.match(html, /data-profile-scroll-target[\s\S]*?scrollIntoView\(\{\s*behavior: 'smooth',\s*block: 'start'/);
+});
+check('earned badge summary displays complete badge rows before scrolling', () => {
+  assert.match(html, /id="earnedAchievementBadges" class="flex max-h-48 flex-wrap gap-2 overflow-y-auto"/);
+  assert.match(html, /\.achievement-icon \{\s*display: inline-flex;[\s\S]*?width: 3\.5rem;\s*height: 3\.5rem;/);
 });
 check('biome milestone classes list 3, total minus one and total tiers at every progress level', () => {
   for (const count of [0, 1, 3, 13, 14]) {
