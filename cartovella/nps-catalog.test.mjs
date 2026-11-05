@@ -2515,6 +2515,8 @@ await checkAsync('public summary stats contain compact profile, achievement, and
     assert.equal(privateSummary.routeMapThumbnail, null, 'private profiles do not publish route previews');
     assert.deepEqual(privateSummary.recentExpeditions, [], 'private profiles publish no expedition posts');
     assert.ok(Array.isArray(summary.topBadges) && summary.topBadges.length <= 4);
+    assert.ok(summary.topBadges.every(badge => !Object.hasOwn(badge, 'icon')),
+      'public achievement summaries do not serialize emoji icons');
     assert.deepEqual(summary.recentExpeditions[0], {
       id: 'public-trip', name: 'Waterfall Weekend', startDate: '2026-10-01', endDate: '2026-10-02',
       dayTrip: false, reason: 'Chasing waterfalls', journalSnippet: 'A memorable public story.',
@@ -2701,7 +2703,7 @@ await checkAsync('Explorers’ Guild renders mocked public profiles and expediti
       statesCount: 5, parksCount: 12, biomesCount: 4, totalMiles: 12345.6, totalTrips: 8, clearedPct: 2.4,
       character: { pet: 'pet_fox', background: 'bg_yosemite' },
       routeMapThumbnail: 'data:image/jpeg;base64,YWJjZA==',
-      topBadges: [{ title: 'Grand Voyager', icon: '🏕️', rarity: 'epic' }],
+      topBadges: [{ title: 'Grand Voyager', rarity: 'epic' }],
       recentExpeditions: [{
         id: 'guild-trip', name: 'Spirit Falls Weekend', startDate: '2026-10-20', endDate: '2026-10-21',
         dayTrip: false, reason: 'A long-planned hike', journalShared: true,
@@ -2745,6 +2747,8 @@ await checkAsync('Explorers’ Guild renders mocked public profiles and expediti
     assert.match(element('guildExplorersGrid').innerHTML, /">Miles <b/);
     assert.match(element('guildExplorersGrid').innerHTML, /12,345\.6 mi/);
     assert.match(element('guildExplorersGrid').innerHTML, /Shared trips/);
+    assert.match(element('guildExplorersGrid').innerHTML, /assets\/achievements\/grand-voyager\.png/);
+    assert.doesNotMatch(element('guildExplorersGrid').innerHTML, /🏕️/);
     const unsyncedCard = vm.runInContext(
       `renderGuildExplorerCard({username:'legacy',summary_stats:{}})`, context
     );
@@ -7184,23 +7188,24 @@ for (const [title, filename] of achievementImages) {
 }
 const unmetAchievementData = await readFile(new URL(`./assets/achievements/${unmetAchievementImage}`, import.meta.url));
 assert.equal(unmetAchievementData.subarray(1, 4).toString(), 'PNG', 'shared locked artwork exists and is PNG');
-check('achievement artwork maps all supplied images to real tiers and preserves emoji fallbacks', () => {
-  assert.equal(achievementImages.length, 34);
+check('achievement artwork maps supplied badge images to tiers and has no emoji fallback', () => {
+  assert.equal(achievementImages.length, 35);
   for (const [title, filename] of achievementImages) {
     context.artworkTitle = title;
     const markup = vm.runInContext(`(()=>{
-      const achievement=ACHIEVEMENTS.find(a=>a.tiers.some(t=>t.title===artworkTitle));
-      return achievementIconMarkup(achievement,achievement.tiers.find(t=>t.title===artworkTitle));
+      const tier=ACHIEVEMENTS.flatMap(a=>a.tiers).find(t=>t.title===artworkTitle);
+      return achievementIconMarkup(tier);
     })()`, context);
     assert.ok(markup.includes(`./assets/achievements/${filename}`), title);
     assert.ok(markup.includes('alt=""'), title);
   }
-  assert.ok(vm.runInContext("achievementIconMarkup({icon:'🏕️'},{title:'Unmapped test tier'})", context).includes('🏕️'));
+  assert.throws(() => vm.runInContext("achievementIconMarkup({title:'Unmapped test tier'})", context),
+    /Missing achievement badge artwork/);
   delete context.artworkTitle;
 });
 check('unmet achievements use the shared supplied placeholder artwork', () => {
   assert.equal(unmetAchievementImage, 'unmet.png');
-  const markup = vm.runInContext('achievementIconMarkup(ACHIEVEMENTS[0], ACHIEVEMENTS[0].tiers[0], true)', context);
+  const markup = vm.runInContext('achievementIconMarkup(ACHIEVEMENTS[0].tiers[0], true)', context);
   assert.ok(markup.includes('./assets/achievements/unmet.png'));
   assert.ok(markup.includes('alt=""'));
 });
@@ -7211,7 +7216,7 @@ check('a grouped achievement uses its highest completed tier artwork instead of 
       const originalAchievements = ACHIEVEMENTS.slice();
       try {
         ACHIEVEMENTS.splice(0, ACHIEVEMENTS.length, {
-          id: 'groupedArtworkTest', title: 'Explorer Class', icon: '🧭', background: '#172554',
+          id: 'groupedArtworkTest', title: 'Explorer Class', background: '#172554',
           progress: stats => stats.testProgress,
           tiers: [
             {goal:1,title:'First Steps',desc:'First milestone',rarity:'common'},
@@ -7239,12 +7244,12 @@ check('achievement page sorts rarity sections high to low and keeps unmet classe
       const originalAchievements = ACHIEVEMENTS.slice();
       try {
         ACHIEVEMENTS.splice(0, ACHIEVEMENTS.length,
-          {id:'commonSortTest',title:'Common test',icon:'C',background:'#172554',
-            progress:()=>1,tiers:[{goal:1,title:'Common test',desc:'',rarity:'common'}]},
-          {id:'mythicSortTest',title:'Mythic test',icon:'M',background:'#172554',
-            progress:()=>1,tiers:[{goal:1,title:'Mythic test',desc:'',rarity:'mythic'}]},
-          {id:'unmetSortTest',title:'Unmet test',icon:'U',background:'#172554',
-            progress:()=>0,tiers:[{goal:1,title:'Unmet test',desc:'',rarity:'rare'}]}
+          {id:'commonSortTest',title:'First Steps',background:'#172554',
+            progress:()=>1,tiers:[{goal:1,title:'First Steps',desc:'',rarity:'common'}]},
+          {id:'mythicSortTest',title:'Completionist Legend',background:'#172554',
+            progress:()=>1,tiers:[{goal:1,title:'Completionist Legend',desc:'',rarity:'mythic'}]},
+          {id:'unmetSortTest',title:'Anomaly Seeker',background:'#172554',
+            progress:()=>0,tiers:[{goal:1,title:'Anomaly Seeker',desc:'',rarity:'rare'}]}
         );
         renderAchievementsView({});
       } finally {
@@ -7268,7 +7273,12 @@ check('achievement page sorts rarity sections high to low and keeps unmet classe
   vm.runInContext('renderPassportView()', context);
 });
 check('every achievement milestone has valid difficulty rarity and distinct artwork', () => {
-  assert.equal(vm.runInContext('ACHIEVEMENTS.every(a=>a.icon && /^#[0-9a-f]{6}$/i.test(a.background) && a.tiers.every(t=>ACHIEVEMENT_RARITIES[t.rarity]))', context), true);
+  assert.equal(vm.runInContext(`ACHIEVEMENTS.every(a=>
+    !Object.hasOwn(a,'icon') && /^#[0-9a-f]{6}$/i.test(a.background) &&
+    a.tiers.every(t=>ACHIEVEMENT_RARITIES[t.rarity] && ACHIEVEMENT_IMAGES[t.title]))`, context), true);
+  const achievementStylesStart = html.indexOf('const ACHIEVEMENT_STYLES = {');
+  const achievementStylesEnd = html.indexOf('const ACHIEVEMENT_CLASS_GROUPS', achievementStylesStart);
+  assert.doesNotMatch(html.slice(achievementStylesStart, achievementStylesEnd), /\p{Extended_Pictographic}/u);
   const stateAchievements = vm.runInContext(`ACHIEVEMENTS.filter(a=>
     ['statehopper','semiCentennial','fiftyNifty'].includes(a.id)).map(a=>({
     id:a.id,title:a.title,goal:a.tiers[0].goal,desc:a.tiers[0].desc,rarity:a.tiers[0].rarity
@@ -7278,7 +7288,7 @@ check('every achievement milestone has valid difficulty rarity and distinct artw
     { id: 'semiCentennial', title: 'Semi-Centennial', goal: 25, desc: 'Claim 25 US states', rarity: 'rare' },
     { id: 'fiftyNifty', title: 'Fifty-Nifty', goal: 50, desc: 'Claim all 50 US states', rarity: 'legendary' }
   ]);
-  assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='earthSandwich').icon", context), '🌍🥪');
+  assert.equal(vm.runInContext("Object.hasOwn(ACHIEVEMENTS.find(a=>a.id==='earthSandwich'),'icon')", context), false);
   assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='earthSandwich').background", context), '#172554');
   assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='earthSandwich').tiers[0].rarity", context), 'mythic');
   assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='nps').tiers[0].rarity", context), 'mythic');
@@ -7441,12 +7451,13 @@ check('regional music achievements disclose partial prerequisites and award colo
   `, context);
   assert.ok(element('achievementsContainer').innerHTML.includes('Country Roads, Take Me Home'));
   assert.ok(element('achievementsContainer').innerHTML.includes('value="1" max="2"'));
-  assert.ok(!element('earnedAchievementBadges').innerHTML.includes('🛣️🏡'));
+  assert.doesNotMatch(element('earnedAchievementBadges').innerHTML, /\p{Extended_Pictographic}/u);
   assert.ok(element('achievementsContainer').innerHTML.includes('data-achievement-class="rockyMountainHigh"'));
   vm.runInContext("AppState.pins.shen='v';AppState.counties['08065']='l';renderPassportView()", context);
   const badges = element('earnedAchievementBadges').innerHTML;
   assert.ok(badges.includes('assets/achievements/country-roads.png'));
   assert.ok(badges.includes('assets/achievements/rocky-mountain-high.png'));
+  assert.doesNotMatch(badges, /\p{Extended_Pictographic}/u);
   assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='countryRoads').tiers[0].rarity", context), 'rare');
   assert.equal(vm.runInContext("ACHIEVEMENTS.find(a=>a.id==='rockyMountainHigh').tiers[0].rarity", context), 'uncommon');
   vm.runInContext('saveState();applyPassport(migratePassport(JSON.parse(localStorage.getItem("cartovella_state"))));renderPassportView()', context);
@@ -8267,7 +8278,6 @@ check('America the Beautiful is legendary at 64 national parks and uses its supp
     vm.runInContext(`npsCatalogLoaded = ${catalogLoaded}`, context);
   }
   assert.match(vm.runInContext(`achievementIconMarkup(
-    ACHIEVEMENTS.find(a => a.id === 'americaTheBeautiful'),
     ACHIEVEMENTS.find(a => a.id === 'americaTheBeautiful').tiers[0])`, context),
   /america-the-beautiful\.png/);
 });

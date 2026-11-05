@@ -2264,42 +2264,42 @@
       ACHIEVEMENT_RARITY_ORDER.indexOf('rare')
     ));
     const ACHIEVEMENT_HINT_THRESHOLD = 0.85;
-    const ACHIEVEMENT_ART = {
-      firstSteps: ['🏕️', '#334155', ['common']],
-      trailblazer: ['🏕️', '#064e3b', ['uncommon']],
-      masterRanger: ['🏕️', '#1e3a8a', ['rare']],
-      grandVoyager: ['🏕️', '#4c1d95', ['epic']],
-      americaTheBeautiful: ['🏞️', '#422006', ['legendary']],
-      nps: ['🏞️', '#422006', ['mythic']],
-      juniorEcologist: ['🌱', '#12352b', ['uncommon']],
-      almostThere: ['🌱', '#713f12', ['legendary']],
-      gaiaWanderer: ['🌱', '#2e1065', ['mythic']],
-      rare_biomes: ['🔮', '#164e63', ['rare']],
-      statehopper: ['🇺🇸', '#064e3b', ['uncommon']],
-      semiCentennial: ['🇺🇸', '#155e75', ['rare']],
-      fiftyNifty: ['🇺🇸', '#78350f', ['legendary']],
-      countries: ['🛂', '#164e63', ['rare']],
-      waterfalls_1: ['💧', '#334155', ['common']],
-      subterranean: ['🌊⬇️', '#064e3b', ['uncommon']],
-      thinAir: ['🏔️', '#1e3a5f', ['rare']],
-      whispers: ['🌲✨', '#14332c', ['uncommon']],
-      overlander: ['🚙', '#365314', ['uncommon']],
-      mariner: ['⛴️', '#14532d', ['uncommon']],
-      focal: ['📷', '#3b0764', ['rare']],
-      southernCross: ['🌌', '#172554', ['rare']],
-      localLore: ['phosphor:house+💎', '#134e4a', ['rare']],
-      zeroMeridian: ['phosphor:house', '#334155', ['common']],
-      beyondHorizon: ['🌅', '#0e4f5c', ['rare']],
-      international: ['🌍✈️', '#14532d', ['uncommon']],
-      touchGrass: ['🌿', '#14532d', ['common']],
-      fastTravel: ['⚡', '#312e81', ['epic']],
-      earthSandwich: ['🌍🥪', '#172554', ['mythic']],
-      longDark: ['❄️🌙', '#172554', ['epic']],
-      latitudeSpan: ['🌐↕️', '#1e3a5f', ['epic']],
-      counties: ['phosphor:mapTrifold', '#422006', ['mythic']],
-      worldAtlas: ['🌍👑', '#2e1065', ['mythic']],
-      countryRoads: ['🛣️🏡', '#155e75', ['rare']],
-      rockyMountainHigh: ['🏔️🎵', '#365314', ['uncommon']]
+    const ACHIEVEMENT_STYLES = {
+      firstSteps: ['#334155', ['common']],
+      trailblazer: ['#064e3b', ['uncommon']],
+      masterRanger: ['#1e3a8a', ['rare']],
+      grandVoyager: ['#4c1d95', ['epic']],
+      americaTheBeautiful: ['#422006', ['legendary']],
+      nps: ['#422006', ['mythic']],
+      juniorEcologist: ['#12352b', ['uncommon']],
+      almostThere: ['#713f12', ['legendary']],
+      gaiaWanderer: ['#2e1065', ['mythic']],
+      rare_biomes: ['#164e63', ['rare']],
+      statehopper: ['#064e3b', ['uncommon']],
+      semiCentennial: ['#155e75', ['rare']],
+      fiftyNifty: ['#78350f', ['legendary']],
+      countries: ['#164e63', ['rare']],
+      waterfalls_1: ['#334155', ['common']],
+      subterranean: ['#064e3b', ['uncommon']],
+      thinAir: ['#1e3a5f', ['rare']],
+      whispers: ['#14332c', ['uncommon']],
+      overlander: ['#365314', ['uncommon']],
+      mariner: ['#14532d', ['uncommon']],
+      focal: ['#3b0764', ['rare']],
+      southernCross: ['#172554', ['rare']],
+      localLore: ['#134e4a', ['rare']],
+      zeroMeridian: ['#334155', ['common']],
+      beyondHorizon: ['#0e4f5c', ['rare']],
+      international: ['#14532d', ['uncommon']],
+      touchGrass: ['#14532d', ['common']],
+      fastTravel: ['#312e81', ['epic']],
+      earthSandwich: ['#172554', ['mythic']],
+      longDark: ['#172554', ['epic']],
+      latitudeSpan: ['#1e3a5f', ['epic']],
+      counties: ['#422006', ['mythic']],
+      worldAtlas: ['#2e1065', ['mythic']],
+      countryRoads: ['#155e75', ['rare']],
+      rockyMountainHigh: ['#365314', ['uncommon']]
     };
     const ACHIEVEMENT_CLASS_GROUPS = [
       {
@@ -2312,8 +2312,12 @@
       { id: 'waterfalls', title: 'Waterfall Hunter', achievementIds: ['waterfalls_1'] }
     ];
     ACHIEVEMENTS.forEach(achievement => {
-      const [icon, background, rarities] = ACHIEVEMENT_ART[achievement.id];
-      achievement.icon = icon;
+      const style = ACHIEVEMENT_STYLES[achievement.id];
+      if (!style) throw new Error(`Missing achievement styling for "${achievement.id}".`);
+      const [background, rarities] = style;
+      if (rarities.length !== achievement.tiers.length) {
+        throw new Error(`Achievement rarity styling does not match tiers for "${achievement.id}".`);
+      }
       achievement.background = background;
       achievement.tiers.forEach((tier, index) => { tier.rarity = rarities[index]; });
     });
@@ -7155,6 +7159,7 @@
       'Southern Cross': 'southern-cross.png',
       'Statehopper': 'statehopper.png',
       'Terra Incognita': 'terra-incognita.png',
+      'The Long Dark': 'the-long-dark.png',
       'The Mariner': 'the-mariner.png',
       'The Overlander': 'the-overlander.png',
       'Thin Air': 'thin-air.png',
@@ -7184,10 +7189,10 @@
 
     const UNMET_ACHIEVEMENT_IMAGE = 'unmet.png';
 
-    function achievementIconMarkup(achievement, tier, unmet = false) {
+    function achievementIconMarkup(tier, unmet = false) {
       const image = unmet ? UNMET_ACHIEVEMENT_IMAGE : ACHIEVEMENT_IMAGES[tier.title];
-      return image ? `<img src="./assets/achievements/${image}" alt="" loading="lazy" decoding="async">`
-        : cartovellaIconTokenMarkup(achievement.icon, 'h-7 w-7');
+      if (!image) throw new Error(`Missing achievement badge artwork for "${tier.title}".`);
+      return `<img src="./assets/achievements/${escapeHtml(image)}" alt="" loading="lazy" decoding="async">`;
     }
 
     function renderEarnedAchievementBadges(stats) {
@@ -7207,7 +7212,7 @@
         badge.setAttribute('data-achievement', achievement.id);
         badge.setAttribute('title', label);
         badge.setAttribute('aria-label', label);
-        badge.innerHTML = achievementIconMarkup(achievement, completed);
+        badge.innerHTML = achievementIconMarkup(completed);
         badge.addEventListener('click', () => switchTab('achievements'));
         container.appendChild(badge);
         earnedCount++;
@@ -7303,7 +7308,7 @@
           return `
             <li class="flex items-start gap-3 rounded-xl border p-3" data-achievement-tier="${escapeHtml(tier.title)}" data-earned="${earned}" style="${achievementCardStyle(achievement, tier)}">
               <div class="achievement-icon shrink-0" data-rarity="${tier.rarity}" style="${achievementBadgeStyle(achievement, tier)}" aria-hidden="true">
-                ${achievementIconMarkup(achievement, tier, !earned)}
+                ${achievementIconMarkup(tier, !earned)}
               </div>
               <div class="min-w-0 flex-1">
                 <div class="flex flex-wrap items-center gap-2">
@@ -7345,7 +7350,7 @@
           <details class="achievement-class w-full" data-achievement-class="${escapeHtml(model.id)}" data-rarity="${completedClass ? model.completed.tier.rarity : 'unmet'}">
             <summary class="flex w-full cursor-pointer list-none items-center gap-4 rounded-2xl border p-4 sm:p-5" style="${achievementCardStyle(currentAchievement, currentTier)}">
               <div class="achievement-icon shrink-0" data-rarity="${currentTier.rarity}" style="${achievementBadgeStyle(currentAchievement, currentTier)}" aria-hidden="true">
-                ${achievementIconMarkup(currentAchievement, currentTier, !completedClass)}
+                ${achievementIconMarkup(currentTier, !completedClass)}
               </div>
               <div class="min-w-0 flex-1">
                 <div class="flex flex-wrap items-center gap-2">
@@ -9415,7 +9420,6 @@
         const { completed } = achievementDisclosure(achievement, stats);
         return completed ? {
           title: completed.title,
-          icon: achievement.icon,
           rarity: completed.rarity
         } : null;
       }).filter(Boolean).sort((a, b) =>
@@ -9626,7 +9630,14 @@
     function renderGuildExplorerCard(profile) {
       const stats = profile.summary_stats || {};
       const badges = (Array.isArray(stats.topBadges) ? stats.topBadges : []).slice(0, 4)
-        .map(badge => `<span class="rounded-full border border-amber-300/20 bg-amber-950/40 px-2 py-1 text-[10px] text-amber-100" title="${escapeHtml(badge.title || '')}">${cartovellaIconTokenMarkup(badge.icon || '🏆', 'h-3 w-3')} ${escapeHtml(badge.title || '')}</span>`)
+        .map(badge => {
+          const image = ACHIEVEMENT_IMAGES[badge.title];
+          if (!image) {
+            console.error(`Missing badge artwork for public achievement "${badge.title || 'unknown'}".`);
+            return '';
+          }
+          return `<span class="inline-flex items-center gap-1 rounded-full border border-amber-300/20 bg-amber-950/40 px-2 py-1 text-[10px] text-amber-100" title="${escapeHtml(badge.title || '')}"><img src="./assets/achievements/${escapeHtml(image)}" alt="" aria-hidden="true" loading="lazy" decoding="async" class="h-3 w-3 shrink-0 object-contain"> ${escapeHtml(badge.title || '')}</span>`;
+        })
         .join('');
       const stat = value => Number.isFinite(Number(value)) ? Number(value).toLocaleString('en') : '0';
       const totalMiles = Number.isFinite(stats.totalMiles) && stats.totalMiles >= 0
