@@ -146,7 +146,7 @@ const html = (await readFile(new URL('./index.html', import.meta.url), 'utf8')).
 const expeditionUi = await readFile(new URL('./expedition-ui.js', import.meta.url), 'utf8');
 const legacyRoute = await readFile(new URL('../wanderlog/index.html', import.meta.url), 'utf8');
 check('favicon uses the tightly cropped simplified logo at full size', () => {
-  assert.match(html, /rel="icon" type="image\/png" href="assets\/logos\/simplified-cartovella-favicon\.png"/);
+  assert.match(html, /rel="icon" type="image\/png" href="assets\/logos\/simplified-cartovella-favicon\.png\?v=2"/);
   assert.equal(faviconPng.toString('hex', 0, 8), '89504e470d0a1a0a');
   assert.equal(faviconPng.readUInt32BE(16), 512);
   assert.equal(faviconPng.readUInt32BE(20), 512);
