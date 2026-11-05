@@ -1593,27 +1593,47 @@ function renderPublicExpeditionSummary(profile, expedition) {
   const transitTags = (detailsShared && Array.isArray(expedition.transitTags) ? expedition.transitTags : [])
     .map(mode => TravelLedger.transitTags[mode] || mode);
   const stopNames = (detailsShared && Array.isArray(expedition.stopNames) ? expedition.stopNames : [])
-    .filter(name => typeof name === 'string' && name.trim());
+    .filter(name => typeof name === 'string' && name.trim()).slice(0, 16);
   const sharedStops = (detailsShared && Array.isArray(expedition.sharedStops) ? expedition.sharedStops : [])
     .filter(stop => typeof stop?.name === 'string' && stop.name.trim() &&
       Array.isArray(stop.coords) && stop.coords.length === 2 &&
       Number.isFinite(stop.coords[0]) && Number.isFinite(stop.coords[1]) &&
       Math.abs(stop.coords[0]) <= 90 && Math.abs(stop.coords[1]) <= 180)
     .slice(0, 16);
+  const uniqueWishlistStops = [...new Map(sharedStops.map(stop => [
+    `${stop.name.trim().toLocaleLowerCase()}|${stop.coords[0].toFixed(4)}|${stop.coords[1].toFixed(4)}`,
+    stop
+  ])).values()];
   const photos = (expedition.photosShared === true && Array.isArray(expedition.photos) ? expedition.photos : [])
     .filter(photo => typeof photo === 'string' && /^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/.test(photo));
   const distance = detailsShared && Number.isFinite(expedition.distanceMiles)
     ? `${expedition.distanceMiles.toLocaleString('en', { maximumFractionDigits: 1 })} mi`
     : '';
   const title = detailsShared ? expedition.name || 'Untitled expedition' : 'Shared expedition';
-  const wishlistStops = sharedStops.length ? `<div class="mt-3 flex flex-wrap gap-2" aria-label="Shared stops">
-    ${sharedStops.map(stop => `<button type="button" data-guild-wishlist-stop
+  const wishlistStops = uniqueWishlistStops.map(stop => {
+    const fullName = stop.name.trim();
+    const shortName = fullName.split(',')[0].trim() || fullName;
+    return `<button type="button" data-guild-wishlist-stop
       data-stop-name="${escapeHtml(stop.name)}" data-stop-kind="${escapeHtml(stop.kind || '')}"
       data-stop-id="${escapeHtml(stop.id || '')}" data-stop-lat="${stop.coords[0]}"
       data-stop-lng="${stop.coords[1]}"
-      class="rounded-lg border border-amber-400/30 bg-amber-950/30 px-2.5 py-1.5 text-[11px] text-amber-100 hover:border-amber-300/70">
-      + Wishlist: ${escapeHtml(stop.name)}
-    </button>`).join('')}
+      aria-label="Add ${escapeHtml(fullName)} to Wishlist" title="Add ${escapeHtml(fullName)} to Wishlist"
+      class="inline-flex max-w-full items-center gap-1.5 rounded-lg border border-amber-400/30 bg-amber-950/30 px-2.5 py-1.5 text-[11px] text-amber-100 hover:border-amber-300/70">
+      <span aria-hidden="true">+</span><span class="max-w-[14rem] truncate">${escapeHtml(shortName)}</span>
+    </button>`;
+  }).join('');
+  const stopCount = uniqueWishlistStops.length || stopNames.length;
+  const stopDetails = stopNames.length || uniqueWishlistStops.length ? `<details class="mt-3 rounded-xl border border-slate-700/70 bg-slate-950/40 p-2.5">
+    <summary class="cursor-pointer select-none text-xs font-semibold text-slate-300 marker:text-sky-300">
+      Stops &amp; Wishlist <span class="ml-1 text-[10px] font-normal text-slate-500">${stopCount} stop${stopCount === 1 ? '' : 's'}</span>
+    </summary>
+    <div class="mt-2 space-y-2.5">
+      ${stopNames.length ? `<p class="text-[11px] leading-relaxed text-slate-400"><span class="font-semibold text-slate-500">Route:</span> ${stopNames.map(name => escapeHtml(name)).join(' → ')}</p>` : ''}
+      ${wishlistStops ? `<div class="flex flex-wrap gap-1.5" aria-label="Add shared stops to your Wishlist">${wishlistStops}</div>` : ''}
+    </div>
+  </details>` : '';
+  const transitMarkup = transitTags.length ? `<div class="mt-2 flex flex-wrap gap-1.5" aria-label="Transit modes">
+    ${transitTags.map(mode => `<span class="rounded-full border border-sky-400/25 bg-sky-950/30 px-2 py-0.5 text-[10px] text-sky-200">${escapeHtml(mode)}</span>`).join('')}
   </div>` : '';
   return `<article class="rpg-panel overflow-hidden rounded-2xl p-4">
     <div class="flex items-center gap-3">
@@ -1623,14 +1643,16 @@ function renderPublicExpeditionSummary(profile, expedition) {
     </div>
     <h4 class="mt-3 text-base font-bold text-amber-200">${escapeHtml(title)}</h4>
     ${detailsShared ? `<p class="mt-1 text-xs text-slate-400">${escapeHtml(dates || 'Dates not set')}${expedition.dayTrip ? ' · Day trip' : ''} · ${escapeHtml(distance || 'Distance not recorded')}</p>` : ''}
-    ${transitTags.length ? `<p class="mt-2 text-xs text-sky-200">Transit: ${escapeHtml(transitTags.join(' · '))}</p>` : ''}
-    ${stopNames.length ? `<p class="mt-2 text-xs text-slate-300"><span class="font-semibold text-slate-400">Stops:</span> ${escapeHtml(stopNames.join(' · '))}</p>` : ''}
+    ${transitMarkup}
     ${detailsShared && expedition.reason ? `<p class="mt-2 text-xs text-slate-400">${escapeHtml(expedition.reason)}</p>` : ''}
-    ${journalShared && expedition.journalSnippet ? `<p class="mt-2 whitespace-pre-line text-sm text-slate-200">${escapeHtml(expedition.journalSnippet)}</p>` : ''}
+    ${journalShared && expedition.journalSnippet ? `<details class="mt-2">
+      <summary class="cursor-pointer text-xs font-semibold text-slate-300">Read trip story</summary>
+      <p class="mt-2 whitespace-pre-line text-sm text-slate-200">${escapeHtml(expedition.journalSnippet)}</p>
+    </details>` : ''}
     ${photos.length ? `<div class="mt-3 flex flex-wrap gap-2">${photos.map((photo, index) =>
       `<figure class="rotate-1 rounded bg-white p-2 pb-3 shadow-lg"><img src="${photo}" alt="Shared trip photo ${index + 1}" class="max-h-40 max-w-full object-cover" loading="lazy" decoding="async"></figure>`
     ).join('')}</div>` : ''}
-    ${wishlistStops}
+    ${stopDetails}
     ${detailsShared && profile.visibility !== 'profile' ? `<button type="button" data-guild-open-travel="${escapeHtml(username)}" class="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-sky-400/40 bg-sky-950/40 px-3 py-2 text-xs text-sky-200 hover:bg-sky-900/50">${cartovellaIcon('notebook', 'h-4 w-4')} Open in Explorer's Travel Log</button>` : ''}
   </article>`;
 }

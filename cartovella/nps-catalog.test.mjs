@@ -273,7 +273,7 @@ check('character customization appears above the stage and progress summary', ()
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 10);
-  assert.ok(sources.every(source => source.endsWith('?v=20261105-biome-icon-layout-v1')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261105-guild-travel-cleanup-v1')));
   assert.ok(sources.some(source => source.startsWith('./character-creator.js?')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
@@ -2782,7 +2782,9 @@ await checkAsync('Explorers’ Guild renders mocked public profiles and expediti
     assert.match(element('guildExpeditionsFeed').innerHTML, /data:image\/jpeg;base64,YWJjZA==/);
     assert.match(element('guildExpeditionsFeed').innerHTML, /data-guild-open-travel="devon"/);
     assert.match(element('guildExpeditionsFeed').innerHTML, /data-guild-wishlist-stop/);
-    assert.match(element('guildExpeditionsFeed').innerHTML, /\+ Wishlist: Yellowstone/);
+    assert.match(element('guildExpeditionsFeed').innerHTML, /aria-label="Add Yellowstone to Wishlist"/);
+    assert.match(element('guildExpeditionsFeed').innerHTML, /Stops &amp; Wishlist/);
+    assert.match(element('guildExpeditionsFeed').innerHTML, /<details[\s\S]*?Route:/);
     assert.equal((element('guildExpeditionsFeed').innerHTML.match(/data-guild-wishlist-stop/g) || []).length, 1);
     assert.match(element('guildExpeditionsFeed').innerHTML, /guild-avatar h-16 w-16 shrink-0 rounded-full/);
     const privateDetailsPost = vm.runInContext(`renderPublicExpeditionSummary(
@@ -2792,6 +2794,16 @@ await checkAsync('Explorers’ Guild renders mocked public profiles and expediti
     )`, context);
     assert.match(privateDetailsPost, /Shared expedition/);
     assert.doesNotMatch(privateDetailsPost, /Public story|Secret trip|Secret reason|Secret stop|data-guild-open-travel|data-guild-wishlist-stop/);
+    const duplicateStopsPost = vm.runInContext(`renderPublicExpeditionSummary(
+      {username:'devon',summary_stats:{}},
+      {id:'duplicate-stops',detailsShared:true,stopNames:['Murrieta','Murrieta'],
+        sharedStops:[
+          {kind:'place',id:'murrieta-outbound',name:'Murrieta, California',coords:[33.5539,-117.2139]},
+          {kind:'place',id:'murrieta-return',name:'Murrieta, California',coords:[33.5539,-117.2139]}
+        ]}
+    )`, context);
+    assert.equal((duplicateStopsPost.match(/data-guild-wishlist-stop/g) || []).length, 1);
+    assert.match(duplicateStopsPost, /aria-label="Add Murrieta, California to Wishlist"/);
     const journalOnlyPost = vm.runInContext(`renderPublicExpeditionSummary(
       {username:'devon',summary_stats:{}},
       {id:'story-post',detailsShared:false,journalShared:true,journalSnippet:'Explicitly shared story',
