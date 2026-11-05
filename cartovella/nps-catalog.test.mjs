@@ -18,7 +18,7 @@ const publicTripSharingSql = await readFile(new URL('./public-trip-sharing.sql',
 const loadingDogSprite = await readFile(new URL(
   './assets/Loading%20Animations/Topdown%20-%20Pet%20-%20Dog/Root_Idle.png', import.meta.url
 ));
-const faviconSvg = await readFile(new URL('./assets/logos/cartovella-logo-1.svg', import.meta.url), 'utf8');
+const faviconPng = await readFile(new URL('./assets/logos/simplified-cartovella-favicon.png', import.meta.url));
 
 const records = Array.from({ length: 405 }, (_, index) => ({
   id: `official-${index}`, parkCode: index.toString(36).padStart(4, '0'),
@@ -145,9 +145,11 @@ console.log('PASS changing API totals rejected');
 const html = (await readFile(new URL('./index.html', import.meta.url), 'utf8')).replace(/\r\n/g, '\n');
 const expeditionUi = await readFile(new URL('./expedition-ui.js', import.meta.url), 'utf8');
 const legacyRoute = await readFile(new URL('../wanderlog/index.html', import.meta.url), 'utf8');
-check('favicon enlarges the mark within a safe, uncropped viewBox', () => {
-  assert.match(html, /rel="icon"[^>]*href="assets\/logos\/cartovella-logo-1\.svg"/);
-  assert.match(faviconSvg.slice(0, 500), /viewBox="350 350 1220 1220"/);
+check('favicon uses the tightly cropped simplified logo at full size', () => {
+  assert.match(html, /rel="icon" type="image\/png" href="assets\/logos\/simplified-cartovella-favicon\.png"/);
+  assert.equal(faviconPng.toString('hex', 0, 8), '89504e470d0a1a0a');
+  assert.equal(faviconPng.readUInt32BE(16), 512);
+  assert.equal(faviconPng.readUInt32BE(20), 512);
   assert.match(html, /class="relative flex h-12 w-12 shrink-0 items-center justify-center"[\s\S]*?class="h-8 w-8 object-contain"/);
 });
 check('Miku is unlocked only by the clickable logo-book easter egg on the Explorer Profile', () => {
