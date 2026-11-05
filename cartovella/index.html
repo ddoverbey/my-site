@@ -1791,8 +1791,39 @@
       return Array.isArray(coordinates) && coordinates.length > 1;
     }
 
+    const MAX_EXPEDITION_XP_MILES = 24901;
+    const EXPEDITION_MILES_PER_XP = {
+      flight: 100,
+      road: 25,
+      rail: 15,
+      ferry: 15,
+      awd: 10,
+      foot: 0.5
+    };
+
     function expeditionExperiencePoints(expedition, distanceMiles = expeditionDistanceMiles(expedition)) {
-      return 5 + Math.min(30, Math.floor(distanceMiles / 25));
+      if (Array.isArray(expedition?.routeLegs) && expedition.routeLegs.length && expedition.routeStops?.length) {
+        let countedMiles = 0;
+        let rawDistanceXp = 0;
+        for (let index = 0; index < expedition.routeLegs.length; index++) {
+          if (countedMiles >= MAX_EXPEDITION_XP_MILES) break;
+          const leg = expedition.routeLegs[index];
+          const coordinates = leg.routeCoords?.length > 1 ? leg.routeCoords : [
+            expedition.routeStops[index]?.coords, expedition.routeStops[index + 1]?.coords
+          ].filter(Boolean);
+          const countedLegMiles = Math.min(
+            pathDistanceMiles(coordinates),
+            MAX_EXPEDITION_XP_MILES - countedMiles
+          );
+          countedMiles += countedLegMiles;
+          rawDistanceXp += countedLegMiles / (EXPEDITION_MILES_PER_XP[leg.mode] || 25);
+        }
+        return 5 + Math.floor(rawDistanceXp);
+      }
+
+      const mode = expedition?.transitTags?.[0] || 'road';
+      const clampedMiles = Math.min(distanceMiles, MAX_EXPEDITION_XP_MILES);
+      return 5 + Math.floor(clampedMiles / (EXPEDITION_MILES_PER_XP[mode] || 25));
     }
 
     function expeditionStopCoordinates(expedition) {

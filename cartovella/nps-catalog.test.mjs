@@ -648,11 +648,52 @@ check('every saved expedition earns base XP and route distance adds capped XP in
     routeLegs: [{ mode: 'flight', routeCoords: [] }]
   };
   assert.ok(Math.abs(vm.runInContext('expeditionDistanceMiles(expeditionXpFixture)', context) - degreeMiles) < 0.001);
-  assert.equal(vm.runInContext('expeditionExperiencePoints(expeditionXpFixture)', context), 7);
+  assert.equal(vm.runInContext('expeditionExperiencePoints(expeditionXpFixture)', context), 5);
   context.expeditionXpFixture = { routeCoords: [] };
   assert.equal(vm.runInContext('expeditionExperiencePoints(expeditionXpFixture)', context), 5);
   context.expeditionXpFixture = { routeCoords: [[0, 0], [0, 20]] };
-  assert.equal(vm.runInContext('expeditionExperiencePoints(expeditionXpFixture)', context), 35);
+  assert.equal(vm.runInContext('expeditionExperiencePoints(expeditionXpFixture)', context), 60);
+  delete context.expeditionXpFixture;
+});
+check('expedition XP weights each route leg by transit mode and caps counted distance at Earth circumference', () => {
+  const milesPerLongitudeDegree = travelLedger.distanceMiles({ lat: 0, lng: 0 }, { lat: 0, lng: 1 });
+  const stopsForMiles = miles => [
+    { coords: [0, 0] },
+    { coords: [0, miles / milesPerLongitudeDegree] }
+  ];
+  const scoreLeg = (mode, miles) => {
+    context.expeditionXpFixture = {
+      routeStops: stopsForMiles(miles),
+      routeLegs: [{ mode, routeCoords: [] }]
+    };
+    return vm.runInContext('expeditionExperiencePoints(expeditionXpFixture)', context);
+  };
+
+  const flightXp = scoreLeg('flight', 150);
+  const roadXp = scoreLeg('road', 150);
+  const railXp = scoreLeg('rail', 150);
+  const ferryXp = scoreLeg('ferry', 150);
+  const awdXp = scoreLeg('awd', 150);
+  const footXp = scoreLeg('foot', 150);
+  assert.ok(flightXp < roadXp && roadXp < railXp && railXp === ferryXp && ferryXp < awdXp && awdXp < footXp);
+  assert.equal(scoreLeg('foot', 10), 25);
+  assert.equal(scoreLeg('road', 1001), 45);
+
+  context.expeditionXpFixture = {
+    routeStops: [0, 60, 120].map(longitude => ({ coords: [0, longitude / milesPerLongitudeDegree] })),
+    routeLegs: [{ mode: 'flight' }, { mode: 'flight' }]
+  };
+  assert.equal(vm.runInContext('expeditionExperiencePoints(expeditionXpFixture)', context), 6);
+
+  context.expeditionXpFixture = {
+    routeStops: [0, 144, 288, 432].map(longitude => ({ coords: [0, longitude] })),
+    routeLegs: [{ mode: 'road' }, { mode: 'road' }, { mode: 'road' }]
+  };
+  assert.ok(vm.runInContext('expeditionDistanceMiles(expeditionXpFixture)', context) > 24901);
+  assert.equal(vm.runInContext('expeditionExperiencePoints(expeditionXpFixture)', context), 1001);
+  context.expeditionXpFixture = { transitTags: ['flight', 'road'] };
+  assert.equal(vm.runInContext('expeditionExperiencePoints(expeditionXpFixture, 150)', context), 6);
+  assert.equal(vm.runInContext("expeditionExperiencePoints({ transitTags: ['road'] }, 30000)", context), 1001);
   delete context.expeditionXpFixture;
 });
 check('total passport XP includes each logged expedition', () => {
@@ -668,15 +709,15 @@ check('total passport XP includes each logged expedition', () => {
     });
     context.expeditionXpFixture = makeTrip('short-flight', milesPerLongitudeDegree);
     vm.runInContext('AppState.expeditions = [expeditionXpFixture]', context);
-    assert.equal(vm.runInContext('computeStats().xp', context) - before, 7);
+    assert.equal(vm.runInContext('computeStats().xp', context) - before, 5);
 
     context.expeditionXpFixture = [50, 50, 50].map((miles, index) => makeTrip(`local-${index}`, miles));
     vm.runInContext('AppState.expeditions = expeditionXpFixture', context);
-    assert.equal(vm.runInContext('computeStats().xp', context) - before, 96);
+    assert.equal(vm.runInContext('computeStats().xp', context) - before, 90);
 
     context.expeditionXpFixture = [makeTrip('long-haul', 550)];
     vm.runInContext('AppState.expeditions = expeditionXpFixture', context);
-    assert.equal(vm.runInContext('computeStats().xp', context) - before, 127);
+    assert.equal(vm.runInContext('computeStats().xp', context) - before, 110);
   } finally {
     vm.runInContext(`AppState.expeditions = ${originalExpeditions}`, context);
     delete context.expeditionXpFixture;

@@ -72,13 +72,14 @@ trip updates its XP rather than leaving a separate balance behind.
 | Each visited or lived county/district | 3 for the first 50; 1 for each additional one |
 | Establishing a home Citadel | 50 |
 | First collection of a biome | 15–200, based on its rarity tier above |
-| Each logged expedition | 5 base XP, plus 1 XP per full 25 route miles (up to 30 distance XP) |
+| Each logged expedition | 5 base XP, plus mode-weighted distance XP: foot 2 XP/mi; AWD 1 XP/10 mi; rail/ferry 1 XP/15 mi; road 1 XP/25 mi; flight 1 XP/100 mi |
 | Completing a questline | Varies by questline |
 
-An expedition can earn up to 35 XP. Distance is summed across its route legs; when route geometry is
-unavailable, Cartovella estimates each leg between its ordered stops. Flight and ferry distances count
-for expedition XP even though those modes do not count toward land-route biome credit. A trip without
-measurable distance still earns the 5 base XP.
+Distance XP is summed across an expedition's route legs, using each leg's transit mode, up to 24,901
+route miles (Earth's equatorial circumference) per expedition instead of the former 30-distance-XP
+ceiling. When route geometry is unavailable, Cartovella estimates each leg between its ordered stops.
+Flight and ferry distances count for expedition XP even though those modes do not count toward
+land-route biome credit. A trip without measurable distance still earns the 5 base XP.
 
 Home-base geography can also count its state, country, and home-county biome. The Citadel bonus is
 included while a home base is set; changing the home location does not award another 50 XP. Quest
