@@ -1751,6 +1751,7 @@ check('primary feature choices unlock by level and can be skipped', () => {
       onboarding={unlockedAll:false,chosenTools:[]};onboardingLevel=1;updateHeaderNavigation()`, context);
     assert.deepEqual(visibleTabs(), ['map']);
     assert.equal(element('toolUnlockModal').classList.contains('hidden'), true);
+    assert.equal(element('btnUnlockAllFeatures').classList.contains('hidden'), false);
 
     vm.runInContext(`AppState.homeBase={name:'Test Citadel'};AppState.mode='rpg';
       AppState.currentTab='map';
@@ -1793,11 +1794,13 @@ check('primary feature choices unlock by level and can be skipped', () => {
       ['scratch', 'bucketlist', 'travel']);
     assert.equal(element('toolUnlockModal').classList.contains('hidden'), true);
     assert.equal(element('hudActiveQuests').classList.contains('hidden'), false);
+    assert.equal(element('btnUnlockAllFeatures').classList.contains('hidden'), false);
 
     vm.runInContext('onboardingLevel=4;updateHeaderNavigation()', context);
     assert.deepEqual(visibleTabs(), ['map', 'bucketlist', 'scratch', 'travel', 'passport', 'guild']);
     assert.equal(vm.runInContext('onboarding.unlockedAll', context), true);
     assert.equal(JSON.parse(context.localStorage.getItem('cartovella_onboarding_v1')).unlockedAll, true);
+    assert.equal(element('btnUnlockAllFeatures').classList.contains('hidden'), true);
 
     vm.runInContext("onboarding={unlockedAll:false,chosenTools:['scratch']};onboardingLevel=1;updateHeaderNavigation()", context);
     context.updateAllUI = () => context.updateHeaderNavigation();
@@ -1805,10 +1808,12 @@ check('primary feature choices unlock by level and can be skipped', () => {
     assert.equal(vm.runInContext('onboarding.unlockedAll', context), true);
     assert.deepEqual(visibleTabs(), ['map', 'bucketlist', 'scratch', 'travel', 'passport', 'guild']);
     assert.equal(JSON.parse(context.localStorage.getItem('cartovella_onboarding_v1')).unlockedAll, true);
+    assert.equal(element('btnUnlockAllFeatures').classList.contains('hidden'), true);
 
     vm.runInContext("onboarding={unlockedAll:false,chosenTools:[]};AppState.viewOnly=true;updateHeaderNavigation()", context);
     assert.equal(vm.runInContext('onboarding.unlockedAll', context), true);
     assert.deepEqual(visibleTabs(), ['map', 'bucketlist', 'scratch', 'travel', 'passport', 'guild']);
+    assert.equal(element('btnUnlockAllFeatures').classList.contains('hidden'), true);
   } finally {
     context.document.querySelectorAll = originalQuery;
     context.calculateStats = originalCalculateStats;

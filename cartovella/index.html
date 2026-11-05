@@ -621,7 +621,7 @@
           <button id="btnImportTrigger" class="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-800 flex items-center gap-2">
             <span data-cartovella-icon="import" data-icon-class="h-4 w-4" aria-hidden="true"></span> Import Passport
           </button>
-          <button id="btnUnlockAllFeatures" type="button" class="w-full text-left px-4 py-2 text-xs text-amber-200 hover:bg-slate-800">
+          <button id="btnUnlockAllFeatures" type="button" class="hidden w-full text-left px-4 py-2 text-xs text-amber-200 hover:bg-slate-800">
             Unlock All Primary Features
           </button>
           <button id="btnOpenCredits" type="button" class="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-800 flex items-center gap-2">
@@ -7846,6 +7846,8 @@
       });
       document.getElementById('hudActiveQuests').classList.toggle('hidden',
         !onboarding.unlockedAll && stats.level < 3);
+      document.getElementById('btnUnlockAllFeatures').classList.toggle('hidden',
+        onboarding.unlockedAll || stats.level >= 4 || AppState.viewOnly);
       renderFeatureChoiceModal(stats);
     }
 

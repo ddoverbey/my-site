@@ -158,8 +158,9 @@ The six primary tabs are Map, Travel Ledger, Scratch Map, Travel Log, Explorer P
 Explorers' Guild. At Level 3, the Explorer Class can shift from its starting title to the leading
 travel archetype when that archetype has progressed beyond 5%; otherwise, the starting title remains.
 
-You can bypass the progression at any time with **Skip & unlock all features** in the tool chooser
-or **Unlock All Primary Features** in Settings. All features also unlock automatically for read-only
+While features are locked, you can bypass the progression with **Skip & unlock all features** in
+the tool chooser or **Unlock All Primary Features** in Settings. The Settings option is hidden once
+all six primary features are unlocked. All features also unlock automatically for read-only
 passports, when existing travel progress is found on load, when signing in to an account with an
 existing passport, or after importing a `.json` passport. Existing travel progress includes logged
 travel, saved expeditions or custom places, or more than one visited country, state, or county.
