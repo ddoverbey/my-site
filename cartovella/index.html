@@ -8291,7 +8291,7 @@
               recoveryCleanupWarning = ` The separate local draft copy could not be cleared: ${error.message}`;
             }
           }
-          if (AppState.homeBase) closeHomeModal();
+          closeHomeModal({ allowWithoutHomeBase: true });
           initMap();
           restoreModeView();
           updateHomeBaseMarker();
@@ -8344,12 +8344,16 @@
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);
+      document.getElementById('btnCloseHomeModal').classList.toggle('hidden',
+        !AppState.homeBase && !cloudSession?.user && !AppState.viewOnly);
       document.getElementById('homeBaseModal').classList.remove('hidden');
     }
 
-    function closeHomeModal() {
+    function closeHomeModal({ allowWithoutHomeBase = false } = {}) {
+      if (!AppState.homeBase && !cloudSession?.user && !AppState.viewOnly && !allowWithoutHomeBase) return false;
       dismissPlaceSuggestions(true, true);
       document.getElementById('homeBaseModal').classList.add('hidden');
+      return true;
     }
 
     document.getElementById('btnCloseHomeModal').addEventListener('click', closeHomeModal);
@@ -8677,6 +8681,9 @@
     function updateAuthUI() {
       const isLoggedIn = !!cloudSession?.user;
       const hasConflict = !!pendingCloudConflict;
+      if (isLoggedIn && !document.getElementById('homeBaseModal').classList.contains('hidden')) {
+        closeHomeModal();
+      }
       updateHeaderAccountPill();
       document.getElementById('btnHomeSignIn').classList.toggle('hidden', isLoggedIn);
       document.getElementById('cloudConflictView').classList.toggle('hidden', !hasConflict);
@@ -9017,7 +9024,7 @@
       localStorage.setItem(LOCAL_CLOUD_DIRTY_KEY, 'false');
       localStorage.removeItem(LAST_SIGNED_OUT_CLOUD_ACCOUNT_KEY);
       cloudHydrated = true;
-      if (AppState.homeBase) closeHomeModal();
+      closeHomeModal();
       updateHomeBaseMarker();
       await yieldToMain();
       renderParkMarkers();
@@ -10285,7 +10292,7 @@
         startupLoadingTask = beginAppLoading('Preparing Cartovella…');
       }
       // Decide on onboarding from saved state immediately, not after every dataset loads.
-      if (!AppState.homeBase && !AppState.viewOnly) openHomeModal();
+      if (!AppState.homeBase && !AppState.viewOnly && !cloudSession?.user) openHomeModal();
       appReady = startApp();
       startupDataReady = appReady.then(async () => {
         if (publicUsername && activePublicAtlasUsername === publicUsername) {
