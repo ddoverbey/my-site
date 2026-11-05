@@ -1298,15 +1298,14 @@
       <div>
         <h2 id="homeBaseModalTitle" class="cinzel text-2xl sm:text-3xl font-extrabold text-amber-200">Establish Your Home Citadel</h2>
         <p class="text-sm text-slate-300 mt-2">
-          Every explorer begins somewhere. Set your home to reveal a small circle 15 miles across (7.5-mile radius) and permanently claim its county, state, and country as Lived. Your first logged travel anywhere unlocks the whole home county. Establishing your first Citadel grants +50 XP; your starting path gives you a class title through Level 2, then your Archetype Radar Chart shapes your Explorer Class from Level 3.
+          Every adventure starts somewhere. Set your home base.
         </p>
       </div>
 
       <div class="space-y-3">
         <button id="btnGeoDetect" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-sky-600 hover:from-blue-500 hover:to-sky-500 font-semibold text-white text-sm shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2 transition-all">
-          <span data-cartovella-icon="locator" data-icon-class="h-5 w-5" aria-hidden="true"></span> Detect My Location Automatically
+          <span data-cartovella-icon="locator" data-icon-class="h-5 w-5" aria-hidden="true"></span> Detect My Location
         </button>
-        <p class="text-[11px] text-slate-400">Automatic detection sends your coordinates to Photon by Komoot to identify your city. If the lookup is unavailable or no city is found, your Citadel is saved as “Home Sanctuary.”</p>
 
         <div class="flex items-center gap-3 text-xs text-slate-500">
           <div class="flex-1 h-px bg-slate-800"></div>
@@ -1317,7 +1316,7 @@
         <div class="flex gap-2">
           <input type="text" id="cityInput" aria-label="Search for your home city" autocomplete="off" aria-controls="citySearchResults" placeholder="e.g. Seattle, WA or London, UK" class="w-full min-w-0 bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-400">
         </div>
-        <p class="text-[11px] text-slate-400">Suggestions use Photon by Komoot and send your search text as you type. Click your city to establish your Citadel. © OpenStreetMap contributors.</p>
+        <p class="text-[10px] text-slate-500"><a class="text-sky-300 underline" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap contributors</a></p>
         <div id="citySearchResults" aria-label="Matching home cities" class="space-y-1 max-h-48 overflow-y-auto rounded-xl text-left"></div>
         <p id="homeLookupStatus" role="status" aria-live="polite" class="text-xs text-amber-200"></p>
 
@@ -1342,9 +1341,6 @@
         </button>
       </div>
 
-      <div class="text-[11px] text-slate-500">
-        You can always change your home base or customize fog clearing later.
-      </div>
     </div>
   </div>
 
