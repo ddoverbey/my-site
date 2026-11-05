@@ -169,7 +169,7 @@ check('RPG Map keeps its fog-of-war icon and Route Map uses the Phosphor Path ic
   assert.match(html, /id="navBucketlist"[^>]*>[\s\S]*?data-cartovella-icon="travelLedger"/);
   assert.match(html, /id="navExplorer"[^>]*>[\s\S]*?data-cartovella-icon="explorerProfile"/);
   assert.match(html, /id="navScratch"[^>]*>[\s\S]*?data-cartovella-icon="scratchMap"/);
-  assert.match(html, /id="navTravel"[^>]*>[\s\S]*?data-icon-class="h-7 w-7 md:h-12 md:w-12"/);
+  assert.match(html, /id="navTravel"[^>]*>[\s\S]*?data-icon-class="h-9 w-9 md:h-14 md:w-14"/);
   assert.match(html, /id="btnToggleTravelRoutes"[^>]*>[\s\S]*?data-cartovella-icon="routeMap"/);
   assert.match(html, /id="btnToggleTravelRoutes"[^>]*>[\s\S]*?data-icon-class="h-5 w-5"/);
   assert.match(html, /href="https:\/\/cdn\.jsdelivr\.net\/npm\/@phosphor-icons\/web@2\.1\.1\/src\/duotone\/style\.css"/);
@@ -1688,7 +1688,7 @@ check('six icon-only header tabs keep primary navigation clean', () => {
   ]) {
     assert.match(nav, new RegExp(`<button id="${id}"[^>]*data-tab="${tab}"`));
     assert.ok(nav.includes(`data-cartovella-icon="${icon}"`));
-    const iconClass = id === 'navTravel' ? 'h-7 w-7 md:h-12 md:w-12' : 'h-6 w-6 md:h-10 md:w-10';
+    const iconClass = id === 'navTravel' ? 'h-9 w-9 md:h-14 md:w-14' : 'h-6 w-6 md:h-10 md:w-10';
     assert.ok(nav.includes(`data-cartovella-icon="${icon}" data-icon-class="${iconClass}"`));
     assert.match(nav, new RegExp(`data-tooltip="${label}" title="${label}" aria-label="${label}"`));
   }
