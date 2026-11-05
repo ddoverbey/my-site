@@ -552,8 +552,10 @@
 
   <header class="relative min-h-16 border-b border-slate-800 bg-[#0c1222]/95 px-3 py-2 sm:px-4 flex flex-wrap xl:flex-nowrap items-center justify-between gap-x-3 gap-y-2 z-[600] shrink-0 backdrop-blur-md">
     <div class="flex items-center gap-3 min-w-0">
-      <span class="flex h-12 w-12 shrink-0 items-center justify-center">
+      <span class="relative flex h-12 w-12 shrink-0 items-center justify-center">
         <img src="assets/logos/cartovella-logo-1.svg" alt="" aria-hidden="true" class="h-8 w-8 object-contain">
+        <button id="btnMikuEasterEgg" type="button" aria-label="Discover the secret Miku skin"
+          title="Secret page" class="hidden absolute left-1/2 top-1/2 z-10 h-4 w-4 -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300"></button>
       </span>
       <div class="hidden lg:block">
         <div class="flex items-center gap-2">
@@ -1601,15 +1603,15 @@
     </section>
   </div>
 
-  <script src="./nps-catalog.js?v=20261029-flat-eight-icon-nav-v1"></script>
-  <script src="./national-parks-scratch.js?v=20261029-flat-eight-icon-nav-v1"></script>
-  <script src="./international-parks.js?v=20261029-flat-eight-icon-nav-v1"></script>
-  <script src="./ecoregions.js?v=20261029-flat-eight-icon-nav-v1"></script>
-  <script src="./coordinate-lookups.js?v=20261029-flat-eight-icon-nav-v1"></script>
-  <script src="./micro-states.js?v=20261029-flat-eight-icon-nav-v1"></script>
-  <script src="./travel-ledger.js?v=20261029-flat-eight-icon-nav-v1"></script>
-  <script src="./character-creator.js?v=20261029-flat-eight-icon-nav-v1"></script>
-  <script src="./rarity-config.js?v=20261029-flat-eight-icon-nav-v1"></script>
+  <script src="./nps-catalog.js?v=20261104-miku-easter-egg-v1"></script>
+  <script src="./national-parks-scratch.js?v=20261104-miku-easter-egg-v1"></script>
+  <script src="./international-parks.js?v=20261104-miku-easter-egg-v1"></script>
+  <script src="./ecoregions.js?v=20261104-miku-easter-egg-v1"></script>
+  <script src="./coordinate-lookups.js?v=20261104-miku-easter-egg-v1"></script>
+  <script src="./micro-states.js?v=20261104-miku-easter-egg-v1"></script>
+  <script src="./travel-ledger.js?v=20261104-miku-easter-egg-v1"></script>
+  <script src="./character-creator.js?v=20261104-miku-easter-egg-v1"></script>
+  <script src="./rarity-config.js?v=20261104-miku-easter-egg-v1"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -6822,6 +6824,28 @@
       renderAchievementsView(stats);
     }
 
+    function unlockMikuEasterEgg() {
+      if (AppState.currentTab !== 'passport' || AppState.viewOnly) return;
+      const character = CharacterCreator.normalizeCharacter(AppState.character);
+      if (character.unlockedEasterEggs.includes('miku')) return;
+      const previous = AppState.character;
+      AppState.character = {
+        ...character,
+        unlockedEasterEggs: [...character.unlockedEasterEggs, 'miku']
+      };
+      try {
+        saveState();
+      } catch (error) {
+        AppState.character = previous;
+        console.error('Miku easter egg could not be saved.', error);
+        showNotification('Easter egg not saved', error.message, '⚠️');
+        return;
+      }
+      updateHeaderNavigation();
+      renderPassportView();
+      showNotification('Easter Egg Found', 'Miku is now available in Special Skins.', '✨');
+    }
+
     let atlasPinReturnFocus = null;
 
     function atlasPinTripMarkup(trips) {
@@ -7762,6 +7786,10 @@
     function updateHeaderNavigation() {
       document.body.classList.toggle('mode-classic', AppState.mode === 'classic');
       document.getElementById('rpgMapHud').classList.toggle('hidden', AppState.mode === 'classic');
+      const mikuEggUnlocked = CharacterCreator.normalizeCharacter(AppState.character)
+        .unlockedEasterEggs.includes('miku');
+      document.getElementById('btnMikuEasterEgg').classList.toggle('hidden',
+        AppState.currentTab !== 'passport' || AppState.viewOnly || mikuEggUnlocked);
       const showRpgMapControls = AppState.mode === 'rpg' && AppState.currentTab === 'map';
       document.getElementById('btnRecenterHome').classList.toggle('hidden', !showRpgMapControls);
       const stats = calculateStats();
@@ -8261,7 +8289,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261029-flat-eight-icon-nav-v1"></script>
+  <script src="./expedition-ui.js?v=20261104-miku-easter-egg-v1"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);
@@ -8297,6 +8325,7 @@
       if (!homeModal.classList.contains('hidden')) return closeHomeModal();
       hideLevelUpNotification();
     });
+    document.getElementById('btnMikuEasterEgg').addEventListener('click', unlockMikuEasterEgg);
     document.getElementById('btnHomeConfig').addEventListener('click', () => {
       document.getElementById('settingsMenu').open = false;
       openHomeModal();

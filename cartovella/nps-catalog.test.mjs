@@ -148,7 +148,13 @@ const legacyRoute = await readFile(new URL('../wanderlog/index.html', import.met
 check('favicon enlarges the mark within a safe, uncropped viewBox', () => {
   assert.match(html, /rel="icon"[^>]*href="assets\/logos\/cartovella-logo-1\.svg"/);
   assert.match(faviconSvg.slice(0, 500), /viewBox="350 350 1220 1220"/);
-  assert.match(html, /class="flex h-12 w-12 shrink-0 items-center justify-center"[\s\S]*?class="h-8 w-8 object-contain"/);
+  assert.match(html, /class="relative flex h-12 w-12 shrink-0 items-center justify-center"[\s\S]*?class="h-8 w-8 object-contain"/);
+});
+check('Miku is unlocked only by the clickable logo-book easter egg on the Explorer Profile', () => {
+  assert.match(html, /id="btnMikuEasterEgg"[^>]*title="Secret page"[^>]*cursor-pointer/);
+  assert.match(html, /AppState\.currentTab !== 'passport' \|\| AppState\.viewOnly \|\| mikuEggUnlocked/);
+  assert.match(html, /btnMikuEasterEgg'\)\.addEventListener\('click', unlockMikuEasterEgg\)/);
+  assert.match(html, /function unlockMikuEasterEgg\(\)[\s\S]*?AppState\.currentTab !== 'passport' \|\| AppState\.viewOnly/);
 });
 const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)]
   .map(match => /src="\.\/expedition-ui\.js(?:\?[^"]*)?"/.test(match[0]) ? expeditionUi : match[1]);
@@ -258,7 +264,7 @@ check('character customization appears above the stage and progress summary', ()
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 10);
-  assert.ok(sources.every(source => source.endsWith('?v=20261029-flat-eight-icon-nav-v1')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261104-miku-easter-egg-v1')));
   assert.ok(sources.some(source => source.startsWith('./character-creator.js?')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
@@ -1856,6 +1862,51 @@ check('existing travel progress and read-only passports automatically unlock all
       onboarding=JSON.parse(${JSON.stringify(originalOnboarding)})`, context);
     if (originalOnboardingStorage === null) context.localStorage.removeItem('cartovella_onboarding_v1');
     else context.localStorage.setItem('cartovella_onboarding_v1', originalOnboardingStorage);
+  }
+});
+check('Miku logo click grants a saved unlock only from the editable Explorer Profile', () => {
+  const savedState = vm.runInContext(
+    'JSON.stringify({character:AppState.character,currentTab:AppState.currentTab,viewOnly:AppState.viewOnly})',
+    context
+  );
+  const originalFunctions = {
+    saveState: context.saveState,
+    updateHeaderNavigation: context.updateHeaderNavigation,
+    renderPassportView: context.renderPassportView,
+    showNotification: context.showNotification
+  };
+  let saveCalls = 0;
+  const notices = [];
+  context.saveState = () => { saveCalls++; };
+  context.updateHeaderNavigation = () => {};
+  context.renderPassportView = () => {};
+  context.showNotification = (...args) => notices.push(args);
+  try {
+    vm.runInContext(`AppState.character=CharacterCreator.normalizeCharacter({});
+      AppState.currentTab='map';AppState.viewOnly=false`, context);
+    element('btnMikuEasterEgg').handlers.click();
+    assert.deepEqual(Array.from(vm.runInContext(
+      'AppState.character.unlockedEasterEggs', context
+    )), []);
+    vm.runInContext("AppState.currentTab='passport';AppState.viewOnly=true", context);
+    element('btnMikuEasterEgg').handlers.click();
+    assert.deepEqual(Array.from(vm.runInContext(
+      'AppState.character.unlockedEasterEggs', context
+    )), []);
+    vm.runInContext('AppState.viewOnly=false', context);
+    element('btnMikuEasterEgg').handlers.click();
+    assert.deepEqual(Array.from(vm.runInContext(
+      'AppState.character.unlockedEasterEggs', context
+    )), ['miku']);
+    assert.equal(saveCalls, 1);
+    assert.equal(notices[0][0], 'Easter Egg Found');
+  } finally {
+    context.saveState = originalFunctions.saveState;
+    context.updateHeaderNavigation = originalFunctions.updateHeaderNavigation;
+    context.renderPassportView = originalFunctions.renderPassportView;
+    context.showNotification = originalFunctions.showNotification;
+    vm.runInContext(`Object.assign(AppState,JSON.parse(${JSON.stringify(savedState)}));
+      updateHeaderNavigation()`, context);
   }
 });
 check('HUD quest links open the profile and expand the matching quest card', () => {

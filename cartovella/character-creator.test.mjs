@@ -245,22 +245,34 @@ check('Miku locks hair and clothing while keeping scene, sprite, skin, pet and e
   assert.ok(miku);
   assert.equal(miku.name, 'Miku');
   assert.equal(miku.fixedAppearance, true);
-  assert.equal(miku.unlock.type, 'starter');
+  assert.deepEqual(miku.unlock, { type: 'easterEgg', id: 'miku' });
   assert.equal(miku.paths.male, './assets/custom-gear/Miku-2.png');
   assert.equal(miku.paths.female, miku.paths.male);
   const png = readFileSync(new URL(miku.paths.male, import.meta.url));
   assert.equal(png.toString('ascii', 1, 4), 'PNG');
   assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [80, 64]);
 
+  const lockedCharacter = characterCreator.normalizeCharacter({ specialSkin: miku.id });
+  assert.equal(lockedCharacter.specialSkin, '', 'Miku cannot be equipped before finding the easter egg');
+  assert.deepEqual(lockedCharacter.unlockedEasterEggs, []);
+  const lockedControls = { dataset: { activeTab: 'appearance' }, innerHTML: '' };
+  characterCreator.render({
+    controls: lockedControls, character: lockedCharacter, stats: { level: 10 }
+  });
+  assert.match(lockedControls.innerHTML, /data-character-id="special_miku"[^>]*disabled/);
+  assert.match(lockedControls.innerHTML, /Discover a secret in Cartovella/);
+
   const character = characterCreator.normalizeCharacter({
     ...characterCreator.DEFAULT_CHARACTER,
     specialSkin: miku.id,
+    unlockedEasterEggs: ['miku', 'unknown', 'miku'],
     top: 'green_shirt',
     bottoms: 'green_pants',
     skinTone: 'deep',
     effect: 'effect_1',
     purchasedItems: ['green_shirt', 'green_pants', 'effect_1']
   });
+  assert.deepEqual(character.unlockedEasterEggs, ['miku']);
   const layers = characterCreator.characterSpriteAssets(character, new Date(2026, 9, 28));
   assert.deepEqual(layers.map(layer => layer.layer), ['effect', 'base']);
   assert.ok(layers[1].imageSrc.endsWith('/Miku-2.png'));
@@ -372,7 +384,9 @@ check('holiday hats automatically overlay male, female and Miku sprites only on 
   const christmasEnd = new Date(2026, 11, 25);
   const male = makeCharacter({ gender: 'male' });
   const female = makeCharacter({ gender: 'female' });
-  const miku = makeCharacter({ specialSkin: 'special_miku', gender: 'male' });
+  const miku = makeCharacter({
+    specialSkin: 'special_miku', unlockedEasterEggs: ['miku'], gender: 'male'
+  });
   assert.ok(headwearPath(male, halloween).endsWith('/Male Hat/Pumpkin hat.png'));
   assert.ok(headwearPath(male, halloweenEnd).endsWith('/Male Hat/Pumpkin hat.png'));
   assert.ok(headwearPath(female, halloween).endsWith('/Female Hat/Witch hat.png'));
@@ -387,6 +401,7 @@ check('holiday hat removal restores prior headwear and persists for the active e
   let character = characterCreator.normalizeCharacter({
     ...characterCreator.DEFAULT_CHARACTER,
     specialSkin: 'special_miku',
+    unlockedEasterEggs: ['miku'],
     headwear: 'traveler_cap'
   });
   const currentDate = new Date(2026, 9, 30);

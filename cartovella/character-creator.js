@@ -664,7 +664,7 @@
       pairedPaths(`${ASSET_ROOT}GandalfHardcore Special skin/`, male, female), 300));
   SHOP_WARDROBE.push({
     ...equipmentItem('special_miku', 'Miku', 'specialSkin',
-      pairedPaths(CUSTOM_GEAR_ASSET_ROOT, 'Miku-2.png'), { type: 'starter' }),
+      pairedPaths(CUSTOM_GEAR_ASSET_ROOT, 'Miku-2.png'), { type: 'easterEgg', id: 'miku' }),
     fixedAppearance: true
   });
   addShopItem('small_backpack', 'Small Backpack', 'backLayer',
@@ -782,6 +782,7 @@
     ...EQUIPMENT_DEFAULTS,
     seasonalHatDismissals: [],
     purchasedItems: [],
+    unlockedEasterEggs: [],
     proUnlocked: false,
     donationUsd: 0
   });
@@ -828,14 +829,21 @@
     const purchasedItems = Array.isArray(source.purchasedItems)
       ? [...new Set(source.purchasedItems.filter(id => availablePurchasedIds.has(id)))]
       : [];
+    const unlockedEasterEggs = Array.isArray(source.unlockedEasterEggs)
+      ? [...new Set(source.unlockedEasterEggs.filter(id => id === 'miku'))]
+      : [];
     const equipment = Object.fromEntries(Object.entries(EQUIPMENT_DEFAULTS).map(([field, fallback]) => {
       const legacyValue = field === 'top' ? legacyOutfit[0] :
         field === 'bottoms' ? legacyOutfit[1] : fallback;
       const allowed = EQUIPMENT_BY_FIELD[field] || [];
-      const equipmentGender = field === 'headwear' && source.specialSkin === 'special_miku'
+      const equipmentGender = field === 'headwear' && unlockedEasterEggs.includes('miku') &&
+        source.specialSkin === 'special_miku'
         ? 'female' : gender;
-      const isOwned = candidate => candidate.unlock.type !== 'coin' ||
-        purchasedItems.includes(candidate.id);
+      const isOwned = candidate => {
+        if (candidate.unlock.type === 'coin') return purchasedItems.includes(candidate.id);
+        if (candidate.unlock.type === 'easterEgg') return unlockedEasterEggs.includes(candidate.unlock.id);
+        return true;
+      };
       if (source[field] === '') return [field, ''];
       const item = allowed.find(candidate =>
         candidate.id === source[field] && candidate.paths[equipmentGender] && isOwned(candidate));
@@ -878,6 +886,7 @@
       ...equipment,
       seasonalHatDismissals: normalizeSeasonalHatDismissals(source.seasonalHatDismissals),
       purchasedItems,
+      unlockedEasterEggs,
       proUnlocked: source.proUnlocked === true,
       donationUsd: Number.isFinite(Number(source.donationUsd))
         ? Math.max(0, Math.min(1000000, Number(source.donationUsd))) : 0
@@ -973,6 +982,14 @@
 
   function unlockStatus(unlock, stats, character, achievements, appState = { character }) {
     if (!unlock || unlock.type === 'starter') return { unlocked: true, description: 'Available from the start.' };
+    if (unlock.type === 'easterEgg') {
+      const unlocked = Array.isArray(character.unlockedEasterEggs) &&
+        character.unlockedEasterEggs.includes(unlock.id);
+      return {
+        unlocked,
+        description: unlocked ? 'Secret found.' : 'Discover a secret in Cartovella.'
+      };
+    }
     if (unlock.type === 'level') {
       const current = Number(stats.level) || 1;
       return {
