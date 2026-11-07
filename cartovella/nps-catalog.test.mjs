@@ -422,6 +422,55 @@ const context = vm.createContext({
 });
 const testConsole = context.console;
 scripts.forEach(script => vm.runInContext(script, context));
+check('reset all progress requires an unchecked confirmation checkbox before proceeding', () => {
+  assert.match(html, /<input id="confirmResetProgress" type="checkbox"/);
+  assert.match(html, /Are you sure you want to reset all progress\?/);
+  assert.match(html, /id="btnConfirmResetProgress" type="button" disabled/);
+  const modal = element('resetProgressModal');
+  const checkbox = element('confirmResetProgress');
+  const confirmButton = element('btnConfirmResetProgress');
+  const originalState = JSON.parse(vm.runInContext(
+    'JSON.stringify({ homeBase: AppState.homeBase, pins: AppState.pins, viewOnly: AppState.viewOnly })', context));
+  const originalReset = vm.runInContext('resetAllProgress', context);
+  let stateBefore;
+  let resetCalls = 0;
+  try {
+    context.testResetProgressAction = () => { resetCalls++; };
+    vm.runInContext(`
+      AppState.viewOnly=false;
+      AppState.homeBase={name:'Confirmation Test',lat:40,lng:-105,radiusKm:24.14};
+      AppState.pins={confirmation_test:'v'};
+      resetAllProgress=testResetProgressAction;
+    `, context);
+    stateBefore = vm.runInContext(
+      'JSON.stringify({ homeBase: AppState.homeBase, pins: AppState.pins })', context);
+    modal.classList.add('hidden');
+    element('btnResetData').handlers.click();
+    assert.equal(modal.classList.contains('hidden'), false);
+    assert.equal(checkbox.checked, false);
+    assert.equal(confirmButton.disabled, true);
+    confirmButton.handlers.click();
+    assert.equal(resetCalls, 0);
+    checkbox.checked = true;
+    checkbox.handlers.change();
+    assert.equal(confirmButton.disabled, false);
+    confirmButton.handlers.click();
+    assert.equal(resetCalls, 1);
+    assert.equal(vm.runInContext(
+      'JSON.stringify({ homeBase: AppState.homeBase, pins: AppState.pins })', context), stateBefore);
+    element('btnCancelResetProgress').handlers.click();
+    assert.equal(modal.classList.contains('hidden'), true);
+    assert.equal(checkbox.checked, false);
+    assert.equal(confirmButton.disabled, true);
+  } finally {
+    context.testOriginalResetProgress = originalReset;
+    vm.runInContext(`
+      resetAllProgress=testOriginalResetProgress;
+      Object.assign(AppState, JSON.parse(${JSON.stringify(JSON.stringify(originalState))}));
+      closeResetProgressConfirmation();
+    `, context);
+  }
+});
 check('biome SVG emoji replacements are limited to supplied icons and preserve other emojis', () => {
   assert.equal(vm.runInContext("biomeIconMarkup('3')", context),
     '<img src="assets/icons/tropical-conifer-icon.svg" class="h-4 w-4 align-middle object-contain" alt="" aria-hidden="true">');
