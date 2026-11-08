@@ -640,7 +640,7 @@ check('late character sprite loads redraw the most recently rendered stage', () 
     assert.equal(pendingImages.length, 7);
     pendingImages.forEach(image => image.load());
     assert.equal(drawCalls.length, 6);
-    assert.equal(drawCalls.filter(src => src?.includes('Female')).length, 4);
+    assert.equal(drawCalls.filter(src => src?.includes('Female')).length, 3);
     assert.equal(drawCalls.filter(src => src?.includes('yosemite-bg')).length, 1);
     assert.equal(drawCalls.some(src => src?.includes('/campfire/')), false);
     assert.ok(stageScales.length >= 2);
@@ -732,6 +732,42 @@ check('shirts, bottoms, and shoes can be cleared, and requested bottom pieces us
       assert.ok(layer, `${id} renders for ${gender}`);
       if (id === 'black_short_skirt') assert.ok(layer.variantSpec);
     }
+  }
+  const femalePantsTemplate = './assets/custom-gear/female-ranger-pants.png';
+  const femalePantsIds = [
+    'starter_pants', 'scout_cargo_pants', 'canyon_work_denim', 'highlander_gilded_pants',
+    'ranger_trail_pants', 'khaki_trail_pants', 'green_pants', 'blue_pants', 'orange_pants',
+    'purple_pants', 'pants'
+  ];
+  for (const id of femalePantsIds) {
+    const item = characterCreator.EQUIPMENT_CATALOG.find(candidate => candidate.id === id);
+    assert.ok(item, `${id} is available`);
+    assert.equal(item.paths.female, femalePantsTemplate, `${id} uses ranger-breeches artwork`);
+    const character = characterCreator.normalizeCharacter({
+      ...characterCreator.DEFAULT_CHARACTER, gender: 'female', bottoms: id, purchasedItems: [id]
+    });
+    const layer = characterCreator.characterSpriteAssets(character)
+      .find(entry => entry.layer === 'bottoms');
+    assert.equal(layer?.imageSrc, encodeURI(femalePantsTemplate), `${id} renders as pants`);
+  }
+  const pantsColors = {
+    green_pants: '#527347', blue_pants: '#41638e',
+    orange_pants: '#ad6235', purple_pants: '#654d8b'
+  };
+  for (const [id, baseColor] of Object.entries(pantsColors)) {
+    const item = characterCreator.SHOP_WARDROBE.find(candidate => candidate.id === id);
+    assert.equal(item.paths.female, femalePantsTemplate, `${id} female pants artwork`);
+    assert.equal(item.variantSpecByGender.male, null, `${id} preserves the original male art`);
+    assert.equal(item.variantSpec.palette.base, baseColor, `${id} female color palette`);
+    assert.equal(item.variantSpec.palette.colorMap['#446b26'],
+      item.variantSpec.palette.highlight, `${id} maps the bright breeches fabric`);
+    assert.ok(item.variantSpec.palette.preserveColors.includes('#13131c'),
+      `${id} preserves the original outline`);
+    const femaleLayer = characterCreator.characterSpriteAssets({
+      ...characterCreator.DEFAULT_CHARACTER, gender: 'female', bottoms: id,
+      purchasedItems: [id]
+    }).find(entry => entry.layer === 'bottoms');
+    assert.equal(femaleLayer.variantSpec.palette.base, baseColor, `${id} colors the female pants`);
   }
 });
 check('simple shoes and trail boots differ by gender and include recolored choices', () => {
@@ -1241,7 +1277,8 @@ check('variant clothing includes all requested rewards and valid paired sprite-s
     'ranger_hat_classic_brown', 'ranger_hat_forest_green', 'ranger_hat_green',
     'ranger_hat_navy', 'ranger_hat_navy_banded', 'ranger_hat_purple',
     'ranger_hat_silver', 'ranger_hat_golden', 'ranger_hat_diamond', 'john_denver_guitar',
-    'khaki_trail_pants', 'mist_rain_poncho', 'cavern_miner_suit', 'summit_down_parka',
+    'khaki_trail_pants', 'mist_rain_poncho', 'cavern_miner_suit', 'cavern_pink_suit',
+    'summit_down_parka', 'summit_bright_red_parka', 'summit_navy_blue_parka',
     'summit_hood_up_parka', 'overland_canvas_jacket',
     'mariner_pea_coat', 'photographer_vest', 'arctic_aurora_cloak',
     'blue_ridge_flannel', 'alpine_timberline_jacket', 'continental_cape',
@@ -1310,7 +1347,10 @@ check('variant clothing includes all requested rewards and valid paired sprite-s
 check('replacement Summit, Mariner, Ranger, and vest artwork is wired with hood restrictions', () => {
   const achievementItem = id => characterCreator.ACHIEVEMENT_ITEMS.find(item => item.id === id);
   const cavernSuit = achievementItem('cavern_miner_suit');
+  const cavernPinkSuit = achievementItem('cavern_pink_suit');
   const summitDown = achievementItem('summit_down_parka');
+  const summitRed = achievementItem('summit_bright_red_parka');
+  const summitNavy = achievementItem('summit_navy_blue_parka');
   const summitHoodUp = achievementItem('summit_hood_up_parka');
   const mariner = achievementItem('mariner_pea_coat');
   const parkRanger = characterCreator.PARK_MILESTONE_ITEMS.find(item => item.id === 'park_ranger_uniform');
@@ -1326,6 +1366,24 @@ check('replacement Summit, Mariner, Ranger, and vest artwork is wired with hood 
   assert.equal(cavernSuit.paths.female, './assets/custom-gear/female-cave-suit.png');
   assert.equal(cavernSuit.variantSpecByGender.male, null);
   assert.equal(cavernSuit.variantSpecByGender.female, null);
+  assert.equal(cavernPinkSuit.paths.male, cavernSuit.paths.male);
+  assert.equal(cavernPinkSuit.paths.female, cavernSuit.paths.female);
+  assert.equal(cavernPinkSuit.variantSpec.palette.base, '#a4538d');
+  assert.equal(summitRed.name, 'Bright Red Summit Down Parka');
+  assert.equal(summitNavy.name, 'Navy Blue Summit Down Parka');
+  assert.equal(summitRed.variantSpec.palette.base, '#c92f3a');
+  assert.equal(summitNavy.variantSpec.palette.base, '#254a72');
+  assert.deepEqual(summitRed.variantSpec.palette.colorMap, {
+    '#27130f': '#70151f', '#291410': '#70151f',
+    '#2f1712': '#c92f3a', '#3d1e17': '#ff7479'
+  });
+  assert.ok(summitRed.variantSpec.palette.preserveColors.includes('#a38a6e'));
+  assert.ok(summitNavy.variantSpec.palette.preserveColors.includes('#13131c'));
+  for (const item of [summitDown, summitRed, summitNavy]) {
+    assert.equal(item.paths.male, './assets/custom-gear/male parka down .png');
+    assert.equal(item.paths.female, './assets/custom-gear/female-parka-down.png');
+  }
+  assert.equal(summitDown.variantSpecByGender.female, null);
   for (const gender of ['male', 'female']) {
     const layer = characterCreator.characterSpriteAssets({
       ...characterCreator.DEFAULT_CHARACTER, gender, top: cavernSuit.id
@@ -1336,6 +1394,7 @@ check('replacement Summit, Mariner, Ranger, and vest artwork is wired with hood 
     assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [80, 64]);
   }
   assert.equal(summitDown.paths.male, './assets/custom-gear/male parka down .png');
+  assert.equal(summitDown.paths.female, './assets/custom-gear/female-parka-down.png');
   assert.equal(summitHoodUp.paths.male, './assets/custom-gear/Male Parka up no hat.png');
   assert.equal(achievementItem('summit_red_hood_up_parka'), undefined);
   assert.equal(mariner.paths.male, './assets/custom-gear/Male Mariner Coat.png');
@@ -1376,7 +1435,9 @@ check('replacement Summit, Mariner, Ranger, and vest artwork is wired with hood 
   assert.equal(decodeURIComponent(malePaintLayer.imageSrc), facePaint.paths.male);
 
   const replacementPaths = [
-    cavernSuit.paths.male, cavernSuit.paths.female, summitDown.paths.male, summitHoodUp.paths.male,
+    cavernSuit.paths.male, cavernSuit.paths.female, summitDown.paths.male, summitDown.paths.female,
+    summitRed.paths.male, summitRed.paths.female, summitNavy.paths.male, summitNavy.paths.female,
+    cavernPinkSuit.paths.male, cavernPinkSuit.paths.female, summitHoodUp.paths.male,
     mariner.paths.male, mariner.paths.female, parkRanger.paths.male, parkRanger.paths.female,
     rangerPants.paths.male, rangerPants.paths.female, centennialCoat.paths.male,
     greenVest.paths.male, khakiVest.paths.male, witchHat.paths.female,
@@ -1536,6 +1597,9 @@ check('sprite palette shader recolors frames, preserves outlines and transparenc
   setPixel(9, 2, [120, 35, 0, 255]);
   setPixel(10, 2, [150, 80, 40, 255]);
   setPixel(11, 2, [40, 140, 60, 255]);
+  setPixel(12, 2, [39, 19, 15, 255]);
+  setPixel(13, 2, [163, 138, 110, 255]);
+  setPixel(14, 2, [19, 19, 28, 255]);
   setPixel(84, 2, [150, 150, 150, 255]);
   setPixel(30, 2, [150, 150, 150, 255]);
   setPixel(31, 2, [150, 150, 150, 255]);
@@ -1583,6 +1647,17 @@ check('sprite palette shader recolors frames, preserves outlines and transparenc
     assert.deepEqual(pixelAt(colorizedHair, 10, 2), [0x40, 0x41, 0x42, 255]);
     assert.deepEqual(pixelAt(colorizedHair, 11, 2), [0x40, 0x41, 0x42, 255]);
     assert.deepEqual(pixelAt(colorizedHair, 3, 3), [0x80, 0x81, 0x82, 255]);
+    const exactMapped = characterCreator.processSpriteVariant(source, {
+      palette: {
+        shadow: '#70151f', base: '#c92f3a', highlight: '#ff7479',
+        colorMap: { '#27130f': '#70151f' },
+        preserveColors: ['#a38a6e', '#13131c']
+      },
+      pattern: 'jacket'
+    });
+    assert.deepEqual(pixelAt(exactMapped, 12, 2), [0x70, 0x15, 0x1f, 255]);
+    assert.deepEqual(pixelAt(exactMapped, 13, 2), [0xa3, 0x8a, 0x6e, 255]);
+    assert.deepEqual(pixelAt(exactMapped, 14, 2), [0x13, 0x13, 0x1c, 255]);
     assert.strictEqual(characterCreator.processSpriteVariant(source, plaid), processed);
     const vest = characterCreator.processSpriteVariant(source, {
       palette: {
@@ -2025,7 +2100,8 @@ check('sprite character selects matching gender, skin, hair, and outfit layers',
     const assets = characterCreator.characterSpriteAssets(character);
     assert.deepEqual(assets.map(layer =>
       decodeURIComponent(layer.imageSrc.split('/').at(-1))), [
-      'Female Skin5.png', 'Skirt.png', 'Boots.png', 'Blue Corset v2.png', 'Female Hair10.png'
+      'Female Skin5.png', 'female-ranger-pants.png', 'Boots.png',
+      'Blue Corset v2.png', 'Female Hair10.png'
     ]);
     const hairLayer = assets.find(layer => layer.layer === 'hair');
     assert.equal(hairLayer.variantSpec.colorizeByLuminance, true);
@@ -2033,7 +2109,8 @@ check('sprite character selects matching gender, skin, hair, and outfit layers',
     for (const asset of assets) {
       const png = readFileSync(new URL(asset.imageSrc, import.meta.url));
       assert.equal(png.toString('ascii', 1, 4), 'PNG');
-      assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [800, 448]);
+      assert.ok([[80, 64], [800, 448]].some(dimensions =>
+        dimensions[0] === png.readUInt32BE(16) && dimensions[1] === png.readUInt32BE(20)));
     }
     characterCreator.drawCharacterSprite({
       save() {},

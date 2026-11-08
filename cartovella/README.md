@@ -249,7 +249,9 @@ recolored shop options; the female Trail Boots use different art from Simple Sho
 The Summit Down Parka has hood-down and one hood-up male choice; the hood-up choice hides and disables
 hats and helmets until a hood-down top is selected. Mariner coats, both Park Ranger Shirt and Ranger
 Trail Breeches sprites, and the male Centennial Ranger Coat use dedicated replacement art. The
-Wayfarer Field Vest reward has green and khaki variants.
+Wayfarer Field Vest reward has green and khaki variants. All female pants options, including the
+colored shop pants, use the Ranger Breeches artwork with recolored palettes. Bright Red and Navy Blue
+Summit Down Parkas and a Pink Deep Cavern Suit are also available as achievement rewards.
 The horned Viking helmet uses its horned art for both sprites, and Blue Face Paint uses its paint
 art for both sprites rather than reusing the Face Mask. The Deep Cavern Suit achievement reward uses
 the replacement 80×64 male and female sprite art.

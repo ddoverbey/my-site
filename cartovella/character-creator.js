@@ -298,6 +298,12 @@
     male: spritePath(folder, maleFile),
     female: spritePath(folder, femaleFile)
   });
+  const RANGER_PANTS_PATHS = Object.freeze(pairedPaths(CUSTOM_GEAR_ASSET_ROOT,
+    'male-ranger-pants.png', 'female-ranger-pants.png'));
+  const CAVERN_SUIT_PATHS = Object.freeze(pairedPaths(CUSTOM_GEAR_ASSET_ROOT,
+    'male-cave-suit.png', 'female-cave-suit.png'));
+  const SUMMIT_DOWN_PARKA_PATHS = Object.freeze(pairedPaths(CUSTOM_GEAR_ASSET_ROOT,
+    'male parka down .png', 'female-parka-down.png'));
   const oneGenderPath = (gender, path) => ({ [gender]: path });
   const equipmentItem = (id, name, field, paths, unlock = { type: 'coin', cost: 100 }) => ({
     id, name, field, paths, genders: Object.keys(paths),
@@ -315,8 +321,10 @@
   const VARIANT_BASE_PATHS = Object.freeze({
     top: Object.freeze(pairedPaths(PACK, 'Male Clothing/Shirt v2.png',
       'Female Clothing/Green Corset v2.png')),
-    bottoms: Object.freeze(pairedPaths(PACK, 'Male Clothing/Green Pants.png',
-      'Female Clothing/Skirt.png')),
+    bottoms: Object.freeze({
+      ...pairedPaths(PACK, 'Male Clothing/Green Pants.png'),
+      female: RANGER_PANTS_PATHS.female
+    }),
     backLayer: Object.freeze(pairedPaths(VARIANT_ASSET_ROOTS.backLayers, 'Cape green.png')),
     headwear: Object.freeze(pairedPaths(VARIANT_ASSET_ROOTS.hats,
       'Male Hat/Farming Hat M.png', 'Female Hat/Farming Hat F.png'))
@@ -344,11 +352,27 @@
   const palette = (shadow, base, highlight, extra = {}) => ({
     shadow, base, highlight, ...extra
   });
+  const rangerPantsPalette = (shadow, base, highlight) => palette(shadow, base, highlight, {
+    colorMap: {
+      '#2d4619': shadow, '#395920': base, '#3b5d21': base,
+      '#416625': highlight, '#446b26': highlight
+    },
+    preserveColors: ['#13131c', '#2c2c2c']
+  });
+  const summitParkaPalette = (shadow, base, highlight) => palette(shadow, base, highlight, {
+    colorMap: {
+      '#27130f': shadow, '#291410': shadow, '#2f1712': base, '#3d1e17': highlight
+    },
+    preserveColors: ['#13131c', '#937c63', '#a38a6e', '#c3a584', '#c8a987']
+  });
   const LEVEL_ITEMS = [
     levelItem('starter_shirt', 'Starter Shirt', 'top',
       pairedPaths(PACK, 'Male Clothing/Shirt v2.png', 'Female Clothing/Corset v2.png'), 1),
     levelItem('starter_pants', 'Starter Pants', 'bottoms',
-      pairedPaths(PACK, 'Male Clothing/Pants.png', 'Female Clothing/Skirt.png'), 1),
+      Object.freeze({
+        ...pairedPaths(PACK, 'Male Clothing/Pants.png'),
+        female: RANGER_PANTS_PATHS.female
+      }), 1),
     levelItem('simple_shoes', 'Simple Shoes', 'shoes', SIMPLE_SHOE_PATHS, 1),
     levelItem('walking_stick', 'Walking Stick', 'handItem',
       pairedPaths(`${ASSET_ROOT}GandalfHardcore 35x Hand Items/`,
@@ -421,7 +445,7 @@
     makeVariantItem('pine_trail_flannel', 'Pine Trail Flannel', 'top', { type: 'level', goal: 2 },
       palette('#1d2921', '#4d704e', '#a5b694', { accent: '#29372d' }), 'plaid'),
     makeVariantItem('scout_cargo_pants', 'Scout Cargo Pants', 'bottoms', { type: 'level', goal: 3 },
-      palette('#26291d', '#687249', '#b1ae80')),
+      rangerPantsPalette('#26291d', '#687249', '#b1ae80')),
     makeVariantItem('meadow_forager_tunic', 'Meadow Forager Tunic', 'top', { type: 'level', goal: 4 },
       palette('#30382d', '#849a73', '#d6ddbd', { accent: '#ede8cf' }), 'jacket'),
     makeVariantItem('wayfarer_field_vest', 'Wayfarer Field Vest', 'top', { type: 'level', goal: 5 },
@@ -446,13 +470,13 @@
         variantSpecByGender: { male: null }
       }),
     makeVariantItem('canyon_work_denim', 'Canyon Work Denim', 'bottoms', { type: 'level', goal: 6 },
-      palette('#20283a', '#4c6388', '#9aaec9')),
+      rangerPantsPalette('#20283a', '#4c6388', '#9aaec9')),
     makeVariantItem('redwood_flannel_jacket', 'Redwood Flannel Jacket', 'top', { type: 'level', goal: 7 },
       palette('#321e23', '#8d454b', '#c7867d', { accent: '#36292d' }), 'plaid'),
     makeVariantItem('vanguard_tabard', 'Vanguard Tabard', 'top', { type: 'level', goal: 8 },
       palette('#323945', '#71849c', '#d4dbe4', { accent: '#3b5ba8' }), 'jacket'),
     makeVariantItem('highlander_gilded_pants', 'Highlander Breeches', 'bottoms', { type: 'level', goal: 9 },
-      palette('#29241f', '#675642', '#b49a70')),
+      rangerPantsPalette('#29241f', '#675642', '#b49a70')),
     makeVariantItem('sovereign_cartographer_coat', 'Sovereign Cartographer Coat', 'top',
       { type: 'level', goal: 10 },
       palette('#1d202b', '#41475c', '#c6b987', { accent: '#e1b94f' }), 'jacket')
@@ -472,8 +496,7 @@
     makeVariantItem('ranger_trail_pants', 'Ranger Trail Breeches', 'bottoms',
       { type: 'worldParks', goal: 25 },
       palette('#1e2a24', '#355b43', '#77926c'), null, {
-        paths: Object.freeze(pairedPaths(CUSTOM_GEAR_ASSET_ROOT,
-          'male-ranger-pants.png', 'female-ranger-pants.png')),
+        paths: RANGER_PANTS_PATHS,
         variantSpecByGender: { male: null, female: null }
       }),
     makeVariantItem('grand_warden_cloak', 'Grand Warden Cloak', 'backLayer',
@@ -508,27 +531,38 @@
       { type: 'achievement', ids: ['countryRoads', 'rockyMountainHigh'] }),
     makeVariantItem('khaki_trail_pants', 'Khaki Trail Pants', 'bottoms',
       { type: 'achievement', id: 'firstSteps' },
-      palette('#363126', '#9d8a5d', '#d6c79b')),
+      rangerPantsPalette('#363126', '#9d8a5d', '#d6c79b')),
     makeVariantItem('mist_rain_poncho', 'Mist Rain Poncho', 'top',
       { type: 'achievement', id: 'waterfalls_1' },
       palette('#39362a', '#bd9942', '#e8d181', { accent: '#43a5a1' }), 'jacket'),
     makeVariantItem('cavern_miner_suit', 'Deep Cavern Suit', 'top',
       { type: 'achievement', id: 'subterranean' },
       palette('#292e36', '#59616d', '#c89b49', { accent: '#d29d3e' }), 'jacket', {
-        paths: Object.freeze(pairedPaths(CUSTOM_GEAR_ASSET_ROOT,
-          'male-cave-suit.png', 'female-cave-suit.png')),
+        paths: CAVERN_SUIT_PATHS,
         variantSpecByGender: { male: null, female: null }
+      }),
+    makeVariantItem('cavern_pink_suit', 'Pink Deep Cavern Suit', 'top',
+      { type: 'achievement', id: 'subterranean' },
+      palette('#3b2136', '#a4538d', '#edb6da'), 'jacket', {
+        paths: CAVERN_SUIT_PATHS
       }),
     makeVariantItem('summit_down_parka', 'Summit Down Parka', 'top',
       { type: 'achievement', id: 'thinAir' },
       palette('#33424a', '#9ac6cf', '#f1f6f5', {
         sleeve: '#e4f1f2', accent: '#58777d'
       }), 'vest', {
-        paths: Object.freeze({
-          ...VARIANT_BASE_PATHS.top,
-          male: spritePath(CUSTOM_GEAR_ASSET_ROOT, 'male parka down .png')
-        }),
-        variantSpecByGender: { male: null }
+        paths: SUMMIT_DOWN_PARKA_PATHS,
+        variantSpecByGender: { male: null, female: null }
+      }),
+    makeVariantItem('summit_bright_red_parka', 'Bright Red Summit Down Parka', 'top',
+      { type: 'achievement', id: 'thinAir' },
+      summitParkaPalette('#70151f', '#c92f3a', '#ff7479'), 'jacket', {
+        paths: SUMMIT_DOWN_PARKA_PATHS
+      }),
+    makeVariantItem('summit_navy_blue_parka', 'Navy Blue Summit Down Parka', 'top',
+      { type: 'achievement', id: 'thinAir' },
+      summitParkaPalette('#111b2d', '#254a72', '#5b83b4'), 'jacket', {
+        paths: SUMMIT_DOWN_PARKA_PATHS
       }),
     {
       ...equipmentItem('summit_hood_up_parka', 'Summit Hood-Up Parka', 'top',
@@ -603,13 +637,23 @@
     addShopItem(id, name, 'top', pairedPaths(PACK, `Male Clothing/${male}`,
       `Female Clothing/${female}`), 100));
   [
-    ['green_pants', 'Forest Pants', 'Green Pants.png'],
-    ['blue_pants', 'River Pants', 'Blue Pants.png'],
-    ['orange_pants', 'Ember Pants', 'Orange Pants.png'],
-    ['purple_pants', 'Violet Pants', 'Purple Pants.png']
-  ].forEach(([id, name, file]) =>
-    addShopItem(id, name, 'bottoms',
-      oneGenderPath('male', `${PACK}Male Clothing/${file}`), 100));
+    ['green_pants', 'Forest Pants', 'Green Pants.png',
+      rangerPantsPalette('#203626', '#527347', '#93ad78')],
+    ['blue_pants', 'River Pants', 'Blue Pants.png',
+      rangerPantsPalette('#1c2b43', '#41638e', '#91acd0')],
+    ['orange_pants', 'Ember Pants', 'Orange Pants.png',
+      rangerPantsPalette('#452719', '#ad6235', '#e5a464')],
+    ['purple_pants', 'Violet Pants', 'Purple Pants.png',
+      rangerPantsPalette('#2b203e', '#654d8b', '#ad94cd')]
+  ].forEach(([id, name, file, colorPalette]) =>
+    SHOP_WARDROBE.push(makeVariantItem(id, name, 'bottoms',
+      { type: 'coin', cost: 100 }, colorPalette, null, {
+        paths: Object.freeze({
+          male: `${PACK}Male Clothing/${file}`,
+          female: RANGER_PANTS_PATHS.female
+        }),
+        variantSpecByGender: { male: null }
+      })));
   [
     ['classic_corset', 'Classic Corset', 'Corset.png'],
     ['blue_corset', 'Blue Corset', 'Blue Corset.png'],
@@ -709,8 +753,10 @@
       `${ASSET_ROOT}GandalfHardcore 43x Female Clothing/${file}`), 100));
   addShopItem('skirt', 'Skirt', 'bottoms', pairedPaths(PACK,
     'Female Clothing/Skirt.png'), 100);
-  addShopItem('pants', 'Pants', 'bottoms', pairedPaths(PACK,
-    'Male Clothing/Pants.png'), 100);
+  addShopItem('pants', 'Pants', 'bottoms', Object.freeze({
+    ...pairedPaths(PACK, 'Male Clothing/Pants.png'),
+    female: RANGER_PANTS_PATHS.female
+  }), 100);
   SHOP_WARDROBE.push({
     ...equipmentItem('black_short_skirt', 'Black Short Skirt', 'bottoms',
       pairedPaths(`${ASSET_ROOT}GandalfHardcore 43x Female Clothing/`, 'Short Skirt.png'),
@@ -1279,6 +1325,13 @@
     const bandColors = Array.isArray(variantSpec.palette.band)
       ? variantSpec.palette.band.map(parsePaletteColor)
       : colors.band ? [colors.band] : [];
+    const colorMap = new Map(Object.entries(variantSpec.palette.colorMap || {})
+      .map(([source, target]) => [
+        parsePaletteColor(source).join(','),
+        parsePaletteColor(target)
+      ]));
+    const preserveColors = new Set((variantSpec.palette.preserveColors || [])
+      .map(color => parsePaletteColor(color).join(',')));
     if (!colors.shadow || !colors.base || !colors.highlight) {
       throw new Error(`Sprite variant requires shadow, base, and highlight colors: ${sourcePath}`);
     }
@@ -1313,12 +1366,16 @@
         const index = (y * width + x) * 4;
         const alpha = data[index + 3];
         if (alpha === 0) continue;
+        const sourceColorKey = `${data[index]},${data[index + 1]},${data[index + 2]}`;
+        if (preserveColors.has(sourceColorKey)) continue;
         const luminance = (0.2126 * data[index] + 0.7152 * data[index + 1] +
           0.0722 * data[index + 2]) / 255;
         const mapped = luminance < 0.42 ? colors.shadow
           : luminance < 0.74 ? colors.base : colors.highlight;
-        let output;
-        if (variantSpec.colorizeByLuminance) {
+        let output = colorMap.get(sourceColorKey);
+        if (output) {
+          // Exact source-color mappings handle dark garment fabrics without touching details.
+        } else if (variantSpec.colorizeByLuminance) {
           if (luminance <= 0.12) {
             output = colors.outline || colors.shadow;
           } else {
