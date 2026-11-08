@@ -1338,7 +1338,7 @@ const GLOBAL_ROUTE_MAP_STYLES = Object.freeze({
     border: '#82919c', graticule: '#afbdc4', text: '#1e293b'
   },
   parchment: {
-    ocean: '#183b56', land: '#987348', visited: '#6f7049',
+    ocean: '#183b56', land: '#987348', visited: '#5c4330',
     border: '#493625', graticule: '#31516b', text: '#f1dfbd'
   }
 });
@@ -1844,7 +1844,7 @@ function renderGlobalRoutesMap() {
   const projection = scope === 'domestic' && homeCountryCode === 'US'
     ? d3.geoAlbersUsa() : d3.geoNaturalEarth1();
   const mapTop = showTitleControl.checked ? 54 : 24;
-  if (features.length) projection.fitExtent([[24, mapTop], [1176, 560]], collection);
+  if (features.length) projection.fitExtent([[24, mapTop], [1176, 550]], collection);
   const path = d3.geoPath(projection);
   const mapStyle = GLOBAL_ROUTE_MAP_STYLES[globalRoutesAtlasStyle];
   const stats = calculateStats();
@@ -1921,9 +1921,9 @@ function renderGlobalRoutesMap() {
     <text x="49" y="29" fill="${mapStyle.text}" font-family="Cinzel, Georgia, serif" font-size="16" font-weight="700" letter-spacing="1.2">CARTOVELLA</text>
   </g>`;
   const explorerInfo = showExplorerInfoControl.checked
-    ? `<g class="global-routes-explorer-info" pointer-events="none"><text x="1176" y="610" text-anchor="end" fill="${mapStyle.text}" stroke="${mapStyle.ocean}" stroke-width="3" paint-order="stroke" font-family="Inter, Arial, sans-serif" font-size="13">${escapeHtml(`${stats.cls} · Level ${stats.level} · ${expeditions.length} Expeditions · ${stats.countriesCount} Countries`)}</text></g>`
+    ? `<g class="global-routes-explorer-info" pointer-events="none"><text x="1176" y="550" text-anchor="end" fill="${mapStyle.text}" stroke="${mapStyle.ocean}" stroke-width="3" paint-order="stroke" font-family="Inter, Arial, sans-serif" font-size="13">${escapeHtml(`${stats.cls} · Level ${stats.level} · ${expeditions.length} Expeditions · ${stats.countriesCount} Countries`)}</text></g>`
     : '';
-  svg.innerHTML = `<rect class="global-routes-ocean" width="1200" height="630" fill="${mapStyle.ocean}"></rect><g class="global-routes-zoom"><path class="global-routes-graticule" fill="none" stroke="${mapStyle.graticule}" stroke-width="0.6" d="${graticule}"></path>${countries}${routes.join('')}${markers.join('')}${homeMarker}</g>${titleOverlay}${watermark}${explorerInfo}`;
+  svg.innerHTML = `<rect class="global-routes-ocean" width="1200" height="580" fill="${mapStyle.ocean}"></rect><g class="global-routes-zoom"><path class="global-routes-graticule" fill="none" stroke="${mapStyle.graticule}" stroke-width="0.6" d="${graticule}"></path>${countries}${routes.join('')}${markers.join('')}${homeMarker}</g>${titleOverlay}${watermark}${explorerInfo}`;
   svg.setAttribute('aria-label', `${scopeLabel} route map showing ${expeditions.length} expeditions`);
   svg.setAttribute('data-atlas-style', globalRoutesAtlasStyle);
   globalRoutesZoomBehavior = d3.zoom().scaleExtent([1, 14]).on('zoom', event => {
@@ -1961,10 +1961,10 @@ function appendSvgElement(parent, name, attributes = {}) {
 
 function prepareGlobalRoutesExportSvg(svg) {
   svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-  svg.setAttribute('viewBox', '0 0 1200 630');
+  svg.setAttribute('viewBox', '0 0 1200 580');
   svg.setAttribute('width', '2400');
-  svg.setAttribute('height', '1260');
-  svg.querySelector('.global-routes-ocean')?.setAttribute('height', '630');
+  svg.setAttribute('height', '1160');
+  svg.querySelector('.global-routes-ocean')?.setAttribute('height', '580');
   svg.querySelector('.global-routes-zoom')?.setAttribute('transform', 'translate(0,0) scale(1)');
 }
 
@@ -2029,7 +2029,7 @@ async function exportGlobalRoutesPng() {
     });
     const canvas = document.createElement('canvas');
     canvas.width = 2400;
-    canvas.height = 1260;
+    canvas.height = 1160;
     const context = canvas.getContext('2d');
     if (!context) throw new Error('Canvas rendering is unavailable in this browser.');
     context.drawImage(image, 0, 0, canvas.width, canvas.height);

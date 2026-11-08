@@ -9174,7 +9174,7 @@ check('Global Route Map renders country and expedition paths and toggles indepen
   try {
     toggle.handlers.click();
     assert.equal(albersUsaProjectionCalls, 0);
-    assert.equal(JSON.stringify(mapFitExtents.at(-1)), '[[24,24],[1176,560]]');
+    assert.equal(JSON.stringify(mapFitExtents.at(-1)), '[[24,24],[1176,550]]');
     const svg = element('svgGlobalRoutesMap').innerHTML;
     assert.match(svg, /class="global-country"/);
     assert.match(svg, /class="global-route"/);
@@ -9205,6 +9205,7 @@ check('Global Route Map renders country and expedition paths and toggles indepen
     const parchmentSvg = element('svgGlobalRoutesMap').innerHTML;
     assert.match(parchmentSvg, /class="global-routes-ocean"[^>]*fill="#183b56"/);
     assert.match(parchmentSvg, /class="global-country" fill="#987348" stroke="#493625"/);
+    assert.equal(vm.runInContext('GLOBAL_ROUTE_MAP_STYLES.parchment.visited', context), '#5c4330');
     atlasStyle.value = 'midnight';
     atlasStyle.handlers.change({ currentTarget: atlasStyle });
 
@@ -9258,7 +9259,8 @@ check('Global Route Map renders country and expedition paths and toggles indepen
     routeYear.handlers.change({ currentTarget: routeYear });
     showExplorerInfo.checked = true;
     showExplorerInfo.handlers.change({ currentTarget: showExplorerInfo });
-    assert.match(element('svgGlobalRoutesMap').innerHTML, /class="global-routes-explorer-info"/);
+    const explorerInfoSvg = element('svgGlobalRoutesMap').innerHTML;
+    assert.match(explorerInfoSvg, /class="global-routes-explorer-info"[^]*?y="550"/);
     showExplorerInfo.checked = false;
     showExplorerInfo.handlers.change({ currentTarget: showExplorerInfo });
     assert.doesNotMatch(element('svgGlobalRoutesMap').innerHTML, /class="global-routes-explorer-info"/);
@@ -9315,9 +9317,9 @@ check('Global Route Map renders country and expedition paths and toggles indepen
       }
     };
     vm.runInContext('prepareGlobalRoutesExportSvg(routeMapLayoutSvg)', context);
-    assert.equal(exportLayoutAttributes.viewBox, '0 0 1200 630');
-    assert.equal(exportLayoutAttributes.height, '1260');
-    assert.equal(exportOcean.attributes.height, '630');
+    assert.equal(exportLayoutAttributes.viewBox, '0 0 1200 580');
+    assert.equal(exportLayoutAttributes.height, '1160');
+    assert.equal(exportOcean.attributes.height, '580');
     assert.equal(exportZoom.attributes.transform, 'translate(0,0) scale(1)');
 
     routeYear.value = 'all';
