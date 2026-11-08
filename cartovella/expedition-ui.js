@@ -1338,8 +1338,8 @@ const GLOBAL_ROUTE_MAP_STYLES = Object.freeze({
     border: '#82919c', graticule: '#afbdc4', text: '#1e293b'
   },
   parchment: {
-    ocean: '#e9dec5', land: '#d3c19d', visited: '#a7bd91',
-    border: '#907d5a', graticule: '#bcac8c', text: '#3b3428'
+    ocean: '#eee7d8', land: '#faf6ec', visited: '#b8c99e',
+    border: '#8e8067', graticule: '#d2c7af', text: '#40372b'
   }
 });
 // Continent membership follows Annexare Countries (MIT): https://github.com/annexare/Countries.
@@ -1761,6 +1761,8 @@ function renderGlobalRoutesMap() {
   const lineStyleControl = document.getElementById('globalRoutesLineStyle');
   const showStopsControl = document.getElementById('globalRoutesShowStops');
   const showTitleControl = document.getElementById('globalRoutesShowTitle');
+  const showYearTitleControl = document.getElementById('globalRoutesShowYearTitle');
+  const showExplorerInfoControl = document.getElementById('globalRoutesShowExplorerInfo');
   const customTitleControl = document.getElementById('globalRoutesCustomTitle');
   domesticOption.textContent = homeCountryName ? `Domestic · ${homeCountryName}` :
     AppState.homeBase ? 'Domestic (unavailable)' : 'Domestic (set home base)';
@@ -1784,6 +1786,9 @@ function renderGlobalRoutesMap() {
     'hidden', colorModeControl.value !== 'mode'
   );
   document.getElementById('globalRoutesCustomTitleWrap').classList.toggle(
+    'hidden', !showTitleControl.checked
+  );
+  document.getElementById('globalRoutesShowYearTitleWrap').classList.toggle(
     'hidden', !showTitleControl.checked
   );
   customTitleControl.disabled = !showTitleControl.checked;
@@ -1903,24 +1908,21 @@ function renderGlobalRoutesMap() {
     ? `<g class="global-route-home"><title>${escapeHtml(`Home Base · ${AppState.homeBase.name}`)}</title><circle cx="${homePosition[0]}" cy="${homePosition[1]}" r="11" fill="#f59e0b" fill-opacity="0.2" stroke="#fbbf24" stroke-width="1.5"></circle><text x="${homePosition[0]}" y="${homePosition[1] + 6}" text-anchor="middle" font-size="17" fill="#fbbf24">★</text></g>`
     : '';
 
-  const titleText = customTitleControl.value.trim() ||
-    `${globalRoutesYear === 'all' ? 'All Years' : globalRoutesYear} · ${scopeLabel}`;
+  const titleParts = [];
+  if (showYearTitleControl.checked && globalRoutesYear !== 'all') titleParts.push(globalRoutesYear);
+  titleParts.push(customTitleControl.value.trim() || scopeLabel);
+  const titleText = titleParts.join(' · ');
   const titleOverlay = showTitleControl.checked
     ? `<g class="global-routes-title-overlay" pointer-events="none"><text x="600" y="48" text-anchor="middle" fill="${mapStyle.text}" stroke="${mapStyle.ocean}" stroke-width="5" paint-order="stroke" font-family="Cinzel, Georgia, serif" font-size="24" font-weight="700">${escapeHtml(titleText)}</text></g>`
     : '';
-  const watermarkAccent = globalRoutesAtlasStyle === 'midnight' ? '#fac60b' :
-    globalRoutesAtlasStyle === 'classic' ? '#124777' : '#7c4a03';
-  const watermarkPanel = globalRoutesAtlasStyle === 'midnight' ? '#020617' : mapStyle.ocean;
-  const watermark = `<g id="globalRoutesBrandWatermark" transform="translate(24 582)" aria-label="Cartovella">
-    <rect width="220" height="36" rx="9" fill="${watermarkPanel}" fill-opacity="0.88" stroke="${mapStyle.border}" stroke-width="1"></rect>
-    <g transform="translate(5 4)">
-      <path d="M15 0 18.5 10.5 29 14 18.5 17.5 15 28 11.5 17.5 1 14 11.5 10.5Z" fill="${watermarkAccent}"></path>
-      <path d="M4 14.5c4-1.8 7-1 11 1.1 4-2.1 7-2.9 11-1.1v12c-4-1.8-7-1-11 1.1-4-2.1-7-2.9-11-1.1z" fill="${watermarkPanel}" stroke="${mapStyle.text}" stroke-width="1.2" stroke-linejoin="round"></path>
-      <path d="M15 15.6v12" fill="none" stroke="${mapStyle.text}" stroke-width="1.2"></path>
-    </g>
-    <text x="49" y="23" fill="${mapStyle.text}" font-family="Cinzel, Georgia, serif" font-size="16" font-weight="700" letter-spacing="1.2">CARTOVELLA</text>
+  const watermark = `<g id="globalRoutesBrandWatermark" transform="translate(24 574)" aria-label="Cartovella">
+    <image id="globalRoutesBrandLogo" href="assets/logos/simplified-cartovella-logo-1.png" x="0" y="0" width="48" height="48" preserveAspectRatio="xMidYMid meet"></image>
+    <text x="49" y="29" fill="${mapStyle.text}" font-family="Cinzel, Georgia, serif" font-size="16" font-weight="700" letter-spacing="1.2">CARTOVELLA</text>
   </g>`;
-  svg.innerHTML = `<rect class="global-routes-ocean" width="1200" height="630" fill="${mapStyle.ocean}"></rect><g class="global-routes-zoom"><path class="global-routes-graticule" fill="none" stroke="${mapStyle.graticule}" stroke-width="0.6" d="${graticule}"></path>${countries}${routes.join('')}${markers.join('')}${homeMarker}</g>${titleOverlay}${watermark}`;
+  const explorerInfo = showExplorerInfoControl.checked
+    ? `<g class="global-routes-explorer-info" pointer-events="none"><text x="1176" y="610" text-anchor="end" fill="${mapStyle.text}" stroke="${mapStyle.ocean}" stroke-width="3" paint-order="stroke" font-family="Inter, Arial, sans-serif" font-size="13">${escapeHtml(`${stats.cls} · Level ${stats.level} · ${expeditions.length} Expeditions · ${stats.countriesCount} Countries`)}</text></g>`
+    : '';
+  svg.innerHTML = `<rect class="global-routes-ocean" width="1200" height="630" fill="${mapStyle.ocean}"></rect><g class="global-routes-zoom"><path class="global-routes-graticule" fill="none" stroke="${mapStyle.graticule}" stroke-width="0.6" d="${graticule}"></path>${countries}${routes.join('')}${markers.join('')}${homeMarker}</g>${titleOverlay}${watermark}${explorerInfo}`;
   svg.setAttribute('aria-label', `${scopeLabel} route map showing ${expeditions.length} expeditions`);
   svg.setAttribute('data-atlas-style', globalRoutesAtlasStyle);
   globalRoutesZoomBehavior = d3.zoom().scaleExtent([1, 14]).on('zoom', event => {
@@ -1958,11 +1960,32 @@ function appendSvgElement(parent, name, attributes = {}) {
 
 function prepareGlobalRoutesExportSvg(svg) {
   svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-  svg.setAttribute('viewBox', '0 0 1200 750');
+  svg.setAttribute('viewBox', '0 0 1200 630');
   svg.setAttribute('width', '2400');
-  svg.setAttribute('height', '1500');
-  svg.querySelector('.global-routes-ocean')?.setAttribute('height', '750');
-  svg.querySelector('.global-routes-zoom')?.setAttribute('transform', 'translate(0,120) scale(1)');
+  svg.setAttribute('height', '1260');
+  svg.querySelector('.global-routes-ocean')?.setAttribute('height', '630');
+  svg.querySelector('.global-routes-zoom')?.setAttribute('transform', 'translate(0,0) scale(1)');
+}
+
+async function inlineGlobalRoutesBrandLogo(svg) {
+  const logo = svg.querySelector('#globalRoutesBrandLogo');
+  if (!logo) throw new Error('The Cartovella logo is missing from the route map.');
+  const image = new Image();
+  await new Promise((resolve, reject) => {
+    image.onload = resolve;
+    image.onerror = () => reject(new Error('The Cartovella logo could not be loaded for export.'));
+    image.src = new URL(logo.getAttribute('href'), document.baseURI).href;
+  });
+  if (!image.naturalWidth || !image.naturalHeight) {
+    throw new Error('The Cartovella logo image is empty.');
+  }
+  const canvas = document.createElement('canvas');
+  canvas.width = image.naturalWidth;
+  canvas.height = image.naturalHeight;
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('Canvas rendering is unavailable for the Cartovella logo.');
+  context.drawImage(image, 0, 0);
+  logo.setAttribute('href', canvas.toDataURL('image/png'));
 }
 
 function canvasPngBlob(canvas) {
@@ -1990,17 +2013,9 @@ function canvasPngBlob(canvas) {
 async function exportGlobalRoutesPng() {
   renderGlobalRoutesMap();
   const svg = document.getElementById('svgGlobalRoutesMap').cloneNode(true);
+  await inlineGlobalRoutesBrandLogo(svg);
   prepareGlobalRoutesExportSvg(svg);
 
-  const stats = calculateStats();
-  const footer = appendSvgElement(svg, 'g', { class: 'global-routes-export-footer' });
-  const mapStyle = GLOBAL_ROUTE_MAP_STYLES[globalRoutesAtlasStyle];
-  appendSvgElement(footer, 'rect', { x: 0, y: 690, width: 1200, height: 60, fill: mapStyle.land });
-  const banner = appendSvgElement(footer, 'text', {
-    x: 32, y: 728, fill: mapStyle.text, 'font-family': 'Inter, Arial, sans-serif',
-    'font-size': 20, 'font-weight': 600
-  });
-  banner.textContent = `${stats.cls} (Level ${stats.level}) • ${globalRoutesVisibleExpeditions.length} Expeditions • ${stats.countriesCount} Countries`;
   const svgBlob = new Blob([new XMLSerializer().serializeToString(svg)], { type: 'image/svg+xml;charset=utf-8' });
   const svgUrl = URL.createObjectURL(svgBlob);
   let png;
@@ -2591,9 +2606,12 @@ document.getElementById('globalRoutesShowStops').addEventListener('change', rend
 document.getElementById('globalRoutesShowTitle').addEventListener('change', event => {
   const showTitle = event.currentTarget.checked;
   document.getElementById('globalRoutesCustomTitleWrap').classList.toggle('hidden', !showTitle);
+  document.getElementById('globalRoutesShowYearTitleWrap').classList.toggle('hidden', !showTitle);
   document.getElementById('globalRoutesCustomTitle').disabled = !showTitle;
   renderGlobalRoutesMap();
 });
+document.getElementById('globalRoutesShowYearTitle').addEventListener('change', renderGlobalRoutesMap);
+document.getElementById('globalRoutesShowExplorerInfo').addEventListener('change', renderGlobalRoutesMap);
 document.getElementById('globalRoutesCustomTitle').addEventListener('input', renderGlobalRoutesMap);
 document.getElementById('btnResetGlobalRoutesZoom').addEventListener('click', resetGlobalRoutesZoom);
 document.getElementById('btnExportRoutesPng').addEventListener('click', () => {

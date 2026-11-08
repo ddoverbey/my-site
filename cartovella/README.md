@@ -13,10 +13,12 @@ expeditions, track parks and regions, and earn achievements from your travel his
   files that contain both. Select multiple files in itinerary order to combine their stops and tracks;
   adjacent duplicate stops are merged, and each track is matched to adjacent stops by its endpoints.
   Gaps between files remain as legs to route in the app. Connected track-only imports create the
-  itinerary; choose a transit mode for every leg. Customize the Global Route Map with transit-mode or
-  single-color routes, solid/dashed/dotted lines, optional stop dots, and an optional custom title; the
-  Cartovella logo is included in PNG exports. Water Transit routes are blue, while flights use a neutral
-  gray in the map and trip logs.
+  itinerary; choose a transit mode for every leg. Customize the Global Route Map with a year filter,
+  map area, Midnight, Classic, or improved Parchment atlas style, transit-mode or single-color routes,
+  line patterns, optional stop dots, a title with optional year display, and optional explorer details.
+  PNG exports use the Cartovella logo without a background panel and keep the map at its normal
+  proportions. Water Transit
+  routes are blue, while flights use a neutral gray in the map and trip logs.
 - The Explorers' Guild separates public explorers into an expandable Explore directory and a
   Travels feed of public expeditions. Travels show only explicitly shared trip details, journal entries, and
   selected photos; coordinate-backed shared stops can be saved to your Wishlist.

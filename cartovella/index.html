@@ -1115,11 +1115,19 @@
             </label>
             <label for="globalRoutesShowTitle" class="inline-flex items-center gap-2 text-xs text-slate-300">
               <input id="globalRoutesShowTitle" type="checkbox" class="accent-amber-400">
-              Show Title Overlay
+              Show Map Title
+            </label>
+            <label id="globalRoutesShowYearTitleWrap" for="globalRoutesShowYearTitle" class="hidden inline-flex items-center gap-2 text-xs text-slate-300">
+              <input id="globalRoutesShowYearTitle" type="checkbox" class="accent-amber-400">
+              Include Selected Year
             </label>
             <label id="globalRoutesCustomTitleWrap" for="globalRoutesCustomTitle" class="hidden inline-flex items-center gap-2 text-xs text-slate-300">
               Custom title
               <input id="globalRoutesCustomTitle" type="text" maxlength="60" placeholder="Optional map title..." disabled class="w-48 rounded-lg border border-slate-700 bg-slate-900 px-2 py-2 text-xs text-slate-100 placeholder:text-slate-500">
+            </label>
+            <label for="globalRoutesShowExplorerInfo" class="inline-flex items-center gap-2 text-xs text-slate-300">
+              <input id="globalRoutesShowExplorerInfo" type="checkbox" class="accent-amber-400">
+              Show Explorer Info
             </label>
           </div>
           <p class="text-[10px] text-slate-500">Atlas styles recolor the built-in vector map; no external basemap tiles are loaded.</p>

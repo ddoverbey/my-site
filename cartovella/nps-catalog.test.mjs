@@ -9037,12 +9037,15 @@ check('Global Route Map renders country and expedition paths and toggles indepen
   const lineStyle = element('globalRoutesLineStyle');
   const showStops = element('globalRoutesShowStops');
   const showTitle = element('globalRoutesShowTitle');
+  const showYearTitle = element('globalRoutesShowYearTitle');
+  const showExplorerInfo = element('globalRoutesShowExplorerInfo');
   const customTitle = element('globalRoutesCustomTitle');
   const routeLegend = element('globalRoutesTransitLegend');
   const customTitleWrap = element('globalRoutesCustomTitleWrap');
-  const routeControlStates = [colorMode, lineStyle, showStops, showTitle, customTitle]
+  const yearTitleWrap = element('globalRoutesShowYearTitleWrap');
+  const routeControlStates = [colorMode, lineStyle, showStops, showTitle, showYearTitle, showExplorerInfo, customTitle]
     .map(control => ({ control, value: control.value, checked: control.checked, disabled: control.disabled }));
-  const routeClassStates = [routeLegend, customTitleWrap]
+  const routeClassStates = [routeLegend, customTitleWrap, yearTitleWrap]
     .map(control => ({ control, hidden: control.classList.contains('hidden') }));
   const domesticOption = element('globalRoutesDomesticOption');
   const continentOption = element('globalRoutesContinentOption');
@@ -9173,10 +9176,16 @@ check('Global Route Map renders country and expedition paths and toggles indepen
     assert.match(svg, /stroke="#38bdf8"/);
     assert.match(svg, /stroke-dasharray="6 5"/);
     assert.doesNotMatch(svg, /class="global-routes-title-overlay"/);
-    assert.match(svg, /id="globalRoutesBrandWatermark" transform="translate\(24 582\)"/);
+    assert.match(svg, /id="globalRoutesBrandWatermark" transform="translate\(24 574\)"/);
+    assert.match(svg, /id="globalRoutesBrandLogo" href="assets\/logos\/simplified-cartovella-logo-1\.png"/);
+    assert.doesNotMatch(svg, /id="globalRoutesBrandWatermark"[^]*?<rect/);
+    assert.doesNotMatch(svg, /class="global-routes-explorer-info"/);
     assert.match(html, /<option value="mode">By Transit Mode<\/option>/);
     assert.match(html, /id="globalRoutesShowStops" type="checkbox" checked/);
     assert.match(html, /id="globalRoutesShowTitle" type="checkbox" class=/);
+    assert.match(html, /id="globalRoutesShowYearTitle" type="checkbox"/);
+    assert.match(html, /id="globalRoutesShowExplorerInfo" type="checkbox"/);
+    assert.match(html, /<option value="parchment">Parchment<\/option>/);
     assert.match(html, /placeholder="Optional map title\.\.\."/);
     assert.match(html, /id="globalRoutesTransitLegend"/);
 
@@ -9208,18 +9217,37 @@ check('Global Route Map renders country and expedition paths and toggles indepen
     showTitle.handlers.change({ currentTarget: showTitle });
     assert.equal(customTitle.disabled, false);
     assert.equal(customTitleWrap.classList.contains('hidden'), false);
+    assert.equal(yearTitleWrap.classList.contains('hidden'), false);
     assert.match(element('svgGlobalRoutesMap').innerHTML, /class="global-routes-title-overlay"[^>]*><text[^>]*>Custom route poster<\/text>/);
     const exportedTitleMap = routeMapSvg.cloneNode(true);
     assert.match(exportedTitleMap.innerHTML, /class="global-routes-title-overlay"/);
     assert.match(exportedTitleMap.innerHTML, /id="globalRoutesBrandWatermark"/);
     customTitle.value = ' ';
     customTitle.handlers.input();
-    assert.match(element('svgGlobalRoutesMap').innerHTML, /All Years · Global/);
+    assert.match(element('svgGlobalRoutesMap').innerHTML, />Global<\/text>/);
+    showYearTitle.checked = true;
+    showYearTitle.handlers.change({ currentTarget: showYearTitle });
+    assert.doesNotMatch(element('svgGlobalRoutesMap').innerHTML, /All Years · Global/);
+    routeYear.value = '2026';
+    routeYear.handlers.change({ currentTarget: routeYear });
+    assert.match(element('svgGlobalRoutesMap').innerHTML, /2026 · Global/);
+    showYearTitle.checked = false;
+    showYearTitle.handlers.change({ currentTarget: showYearTitle });
+    assert.doesNotMatch(element('svgGlobalRoutesMap').innerHTML, /2026 · Global/);
+    routeYear.value = 'all';
+    routeYear.handlers.change({ currentTarget: routeYear });
+    showExplorerInfo.checked = true;
+    showExplorerInfo.handlers.change({ currentTarget: showExplorerInfo });
+    assert.match(element('svgGlobalRoutesMap').innerHTML, /class="global-routes-explorer-info"/);
+    showExplorerInfo.checked = false;
+    showExplorerInfo.handlers.change({ currentTarget: showExplorerInfo });
+    assert.doesNotMatch(element('svgGlobalRoutesMap').innerHTML, /class="global-routes-explorer-info"/);
     showTitle.checked = false;
     showTitle.handlers.change({ currentTarget: showTitle });
     assert.doesNotMatch(element('svgGlobalRoutesMap').innerHTML, /class="global-routes-title-overlay"/);
     assert.equal(customTitle.disabled, true);
     assert.equal(customTitleWrap.classList.contains('hidden'), true);
+    assert.equal(yearTitleWrap.classList.contains('hidden'), true);
     showStops.checked = false;
     showStops.handlers.change({ currentTarget: showStops });
     assert.doesNotMatch(element('svgGlobalRoutesMap').innerHTML, /class="global-route-stop"/);
@@ -9266,10 +9294,10 @@ check('Global Route Map renders country and expedition paths and toggles indepen
       }
     };
     vm.runInContext('prepareGlobalRoutesExportSvg(routeMapLayoutSvg)', context);
-    assert.equal(exportLayoutAttributes.viewBox, '0 0 1200 750');
-    assert.equal(exportLayoutAttributes.height, '1500');
-    assert.equal(exportOcean.attributes.height, '750');
-    assert.equal(exportZoom.attributes.transform, 'translate(0,120) scale(1)');
+    assert.equal(exportLayoutAttributes.viewBox, '0 0 1200 630');
+    assert.equal(exportLayoutAttributes.height, '1260');
+    assert.equal(exportOcean.attributes.height, '630');
+    assert.equal(exportZoom.attributes.transform, 'translate(0,0) scale(1)');
 
     routeYear.value = 'all';
     routeYear.handlers.change({ currentTarget: routeYear });
@@ -9279,8 +9307,8 @@ check('Global Route Map renders country and expedition paths and toggles indepen
     assert.match(element('svgGlobalRoutesMap').innerHTML, /fill="#f5f1e6"/);
     atlasStyle.value = 'parchment';
     atlasStyle.handlers.change({ currentTarget: atlasStyle });
-    assert.match(element('svgGlobalRoutesMap').innerHTML, /fill="#e9dec5"/);
-    assert.match(element('svgGlobalRoutesMap').innerHTML, /fill="#d3c19d"/);
+    assert.match(element('svgGlobalRoutesMap').innerHTML, /fill="#eee7d8"/);
+    assert.match(element('svgGlobalRoutesMap').innerHTML, /fill="#faf6ec"/);
     atlasStyle.value = 'midnight';
     atlasStyle.handlers.change({ currentTarget: atlasStyle });
 
