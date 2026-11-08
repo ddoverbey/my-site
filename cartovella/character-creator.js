@@ -315,6 +315,12 @@
     headwear: Object.freeze(pairedPaths(VARIANT_ASSET_ROOTS.hats,
       'Male Hat/Farming Hat M.png', 'Female Hat/Farming Hat F.png'))
   });
+  const SIMPLE_SHOE_PATHS = Object.freeze(pairedPaths(PACK,
+    'Male Clothing/Shoes.png', 'Female Clothing/Boots.png'));
+  const TRAIL_BOOT_PATHS = Object.freeze({
+    male: `${PACK}Male Clothing/Boots.png`,
+    female: `${ASSET_ROOT}GandalfHardcore 43x Female Clothing/Brown Thigh-High Boots.png`
+  });
   const makeVariantItem = (id, name, field, unlock, palette, pattern = null, options = {}) => ({
     ...equipmentItem(id, name, field, options.paths || VARIANT_BASE_PATHS[field], unlock),
     variantSpec: { palette, ...(pattern ? { pattern } : {}),
@@ -337,13 +343,11 @@
       pairedPaths(PACK, 'Male Clothing/Shirt v2.png', 'Female Clothing/Corset v2.png'), 1),
     levelItem('starter_pants', 'Starter Pants', 'bottoms',
       pairedPaths(PACK, 'Male Clothing/Pants.png', 'Female Clothing/Skirt.png'), 1),
-    levelItem('simple_shoes', 'Simple Shoes', 'shoes',
-      pairedPaths(PACK, 'Male Clothing/Shoes.png', 'Female Clothing/Boots.png'), 1),
+    levelItem('simple_shoes', 'Simple Shoes', 'shoes', SIMPLE_SHOE_PATHS, 1),
     levelItem('walking_stick', 'Walking Stick', 'handItem',
       pairedPaths(`${ASSET_ROOT}GandalfHardcore 35x Hand Items/`,
         'Male Hand/Stick.png', 'Female Hand/Stick.png'), 2),
-    levelItem('trail_boots', 'Trail Boots', 'shoes',
-      pairedPaths(PACK, 'Male Clothing/Boots.png', 'Female Clothing/Boots.png'), 2),
+    levelItem('trail_boots', 'Trail Boots', 'shoes', TRAIL_BOOT_PATHS, 2),
     levelItem('explorer_backpack', 'Explorer Backpack', 'backLayer',
       pairedPaths(`${ASSET_ROOT}GandalfHardcore Back layers s/`, 'Backpack.png'), 3),
     levelItem('traveler_cap', 'Traveler Cap', 'headwear',
@@ -568,6 +572,24 @@
   const SHOP_WARDROBE = [];
   const addShopItem = (id, name, field, paths, cost = 100) =>
     SHOP_WARDROBE.push(equipmentItem(id, name, field, paths, { type: 'coin', cost }));
+  const addVariantShopItem = (id, name, field, paths, colorPalette, cost = 100) =>
+    SHOP_WARDROBE.push({
+      ...equipmentItem(id, name, field, paths, { type: 'coin', cost }),
+      variantSpec: { palette: colorPalette }
+    });
+  const addFootwearColorOptions = (id, name, paths) => {
+    [
+      ['slate', 'Slate', palette('#25282e', '#565b66', '#bbc2cb')],
+      ['forest', 'Forest', palette('#1b3025', '#47664a', '#a8bd91')],
+      ['river', 'River Blue', palette('#202b42', '#4b6692', '#aabbd8')],
+      ['russet', 'Russet', palette('#39251d', '#80513a', '#c8916e')],
+      ['gold', 'Golden', palette('#403319', '#8e702a', '#d2b451')]
+    ].forEach(([colorId, colorName, colorPalette]) =>
+      addVariantShopItem(`${id}_${colorId}`, `${name} (${colorName})`, 'shoes',
+        paths, colorPalette));
+  };
+  addShopItem('classic_shirt', 'Classic Trail Shirt', 'top',
+    oneGenderPath('male', `${PACK}Male Clothing/Shirt.png`));
   [
     ['green_shirt', 'Forest Shirt', 'Green Shirt v2.png', 'Green Corset v2.png'],
     ['blue_shirt', 'River Shirt', 'Blue Shirt v2.png', 'Blue Corset v2.png'],
@@ -584,6 +606,55 @@
   ].forEach(([id, name, file]) =>
     addShopItem(id, name, 'bottoms',
       oneGenderPath('male', `${PACK}Male Clothing/${file}`), 100));
+  [
+    ['classic_corset', 'Classic Corset', 'Corset.png'],
+    ['blue_corset', 'Blue Corset', 'Blue Corset.png'],
+    ['green_corset', 'Green Corset', 'Green Corset.png'],
+    ['orange_corset', 'Orange Corset', 'Orange Corset.png'],
+    ['purple_corset', 'Purple Corset', 'Purple Corset.png']
+  ].forEach(([id, name, file]) =>
+    addShopItem(id, name, 'top',
+      oneGenderPath('female', `${PACK}Female Clothing/${file}`), 100));
+  [
+    ['male_base_layer', 'Explorer Base Layer', 'Underwear.png'],
+    ['male_blue_base_layer', 'Blue Explorer Base Layer', 'Skyblue Underwear.png'],
+    ['male_green_base_layer', 'Green Explorer Base Layer', 'Green Underwear.png'],
+    ['male_orange_base_layer', 'Orange Explorer Base Layer', 'Orange Underwear.png'],
+    ['male_purple_base_layer', 'Purple Explorer Base Layer', 'Purple Underwear.png'],
+    ['male_red_base_layer', 'Red Explorer Base Layer', 'Red Underwear.png']
+  ].forEach(([id, name, file]) =>
+    addShopItem(id, name, 'bottoms',
+      oneGenderPath('male', `${PACK}Male Clothing/${file}`), 100));
+  [
+    ['female_blue_base_layer', 'Blue Explorer Base Layer', 'Blue Panties and Bra.png'],
+    ['female_green_base_layer', 'Green Explorer Base Layer', 'Green Panties and Bra.png'],
+    ['female_orange_base_layer', 'Orange Explorer Base Layer', 'Orange Panties and Bra.png'],
+    ['female_purple_base_layer', 'Purple Explorer Base Layer', 'Purple Panties and Bra.png'],
+    ['female_red_base_layer', 'Red Explorer Base Layer', 'Red Panties and Bra.png'],
+    ['female_sky_blue_base_layer', 'Sky Blue Explorer Base Layer', 'Skyblue Panties and Bra.png']
+  ].forEach(([id, name, file]) =>
+    addShopItem(id, name, 'top',
+      oneGenderPath('female', `${PACK}Female Clothing/${file}`), 100));
+  [
+    ['female_socks', 'Trail Socks', 'Socks.png'],
+    ['female_green_socks', 'Forest Trail Socks', 'Green Socks.png'],
+    ['female_orange_socks', 'Ember Trail Socks', 'Orange Socks.png'],
+    ['female_purple_socks', 'Violet Trail Socks', 'Purple Socks.png'],
+    ['female_red_socks', 'Red Trail Socks', 'Red Socks.png'],
+    ['female_sky_blue_socks', 'Sky Blue Trail Socks', 'Skyblue Socks.png']
+  ].forEach(([id, name, file]) =>
+    addShopItem(id, name, 'shoes',
+      oneGenderPath('female', `${PACK}Female Clothing/${file}`), 100));
+  [
+    ['blue_swim_trunks', 'Blue Swim Trunks', 'Blue swim trunks.png'],
+    ['green_swim_trunks', 'Green Swim Trunks', 'Green swim trunks.png'],
+    ['orange_swim_trunks', 'Orange Swim Trunks', 'Orange swim trunks.png'],
+    ['purple_swim_trunks', 'Purple Swim Trunks', 'Purple swim trunks.png'],
+    ['red_swim_trunks', 'Red Swim Trunks', 'Red swim trunks.png'],
+    ['split_hose', 'Split Hose', 'Split hose.png']
+  ].forEach(([id, name, file]) =>
+    addShopItem(id, name, 'bottoms',
+      oneGenderPath('male', `${ASSET_ROOT}GandalfHardcore 7x Male Clothing/${file}`), 100));
   [
     ['blue_bodice', 'Blue Bodice', 'Blue Bodice.png'],
     ['green_bodice', 'Green Bodice', 'Green Bodice.png'],
@@ -608,6 +679,8 @@
     ['orange_corset_v2_long_sleeves', 'Orange Corset v2 (Long Sleeves)', 'Orange Corset v2 Long Sleeves.png'],
     ['purple_corset_long_sleeves', 'Purple Corset (Long Sleeves)', 'Purple Corset Long Sleeves.png'],
     ['purple_corset_v2_long_sleeves', 'Purple Corset v2 (Long Sleeves)', 'Purple Corset v2 Long Sleeves.png'],
+    ['classic_corset_long_sleeves', 'Classic Corset (Long Sleeves)', 'Corset Long Sleeves.png'],
+    ['classic_corset_v2_long_sleeves', 'Classic Corset v2 (Long Sleeves)', 'Corset v2 Long Sleeves.png'],
     ['blue_bikini', 'Blue Bikini', 'Blue bikini.png'],
     ['green_bikini', 'Green Bikini', 'Green bikini.png'],
     ['orange_bikini', 'Orange Bikini', 'Orange bikini.png'],
@@ -648,6 +721,8 @@
   ].forEach(([id, name, file]) =>
     addShopItem(id, name, 'shoes', oneGenderPath('female',
       `${ASSET_ROOT}GandalfHardcore 43x Female Clothing/${file}`), 100));
+  addFootwearColorOptions('simple_shoes', 'Simple Shoes', SIMPLE_SHOE_PATHS);
+  addFootwearColorOptions('trail_boots', 'Trail Boots', TRAIL_BOOT_PATHS);
 
   const hatFolder = `${ASSET_ROOT}GandalfHardcore 41x Hats/`;
   const addHat = (id, name, male, female, cost = 100) => addShopItem(id, name, 'headwear', {
@@ -666,7 +741,7 @@
   addDateUnlockedHat('pumpkin_hat', 'Pumpkin Hat', 'Male Hat/Pumpkin hat.png', null,
     { year: 2026, month: 10, day: 30 });
   addHat('viking_horns', 'Viking Helmet with Horns',
-    'Male Hat/Viking Helmet with horns.png', 'Female Hat/Headdress.png', 125);
+    'Male Hat/Viking Helmet with horns.png', 'Male Hat/Viking Helmet with horns.png', 125);
   [
     ['green_cap', 'Green Cap', 'Green'],
     ['orange_cap', 'Orange Cap', 'Orange'],
@@ -687,7 +762,7 @@
   [
     ['plague_mask', 'Plague Mask', 'Male Plague Mask.png', 'Female Plague Mask.png'],
     ['face_mask', 'Face Mask', 'Male Mask.png', 'Female Mask.png'],
-    ['face_paint', 'Blue Face Paint', 'Male Mask.png', 'Female Blue Face paint.png']
+    ['face_paint', 'Blue Face Paint', 'Female Blue Face paint.png', 'Female Blue Face paint.png']
   ].forEach(([id, name, male, female]) =>
     addShopItem(id, name, 'face', pairedPaths(`${ASSET_ROOT}GandalfHardcore Masks/`, male, female), 125));
 

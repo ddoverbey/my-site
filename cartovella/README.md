@@ -240,11 +240,16 @@ The sprite picker is labeled Sprite A and Sprite B; internal male/female keys re
 each choice to its source art. Ranger hats mask the upper edge of hairstyles, while allowing hair to
 show below the hat. Shirts, bottoms, and shoes can be unequipped independently, including
 when a one-piece outfit such as a bikini is selected. The wardrobe includes skirt, black short skirt,
-and pants options.
+and pants options. Every garment sheet from the original GandalfHardcore clothing packs is available,
+including base layers, swimwear, corsets, bodices, skirts, and dresses such as Queen Dress. Intimate
+underlayers use Explorer Base Layer names in Cartovella. Simple Shoes and Trail Boots each have five
+recolored shop options; the female Trail Boots use different art from Simple Shoes.
 The Summit Down Parka has hood-down and two hood-up male choices; hood-up choices hide and disable
 hats and helmets until a hood-down top is selected. Mariner coats, both Park Ranger Shirt and Ranger
 Trail Breeches sprites, and the male Centennial Ranger Coat use dedicated replacement art. The
 Wayfarer Field Vest reward has green and khaki variants.
+The horned Viking helmet uses its horned art for both sprites, and Blue Face Paint uses its paint
+art for both sprites rather than reusing the Face Mask.
 The Centennial Ranger Coat is offered only to authenticated accounts whose Supabase Auth
 `app_metadata` contains `"cartovella_owner": true`. Set this server-managed flag for trusted accounts
 in the Supabase Dashboard under **Authentication > Users > Raw App Meta Data**; do not use

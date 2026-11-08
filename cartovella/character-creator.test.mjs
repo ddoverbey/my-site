@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import characterCreator from './character-creator.js';
 
 let checks = 0;
@@ -719,6 +719,56 @@ check('shirts, bottoms, and shoes can be cleared, and requested bottom pieces us
     }
   }
 });
+check('simple shoes and trail boots differ by gender and include recolored choices', () => {
+  const simpleShoes = characterCreator.LEVEL_ITEMS.find(item => item.id === 'simple_shoes');
+  const trailBoots = characterCreator.LEVEL_ITEMS.find(item => item.id === 'trail_boots');
+  assert.notEqual(simpleShoes.paths.male, trailBoots.paths.male);
+  assert.notEqual(simpleShoes.paths.female, trailBoots.paths.female);
+  assert.ok(trailBoots.paths.female.endsWith('/Brown%20Thigh-High%20Boots.png') ||
+    trailBoots.paths.female.endsWith('/Brown Thigh-High Boots.png'));
+  for (const id of ['simple_shoes', 'trail_boots']) {
+    const choices = characterCreator.SHOP_WARDROBE.filter(item =>
+      item.field === 'shoes' && item.id.startsWith(`${id}_`));
+    assert.equal(choices.length, 5, `${id} has five color choices`);
+    assert.equal(new Set(choices.map(item => JSON.stringify(item.variantSpec.palette))).size, 5);
+    assert.ok(choices.every(item => item.paths.male && item.paths.female), `${id} supports both sprites`);
+  }
+  assert.equal(characterCreator.characterSpriteAssets(
+    characterCreator.normalizeCharacter({ shoes: '' })
+  ).some(layer => layer.layer === 'shoes'), false, 'no footwear remains available');
+});
+check('all original Gandalf clothing sheets are cataloged and correctly sliced', () => {
+  const sourceDirectories = [
+    './assets/gandalfhardcore/GandalfHardcore Character Asset Pack/GandalfHardcore Character Asset Pack/Male Clothing/',
+    './assets/gandalfhardcore/GandalfHardcore Character Asset Pack/GandalfHardcore Character Asset Pack/Female Clothing/',
+    './assets/gandalfhardcore/GandalfHardcore 7x Male Clothing/',
+    './assets/gandalfhardcore/GandalfHardcore 43x Female Clothing/'
+  ];
+  const catalogItems = [
+    ...characterCreator.LEVEL_ITEMS,
+    ...characterCreator.PARK_MILESTONE_ITEMS,
+    ...characterCreator.ACHIEVEMENT_ITEMS,
+    ...characterCreator.SHOP_WARDROBE
+  ];
+  const catalogPaths = new Set(catalogItems.flatMap(item => Object.values(item.paths || {})));
+  for (const directory of sourceDirectories) {
+    for (const filename of readdirSync(new URL(directory, import.meta.url))) {
+      if (!filename.toLowerCase().endsWith('.png') || filename === 'DONT FORGET TO RATE.png') continue;
+      const path = `${directory}${filename}`;
+      assert.ok(catalogPaths.has(path), `${filename} is available in a clothing catalog`);
+      const png = readFileSync(new URL(path, import.meta.url));
+      assert.equal(png.toString('ascii', 1, 4), 'PNG', filename);
+      assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [800, 448],
+        `${filename} uses the 80x64 clothing grid`);
+    }
+  }
+  const queenDress = characterCreator.SHOP_WARDROBE.find(item => item.id === 'queen_dress');
+  assert.equal(queenDress.name, 'Queen Dress');
+  assert.equal(queenDress.paths.female,
+    `${sourceDirectories[3]}Queen Dress.png`);
+  const displayedNames = catalogItems.map(item => item.name).join(' ');
+  assert.doesNotMatch(displayedNames, /panties and bra/i);
+});
 check('character migration clamps invalid values and preserves safe selections', () => {
   assert.deepEqual(characterCreator.normalizeCharacter({
     skinTone: 'deep', hairStyle: 'curls', outfit: 'outfit_parka',
@@ -1253,6 +1303,10 @@ check('replacement Summit, Mariner, Ranger, and vest artwork is wired with hood 
   const centennialCoat = achievementItem('centennial_ranger_coat');
   const greenVest = characterCreator.LEVEL_ITEMS.find(item => item.id === 'wayfarer_field_vest');
   const khakiVest = characterCreator.LEVEL_ITEMS.find(item => item.id === 'wayfarer_khaki_field_vest');
+  const witchHat = characterCreator.SHOP_WARDROBE.find(item => item.id === 'witch_hat');
+  const vikingHorns = characterCreator.SHOP_WARDROBE.find(item => item.id === 'viking_horns');
+  const facePaint = characterCreator.SHOP_WARDROBE.find(item => item.id === 'face_paint');
+  const faceMask = characterCreator.SHOP_WARDROBE.find(item => item.id === 'face_mask');
   assert.equal(summitDown.paths.male, './assets/custom-gear/male-parka-down.png');
   assert.equal(summitHoodUp.paths.male, './assets/custom-gear/Male Parka up no hat.png');
   assert.equal(summitRedHoodUp.paths.male, './assets/custom-gear/Red male Parka up no hat .png');
@@ -1270,17 +1324,41 @@ check('replacement Summit, Mariner, Ranger, and vest artwork is wired with hood 
   assert.equal(greenVest.paths.male, './assets/custom-gear/male-green-vest.png');
   assert.equal(khakiVest.paths.male, './assets/custom-gear/male-khaki-vest.png');
   assert.equal(khakiVest.name, 'Khaki Wayfarer Field Vest');
+  assert.equal(witchHat.paths.female,
+    './assets/gandalfhardcore/GandalfHardcore 41x Hats/Female Hat/Witch hat.png');
+  assert.equal(vikingHorns.paths.female, vikingHorns.paths.male);
+  assert.ok(vikingHorns.paths.female.endsWith('/Male Hat/Viking Helmet with horns.png'));
+  assert.equal(facePaint.paths.male, facePaint.paths.female);
+  assert.ok(facePaint.paths.male.endsWith('/GandalfHardcore Masks/Female Blue Face paint.png'));
+  assert.notEqual(facePaint.paths.male, faceMask.paths.male);
+  const witchLayer = characterCreator.characterSpriteAssets({
+    ...characterCreator.DEFAULT_CHARACTER, gender: 'female', headwear: witchHat.id,
+    purchasedItems: [witchHat.id]
+  }).find(layer => layer.layer === 'headwear');
+  const femaleVikingLayer = characterCreator.characterSpriteAssets({
+    ...characterCreator.DEFAULT_CHARACTER, gender: 'female', headwear: vikingHorns.id,
+    purchasedItems: [vikingHorns.id]
+  }).find(layer => layer.layer === 'headwear');
+  const malePaintLayer = characterCreator.characterSpriteAssets({
+    ...characterCreator.DEFAULT_CHARACTER, gender: 'male', face: facePaint.id,
+    purchasedItems: [facePaint.id]
+  }).find(layer => layer.layer === 'face');
+  assert.equal(decodeURIComponent(witchLayer.imageSrc), witchHat.paths.female);
+  assert.equal(decodeURIComponent(femaleVikingLayer.imageSrc), vikingHorns.paths.female);
+  assert.equal(decodeURIComponent(malePaintLayer.imageSrc), facePaint.paths.male);
 
   const replacementPaths = [
     summitDown.paths.male, summitHoodUp.paths.male, summitRedHoodUp.paths.male,
     mariner.paths.male, mariner.paths.female, parkRanger.paths.male, parkRanger.paths.female,
     rangerPants.paths.male, rangerPants.paths.female, centennialCoat.paths.male,
-    greenVest.paths.male, khakiVest.paths.male
+    greenVest.paths.male, khakiVest.paths.male, witchHat.paths.female,
+    vikingHorns.paths.male, facePaint.paths.male
   ];
   for (const path of replacementPaths) {
     const png = readFileSync(new URL(path, import.meta.url));
     assert.equal(png.toString('ascii', 1, 4), 'PNG', path);
-    assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [80, 64], path);
+    assert.equal(png.readUInt32BE(16) % 80, 0, `${path} frame width`);
+    assert.equal(png.readUInt32BE(20) % 64, 0, `${path} frame height`);
   }
   for (const item of [summitHoodUp, summitRedHoodUp]) {
     assert.equal(item.blocksHeadwear, true, item.id);
