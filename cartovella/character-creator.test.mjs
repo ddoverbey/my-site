@@ -1227,7 +1227,7 @@ check('variant clothing includes all requested rewards and valid paired sprite-s
     'ranger_hat_navy', 'ranger_hat_navy_banded', 'ranger_hat_purple',
     'ranger_hat_silver', 'ranger_hat_golden', 'ranger_hat_diamond', 'john_denver_guitar',
     'khaki_trail_pants', 'mist_rain_poncho', 'cavern_miner_suit', 'summit_down_parka',
-    'summit_hood_up_parka', 'summit_red_hood_up_parka', 'overland_canvas_jacket',
+    'summit_hood_up_parka', 'overland_canvas_jacket',
     'mariner_pea_coat', 'photographer_vest', 'arctic_aurora_cloak',
     'blue_ridge_flannel', 'alpine_timberline_jacket', 'continental_cape',
     'centennial_ranger_coat', 'gaia_druid_mantle'
@@ -1296,7 +1296,6 @@ check('replacement Summit, Mariner, Ranger, and vest artwork is wired with hood 
   const achievementItem = id => characterCreator.ACHIEVEMENT_ITEMS.find(item => item.id === id);
   const summitDown = achievementItem('summit_down_parka');
   const summitHoodUp = achievementItem('summit_hood_up_parka');
-  const summitRedHoodUp = achievementItem('summit_red_hood_up_parka');
   const mariner = achievementItem('mariner_pea_coat');
   const parkRanger = characterCreator.PARK_MILESTONE_ITEMS.find(item => item.id === 'park_ranger_uniform');
   const rangerPants = characterCreator.PARK_MILESTONE_ITEMS.find(item => item.id === 'ranger_trail_pants');
@@ -1309,7 +1308,7 @@ check('replacement Summit, Mariner, Ranger, and vest artwork is wired with hood 
   const faceMask = characterCreator.SHOP_WARDROBE.find(item => item.id === 'face_mask');
   assert.equal(summitDown.paths.male, './assets/custom-gear/male-parka-down.png');
   assert.equal(summitHoodUp.paths.male, './assets/custom-gear/Male Parka up no hat.png');
-  assert.equal(summitRedHoodUp.paths.male, './assets/custom-gear/Red male Parka up no hat .png');
+  assert.equal(achievementItem('summit_red_hood_up_parka'), undefined);
   assert.equal(mariner.paths.male, './assets/custom-gear/Male Mariner Coat.png');
   assert.equal(mariner.paths.female, './assets/custom-gear/Female Mariner Coat.png');
   assert.equal(parkRanger.name, 'Park Ranger Shirt');
@@ -1348,7 +1347,7 @@ check('replacement Summit, Mariner, Ranger, and vest artwork is wired with hood 
   assert.equal(decodeURIComponent(malePaintLayer.imageSrc), facePaint.paths.male);
 
   const replacementPaths = [
-    summitDown.paths.male, summitHoodUp.paths.male, summitRedHoodUp.paths.male,
+    summitDown.paths.male, summitHoodUp.paths.male,
     mariner.paths.male, mariner.paths.female, parkRanger.paths.male, parkRanger.paths.female,
     rangerPants.paths.male, rangerPants.paths.female, centennialCoat.paths.male,
     greenVest.paths.male, khakiVest.paths.male, witchHat.paths.female,
@@ -1360,7 +1359,7 @@ check('replacement Summit, Mariner, Ranger, and vest artwork is wired with hood 
     assert.equal(png.readUInt32BE(16) % 80, 0, `${path} frame width`);
     assert.equal(png.readUInt32BE(20) % 64, 0, `${path} frame height`);
   }
-  for (const item of [summitHoodUp, summitRedHoodUp]) {
+  for (const item of [summitHoodUp]) {
     assert.equal(item.blocksHeadwear, true, item.id);
     const character = characterCreator.normalizeCharacter({
       ...characterCreator.DEFAULT_CHARACTER, top: item.id, headwear: 'traveler_cap'

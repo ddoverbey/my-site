@@ -244,7 +244,7 @@ and pants options. Every garment sheet from the original GandalfHardcore clothin
 including base layers, swimwear, corsets, bodices, skirts, and dresses such as Queen Dress. Intimate
 underlayers use Explorer Base Layer names in Cartovella. Simple Shoes and Trail Boots each have five
 recolored shop options; the female Trail Boots use different art from Simple Shoes.
-The Summit Down Parka has hood-down and two hood-up male choices; hood-up choices hide and disable
+The Summit Down Parka has hood-down and one hood-up male choice; the hood-up choice hides and disables
 hats and helmets until a hood-down top is selected. Mariner coats, both Park Ranger Shirt and Ranger
 Trail Breeches sprites, and the male Centennial Ranger Coat use dedicated replacement art. The
 Wayfarer Field Vest reward has green and khaki variants.

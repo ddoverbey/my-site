@@ -526,12 +526,6 @@
         { type: 'achievement', id: 'thinAir' }),
       blocksHeadwear: true
     },
-    {
-      ...equipmentItem('summit_red_hood_up_parka', 'Summit Red Hood-Up Parka', 'top',
-        oneGenderPath('male', spritePath(CUSTOM_GEAR_ASSET_ROOT, 'Red male Parka up no hat .png')),
-        { type: 'achievement', id: 'thinAir' }),
-      blocksHeadwear: true
-    },
     makeVariantItem('overland_canvas_jacket', 'Overland Canvas Jacket', 'top',
       { type: 'achievement', id: 'overlander' },
       palette('#382621', '#9b6042', '#d4aa74', { accent: '#cba46f' }), 'jacket'),
