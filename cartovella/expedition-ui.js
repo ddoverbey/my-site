@@ -1338,8 +1338,8 @@ const GLOBAL_ROUTE_MAP_STYLES = Object.freeze({
     border: '#82919c', graticule: '#afbdc4', text: '#1e293b'
   },
   parchment: {
-    ocean: '#c5d5cf', land: '#f2e4c4', visited: '#a9a574',
-    border: '#776044', graticule: '#cbb892', text: '#3d3225'
+    ocean: '#183b56', land: '#987348', visited: '#6f7049',
+    border: '#493625', graticule: '#31516b', text: '#f1dfbd'
   }
 });
 // Continent membership follows Annexare Countries (MIT): https://github.com/annexare/Countries.
@@ -1843,7 +1843,7 @@ function renderGlobalRoutesMap() {
   const collection = { type: 'FeatureCollection', features };
   const projection = scope === 'domestic' && homeCountryCode === 'US'
     ? d3.geoAlbersUsa() : d3.geoNaturalEarth1();
-  const mapTop = showTitleControl.checked ? 80 : 24;
+  const mapTop = showTitleControl.checked ? 54 : 24;
   if (features.length) projection.fitExtent([[24, mapTop], [1176, 560]], collection);
   const path = d3.geoPath(projection);
   const mapStyle = GLOBAL_ROUTE_MAP_STYLES[globalRoutesAtlasStyle];
@@ -1914,9 +1914,9 @@ function renderGlobalRoutesMap() {
   titleParts.push(customTitleControl.value.trim() || scopeLabel);
   const titleText = titleParts.join(' · ');
   const titleOverlay = showTitleControl.checked
-    ? `<g class="global-routes-title-overlay" pointer-events="none"><text x="600" y="48" text-anchor="middle" fill="${mapStyle.text}" stroke="${mapStyle.ocean}" stroke-width="5" paint-order="stroke" font-family="Cinzel, Georgia, serif" font-size="24" font-weight="700">${escapeHtml(titleText)}</text></g>`
+    ? `<g class="global-routes-title-overlay" pointer-events="none"><text x="600" y="38" text-anchor="middle" fill="${mapStyle.text}" stroke="${mapStyle.ocean}" stroke-width="5" paint-order="stroke" font-family="Cinzel, Georgia, serif" font-size="24" font-weight="700">${escapeHtml(titleText)}</text></g>`
     : '';
-  const watermark = `<g id="globalRoutesBrandWatermark" transform="translate(24 574)" aria-label="Cartovella">
+  const watermark = `<g id="globalRoutesBrandWatermark" transform="translate(24 520)" aria-label="Cartovella">
     <image id="globalRoutesBrandLogo" href="assets/logos/simplified-cartovella-logo-1.png" x="0" y="0" width="48" height="48" preserveAspectRatio="xMidYMid meet"></image>
     <text x="49" y="29" fill="${mapStyle.text}" font-family="Cinzel, Georgia, serif" font-size="16" font-weight="700" letter-spacing="1.2">CARTOVELLA</text>
   </g>`;

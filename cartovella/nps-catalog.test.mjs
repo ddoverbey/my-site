@@ -9187,7 +9187,7 @@ check('Global Route Map renders country and expedition paths and toggles indepen
     assert.match(svg, /stroke="#38bdf8"/);
     assert.match(svg, /stroke-dasharray="6 5"/);
     assert.doesNotMatch(svg, /class="global-routes-title-overlay"/);
-    assert.match(svg, /id="globalRoutesBrandWatermark" transform="translate\(24 574\)"/);
+    assert.match(svg, /id="globalRoutesBrandWatermark" transform="translate\(24 520\)"/);
     assert.match(svg, /id="globalRoutesBrandLogo" href="assets\/logos\/simplified-cartovella-logo-1\.png"/);
     assert.doesNotMatch(svg, /id="globalRoutesBrandWatermark"[^]*?<rect/);
     assert.doesNotMatch(svg, /class="global-routes-explorer-info"/);
@@ -9203,8 +9203,8 @@ check('Global Route Map renders country and expedition paths and toggles indepen
     atlasStyle.value = 'parchment';
     atlasStyle.handlers.change({ currentTarget: atlasStyle });
     const parchmentSvg = element('svgGlobalRoutesMap').innerHTML;
-    assert.match(parchmentSvg, /class="global-routes-ocean"[^>]*fill="#c5d5cf"/);
-    assert.match(parchmentSvg, /class="global-country" fill="#f2e4c4" stroke="#776044"/);
+    assert.match(parchmentSvg, /class="global-routes-ocean"[^>]*fill="#183b56"/);
+    assert.match(parchmentSvg, /class="global-country" fill="#987348" stroke="#493625"/);
     atlasStyle.value = 'midnight';
     atlasStyle.handlers.change({ currentTarget: atlasStyle });
 
@@ -9237,7 +9237,7 @@ check('Global Route Map renders country and expedition paths and toggles indepen
     assert.equal(customTitle.disabled, false);
     assert.equal(customTitleWrap.classList.contains('hidden'), false);
     assert.equal(yearTitleWrap.classList.contains('hidden'), false);
-    assert.equal(mapFitExtents.at(-1)[0][1], 80, 'the title gets its own space above the map');
+    assert.equal(mapFitExtents.at(-1)[0][1], 54, 'the title gets a compact space above the map');
     assert.match(element('svgGlobalRoutesMap').innerHTML, /class="global-routes-title-overlay"[^>]*><text[^>]*>Custom route poster<\/text>/);
     const exportedTitleMap = routeMapSvg.cloneNode(true);
     assert.match(exportedTitleMap.innerHTML, /class="global-routes-title-overlay"/);
@@ -9328,8 +9328,8 @@ check('Global Route Map renders country and expedition paths and toggles indepen
     assert.match(element('svgGlobalRoutesMap').innerHTML, /fill="#f5f1e6"/);
     atlasStyle.value = 'parchment';
     atlasStyle.handlers.change({ currentTarget: atlasStyle });
-    assert.match(element('svgGlobalRoutesMap').innerHTML, /fill="#c5d5cf"/);
-    assert.match(element('svgGlobalRoutesMap').innerHTML, /fill="#f2e4c4"/);
+    assert.match(element('svgGlobalRoutesMap').innerHTML, /fill="#183b56"/);
+    assert.match(element('svgGlobalRoutesMap').innerHTML, /fill="#987348"/);
     atlasStyle.value = 'midnight';
     atlasStyle.handlers.change({ currentTarget: atlasStyle });
 
