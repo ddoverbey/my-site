@@ -22,8 +22,12 @@ expeditions, track parks and regions, and earn achievements from your travel his
   proportions. Water Transit
   routes are blue, while flights use a neutral gray in the map and trip logs.
 - The Explorers' Guild separates public explorers into an expandable Explore directory and a
-  Travels feed of public expeditions. Travels show only explicitly shared trip details, journal entries, and
-  selected photos; coordinate-backed shared stops can be saved to your Wishlist.
+  Travels feed with one route atlas per explorer plus their public trip dispatches. Each atlas
+  includes every trip whose route details that explorer explicitly shares, across all years and
+  regions. Route-map background and single-line color are chosen in Public Explorer Profile
+  settings; Guild route lines are always solid. Saving or syncing a trip regenerates the atlas.
+  Travels show only explicitly shared trip details, journal entries, and selected photos;
+  coordinate-backed shared stops can be saved to your Wishlist.
 - Progress for parks, regions, elevations, rarity, and terrestrial biomes.
 - Large park and geography datasets are prepared in stages; the map creates markers for the visible
   area and updates existing markers when travel statuses change.

@@ -511,6 +511,12 @@ check('public profile visibility migrates legacy consent without widening access
   assert.equal(vm.runInContext(`normalizePublicProfile({username:'devon',is_public:false}).visibility`, context), 'none');
   assert.equal(vm.runInContext(`normalizePublicProfile({visibility:'profile',is_public:true}).visibility`, context), 'profile');
   assert.equal(vm.runInContext(`normalizePublicProfile({visibility:'none',is_public:true}).is_public`, context), false);
+  assert.equal(vm.runInContext(`normalizePublicProfile({
+    routeMapBackground:'parchment', routeMapColor:'emerald'
+  }).routeMapBackground`, context), 'parchment');
+  assert.equal(vm.runInContext(`normalizePublicProfile({
+    routeMapBackground:'invalid', routeMapColor:'invalid'
+  }).routeMapColor`, context), 'gold');
   const originalProfile = JSON.stringify(vm.runInContext('publicProfile', context));
   const originalWindow = context.window;
   try {
@@ -2526,6 +2532,8 @@ await checkAsync('public summary stats contain compact profile, achievement, and
       globalRoutesScope = 'global';
       globalRoutesYear = 'all';
       globalRoutesAtlasStyle = 'midnight';
+      publicProfile.routeMapBackground = 'parchment';
+      publicProfile.routeMapColor = 'crimson';
     `, context);
     const summary = JSON.parse(JSON.stringify(await vm.runInContext(
       `buildPublicSummaryStats({
@@ -2538,6 +2546,8 @@ await checkAsync('public summary stats contain compact profile, achievement, and
     assert.equal(summary.xp, 1234);
     assert.equal(summary.cls, 'Alpine Ranger');
     assert.equal(summary.homeName, 'Cloud Citadel');
+    assert.equal(summary.routeMapBackground, 'parchment');
+    assert.equal(summary.routeMapColor, 'crimson');
     assert.equal(summary.character.pet, characterCreator.DEFAULT_CHARACTER.pet);
     assert.equal(summary.countriesCount, 3);
     assert.equal(summary.statesCount, 5);
@@ -2551,11 +2561,15 @@ await checkAsync('public summary stats contain compact profile, achievement, and
     assert.equal(summary.totalTrips, 4);
     assert.match(summary.routeMapThumbnail, /^data:image\/jpeg;base64,/);
     assert.deepEqual(routeCanvasEncodings.find(encoding => encoding.width === 640), {
-      width: 640, height: 336, type: 'image/jpeg', quality: 0.55
+      width: 640, height: 309, type: 'image/jpeg', quality: 0.55
     });
     assert.match(serializedRouteMap, /class="global-route"/);
     assert.match(serializedRouteMap, /class="global-route-stop"/);
     assert.match(serializedRouteMap, /class="global-route-home"/);
+    assert.match(serializedRouteMap, /stroke="#f43f5e"/,
+      'the saved public route color is used for every route');
+    assert.doesNotMatch(serializedRouteMap, /stroke-dasharray="(?:7 5|2 5)"/,
+      'public route previews use solid lines regardless of transit mode');
     assert.equal((serializedRouteMap.match(/class="global-route"/g) || []).length, 3,
       'the preview is rasterized from the same complete SVG rendered by the Global Route Map');
     assert.ok(revokedRouteMapUrl, 'the temporary SVG object URL is released');
@@ -2721,6 +2735,8 @@ await checkAsync('signup requires a unique username, stores it, and reports user
     element('profileUsername').value = 'privatecollision';
     element('profileDisplayName').value = 'New Traveler';
     element('profileVisibility').value = 'profile';
+    element('profileRouteMapBackground').value = 'parchment';
+    element('profileRouteMapColor').value = 'emerald';
     context.fetch = async (url, options = {}) => {
       requests.push({ url: String(url), options });
       if (String(url).includes('/rest/v1/cartovella_public_profiles?') && options.method === 'GET') {
@@ -2740,6 +2756,10 @@ await checkAsync('signup requires a unique username, stores it, and reports user
     await vm.runInContext('savePublicProfile()', context);
     assert.equal(element('publicProfileStatus').textContent, 'That username is already taken. Please choose another.');
     assert.equal(JSON.stringify(vm.runInContext('publicProfile', context)), profileBeforeConflict);
+    assert.equal(element('profileRouteMapBackground').value,
+      vm.runInContext('publicProfile.routeMapBackground', context));
+    assert.equal(element('profileRouteMapColor').value,
+      vm.runInContext('publicProfile.routeMapColor', context));
   } finally {
     context.fetch = originalFetch;
     vm.runInContext(`cloudSession = ${originalSession}; cloudHydrated = ${originalHydrated}; AppState.viewOnly = ${originalViewOnly}; publicProfile = normalizePublicProfile(${originalProfile}); updatePublicProfileSettings()`, context);
@@ -2831,6 +2851,9 @@ await checkAsync('Explorers’ Guild renders mocked public profiles and expediti
     assert.equal(element('guildDispatchesView').classList.contains('hidden'), true);
     assert.equal(element('guildExploreView').classList.contains('hidden'), false);
     assert.match(element('guildExpeditionsFeed').innerHTML, /Spirit Falls Weekend/);
+    assert.match(element('guildExpeditionsFeed').innerHTML, /Shared Route Atlas/);
+    assert.match(element('guildExpeditionsFeed').innerHTML, /Every trip with route details this explorer chose to share/);
+    assert.match(element('guildExpeditionsFeed').innerHTML, /All publicly shared routes for @devon/);
     assert.match(element('guildExpeditionsFeed').innerHTML, /The falls were roaring/);
     assert.match(element('guildExpeditionsFeed').innerHTML, /data:image\/jpeg;base64,YWJjZA==/);
     assert.match(element('guildExpeditionsFeed').innerHTML, /data-guild-open-travel="devon"/);
