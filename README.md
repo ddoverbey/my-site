@@ -126,9 +126,10 @@ the home marker, erase visits, or stop visited destinations from clearing their 
 
 ### Travel Ledger and rendering performance
 
-Local JavaScript URLs share a release query (`?v=20261015-ui2`) to prevent GitHub Pages'
+Local JavaScript URLs share a release query (`?v=20261108-performance-v1`) to prevent GitHub Pages'
 10-minute asset cache from combining newly deployed HTML with older scripts. Bump this release
-query on all local scripts when changing their code or dependent markup. No cache or saved
+query on all local scripts when changing their code or dependent markup, and on the stylesheet
+when rebuilding CSS. No cache or saved
 passport reset is required.
 
 The Travel Ledger renders **50 destinations per page**, with Previous/Next controls and matching
@@ -147,16 +148,43 @@ to one per animation frame. All cleared counties share one cached path and a sin
 instead of hundreds of separately shadowed fills. The county path and the land stencil are projected
 once at zoom 0 and scaled to the current zoom, with per-feature pieces culled to each tile, so zooming
 never re-projects atlas geometry. Each county's biome match is saved in localStorage (keyed to the
-ecoregion and county atlas versions), and coordinate indexes are built one atlas per task, so warm
-startups avoid hundreds of milliseconds of point-in-polygon work and never block input in one long task. Rendered fog is cached as 512px world-anchored
-tiles per zoom (an LRU of ~384 tiles on desktop, 64 on mobile): only tiles under the viewport render
+ecoregion and county atlas versions). Geography indexing yields after approximately 8 ms of work,
+including within a single atlas, and discards obsolete loads. Containment uses a 5-degree spatial
+grid before the original spherical bounds/containment checks; holes, poles, overlapping regions,
+result order and antimeridian handling remain unchanged. A single unusually complex polygon or
+JSON/TopoJSON decoding can still exceed the indexing budget.
+Rendered fog is cached as 512px world-anchored
+tiles per zoom (an LRU of 96 tiles on desktop, 32 on mobile, or enough for one overscanned view
+if larger): only tiles under the viewport render
 synchronously, overscan tiles fill in during idle time, and pans or returning to a visited zoom only
 composite cached bitmaps. Until an overscan tile renders, it shows the previous fog bitmap shifted or
 scaled into place (like Leaflet's own tile zoom) rather than a solid fog block, so edges never flash, and
-an unchanged view (such as the `moveend` that follows `zoomend`) is not recomposited. Any data change drops the cache, and bursts of changes coalesce into one frame.
+an unchanged view (such as the `moveend` that follows `zoomend`) is not recomposited. Hidden map
+pages pause queued tile work, which resumes when returning. Tiles share one derived fog scene per
+data version instead of repeatedly scanning the passport. Any data change drops the cache, and
+bursts of changes coalesce into one frame. Resizing to unchanged dimensions preserves the bitmap;
+actual size changes release the obsolete backup.
 Home/discovery pulse frames repaint only the visible viewport. Fog polygon paths are cached at the current zoom, translated during pans and culled outside
 the overscanned canvas; routes and auras are also culled without changing their reveal extents.
 These optimizations do not change saved records, achievement rules or geography snapshots.
+
+Travel-stat and fog-county cache keys use weakly held geometry identities rather than serializing
+every route point on each check. Saved route arrays and polygon objects must be **replaced**, not
+edited in place, when their geometry changes; this also keeps the existing fog-projection and
+route-circle caches correct. Photo counts invalidate statistics independently of large photo
+payloads, so Focal Length updates after a journal save.
+
+Travel Journal mini-maps are created only within 200 CSS pixels of the viewport and released when
+scrolled away, switching to the global atlas, or leaving Travel Journal. Browsers without
+IntersectionObserver retain the layout/resize fallback. Resizes reuse precomputed map bounds.
+The global atlas caches projected countries, graticules and route paths for up to six map
+area/title layouts; changing colors, years or text reuses that geography without changing route
+geometry, export dimensions or transit-mode styling. Country fills still reflect current progress.
+
+Tailwind is compiled ahead of time into the checked-in `cartovella/styles.css`; no browser-side
+compiler or DOM-watching CSS generator runs in production. After changing HTML/JavaScript utility
+classes, run `npm run build:css` in `cartovella` and commit the generated stylesheet. See
+[Cartovella development instructions](cartovella/README.md#development-and-tests).
 
 Cartovella maps NPS and international destination **coordinates**, not park boundaries, to the
 [RESOLVE Ecoregions 2017](https://ecoregions.appspot.com/) polygons, an update of WWF's 2001

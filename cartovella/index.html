@@ -7,7 +7,7 @@
   <meta name="description" content="Cartovella is a gamified fog-of-war travel atlas and journal. Log trips, collect achievements, and reveal the world as you explore.">
   <link rel="icon" type="image/png" href="assets/logos/simplified-cartovella-favicon.png?v=2">
   <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="./styles.css?v=20261108-performance-v1">
   <!-- Leaflet CSS & JS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -20,30 +20,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Cinzel+Decorative:wght@700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/duotone/style.css">
   
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          fontFamily: {
-            cinzel: ['"Cinzel"', 'serif'],
-            cinzelDeco: ['"Cinzel Decorative"', 'serif'],
-            sans: ['"Inter"', 'system-ui', 'sans-serif'],
-          },
-          colors: {
-            parchment: '#dfd2b5',
-            parchmentDark: '#121624',
-            parchmentBorder: '#2e3b5e',
-            arcane: '#38bdf8',
-            gold: '#fbbf24',
-            goldGlow: '#f59e0b',
-            fogDark: '#05070d',
-            emeraldExp: '#10b981'
-          }
-        }
-      }
-    }
-  </script>
   <script>
     const PHOSPHOR_ICONS = {
       compass: { className: 'ph-compass', color: '#fac60b', secondaryColor: '#124777' },
@@ -1701,15 +1677,15 @@
     </section>
   </div>
 
-  <script src="./nps-catalog.js?v=20261105-global-route-customization-v1"></script>
-  <script src="./national-parks-scratch.js?v=20261105-global-route-customization-v1"></script>
-  <script src="./international-parks.js?v=20261105-global-route-customization-v1"></script>
-  <script src="./ecoregions.js?v=20261105-global-route-customization-v1"></script>
-  <script src="./coordinate-lookups.js?v=20261105-global-route-customization-v1"></script>
-  <script src="./micro-states.js?v=20261105-global-route-customization-v1"></script>
-  <script src="./travel-ledger.js?v=20261105-global-route-customization-v1"></script>
-  <script src="./character-creator.js?v=20261105-global-route-customization-v1"></script>
-  <script src="./rarity-config.js?v=20261105-global-route-customization-v1"></script>
+  <script src="./nps-catalog.js?v=20261108-performance-v1"></script>
+  <script src="./national-parks-scratch.js?v=20261108-performance-v1"></script>
+  <script src="./international-parks.js?v=20261108-performance-v1"></script>
+  <script src="./ecoregions.js?v=20261108-performance-v1"></script>
+  <script src="./coordinate-lookups.js?v=20261108-performance-v1"></script>
+  <script src="./micro-states.js?v=20261108-performance-v1"></script>
+  <script src="./travel-ledger.js?v=20261108-performance-v1"></script>
+  <script src="./character-creator.js?v=20261108-performance-v1"></script>
+  <script src="./rarity-config.js?v=20261108-performance-v1"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -3394,13 +3370,14 @@
 
     function calculateStats() {
       const key = travelStateKey();
+      const photoCount = AppState.expeditions.reduce((count, trip) => count + (trip.photos?.length || 0), 0);
       const datasets = [PARKS, BIOMES, coordinateIndexes, worldGeoJson, countyGeoJson, microStateCatalog,
         usaRegionGeoJson, worldSubdivisionGeoJson, internationalCountyGeoJson, microStateGeoJson,
         npsBoundariesByCode];
-      if (statsCache && statsCache.key === key &&
+      if (statsCache && statsCache.key === key && statsCache.photoCount === photoCount &&
           datasets.every((dataset, index) => dataset === statsCache.datasets[index])) return statsCache.value;
       const value = computeStats();
-      statsCache = { key, datasets, value };
+      statsCache = { key, datasets, photoCount, value };
       return value;
     }
 
@@ -3640,11 +3617,23 @@
       };
     }
 
+    const travelGeometryIds = new WeakMap();
+    let nextTravelGeometryId = 0;
+    // Saved geometry is replaced on edits, just like the projection and route-circle caches.
+    function travelGeometryKey(geometry) {
+      if (!geometry || typeof geometry !== 'object') return geometry;
+      if (!travelGeometryIds.has(geometry)) travelGeometryIds.set(geometry, ++nextTravelGeometryId);
+      return [travelGeometryIds.get(geometry), geometry.length];
+    }
+
     function travelStateKey() {
       return JSON.stringify([
         AppState.homeBase, AppState.pins, AppState.parkRarity, AppState.regions, AppState.counties,
-        AppState.customPois, AppState.statusOverrides, AppState.clearedPolygons, AppState.routes,
-        AppState.expeditions.map(({ journal, photos, ...travel }) => travel)
+        AppState.customPois, AppState.statusOverrides, AppState.clearedPolygons.map(travelGeometryKey),
+        AppState.routes.map(travelGeometryKey),
+        AppState.expeditions.map(({ journal, photos, routeCoords, routeLegs, ...travel }) =>
+          [travel, travelGeometryKey(routeCoords), routeLegs?.map(({ routeCoords, ...leg }) =>
+            [leg, travelGeometryKey(routeCoords)])])
       ]);
     }
 
@@ -3986,6 +3975,10 @@
     function resizeFogCanvas() {
       if (!fogCanvas || !map || AppState.currentTab !== 'map') return;
       const size = map.getSize();
+      if (fogCanvas.width === size.x * 3 && fogCanvas.height === size.y * 3 &&
+          fogPadding.x === size.x && fogPadding.y === size.y) return;
+      fogComposite = null;
+      fogBackup = null;
       // Overscan keeps the viewport covered while the bitmap scales down during zoom-out.
       fogPadding = { x: size.x, y: size.y };
       fogCanvas.width = size.x * 3;
@@ -4059,6 +4052,29 @@
     let fogTileQueue = [];
     let fogTileIdle = null;
     let fogComposite = null;
+    let fogSceneCache = null;
+
+    function prepareFogScene() {
+      const waterRoutes = [];
+      const flightStops = [];
+      const routes = [...AppState.routes];
+      AppState.expeditions.forEach(exp => {
+        const waterLegs = exp.routeLegs?.filter(leg => ['ferry', 'flight'].includes(leg.mode));
+        TravelLedger.waterFogRoutes(exp).forEach((route, index) => {
+          const isFlight = waterLegs ? waterLegs[index].mode === 'flight' : exp.transitTags.includes('flight');
+          waterRoutes.push(isFlight ? flightFogRoute(route) : route);
+        });
+        flightStops.push(...TravelLedger.flightStops(exp));
+        routes.push(...TravelLedger.fogRoutes(exp));
+      });
+      return {
+        oceanOpacity: oceanFogOpacity(), waterRoutes, flightStops, routes,
+        parks: PARKS.filter(park => TravelLedger.clearsFog(AppState.pins[park.id])),
+        countyIds: Object.entries(countyFogStatuses(false, false))
+          .filter(([id, status]) => TravelLedger.clearsFog(status) && countyFeaturesById[id])
+          .map(([id]) => id)
+      };
+    }
 
     function fogTilesAvailable() {
       return typeof OffscreenCanvas !== 'undefined' && !!map?.project && !!map.getSize;
@@ -4077,7 +4093,7 @@
       const mobile = typeof navigator !== 'undefined' &&
         (/iPhone|iPad|iPod|Android/.test(navigator.userAgent) || navigator.maxTouchPoints > 1);
       // ~1 MB per tile; iOS caps total canvas memory, desktops can keep several zoom levels warm.
-      return Math.max(mobile ? 64 : 384, Math.ceil(perView * 1.5));
+      return Math.max(mobile ? 32 : 96, perView);
     }
 
     function fogWorldOrigin(zoom) {
@@ -4087,6 +4103,7 @@
 
     function drawFogOfWar() {
       fogTileVersion++;
+      fogSceneCache = null;
       fogTiles.clear();
       fogTileQueue = [];
       // Coalesce bursts of data changes (startup loads, imports) into one composite per frame.
@@ -4121,6 +4138,10 @@
     }
 
     function renderFogTile(zoom, i, j) {
+      if (!fogSceneCache || fogSceneCache.version !== fogTileVersion ||
+          fogSceneCache.politicalSize !== politicalCache.size) {
+        fogSceneCache = { version: fogTileVersion, politicalSize: politicalCache.size, scene: prepareFogScene() };
+      }
       const canvas = new OffscreenCanvas(FOG_TILE_SIZE, FOG_TILE_SIZE);
       const origin = fogWorldOrigin(zoom);
       const saved = [fogCtx, fogCanvas, fogPadding];
@@ -4128,7 +4149,7 @@
       fogCanvas = { width: FOG_TILE_SIZE, height: FOG_TILE_SIZE };
       fogPadding = { x: -i * FOG_TILE_SIZE - origin.x, y: -j * FOG_TILE_SIZE - origin.y };
       try {
-        renderFogLayer();
+        renderFogLayer(fogSceneCache.scene);
       } finally {
         [fogCtx, fogCanvas, fogPadding] = saved;
       }
@@ -4162,7 +4183,10 @@
       const center = { x: -origin.x + size.x / 2, y: -origin.y + size.y / 2 };
       const prev = fogComposite;
       if (prev && prev.version === fogTileVersion && prev.zoom === zoom && prev.ox === origin.x &&
-          prev.oy === origin.y && prev.padX === fogPadding.x && prev.padY === fogPadding.y) return;
+          prev.oy === origin.y && prev.padX === fogPadding.x && prev.padY === fogPadding.y) {
+        scheduleFogTileWork();
+        return;
+      }
       resetFogContext();
       // Unrendered tiles show the previous bitmap (shifted/scaled) instead of a solid fog block that pops later.
       const seeded = seedFogFromPrevious(prev, zoom, origin);
@@ -4224,6 +4248,7 @@
       if (fogTileIdle !== null || !fogTileQueue.length) return;
       const run = () => {
         fogTileIdle = null;
+        if (AppState.currentTab !== 'map' || AppState.mode === 'classic') return;
         const started = performance.now();
         while (fogTileQueue.length && performance.now() - started < 10) {
           const job = fogTileQueue.shift();
@@ -4251,7 +4276,7 @@
         : setTimeout(run, 16);
     }
 
-    function renderFogLayer() {
+    function renderFogLayer(scene) {
       const width = fogCanvas.width;
       const height = fogCanvas.height;
 
@@ -4259,32 +4284,21 @@
       fogCtx.setTransform(1, 0, 0, 1, 0, 0);
       fogCtx.clearRect(0, 0, width, height);
       if (AppState.mode === 'classic') return;
-
-      // Optional fog toggle:
-      // const isFogActive = document.getElementById('fogToggleCheckbox').checked;
-      // if (!isFogActive) return;
+      scene ||= prepareFogScene();
 
       // Keep unexplored terrain nearly opaque while retaining the faintest map silhouette.
       fogCtx.globalCompositeOperation = 'source-over';
       fogCtx.globalAlpha = 1;
       fogCtx.shadowBlur = 0;
       fogCtx.shadowColor = 'transparent';
-      const oceanOpacity = oceanFogOpacity();
+      const oceanOpacity = scene.oceanOpacity;
       fogCtx.fillStyle = `rgba(235, 239, 245, ${oceanOpacity})`;
       fogCtx.fillRect(0, 0, width, height);
       fogCtx.setTransform(1, 0, 0, 1, fogPadding.x, fogPadding.y);
       if (worldGeoJson?.length) {
         fogCtx.globalCompositeOperation = 'destination-out';
-        let waterRoutesDrawn = false;
-        AppState.expeditions.forEach(exp => {
-          const waterLegs = exp.routeLegs?.filter(leg => ['ferry', 'flight'].includes(leg.mode));
-          TravelLedger.waterFogRoutes(exp).forEach((route, index) => {
-            const isFlight = waterLegs ? waterLegs[index].mode === 'flight' : exp.transitTags.includes('flight');
-            punchFogRoute(isFlight ? flightFogRoute(route) : route, 160.934);
-            waterRoutesDrawn = true;
-          });
-        });
-        if (oceanOpacity < 0.99 || waterRoutesDrawn) paintLandFogStencil();
+        scene.waterRoutes.forEach(route => punchFogRoute(route, 160.934));
+        if (oceanOpacity < 0.99 || scene.waterRoutes.length) paintLandFogStencil();
       }
       fogCtx.shadowBlur = 0;
       fogCtx.shadowColor = 'transparent';
@@ -4302,7 +4316,7 @@
       }
 
       // Punch out holes for all visited parks & pins
-      PARKS.forEach(p => {
+      scene.parks.forEach(p => {
         const status = AppState.pins[p.id];
         const pulse = TravelLedger.isVisited(status) ? discoveryPulseScale(`park:${p.id}`) : 1;
         fogCtx.globalAlpha = pulse;
@@ -4349,24 +4363,19 @@
         fogCtx.globalAlpha = 1;
       });
 
-      punchCountyFog(Object.entries(countyFogStatuses(false, false))
-        .filter(([id, status]) => TravelLedger.clearsFog(status) && countyFeaturesById[id])
-        .map(([id]) => id));
+      punchCountyFog(scene.countyIds);
 
-      AppState.expeditions.forEach(exp => TravelLedger.flightStops(exp).forEach(([lat, lng]) => {
+      scene.flightStops.forEach(([lat, lng]) => {
         const point = fogLayerPoint([lat, lng]);
         const radius = calculatePixelRadius(lat, FLIGHT_STOP_FOG_RADIUS_KM);
         if (point.x + radius >= -fogPadding.x && point.x - radius <= width - fogPadding.x &&
             point.y + radius >= -fogPadding.y && point.y - radius <= height - fogPadding.y) {
           punchFogAura(point.x, point.y, radius, 0.95);
         }
-      }));
+      });
 
       AppState.clearedPolygons.forEach(geometry => punchFogPolygon(geometry));
-      AppState.routes.forEach(route => punchFogRoute(route));
-      AppState.expeditions.forEach(exp => {
-        TravelLedger.fogRoutes(exp).forEach(route => punchFogRoute(route));
-      });
+      scene.routes.forEach(route => punchFogRoute(route));
 
       // Reset composite operation to normal
       fogCtx.globalCompositeOperation = 'source-over';
@@ -4882,6 +4891,9 @@
     }
 
     function updateParkMarkerStyle(marker, status) {
+      if (marker.cartovellaStatus === status && marker.cartovellaStyled) return;
+      marker.cartovellaStatus = status;
+      marker.cartovellaStyled = true;
       const visited = TravelLedger.isVisited(status);
       const color = TravelLedger.colors[status] || '#475569';
       marker.setRadius(visited ? 8 : 6);
@@ -4895,13 +4907,14 @@
 
     function createParkMarker(p, status) {
       const marker = L.circleMarker([p.lat, p.lng], { pane: 'destinationMarkerPane' }).addTo(map);
+      marker.cartovellaDestination = p;
       updateParkMarkerStyle(marker, status);
       marker.bindTooltip(`<b>${escapeHtml(p.name)}</b>`, {
         direction: 'top',
         offset: [0, -8],
         className: 'rpg-tooltip'
       });
-      marker.bindPopup(() => createPopupContent(p), { maxWidth: 280 });
+      marker.bindPopup(() => createPopupContent(marker.cartovellaDestination), { maxWidth: 280 });
       marker.on('click', () => {
         if (expeditionPicking) {
           addExpeditionStop(p.custom ? 'poi' : 'park', p.id);
@@ -4933,6 +4946,7 @@
           marker = createParkMarker(p, status);
           leafletMarkers[key] = marker;
         } else {
+          marker.cartovellaDestination = p;
           updateParkMarkerStyle(marker, status);
         }
       });
@@ -5694,18 +5708,13 @@
           !feature.geometry || feature.properties.BIOME_NUM !== 14)) {
           throw new Error('Incomplete detailed mangrove geography.');
         }
-        // Index one atlas per task so startup input is never blocked by a single ~250ms indexing pass.
         const indexes = {};
         for (const [key, source] of [['countries', worldGeoJson], ['states', usaRegionGeoJson],
           ['counties', [...countyGeoJson, ...internationalCountyGeoJson]], ['subdivisions', worldSubdivisionGeoJson],
-          ['microStates', microStateGeoJson || []], ['ecoregions', features]]) {
-          indexes[key] = CoordinateLookups.indexFeatures(source, d3);
-          await yieldToMain();
-          if (loadId !== coordinateLoadId) return;
-        }
-        indexes.mangroves = [];
-        for (const feature of mangroveFeatures) {
-          indexes.mangroves.push(...CoordinateLookups.indexFeatures([feature], d3));
+          ['microStates', microStateGeoJson || []], ['ecoregions', features], ['mangroves', mangroveFeatures]]) {
+          indexes[key] = await CoordinateLookups.indexFeaturesAsync(source, d3, yieldToMain,
+            () => loadId === coordinateLoadId);
+          if (!indexes[key]) return;
           await yieldToMain();
           if (loadId !== coordinateLoadId) return;
         }
@@ -5854,7 +5863,7 @@
         revealHome ? AppState.homeBase : null, AppState.pins,
         AppState.customPois.map(poi => [poi.id, poi.status, poi.political]),
         AppState.expeditions.map(exp => [exp.parkIds, exp.customPoiIds, exp.countyIds,
-          exp.routeLegs ? exp.routeCoords : null, exp.routeLegs?.map(leg => leg.countyIds)]),
+          exp.routeLegs ? travelGeometryKey(exp.routeCoords) : null, exp.routeLegs?.map(leg => leg.countyIds)]),
         resolveCoordinates ? null : politicalCache.size
       ]);
       const cacheKey = resolveCoordinates ? includeHome : 'fog';
@@ -8133,6 +8142,7 @@
         AppState.mode = 'classic';
         saveState();
       }
+      if (AppState.currentTab === 'travel' && tabId !== 'travel') destroyTravelLogMaps();
       AppState.currentTab = tabId;
       updateHeaderNavigation();
       if (tabId === 'map') renderCountyHitboxes();
@@ -8602,7 +8612,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261105-global-route-customization-v1"></script>
+  <script src="./expedition-ui.js?v=20261108-performance-v1"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);

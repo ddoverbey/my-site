@@ -273,9 +273,19 @@ check('character customization appears above the stage and progress summary', ()
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 10);
-  assert.ok(sources.every(source => source.endsWith('?v=20261105-global-route-customization-v1')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261108-performance-v1')));
   assert.ok(sources.some(source => source.startsWith('./character-creator.js?')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
+});
+await checkAsync('production styles are precompiled and include runtime-created UI utilities', async () => {
+  const styles = await readFile(new URL('./styles.css', import.meta.url), 'utf8');
+  assert.ok(html.includes('./styles.css?v=20261108-performance-v1'));
+  assert.ok(!html.includes('cdn.tailwindcss.com'));
+  assert.ok(!html.includes('tailwind.config'));
+  assert.ok(styles.length < 100000);
+  for (const utility of ['.hidden{display:none}', '.transition-colors{', '.font-sans{', '.text-sky-200{']) {
+    assert.ok(styles.includes(utility), `Missing utility ${utility}`);
+  }
 });
 check('legacy app URL redirects to Cartovella while preserving share-link query and hash', () => {
   assert.match(legacyRoute, /window\.location\.replace\(`\.\.\/cartovella\/\$\{window\.location\.search\}\$\{window\.location\.hash\}`\)/);
@@ -3355,7 +3365,8 @@ check('header save status shows relative cloud-save age only for signed-in explo
 });
 check('progressive oceans and water-only corridors use a cached combined land stencil', () => {
   assert.ok(html.includes('TravelLedger.waterFogRoutes(exp)'));
-  assert.ok(html.includes('punchFogRoute(isFlight ? flightFogRoute(route) : route, 160.934)'));
+  assert.ok(html.includes('waterRoutes.push(isFlight ? flightFogRoute(route) : route)'));
+  assert.ok(html.includes('scene.waterRoutes.forEach(route => punchFogRoute(route, 160.934))'));
   assert.ok(html.includes('function oceanFogOpacity()'));
   assert.ok(html.includes('function paintLandFogStencil()'));
   assert.ok(!html.includes('function hasUnlockedOcean'));
@@ -3401,6 +3412,28 @@ check('fog canvas overscan is positioned in a Leaflet pane for shared map transf
   assert.match(html, /map\.getPane\('fogCanvasPane'\)\.appendChild\(fogCanvas\)/);
   assert.match(html, /map\.on\('zoomstart', \(\) => \{ fogZoomAnimating = true; \}\)/);
   assert.match(html, /zoomAnimationThreshold:\s*1/);
+});
+check('unchanged fog canvas dimensions retain the bitmap and size changes release the backup', () => {
+  const result = vm.runInContext(`(()=>{
+    const saved = {map, fogCanvas, fogPadding, fogComposite, fogBackup};
+    let writes = 0, width = 2400, height = 1800;
+    try {
+      map = {...map, getSize:()=>({x:800,y:600})};
+      fogCanvas = {style:{},
+        get width(){return width;}, set width(value){writes++;width=value;},
+        get height(){return height;}, set height(value){writes++;height=value;}};
+      fogPadding = {x:800,y:600};
+      fogComposite = {version:1}; fogBackup = {};
+      resizeFogCanvas();
+      const preserved = writes === 0 && fogComposite !== null && fogBackup !== null;
+      map.getSize = ()=>({x:900,y:600});
+      resizeFogCanvas();
+      return {preserved, writes, cleared:fogComposite === null && fogBackup === null, width};
+    } finally {
+      ({map,fogCanvas,fogPadding,fogComposite,fogBackup} = saved);
+    }
+  })()`, context);
+  assert.deepEqual(JSON.parse(JSON.stringify(result)), {preserved:true, writes:2, cleared:true, width:2700});
 });
 check('fog canvas expands only when a zoom-out would otherwise expose its edges', () => {
   const saved = vm.runInContext('({ map, fogCanvas, fogCtx, fogPadding, fogCanvasExpandedForZoom })', context);
@@ -3529,6 +3562,18 @@ check('all pin filters work and None removes previously rendered markers', () =>
   assert.equal(context.removedMarkers.length, 4);
   assert.ok(context.markerOptions.every(options => options.pane === 'destinationMarkerPane'));
   assert.equal(vm.runInContext('AppState.pins.visited', context), 'v');
+});
+check('marker styling does no redundant canvas work when its status is unchanged', () => {
+  let radii=0,styles=0;
+  context.performanceMarker={setRadius(){radii++;},setStyle(){styles++;}};
+  try {
+    vm.runInContext('updateParkMarkerStyle(performanceMarker,undefined);updateParkMarkerStyle(performanceMarker,undefined)',context);
+    assert.equal(radii,1);
+    assert.equal(styles,1);
+    vm.runInContext("updateParkMarkerStyle(performanceMarker,'v');updateParkMarkerStyle(performanceMarker,'v')",context);
+    assert.equal(radii,2);
+    assert.equal(styles,2);
+  } finally {delete context.performanceMarker;}
 });
 context.fogOperations.length = 0;
 vm.runInContext(`
@@ -5292,6 +5337,45 @@ check('journal text and photos are excluded from the per-frame travel stats cach
   assert.equal(result.unchanged, true);
   assert.equal(result.travelChanged, true);
 });
+check('large route keys stay compact and invalidate on geometry replacement and appended points', () => {
+  const result = vm.runInContext(`(()=>{
+    const saved = AppState.expeditions;
+    const route = Array.from({length:20000}, (_, i) => [40 + i / 100000, -110 + i / 100000]);
+    try {
+      AppState.expeditions = Array.from({length:20}, (_, i) => ({
+        id:'perf-' + i, routeCoords:route, routeLegs:[{mode:'road', routeCoords:route}]
+      }));
+      const before = travelStateKey();
+      AppState.expeditions[0].routeCoords = route.slice();
+      const after = travelStateKey();
+      route.push([41,-109]);
+      return {length:before.length, replacement:before !== after, append:after !== travelStateKey()};
+    } finally { AppState.expeditions = saved; }
+  })()`, context);
+  assert.ok(result.length < 10000, 'cache checks must not serialize hundreds of thousands of coordinates');
+  assert.equal(result.replacement, true);
+  assert.equal(result.append, true);
+});
+check('photo counts invalidate statistics without serializing photo payloads', () => {
+  const result = vm.runInContext(`(()=>{
+    const saved = {computeStats, statsCache, trips:AppState.expeditions};
+    let calls = 0;
+    try {
+      computeStats = () => ({calls:++calls});
+      statsCache = null;
+      AppState.expeditions = [{id:'photo-test', photos:[]}];
+      const before = calculateStats();
+      const cached = calculateStats();
+      AppState.expeditions[0].photos = ['data:image/jpeg;base64,YWJjZA=='];
+      const after = calculateStats();
+      return {reused:before === cached, updated:before !== after, calls};
+    } finally {
+      computeStats = saved.computeStats; statsCache = saved.statsCache;
+      AppState.expeditions = saved.trips;
+    }
+  })()`, context);
+  assert.deepEqual(JSON.parse(JSON.stringify(result)), {reused:true, updated:true, calls:2});
+});
 check('journal saves are transactional, retain unsaved text on quota failure, and survive Passport reloads', () => {
   const snapshot = vm.runInContext('JSON.stringify(passportPayload())', context);
   const viewOnly = vm.runInContext('AppState.viewOnly', context);
@@ -5435,6 +5519,49 @@ check('hidden mini-maps wait for layout and refit route bounds without animation
     context.ResizeObserver = previousObserver;
     delete host.getBoundingClientRect;
     vm.runInContext(`AppState.expeditions=${snapshot};renderExpeditionHistory()`, context);
+  }
+});
+check('travel mini-maps are created near the viewport, released offscreen and disconnected on teardown', () => {
+  const previousL = context.L, previousObserver = context.IntersectionObserver;
+  let callback, observed = [], created = 0, removed = 0, disconnected = 0;
+  context.IntersectionObserver = class {
+    constructor(handler, options) {callback=handler; assert.equal(options.rootMargin,'200px');}
+    observe(target) {observed.push(target);}
+    disconnect() {disconnected++;}
+  };
+  context.L = {
+    map() {created++; return {remove(){removed++;}, invalidateSize(){}, fitBounds(){}, setView(){}};},
+    tileLayer:()=>({addTo(){}}), latLngBounds:coords=>coords,
+    polyline:()=>({addTo(){}}), circleMarker:()=>({addTo(){}})
+  };
+  try {
+    vm.runInContext(`
+      globalThis.lazyMapSaved={trips:AppState.expeditions,tab:AppState.currentTab,open:globalRoutesOpen};
+      AppState.currentTab='travel';globalRoutesOpen=false;
+      AppState.expeditions=Array.from({length:20},(_,i)=>({...AppState.expeditions[0],id:'lazy-'+i}));
+      renderExpeditionHistory();
+    `,context);
+    assert.equal(created,0);
+    assert.equal(observed.length,20);
+    observed.forEach((host,index)=>{host.id=`mini-map-lazy-${index}`;});
+    callback([{target:observed[0],isIntersecting:true},{target:observed[1],isIntersecting:true}]);
+    assert.equal(created,2);
+    callback([{target:observed[0],isIntersecting:false}]);
+    assert.equal(removed,1);
+    assert.equal(vm.runInContext('Object.keys(travelLogMaps).length',context),1);
+    callback([{target:observed[0],isIntersecting:true}]);
+    assert.equal(created,3);
+    vm.runInContext('destroyTravelLogMaps()',context);
+    assert.equal(disconnected,1);
+    assert.equal(removed,3);
+  } finally {
+    context.L=previousL;
+    if (previousObserver === undefined) delete context.IntersectionObserver;
+    else context.IntersectionObserver=previousObserver;
+    vm.runInContext(`
+      AppState.expeditions=lazyMapSaved.trips;AppState.currentTab=lazyMapSaved.tab;
+      globalRoutesOpen=lazyMapSaved.open;delete globalThis.lazyMapSaved;
+    `,context);
   }
 });
 check('saved and imported road/AWD legs reveal entire crossed counties, including land far from the route', () => {
@@ -7813,6 +7940,8 @@ check('fog tiles render the viewport first, fill overscan when idle, survive pan
   try {
     vm.runInContext(`
       globalThis.tileSaved={map,fogCtx,fogPadding,PARKS,worldGeoJson,state:Object.fromEntries(['currentTab','mode','homeBase','expeditions','routes','clearedPolygons','counties','customLocations'].map(k=>[k,AppState[k]])),w:fogCanvas.width,h:fogCanvas.height};
+      tileSaved.prepareFogScene=prepareFogScene;tileSaved.sceneCalls=0;
+      prepareFogScene=()=>{tileSaved.sceneCalls++;return tileSaved.prepareFogScene();};
       AppState.currentTab='map';AppState.mode='rpg';AppState.homeBase=null;AppState.expeditions=[];AppState.routes=[];
       AppState.clearedPolygons=[];AppState.counties={};AppState.customLocations=[];
       PARKS=[];worldGeoJson=null;fogZoomAnimating=false;fogDrawFrame=null;homeAuraPulseStarted=null;discoveryPulses.clear();
@@ -7822,10 +7951,16 @@ check('fog tiles render the viewport first, fill overscan when idle, survive pan
     assert.equal(tilesMade, 0, 'data changes coalesce into the next frame');
     frame();
     assert.equal(tilesMade, 4, 'only the four tiles under the viewport render synchronously');
+    assert.equal(vm.runInContext('tileSaved.sceneCalls',context),1,'all viewport tiles share one derived scene');
     assert.equal(main.filter(op => op[0] === 'drawImage').length, 4);
     assert.equal(main.filter(op => op[0] === 'fillRect').length, 8, 'overscan shows placeholder fog');
+    vm.runInContext("AppState.currentTab='travel'",context);
+    idle();
+    assert.equal(tilesMade,4,'hidden pages pause queued fog work');
+    vm.runInContext("AppState.currentTab='map';showFog()",context);
     idle();
     assert.equal(tilesMade, 12);
+    assert.equal(vm.runInContext('tileSaved.sceneCalls',context),1,'idle overscan also reuses the scene');
     assert.equal(main.filter(op => op[0] === 'drawImage').length, 12);
     panX = 512;
     main.length = 0;
@@ -7854,12 +7989,14 @@ check('fog tiles render the viewport first, fill overscan when idle, survive pan
     vm.runInContext('drawFogOfWar()', context);
     frame();
     assert.equal(tilesMade - madeBeforeChange, 4, 'a data change re-renders the visible tiles');
+    assert.equal(vm.runInContext('tileSaved.sceneCalls',context),2,'data changes invalidate scene derivation');
   } finally {
     Object.assign(context, { requestAnimationFrame: saved.raf, requestIdleCallback: saved.ric, OffscreenCanvas: saved.off });
     if (!saved.off) delete context.OffscreenCanvas;
     if (!saved.ric) delete context.requestIdleCallback;
     vm.runInContext(`
       ({map,fogCtx,fogPadding,PARKS,worldGeoJson}=tileSaved);Object.assign(AppState,tileSaved.state);
+      prepareFogScene=tileSaved.prepareFogScene;fogSceneCache=null;
       fogCanvas.width=tileSaved.w;fogCanvas.height=tileSaved.h;fogTiles.clear();fogTileQueue=[];fogTileIdle=null;
       fogComposite=null;fogDrawFrame=null;delete globalThis.tileSaved;
     `, context);
@@ -9290,7 +9427,10 @@ check('Global Route Map renders country and expedition paths and toggles indepen
     showTitle.checked = false;
     showTitle.handlers.change({ currentTarget: showTitle });
     assert.doesNotMatch(element('svgGlobalRoutesMap').innerHTML, /class="global-routes-title-overlay"/);
-    assert.equal(mapFitExtents.at(-1)[0][1], 24, 'the map expands when its title is hidden');
+    const countryPaths = markup => [...markup.matchAll(/<path class="global-country"[^>]* d="([^"]*)"/g)]
+      .map(match => match[1]);
+    assert.deepEqual(countryPaths(element('svgGlobalRoutesMap').innerHTML),countryPaths(svg),
+      'hiding the title restores the original full-size map geometry, including cached views');
     assert.equal(customTitle.disabled, true);
     assert.equal(customTitleWrap.classList.contains('hidden'), true);
     assert.equal(yearTitleWrap.classList.contains('hidden'), true);
@@ -9444,5 +9584,40 @@ check('Global Route Map renders country and expedition paths and toggles indepen
       delete globalThis.routeMapTestSaved;
     `, context);
   }
+});
+check('route atlases reuse projected geography and route paths but invalidate changed views and datasets', () => {
+  const previousD3=context.d3;
+  let fits=0,paths=0;
+  context.d3={
+    ...previousD3,
+    geoNaturalEarth1:()=>({fitExtent(){fits++;return this;}}),
+    geoAlbersUsa:()=>({fitExtent(){fits++;return this;}}),
+    geoPath:()=>()=>`path-${++paths}`,
+    geoGraticule:()=>({})
+  };
+  try {
+    const result=vm.runInContext(`(()=>{
+      const saved={worldGeoJson,globalRouteGeographyCache};
+      try {
+        worldGeoJson=[{type:'Feature',properties:{name:'Test'},geometry:{type:'Polygon',coordinates:[]}}];
+        const before=globalRouteGeography('global','US',worldGeoJson,24);
+        const warm=globalRouteGeography('global','CA',worldGeoJson,24);
+        const title=globalRouteGeography('global','CA',worldGeoJson,54);
+        const route=[[0,0],[1,1],[2,2]];
+        const first=globalRouteLegPath({mode:'road',routeSource:'uploaded',coords:route},before);
+        const repeated=globalRouteLegPath({mode:'road',routeSource:'uploaded',coords:route},before);
+        const changed=globalRouteLegPath({mode:'road',routeSource:'uploaded',coords:route.slice()},before);
+        worldGeoJson=[...worldGeoJson];
+        const dataset=globalRouteGeography('global','CA',worldGeoJson,24);
+        return {reused:before===warm,titleChanged:before!==title,datasetChanged:before!==dataset,
+          routeReused:first===repeated,routeReplaced:first!==changed};
+      } finally {({worldGeoJson,globalRouteGeographyCache}=saved);}
+    })()`,context);
+    assert.deepEqual(JSON.parse(JSON.stringify(result)),{
+      reused:true,titleChanged:true,datasetChanged:true,routeReused:true,routeReplaced:true
+    });
+    assert.equal(fits,3);
+    assert.equal(paths,8,'six background paths and two distinct route geometries');
+  } finally {context.d3=previousD3;}
 });
 console.log(`${checks} checks passed.`);

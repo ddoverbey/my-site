@@ -143,9 +143,48 @@
     });
   }
 
+  async function indexFeaturesAsync(features, geo, yieldToMain, isCurrent = () => true) {
+    const index = [];
+    let started = performance.now();
+    for (const feature of features) {
+      if (!isCurrent()) return null;
+      index.push(...indexFeatures([feature], geo));
+      if (performance.now() - started >= 8) {
+        await yieldToMain();
+        started = performance.now();
+      }
+    }
+    return isCurrent() ? index : null;
+  }
+
+  const spatialIndexes = new WeakMap();
+  const latitudeBand = latitude => Math.min(35, Math.max(0, Math.floor((latitude + 90) / 5)));
+  const longitudeBand = longitude => Math.min(71, Math.max(0, Math.floor((longitude + 180) / 5)));
+
+  function spatialCandidates(index, lat, lng) {
+    let cached = spatialIndexes.get(index);
+    if (!cached || cached.length !== index.length) {
+      const cells = Array.from({ length: 36 * 72 }, () => []);
+      for (const entry of index) {
+        const [[west, south], [east, north]] = entry.bounds;
+        const westBand = longitudeBand(west), eastBand = longitudeBand(east);
+        const ranges = west <= east ? [[westBand, eastBand]] :
+          westBand === eastBand ? [[0, 71]] : [[0, eastBand], [westBand, 71]];
+        for (let row = latitudeBand(south); row <= latitudeBand(north); row++) {
+          for (const [start, end] of ranges) {
+            for (let column = start; column <= end; column++) cells[row * 72 + column].push(entry);
+          }
+        }
+      }
+      cached = { length: index.length, cells };
+      spatialIndexes.set(index, cached);
+    }
+    return cached.cells[latitudeBand(lat) * 72 + longitudeBand(lng)];
+  }
+
   function findContaining(index, lat, lng, geoContains) {
     validateCoordinates(lat, lng);
-    return index.filter(({ feature, bounds: [[west, south], [east, north]] }) =>
+    return spatialCandidates(index, lat, lng).filter(({ feature, bounds: [[west, south], [east, north]] }) =>
       lat >= south && lat <= north &&
       (west <= east ? lng >= west && lng <= east : lng >= west || lng <= east) &&
       geoContains(feature, [lng, lat])).map(item => item.feature);
@@ -841,7 +880,7 @@
   }
 
   const api = {
-    validateCoordinates, normalizeFeature, indexFeatures, findContaining, politicalRegion, biomeRegion,
+    validateCoordinates, normalizeFeature, indexFeatures, indexFeaturesAsync, findContaining, politicalRegion, biomeRegion,
     predominantBiome,
     validCountyId, validSubdivisionId, subdivisionFeatures,
     firstBoundaryIntersection, lookupRoadRoute, lookupWalkingRoute, routeCountyIds,

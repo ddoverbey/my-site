@@ -1309,6 +1309,7 @@ function clearExpeditionRoute() {
 
 let travelLogMaps = {};
 let travelLogResizeObserver = null;
+let travelLogVisibilityObserver = null;
 const openTravelLogs = new Set();
 const travelJournalDrafts = new Map();
 const confirmingTravelLogDeletion = new Set();
@@ -1524,6 +1525,8 @@ function travelLogCountyIds(exp) {
 }
 
 function destroyTravelLogMaps() {
+  travelLogVisibilityObserver?.disconnect();
+  travelLogVisibilityObserver = null;
   travelLogResizeObserver?.disconnect();
   travelLogResizeObserver = null;
   Object.values(travelLogMaps).forEach(instance => {
@@ -1657,6 +1660,16 @@ function renderTravelLogMiniMap(exp) {
     return;
   }
   if (host.getBoundingClientRect && !host.getBoundingClientRect().width) return;
+  if (travelLogMaps[exp.id]) {
+    const miniMap = travelLogMaps[exp.id];
+    miniMap.invalidateSize({ animate: false, pan: false });
+    if (miniMap.cartovellaBounds) {
+      miniMap.fitBounds(miniMap.cartovellaBounds, { padding: [15, 15], maxZoom: 10, animate: false });
+    } else {
+      miniMap.setView(miniMap.cartovellaCenter, 8, { animate: false });
+    }
+    return;
+  }
   const route = (exp.routeCoords || []).filter(travelLogPoint);
   const stops = (exp.routeStops || []).map(stop => stop?.coords).filter(travelLogPoint);
   const legs = travelLogLegs(exp);
@@ -1669,17 +1682,13 @@ function renderTravelLogMiniMap(exp) {
     host.textContent = 'No route coordinates recorded.';
     return;
   }
-  if (travelLogMaps[exp.id]) {
-    travelLogMaps[exp.id].invalidateSize({ animate: false, pan: false });
-    if (points.length > 1) travelLogMaps[exp.id].fitBounds(L.latLngBounds(points), { padding: [15, 15], maxZoom: 10, animate: false });
-    else travelLogMaps[exp.id].setView(points[0], 8, { animate: false });
-    return;
-  }
   const miniMap = L.map(`mini-map-${exp.id}`, {
     zoomControl: false, attributionControl: false, dragging: false, scrollWheelZoom: false,
     doubleClickZoom: false, boxZoom: false, keyboard: false, touchZoom: false
   });
   travelLogMaps[exp.id] = miniMap;
+  miniMap.cartovellaBounds = points.length > 1 ? L.latLngBounds(points) : null;
+  miniMap.cartovellaCenter = points[0];
   L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
     maxZoom: 19
   }).addTo(miniMap);
@@ -1699,7 +1708,7 @@ function renderTravelLogMiniMap(exp) {
     points.forEach(coords => L.circleMarker(coords,
       { radius: 6, fillColor: '#10b981', color: '#fff', weight: 2, fillOpacity: 1 }).addTo(miniMap));
   }
-  if (points.length > 1) miniMap.fitBounds(L.latLngBounds(points), { padding: [15, 15], maxZoom: 10, animate: false });
+  if (miniMap.cartovellaBounds) miniMap.fitBounds(miniMap.cartovellaBounds, { padding: [15, 15], maxZoom: 10, animate: false });
   else miniMap.setView(points[0], 8);
 }
 
@@ -1726,6 +1735,65 @@ function routeMapCountryCodesAt(coords, features, cache) {
 function routeMapExpeditionPoints(exp) {
   const stops = (exp.routeStops || []).map(stop => stop?.coords).filter(travelLogPoint);
   return stops.length ? stops : (exp.routeCoords || []).filter(travelLogPoint);
+}
+
+let globalRouteGeographyCache = null;
+
+function globalRouteGeography(scope, homeCountryCode, features, mapTop) {
+  if (!globalRouteGeographyCache || globalRouteGeographyCache.world !== worldGeoJson) {
+    globalRouteGeographyCache = { world: worldGeoJson, views: new Map() };
+  }
+  const key = `${scope}:${scope === 'global' ? '' : homeCountryCode}:${mapTop}`;
+  const views = globalRouteGeographyCache.views;
+  if (views.has(key)) {
+    const cached = views.get(key);
+    views.delete(key);
+    views.set(key, cached);
+    return cached;
+  }
+  const projection = scope === 'domestic' && homeCountryCode === 'US'
+    ? d3.geoAlbersUsa() : d3.geoNaturalEarth1();
+  if (features.length) {
+    projection.fitExtent([[24, mapTop], [1176, 550]], { type: 'FeatureCollection', features });
+  }
+  const path = d3.geoPath(projection);
+  const geography = {
+    projection, path, routePaths: new WeakMap(),
+    countries: features.filter(feature => feature?.geometry).map(feature => ({
+      name: feature.properties?.name || 'Unknown country', path: path(feature) || ''
+    })),
+    graticule: path(d3.geoGraticule()) || ''
+  };
+  views.set(key, geography);
+  while (views.size > 6) views.delete(views.keys().next().value);
+  return geography;
+}
+
+function globalRouteLegPath(leg, geography) {
+  const key = leg.mode === 'flight' ? `flight:${leg.routeSource}` : leg.routeSource;
+  let cached = geography.routePaths.get(leg.coords);
+  if (!cached || cached.length !== leg.coords.length) {
+    cached = { length: leg.coords.length, paths: new Map() };
+    geography.routePaths.set(leg.coords, cached);
+  }
+  if (cached.paths.has(key)) return cached.paths.get(key);
+  const segments = leg.mode === 'flight' && leg.routeSource === 'direct'
+    ? leg.coords.slice(1).map((point, index) => [leg.coords[index], point])
+    : [leg.coords];
+  const routePath = segments.map(segment => {
+    const isDirect = leg.routeSource === 'direct' && segment.length === 2;
+    const coordinates = leg.mode === 'flight' || isDirect
+      ? (() => {
+        const interpolate = d3.geoInterpolate(
+          [segment[0][1], segment[0][0]], [segment.at(-1)[1], segment.at(-1)[0]]
+        );
+        return Array.from({ length: 25 }, (_, index) => interpolate(index / 24));
+      })()
+      : segment.map(([lat, lng]) => [lng, lat]);
+    return geography.path({ type: 'LineString', coordinates }) || '';
+  }).join('');
+  cached.paths.set(key, routePath);
+  return routePath;
 }
 
 function renderGlobalRoutesMap() {
@@ -1840,21 +1908,17 @@ function renderGlobalRoutesMap() {
         : `Showing ${expeditions.length} expeditions worldwide for ${yearLabel}. Set a home base to enable domestic and continental views.`);
 
   const features = mapFeatures;
-  const collection = { type: 'FeatureCollection', features };
-  const projection = scope === 'domestic' && homeCountryCode === 'US'
-    ? d3.geoAlbersUsa() : d3.geoNaturalEarth1();
   const mapTop = showTitleControl.checked ? 54 : 24;
-  if (features.length) projection.fitExtent([[24, mapTop], [1176, 550]], collection);
-  const path = d3.geoPath(projection);
+  const geography = globalRouteGeography(scope, homeCountryCode, features, mapTop);
+  const { projection } = geography;
   const mapStyle = GLOBAL_ROUTE_MAP_STYLES[globalRoutesAtlasStyle];
   const stats = calculateStats();
   const visitedCountries = new Set(stats.visitedCountries);
-  const countries = features.filter(feature => feature?.geometry).map(feature => {
-    const name = feature.properties?.name || 'Unknown country';
+  const countries = geography.countries.map(({ name, path }) => {
     const fill = visitedCountries.has(name) ? mapStyle.visited : mapStyle.land;
-    return `<path class="global-country" fill="${fill}" stroke="${mapStyle.border}" stroke-width="0.8" d="${path(feature) || ''}"><title>${escapeHtml(name)}</title></path>`;
+    return `<path class="global-country" fill="${fill}" stroke="${mapStyle.border}" stroke-width="0.8" d="${path}"><title>${escapeHtml(name)}</title></path>`;
   }).join('');
-  const graticule = path(d3.geoGraticule()) || '';
+  const graticule = geography.graticule;
   const routes = [];
   const markers = [];
 
@@ -1862,22 +1926,7 @@ function renderGlobalRoutesMap() {
     const title = `${exp.name || 'Expedition'} · ${travelLogDateRange(exp)}`;
     travelLogLegs(exp).forEach(leg => {
       if (!Array.isArray(leg.coords) || leg.coords.length < 2 || !leg.coords.every(travelLogPoint)) return;
-      const segments = leg.mode === 'flight' && leg.routeSource === 'direct'
-        ? leg.coords.slice(1).map((point, index) => [leg.coords[index], point])
-        : [leg.coords];
-      const routePath = segments.map(segment => {
-        const isDirect = leg.routeSource === 'direct' && segment.length === 2;
-        const coordinates = leg.mode === 'flight' || isDirect
-          ? (() => {
-          const interpolate = d3.geoInterpolate(
-            [segment[0][1], segment[0][0]],
-            [segment.at(-1)[1], segment.at(-1)[0]]
-          );
-          return Array.from({ length: 25 }, (_, index) => interpolate(index / 24));
-        })()
-          : segment.map(([lat, lng]) => [lng, lat]);
-        return path({ type: 'LineString', coordinates }) || '';
-      }).join('');
+      const routePath = globalRouteLegPath(leg, geography);
       if (!routePath) return;
       const color = colorModeControl.value === 'mode'
         ? TRAVEL_ROUTE_COLORS[leg.mode] || '#94a3b8'
@@ -1943,7 +1992,7 @@ function setGlobalRoutesView(open) {
   toggle.setAttribute('aria-label', open ? 'Return to Travel Log' : 'Show Route Map');
   toggle.setAttribute('aria-expanded', String(open));
   toggle.setAttribute('aria-pressed', String(open));
-  if (open) renderGlobalRoutesMap();
+  renderExpeditionHistory();
 }
 
 function resetGlobalRoutesZoom() {
@@ -2052,6 +2101,10 @@ function renderExpeditionHistory() {
   const container = document.getElementById('travelLogFeed');
   // Leaflet instances must be torn down before their containers are discarded.
   destroyTravelLogMaps();
+  if (globalRoutesOpen) {
+    renderGlobalRoutesMap();
+    return;
+  }
   if (!AppState.expeditions.length) {
     container.innerHTML = '<p class="text-sm text-slate-400">No expeditions yet. Log your first trip.</p>';
     if (globalRoutesOpen) renderGlobalRoutesMap();
@@ -2060,11 +2113,13 @@ function renderExpeditionHistory() {
   const biomesByExpedition = calculateStats().metadataProgress.biomesByExpedition;
   const sorted = [...AppState.expeditions].sort((a, b) =>
     (b.startDate || b.endDate || '').localeCompare(a.startDate || a.endDate || ''));
+  const tripsById = new Map(sorted.map(exp => [exp.id, exp]));
+  const tripsByMapId = new Map(sorted.map(exp => [`mini-map-${exp.id}`, exp]));
   for (const id of confirmingTravelLogDeletion) {
-    if (!sorted.some(exp => exp.id === id)) confirmingTravelLogDeletion.delete(id);
+    if (!tripsById.has(id)) confirmingTravelLogDeletion.delete(id);
   }
   for (const id of travelJournalDrafts.keys()) {
-    if (!sorted.some(exp => exp.id === id)) travelJournalDrafts.delete(id);
+    if (!tripsById.has(id)) travelJournalDrafts.delete(id);
   }
   let period = null;
   container.innerHTML = sorted.map(exp => {
@@ -2238,7 +2293,7 @@ function renderExpeditionHistory() {
   container.querySelectorAll('[data-trip-flags]').forEach(wireCountryFlagFallbacks);
   container.querySelectorAll('[data-trip-state-flags]').forEach(wireStateFlagInteractions);
   container.querySelectorAll('[data-trip]').forEach(card => {
-    const exp = sorted.find(item => item.id === card.dataset.trip);
+    const exp = tripsById.get(card.dataset.trip);
     const reveal = () => {
       if (card.open) {
         openTravelLogs.add(exp.id);
@@ -2252,8 +2307,9 @@ function renderExpeditionHistory() {
   if (typeof ResizeObserver !== 'undefined') {
     travelLogResizeObserver = new ResizeObserver(entries => {
       entries.forEach(entry => {
-        const exp = sorted.find(item => `mini-map-${item.id}` === entry.target.id);
-        if (exp && entry.contentRect.width && entry.contentRect.height) {
+        const exp = tripsByMapId.get(entry.target.id);
+        if (exp && (travelLogMaps[exp.id] || typeof IntersectionObserver === 'undefined') &&
+            entry.contentRect.width && entry.contentRect.height) {
           try { renderTravelLogMiniMap(exp); }
           catch (error) { showTravelLogMapError(exp, error); }
         }
@@ -2261,11 +2317,31 @@ function renderExpeditionHistory() {
     });
     sorted.forEach(exp => travelLogResizeObserver.observe(document.getElementById(`mini-map-${exp.id}`)));
   }
-  sorted.forEach(exp => {
-    try { renderTravelLogMiniMap(exp); }
-    catch (error) { showTravelLogMapError(exp, error); }
-  });
-  if (globalRoutesOpen) renderGlobalRoutesMap();
+  if (typeof IntersectionObserver !== 'undefined') {
+    travelLogVisibilityObserver = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        const exp = tripsByMapId.get(entry.target.id);
+        if (!exp || AppState.currentTab !== 'travel' || globalRoutesOpen) return;
+        if (entry.isIntersecting) {
+          try { renderTravelLogMiniMap(exp); }
+          catch (error) { showTravelLogMapError(exp, error); }
+        } else if (travelLogMaps[exp.id]) {
+          try {
+            travelLogMaps[exp.id].remove();
+            delete travelLogMaps[exp.id];
+          } catch (error) {
+            console.error('Mini-map teardown failed', error);
+          }
+        }
+      });
+    }, { rootMargin: '200px' });
+    sorted.forEach(exp => travelLogVisibilityObserver.observe(document.getElementById(`mini-map-${exp.id}`)));
+  } else {
+    sorted.forEach(exp => {
+      try { renderTravelLogMiniMap(exp); }
+      catch (error) { showTravelLogMapError(exp, error); }
+    });
+  }
 }
 
 function collapseTravelJournal(card) {

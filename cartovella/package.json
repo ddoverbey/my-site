@@ -2,6 +2,7 @@
   "name": "cartovella-data",
   "private": true,
   "scripts": {
+    "build:css": "tailwindcss -i ./tailwind.css -o ./styles.css --minify",
     "test": "node international-parks.test.mjs && node nps-catalog.test.mjs && node character-creator.test.mjs && node ecoregions.test.mjs && node coordinate-lookups.test.mjs && node micro-states.test.mjs && node rarity-worker/worker.test.mjs && node travel-ledger.test.mjs",
     "import:ecoregions": "node import-ecoregions.mjs",
     "import:geography": "node import-geography.mjs",
@@ -15,6 +16,7 @@
     "mapshaper": "^0.7.85",
     "topojson-client": "^3.1.0",
     "wrangler": "^4.36.0",
-    "shapefile": "^0.6.6"
+    "shapefile": "^0.6.6",
+    "tailwindcss": "3.4.17"
   }
 }

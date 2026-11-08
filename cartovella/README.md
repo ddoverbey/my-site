@@ -30,7 +30,10 @@ expeditions, track parks and regions, and earn achievements from your travel his
   coordinate-backed shared stops can be saved to your Wishlist.
 - Progress for parks, regions, elevations, rarity, and terrestrial biomes.
 - Large park and geography datasets are prepared in stages; the map creates markers for the visible
-  area and updates existing markers when travel statuses change.
+  area and updates existing markers when travel statuses change. Geography indexing yields in
+  small time slices; fog tiles share prepared travel data and use a bounded cache.
+- Travel Journal mini-maps load near the viewport and are released offscreen. The global route
+  atlas reuses projected geography when changing its presentation controls.
 - Clickable biome and destination pins show the trips, stops, and saved places contributing to them.
 - Achievements are grouped into expandable milestone classes and sorted by rarity, with unmet classes
   at the bottom. Expanded tiers run highest to lowest, omit the highest earned tier already shown in
@@ -398,7 +401,8 @@ origins `http://127.0.0.1:8766` and `http://localhost:8766`. The optional Esri i
 
 ## Run locally
 
-There is no build step or `npm start` script. Serve this directory over HTTP; opening `index.html`
+The published files are static, with no application build or `npm start` script. Serve this directory
+over HTTP; opening `index.html`
 directly as a `file://` URL can prevent the app from loading its local geography files.
 
 On Windows, from this directory:
@@ -416,6 +420,7 @@ python3 -m http.server 8000
 Open <http://localhost:8000> and stop the server with `Ctrl+C` when finished. The app loads some
 libraries, map tiles, and lookup services from external providers, so those features require an
 internet connection.
+The precompiled stylesheet is checked in, so running the game does not require Node.js or a CSS build.
 
 ## Passport data
 
@@ -479,9 +484,39 @@ Use Node.js 22 or newer for the development tools and test suite. From this dire
 
 ```sh
 npm ci
+npm run build:css
 npm test
 ```
 
 The tests cover park catalogs, ecoregions, coordinate lookup, geography, rarity, and the travel
-ledger. Data importers are available through the scripts in `package.json`; consult the repository
+ledger, including compact cache keys, cache invalidation, yielding/cancellation, spatial lookup
+equivalence, lazy mini-map lifecycles and cached atlas layouts.
+
+Rebuild and commit `styles.css` whenever changing utility classes in `index.html` or the app's
+JavaScript files. `tailwind.config.cjs` scans both static and dynamically created UI markup; keep
+class names as complete literal strings rather than assembling fragments at runtime. No Tailwind
+CDN script is needed. Bump the shared local-script release query after code changes, and the
+stylesheet query after CSS changes.
+
+Geometry caches assume saved route arrays and polygon objects are replaced on edits, as they
+already are for imports and expedition saves. Do not mutate saved coordinate pairs in place.
+Caches are browser-session-only and do not change the passport format or require resetting saves.
+
+### Performance verification
+
+Use browser Performance tools on a locally served copy, measuring startup separately from warm
+interactions. Exercise pan/zoom, filters, Travel Journal scrolling, the route-map controls and
+passport edits; check that maps and tile work are released or paused when hidden. Use the same
+passport and viewport for comparisons, and test a real mobile browser as well as CPU throttling.
+
+During the November 2026 optimization, a browser fixture with 20 trips sharing a 20,000-point
+route reduced a travel-cache check from approximately 207 ms (17.4 million serialized characters)
+to under 1 ms (about 15,000 characters). Repeated atlas renders for a small passport went from
+approximately 39 ms to 5–7 ms after the geography cache warmed. A 1,000-point comparison against
+all 10,821 county/district features returned identical ordered IDs using indexed and full-scan
+lookups. These are local microbenchmarks, not a device-wide FPS or startup-time guarantee:
+large passport serialization during saves, geographic decoding, first-time progress rasterization,
+and external map/service latency can still take time.
+
+Data importers are available through the scripts in `package.json`; consult the repository
 README before regenerating or replacing checked-in data.

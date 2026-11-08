@@ -54,6 +54,63 @@ await check('D3 winding normalization respects exteriors, holes, islands, and th
   assert.equal(lookups.findContaining(crossing, 0, -179, geo.geoContains).length, 1);
   assert.equal(lookups.findContaining(crossing, 0, 0, geo.geoContains).length, 0);
 });
+await check('spatial indexing preserves full-scan results, order, poles, and date-line boundaries', () => {
+  const features = lookups.indexFeatures([
+    polygon([ring(170, -10, -170, 10)]),
+    polygon([ring(-20, -15, 20, 15)]),
+    polygon([ring(-10, -10, 10, 10)]),
+    polygon([ring(10, 70, 20, 85)])
+  ], geo);
+  const fullScan = (lat, lng) => features.filter(({feature, bounds:[[west,south],[east,north]]}) =>
+    lat >= south && lat <= north &&
+    (west <= east ? lng >= west && lng <= east : lng >= west || lng <= east) &&
+    geo.geoContains(feature, [lng,lat])).map(entry => entry.feature);
+  for (const lat of [-90,-15,-10,-5,0,5,10,15,70,85,90]) {
+    for (const lng of [-180,-179,-20,-10,0,10,20,179,180]) {
+      assert.deepEqual(lookups.findContaining(features, lat, lng, geo.geoContains), fullScan(lat,lng));
+    }
+  }
+  features.push(...lookups.indexFeatures([polygon([ring(-5,-5,5,5)])],geo));
+  assert.deepEqual(lookups.findContaining(features,0,0,geo.geoContains),fullScan(0,0));
+});
+await check('warm coordinate queries inspect only their spatial cell', () => {
+  let boundsReads = 0;
+  const features = Array.from({length:3500}, (_,i) => {
+    const south = -85 + (i % 35) * 5;
+    return {feature:polygon([ring(0,south,1,south+1)]),
+      get bounds() {boundsReads++; return [[0,south],[1,south+1]];}};
+  });
+  lookups.findContaining(features,0.5,0.5,()=>true);
+  boundsReads = 0;
+  assert.equal(lookups.findContaining(features,0.5,0.5,()=>true).length,100);
+  assert.ok(boundsReads <= features.length / 20, 'no full-array scan after the first lookup');
+});
+await check('wrapped bounds in one longitude band never duplicate matching features', () => {
+  const feature=polygon([ring(0,0,1,1)]);
+  const index=[{feature,bounds:[[2,-10],[1,10]]}];
+  assert.deepEqual(lookups.findContaining(index,0,0,()=>true),[feature]);
+  assert.deepEqual(lookups.findContaining(index,0,2.5,()=>true),[feature]);
+  assert.deepEqual(lookups.findContaining(index,0,1.5,()=>true),[]);
+});
+await check('async geography indexing yields within its work budget and discards cancelled results', async () => {
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis,'performance');
+  let time = 0;
+  Object.defineProperty(globalThis,'performance',{configurable:true,value:{now:()=>time}});
+  try {
+    const features = Array.from({length:10},()=>polygon([ring(0,0,1,1)]));
+    const measuredGeo = {
+      geoArea(feature) {time += 3; return geo.geoArea(feature);},
+      geoBounds(feature) {time += 3; return geo.geoBounds(feature);}
+    };
+    let yields = 0;
+    const index = await lookups.indexFeaturesAsync(features,measuredGeo,async()=>{yields++;});
+    assert.deepEqual(index,lookups.indexFeatures(features,geo));
+    assert.equal(yields,5);
+    let current = true;
+    assert.equal(await lookups.indexFeaturesAsync(features,measuredGeo,async()=>{current=false;},()=>current),null);
+    assert.equal(await lookups.indexFeaturesAsync(features,measuredGeo,async()=>{},()=>false),null);
+  } finally {Object.defineProperty(globalThis,'performance',descriptor);}
+});
 await check('international subdivisions resolve to stable county-ledger IDs for locations and routes', () => {
   const subdivisionIndex = lookups.indexFeatures([subdivision], geo);
   const political = lookups.politicalRegion(5, 5, {
