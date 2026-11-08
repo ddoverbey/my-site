@@ -843,6 +843,8 @@
       ...(male ? { male: `${hatFolder}${male}` } : {}),
       ...(female ? { female: `${hatFolder}${female}` } : {})
     }, { type: 'date', ...date }));
+  addShopItem('alpha_hat', 'Alpha Hat', 'headwear',
+    pairedPaths(CUSTOM_GEAR_ASSET_ROOT, 'male-alpha-hat.png', 'female-alpha-hat.png'));
   addDateUnlockedHat('witch_hat', 'Witch Hat', null, 'Female Hat/Witch hat.png',
     { year: 2026, month: 10, day: 30 });
   addDateUnlockedHat('santa_hat', 'Santa Hat', 'Male Hat/Male Santa hat.png', 'Female Hat/Female Santa hat.png',

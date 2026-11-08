@@ -1581,6 +1581,25 @@ check('new custom gear uses replacement art, multiple colors, and correct poncho
   });
   assert.match(controls.innerHTML, /The rain poncho covers your head/);
 });
+check('Alpha Hat uses paired custom art and is available to both sprites', () => {
+  const alphaHat = characterCreator.SHOP_WARDROBE.find(item => item.id === 'alpha_hat');
+  assert.equal(alphaHat.name, 'Alpha Hat');
+  assert.equal(alphaHat.field, 'headwear');
+  assert.equal(alphaHat.unlock.type, 'coin');
+  assert.equal(alphaHat.cost, 100);
+  assert.deepEqual(alphaHat.genders, ['male', 'female']);
+  assert.equal(alphaHat.paths.male, './assets/custom-gear/male-alpha-hat.png');
+  assert.equal(alphaHat.paths.female, './assets/custom-gear/female-alpha-hat.png');
+  for (const gender of alphaHat.genders) {
+    const layer = characterCreator.characterSpriteAssets({
+      ...characterCreator.DEFAULT_CHARACTER, gender, headwear: alphaHat.id,
+      purchasedItems: [alphaHat.id]
+    }).find(item => item.layer === 'headwear');
+    assert.equal(layer.imageSrc, alphaHat.paths[gender], `${gender} hat art`);
+    const png = readFileSync(new URL(alphaHat.paths[gender], import.meta.url));
+    assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [80, 64], `${gender} hat size`);
+  }
+});
 check('park and achievement clothing unlock at their exact requirements', () => {
   const character = characterCreator.normalizeCharacter();
   characterCreator.PARK_MILESTONE_ITEMS.forEach(item => {
