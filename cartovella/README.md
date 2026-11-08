@@ -247,9 +247,10 @@ when a one-piece outfit such as a bikini is selected. The wardrobe includes skir
 and pants options. Every garment sheet from the original GandalfHardcore clothing packs is available,
 including base layers, swimwear, corsets, bodices, skirts, and dresses such as Queen Dress. Intimate
 underlayers use Explorer Base Layer names in Cartovella. Simple Shoes and Trail Boots each have five
-recolored shop options; the female Trail Boots use different art from Simple Shoes. Hiking Boots also
-have five recolored shop options. Short-Sleeve T-Shirts use paired male and female artwork and come
-in the original neutral color plus five color variants. Glasses and face accessories are available in
+recolored shop options; the female Trail Boots use different art from Simple Shoes. Hiking Boots and
+Rain Boots have paired male and female art and five recolored shop options each. Short-Sleeve T-Shirts
+use paired male and female artwork and come in the original neutral color plus five color variants.
+Glasses and face accessories are available in
 the Wardrobe. The Alpha Hat uses paired custom male and female artwork and is available in the Coin
 Shop.
 The Summit Down Parka has hood-down and one hood-up male choice; the hood-up choice hides and disables

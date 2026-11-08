@@ -1578,6 +1578,7 @@ check('new custom gear uses replacement art, multiple colors, and correct poncho
   const poncho = achievementItem('mist_rain_poncho');
   const glasses = shopItem('glasses');
   const hikingBoots = shopItem('hiking_boots');
+  const rainBoots = shopItem('rain_boots');
 
   assert.deepEqual(monocle.unlock, coat.unlock);
   assert.equal(monocle.unlock.goal, 10);
@@ -1602,11 +1603,19 @@ check('new custom gear uses replacement art, multiple colors, and correct poncho
   assert.deepEqual(glasses.genders, ['male']);
   assert.equal(hikingBoots.paths.male, './assets/custom-gear/male-hiking-boots.png');
   assert.equal(hikingBoots.paths.female, './assets/custom-gear/female-hiking-boots.png');
+  assert.equal(rainBoots.paths.male, './assets/custom-gear/male-rain-boots.png');
+  assert.equal(rainBoots.paths.female, './assets/custom-gear/female-rain-boots.png');
   const hikingBootColors = characterCreator.SHOP_WARDROBE.filter(item =>
     item.id.startsWith('hiking_boots_'));
   assert.equal(hikingBootColors.length, 5);
   assert.ok(hikingBootColors.every(item =>
     item.variantSpec.palette.colorMap['#302c2a'] === item.variantSpec.palette.shadow));
+  const rainBootColors = characterCreator.SHOP_WARDROBE.filter(item =>
+    item.id.startsWith('rain_boots_'));
+  assert.equal(rainBootColors.length, 5);
+  assert.ok(rainBootColors.every(item =>
+    item.variantSpec.palette.colorMap['#af8500'] === item.variantSpec.palette.shadow &&
+    item.variantSpec.palette.colorMap['#f0b700'] === item.variantSpec.palette.highlight));
 
   const shirts = characterCreator.SHOP_WARDROBE.filter(item =>
     item.id === 'short_sleeve_tshirt' || item.id.startsWith('short_sleeve_tshirt_'));
@@ -1626,7 +1635,8 @@ check('new custom gear uses replacement art, multiple colors, and correct poncho
     ...[coat, monocle, pineFlannel, redwoodFlannel, greenVest, volunteerTee, canvasJacket]
       .flatMap(item => Object.values(item.paths)),
     ...Object.values(poncho.paths), ...Object.values(glasses.paths),
-    ...Object.values(hikingBoots.paths), ...Object.values(shirts[0].paths)
+    ...Object.values(hikingBoots.paths), ...Object.values(rainBoots.paths),
+    ...Object.values(shirts[0].paths)
   ];
   for (const path of new Set(replacementPaths)) {
     const png = readFileSync(new URL(path, import.meta.url));

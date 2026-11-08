@@ -664,6 +664,8 @@
     'male-t-shirt.png', 'female-t-shirt.png');
   const HIKING_BOOTS_PATHS = pairedPaths(CUSTOM_GEAR_ASSET_ROOT,
     'male-hiking-boots.png', 'female-hiking-boots.png');
+  const RAIN_BOOTS_PATHS = pairedPaths(CUSTOM_GEAR_ASSET_ROOT,
+    'male-rain-boots.png', 'female-rain-boots.png');
   addShopItem('classic_shirt', 'Classic Trail Shirt', 'top',
     oneGenderPath('male', `${PACK}Male Clothing/Shirt.png`));
   addShopItem('short_sleeve_tshirt', 'Short-Sleeve T-Shirt', 'top',
@@ -684,6 +686,18 @@
     '#5b4a3f': 'base',
     '#6e594c': 'highlight',
     '#ff963d': 'highlight'
+  });
+  addShopItem('rain_boots', 'Rain Boots', 'shoes', RAIN_BOOTS_PATHS);
+  addFootwearColorOptions('rain_boots', 'Rain Boots', RAIN_BOOTS_PATHS, {
+    '#af8500': 'shadow',
+    '#cc9b00': 'base',
+    '#d7a400': 'base',
+    '#f0b700': 'highlight',
+    '#ffc100': 'highlight',
+    '#ffd756': 'highlight',
+    '#ffe082': 'highlight',
+    '#ffe183': 'highlight',
+    '#ffe283': 'highlight'
   });
   addShopItem('glasses', 'Glasses', 'face',
     oneGenderPath('male', spritePath(CUSTOM_GEAR_ASSET_ROOT, 'male-glasses-1.png')));
