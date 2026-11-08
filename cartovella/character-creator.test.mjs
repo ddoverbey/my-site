@@ -25,7 +25,7 @@ check('every customization option supports a future image override', () => {
 check('character appearance, wardrobe, companions, and scene choices render as dropdowns', () => {
   const controls = { dataset: {}, innerHTML: '' };
   const expectedFields = {
-    appearance: ['gender', 'skinTone', 'hairPreset', 'specialSkin', 'effect'],
+    appearance: ['gender', 'skinTone', 'eyeColor', 'hairPreset', 'specialSkin', 'effect'],
     wardrobe: ['top'],
     pets: ['pet', 'petAnimation', 'petHat', 'petBackpack'],
     backgrounds: ['background'],
@@ -33,7 +33,7 @@ check('character appearance, wardrobe, companions, and scene choices render as d
     patron: []
   };
   const visualFields = new Set([
-    'gender', 'skinTone', 'hairPreset', 'top', 'bottoms', 'shoes', 'headwear',
+    'gender', 'skinTone', 'eyeColor', 'hairPreset', 'top', 'bottoms', 'shoes', 'headwear',
     'handItem', 'backLayer', 'arms', 'face', 'ears', 'effect', 'specialSkin',
     'pet', 'petHat', 'petBackpack', 'background'
   ]);
@@ -68,7 +68,13 @@ check('character appearance, wardrobe, companions, and scene choices render as d
   assert.match(controls.innerHTML, /data-hair-preview="true"/);
   assert.match(controls.innerHTML, /data-hair-style="hair_6"/);
   assert.match(controls.innerHTML, /data-hair-color="brown"/);
+  assert.match(controls.innerHTML, /data-eye-color="dark_brown"/);
   assert.match(controls.innerHTML, /background-color:#dba77e/);
+  assert.match(controls.innerHTML, /data-character-id="dark_brown"[^>]*>[\s\S]*?Dark Brown/);
+  assert.match(controls.innerHTML, /data-character-id="brown"[^>]*>[\s\S]*?Brown/);
+  assert.match(controls.innerHTML, /data-character-id="green"[^>]*>[\s\S]*?Green/);
+  assert.match(controls.innerHTML, /data-character-id="blue"[^>]*>[\s\S]*?Blue/);
+  assert.match(controls.innerHTML, /data-character-id="gray"[^>]*>[\s\S]*?Gray/);
   assert.match(controls.innerHTML, /Chestnut/);
   assert.match(controls.innerHTML, /Black/);
   assert.match(controls.innerHTML, /Blonde/);
@@ -286,7 +292,7 @@ check('Miku locks hair and clothing while keeping scene, sprite, skin, pet and e
   render();
   assert.match(controls.innerHTML, /data-character-field="specialSkin"/);
   assert.match(controls.innerHTML, /data-character-field="effect"/);
-  for (const field of ['gender', 'skinTone']) {
+  for (const field of ['gender', 'skinTone', 'eyeColor']) {
     assert.match(controls.innerHTML, new RegExp(`data-character-field="${field}"`));
   }
   for (const field of ['hairPreset', 'top']) {
@@ -300,6 +306,13 @@ check('Miku locks hair and clothing while keeping scene, sprite, skin, pet and e
   assert.equal(changed, undefined, 'fixed-skin gear cannot be changed through the event handler');
   controls.onchange({ target: { dataset: { characterField: 'skinTone' }, value: 'porcelain' } });
   assert.equal(changed?.skinTone, 'porcelain', 'skin selection remains available for when Miku is deselected');
+  changed = undefined;
+  controls.onclick({ target: { closest(selector) {
+    return selector === 'button[data-character-field][data-character-id]'
+      ? { dataset: { characterField: 'eyeColor', characterId: 'green' }, disabled: false }
+      : null;
+  } } });
+  assert.equal(changed?.eyeColor, 'green', 'eye color selection remains available for when Miku is deselected');
   changed = undefined;
   controls.onchange({ target: { dataset: { characterField: 'gender' }, value: 'female' } });
   assert.equal(changed?.gender, 'female', 'sprite selection remains available for when Miku is deselected');
@@ -519,6 +532,8 @@ check('dropdown changes update the selected character field', () => {
   assert.equal(changedCharacter.hairStyle, 'hair_10');
   choose('gender', 'female');
   assert.equal(changedCharacter.gender, 'female');
+  choose('eyeColor', 'gray');
+  assert.equal(changedCharacter.eyeColor, 'gray');
 });
 check('pet animation selection is validated, persisted, and resets to the new pet default', () => {
   const dog = characterCreator.PET_CATALOG.find(item => item.id === 'pet_trail_dog');
@@ -1294,6 +1309,7 @@ check('variant clothing includes all requested rewards and valid paired sprite-s
 });
 check('replacement Summit, Mariner, Ranger, and vest artwork is wired with hood restrictions', () => {
   const achievementItem = id => characterCreator.ACHIEVEMENT_ITEMS.find(item => item.id === id);
+  const cavernSuit = achievementItem('cavern_miner_suit');
   const summitDown = achievementItem('summit_down_parka');
   const summitHoodUp = achievementItem('summit_hood_up_parka');
   const mariner = achievementItem('mariner_pea_coat');
@@ -1306,7 +1322,20 @@ check('replacement Summit, Mariner, Ranger, and vest artwork is wired with hood 
   const vikingHorns = characterCreator.SHOP_WARDROBE.find(item => item.id === 'viking_horns');
   const facePaint = characterCreator.SHOP_WARDROBE.find(item => item.id === 'face_paint');
   const faceMask = characterCreator.SHOP_WARDROBE.find(item => item.id === 'face_mask');
-  assert.equal(summitDown.paths.male, './assets/custom-gear/male-parka-down.png');
+  assert.equal(cavernSuit.paths.male, './assets/custom-gear/male-cave-suit.png');
+  assert.equal(cavernSuit.paths.female, './assets/custom-gear/female-cave-suit.png');
+  assert.equal(cavernSuit.variantSpecByGender.male, null);
+  assert.equal(cavernSuit.variantSpecByGender.female, null);
+  for (const gender of ['male', 'female']) {
+    const layer = characterCreator.characterSpriteAssets({
+      ...characterCreator.DEFAULT_CHARACTER, gender, top: cavernSuit.id
+    }).find(candidate => candidate.layer === 'top');
+    assert.equal(layer.imageSrc, encodeURI(cavernSuit.paths[gender]));
+    assert.equal(layer.variantSpec, undefined);
+    const png = readFileSync(new URL(cavernSuit.paths[gender], import.meta.url));
+    assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [80, 64]);
+  }
+  assert.equal(summitDown.paths.male, './assets/custom-gear/male parka down .png');
   assert.equal(summitHoodUp.paths.male, './assets/custom-gear/Male Parka up no hat.png');
   assert.equal(achievementItem('summit_red_hood_up_parka'), undefined);
   assert.equal(mariner.paths.male, './assets/custom-gear/Male Mariner Coat.png');
@@ -1347,7 +1376,7 @@ check('replacement Summit, Mariner, Ranger, and vest artwork is wired with hood 
   assert.equal(decodeURIComponent(malePaintLayer.imageSrc), facePaint.paths.male);
 
   const replacementPaths = [
-    summitDown.paths.male, summitHoodUp.paths.male,
+    cavernSuit.paths.male, cavernSuit.paths.female, summitDown.paths.male, summitHoodUp.paths.male,
     mariner.paths.male, mariner.paths.female, parkRanger.paths.male, parkRanger.paths.female,
     rangerPants.paths.male, rangerPants.paths.female, centennialCoat.paths.male,
     greenVest.paths.male, khakiVest.paths.male, witchHat.paths.female,
@@ -1909,6 +1938,50 @@ check('the shared stage animation loop advances pets and effects without moving 
     else globalThis.window = originalWindow;
     if (originalDocument === undefined) delete globalThis.document;
     else globalThis.document = originalDocument;
+  }
+});
+check('eye colors recolor only the two source eye pixels for each sprite', () => {
+  const originalOffscreenCanvas = globalThis.OffscreenCanvas;
+  class FakeOffscreenCanvas {
+    constructor(width, height) {
+      this.width = width;
+      this.height = height;
+      this.pixels = new Uint8ClampedArray(width * height * 4);
+    }
+    getContext() {
+      return {
+        drawImage: image => this.pixels.set(image.pixels),
+        getImageData: () => ({ data: new Uint8ClampedArray(this.pixels) }),
+        putImageData: imageData => this.pixels.set(imageData.data)
+      };
+    }
+  }
+  globalThis.OffscreenCanvas = FakeOffscreenCanvas;
+  try {
+    const sourceEye = [39, 19, 15, 255];
+    const blueEye = [0x47, 0x7b, 0xa7, 255];
+    for (const [gender, eyePixels] of [
+      ['male', [[35, 27], [38, 27]]],
+      ['female', [[35, 28], [38, 28]]]
+    ]) {
+      const pixels = new Uint8ClampedArray(80 * 64 * 4);
+      const setPixel = (x, y, color) =>
+        pixels.set(color, (y * 80 + x) * 4);
+      const getPixel = (image, x, y) =>
+        [...image.pixels.slice((y * 80 + x) * 4, (y * 80 + x) * 4 + 4)];
+      eyePixels.forEach(([x, y]) => setPixel(x, y, sourceEye));
+      setPixel(1, 1, sourceEye);
+      const image = {
+        src: `eye-color-${gender}.png`, naturalWidth: 80, naturalHeight: 64, pixels
+      };
+      const recolored = characterCreator.processSpriteEyeColor(image, 'blue', gender);
+      eyePixels.forEach(([x, y]) => assert.deepEqual(getPixel(recolored, x, y), blueEye));
+      assert.deepEqual(getPixel(recolored, 1, 1), sourceEye);
+      assert.deepEqual(getPixel(image, eyePixels[0][0], eyePixels[0][1]), sourceEye);
+    }
+  } finally {
+    if (originalOffscreenCanvas === undefined) delete globalThis.OffscreenCanvas;
+    else globalThis.OffscreenCanvas = originalOffscreenCanvas;
   }
 });
 check('sprite character selects matching gender, skin, hair, and outfit layers', () => {

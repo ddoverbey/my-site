@@ -51,11 +51,17 @@
     teal: Object.freeze({ outline: '#142827', shadow: '#286c67', base: '#53b8aa', highlight: '#9be0d5' })
   });
   const EYE_COLORS = [
-    { id: 'brown', name: 'Brown', color: '#754532', imageSrc: null },
-    { id: 'blue', name: 'Blue', color: '#5ba9dc', imageSrc: null },
-    { id: 'green', name: 'Green', color: '#68a867', imageSrc: null },
-    { id: 'violet', name: 'Violet', color: '#9c79c8', imageSrc: null }
+    { id: 'dark_brown', name: 'Dark Brown', color: '#27130f', imageSrc: null },
+    { id: 'brown', name: 'Brown', color: '#68452f', imageSrc: null },
+    { id: 'green', name: 'Green', color: '#447a4d', imageSrc: null },
+    { id: 'blue', name: 'Blue', color: '#477ba7', imageSrc: null },
+    { id: 'gray', name: 'Gray', color: '#68727d', imageSrc: null }
   ];
+  const EYE_PIXEL_OFFSETS = Object.freeze({
+    male: Object.freeze([[35, 27], [38, 27]]),
+    female: Object.freeze([[35, 28], [38, 28]])
+  });
+  const ORIGINAL_EYE_RGB = Object.freeze([39, 19, 15]);
   const BODY_SHAPES = [
     { id: 'straight', name: 'Classic / Straight Frame', imageSrc: null },
     { id: 'vTaper', name: 'Broad / V-Taper Frame', imageSrc: null },
@@ -508,7 +514,11 @@
       palette('#39362a', '#bd9942', '#e8d181', { accent: '#43a5a1' }), 'jacket'),
     makeVariantItem('cavern_miner_suit', 'Deep Cavern Suit', 'top',
       { type: 'achievement', id: 'subterranean' },
-      palette('#292e36', '#59616d', '#c89b49', { accent: '#d29d3e' }), 'jacket'),
+      palette('#292e36', '#59616d', '#c89b49', { accent: '#d29d3e' }), 'jacket', {
+        paths: Object.freeze(pairedPaths(CUSTOM_GEAR_ASSET_ROOT,
+          'male-cave-suit.png', 'female-cave-suit.png')),
+        variantSpecByGender: { male: null, female: null }
+      }),
     makeVariantItem('summit_down_parka', 'Summit Down Parka', 'top',
       { type: 'achievement', id: 'thinAir' },
       palette('#33424a', '#9ac6cf', '#f1f6f5', {
@@ -516,7 +526,7 @@
       }), 'vest', {
         paths: Object.freeze({
           ...VARIANT_BASE_PATHS.top,
-          male: spritePath(CUSTOM_GEAR_ASSET_ROOT, 'male-parka-down.png')
+          male: spritePath(CUSTOM_GEAR_ASSET_ROOT, 'male parka down .png')
         }),
         variantSpecByGender: { male: null }
       }),
@@ -817,7 +827,7 @@
       [field, EQUIPMENT_CATALOG.filter(item => item.field === field)])));
   const FIXED_SKIN_ALLOWED_FIELDS = new Set([
     'gender', 'skinTone', 'specialSkin', 'effect', 'pet', 'petAnimation',
-    'petHat', 'petBackpack', 'background', 'headwear', 'bodyWidth', 'bodyHeight'
+    'petHat', 'petBackpack', 'background', 'headwear', 'eyeColor', 'bodyWidth', 'bodyHeight'
   ]);
   const fixedAppearanceSkin = character =>
     EQUIPMENT_BY_FIELD.specialSkin.find(item =>
@@ -900,7 +910,7 @@
     skinTone: 'warm',
     hairStyle: 'hair_6',
     hairColor: 'brown',
-    eyeColor: 'brown',
+    eyeColor: 'dark_brown',
     bodyShape: 'straight',
     height: 'standard',
     bodyWidth: 100,
@@ -1376,6 +1386,53 @@
     return canvas;
   }
 
+  function processSpriteEyeColor(baseImage, eyeColorId, gender) {
+    const sourcePath = baseImage?.currentSrc || baseImage?.src;
+    const width = baseImage?.naturalWidth || baseImage?.width || 0;
+    const height = baseImage?.naturalHeight || baseImage?.height || 0;
+    if (!sourcePath || width < 80 || height < 64 || width % 80 !== 0 || height % 64 !== 0) {
+      throw new Error(`Sprite eye-color source must be an aligned 80x64 sheet: ${sourcePath || 'unknown source'}`);
+    }
+    const eyePixels = EYE_PIXEL_OFFSETS[gender];
+    if (!eyePixels) throw new Error(`Unsupported sprite gender for eye color: ${gender}`);
+    const selectedColor = EYE_COLORS.find(color => color.id === eyeColorId);
+    if (!selectedColor) throw new Error(`Unsupported sprite eye color: ${eyeColorId}`);
+    const outputColor = parsePaletteColor(selectedColor.color);
+    if (outputColor.every((channel, index) => channel === ORIGINAL_EYE_RGB[index])) return baseImage;
+
+    const cacheKey = `${sourcePath}|eye:${gender}:${eyeColorId}`;
+    if (spriteVariantCache.has(cacheKey)) return spriteVariantCache.get(cacheKey);
+    const canvas = typeof OffscreenCanvas === 'function'
+      ? new OffscreenCanvas(width, height)
+      : typeof document !== 'undefined' && typeof document.createElement === 'function'
+        ? document.createElement('canvas') : null;
+    if (!canvas) throw new Error('Canvas support is required to render sprite eye colors.');
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    if (!context) throw new Error(`2D canvas context unavailable for sprite eye color: ${sourcePath}`);
+    context.drawImage(baseImage, 0, 0);
+    const imageData = context.getImageData(0, 0, width, height);
+    const { data } = imageData;
+    for (let frameY = 0; frameY < height; frameY += 64) {
+      for (let frameX = 0; frameX < width; frameX += 80) {
+        for (const [eyeX, eyeY] of eyePixels) {
+          const index = ((frameY + eyeY) * width + frameX + eyeX) * 4;
+          if (data[index] !== ORIGINAL_EYE_RGB[0] ||
+              data[index + 1] !== ORIGINAL_EYE_RGB[1] ||
+              data[index + 2] !== ORIGINAL_EYE_RGB[2] ||
+              data[index + 3] === 0) continue;
+          data[index] = outputColor[0];
+          data[index + 1] = outputColor[1];
+          data[index + 2] = outputColor[2];
+        }
+      }
+    }
+    context.putImageData(imageData, 0, 0);
+    spriteVariantCache.set(cacheKey, canvas);
+    return canvas;
+  }
+
   function characterSpriteAssets(value, date = new Date()) {
     const character = normalizeCharacter(value);
     const equipmentGender = equipmentGenderFor(character);
@@ -1427,7 +1484,9 @@
       equipmentLayer('effect', 'effect'),
       specialSkin || {
         layer: 'base',
-        imageSrc: assetUrl(`${CHARACTER_ASSET_ROOT}Character skin colors/${genderName} Skin${skinIndex}.png`)
+        imageSrc: assetUrl(`${CHARACTER_ASSET_ROOT}Character skin colors/${genderName} Skin${skinIndex}.png`),
+        eyeColor: character.eyeColor,
+        eyeGender: character.gender
       },
       equipmentLayer('ears', 'ears'),
       equipmentLayer('bottoms', 'bottoms'),
@@ -1524,8 +1583,9 @@
     }
     characterSpriteAssets(character).forEach(layer => {
       const baseImage = getImage(layer, redraw);
-      const image = baseImage && layer.variantSpec
-        ? processSpriteVariant(baseImage, layer.variantSpec) : baseImage;
+      const image = !baseImage ? null : layer.eyeColor
+        ? processSpriteEyeColor(baseImage, layer.eyeColor, layer.eyeGender)
+        : layer.variantSpec ? processSpriteVariant(baseImage, layer.variantSpec) : baseImage;
       if (image) {
         if (layer.filter) {
           ctx.save();
@@ -1767,7 +1827,8 @@
 
   function hairThumbnailMarkup(character) {
     return `<canvas data-hair-preview="true" data-gender="${escapeHtml(character.gender)}"
-      data-skin-tone="${escapeHtml(character.skinTone)}" data-outfit="${escapeHtml(character.outfit)}"
+      data-skin-tone="${escapeHtml(character.skinTone)}" data-eye-color="${escapeHtml(character.eyeColor)}"
+      data-outfit="${escapeHtml(character.outfit)}"
       data-hair-style="${escapeHtml(character.hairStyle)}" data-hair-color="${escapeHtml(character.hairColor)}"
       width="40" height="40" aria-hidden="true"
       class="block h-10 w-10 shrink-0 rounded bg-slate-900"></canvas>`;
@@ -1778,6 +1839,7 @@
     const character = normalizeCharacter({
       gender: canvas.dataset.gender,
       skinTone: canvas.dataset.skinTone,
+      eyeColor: canvas.dataset.eyeColor,
       outfit: canvas.dataset.outfit,
       hairStyle: canvas.dataset.hairStyle,
       hairColor: canvas.dataset.hairColor
@@ -2110,7 +2172,7 @@
     const sections = {
       appearance: `<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
         ${fixedAppearance
-          ? '<p class="sm:col-span-2 text-xs text-slate-400">Miku’s sprite stays fixed; hair and clothing cannot be changed. Sprite and skin choices are saved for when you switch back.</p>'
+          ? '<p class="sm:col-span-2 text-xs text-slate-400">Miku’s sprite stays fixed; hair and clothing cannot be changed. Sprite, skin, and eye choices are saved for when you switch back.</p>'
           : ''}
         ${dropdown('gender', 'Character sprite', character.gender, [
           { id: 'male', name: 'Sprite A' }, { id: 'female', name: 'Sprite B' }
@@ -2118,6 +2180,10 @@
         ${dropdown('skinTone', 'Skin tone', character.skinTone, SKIN_TONES, option =>
           `<span aria-hidden="true" class="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-slate-900">
             <span class="h-6 w-6 rounded-full border border-slate-500" style="background-color:${escapeHtml(option.color)}"></span>
+          </span>`)}
+        ${dropdown('eyeColor', 'Eye color', character.eyeColor, EYE_COLORS, option =>
+          `<span aria-hidden="true" class="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-slate-900">
+            <span class="h-3 w-3 rounded-sm border border-slate-500" style="background-color:${escapeHtml(option.color)}"></span>
           </span>`)}
         <fieldset class="sm:col-span-2 rounded-xl border border-slate-700 bg-slate-950/50 p-3">
           <legend class="px-1 text-xs font-semibold text-slate-200">Body proportions</legend>
@@ -2324,7 +2390,7 @@
           options.onChange?.(normalizeCharacter({ ...character, hairStyle, hairColor }));
           return;
         }
-        if (field === 'gender' || field === 'skinTone') {
+        if (field === 'gender' || field === 'skinTone' || field === 'eyeColor') {
           options.onChange?.(normalizeCharacter({ ...character, [field]: id }));
           return;
         }
@@ -2386,7 +2452,7 @@
     SHOP_WARDROBE, PET_ACCESSORY_CATALOG, EQUIPMENT_CATALOG, LEVEL_TRACK,
     BODY_SHAPE_PROFILES, normalizeCharacter, characterSpriteAssets, achievementProgress,
     unlockStatus, holidayHatEventFor, holidayHatFor, coinSummary, rarityCoinReward,
-    processSpriteVariant, drawPet, drawCharacterLayer,
+    processSpriteVariant, processSpriteEyeColor, drawPet, drawCharacterLayer,
     drawCharacterSprite, drawCampfire,
     drawStage, drawGuildAvatar, renderAvatar, render
   };

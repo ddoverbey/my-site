@@ -221,7 +221,9 @@ and 30 female hairstyles plus three shared extra styles. The original character 
 first five hairstyles for both sprites. The catalog also includes a Bald option for each sprite.
 One appearance picker combines each available hairstyle with its hair color, with labels such as
 “Hairstyle 1: Chestnut.” Hair color palettes are normalized across the differently colored source
-sheets, so each color choice is consistent between styles. Ranger hats are centered on the character.
+sheets, so each color choice is consistent between styles. Eye color can be selected as Dark Brown,
+Brown, Green, Blue, or Gray; the selected color changes only the two eye pixels. Ranger hats are
+centered on the character.
 Character sprite catalogs, layer composition, unlock rules,
 backgrounds, and companion rendering live in `character-creator.js`;
 character settings are stored in the passport and included in local, cloud, export, and shared saves.
@@ -249,7 +251,8 @@ hats and helmets until a hood-down top is selected. Mariner coats, both Park Ran
 Trail Breeches sprites, and the male Centennial Ranger Coat use dedicated replacement art. The
 Wayfarer Field Vest reward has green and khaki variants.
 The horned Viking helmet uses its horned art for both sprites, and Blue Face Paint uses its paint
-art for both sprites rather than reusing the Face Mask.
+art for both sprites rather than reusing the Face Mask. The Deep Cavern Suit achievement reward uses
+the replacement 80×64 male and female sprite art.
 The Centennial Ranger Coat is offered only to authenticated accounts whose Supabase Auth
 `app_metadata` contains `"cartovella_owner": true`. Set this server-managed flag for trusted accounts
 in the Supabase Dashboard under **Authentication > Users > Raw App Meta Data**; do not use
