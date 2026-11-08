@@ -58,10 +58,11 @@
     { id: 'gray', name: 'Gray', color: '#68727d', imageSrc: null }
   ];
   const EYE_PIXEL_OFFSETS = Object.freeze({
-    male: Object.freeze([[35, 27], [38, 27]]),
-    female: Object.freeze([[35, 28], [38, 28]])
+    male: Object.freeze([[37, 27], [40, 27]]),
+    female: Object.freeze([[37, 28], [40, 28]])
   });
   const ORIGINAL_EYE_RGB = Object.freeze([39, 19, 15]);
+  const MIKU_EYE_RGB = Object.freeze([10, 77, 78]);
   const BODY_SHAPES = [
     { id: 'straight', name: 'Classic / Straight Frame', imageSrc: null },
     { id: 'vTaper', name: 'Broad / V-Taper Frame', imageSrc: null },
@@ -377,7 +378,7 @@
     levelItem('walking_stick', 'Walking Stick', 'handItem',
       pairedPaths(`${ASSET_ROOT}GandalfHardcore 35x Hand Items/`,
         'Male Hand/Stick.png', 'Female Hand/Stick.png'), 2),
-    levelItem('trail_boots', 'Trail Boots', 'shoes', TRAIL_BOOT_PATHS, 2),
+    levelItem('trail_boots', 'Leather Riding Boots', 'shoes', TRAIL_BOOT_PATHS, 2),
     levelItem('explorer_backpack', 'Explorer Backpack', 'backLayer',
       pairedPaths(`${ASSET_ROOT}GandalfHardcore Back layers s/`, 'Backpack.png'), 3),
     levelItem('traveler_cap', 'Traveler Cap', 'headwear',
@@ -681,24 +682,7 @@
       `Short-Sleeve T-Shirt (${colorName})`, 'top',
       SHORT_SLEEVE_TSHIRT_PATHS, colorPalette));
   addShopItem('hiking_boots', 'Hiking Boots', 'shoes', HIKING_BOOTS_PATHS);
-  addFootwearColorOptions('hiking_boots', 'Hiking Boots', HIKING_BOOTS_PATHS, {
-    '#302c2a': 'shadow',
-    '#5b4a3f': 'base',
-    '#6e594c': 'highlight',
-    '#ff963d': 'highlight'
-  });
   addShopItem('rain_boots', 'Rain Boots', 'shoes', RAIN_BOOTS_PATHS);
-  addFootwearColorOptions('rain_boots', 'Rain Boots', RAIN_BOOTS_PATHS, {
-    '#af8500': 'shadow',
-    '#cc9b00': 'base',
-    '#d7a400': 'base',
-    '#f0b700': 'highlight',
-    '#ffc100': 'highlight',
-    '#ffd756': 'highlight',
-    '#ffe082': 'highlight',
-    '#ffe183': 'highlight',
-    '#ffe283': 'highlight'
-  });
   addShopItem('glasses', 'Glasses', 'face',
     oneGenderPath('male', spritePath(CUSTOM_GEAR_ASSET_ROOT, 'male-glasses-1.png')));
   [
@@ -744,8 +728,8 @@
     ['male_purple_base_layer', 'Purple Explorer Base Layer', 'Purple Underwear.png'],
     ['male_red_base_layer', 'Red Explorer Base Layer', 'Red Underwear.png']
   ].forEach(([id, name, file]) =>
-    addShopItem(id, name, 'bottoms',
-      oneGenderPath('male', `${PACK}Male Clothing/${file}`), 100));
+    LEVEL_ITEMS.push(levelItem(id, name, 'bottoms',
+      oneGenderPath('male', `${PACK}Male Clothing/${file}`), 1)));
   [
     ['female_blue_base_layer', 'Blue Explorer Base Layer', 'Blue Panties and Bra.png'],
     ['female_green_base_layer', 'Green Explorer Base Layer', 'Green Panties and Bra.png'],
@@ -754,8 +738,8 @@
     ['female_red_base_layer', 'Red Explorer Base Layer', 'Red Panties and Bra.png'],
     ['female_sky_blue_base_layer', 'Sky Blue Explorer Base Layer', 'Skyblue Panties and Bra.png']
   ].forEach(([id, name, file]) =>
-    addShopItem(id, name, 'top',
-      oneGenderPath('female', `${PACK}Female Clothing/${file}`), 100));
+    LEVEL_ITEMS.push(levelItem(id, name, 'top',
+      oneGenderPath('female', `${PACK}Female Clothing/${file}`), 1)));
   [
     ['female_socks', 'Trail Socks', 'Socks.png'],
     ['female_green_socks', 'Forest Trail Socks', 'Green Socks.png'],
@@ -830,6 +814,16 @@
     ...pairedPaths(PACK, 'Male Clothing/Pants.png'),
     female: RANGER_PANTS_PATHS.female
   }), 100);
+  addVariantShopItem('black_pants', 'Black Pants', 'bottoms',
+    oneGenderPath('male', `${PACK}Male Clothing/Pants.png`),
+    palette('#11131a', '#2b303b', '#626976', {
+      colorMap: {
+        '#330f1f': '#11131a',
+        '#5e2027': '#2b303b',
+        '#912b2e': '#2b303b',
+        '#b92a3b': '#626976'
+      }
+    }));
   SHOP_WARDROBE.push({
     ...equipmentItem('black_short_skirt', 'Black Short Skirt', 'bottoms',
       pairedPaths(`${ASSET_ROOT}GandalfHardcore 43x Female Clothing/`, 'Short Skirt.png'),
@@ -844,8 +838,15 @@
   ].forEach(([id, name, file]) =>
     addShopItem(id, name, 'shoes', oneGenderPath('female',
       `${ASSET_ROOT}GandalfHardcore 43x Female Clothing/${file}`), 100));
-  addFootwearColorOptions('simple_shoes', 'Simple Shoes', SIMPLE_SHOE_PATHS);
-  addFootwearColorOptions('trail_boots', 'Trail Boots', TRAIL_BOOT_PATHS);
+  addFootwearColorOptions('simple_shoes', 'Simple Shoes', SIMPLE_SHOE_PATHS, {
+    '#261e19': 'shadow',
+    '#3b2d26': 'base'
+  });
+  addFootwearColorOptions('trail_boots', 'Leather Riding Boots', TRAIL_BOOT_PATHS, {
+    '#261e19': 'shadow',
+    '#3b2d26': 'base',
+    '#593e2d': 'highlight'
+  });
 
   const hatFolder = `${ASSET_ROOT}GandalfHardcore 41x Hats/`;
   const addHat = (id, name, male, female, cost = 100) => addShopItem(id, name, 'headwear', {
@@ -920,13 +921,15 @@
   SHOP_WARDROBE.push({
     ...equipmentItem('special_miku', 'Miku', 'specialSkin',
       pairedPaths(CUSTOM_GEAR_ASSET_ROOT, 'Miku-2.png'), { type: 'easterEgg', id: 'miku' }),
-    fixedAppearance: true
+    fixedAppearance: true,
+    eyeColorSourceRgb: MIKU_EYE_RGB
   });
   SHOP_WARDROBE.push({
     ...equipmentItem('special_ranger_miku', 'Ranger Miku', 'specialSkin',
       pairedPaths(CUSTOM_GEAR_ASSET_ROOT, 'ranger-miku.png'),
       { type: 'easterEgg', id: 'miku' }),
     fixedAppearance: true,
+    eyeColorSourceRgb: MIKU_EYE_RGB,
     blocksHeadwear: true,
     headwearBlockMessage: 'Ranger Miku already wears a hat; additional hats and helmets stay hidden.'
   });
@@ -1011,7 +1014,13 @@
     headwear: '', handItem: '', petHat: '', petBackpack: ''
   });
   const LEVEL_TRACK = Object.freeze([
-    { level: 1, title: 'Fresh Recruit', itemIds: ['starter_shirt', 'starter_pants', 'simple_shoes'] },
+    { level: 1, title: 'Fresh Recruit', itemIds: [
+      'starter_shirt', 'starter_pants', 'simple_shoes',
+      'male_base_layer', 'male_blue_base_layer', 'male_green_base_layer',
+      'male_orange_base_layer', 'male_purple_base_layer', 'male_red_base_layer',
+      'female_blue_base_layer', 'female_green_base_layer', 'female_orange_base_layer',
+      'female_purple_base_layer', 'female_red_base_layer', 'female_sky_blue_base_layer'
+    ] },
     { level: 2, title: 'Trailwalker', itemIds: ['walking_stick', 'trail_boots', 'pine_trail_flannel'] },
     { level: 3, title: 'Scout', itemIds: ['explorer_backpack', 'traveler_cap', 'scout_cargo_pants'] },
     { level: 4, title: 'Forager', itemIds: ['farming_hat', 'basket', 'flower', 'meadow_forager_tunic'] },
@@ -1529,7 +1538,7 @@
     return canvas;
   }
 
-  function processSpriteEyeColor(baseImage, eyeColorId, gender) {
+  function processSpriteEyeColor(baseImage, eyeColorId, gender, sourceEyeRgb = ORIGINAL_EYE_RGB) {
     const sourcePath = baseImage?.currentSrc || baseImage?.src;
     const width = baseImage?.naturalWidth || baseImage?.width || 0;
     const height = baseImage?.naturalHeight || baseImage?.height || 0;
@@ -1541,9 +1550,9 @@
     const selectedColor = EYE_COLORS.find(color => color.id === eyeColorId);
     if (!selectedColor) throw new Error(`Unsupported sprite eye color: ${eyeColorId}`);
     const outputColor = parsePaletteColor(selectedColor.color);
-    if (outputColor.every((channel, index) => channel === ORIGINAL_EYE_RGB[index])) return baseImage;
+    if (outputColor.every((channel, index) => channel === sourceEyeRgb[index])) return baseImage;
 
-    const cacheKey = `${sourcePath}|eye:${gender}:${eyeColorId}`;
+    const cacheKey = `${sourcePath}|eye:${gender}:${eyeColorId}:${sourceEyeRgb.join(',')}`;
     if (spriteVariantCache.has(cacheKey)) return spriteVariantCache.get(cacheKey);
     const canvas = typeof OffscreenCanvas === 'function'
       ? new OffscreenCanvas(width, height)
@@ -1561,9 +1570,9 @@
       for (let frameX = 0; frameX < width; frameX += 80) {
         for (const [eyeX, eyeY] of eyePixels) {
           const index = ((frameY + eyeY) * width + frameX + eyeX) * 4;
-          if (data[index] !== ORIGINAL_EYE_RGB[0] ||
-              data[index + 1] !== ORIGINAL_EYE_RGB[1] ||
-              data[index + 2] !== ORIGINAL_EYE_RGB[2] ||
+          if (data[index] !== sourceEyeRgb[0] ||
+              data[index + 1] !== sourceEyeRgb[1] ||
+              data[index + 2] !== sourceEyeRgb[2] ||
               data[index + 3] === 0) continue;
           data[index] = outputColor[0];
           data[index + 1] = outputColor[1];
@@ -1580,7 +1589,8 @@
     const character = normalizeCharacter(value);
     const equipmentGender = equipmentGenderFor(character);
     const holidayHat = holidayHatFor(character, date);
-    const fixedAppearance = !!fixedAppearanceSkin(character);
+    const fixedSkin = fixedAppearanceSkin(character);
+    const fixedAppearance = !!fixedSkin;
     const genderName = character.gender === 'female' ? 'Female' : 'Male';
     const skinIndex = SKIN_TONES.findIndex(tone => tone.id === character.skinTone) + 1;
     const hairCatalog = HAIR_STYLES.filter(style => style.genders.includes(character.gender));
@@ -1610,7 +1620,13 @@
         ...(variantSpec ? { variantSpec } : {})
       } : null;
     };
-    const specialSkin = equipmentLayer('specialSkin', 'base');
+    const specialSkinLayer = equipmentLayer('specialSkin', 'base');
+    const specialSkin = specialSkinLayer && fixedSkin?.eyeColorSourceRgb ? {
+      ...specialSkinLayer,
+      eyeColor: character.eyeColor,
+      eyeGender: equipmentGender,
+      eyeSourceRgb: fixedSkin.eyeColorSourceRgb
+    } : specialSkinLayer;
     const headwearBlockingItem = headwearBlockingTop(character);
     const headwearBlocked = !!headwearBlockingItem;
     const topItem = EQUIPMENT_BY_FIELD.top.find(item => item.id === character.top);
@@ -1734,7 +1750,7 @@
     characterSpriteAssets(character).forEach(layer => {
       const baseImage = getImage(layer, redraw);
       const image = !baseImage ? null : layer.eyeColor
-        ? processSpriteEyeColor(baseImage, layer.eyeColor, layer.eyeGender)
+        ? processSpriteEyeColor(baseImage, layer.eyeColor, layer.eyeGender, layer.eyeSourceRgb)
         : layer.variantSpec ? processSpriteVariant(baseImage, layer.variantSpec) : baseImage;
       if (image) {
         if (layer.filter) {

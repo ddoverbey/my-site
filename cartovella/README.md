@@ -233,7 +233,8 @@ The Miku special skin is an easter egg: while on the Explorer Profile character 
 at the center of the Cartovella header logo. The pointer cursor marks the clickable spot, and the
 unlock is saved with the character. Ranger Miku becomes available once Miku is unlocked. Both Miku
 skins keep their appearance fixed while allowing back layers and hand items; Ranger Miku's built-in
-hat prevents equipping other hats or helmets.
+hat prevents equipping other hats or helmets. Eye color recolors the two eye pixels on the Explorer
+and Miku sprites.
 Santa hats unlock for free starting December 1, 2026; pumpkin and witch hats unlock for free starting
 October 30, 2026. On December 24–25 all character sprites, including Miku, automatically wear Santa
 hats; on October 30–31 male sprites wear pumpkin hats and female sprites, including Miku, wear witch
@@ -244,12 +245,14 @@ The sprite picker is labeled Sprite A and Sprite B; internal male/female keys re
 each choice to its source art. Ranger hats mask the upper edge of hairstyles, while allowing hair to
 show below the hat. Shirts, bottoms, and shoes can be unequipped independently, including
 when a one-piece outfit such as a bikini is selected. The wardrobe includes skirt, black short skirt,
-and pants options. Every garment sheet from the original GandalfHardcore clothing packs is available,
-including base layers, swimwear, corsets, bodices, skirts, and dresses such as Queen Dress. Intimate
-underlayers use Explorer Base Layer names in Cartovella. Simple Shoes and Trail Boots each have five
-recolored shop options; the female Trail Boots use different art from Simple Shoes. Hiking Boots and
-Rain Boots have paired male and female art and five recolored shop options each. Short-Sleeve T-Shirts
-use paired male and female artwork and come in the original neutral color plus five color variants.
+and pants options, including male Black Pants. Every garment sheet from the original GandalfHardcore
+clothing packs is available, including base layers, swimwear, corsets, bodices, skirts, and dresses
+such as Queen Dress. Intimate
+underlayers use Explorer Base Layer names in Cartovella and are free at Level 1. Simple Shoes and
+Leather Riding Boots each have five recolored shop options; the female Riding Boots use different art
+from Simple Shoes. Hiking Boots and Rain Boots have paired male and female art, each in its original
+color without recolored variants. Short-Sleeve T-Shirts use paired male and female artwork and come in
+the original neutral color plus five color variants.
 Glasses and face accessories are available in
 the Wardrobe. The Alpha Hat uses paired custom male and female artwork and is available in the Coin
 Shop.
@@ -336,8 +339,8 @@ reward track are not included.
 
 | Level | Clothing and wardrobe appearance unlocks |
 | ---: | --- |
-| 1 | Classic Adventurer starter outfit; Starter Shirt, Starter Pants, Simple Shoes |
-| 2 | Trail Pith Hat, Trail Boots, Pine Trail Flannel |
+| 1 | Classic Adventurer starter outfit; Starter Shirt, Starter Pants, Simple Shoes, free Explorer Base Layers |
+| 2 | Trail Pith Hat, Leather Riding Boots, Pine Trail Flannel |
 | 3 | Forest Green outfit, Explorer Backpack, Traveler Cap, Scout Cargo Pants |
 | 4 | Farming Hat, Meadow Forager Tunic, Walking Stick accessory |
 | 5 | River Blue outfit, Wayfarer Gloves, Back Lantern, green and khaki Wayfarer Field Vests |

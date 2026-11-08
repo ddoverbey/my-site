@@ -282,6 +282,8 @@ check('Miku locks hair and clothing while keeping scene, sprite, skin, pet and e
   const layers = characterCreator.characterSpriteAssets(character, new Date(2026, 9, 28));
   assert.deepEqual(layers.map(layer => layer.layer), ['effect', 'base']);
   assert.ok(layers[1].imageSrc.endsWith('/Miku-2.png'));
+  assert.equal(layers[1].eyeColor, character.eyeColor);
+  assert.deepEqual(layers[1].eyeSourceRgb, [10, 77, 78]);
 
   const controls = { dataset: { activeTab: 'appearance' }, innerHTML: '' };
   let changed;
@@ -825,6 +827,18 @@ check('shirts, bottoms, and shoes can be cleared, and requested bottom pieces us
       .find(entry => entry.layer === 'bottoms');
     assert.equal(layer?.imageSrc, encodeURI(femalePantsTemplate), `${id} renders as pants`);
   }
+  const blackPants = characterCreator.SHOP_WARDROBE.find(item => item.id === 'black_pants');
+  assert.ok(blackPants);
+  assert.deepEqual(blackPants.genders, ['male']);
+  assert.equal(blackPants.paths.male,
+    './assets/gandalfhardcore/GandalfHardcore Character Asset Pack/GandalfHardcore Character Asset Pack/Male Clothing/Pants.png');
+  assert.equal(blackPants.paths.female, undefined);
+  assert.equal(blackPants.variantSpec.palette.colorMap['#b92a3b'], '#626976');
+  const blackPantsLayer = characterCreator.characterSpriteAssets({
+    ...characterCreator.DEFAULT_CHARACTER, bottoms: blackPants.id,
+    purchasedItems: [blackPants.id]
+  }).find(entry => entry.layer === 'bottoms');
+  assert.ok(blackPantsLayer?.variantSpec, 'Black Pants renders as a recolored male option');
   const pantsColors = {
     green_pants: '#527347', blue_pants: '#41638e',
     orange_pants: '#ad6235', purple_pants: '#654d8b'
@@ -845,20 +859,62 @@ check('shirts, bottoms, and shoes can be cleared, and requested bottom pieces us
     assert.equal(femaleLayer.variantSpec.palette.base, baseColor, `${id} colors the female pants`);
   }
 });
-check('simple shoes and trail boots differ by gender and include recolored choices', () => {
+check('Explorer Base Layers are free rewards from level one', () => {
+  const ids = [
+    'male_base_layer', 'male_blue_base_layer', 'male_green_base_layer',
+    'male_orange_base_layer', 'male_purple_base_layer', 'male_red_base_layer',
+    'female_blue_base_layer', 'female_green_base_layer', 'female_orange_base_layer',
+    'female_purple_base_layer', 'female_red_base_layer', 'female_sky_blue_base_layer'
+  ];
+  for (const id of ids) {
+    const item = characterCreator.LEVEL_ITEMS.find(candidate => candidate.id === id);
+    assert.ok(item, `${id} is a level reward`);
+    assert.deepEqual(item.unlock, { type: 'level', goal: 1 });
+    assert.equal(item.cost, undefined, `${id} has no coin cost`);
+    assert.equal(characterCreator.SHOP_WARDROBE.some(candidate => candidate.id === id),
+      false, `${id} is not purchase-gated`);
+    assert.ok(characterCreator.LEVEL_TRACK[0].itemIds.includes(id),
+      `${id} is listed at level one`);
+    const gender = id.startsWith('female_') ? 'female' : 'male';
+    const field = gender === 'female' ? 'top' : 'bottoms';
+    const character = characterCreator.normalizeCharacter({ gender, [field]: id });
+    assert.equal(character[field], id, `${id} is selectable without a purchase`);
+    assert.ok(characterCreator.characterSpriteAssets(character)
+      .some(layer => layer.layer === field), `${id} renders for ${gender}`);
+  }
+});
+check('Simple Shoes and Leather Riding Boots have visible color choices', () => {
   const simpleShoes = characterCreator.LEVEL_ITEMS.find(item => item.id === 'simple_shoes');
   const trailBoots = characterCreator.LEVEL_ITEMS.find(item => item.id === 'trail_boots');
   assert.notEqual(simpleShoes.paths.male, trailBoots.paths.male);
   assert.notEqual(simpleShoes.paths.female, trailBoots.paths.female);
+  assert.equal(trailBoots.name, 'Leather Riding Boots');
   assert.ok(trailBoots.paths.female.endsWith('/Brown%20Thigh-High%20Boots.png') ||
     trailBoots.paths.female.endsWith('/Brown Thigh-High Boots.png'));
-  for (const id of ['simple_shoes', 'trail_boots']) {
+  const sourceMaps = {
+    simple_shoes: { '#261e19': 'shadow', '#3b2d26': 'base' },
+    trail_boots: {
+      '#261e19': 'shadow', '#3b2d26': 'base', '#593e2d': 'highlight'
+    }
+  };
+  for (const id of Object.keys(sourceMaps)) {
     const choices = characterCreator.SHOP_WARDROBE.filter(item =>
       item.field === 'shoes' && item.id.startsWith(`${id}_`));
     assert.equal(choices.length, 5, `${id} has five color choices`);
     assert.equal(new Set(choices.map(item => JSON.stringify(item.variantSpec.palette))).size, 5);
     assert.ok(choices.every(item => item.paths.male && item.paths.female), `${id} supports both sprites`);
+    for (const choice of choices) {
+      for (const [source, role] of Object.entries(sourceMaps[id])) {
+        assert.equal(choice.variantSpec.palette.colorMap[source],
+          choice.variantSpec.palette[role], `${choice.name} recolors source ${source}`);
+      }
+    }
   }
+  assert.equal(characterCreator.SHOP_WARDROBE.filter(item =>
+    item.id.startsWith('hiking_boots_') || item.id.startsWith('rain_boots_')).length, 0,
+  'custom Hiking Boots and Rain Boots do not get color variants');
+  assert.ok(characterCreator.SHOP_WARDROBE.some(item => item.id === 'hiking_boots'));
+  assert.ok(characterCreator.SHOP_WARDROBE.some(item => item.id === 'rain_boots'));
   assert.equal(characterCreator.characterSpriteAssets(
     characterCreator.normalizeCharacter({ shoes: '' })
   ).some(layer => layer.layer === 'shoes'), false, 'no footwear remains available');
@@ -1324,13 +1380,28 @@ check('level and destination unlocks show exact current progress', () => {
     { character, isCartovellaOwner: true }
   ).unlocked, true);
 });
-check('the explorer track contains paired gender gear for all ten levels', () => {
+check('the explorer track contains paired gear and level-one base layers', () => {
+  const underwearIds = new Set([
+    'male_base_layer', 'male_blue_base_layer', 'male_green_base_layer',
+    'male_orange_base_layer', 'male_purple_base_layer', 'male_red_base_layer',
+    'female_blue_base_layer', 'female_green_base_layer', 'female_orange_base_layer',
+    'female_purple_base_layer', 'female_red_base_layer', 'female_sky_blue_base_layer'
+  ]);
   assert.deepEqual(characterCreator.LEVEL_TRACK.map(reward => reward.level),
     [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
   assert.ok(characterCreator.LEVEL_ITEMS.every(item =>
-    item.unlock.type === 'level' && item.paths.male && item.paths.female));
+    item.unlock.type === 'level' &&
+    (underwearIds.has(item.id)
+      ? Object.keys(item.paths).length === 1
+      : item.paths.male && item.paths.female)));
   assert.deepEqual(characterCreator.LEVEL_TRACK[0].itemIds,
-    ['starter_shirt', 'starter_pants', 'simple_shoes']);
+    [
+      'starter_shirt', 'starter_pants', 'simple_shoes',
+      'male_base_layer', 'male_blue_base_layer', 'male_green_base_layer',
+      'male_orange_base_layer', 'male_purple_base_layer', 'male_red_base_layer',
+      'female_blue_base_layer', 'female_green_base_layer', 'female_orange_base_layer',
+      'female_purple_base_layer', 'female_red_base_layer', 'female_sky_blue_base_layer'
+    ]);
   assert.ok(characterCreator.LEVEL_TRACK[9].itemIds.includes('diamond_sword'));
   assert.ok(characterCreator.LEVEL_TRACK[9].itemIds.includes('hair_shield_maiden'));
   for (const reward of characterCreator.LEVEL_TRACK.slice(1)) {
@@ -1607,15 +1678,10 @@ check('new custom gear uses replacement art, multiple colors, and correct poncho
   assert.equal(rainBoots.paths.female, './assets/custom-gear/female-rain-boots.png');
   const hikingBootColors = characterCreator.SHOP_WARDROBE.filter(item =>
     item.id.startsWith('hiking_boots_'));
-  assert.equal(hikingBootColors.length, 5);
-  assert.ok(hikingBootColors.every(item =>
-    item.variantSpec.palette.colorMap['#302c2a'] === item.variantSpec.palette.shadow));
+  assert.equal(hikingBootColors.length, 0);
   const rainBootColors = characterCreator.SHOP_WARDROBE.filter(item =>
     item.id.startsWith('rain_boots_'));
-  assert.equal(rainBootColors.length, 5);
-  assert.ok(rainBootColors.every(item =>
-    item.variantSpec.palette.colorMap['#af8500'] === item.variantSpec.palette.shadow &&
-    item.variantSpec.palette.colorMap['#f0b700'] === item.variantSpec.palette.highlight));
+  assert.equal(rainBootColors.length, 0);
 
   const shirts = characterCreator.SHOP_WARDROBE.filter(item =>
     item.id === 'short_sleeve_tshirt' || item.id.startsWith('short_sleeve_tshirt_'));
@@ -1803,6 +1869,7 @@ check('sprite palette shader recolors frames, preserves outlines and transparenc
   setPixel(12, 2, [39, 19, 15, 255]);
   setPixel(13, 2, [163, 138, 110, 255]);
   setPixel(14, 2, [19, 19, 28, 255]);
+  setPixel(15, 2, [38, 30, 25, 255]);
   setPixel(84, 2, [150, 150, 150, 255]);
   setPixel(30, 2, [150, 150, 150, 255]);
   setPixel(31, 2, [150, 150, 150, 255]);
@@ -1853,12 +1920,13 @@ check('sprite palette shader recolors frames, preserves outlines and transparenc
     const exactMapped = characterCreator.processSpriteVariant(source, {
       palette: {
         shadow: '#70151f', base: '#c92f3a', highlight: '#ff7479',
-        colorMap: { '#27130f': '#70151f' },
+        colorMap: { '#27130f': '#70151f', '#261e19': '#102030' },
         preserveColors: ['#a38a6e', '#13131c']
       },
       pattern: 'jacket'
     });
     assert.deepEqual(pixelAt(exactMapped, 12, 2), [0x70, 0x15, 0x1f, 255]);
+    assert.deepEqual(pixelAt(exactMapped, 15, 2), [0x10, 0x20, 0x30, 255]);
     assert.deepEqual(pixelAt(exactMapped, 13, 2), [0xa3, 0x8a, 0x6e, 255]);
     assert.deepEqual(pixelAt(exactMapped, 14, 2), [0x13, 0x13, 0x1c, 255]);
     assert.strictEqual(characterCreator.processSpriteVariant(source, plaid), processed);
@@ -2239,9 +2307,14 @@ check('eye colors recolor only the two source eye pixels for each sprite', () =>
     const sourceEye = [39, 19, 15, 255];
     const blueEye = [0x47, 0x7b, 0xa7, 255];
     for (const [gender, eyePixels] of [
-      ['male', [[35, 27], [38, 27]]],
-      ['female', [[35, 28], [38, 28]]]
+      ['male', [[37, 27], [40, 27]]],
+      ['female', [[37, 28], [40, 28]]]
     ]) {
+      const baseLayer = characterCreator.characterSpriteAssets({
+        ...characterCreator.DEFAULT_CHARACTER, gender, eyeColor: 'blue'
+      }).find(layer => layer.layer === 'base');
+      assert.equal(baseLayer.eyeColor, 'blue');
+      assert.equal(baseLayer.eyeGender, gender);
       const pixels = new Uint8ClampedArray(80 * 64 * 4);
       const setPixel = (x, y, color) =>
         pixels.set(color, (y * 80 + x) * 4);
@@ -2256,6 +2329,23 @@ check('eye colors recolor only the two source eye pixels for each sprite', () =>
       eyePixels.forEach(([x, y]) => assert.deepEqual(getPixel(recolored, x, y), blueEye));
       assert.deepEqual(getPixel(recolored, 1, 1), sourceEye);
       assert.deepEqual(getPixel(image, eyePixels[0][0], eyePixels[0][1]), sourceEye);
+    }
+
+    const mikuPixels = new Uint8ClampedArray(80 * 64 * 4);
+    for (const [x, y] of [[37, 28], [40, 28]]) {
+      mikuPixels.set([10, 77, 78, 255], (y * 80 + x) * 4);
+    }
+    const mikuImage = {
+      src: 'miku-eye-color.png', naturalWidth: 80, naturalHeight: 64, pixels: mikuPixels
+    };
+    const recoloredMiku = characterCreator.processSpriteEyeColor(
+      mikuImage, 'blue', 'female', [10, 77, 78]
+    );
+    for (const [x, y] of [[37, 28], [40, 28]]) {
+      assert.deepEqual(
+        [...recoloredMiku.pixels.slice((y * 80 + x) * 4, (y * 80 + x) * 4 + 4)],
+        blueEye
+      );
     }
   } finally {
     if (originalOffscreenCanvas === undefined) delete globalThis.OffscreenCanvas;
