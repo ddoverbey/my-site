@@ -433,7 +433,7 @@
     makeVariantItem('volunteer_park_tee', 'Volunteer Park Tee', 'top',
       { type: 'worldParks', goal: 5 },
       palette('#1c3429', '#365e45', '#88a36c', { accent: '#dfc05b' }), 'jacket'),
-    makeVariantItem('park_ranger_uniform', 'Park Ranger Uniform', 'top',
+    makeVariantItem('park_ranger_uniform', 'Park Ranger Shirt', 'top',
       { type: 'worldParks', goal: 15 },
       palette('#32372c', '#a49260', '#ded0a0', { accent: '#435238' }), 'buttons', {
         paths: Object.freeze({

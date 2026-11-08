@@ -1198,6 +1198,7 @@ check('replacement Summit, Mariner, and Park Ranger artwork is wired with hood r
   assert.equal(summitRedHoodUp.paths.male, './assets/custom-gear/Red male Parka up no hat .png');
   assert.equal(mariner.paths.male, './assets/custom-gear/Male Mariner Coat.png');
   assert.equal(mariner.paths.female, './assets/custom-gear/Female Mariner Coat.png');
+  assert.equal(parkRanger.name, 'Park Ranger Shirt');
   assert.equal(parkRanger.paths.male, './assets/custom-gear/male-ranger-shirt-1.png');
   assert.equal(parkRanger.variantSpecByGender.male, null);
   assert.equal(parkRanger.variantSpecByGender.female, undefined);
