@@ -755,6 +755,51 @@ check('inclusive body frames migrate legacy selections', () => {
   assert.equal(characterCreator.normalizeCharacter({ bodyShape: 'sturdy' }).bodyShape, 'vTaper');
   assert.equal(characterCreator.normalizeCharacter({ bodyShape: 'hourglass' }).bodyShape, 'hourglass');
 });
+check('inclusive body proportion controls default, clamp, persist and scale every layer together', () => {
+  assert.deepEqual([
+    characterCreator.DEFAULT_CHARACTER.bodyWidth,
+    characterCreator.DEFAULT_CHARACTER.bodyHeight
+  ], [100, 100]);
+  assert.deepEqual([
+    characterCreator.normalizeCharacter({ bodyWidth: 1000, bodyHeight: -20 }).bodyWidth,
+    characterCreator.normalizeCharacter({ bodyWidth: 1000, bodyHeight: -20 }).bodyHeight
+  ], [120, 90]);
+  assert.deepEqual([
+    characterCreator.normalizeCharacter({ bodyWidth: 'invalid', bodyHeight: null }).bodyWidth,
+    characterCreator.normalizeCharacter({ bodyWidth: 'invalid', bodyHeight: null }).bodyHeight
+  ], [100, 100]);
+
+  const controls = { dataset: { activeTab: 'appearance' }, innerHTML: '' };
+  let character = characterCreator.normalizeCharacter();
+  const render = () => characterCreator.render({
+    controls, character, stats: { level: 1 },
+    onChange: next => { character = next; render(); }
+  });
+  render();
+  assert.match(controls.innerHTML,
+    /type="range" min="85" max="120"\s+step="5" value="100"\s+data-character-field="bodyWidth"/);
+  assert.match(controls.innerHTML,
+    /type="range" min="90" max="110"\s+step="5" value="100"\s+data-character-field="bodyHeight"/);
+
+  controls.onchange({ target: { dataset: { characterField: 'bodyWidth' }, value: '115' } });
+  assert.equal(character.bodyWidth, 115);
+  controls.onchange({ target: { dataset: { characterField: 'bodyHeight' }, value: '90' } });
+  assert.deepEqual([character.bodyWidth, character.bodyHeight], [115, 90]);
+
+  const transforms = [];
+  characterCreator.drawCharacterSprite({
+    save() {},
+    restore() {},
+    translate(...values) { transforms.push(['translate', ...values]); },
+    scale(...values) { transforms.push(['scale', ...values]); },
+    drawImage() {}
+  }, character);
+  assert.deepEqual(transforms, [
+    ['translate', 80, 58],
+    ['scale', 1.15, 0.9],
+    ['translate', -80, -58]
+  ]);
+});
 check('sprite hairstyle assets are available for their matching character sprites', () => {
   const maleStyles = characterCreator.HAIR_STYLES.filter(style => style.genders.includes('male'));
   const femaleStyles = characterCreator.HAIR_STYLES.filter(style => style.genders.includes('female'));

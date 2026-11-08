@@ -249,6 +249,9 @@ in `assets/Zips/`.
 Character layers use aligned 80×64 cells (10×7 on 800×448 sheets); the 32×48 character artwork
 is padded inside each cell and rendered at a uniform native scale. Character, hairstyle, wardrobe,
 companion, and background selectors show visual previews.
+Appearance includes body-width and body-height sliders for inclusive character proportions. Width
+can be adjusted from 85% to 120% and height from 90% to 110%; both default to 100%, and the same
+transform is applied to every character layer so outfits remain aligned.
 Opening the character editor focuses and jumps directly to the customization controls above the
 character stage. Appearance contains skin tones and special skins, plus a compact full-width
 hairstyle picker that keeps its preview, name, and arrows separate. Hairstyle arrows cycle through

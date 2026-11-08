@@ -77,6 +77,8 @@
     { id: 'standard', name: 'Standard', imageSrc: null },
     { id: 'tall', name: 'Tall', imageSrc: null }
   ];
+  const BODY_WIDTH_LIMITS = Object.freeze({ min: 85, max: 120, step: 5 });
+  const BODY_HEIGHT_LIMITS = Object.freeze({ min: 90, max: 110, step: 5 });
 
   const OUTFIT_CATALOG = [
     { id: 'outfit_recruit', name: 'Classic Adventurer', spriteStyle: 'classic', slot: 'outfit', unlock: { type: 'starter' }, color: '#5d9d79', imageSrc: null },
@@ -721,7 +723,7 @@
       [field, EQUIPMENT_CATALOG.filter(item => item.field === field)])));
   const FIXED_SKIN_ALLOWED_FIELDS = new Set([
     'gender', 'skinTone', 'specialSkin', 'effect', 'pet', 'petAnimation',
-    'petHat', 'petBackpack', 'background', 'headwear'
+    'petHat', 'petBackpack', 'background', 'headwear', 'bodyWidth', 'bodyHeight'
   ]);
   const fixedAppearanceSkin = character =>
     EQUIPMENT_BY_FIELD.specialSkin.find(item =>
@@ -805,6 +807,8 @@
     eyeColor: 'brown',
     bodyShape: 'straight',
     height: 'standard',
+    bodyWidth: 100,
+    bodyHeight: 100,
     hat: 'hat_none',
     outfit: 'outfit_recruit',
     accessory: 'accessory_none',
@@ -832,6 +836,16 @@
   const stageRenderers = new WeakMap();
   const stageAnimations = new WeakMap();
   const tabs = ['appearance', 'wardrobe', 'pets', 'backgrounds', 'shop', 'patron'];
+
+  function normalizeBodyScale(value, limits) {
+    if (value === undefined || value === null ||
+      (typeof value === 'string' && value.trim() === '') ||
+      (typeof value !== 'number' && typeof value !== 'string')) return 100;
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return 100;
+    const stepped = Math.round(numeric / limits.step) * limits.step;
+    return Math.max(limits.min, Math.min(limits.max, stepped));
+  }
 
   function normalizeCharacter(value) {
     const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
@@ -905,6 +919,8 @@
       eyeColor: validColorId(source.eyeColor, EYE_COLORS, DEFAULT_CHARACTER.eyeColor),
       bodyShape: normalizeId(bodyShape, knownIds(BODY_SHAPES), DEFAULT_CHARACTER.bodyShape),
       height: normalizeId(source.height, knownIds(HEIGHTS), DEFAULT_CHARACTER.height),
+      bodyWidth: normalizeBodyScale(source.bodyWidth, BODY_WIDTH_LIMITS),
+      bodyHeight: normalizeBodyScale(source.bodyHeight, BODY_HEIGHT_LIMITS),
       hat: normalizeId(source.hat, knownIds(HAT_CATALOG), DEFAULT_CHARACTER.hat),
       outfit: normalizeId(source.outfit, knownIds(OUTFIT_CATALOG), DEFAULT_CHARACTER.outfit),
       accessory: normalizeId(source.accessory, knownIds(ACCESSORY_CATALOG), DEFAULT_CHARACTER.accessory),
@@ -1391,9 +1407,18 @@
     pixel(ctx, 32, 64, 3, 8, '#df6136');
   }
 
-  function drawCharacterSprite(ctx, value, redraw = () => {}, effectFrame = 0, bobOffset = 0) {
-    const target = CHARACTER_SPRITE_TARGET;
-    const character = normalizeCharacter(value);
+  function drawCharacterLayers(ctx, character, redraw, target, effectFrame = 0, bobOffset = 0) {
+    const widthScale = character.bodyWidth / 100;
+    const heightScale = character.bodyHeight / 100;
+    const targetY = target.y + bobOffset;
+    const centerX = target.x + CHARACTER_SPRITE_CONTENT.x + CHARACTER_SPRITE_CONTENT.width / 2;
+    const centerY = targetY + CHARACTER_SPRITE_CONTENT.y + CHARACTER_SPRITE_CONTENT.height / 2;
+    ctx.save();
+    if (widthScale !== 1 || heightScale !== 1) {
+      ctx.translate(centerX, centerY);
+      ctx.scale(widthScale, heightScale);
+      ctx.translate(-centerX, -centerY);
+    }
     characterSpriteAssets(character).forEach(layer => {
       const baseImage = getImage(layer, redraw);
       const image = baseImage && layer.variantSpec
@@ -1408,10 +1433,16 @@
           : 0;
         drawCharacterLayer(ctx, image, layer,
           layerFrame, 0, CHARACTER_SPRITE_CELL.width, CHARACTER_SPRITE_CELL.height,
-          target.x, target.y + bobOffset, target.width, target.height);
+          target.x, targetY, target.width, target.height);
         if (layer.filter) ctx.restore();
       }
     });
+    ctx.restore();
+  }
+
+  function drawCharacterSprite(ctx, value, redraw = () => {}, effectFrame = 0, bobOffset = 0) {
+    const character = normalizeCharacter(value);
+    drawCharacterLayers(ctx, character, redraw, CHARACTER_SPRITE_TARGET, effectFrame, bobOffset);
   }
 
   function drawCharacterLayer(ctx, image, layer, sourceX, sourceY, sourceWidth, sourceHeight,
@@ -1580,20 +1611,8 @@
       (canvas.height - CHARACTER_SPRITE_CELL.height * scale) / 2
     );
     ctx.scale(scale, scale);
-    characterSpriteAssets(character).forEach(layer => {
-      const baseImage = getImage(layer, redraw);
-      const image = baseImage && layer.variantSpec
-        ? processSpriteVariant(baseImage, layer.variantSpec) : baseImage;
-      if (!image) return;
-      if (layer.filter) {
-        ctx.save();
-        ctx.filter = layer.filter;
-      }
-      drawCharacterLayer(ctx, image, layer, 0, 0,
-        CHARACTER_SPRITE_CELL.width, CHARACTER_SPRITE_CELL.height,
-        0, 0, CHARACTER_SPRITE_CELL.width, CHARACTER_SPRITE_CELL.height);
-      if (layer.filter) ctx.restore();
-    });
+    drawCharacterLayers(ctx, character, redraw,
+      { x: 0, y: 0, width: CHARACTER_SPRITE_CELL.width, height: CHARACTER_SPRITE_CELL.height });
     ctx.restore();
   }
 
@@ -1997,6 +2016,26 @@
           `<span aria-hidden="true" class="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-slate-900">
             <span class="h-6 w-6 rounded-full border border-slate-500" style="background-color:${escapeHtml(option.color)}"></span>
           </span>`)}
+        <fieldset class="sm:col-span-2 rounded-xl border border-slate-700 bg-slate-950/50 p-3">
+          <legend class="px-1 text-xs font-semibold text-slate-200">Body proportions</legend>
+          <p class="mb-3 text-xs text-slate-400">Adjust your sprite's width and height. All layers stay aligned; 100% is the default.</p>
+          <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <label class="block text-xs text-slate-300">Body width
+              <output class="float-right font-mono text-amber-200">${character.bodyWidth}%</output>
+              <input type="range" min="${BODY_WIDTH_LIMITS.min}" max="${BODY_WIDTH_LIMITS.max}"
+                step="${BODY_WIDTH_LIMITS.step}" value="${character.bodyWidth}"
+                data-character-field="bodyWidth" aria-label="Body width"
+                class="mt-2 w-full accent-amber-400" ${disabled ? 'disabled' : ''}>
+            </label>
+            <label class="block text-xs text-slate-300">Body height
+              <output class="float-right font-mono text-amber-200">${character.bodyHeight}%</output>
+              <input type="range" min="${BODY_HEIGHT_LIMITS.min}" max="${BODY_HEIGHT_LIMITS.max}"
+                step="${BODY_HEIGHT_LIMITS.step}" value="${character.bodyHeight}"
+                data-character-field="bodyHeight" aria-label="Body height"
+                class="mt-2 w-full accent-amber-400" ${disabled ? 'disabled' : ''}>
+            </label>
+          </div>
+        </fieldset>
         ${fixedAppearance
           ? '<p class="sm:col-span-2 text-xs text-slate-400">Hairstyle changes are unavailable while Miku is selected.</p>'
           : `<div class="sm:col-span-2">${hairPicker}</div>`}
