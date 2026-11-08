@@ -241,6 +241,9 @@ each choice to its source art. Ranger hats mask the upper edge of hairstyles, wh
 show below the hat. Shirts, bottoms, and shoes can be unequipped independently, including
 when a one-piece outfit such as a bikini is selected. The wardrobe includes skirt, black short skirt,
 and pants options.
+The Summit Down Parka has hood-down and two hood-up male choices; hood-up choices hide and disable
+hats and helmets until a hood-down top is selected. Mariner coats and the male Park Ranger Uniform use
+their dedicated replacement art.
 GandalfHardcore asset folders are grouped under `assets/gandalfhardcore/`; source ZIP archives remain
 in `assets/Zips/`.
 The character layers use aligned 800×448 sheets and a 32×48 crop around the first character

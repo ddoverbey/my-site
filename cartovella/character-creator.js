@@ -313,16 +313,20 @@
     headwear: Object.freeze(pairedPaths(VARIANT_ASSET_ROOTS.hats,
       'Male Hat/Farming Hat M.png', 'Female Hat/Farming Hat F.png'))
   });
-  const makeVariantItem = (id, name, field, unlock, palette, pattern = null) => ({
-    ...equipmentItem(id, name, field, VARIANT_BASE_PATHS[field], unlock),
+  const makeVariantItem = (id, name, field, unlock, palette, pattern = null, options = {}) => ({
+    ...equipmentItem(id, name, field, options.paths || VARIANT_BASE_PATHS[field], unlock),
     variantSpec: { palette, ...(pattern ? { pattern } : {}),
       ...(pattern === 'hatBand' ? {
         bandRowsByGender: { male: [21], female: [22] },
         bandXRange: [39, 46]
-      } : {}) }
+      } : {}) },
+    ...(options.variantSpecByGender ? { variantSpecByGender: options.variantSpecByGender } : {})
   });
-  const variantSpecForGender = (item, gender) => item.variantSpec?.bandRowsByGender
-    ? { ...item.variantSpec, gender } : item.variantSpec;
+  const variantSpecForGender = (item, gender) => {
+    const variantSpec = Object.prototype.hasOwnProperty.call(item.variantSpecByGender || {}, gender)
+      ? item.variantSpecByGender[gender] : item.variantSpec;
+    return variantSpec?.bandRowsByGender ? { ...variantSpec, gender } : variantSpec;
+  };
   const palette = (shadow, base, highlight, extra = {}) => ({
     shadow, base, highlight, ...extra
   });
@@ -431,7 +435,13 @@
       palette('#1c3429', '#365e45', '#88a36c', { accent: '#dfc05b' }), 'jacket'),
     makeVariantItem('park_ranger_uniform', 'Park Ranger Uniform', 'top',
       { type: 'worldParks', goal: 15 },
-      palette('#32372c', '#a49260', '#ded0a0', { accent: '#435238' }), 'buttons'),
+      palette('#32372c', '#a49260', '#ded0a0', { accent: '#435238' }), 'buttons', {
+        paths: Object.freeze({
+          ...VARIANT_BASE_PATHS.top,
+          male: spritePath(CUSTOM_GEAR_ASSET_ROOT, 'male-ranger-shirt-1.png')
+        }),
+        variantSpecByGender: { male: null }
+      }),
     makeVariantItem('ranger_trail_pants', 'Ranger Trail Breeches', 'bottoms',
       { type: 'worldParks', goal: 25 },
       palette('#1e2a24', '#355b43', '#77926c')),
@@ -478,13 +488,31 @@
       { type: 'achievement', id: 'thinAir' },
       palette('#33424a', '#9ac6cf', '#f1f6f5', {
         sleeve: '#e4f1f2', accent: '#58777d'
-      }), 'vest'),
+      }), 'vest', {
+        paths: Object.freeze({
+          ...VARIANT_BASE_PATHS.top,
+          male: spritePath(CUSTOM_GEAR_ASSET_ROOT, 'male-parka-down.png')
+        }),
+        variantSpecByGender: { male: null }
+      }),
+    {
+      ...equipmentItem('summit_hood_up_parka', 'Summit Hood-Up Parka', 'top',
+        oneGenderPath('male', spritePath(CUSTOM_GEAR_ASSET_ROOT, 'Male Parka up no hat.png')),
+        { type: 'achievement', id: 'thinAir' }),
+      blocksHeadwear: true
+    },
+    {
+      ...equipmentItem('summit_red_hood_up_parka', 'Summit Red Hood-Up Parka', 'top',
+        oneGenderPath('male', spritePath(CUSTOM_GEAR_ASSET_ROOT, 'Red male Parka up no hat .png')),
+        { type: 'achievement', id: 'thinAir' }),
+      blocksHeadwear: true
+    },
     makeVariantItem('overland_canvas_jacket', 'Overland Canvas Jacket', 'top',
       { type: 'achievement', id: 'overlander' },
       palette('#382621', '#9b6042', '#d4aa74', { accent: '#cba46f' }), 'jacket'),
-    makeVariantItem('mariner_pea_coat', 'Mariner Pea Coat', 'top',
-      { type: 'achievement', id: 'mariner' },
-      palette('#202b3a', '#344866', '#8395aa', { accent: '#d5b64e' }), 'jacket'),
+    equipmentItem('mariner_pea_coat', 'Mariner Pea Coat', 'top',
+      pairedPaths(CUSTOM_GEAR_ASSET_ROOT, 'Male Mariner Coat.png', 'Female Mariner Coat.png'),
+      { type: 'achievement', id: 'mariner' }),
     makeVariantItem('photographer_vest', "Photographer's Utility Vest", 'top',
       { type: 'achievement', id: 'focal' },
       palette('#292b2c', '#55594d', '#a5a58a', {
@@ -698,6 +726,11 @@
   const fixedAppearanceSkin = character =>
     EQUIPMENT_BY_FIELD.specialSkin.find(item =>
       item.id === character.specialSkin && item.fixedAppearance);
+  const headwearBlockedByTop = character => {
+    if (fixedAppearanceSkin(character)) return false;
+    const item = EQUIPMENT_BY_FIELD.top.find(candidate => candidate.id === character.top);
+    return item?.blocksHeadwear === true && !!item.paths[character.gender];
+  };
   function holidayHatEventFor(date = new Date()) {
     const month = date.getMonth() + 1;
     const day = date.getDate();
@@ -1229,6 +1262,7 @@
     const character = normalizeCharacter(value);
     const equipmentGender = equipmentGenderFor(character);
     const holidayHat = holidayHatFor(character, date);
+    const fixedAppearance = !!fixedAppearanceSkin(character);
     const genderName = character.gender === 'female' ? 'Female' : 'Male';
     const skinIndex = SKIN_TONES.findIndex(tone => tone.id === character.skinTone) + 1;
     const hairCatalog = HAIR_STYLES.filter(style => style.genders.includes(character.gender));
@@ -1252,19 +1286,22 @@
     const equipmentLayer = (field, layer, gender = character.gender, itemId = character[field]) => {
       const item = (EQUIPMENT_BY_FIELD[field] || []).find(candidate => candidate.id === itemId);
       const path = item?.paths[gender];
+      const variantSpec = item && variantSpecForGender(item, gender);
       return path ? {
         layer, imageSrc: assetUrl(path),
-        ...(item.variantSpec ? {
-          variantSpec: variantSpecForGender(item, gender)
-        } : {})
+        ...(variantSpec ? { variantSpec } : {})
       } : null;
     };
     const specialSkin = equipmentLayer('specialSkin', 'base');
-    if (fixedAppearanceSkin(character)) {
+    const headwearBlocked = headwearBlockedByTop(character);
+    const headwearLayer = headwearBlocked ? null : equipmentLayer(
+      'headwear', 'headwear', equipmentGender, holidayHat?.id || character.headwear
+    );
+    if (fixedAppearance) {
       return [
         equipmentLayer('effect', 'effect'),
         specialSkin,
-        equipmentLayer('headwear', 'headwear', equipmentGender, holidayHat?.id || character.headwear)
+        headwearLayer
       ].filter(Boolean);
     }
     const layers = [
@@ -1281,7 +1318,7 @@
       equipmentLayer('arms', 'arms'),
       hairLayer,
       equipmentLayer('face', 'face'),
-      equipmentLayer('headwear', 'headwear', equipmentGender, holidayHat?.id || character.headwear),
+      headwearLayer,
       equipmentLayer('handItem', 'hand')
     ].filter(Boolean);
     return layers;
@@ -1700,7 +1737,7 @@
     const path = item.paths?.[gender];
     const isPetAccessory = item.field === 'petHat' || item.field === 'petBackpack';
     const isCustomGear = path?.startsWith(CUSTOM_GEAR_ASSET_ROOT);
-    if (path && item.variantSpec) {
+    if (path && variantSpecForGender(item, gender)) {
       return `<canvas data-sprite-variant-preview="${escapeHtml(item.id)}"
         data-gender="${escapeHtml(gender)}" width="40" height="40" aria-hidden="true"
         class="block h-10 w-10 shrink-0 rounded bg-slate-900"></canvas>`;
@@ -1843,13 +1880,14 @@
     const activeTab = tabs.includes(container.dataset.activeTab) ? container.dataset.activeTab : 'appearance';
     const completedAchievements = achievementProgress(stats, achievements);
     const fixedAppearance = !!fixedAppearanceSkin(character);
+    const headwearBlocked = headwearBlockedByTop(character);
     const dropdown = (field, label, current, choices, renderChoice, fieldDisabled = false) =>
       visualDropdownMarkup(label, field, choices, current, disabled || fieldDisabled, renderChoice);
     const equipmentDropdown = (field, label, fieldDisabled = false) => dropdown(
       field, label, character[field],
       equipmentOptions(field, character, stats, completedAchievements, appState),
       option => equipmentThumbnailMarkup(option, equipmentGenderFor(character)),
-      disabled || fieldDisabled
+      disabled || fieldDisabled || (field === 'headwear' && headwearBlocked)
     );
     const petOptions = catalogOptions(PET_CATALOG, character.pet, stats, character,
       completedAchievements, 'Equipped', appState);
@@ -1891,15 +1929,19 @@
     container.dataset.activeWardrobeField = selectedWardrobeField;
     const selectedWardrobeLabel = wardrobeFields.find(([field]) =>
       field === selectedWardrobeField)[1];
+    const selectedWardrobeDisabled = selectedWardrobeField === 'headwear' && headwearBlocked;
     const selectedWardrobeOptions = equipmentOptions(
       selectedWardrobeField, character, stats, completedAchievements, appState);
+    const headwearRestrictionMessage = headwearBlocked
+      ? '<p class="text-xs text-amber-200">The hood is up; hats and helmets stay hidden until you choose a hood-down top. Your selected headwear will return when the hood is down.</p>'
+      : '';
     const holidayEvent = holidayHatEventFor(currentDate);
     const holidayHatId = holidayEvent
       ? equipmentGenderFor(character) === 'female' ? holidayEvent.femaleHat : holidayEvent.maleHat
       : '';
     const holidayHatName = EQUIPMENT_CATALOG.find(item => item.id === holidayHatId)?.name || 'holiday hat';
     const holidayHatActive = !!holidayHatFor(character, currentDate);
-    const holidayHatControl = holidayEvent
+    const holidayHatControl = holidayEvent && !headwearBlocked
       ? `<div class="rounded-lg border border-amber-400/30 bg-amber-950/20 p-3">
           <p class="text-xs text-amber-100">${holidayHatActive
             ? `${escapeHtml(holidayEvent.label)} automatically displays the ${escapeHtml(holidayHatName)} over your current hat.`
@@ -1929,7 +1971,7 @@
       </label>
       ${cyclePickerMarkup(
         selectedWardrobeLabel, selectedWardrobeField, character[selectedWardrobeField],
-        selectedWardrobeOptions, disabled,
+        selectedWardrobeOptions, disabled || selectedWardrobeDisabled,
         option => equipmentThumbnailMarkup(option, character.gender),
         `Browse all ${selectedWardrobeLabel.toLowerCase()}`,
         container.dataset.openCharacterBrowse === selectedWardrobeField
@@ -1957,6 +1999,7 @@
           </div>
       </div>`,
       wardrobe: `<div class="space-y-3">
+        ${headwearRestrictionMessage}
         ${holidayHatControl}
         ${fixedAppearance
           ? `<p class="text-xs text-slate-400">Miku’s hair and clothing stay fixed. Hats and helmets remain available.</p>
@@ -2064,6 +2107,7 @@
     const customizeButton = options.customizeButton;
     const character = normalizeCharacter(options.character);
     const fixedAppearance = !!fixedAppearanceSkin(character);
+    const headwearBlocked = headwearBlockedByTop(character);
     const stats = options.stats || {};
     const achievements = options.achievements || [];
     const appState = options.appState || { character };
@@ -2120,6 +2164,7 @@
         if (disabled || choiceButton.disabled) return;
         const field = choiceButton.dataset.characterField;
         const id = choiceButton.dataset.characterId;
+        if (field === 'headwear' && headwearBlocked) return;
         if (fixedAppearance && !FIXED_SKIN_ALLOWED_FIELDS.has(field)) return;
         if (field === 'hairPreset') {
           const option = hairPresetOptions(character).find(item => item.id === id);
@@ -2169,6 +2214,7 @@
       }
       const field = event.target.dataset.characterField;
       if (!field || disabled || (fixedAppearance && !FIXED_SKIN_ALLOWED_FIELDS.has(field))) return;
+      if (field === 'headwear' && headwearBlocked) return;
       const next = { ...character, [field]: event.target.value };
       if (field === 'headwear') {
         const holidayEvent = holidayHatEventFor(currentDate);

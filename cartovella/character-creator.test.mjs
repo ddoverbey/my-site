@@ -1121,7 +1121,8 @@ check('variant clothing includes all requested rewards and valid paired sprite-s
     'ranger_hat_navy', 'ranger_hat_navy_banded', 'ranger_hat_purple',
     'ranger_hat_silver', 'ranger_hat_golden', 'ranger_hat_diamond', 'john_denver_guitar',
     'khaki_trail_pants', 'mist_rain_poncho', 'cavern_miner_suit', 'summit_down_parka',
-    'overland_canvas_jacket', 'mariner_pea_coat', 'photographer_vest', 'arctic_aurora_cloak',
+    'summit_hood_up_parka', 'summit_red_hood_up_parka', 'overland_canvas_jacket',
+    'mariner_pea_coat', 'photographer_vest', 'arctic_aurora_cloak',
     'blue_ridge_flannel', 'alpine_timberline_jacket', 'continental_cape',
     'centennial_ranger_coat', 'gaia_druid_mantle'
   ];
@@ -1172,14 +1173,77 @@ check('variant clothing includes all requested rewards and valid paired sprite-s
       assert.equal(dimensions[0] % 80, 0, `${item.id} ${gender} frame width`);
       assert.equal(dimensions[1] % 64, 0, `${item.id} ${gender} frame height`);
       checkedPaths.add(path);
+      const variantSpec = Object.prototype.hasOwnProperty.call(item.variantSpecByGender || {}, gender)
+        ? item.variantSpecByGender[gender] : item.variantSpec;
       const layer = characterCreator.characterSpriteAssets({
         ...characterCreator.DEFAULT_CHARACTER, gender, [item.field]: item.id
-      }).find(candidate => candidate.variantSpec?.palette === item.variantSpec.palette);
+      }).find(candidate => candidate.imageSrc === encodeURI(path));
       assert.ok(layer, `${item.id} reaches the ${gender} character sprite layers`);
+      assert.equal(layer.variantSpec?.palette, variantSpec?.palette,
+        `${item.id} ${gender} variant handling`);
     }
   }
   assert.ok([...checkedPaths].some(path => path.endsWith('Cape green.png')),
     'cape template is included');
+});
+check('replacement Summit, Mariner, and Park Ranger artwork is wired with hood restrictions', () => {
+  const achievementItem = id => characterCreator.ACHIEVEMENT_ITEMS.find(item => item.id === id);
+  const summitDown = achievementItem('summit_down_parka');
+  const summitHoodUp = achievementItem('summit_hood_up_parka');
+  const summitRedHoodUp = achievementItem('summit_red_hood_up_parka');
+  const mariner = achievementItem('mariner_pea_coat');
+  const parkRanger = characterCreator.PARK_MILESTONE_ITEMS.find(item => item.id === 'park_ranger_uniform');
+  assert.equal(summitDown.paths.male, './assets/custom-gear/male-parka-down.png');
+  assert.equal(summitHoodUp.paths.male, './assets/custom-gear/Male Parka up no hat.png');
+  assert.equal(summitRedHoodUp.paths.male, './assets/custom-gear/Red male Parka up no hat .png');
+  assert.equal(mariner.paths.male, './assets/custom-gear/Male Mariner Coat.png');
+  assert.equal(mariner.paths.female, './assets/custom-gear/Female Mariner Coat.png');
+  assert.equal(parkRanger.paths.male, './assets/custom-gear/male-ranger-shirt-1.png');
+  assert.equal(parkRanger.variantSpecByGender.male, null);
+  assert.equal(parkRanger.variantSpecByGender.female, undefined);
+  assert.ok(parkRanger.variantSpec, 'female Park Ranger shirt keeps its generated style');
+
+  const replacementPaths = [
+    summitDown.paths.male, summitHoodUp.paths.male, summitRedHoodUp.paths.male,
+    mariner.paths.male, mariner.paths.female, parkRanger.paths.male
+  ];
+  for (const path of replacementPaths) {
+    const png = readFileSync(new URL(path, import.meta.url));
+    assert.equal(png.toString('ascii', 1, 4), 'PNG', path);
+    assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [80, 64], path);
+  }
+  for (const item of [summitHoodUp, summitRedHoodUp]) {
+    assert.equal(item.blocksHeadwear, true, item.id);
+    const character = characterCreator.normalizeCharacter({
+      ...characterCreator.DEFAULT_CHARACTER, top: item.id, headwear: 'traveler_cap'
+    });
+    const layers = characterCreator.characterSpriteAssets(character);
+    assert.equal(layers.find(layer => layer.layer === 'top').imageSrc, encodeURI(item.paths.male));
+    assert.equal(layers.some(layer => layer.layer === 'headwear'), false, item.id);
+    assert.ok(characterCreator.characterSpriteAssets({
+      ...character, top: 'summit_down_parka'
+    }).some(layer => layer.layer === 'headwear'), 'hood-down parka permits headwear');
+
+    const controls = {
+      dataset: { activeTab: 'wardrobe', activeWardrobeField: 'headwear' },
+      innerHTML: ''
+    };
+    let changed;
+    characterCreator.render({
+      controls, character, stats: { level: 10 }, onChange: next => { changed = next; }
+    });
+    assert.match(controls.innerHTML, /The hood is up; hats and helmets stay hidden/);
+    assert.match(controls.innerHTML,
+      /data-character-field="headwear"[^>]*aria-label="Next hats &amp; helmets"[^>]*disabled/);
+    controls.onclick({ target: { closest(selector) {
+      return selector === 'button[data-character-field][data-character-id]'
+        ? { dataset: { characterField: 'headwear', characterId: 'traveler_cap' }, disabled: false }
+        : null;
+    } } });
+    assert.equal(changed, undefined, item.id);
+    controls.onchange({ target: { dataset: { characterField: 'headwear' }, value: 'hat_summit' } });
+    assert.equal(changed, undefined, item.id);
+  }
 });
 check('park and achievement clothing unlock at their exact requirements', () => {
   const character = characterCreator.normalizeCharacter();
