@@ -417,7 +417,24 @@
     makeVariantItem('wayfarer_field_vest', 'Wayfarer Field Vest', 'top', { type: 'level', goal: 5 },
       palette('#252b31', '#a39469', '#ded0a1', {
         sleeve: '#34475f', accent: '#665536'
-      }), 'vest'),
+      }), 'vest', {
+        paths: Object.freeze({
+          ...VARIANT_BASE_PATHS.top,
+          male: spritePath(CUSTOM_GEAR_ASSET_ROOT, 'male-green-vest.png')
+        }),
+        variantSpecByGender: { male: null }
+      }),
+    makeVariantItem('wayfarer_khaki_field_vest', 'Khaki Wayfarer Field Vest', 'top',
+      { type: 'level', goal: 5 },
+      palette('#383529', '#81734d', '#d5bf84', {
+        sleeve: '#4b493c', accent: '#6d5e3b'
+      }), 'vest', {
+        paths: Object.freeze({
+          ...VARIANT_BASE_PATHS.top,
+          male: spritePath(CUSTOM_GEAR_ASSET_ROOT, 'male-khaki-vest.png')
+        }),
+        variantSpecByGender: { male: null }
+      }),
     makeVariantItem('canyon_work_denim', 'Canyon Work Denim', 'bottoms', { type: 'level', goal: 6 },
       palette('#20283a', '#4c6388', '#9aaec9')),
     makeVariantItem('redwood_flannel_jacket', 'Redwood Flannel Jacket', 'top', { type: 'level', goal: 7 },
@@ -438,15 +455,17 @@
     makeVariantItem('park_ranger_uniform', 'Park Ranger Shirt', 'top',
       { type: 'worldParks', goal: 15 },
       palette('#32372c', '#a49260', '#ded0a0', { accent: '#435238' }), 'buttons', {
-        paths: Object.freeze({
-          ...VARIANT_BASE_PATHS.top,
-          male: spritePath(CUSTOM_GEAR_ASSET_ROOT, 'male-ranger-shirt-1.png')
-        }),
-        variantSpecByGender: { male: null }
+        paths: Object.freeze(pairedPaths(CUSTOM_GEAR_ASSET_ROOT,
+          'male-ranger-shirt.png', 'female-ranger-shirt.png')),
+        variantSpecByGender: { male: null, female: null }
       }),
     makeVariantItem('ranger_trail_pants', 'Ranger Trail Breeches', 'bottoms',
       { type: 'worldParks', goal: 25 },
-      palette('#1e2a24', '#355b43', '#77926c')),
+      palette('#1e2a24', '#355b43', '#77926c'), null, {
+        paths: Object.freeze(pairedPaths(CUSTOM_GEAR_ASSET_ROOT,
+          'male-ranger-pants.png', 'female-ranger-pants.png')),
+        variantSpecByGender: { male: null, female: null }
+      }),
     makeVariantItem('grand_warden_cloak', 'Grand Warden Cloak', 'backLayer',
       { type: 'worldParks', goal: 75 },
       palette('#172a21', '#315841', '#9d9b54', { accent: '#d0ae48' }))
@@ -533,8 +552,14 @@
       { type: 'achievement', id: 'fiftyNifty' },
       palette('#252636', '#35466e', '#a35a61', { accent: '#b34854' })),
     makeVariantItem('centennial_ranger_coat', 'Centennial Ranger Coat', 'top',
-      { type: 'achievement', id: 'americaTheBeautiful' },
-      palette('#191b20', '#383a3b', '#b49a53', { accent: '#e4c55a' }), 'jacket'),
+      { type: 'owner' },
+      palette('#191b20', '#383a3b', '#b49a53', { accent: '#e4c55a' }), 'jacket', {
+        paths: Object.freeze({
+          ...VARIANT_BASE_PATHS.top,
+          male: spritePath(CUSTOM_GEAR_ASSET_ROOT, 'male-ranger-coat.png')
+        }),
+        variantSpecByGender: { male: null }
+      }),
     makeVariantItem('gaia_druid_mantle', 'Gaia Druid Mantle', 'backLayer',
       { type: 'achievement', id: 'gaiaWanderer' },
       palette('#1b3026', '#28734e', '#c7b34e', { accent: '#78b967' }))
@@ -778,7 +803,9 @@
     { level: 2, title: 'Trailwalker', itemIds: ['walking_stick', 'trail_boots', 'pine_trail_flannel'] },
     { level: 3, title: 'Scout', itemIds: ['explorer_backpack', 'traveler_cap', 'scout_cargo_pants'] },
     { level: 4, title: 'Forager', itemIds: ['farming_hat', 'basket', 'flower', 'meadow_forager_tunic'] },
-    { level: 5, title: 'Wayfarer', itemIds: ['wayfarer_lantern', 'wayfarer_gloves', 'wayfarer_field_vest'] },
+    { level: 5, title: 'Wayfarer', itemIds: [
+      'wayfarer_lantern', 'wayfarer_gloves', 'wayfarer_field_vest', 'wayfarer_khaki_field_vest'
+    ] },
     { level: 6, title: 'Prospector', itemIds: ['mining_helmet', 'iron_pickaxe', 'iron_axe', 'canyon_work_denim'] },
     { level: 7, title: 'Ranger', itemIds: ['traveler_cape', 'bandit_scarf', 'redwood_flannel_jacket'] },
     { level: 8, title: 'Vanguard', itemIds: ['guard_helmet', 'circle_shield', 'iron_sword', 'vanguard_tabard'] },
@@ -1030,6 +1057,13 @@
 
   function unlockStatus(unlock, stats, character, achievements, appState = { character }) {
     if (!unlock || unlock.type === 'starter') return { unlocked: true, description: 'Available from the start.' };
+    if (unlock.type === 'owner') {
+      const unlocked = appState?.isCartovellaOwner === true;
+      return {
+        unlocked,
+        description: unlocked ? 'Cartovella owner reward.' : 'Reserved for Cartovella owner accounts.'
+      };
+    }
     if (unlock.type === 'easterEgg') {
       const unlocked = Array.isArray(character.unlockedEasterEggs) &&
         character.unlockedEasterEggs.includes(unlock.id);

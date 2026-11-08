@@ -242,8 +242,15 @@ show below the hat. Shirts, bottoms, and shoes can be unequipped independently, 
 when a one-piece outfit such as a bikini is selected. The wardrobe includes skirt, black short skirt,
 and pants options.
 The Summit Down Parka has hood-down and two hood-up male choices; hood-up choices hide and disable
-hats and helmets until a hood-down top is selected. Mariner coats and the male Park Ranger Shirt use
-their dedicated replacement art.
+hats and helmets until a hood-down top is selected. Mariner coats, both Park Ranger Shirt and Ranger
+Trail Breeches sprites, and the male Centennial Ranger Coat use dedicated replacement art. The
+Wayfarer Field Vest reward has green and khaki variants.
+The Centennial Ranger Coat is offered only to authenticated accounts whose Supabase Auth
+`app_metadata` contains `"cartovella_owner": true`. Set this server-managed flag for trusted accounts
+in the Supabase Dashboard under **Authentication > Users > Raw App Meta Data**; do not use
+user-editable `user_metadata` or add an email allowlist to client code. Cartovella reads only the
+boolean flag, not an email address. This is a cosmetic frontend gate, not server-side enforcement
+against someone modifying client state.
 GandalfHardcore asset folders are grouped under `assets/gandalfhardcore/`; source ZIP archives remain
 in `assets/Zips/`.
 Character layers use aligned 80×64 cells (10×7 on 800×448 sheets); the 32×48 character artwork
@@ -311,7 +318,7 @@ reward track are not included.
 | 2 | Trail Pith Hat, Trail Boots, Pine Trail Flannel |
 | 3 | Forest Green outfit, Explorer Backpack, Traveler Cap, Scout Cargo Pants |
 | 4 | Farming Hat, Meadow Forager Tunic, Walking Stick accessory |
-| 5 | River Blue outfit, Wayfarer Gloves, Back Lantern, Wayfarer Field Vest |
+| 5 | River Blue outfit, Wayfarer Gloves, Back Lantern, green and khaki Wayfarer Field Vests |
 | 6 | Mining Helmet, Canyon Work Denim, Trail Lantern accessory |
 | 7 | Ember Orange outfit, Traveler Cape, Bandit Scarf, Redwood Flannel Jacket |
 | 8 | Guard Helmet, Circle Shield, Vanguard Tabard |

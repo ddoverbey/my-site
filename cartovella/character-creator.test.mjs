@@ -1140,6 +1140,13 @@ check('level and destination unlocks show exact current progress', () => {
   assert.deepEqual(characterCreator.unlockStatus(
     { type: 'worldParks', goal: 50 }, { visitedParks: Array(12).fill('park') }, character, achievements
   ), { unlocked: false, description: 'Visit 50 Global Parks (12/50).' });
+  assert.equal(characterCreator.unlockStatus(
+    { type: 'owner' }, {}, character, achievements
+  ).unlocked, false);
+  assert.equal(characterCreator.unlockStatus(
+    { type: 'owner' }, {}, character, achievements,
+    { character, isCartovellaOwner: true }
+  ).unlocked, true);
 });
 check('the explorer track contains paired gender gear for all ten levels', () => {
   assert.deepEqual(characterCreator.LEVEL_TRACK.map(reward => reward.level),
@@ -1159,7 +1166,7 @@ check('the explorer track contains paired gender gear for all ten levels', () =>
 check('variant clothing includes all requested rewards and valid paired sprite-sheet paths', () => {
   const levelIds = [
     'pine_trail_flannel', 'scout_cargo_pants', 'meadow_forager_tunic',
-    'wayfarer_field_vest', 'canyon_work_denim', 'redwood_flannel_jacket',
+    'wayfarer_field_vest', 'wayfarer_khaki_field_vest', 'canyon_work_denim', 'redwood_flannel_jacket',
     'vanguard_tabard', 'highlander_gilded_pants', 'sovereign_cartographer_coat'
   ];
   const parkIds = [
@@ -1235,27 +1242,40 @@ check('variant clothing includes all requested rewards and valid paired sprite-s
   assert.ok([...checkedPaths].some(path => path.endsWith('Cape green.png')),
     'cape template is included');
 });
-check('replacement Summit, Mariner, and Park Ranger artwork is wired with hood restrictions', () => {
+check('replacement Summit, Mariner, Ranger, and vest artwork is wired with hood restrictions', () => {
   const achievementItem = id => characterCreator.ACHIEVEMENT_ITEMS.find(item => item.id === id);
   const summitDown = achievementItem('summit_down_parka');
   const summitHoodUp = achievementItem('summit_hood_up_parka');
   const summitRedHoodUp = achievementItem('summit_red_hood_up_parka');
   const mariner = achievementItem('mariner_pea_coat');
   const parkRanger = characterCreator.PARK_MILESTONE_ITEMS.find(item => item.id === 'park_ranger_uniform');
+  const rangerPants = characterCreator.PARK_MILESTONE_ITEMS.find(item => item.id === 'ranger_trail_pants');
+  const centennialCoat = achievementItem('centennial_ranger_coat');
+  const greenVest = characterCreator.LEVEL_ITEMS.find(item => item.id === 'wayfarer_field_vest');
+  const khakiVest = characterCreator.LEVEL_ITEMS.find(item => item.id === 'wayfarer_khaki_field_vest');
   assert.equal(summitDown.paths.male, './assets/custom-gear/male-parka-down.png');
   assert.equal(summitHoodUp.paths.male, './assets/custom-gear/Male Parka up no hat.png');
   assert.equal(summitRedHoodUp.paths.male, './assets/custom-gear/Red male Parka up no hat .png');
   assert.equal(mariner.paths.male, './assets/custom-gear/Male Mariner Coat.png');
   assert.equal(mariner.paths.female, './assets/custom-gear/Female Mariner Coat.png');
   assert.equal(parkRanger.name, 'Park Ranger Shirt');
-  assert.equal(parkRanger.paths.male, './assets/custom-gear/male-ranger-shirt-1.png');
+  assert.equal(parkRanger.paths.male, './assets/custom-gear/male-ranger-shirt.png');
+  assert.equal(parkRanger.paths.female, './assets/custom-gear/female-ranger-shirt.png');
   assert.equal(parkRanger.variantSpecByGender.male, null);
-  assert.equal(parkRanger.variantSpecByGender.female, undefined);
-  assert.ok(parkRanger.variantSpec, 'female Park Ranger shirt keeps its generated style');
+  assert.equal(parkRanger.variantSpecByGender.female, null);
+  assert.equal(rangerPants.paths.male, './assets/custom-gear/male-ranger-pants.png');
+  assert.equal(rangerPants.paths.female, './assets/custom-gear/female-ranger-pants.png');
+  assert.equal(centennialCoat.paths.male, './assets/custom-gear/male-ranger-coat.png');
+  assert.deepEqual(centennialCoat.unlock, { type: 'owner' });
+  assert.equal(greenVest.paths.male, './assets/custom-gear/male-green-vest.png');
+  assert.equal(khakiVest.paths.male, './assets/custom-gear/male-khaki-vest.png');
+  assert.equal(khakiVest.name, 'Khaki Wayfarer Field Vest');
 
   const replacementPaths = [
     summitDown.paths.male, summitHoodUp.paths.male, summitRedHoodUp.paths.male,
-    mariner.paths.male, mariner.paths.female, parkRanger.paths.male
+    mariner.paths.male, mariner.paths.female, parkRanger.paths.male, parkRanger.paths.female,
+    rangerPants.paths.male, rangerPants.paths.female, centennialCoat.paths.male,
+    greenVest.paths.male, khakiVest.paths.male
   ];
   for (const path of replacementPaths) {
     const png = readFileSync(new URL(path, import.meta.url));
@@ -1325,7 +1345,8 @@ check('park and achievement clothing unlock at their exact requirements', () => 
   const recorded = characterCreator.achievementProgress({
     completedAchievementTiers: [...titles.keys()].map(id => ({ key: `${id}:0` }))
   }, definitions);
-  for (const item of characterCreator.ACHIEVEMENT_ITEMS) {
+  for (const item of characterCreator.ACHIEVEMENT_ITEMS.filter(item =>
+    item.unlock.type === 'achievement')) {
     assert.equal(characterCreator.unlockStatus(item.unlock, {}, character, incomplete).unlocked,
       false, item.id);
     assert.equal(characterCreator.unlockStatus(item.unlock, {}, character, complete).unlocked,

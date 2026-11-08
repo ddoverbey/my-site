@@ -6958,7 +6958,10 @@
         summary: document.getElementById('characterProgressSummary'),
         character: AppState.character,
         stats: characterStats,
-        appState: AppState,
+        appState: {
+          ...AppState,
+          isCartovellaOwner: cloudSession?.user?.app_metadata?.cartovella_owner === true
+        },
         achievements: ACHIEVEMENTS,
         viewOnly: AppState.viewOnly,
         onChange: character => {
