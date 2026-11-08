@@ -330,8 +330,10 @@ check('Miku locks hair and clothing while keeping scene, sprite, skin, pet and e
 
   controls.dataset.activeTab = 'wardrobe';
   render();
-  assert.match(controls.innerHTML, /Hats and helmets remain available/);
+  assert.match(controls.innerHTML, /hats and helmets remain available/);
   assert.match(controls.innerHTML, /data-character-field="headwear"/);
+  assert.match(controls.innerHTML, /data-character-field="backLayer"/);
+  assert.match(controls.innerHTML, /data-character-field="handItem"/);
   controls.dataset.activeTab = 'shop';
   render();
   assert.doesNotMatch(controls.innerHTML, /data-character-field="top"/);
@@ -348,6 +350,79 @@ check('Miku locks hair and clothing while keeping scene, sprite, skin, pet and e
   render();
   assert.match(controls.innerHTML, /data-character-field="pet"/);
   assert.match(controls.innerHTML, /data-character-field="petHat"/);
+});
+check('Ranger Miku unlocks with Miku, allows back and hand items, and blocks headwear', () => {
+  const miku = characterCreator.SHOP_WARDROBE.find(item => item.id === 'special_miku');
+  const rangerMiku = characterCreator.SHOP_WARDROBE.find(item =>
+    item.id === 'special_ranger_miku');
+  assert.ok(rangerMiku);
+  assert.equal(rangerMiku.name, 'Ranger Miku');
+  assert.equal(rangerMiku.fixedAppearance, true);
+  assert.deepEqual(rangerMiku.unlock, miku.unlock);
+  assert.equal(rangerMiku.paths.male, './assets/custom-gear/ranger-miku.png');
+  assert.equal(rangerMiku.paths.female, rangerMiku.paths.male);
+  assert.equal(rangerMiku.blocksHeadwear, true);
+  const rangerPng = readFileSync(new URL(rangerMiku.paths.male, import.meta.url));
+  assert.equal(rangerPng.toString('ascii', 1, 4), 'PNG');
+  assert.deepEqual([rangerPng.readUInt32BE(16), rangerPng.readUInt32BE(20)], [80, 64]);
+  assert.equal(characterCreator.normalizeCharacter({
+    specialSkin: rangerMiku.id
+  }).specialSkin, '', 'Ranger Miku stays locked until the Miku easter egg is found');
+
+  for (const skin of [miku, rangerMiku]) {
+    const character = characterCreator.normalizeCharacter({
+      ...characterCreator.DEFAULT_CHARACTER,
+      gender: 'male',
+      specialSkin: skin.id,
+      unlockedEasterEggs: ['miku'],
+      backLayer: 'cape_blue',
+      handItem: 'walking_stick',
+      headwear: 'traveler_cap',
+      purchasedItems: ['cape_blue', 'cape_red']
+    });
+    assert.equal(character.specialSkin, skin.id);
+    assert.equal(character.backLayer, 'cape_blue');
+    assert.equal(character.handItem, 'walking_stick');
+    const layers = characterCreator.characterSpriteAssets(character);
+    assert.ok(layers.some(layer => layer.layer === 'back'));
+    assert.ok(layers.some(layer => layer.layer === 'hand'));
+    if (skin.id === rangerMiku.id) {
+      assert.equal(layers.some(layer => layer.layer === 'headwear'), false);
+      assert.deepEqual(layers.map(layer => layer.layer), ['back', 'base', 'hand']);
+    } else {
+      assert.ok(layers.some(layer => layer.layer === 'headwear'));
+    }
+
+    const controls = {
+      dataset: { activeTab: 'wardrobe', activeWardrobeField: 'backLayer' },
+      innerHTML: ''
+    };
+    let changed;
+    characterCreator.render({
+      controls, character, stats: { level: 10 }, onChange: next => { changed = next; }
+    });
+    assert.match(controls.innerHTML, /data-character-field="backLayer"/);
+    assert.match(controls.innerHTML, /data-character-field="handItem"/);
+    if (skin.id === rangerMiku.id) {
+      assert.doesNotMatch(controls.innerHTML, /data-character-field="headwear"/);
+      assert.match(controls.innerHTML, /Ranger Miku already wears a hat/);
+      controls.onchange({
+        target: { dataset: { characterField: 'headwear' }, value: 'green_cap' }
+      });
+      assert.equal(changed, undefined, 'Ranger Miku cannot equip another hat');
+    } else {
+      assert.match(controls.innerHTML, /data-character-field="headwear"/);
+    }
+    controls.onchange({
+      target: { dataset: { characterField: 'handItem' }, value: 'iron_sword' }
+    });
+    assert.equal(changed?.handItem, 'iron_sword', `${skin.name} can equip hand items`);
+    changed = undefined;
+    controls.onchange({
+      target: { dataset: { characterField: 'backLayer' }, value: 'cape_red' }
+    });
+    assert.equal(changed?.backLayer, 'cape_red', `${skin.name} can equip back items`);
+  }
 });
 check('seasonal hats are free and unlock on their announced 2026 dates', () => {
   const hats = Object.fromEntries(['santa_hat', 'pumpkin_hat', 'witch_hat'].map(id => [

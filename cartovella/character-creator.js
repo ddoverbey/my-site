@@ -908,6 +908,14 @@
       pairedPaths(CUSTOM_GEAR_ASSET_ROOT, 'Miku-2.png'), { type: 'easterEgg', id: 'miku' }),
     fixedAppearance: true
   });
+  SHOP_WARDROBE.push({
+    ...equipmentItem('special_ranger_miku', 'Ranger Miku', 'specialSkin',
+      pairedPaths(CUSTOM_GEAR_ASSET_ROOT, 'ranger-miku.png'),
+      { type: 'easterEgg', id: 'miku' }),
+    fixedAppearance: true,
+    blocksHeadwear: true,
+    headwearBlockMessage: 'Ranger Miku already wears a hat; additional hats and helmets stay hidden.'
+  });
   addShopItem('small_backpack', 'Small Backpack', 'backLayer',
     pairedPaths(`${ASSET_ROOT}GandalfHardcore Back layers s/`, 'Small Backpack.png'), 100);
   [
@@ -934,13 +942,16 @@
       [field, EQUIPMENT_CATALOG.filter(item => item.field === field)])));
   const FIXED_SKIN_ALLOWED_FIELDS = new Set([
     'gender', 'skinTone', 'specialSkin', 'effect', 'pet', 'petAnimation',
-    'petHat', 'petBackpack', 'background', 'headwear', 'eyeColor', 'bodyWidth', 'bodyHeight'
+    'petHat', 'petBackpack', 'background', 'headwear', 'handItem', 'backLayer',
+    'eyeColor', 'bodyWidth', 'bodyHeight'
   ]);
+  const FIXED_MIKU_SKINS = new Set(['special_miku', 'special_ranger_miku']);
   const fixedAppearanceSkin = character =>
     EQUIPMENT_BY_FIELD.specialSkin.find(item =>
       item.id === character.specialSkin && item.fixedAppearance);
   const headwearBlockingTop = character => {
-    if (fixedAppearanceSkin(character)) return null;
+    const fixedSkin = fixedAppearanceSkin(character);
+    if (fixedSkin) return fixedSkin.blocksHeadwear === true ? fixedSkin : null;
     const item = EQUIPMENT_BY_FIELD.top.find(candidate => candidate.id === character.top);
     return item?.blocksHeadwear === true && item.paths[character.gender] ? item : null;
   };
@@ -978,7 +989,7 @@
       : [];
   }
   function equipmentGenderFor(character) {
-    return character.specialSkin === 'special_miku' ? 'female' : character.gender;
+    return FIXED_MIKU_SKINS.has(character.specialSkin) ? 'female' : character.gender;
   }
   const EQUIPMENT_DEFAULTS = Object.freeze({
     top: 'starter_shirt', bottoms: 'starter_pants', shoes: 'simple_shoes',
@@ -1096,9 +1107,8 @@
       const legacyValue = field === 'top' ? legacyOutfit[0] :
         field === 'bottoms' ? legacyOutfit[1] : fallback;
       const allowed = EQUIPMENT_BY_FIELD[field] || [];
-      const equipmentGender = field === 'headwear' && unlockedEasterEggs.includes('miku') &&
-        source.specialSkin === 'special_miku'
-        ? 'female' : gender;
+      const equipmentGender = unlockedEasterEggs.includes('miku') &&
+        FIXED_MIKU_SKINS.has(source.specialSkin) ? 'female' : gender;
       const isOwned = candidate => {
         if (candidate.unlock.type === 'coin') return purchasedItems.includes(candidate.id);
         if (candidate.unlock.type === 'easterEgg') return unlockedEasterEggs.includes(candidate.unlock.id);
@@ -1597,9 +1607,11 @@
     );
     if (fixedAppearance) {
       return [
+        equipmentLayer('backLayer', 'back', equipmentGender),
         equipmentLayer('effect', 'effect'),
         specialSkin,
-        headwearLayer
+        headwearLayer,
+        equipmentLayer('handItem', 'hand', equipmentGender)
       ].filter(Boolean);
     }
     const layers = [
@@ -2195,7 +2207,8 @@
     }
     const activeTab = tabs.includes(container.dataset.activeTab) ? container.dataset.activeTab : 'appearance';
     const completedAchievements = achievementProgress(stats, achievements);
-    const fixedAppearance = !!fixedAppearanceSkin(character);
+    const fixedSkin = fixedAppearanceSkin(character);
+    const fixedAppearance = !!fixedSkin;
     const headwearBlockingItem = headwearBlockingTop(character);
     const headwearBlocked = !!headwearBlockingItem;
     const dropdown = (field, label, current, choices, renderChoice, fieldDisabled = false) =>
@@ -2298,7 +2311,7 @@
     const sections = {
       appearance: `<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
         ${fixedAppearance
-          ? '<p class="sm:col-span-2 text-xs text-slate-400">Miku’s sprite stays fixed; hair and clothing cannot be changed. Sprite, skin, and eye choices are saved for when you switch back.</p>'
+          ? `<p class="sm:col-span-2 text-xs text-slate-400">${escapeHtml(fixedSkin.name)}’s sprite stays fixed; hair and clothing cannot be changed. Sprite, skin, and eye choices are saved for when you switch back.</p>`
           : ''}
         ${dropdown('gender', 'Character sprite', character.gender, [
           { id: 'male', name: 'Sprite A' }, { id: 'female', name: 'Sprite B' }
@@ -2332,7 +2345,7 @@
           </div>
         </fieldset>
         ${fixedAppearance
-          ? '<p class="sm:col-span-2 text-xs text-slate-400">Hairstyle changes are unavailable while Miku is selected.</p>'
+          ? `<p class="sm:col-span-2 text-xs text-slate-400">Hairstyle changes are unavailable while ${escapeHtml(fixedSkin.name)} is selected.</p>`
           : `<div class="sm:col-span-2">${hairPicker}</div>`}
         <div class="sm:col-span-2">${equipmentDropdown('specialSkin', 'Special Skins')}</div>
           <div class="sm:col-span-2">
@@ -2344,8 +2357,10 @@
         ${headwearRestrictionMessage}
         ${holidayHatControl}
         ${fixedAppearance
-          ? `<p class="text-xs text-slate-400">Miku’s hair and clothing stay fixed. Hats and helmets remain available.</p>
-            ${equipmentDropdown('headwear', 'Hats & Helmets')}`
+          ? `<p class="text-xs text-slate-400">${escapeHtml(fixedSkin.name)}’s hair and clothing stay fixed. Back layers and hand items remain available${headwearBlocked ? '.' : '; hats and helmets remain available.'}</p>
+            ${headwearBlocked ? '' : equipmentDropdown('headwear', 'Hats & Helmets')}
+            ${equipmentDropdown('backLayer', 'Back Layers')}
+            ${equipmentDropdown('handItem', 'Hand Items')}`
           : `<p class="text-xs text-slate-400">Choose a layer to preview and cycle through your unlocked gear. Browse all to shop.</p>
         ${purchaseControls}`}
       </div>`,
@@ -2362,7 +2377,7 @@
             completedAchievements, 'Equipped', appState),
           option => backgroundThumbnailMarkup(option))}`,
       shop: fixedAppearance
-        ? '<p class="text-xs text-slate-400">The Coin Shop is unavailable while Miku is selected. Use Wardrobe to choose an unlocked hat.</p>'
+        ? `<p class="text-xs text-slate-400">The Coin Shop is unavailable while ${escapeHtml(fixedSkin.name)} is selected. Switch to a standard skin to purchase gear, then choose allowed accessories in Wardrobe.</p>`
         : `<div class="space-y-4">
         <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-400/30 bg-amber-950/20 p-4">
           <span class="text-sm font-semibold text-amber-100">Wayfarer Coins</span>

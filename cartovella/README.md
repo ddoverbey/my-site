@@ -231,7 +231,9 @@ The profile keeps country and state flags compact in a side-by-side layout, and 
 smooth-scroll to the corresponding profile sections.
 The Miku special skin is an easter egg: while on the Explorer Profile character page, click the book
 at the center of the Cartovella header logo. The pointer cursor marks the clickable spot, and the
-unlock is saved with the character.
+unlock is saved with the character. Ranger Miku becomes available once Miku is unlocked. Both Miku
+skins keep their appearance fixed while allowing back layers and hand items; Ranger Miku's built-in
+hat prevents equipping other hats or helmets.
 Santa hats unlock for free starting December 1, 2026; pumpkin and witch hats unlock for free starting
 October 30, 2026. On December 24–25 all character sprites, including Miku, automatically wear Santa
 hats; on October 30–31 male sprites wear pumpkin hats and female sprites, including Miku, wear witch
