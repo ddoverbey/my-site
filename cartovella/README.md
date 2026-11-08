@@ -245,13 +245,21 @@ when a one-piece outfit such as a bikini is selected. The wardrobe includes skir
 and pants options. Every garment sheet from the original GandalfHardcore clothing packs is available,
 including base layers, swimwear, corsets, bodices, skirts, and dresses such as Queen Dress. Intimate
 underlayers use Explorer Base Layer names in Cartovella. Simple Shoes and Trail Boots each have five
-recolored shop options; the female Trail Boots use different art from Simple Shoes.
+recolored shop options; the female Trail Boots use different art from Simple Shoes. Hiking Boots also
+have five recolored shop options. Short-Sleeve T-Shirts use paired male and female artwork and come
+in the original neutral color plus five color variants. Glasses and face accessories are available in
+the Wardrobe.
 The Summit Down Parka has hood-down and one hood-up male choice; the hood-up choice hides and disables
 hats and helmets until a hood-down top is selected. Mariner coats, both Park Ranger Shirt and Ranger
 Trail Breeches sprites, and the male Centennial Ranger Coat use dedicated replacement art. The
 Wayfarer Field Vest reward has green and khaki variants. All female pants options, including the
 colored shop pants, use the Ranger Breeches artwork with recolored palettes. Bright Red and Navy Blue
 Summit Down Parkas and a Pink Deep Cavern Suit are also available as achievement rewards.
+The Volunteer Park Tee, Pine Trail Flannel, Redwood Flannel Jacket, green Wayfarer Field Vest,
+Sovereign Cartographer Coat, and Overland Canvas Jacket use the new paired sprite art. The level-10
+Cartographer Monocle unlocks alongside the coat. The Mist Rain Poncho uses dedicated male and female
+art, blocks hats and helmets, and renders over hair so only hair in its transparent areas remains
+visible.
 The horned Viking helmet uses its horned art for both sprites, and Blue Face Paint uses its paint
 art for both sprites rather than reusing the Face Mask. The Deep Cavern Suit achievement reward uses
 the replacement 80×64 male and female sprite art.
@@ -333,7 +341,7 @@ reward track are not included.
 | 7 | Ember Orange outfit, Traveler Cape, Bandit Scarf, Redwood Flannel Jacket |
 | 8 | Guard Helmet, Circle Shield, Vanguard Tabard |
 | 9 | Chainmail Tunic, Viking Helmet, Highlander Breeches, Field Spyglass accessory |
-| 10 | Royal Purple outfit, Royal Chaperon / Headdress, Sovereign Cartographer Coat, Fancy Hair, Queen Hair, Shield Maiden Hair |
+| 10 | Royal Purple outfit, Royal Chaperon / Headdress, Sovereign Cartographer Coat, Cartographer Monocle, Fancy Hair, Queen Hair, Shield Maiden Hair |
 
 Level-based wardrobe rewards currently end at Level 10, though levels continue beyond that. Other
 wardrobe and companion cosmetics unlock through worldwide-destination and achievement milestones,

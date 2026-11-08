@@ -1408,7 +1408,9 @@ check('replacement Summit, Mariner, Ranger, and vest artwork is wired with hood 
   assert.equal(rangerPants.paths.female, './assets/custom-gear/female-ranger-pants.png');
   assert.equal(centennialCoat.paths.male, './assets/custom-gear/male-ranger-coat.png');
   assert.deepEqual(centennialCoat.unlock, { type: 'owner' });
-  assert.equal(greenVest.paths.male, './assets/custom-gear/male-green-vest.png');
+  assert.equal(greenVest.paths.male, './assets/custom-gear/male-green-vest-better.png');
+  assert.equal(greenVest.paths.female, './assets/custom-gear/female-vest.png');
+  assert.equal(greenVest.variantSpecByGender.female, null);
   assert.equal(khakiVest.paths.male, './assets/custom-gear/male-khaki-vest.png');
   assert.equal(khakiVest.name, 'Khaki Wayfarer Field Vest');
   assert.equal(witchHat.paths.female,
@@ -1481,6 +1483,99 @@ check('replacement Summit, Mariner, Ranger, and vest artwork is wired with hood 
     controls.onchange({ target: { dataset: { characterField: 'headwear' }, value: 'hat_summit' } });
     assert.equal(changed, undefined, item.id);
   }
+});
+check('new custom gear uses replacement art, multiple colors, and correct poncho layering', () => {
+  const levelItem = id => characterCreator.LEVEL_ITEMS.find(item => item.id === id);
+  const parkItem = id => characterCreator.PARK_MILESTONE_ITEMS.find(item => item.id === id);
+  const achievementItem = id => characterCreator.ACHIEVEMENT_ITEMS.find(item => item.id === id);
+  const shopItem = id => characterCreator.SHOP_WARDROBE.find(item => item.id === id);
+  const coat = levelItem('sovereign_cartographer_coat');
+  const monocle = levelItem('cartographer_monocle');
+  const pineFlannel = levelItem('pine_trail_flannel');
+  const redwoodFlannel = levelItem('redwood_flannel_jacket');
+  const greenVest = levelItem('wayfarer_field_vest');
+  const volunteerTee = parkItem('volunteer_park_tee');
+  const canvasJacket = achievementItem('overland_canvas_jacket');
+  const poncho = achievementItem('mist_rain_poncho');
+  const glasses = shopItem('glasses');
+  const hikingBoots = shopItem('hiking_boots');
+
+  assert.deepEqual(monocle.unlock, coat.unlock);
+  assert.equal(monocle.unlock.goal, 10);
+  assert.equal(monocle.field, 'face');
+  assert.equal(monocle.paths.male, './assets/custom-gear/male-carto-monocle.png');
+  assert.equal(monocle.paths.female, './assets/custom-gear/female-carto-monocle.png');
+  assert.equal(coat.paths.male, './assets/custom-gear/male-carto-coat.png');
+  assert.equal(coat.paths.female, './assets/custom-gear/female-carto-coat.png');
+  assert.equal(pineFlannel.paths.male, './assets/custom-gear/male-pine-flannel.png');
+  assert.equal(pineFlannel.paths.female, './assets/custom-gear/female-pine-flannel.png');
+  assert.equal(redwoodFlannel.paths.male, './assets/custom-gear/male-red-flannel.png');
+  assert.equal(redwoodFlannel.paths.female, './assets/custom-gear/female-red-flannel.png');
+  assert.equal(greenVest.paths.male, './assets/custom-gear/male-green-vest-better.png');
+  assert.equal(greenVest.paths.female, './assets/custom-gear/female-vest.png');
+  assert.equal(volunteerTee.paths.male, './assets/custom-gear/male-park-t-shirt.png');
+  assert.equal(volunteerTee.paths.female, './assets/custom-gear/female-park-t-shirt.png');
+  assert.equal(canvasJacket.paths.male, './assets/custom-gear/male-canvas-jacket.png');
+  assert.equal(canvasJacket.paths.female, './assets/custom-gear/female-canvas-jckt.png');
+
+  assert.equal(glasses.name, 'Glasses');
+  assert.equal(glasses.paths.male, './assets/custom-gear/male-glasses-1.png');
+  assert.deepEqual(glasses.genders, ['male']);
+  assert.equal(hikingBoots.paths.male, './assets/custom-gear/male-hiking-boots.png');
+  assert.equal(hikingBoots.paths.female, './assets/custom-gear/female-hiking-boots.png');
+  const hikingBootColors = characterCreator.SHOP_WARDROBE.filter(item =>
+    item.id.startsWith('hiking_boots_'));
+  assert.equal(hikingBootColors.length, 5);
+  assert.ok(hikingBootColors.every(item =>
+    item.variantSpec.palette.colorMap['#302c2a'] === item.variantSpec.palette.shadow));
+
+  const shirts = characterCreator.SHOP_WARDROBE.filter(item =>
+    item.id === 'short_sleeve_tshirt' || item.id.startsWith('short_sleeve_tshirt_'));
+  assert.equal(shirts.length, 6);
+  assert.ok(shirts.every(item =>
+    item.paths.male === './assets/custom-gear/male-t-shirt.png' &&
+    item.paths.female === './assets/custom-gear/female-t-shirt.png'));
+  assert.equal(new Set(shirts.filter(item => item.variantSpec)
+    .map(item => item.variantSpec.palette.base)).size, 5);
+
+  assert.equal(poncho.paths.male, './assets/custom-gear/male-rain-poncho.png');
+  assert.equal(poncho.paths.female, './assets/custom-gear/female-raincoat.png');
+  assert.equal(poncho.blocksHeadwear, true);
+  assert.equal(poncho.coversHair, true);
+  assert.ok(characterCreator.LEVEL_TRACK[9].itemIds.includes(monocle.id));
+  const replacementPaths = [
+    ...[coat, monocle, pineFlannel, redwoodFlannel, greenVest, volunteerTee, canvasJacket]
+      .flatMap(item => Object.values(item.paths)),
+    ...Object.values(poncho.paths), ...Object.values(glasses.paths),
+    ...Object.values(hikingBoots.paths), ...Object.values(shirts[0].paths)
+  ];
+  for (const path of new Set(replacementPaths)) {
+    const png = readFileSync(new URL(path, import.meta.url));
+    assert.equal(png.toString('ascii', 1, 4), 'PNG', path);
+    assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [80, 64], path);
+  }
+
+  for (const gender of ['male', 'female']) {
+    const character = characterCreator.normalizeCharacter({
+      ...characterCreator.DEFAULT_CHARACTER, gender, top: poncho.id, headwear: 'traveler_cap'
+    });
+    const layers = characterCreator.characterSpriteAssets(character);
+    const hairIndex = layers.findIndex(layer => layer.layer === 'hair');
+    const ponchoIndex = layers.findIndex(layer => layer.layer === 'top');
+    assert.ok(hairIndex >= 0 && ponchoIndex > hairIndex, `${gender} poncho covers trailing hair`);
+    assert.equal(layers.some(layer => layer.layer === 'headwear'), false,
+      `${gender} poncho blocks hats`);
+  }
+  const controls = {
+    dataset: { activeTab: 'wardrobe', activeWardrobeField: 'headwear' },
+    innerHTML: ''
+  };
+  characterCreator.render({
+    controls,
+    character: { ...characterCreator.DEFAULT_CHARACTER, top: poncho.id },
+    stats: { level: 10 }
+  });
+  assert.match(controls.innerHTML, /The rain poncho covers your head/);
 });
 check('park and achievement clothing unlock at their exact requirements', () => {
   const character = characterCreator.normalizeCharacter();

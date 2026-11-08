@@ -434,6 +434,9 @@
     levelItem('royal_headwear', 'Royal Chaperon / Headdress', 'headwear',
       pairedPaths(`${ASSET_ROOT}GandalfHardcore 41x Hats/Male Hat/`, 'Chaperon.png',
         '../Female Hat/Headdress.png'), 10),
+    levelItem('cartographer_monocle', 'Cartographer Monocle', 'face',
+      pairedPaths(CUSTOM_GEAR_ASSET_ROOT,
+        'male-carto-monocle.png', 'female-carto-monocle.png'), 10),
     levelItem('diamond_sword', 'Diamond Sword', 'handItem',
       pairedPaths(`${ASSET_ROOT}GandalfHardcore 35x Hand Items/Male Hand/`, 'Diamond Sword.png',
         '../Female Hand/Diamond Sword.png'), 10),
@@ -443,7 +446,11 @@
   ];
   const VARIANT_LEVEL_ITEMS = [
     makeVariantItem('pine_trail_flannel', 'Pine Trail Flannel', 'top', { type: 'level', goal: 2 },
-      palette('#1d2921', '#4d704e', '#a5b694', { accent: '#29372d' }), 'plaid'),
+      palette('#1d2921', '#4d704e', '#a5b694', { accent: '#29372d' }), 'plaid', {
+        paths: pairedPaths(CUSTOM_GEAR_ASSET_ROOT,
+          'male-pine-flannel.png', 'female-pine-flannel.png'),
+        variantSpecByGender: { male: null, female: null }
+      }),
     makeVariantItem('scout_cargo_pants', 'Scout Cargo Pants', 'bottoms', { type: 'level', goal: 3 },
       rangerPantsPalette('#26291d', '#687249', '#b1ae80')),
     makeVariantItem('meadow_forager_tunic', 'Meadow Forager Tunic', 'top', { type: 'level', goal: 4 },
@@ -454,9 +461,10 @@
       }), 'vest', {
         paths: Object.freeze({
           ...VARIANT_BASE_PATHS.top,
-          male: spritePath(CUSTOM_GEAR_ASSET_ROOT, 'male-green-vest.png')
+          male: spritePath(CUSTOM_GEAR_ASSET_ROOT, 'male-green-vest-better.png'),
+          female: spritePath(CUSTOM_GEAR_ASSET_ROOT, 'female-vest.png')
         }),
-        variantSpecByGender: { male: null }
+        variantSpecByGender: { male: null, female: null }
       }),
     makeVariantItem('wayfarer_khaki_field_vest', 'Khaki Wayfarer Field Vest', 'top',
       { type: 'level', goal: 5 },
@@ -472,20 +480,32 @@
     makeVariantItem('canyon_work_denim', 'Canyon Work Denim', 'bottoms', { type: 'level', goal: 6 },
       rangerPantsPalette('#20283a', '#4c6388', '#9aaec9')),
     makeVariantItem('redwood_flannel_jacket', 'Redwood Flannel Jacket', 'top', { type: 'level', goal: 7 },
-      palette('#321e23', '#8d454b', '#c7867d', { accent: '#36292d' }), 'plaid'),
+      palette('#321e23', '#8d454b', '#c7867d', { accent: '#36292d' }), 'plaid', {
+        paths: pairedPaths(CUSTOM_GEAR_ASSET_ROOT,
+          'male-red-flannel.png', 'female-red-flannel.png'),
+        variantSpecByGender: { male: null, female: null }
+      }),
     makeVariantItem('vanguard_tabard', 'Vanguard Tabard', 'top', { type: 'level', goal: 8 },
       palette('#323945', '#71849c', '#d4dbe4', { accent: '#3b5ba8' }), 'jacket'),
     makeVariantItem('highlander_gilded_pants', 'Highlander Breeches', 'bottoms', { type: 'level', goal: 9 },
       rangerPantsPalette('#29241f', '#675642', '#b49a70')),
     makeVariantItem('sovereign_cartographer_coat', 'Sovereign Cartographer Coat', 'top',
       { type: 'level', goal: 10 },
-      palette('#1d202b', '#41475c', '#c6b987', { accent: '#e1b94f' }), 'jacket')
+      palette('#1d202b', '#41475c', '#c6b987', { accent: '#e1b94f' }), 'jacket', {
+        paths: pairedPaths(CUSTOM_GEAR_ASSET_ROOT,
+          'male-carto-coat.png', 'female-carto-coat.png'),
+        variantSpecByGender: { male: null, female: null }
+      })
   ];
   LEVEL_ITEMS.push(...VARIANT_LEVEL_ITEMS);
   const PARK_MILESTONE_ITEMS = [
     makeVariantItem('volunteer_park_tee', 'Volunteer Park Tee', 'top',
       { type: 'worldParks', goal: 5 },
-      palette('#1c3429', '#365e45', '#88a36c', { accent: '#dfc05b' }), 'jacket'),
+      palette('#1c3429', '#365e45', '#88a36c', { accent: '#dfc05b' }), 'jacket', {
+        paths: pairedPaths(CUSTOM_GEAR_ASSET_ROOT,
+          'male-park-t-shirt.png', 'female-park-t-shirt.png'),
+        variantSpecByGender: { male: null, female: null }
+      }),
     makeVariantItem('park_ranger_uniform', 'Park Ranger Shirt', 'top',
       { type: 'worldParks', goal: 15 },
       palette('#32372c', '#a49260', '#ded0a0', { accent: '#435238' }), 'buttons', {
@@ -532,9 +552,18 @@
     makeVariantItem('khaki_trail_pants', 'Khaki Trail Pants', 'bottoms',
       { type: 'achievement', id: 'firstSteps' },
       rangerPantsPalette('#363126', '#9d8a5d', '#d6c79b')),
-    makeVariantItem('mist_rain_poncho', 'Mist Rain Poncho', 'top',
-      { type: 'achievement', id: 'waterfalls_1' },
-      palette('#39362a', '#bd9942', '#e8d181', { accent: '#43a5a1' }), 'jacket'),
+    {
+      ...makeVariantItem('mist_rain_poncho', 'Mist Rain Poncho', 'top',
+        { type: 'achievement', id: 'waterfalls_1' },
+        palette('#39362a', '#bd9942', '#e8d181', { accent: '#43a5a1' }), 'jacket', {
+          paths: pairedPaths(CUSTOM_GEAR_ASSET_ROOT,
+            'male-rain-poncho.png', 'female-raincoat.png'),
+          variantSpecByGender: { male: null, female: null }
+        }),
+      blocksHeadwear: true,
+      coversHair: true,
+      headwearBlockMessage: 'The rain poncho covers your head; hats and helmets stay hidden until you choose another top. Your selected headwear will return when you do.'
+    },
     makeVariantItem('cavern_miner_suit', 'Deep Cavern Suit', 'top',
       { type: 'achievement', id: 'subterranean' },
       palette('#292e36', '#59616d', '#c89b49', { accent: '#d29d3e' }), 'jacket', {
@@ -568,11 +597,16 @@
       ...equipmentItem('summit_hood_up_parka', 'Summit Hood-Up Parka', 'top',
         oneGenderPath('male', spritePath(CUSTOM_GEAR_ASSET_ROOT, 'Male Parka up no hat.png')),
         { type: 'achievement', id: 'thinAir' }),
-      blocksHeadwear: true
+      blocksHeadwear: true,
+      headwearBlockMessage: 'The hood is up; hats and helmets stay hidden until you choose a hood-down top. Your selected headwear will return when the hood is down.'
     },
     makeVariantItem('overland_canvas_jacket', 'Overland Canvas Jacket', 'top',
       { type: 'achievement', id: 'overlander' },
-      palette('#382621', '#9b6042', '#d4aa74', { accent: '#cba46f' }), 'jacket'),
+      palette('#382621', '#9b6042', '#d4aa74', { accent: '#cba46f' }), 'jacket', {
+        paths: pairedPaths(CUSTOM_GEAR_ASSET_ROOT,
+          'male-canvas-jacket.png', 'female-canvas-jckt.png'),
+        variantSpecByGender: { male: null, female: null }
+      }),
     equipmentItem('mariner_pea_coat', 'Mariner Pea Coat', 'top',
       pairedPaths(CUSTOM_GEAR_ASSET_ROOT, 'Male Mariner Coat.png', 'Female Mariner Coat.png'),
       { type: 'achievement', id: 'mariner' }),
@@ -615,19 +649,51 @@
       ...equipmentItem(id, name, field, paths, { type: 'coin', cost }),
       variantSpec: { palette: colorPalette }
     });
-  const addFootwearColorOptions = (id, name, paths) => {
+  const addFootwearColorOptions = (id, name, paths, sourceColorMap = null) => {
     [
       ['slate', 'Slate', palette('#25282e', '#565b66', '#bbc2cb')],
       ['forest', 'Forest', palette('#1b3025', '#47664a', '#a8bd91')],
       ['river', 'River Blue', palette('#202b42', '#4b6692', '#aabbd8')],
       ['russet', 'Russet', palette('#39251d', '#80513a', '#c8916e')],
       ['gold', 'Golden', palette('#403319', '#8e702a', '#d2b451')]
-    ].forEach(([colorId, colorName, colorPalette]) =>
+    ].forEach(([colorId, colorName, colorPalette]) => {
+      const variantPalette = sourceColorMap
+        ? palette(colorPalette.shadow, colorPalette.base, colorPalette.highlight, {
+          colorMap: Object.fromEntries(Object.entries(sourceColorMap)
+            .map(([source, target]) => [source, colorPalette[target]]))
+        })
+        : colorPalette;
       addVariantShopItem(`${id}_${colorId}`, `${name} (${colorName})`, 'shoes',
-        paths, colorPalette));
+        paths, variantPalette);
+    });
   };
+  const SHORT_SLEEVE_TSHIRT_PATHS = pairedPaths(CUSTOM_GEAR_ASSET_ROOT,
+    'male-t-shirt.png', 'female-t-shirt.png');
+  const HIKING_BOOTS_PATHS = pairedPaths(CUSTOM_GEAR_ASSET_ROOT,
+    'male-hiking-boots.png', 'female-hiking-boots.png');
   addShopItem('classic_shirt', 'Classic Trail Shirt', 'top',
     oneGenderPath('male', `${PACK}Male Clothing/Shirt.png`));
+  addShopItem('short_sleeve_tshirt', 'Short-Sleeve T-Shirt', 'top',
+    SHORT_SLEEVE_TSHIRT_PATHS);
+  [
+    ['forest', 'Forest Green', palette('#203b2c', '#56835b', '#a8c891')],
+    ['river', 'River Blue', palette('#1d3657', '#4c7eaf', '#b1d0f0')],
+    ['ember', 'Ember Orange', palette('#633118', '#c96930', '#ffd08b')],
+    ['violet', 'Violet', palette('#3d245e', '#7652a6', '#c8a9e8')],
+    ['red', 'Crimson Red', palette('#551822', '#b33643', '#f08a8e')]
+  ].forEach(([colorId, colorName, colorPalette]) =>
+    addVariantShopItem(`short_sleeve_tshirt_${colorId}`,
+      `Short-Sleeve T-Shirt (${colorName})`, 'top',
+      SHORT_SLEEVE_TSHIRT_PATHS, colorPalette));
+  addShopItem('hiking_boots', 'Hiking Boots', 'shoes', HIKING_BOOTS_PATHS);
+  addFootwearColorOptions('hiking_boots', 'Hiking Boots', HIKING_BOOTS_PATHS, {
+    '#302c2a': 'shadow',
+    '#5b4a3f': 'base',
+    '#6e594c': 'highlight',
+    '#ff963d': 'highlight'
+  });
+  addShopItem('glasses', 'Glasses', 'face',
+    oneGenderPath('male', spritePath(CUSTOM_GEAR_ASSET_ROOT, 'male-glasses-1.png')));
   [
     ['green_shirt', 'Forest Shirt', 'Green Shirt v2.png', 'Green Corset v2.png'],
     ['blue_shirt', 'River Shirt', 'Blue Shirt v2.png', 'Blue Corset v2.png'],
@@ -878,11 +944,12 @@
   const fixedAppearanceSkin = character =>
     EQUIPMENT_BY_FIELD.specialSkin.find(item =>
       item.id === character.specialSkin && item.fixedAppearance);
-  const headwearBlockedByTop = character => {
-    if (fixedAppearanceSkin(character)) return false;
+  const headwearBlockingTop = character => {
+    if (fixedAppearanceSkin(character)) return null;
     const item = EQUIPMENT_BY_FIELD.top.find(candidate => candidate.id === character.top);
-    return item?.blocksHeadwear === true && !!item.paths[character.gender];
+    return item?.blocksHeadwear === true && item.paths[character.gender] ? item : null;
   };
+  const headwearBlockedByTop = character => !!headwearBlockingTop(character);
   function holidayHatEventFor(date = new Date()) {
     const month = date.getMonth() + 1;
     const day = date.getDate();
@@ -937,7 +1004,7 @@
     { level: 9, title: 'Highlander', itemIds: ['chainmail_tunic', 'viking_helmet', 'golden_pickaxe', 'golden_sword', 'highlander_gilded_pants'] },
     { level: 10, title: 'Cartographer Royal', itemIds: [
       'royal_headwear', 'diamond_sword', 'diamond_pickaxe', 'sovereign_cartographer_coat',
-      'hair_fancy', 'hair_queen', 'hair_shield_maiden'
+      'cartographer_monocle', 'hair_fancy', 'hair_queen', 'hair_shield_maiden'
     ] }
   ]);
   const LEVEL_HAIR_REWARDS = Object.freeze([
@@ -1525,7 +1592,11 @@
       } : null;
     };
     const specialSkin = equipmentLayer('specialSkin', 'base');
-    const headwearBlocked = headwearBlockedByTop(character);
+    const headwearBlockingItem = headwearBlockingTop(character);
+    const headwearBlocked = !!headwearBlockingItem;
+    const topItem = EQUIPMENT_BY_FIELD.top.find(item => item.id === character.top);
+    const topLayer = equipmentLayer('top', 'top');
+    const topCoversHair = !!topLayer && topItem?.coversHair === true;
     const headwearLayer = headwearBlocked ? null : equipmentLayer(
       'headwear', 'headwear', equipmentGender, holidayHat?.id || character.headwear
     );
@@ -1548,9 +1619,10 @@
       equipmentLayer('ears', 'ears'),
       equipmentLayer('bottoms', 'bottoms'),
       equipmentLayer('shoes', 'shoes'),
-      equipmentLayer('top', 'top'),
+      ...(topCoversHair ? [] : [topLayer]),
       equipmentLayer('arms', 'arms'),
       hairLayer,
+      ...(topCoversHair ? [topLayer] : []),
       equipmentLayer('face', 'face'),
       headwearLayer,
       equipmentLayer('handItem', 'hand')
@@ -2129,7 +2201,8 @@
     const activeTab = tabs.includes(container.dataset.activeTab) ? container.dataset.activeTab : 'appearance';
     const completedAchievements = achievementProgress(stats, achievements);
     const fixedAppearance = !!fixedAppearanceSkin(character);
-    const headwearBlocked = headwearBlockedByTop(character);
+    const headwearBlockingItem = headwearBlockingTop(character);
+    const headwearBlocked = !!headwearBlockingItem;
     const dropdown = (field, label, current, choices, renderChoice, fieldDisabled = false) =>
       visualDropdownMarkup(label, field, choices, current, disabled || fieldDisabled, renderChoice);
     const equipmentDropdown = (field, label, fieldDisabled = false) => dropdown(
@@ -2169,7 +2242,7 @@
     const wardrobeFields = [
       ['top', 'Shirts, Bodices & Dresses'], ['bottoms', 'Pants & Skirts'], ['shoes', 'Footwear'],
       ['headwear', 'Hats & Helmets'], ['handItem', 'Hand Items'], ['backLayer', 'Back Layers'],
-      ['arms', 'Arm Layers'], ['face', 'Masks & Face Paint'], ['ears', 'Elven Ears'],
+      ['arms', 'Arm Layers'], ['face', 'Face Accessories & Paint'], ['ears', 'Elven Ears'],
       ['effect', 'Character Effects']
     ];
     const selectedWardrobeField = wardrobeFields.some(([field]) =>
@@ -2182,7 +2255,8 @@
     const selectedWardrobeOptions = equipmentOptions(
       selectedWardrobeField, character, stats, completedAchievements, appState);
     const headwearRestrictionMessage = headwearBlocked
-      ? '<p class="text-xs text-amber-200">The hood is up; hats and helmets stay hidden until you choose a hood-down top. Your selected headwear will return when the hood is down.</p>'
+      ? `<p class="text-xs text-amber-200">${escapeHtml(headwearBlockingItem.headwearBlockMessage ||
+        'This top covers headwear; hats and helmets stay hidden until you choose another top. Your selected headwear will return when you do.')}</p>`
       : '';
     const holidayEvent = holidayHatEventFor(currentDate);
     const holidayHatId = holidayEvent
