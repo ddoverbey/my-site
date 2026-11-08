@@ -15,7 +15,8 @@ expeditions, track parks and regions, and earn achievements from your travel his
   Gaps between files remain as legs to route in the app. Connected track-only imports create the
   itinerary; choose a transit mode for every leg. Customize the Global Route Map with a year filter,
   map area, Midnight, Classic, or improved Parchment atlas style, transit-mode or single-color routes,
-  line patterns, optional stop dots, a title with optional year display, and optional explorer details.
+  line patterns, optional stop dots, a title in a reserved band above the map with optional year
+  display, and optional explorer details.
   PNG exports use the Cartovella logo without a background panel and keep the map at its normal
   proportions. Water Transit
   routes are blue, while flights use a neutral gray in the map and trip logs.

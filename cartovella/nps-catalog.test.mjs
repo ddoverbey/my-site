@@ -9050,6 +9050,7 @@ check('Global Route Map renders country and expedition paths and toggles indepen
   const domesticOption = element('globalRoutesDomesticOption');
   const continentOption = element('globalRoutesContinentOption');
   const flightInterpolations = [];
+  const mapFitExtents = [];
   toggle.setAttribute = (name, value) => { toggleAttributes[name] = value; };
   const zoomIdentity = { toString: () => 'translate(0,0) scale(1)' };
   let albersUsaProjectionCalls = 0;
@@ -9062,6 +9063,15 @@ check('Global Route Map renders country and expedition paths and toggles indepen
     geoAlbersUsa: () => {
       albersUsaProjectionCalls++;
       return d3Geo.geoAlbersUsa();
+    },
+    geoNaturalEarth1: () => {
+      const projection = d3Geo.geoNaturalEarth1();
+      const originalFitExtent = projection.fitExtent;
+      projection.fitExtent = function (extent, object) {
+        mapFitExtents.push(extent.map(point => [...point]));
+        return originalFitExtent.call(projection, extent, object);
+      };
+      return projection;
     },
     select: () => ({
       call(callback, ...args) { callback(this, ...args); return this; },
@@ -9164,6 +9174,7 @@ check('Global Route Map renders country and expedition paths and toggles indepen
   try {
     toggle.handlers.click();
     assert.equal(albersUsaProjectionCalls, 0);
+    assert.equal(JSON.stringify(mapFitExtents.at(-1)), '[[24,24],[1176,560]]');
     const svg = element('svgGlobalRoutesMap').innerHTML;
     assert.match(svg, /class="global-country"/);
     assert.match(svg, /class="global-route"/);
@@ -9188,6 +9199,14 @@ check('Global Route Map renders country and expedition paths and toggles indepen
     assert.match(html, /<option value="parchment">Parchment<\/option>/);
     assert.match(html, /placeholder="Optional map title\.\.\."/);
     assert.match(html, /id="globalRoutesTransitLegend"/);
+
+    atlasStyle.value = 'parchment';
+    atlasStyle.handlers.change({ currentTarget: atlasStyle });
+    const parchmentSvg = element('svgGlobalRoutesMap').innerHTML;
+    assert.match(parchmentSvg, /class="global-routes-ocean"[^>]*fill="#c5d5cf"/);
+    assert.match(parchmentSvg, /class="global-country" fill="#f2e4c4" stroke="#776044"/);
+    atlasStyle.value = 'midnight';
+    atlasStyle.handlers.change({ currentTarget: atlasStyle });
 
     colorMode.value = 'gold';
     colorMode.handlers.change({ currentTarget: colorMode });
@@ -9218,6 +9237,7 @@ check('Global Route Map renders country and expedition paths and toggles indepen
     assert.equal(customTitle.disabled, false);
     assert.equal(customTitleWrap.classList.contains('hidden'), false);
     assert.equal(yearTitleWrap.classList.contains('hidden'), false);
+    assert.equal(mapFitExtents.at(-1)[0][1], 80, 'the title gets its own space above the map');
     assert.match(element('svgGlobalRoutesMap').innerHTML, /class="global-routes-title-overlay"[^>]*><text[^>]*>Custom route poster<\/text>/);
     const exportedTitleMap = routeMapSvg.cloneNode(true);
     assert.match(exportedTitleMap.innerHTML, /class="global-routes-title-overlay"/);
@@ -9245,6 +9265,7 @@ check('Global Route Map renders country and expedition paths and toggles indepen
     showTitle.checked = false;
     showTitle.handlers.change({ currentTarget: showTitle });
     assert.doesNotMatch(element('svgGlobalRoutesMap').innerHTML, /class="global-routes-title-overlay"/);
+    assert.equal(mapFitExtents.at(-1)[0][1], 24, 'the map expands when its title is hidden');
     assert.equal(customTitle.disabled, true);
     assert.equal(customTitleWrap.classList.contains('hidden'), true);
     assert.equal(yearTitleWrap.classList.contains('hidden'), true);
@@ -9307,8 +9328,8 @@ check('Global Route Map renders country and expedition paths and toggles indepen
     assert.match(element('svgGlobalRoutesMap').innerHTML, /fill="#f5f1e6"/);
     atlasStyle.value = 'parchment';
     atlasStyle.handlers.change({ currentTarget: atlasStyle });
-    assert.match(element('svgGlobalRoutesMap').innerHTML, /fill="#eee7d8"/);
-    assert.match(element('svgGlobalRoutesMap').innerHTML, /fill="#faf6ec"/);
+    assert.match(element('svgGlobalRoutesMap').innerHTML, /fill="#c5d5cf"/);
+    assert.match(element('svgGlobalRoutesMap').innerHTML, /fill="#f2e4c4"/);
     atlasStyle.value = 'midnight';
     atlasStyle.handlers.change({ currentTarget: atlasStyle });
 

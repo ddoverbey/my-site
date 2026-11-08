@@ -1338,8 +1338,8 @@ const GLOBAL_ROUTE_MAP_STYLES = Object.freeze({
     border: '#82919c', graticule: '#afbdc4', text: '#1e293b'
   },
   parchment: {
-    ocean: '#eee7d8', land: '#faf6ec', visited: '#b8c99e',
-    border: '#8e8067', graticule: '#d2c7af', text: '#40372b'
+    ocean: '#c5d5cf', land: '#f2e4c4', visited: '#a9a574',
+    border: '#776044', graticule: '#cbb892', text: '#3d3225'
   }
 });
 // Continent membership follows Annexare Countries (MIT): https://github.com/annexare/Countries.
@@ -1843,7 +1843,8 @@ function renderGlobalRoutesMap() {
   const collection = { type: 'FeatureCollection', features };
   const projection = scope === 'domestic' && homeCountryCode === 'US'
     ? d3.geoAlbersUsa() : d3.geoNaturalEarth1();
-  if (features.length) projection.fitExtent([[24, 24], [1176, 560]], collection);
+  const mapTop = showTitleControl.checked ? 80 : 24;
+  if (features.length) projection.fitExtent([[24, mapTop], [1176, 560]], collection);
   const path = d3.geoPath(projection);
   const mapStyle = GLOBAL_ROUTE_MAP_STYLES[globalRoutesAtlasStyle];
   const stats = calculateStats();
