@@ -485,8 +485,6 @@
           'male-red-flannel.png', 'female-red-flannel.png'),
         variantSpecByGender: { male: null, female: null }
       }),
-    makeVariantItem('vanguard_tabard', 'Vanguard Tabard', 'top', { type: 'level', goal: 8 },
-      palette('#323945', '#71849c', '#d4dbe4', { accent: '#3b5ba8' }), 'jacket'),
     makeVariantItem('highlander_gilded_pants', 'Highlander Breeches', 'bottoms', { type: 'level', goal: 9 },
       rangerPantsPalette('#29241f', '#675642', '#b49a70')),
     makeVariantItem('sovereign_cartographer_coat', 'Sovereign Cartographer Coat', 'top',
@@ -610,11 +608,6 @@
     equipmentItem('mariner_pea_coat', 'Mariner Pea Coat', 'top',
       pairedPaths(CUSTOM_GEAR_ASSET_ROOT, 'Male Mariner Coat.png', 'Female Mariner Coat.png'),
       { type: 'achievement', id: 'mariner' }),
-    makeVariantItem('photographer_vest', "Photographer's Utility Vest", 'top',
-      { type: 'achievement', id: 'focal' },
-      palette('#292b2c', '#55594d', '#a5a58a', {
-        sleeve: '#777552', accent: '#393c34'
-      }), 'vest'),
     makeVariantItem('arctic_aurora_cloak', 'Arctic Aurora Cloak', 'backLayer',
       { type: 'achievement', id: 'longDark' },
       palette('#22263d', '#397d83', '#b694d0', { accent: '#6dd5cf' })),
@@ -1000,7 +993,7 @@
     ] },
     { level: 6, title: 'Prospector', itemIds: ['mining_helmet', 'iron_pickaxe', 'iron_axe', 'canyon_work_denim'] },
     { level: 7, title: 'Ranger', itemIds: ['traveler_cape', 'bandit_scarf', 'redwood_flannel_jacket'] },
-    { level: 8, title: 'Vanguard', itemIds: ['guard_helmet', 'circle_shield', 'iron_sword', 'vanguard_tabard'] },
+    { level: 8, title: 'Vanguard', itemIds: ['guard_helmet', 'circle_shield', 'iron_sword'] },
     { level: 9, title: 'Highlander', itemIds: ['chainmail_tunic', 'viking_helmet', 'golden_pickaxe', 'golden_sword', 'highlander_gilded_pants'] },
     { level: 10, title: 'Cartographer Royal', itemIds: [
       'royal_headwear', 'diamond_sword', 'diamond_pickaxe', 'sovereign_cartographer_coat',

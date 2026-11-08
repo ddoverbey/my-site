@@ -1259,16 +1259,20 @@ check('the explorer track contains paired gender gear for all ten levels', () =>
   assert.ok(characterCreator.LEVEL_TRACK[9].itemIds.includes('diamond_sword'));
   assert.ok(characterCreator.LEVEL_TRACK[9].itemIds.includes('hair_shield_maiden'));
   for (const reward of characterCreator.LEVEL_TRACK.slice(1)) {
-    assert.ok(reward.itemIds.some(id => characterCreator.LEVEL_ITEMS.some(item =>
-      item.id === id && item.variantSpec && item.unlock.goal === reward.level)),
-    `level ${reward.level} includes a generated clothing reward`);
+    const generatedClothing = reward.itemIds.filter(id => characterCreator.LEVEL_ITEMS.some(item =>
+      item.id === id && item.variantSpec && item.unlock.goal === reward.level));
+    if (reward.level === 8) {
+      assert.deepEqual(generatedClothing, [], 'Level 8 has no generated clothing reward');
+    } else {
+      assert.ok(generatedClothing.length, `level ${reward.level} includes a generated clothing reward`);
+    }
   }
 });
 check('variant clothing includes all requested rewards and valid paired sprite-sheet paths', () => {
   const levelIds = [
     'pine_trail_flannel', 'scout_cargo_pants', 'meadow_forager_tunic',
     'wayfarer_field_vest', 'wayfarer_khaki_field_vest', 'canyon_work_denim', 'redwood_flannel_jacket',
-    'vanguard_tabard', 'highlander_gilded_pants', 'sovereign_cartographer_coat'
+    'highlander_gilded_pants', 'sovereign_cartographer_coat'
   ];
   const parkIds = [
     'volunteer_park_tee', 'park_ranger_uniform', 'ranger_trail_pants', 'grand_warden_cloak'
@@ -1280,7 +1284,7 @@ check('variant clothing includes all requested rewards and valid paired sprite-s
     'khaki_trail_pants', 'mist_rain_poncho', 'cavern_miner_suit', 'cavern_pink_suit',
     'summit_down_parka', 'summit_bright_red_parka', 'summit_navy_blue_parka',
     'summit_hood_up_parka', 'overland_canvas_jacket',
-    'mariner_pea_coat', 'photographer_vest', 'arctic_aurora_cloak',
+    'mariner_pea_coat', 'arctic_aurora_cloak',
     'blue_ridge_flannel', 'alpine_timberline_jacket', 'continental_cape',
     'centennial_ranger_coat', 'gaia_druid_mantle'
   ];

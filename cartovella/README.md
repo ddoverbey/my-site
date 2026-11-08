@@ -339,7 +339,7 @@ reward track are not included.
 | 5 | River Blue outfit, Wayfarer Gloves, Back Lantern, green and khaki Wayfarer Field Vests |
 | 6 | Mining Helmet, Canyon Work Denim, Trail Lantern accessory |
 | 7 | Ember Orange outfit, Traveler Cape, Bandit Scarf, Redwood Flannel Jacket |
-| 8 | Guard Helmet, Circle Shield, Vanguard Tabard |
+| 8 | Guard Helmet, Circle Shield |
 | 9 | Chainmail Tunic, Viking Helmet, Highlander Breeches, Field Spyglass accessory |
 | 10 | Royal Purple outfit, Royal Chaperon / Headdress, Sovereign Cartographer Coat, Cartographer Monocle, Fancy Hair, Queen Hair, Shield Maiden Hair |
 
