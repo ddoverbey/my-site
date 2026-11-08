@@ -793,10 +793,9 @@
   ]);
 
   const LEGACY_HAIR_STYLE_IDS = new Set(['short', 'bob', 'long', 'curls', 'braided']);
-  const CHARACTER_SPRITE_FRAME = Object.freeze({
-    x: 24, y: 16, width: 32, height: 48, sheetWidth: 80
-  });
-  const CHARACTER_SPRITE_TARGET = Object.freeze({ x: 62, y: 39, width: 36, height: 43 });
+  const CHARACTER_SPRITE_CELL = Object.freeze({ width: 80, height: 64 });
+  const CHARACTER_SPRITE_CONTENT = Object.freeze({ x: 24, y: 16, width: 32, height: 48 });
+  const CHARACTER_SPRITE_TARGET = Object.freeze({ x: 40, y: 18, width: 80, height: 64 });
 
   const DEFAULT_CHARACTER = Object.freeze({
     gender: 'male',
@@ -1405,11 +1404,10 @@
           ctx.filter = layer.filter;
         }
         const layerFrame = layer.layer === 'effect'
-          ? ((Math.max(0, effectFrame) % CHARACTER_EFFECT_FRAME_COUNT) * CHARACTER_SPRITE_FRAME.sheetWidth)
+          ? ((Math.max(0, effectFrame) % CHARACTER_EFFECT_FRAME_COUNT) * CHARACTER_SPRITE_CELL.width)
           : 0;
         drawCharacterLayer(ctx, image, layer,
-          layerFrame + CHARACTER_SPRITE_FRAME.x, CHARACTER_SPRITE_FRAME.y,
-          CHARACTER_SPRITE_FRAME.width, CHARACTER_SPRITE_FRAME.height,
+          layerFrame, 0, CHARACTER_SPRITE_CELL.width, CHARACTER_SPRITE_CELL.height,
           target.x, target.y + bobOffset, target.width, target.height);
         if (layer.filter) ctx.restore();
       }
@@ -1563,16 +1561,24 @@
       const cropSize = 32;
       const scale = Math.min(canvas.width / cropSize, canvas.height / cropSize);
       ctx.translate(
-        (canvas.width - cropSize * scale) / 2 - 64 * scale,
-        (canvas.height - cropSize * scale) / 2 - 38 * scale
+        (canvas.width - cropSize * scale) / 2 -
+          (CHARACTER_SPRITE_TARGET.x + CHARACTER_SPRITE_CONTENT.x) * scale,
+        (canvas.height - cropSize * scale) / 2 -
+          (CHARACTER_SPRITE_TARGET.y + CHARACTER_SPRITE_CONTENT.y) * scale
       );
       ctx.scale(scale, scale);
       drawCharacterSprite(ctx, character, redraw);
       ctx.restore();
       return;
     }
-    const scale = Math.min(canvas.width / 80, canvas.height / 48);
-    ctx.translate((canvas.width - 80 * scale) / 2, (canvas.height - 48 * scale) / 2);
+    const scale = Math.min(
+      canvas.width / CHARACTER_SPRITE_CELL.width,
+      canvas.height / CHARACTER_SPRITE_CELL.height
+    );
+    ctx.translate(
+      (canvas.width - CHARACTER_SPRITE_CELL.width * scale) / 2,
+      (canvas.height - CHARACTER_SPRITE_CELL.height * scale) / 2
+    );
     ctx.scale(scale, scale);
     characterSpriteAssets(character).forEach(layer => {
       const baseImage = getImage(layer, redraw);
@@ -1583,7 +1589,9 @@
         ctx.save();
         ctx.filter = layer.filter;
       }
-      drawCharacterLayer(ctx, image, layer, 0, 0, 80, 48, 0, 0, 80, 48);
+      drawCharacterLayer(ctx, image, layer, 0, 0,
+        CHARACTER_SPRITE_CELL.width, CHARACTER_SPRITE_CELL.height,
+        0, 0, CHARACTER_SPRITE_CELL.width, CHARACTER_SPRITE_CELL.height);
       if (layer.filter) ctx.restore();
     });
     ctx.restore();

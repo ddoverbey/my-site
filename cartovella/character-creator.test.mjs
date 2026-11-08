@@ -841,10 +841,10 @@ check('ranger hats keep every hairstyle below the hat crown in stage and avatar 
     });
     const hair = characterCreator.characterSpriteAssets(character)
       .find(layer => layer.layer === 'hair');
-    characterCreator.drawCharacterLayer(context, {}, hair, 24, 16, 32, 48, 62, 39, 36, 43);
+    characterCreator.drawCharacterLayer(context, {}, hair, 0, 0, 80, 64, 40, 18, 80, 64);
     assert.equal(clips.length, 1);
-    assert.equal(clips[0][0], 62);
-    assert.ok(clips[0][1] > 45 && clips[0][1] < 48);
+    assert.equal(clips[0][0], 40);
+    assert.equal(clips[0][1], 43);
   }
 });
 check('ranger hats preserve their shared centered canvas position when drawn', () => {
@@ -857,9 +857,9 @@ check('ranger hats preserve their shared centered canvas position when drawn', (
     const calls = [];
     characterCreator.drawCharacterLayer({
       drawImage(...args) { calls.push(args); }
-    }, {}, hatLayer, 0, 0, 80, 64, 62, 39, 36, 43);
+    }, {}, hatLayer, 0, 0, 80, 64, 40, 18, 80, 64);
     assert.equal(calls.length, 1, hat);
-    assert.equal(calls[0][5], 62, `${hat} should use the character's shared center`);
+    assert.equal(calls[0][5] + 40, 80, `${hat} should use the character's shared center`);
   }
 });
 check('low-resolution frame profiles keep the V-taper broad at the shoulders and hourglass defined', () => {
@@ -1073,8 +1073,12 @@ check('character effects use their own animation frames without shifting the exp
     characterCreator.drawCharacterSprite(context, character, () => {}, 2);
     const effectCall = drawCalls.find(call => call[0].src === effectLayer.imageSrc);
     assert.ok(effectCall);
-    assert.deepEqual(effectCall.slice(1), [184, 16, 32, 48, 62, 39, 36, 43]);
-    assert.ok(drawCalls.every(call => call[6] === 39));
+    assert.deepEqual(effectCall.slice(1), [160, 0, 80, 64, 40, 18, 80, 64]);
+    assert.ok(drawCalls.every(call =>
+      call.slice(3, 5).join(',') === '80,64' &&
+      call.slice(5).join(',') === '40,18,80,64'
+    ), 'all character layers draw complete 80x64 cells at the shared native-size target');
+    assert.ok(drawCalls.every(call => call[6] === 18));
   } finally {
     if (originalImage === undefined) delete globalThis.Image;
     else globalThis.Image = originalImage;
@@ -1670,8 +1674,8 @@ check('the shared stage animation loop advances pets and effects without moving 
       /doggy%20(?:hat|backpack)\.png$/.test(call[0].src));
     const currentPetAccessoryCalls = () => petAccessoryCalls().slice(-2);
     assert.deepEqual(dogCall().slice(1, 5), [1, 13, 29, 19]);
-    assert.deepEqual(effectCall().slice(1, 5), [24, 16, 32, 48]);
-    assert.equal(avatarCall()[6], 39);
+    assert.deepEqual(effectCall().slice(1, 5), [0, 0, 80, 64]);
+    assert.equal(avatarCall()[6], 18);
     const hiddenDrawCount = drawCalls.length;
     intervalCallbacks[0]();
     assert.equal(drawCalls.length, hiddenDrawCount);
@@ -1683,9 +1687,9 @@ check('the shared stage animation loop advances pets and effects without moving 
     intervalCallbacks[0]();
     intervalCallbacks[0]();
     assert.deepEqual(dogCall().slice(1, 5), [33, 13, 29, 19]);
-    assert.deepEqual(effectCall().slice(1, 5), [104, 16, 32, 48]);
-    assert.equal(effectCall()[6], 39);
-    assert.equal(avatarCall()[6], 39);
+    assert.deepEqual(effectCall().slice(1, 5), [80, 0, 80, 64]);
+    assert.equal(effectCall()[6], 18);
+    assert.equal(avatarCall()[6], 18);
     assert.equal(currentPetAccessoryCalls().length, 2);
     assert.ok(currentPetAccessoryCalls().every(call => call[1] === 32));
     canvas.isConnected = false;
@@ -1696,7 +1700,7 @@ check('the shared stage animation loop advances pets and effects without moving 
     assert.equal(intervalCallbacks.length, 1, 'static scene thumbnails do not start an animation timer');
     const avatarDrawCalls = [];
     const avatarCanvas = {
-      width: 80, height: 48, isConnected: true,
+      width: 80, height: 64, isConnected: true,
       getContext: () => ({
         clearRect() {},
         save() {},
@@ -1709,8 +1713,8 @@ check('the shared stage animation loop advances pets and effects without moving 
     characterCreator.renderAvatar(avatarCanvas, character);
     assert.ok(avatarDrawCalls.length > 0);
     assert.ok(avatarDrawCalls.every(call =>
-      call.length === 9 && call.slice(1).join(',') === '0,0,80,48,0,0,80,48'
-    ), 'avatar thumbnails use the centered 80x48 bust crop');
+      call.length === 9 && call.slice(1).join(',') === '0,0,80,64,0,0,80,64'
+    ), 'avatar thumbnails draw complete 80x64 sprite cells at native proportions');
     const portraitTransforms = [];
     const portraitDrawCalls = [];
     const portraitContext = {
@@ -1727,10 +1731,10 @@ check('the shared stage animation loop advances pets and effects without moving 
     };
     characterCreator.renderAvatar(portraitCanvas, character, { portrait: true });
     assert.deepEqual(portraitTransforms.slice(0, 2), [
-      ['translate', -48, -28.5],
+      ['translate', -48, -25.5],
       ['scale', 0.75, 0.75]
     ], 'header portrait frames the character head and shoulders in a 24x24 canvas');
-    assert.ok(portraitDrawCalls.some(call => call.slice(5).join(',') === '62,39,36,43'));
+    assert.ok(portraitDrawCalls.some(call => call.slice(5).join(',') === '40,18,80,64'));
     const avatarTransforms = [];
     const guildAvatarContext = {
       clearRect() {},
@@ -1823,7 +1827,7 @@ check('sprite character selects matching gender, skin, hair, and outfit layers',
     assert.equal(drawCalls.length, 5);
     assert.equal(drawCalls[4][0].src, undefined, 'hair is rendered from its recolored canvas');
     assert.ok(drawCalls.every(call =>
-      call.length === 9 && call.slice(1).join(',') === '24,16,32,48,62,39,36,43'
+      call.length === 9 && call.slice(1).join(',') === '0,0,80,64,40,18,80,64'
     ));
   } finally {
     if (originalImage === undefined) delete globalThis.Image;

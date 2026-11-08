@@ -246,8 +246,9 @@ hats and helmets until a hood-down top is selected. Mariner coats and the male P
 their dedicated replacement art.
 GandalfHardcore asset folders are grouped under `assets/gandalfhardcore/`; source ZIP archives remain
 in `assets/Zips/`.
-The character layers use aligned 800×448 sheets and a 32×48 crop around the first character
-frame. Character, hairstyle, wardrobe, companion, and background selectors show visual previews.
+Character layers use aligned 80×64 cells (10×7 on 800×448 sheets); the 32×48 character artwork
+is padded inside each cell and rendered at a uniform native scale. Character, hairstyle, wardrobe,
+companion, and background selectors show visual previews.
 Opening the character editor focuses and jumps directly to the customization controls above the
 character stage. Appearance contains skin tones and special skins, plus a compact full-width
 hairstyle picker that keeps its preview, name, and arrows separate. Hairstyle arrows cycle through
