@@ -280,7 +280,7 @@ check('character customization appears above the stage and progress summary', ()
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 10);
-  assert.ok(sources.every(source => source.endsWith('?v=20261108-correctness-v3')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261108-transit-colors-v1')));
   assert.ok(sources.some(source => source.startsWith('./character-creator.js?')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
@@ -9353,6 +9353,19 @@ check('Global Route Map renders country and expedition paths and toggles indepen
         mode: 'ferry', routeSource: 'direct',
         routeCoords: [[40.7,-74],[32.3,-64.8]]
       }]
+    }, {
+      id: 'road-route-test', name: 'Road Trip', startDate: '2025-06-07',
+      endDate: '2025-06-08', transitTags: ['road'],
+      countyIds: [], parkIds: [], customPoiIds: [],
+      routeStops: [
+        { kind: 'place', name: 'New York', coords: [40.7,-74] },
+        { kind: 'place', name: 'Washington', coords: [38.9,-77] }
+      ],
+      routeCoords: [[40.7,-74],[38.9,-77]],
+      routeLegs: [{
+        mode: 'road', routeSource: 'direct',
+        routeCoords: [[40.7,-74],[38.9,-77]]
+      }]
     }];
     globalRoutesOpen = false;
     globalRoutesScope = 'global';
@@ -9379,7 +9392,8 @@ check('Global Route Map renders country and expedition paths and toggles indepen
     assert.ok(interpolatedPairs.includes('[[40,30],[60,50]]'),
       'legacy multi-stop flights should draw the arc from the second to third stop');
     assert.match(svg, /stroke="#94a3b8"/);
-    assert.match(svg, /stroke="#38bdf8"/);
+    assert.match(svg, /stroke="#f97316"/, 'road routes should be orange');
+    assert.match(svg, /stroke="#38bdf8"/, 'ferry routes should remain blue');
     assert.match(svg, /stroke-dasharray="6 5"/);
     assert.doesNotMatch(svg, /class="global-routes-title-overlay"/);
     assert.match(svg, /id="globalRoutesBrandWatermark" transform="translate\(24 520\)"/);

@@ -19,8 +19,8 @@ expeditions, track parks and regions, and earn achievements from your travel his
   line patterns, optional stop dots, a title in a reserved band above the map with optional year
   display, and optional explorer details.
   PNG exports use the Cartovella logo without a background panel and keep the map at its normal
-  proportions. Water Transit
-  routes are blue, while flights use a neutral gray in the map and trip logs.
+  proportions. Road routes are orange, Water Transit routes are blue, and flights use a neutral
+  gray in the map and trip logs.
 - The Explorers' Guild separates public explorers into an expandable Explore directory and a
   Travels feed with one route atlas per explorer plus their public trip dispatches. Each atlas
   includes every trip whose route details that explorer explicitly shares, across all years and

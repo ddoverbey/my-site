@@ -1321,7 +1321,7 @@ let travelLogVisibilityObserver = null;
 const openTravelLogs = new Set();
 const travelJournalDrafts = new Map();
 const confirmingTravelLogDeletion = new Set();
-const TRAVEL_ROUTE_COLORS = { road: '#22d3ee', awd: '#22d3ee', ferry: '#38bdf8',
+const TRAVEL_ROUTE_COLORS = { road: '#f97316', awd: '#22d3ee', ferry: '#38bdf8',
   flight: '#94a3b8', rail: '#a78bfa', foot: '#4ade80' };
 const GLOBAL_ROUTE_SINGLE_COLORS = Object.freeze({
   gold: '#fac60b',
