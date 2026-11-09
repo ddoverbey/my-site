@@ -255,7 +255,8 @@ check('home citadel setup can be dismissed by its close button, backdrop, or Esc
 });
 check('account dialog fits laptop viewports, scrolls internally, and opens at the top', () => {
   const modal = html.slice(html.indexOf('id="authModal"'), html.indexOf('id="authViewLoggedOut"'));
-  assert.match(modal, /id="authModalContent"[^>]*max-w-2xl[^>]*max-h-\[calc\(100vh-2rem\)\][^>]*max-h-\[calc\(100dvh-2rem\)\][^>]*overflow-y-auto/);
+  assert.match(modal, /id="authModalContent"[^>]*max-w-5xl[^>]*max-h-\[calc\(100vh-2rem\)\][^>]*max-h-\[calc\(100dvh-2rem\)\][^>]*overflow-y-auto/);
+  assert.match(html, /id="authViewLoggedIn"[^>]*[\s\S]*?md:grid-cols-2/);
   assert.match(html, /modalContent\.scrollTop = 0/);
   assert.match(html, /const focusTarget = cloudSession \? document\.getElementById\('btnCloseAuthModal'\)/);
 });
