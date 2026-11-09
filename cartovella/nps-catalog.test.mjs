@@ -253,6 +253,12 @@ check('home citadel setup can be dismissed by its close button, backdrop, or Esc
   assert.match(html, /event\.target === event\.currentTarget\) closeHomeModal\(\)/);
   assert.match(html, /event\.key === 'Escape'[\s\S]*?closeHomeModal\(\)/);
 });
+check('account dialog fits laptop viewports, scrolls internally, and opens at the top', () => {
+  const modal = html.slice(html.indexOf('id="authModal"'), html.indexOf('id="authViewLoggedOut"'));
+  assert.match(modal, /id="authModalContent"[^>]*max-w-2xl[^>]*max-h-\[calc\(100vh-2rem\)\][^>]*max-h-\[calc\(100dvh-2rem\)\][^>]*overflow-y-auto/);
+  assert.match(html, /modalContent\.scrollTop = 0/);
+  assert.match(html, /const focusTarget = cloudSession \? document\.getElementById\('btnCloseAuthModal'\)/);
+});
 check('existing sign-in and account creation use separate views, with username only on sign-up', () => {
   const chooser = html.slice(html.indexOf('id="authViewOptions"'), html.indexOf('id="authViewSignIn"'));
   const signIn = html.slice(html.indexOf('id="authViewSignIn"'), html.indexOf('id="authViewSignUp"'));
