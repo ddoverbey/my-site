@@ -273,7 +273,7 @@ check('character customization appears above the stage and progress summary', ()
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 10);
-  assert.ok(sources.every(source => source.endsWith('?v=20261108-performance-v1')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261108-character-performance-v2')));
   assert.ok(sources.some(source => source.startsWith('./character-creator.js?')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
@@ -4031,6 +4031,35 @@ check('zero-progress achievements appear in the unmet section and started classe
   assert.ok(started.includes('The Overlander'));
   assert.ok(started.includes('Under Pressure'));
   assert.ok(!element('achievementsContainer').innerHTML.includes('Venture out'));
+});
+check('cosmetic changes save and redraw only customization, preserving the rest of the profile', () => {
+  const originalRender = context.CharacterCreator.render;
+  const originalSave = context.saveState;
+  const originalProfile = context.renderPassportView;
+  const previousCharacter = vm.runInContext('AppState.character', context);
+  let options, saves = 0, renders = 0;
+  context.CharacterCreator.render = value => { options = value; renders++; };
+  context.saveState = () => { saves++; };
+  context.renderPassportView = () => { throw new Error('Cosmetics rebuilt the whole profile'); };
+  try {
+    vm.runInContext('renderCharacterCustomization()', context);
+    const character = characterCreator.normalizeCharacter({ ...previousCharacter, eyeColor: 'blue' });
+    options.onChange(character);
+    assert.equal(saves, 1);
+    assert.equal(renders, 2);
+    assert.equal(vm.runInContext('AppState.character.eyeColor', context), 'blue');
+    context.saveState = () => { throw new Error('Storage unavailable'); };
+    assert.throws(() => options.onChange({ ...character, eyeColor: 'green' }), /Storage unavailable/);
+    assert.equal(vm.runInContext('AppState.character.eyeColor', context), 'blue');
+    assert.equal(renders, 3, 'failed saves redraw the previous selection');
+    assert.equal(element('toastTitle').textContent, 'Character not saved');
+  } finally {
+    context.CharacterCreator.render = originalRender;
+    context.saveState = originalSave;
+    context.renderPassportView = originalProfile;
+    context.previousCharacterFixture = previousCharacter;
+    vm.runInContext('AppState.character=previousCharacterFixture;delete globalThis.previousCharacterFixture', context);
+  }
 });
 check('single-tier achievement cards show unlocked descriptions and international milestones share a class', () => {
   const container = element('achievementsContainer');

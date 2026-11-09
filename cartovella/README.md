@@ -502,6 +502,14 @@ Geometry caches assume saved route arrays and polygon objects are replaced on ed
 already are for imports and expedition saves. Do not mutate saved coordinate pairs in place.
 Caches are browser-session-only and do not change the passport format or require resetting saves.
 
+Character customization updates only its controls, scene and coin summary after cosmetic edits,
+not the achievements, biome cards, flags or other profile sections. Sprite previews render as they
+enter the viewport, including clipped dropdown lists, and replaced controls disconnect their old
+observers. Static character layers recolor only the displayed 80x64 frame; animated effects retain
+their full sheets. Hair colors reuse one whole-sheet luminance analysis per source so the smaller
+frame keeps the original colors. Coin eligibility is calculated once per controls render instead
+of scanning travel progress separately for every shop item.
+
 ### Performance verification
 
 Use browser Performance tools on a locally served copy, measuring startup separately from warm

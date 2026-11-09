@@ -19,6 +19,134 @@ const allCatalogs = [
   characterCreator.SHOP_WARDROBE, characterCreator.PET_ACCESSORY_CATALOG
 ];
 
+check('frame-only recoloring matches the full sheet and shares whole-sheet luminance analysis', () => {
+  const previous = globalThis.OffscreenCanvas;
+  const reads = [];
+  class PixelCanvas {
+    constructor(width, height) {
+      this.width = width;
+      this.height = height;
+      this.data = new Uint8ClampedArray(width * height * 4);
+    }
+    getContext() {
+      return {
+        drawImage: image => {
+          const width = image.naturalWidth || image.width;
+          const height = image.naturalHeight || image.height;
+          for (let y = 0; y < Math.min(height, this.height); y++) {
+            this.data.set(image.data.subarray(y * width * 4,
+              (y * width + Math.min(width, this.width)) * 4), y * this.width * 4);
+          }
+        },
+        getImageData: () => {
+          reads.push([this.width, this.height]);
+          return { data: new Uint8ClampedArray(this.data) };
+        },
+        putImageData: image => this.data.set(image.data)
+      };
+    }
+  }
+  globalThis.OffscreenCanvas = PixelCanvas;
+  try {
+    const source = {
+      src: 'frame-performance-fixture.png', naturalWidth: 160, naturalHeight: 128,
+      data: new Uint8ClampedArray(160 * 128 * 4)
+    };
+    source.data.set([110, 110, 110, 255], (20 * 160 + 30) * 4);
+    source.data.set([255, 255, 255, 255], (100 * 160 + 100) * 4);
+    source.data.set([39, 19, 15, 255], (27 * 160 + 37) * 4);
+    const variant = {
+      palette: { outline: '#101112', shadow: '#202122', base: '#404142', highlight: '#808182' },
+      colorizeByLuminance: true
+    };
+    const frame = characterCreator.processSpriteVariant(source, variant, true);
+    assert.equal(frame.width, 80);
+    assert.equal(frame.height, 64);
+    assert.equal(reads.filter(([width]) => width === 160).length, 1);
+    const second = characterCreator.processSpriteVariant(source, {
+      ...variant, palette: { ...variant.palette, base: '#445566' }
+    }, true);
+    assert.equal(second.width, 80);
+    assert.equal(reads.filter(([width]) => width === 160).length, 1,
+      'another hair color must not reread the entire sheet');
+    assert.strictEqual(characterCreator.processSpriteVariant(source, variant, true), frame);
+    const full = characterCreator.processSpriteVariant(source, variant);
+    for (let y = 0; y < 64; y++) {
+      assert.deepEqual(frame.data.subarray(y * 80 * 4, (y + 1) * 80 * 4),
+        full.data.subarray(y * 160 * 4, (y * 160 + 80) * 4));
+    }
+    const eyeFrame = characterCreator.processSpriteEyeColor(source, 'blue', 'male', undefined, true);
+    const eyeSheet = characterCreator.processSpriteEyeColor(source, 'blue', 'male');
+    assert.equal(eyeFrame.width, 80);
+    assert.equal(eyeFrame.height, 64);
+    for (let y = 0; y < 64; y++) {
+      assert.deepEqual(eyeFrame.data.subarray(y * 80 * 4, (y + 1) * 80 * 4),
+        eyeSheet.data.subarray(y * 160 * 4, (y * 160 + 80) * 4));
+    }
+  } finally {
+    if (previous === undefined) delete globalThis.OffscreenCanvas;
+    else globalThis.OffscreenCanvas = previous;
+  }
+});
+check('customization previews wait for visible intersections and release observers on rerender', () => {
+  const previous = globalThis.IntersectionObserver;
+  const observers = [];
+  let draws = 0;
+  const canvas = {
+    dataset: { petPreview: 'pet_none' }, isConnected: true,
+    getContext() {
+      draws++;
+      return { clearRect() {}, beginPath() {}, arc() {}, moveTo() {}, lineTo() {}, stroke() {} };
+    }
+  };
+  globalThis.IntersectionObserver = class {
+    constructor(callback) {
+      this.callback = callback;
+      this.observed = [];
+      this.unobserved = [];
+      this.disconnected = false;
+      observers.push(this);
+    }
+    observe(target) { this.observed.push(target); }
+    unobserve(target) { this.unobserved.push(target); }
+    disconnect() { this.disconnected = true; }
+  };
+  const controls = {
+    dataset: { activeTab: 'pets' }, hidden: true, innerHTML: '',
+    querySelectorAll(selector) { return selector === 'canvas[data-pet-preview]' ? [canvas] : []; }
+  };
+  const customizeButton = { setAttribute() {} };
+  try {
+    characterCreator.render({ controls, customizeButton });
+    assert.equal(draws, 0);
+    assert.equal(observers.length, 0, 'collapsed customization does no preview work');
+    customizeButton.onclick();
+    assert.equal(observers.length, 1);
+    assert.deepEqual(observers[0].observed, [canvas]);
+    observers[0].callback([{ target: canvas, isIntersecting: false }]);
+    assert.equal(draws, 0);
+    observers[0].callback([{ target: canvas, isIntersecting: true }]);
+    assert.equal(draws, 1);
+    assert.deepEqual(observers[0].unobserved, [canvas]);
+    characterCreator.render({ controls, customizeButton });
+    assert.equal(observers[0].disconnected, true);
+    canvas.isConnected = false;
+    observers[1].callback([{ target: canvas, isIntersecting: true }]);
+    assert.equal(draws, 1, 'stale detached previews do not render');
+  } finally {
+    if (previous === undefined) delete globalThis.IntersectionObserver;
+    else globalThis.IntersectionObserver = previous;
+  }
+});
+check('catalogs share one coin calculation per controls render', () => {
+  let regionReads = 0;
+  const appState = { character: characterCreator.DEFAULT_CHARACTER };
+  Object.defineProperty(appState, 'regions', { get() { regionReads++; return {}; } });
+  const controls = { dataset: { activeTab: 'shop' }, hidden: true, innerHTML: '' };
+  characterCreator.render({ controls, appState });
+  assert.equal(regionReads, 2, 'one coinSummary pass, not one pass per purchasable item');
+});
+
 check('every customization option supports a future image override', () => {
   allCatalogs.flat().forEach(item => assert.equal(Object.hasOwn(item, 'imageSrc'), true, item.id));
 });

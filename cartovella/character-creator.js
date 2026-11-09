@@ -1081,6 +1081,8 @@
   const imageCache = new Map();
   const imageLoadRedraws = new Map();
   const spriteVariantCache = new Map();
+  const spriteMaximumLuminances = new WeakMap();
+  const previewObservers = new WeakMap();
   const stageRenderers = new WeakMap();
   const stageAnimations = new WeakMap();
   const tabs = ['appearance', 'wardrobe', 'pets', 'backgrounds', 'shop', 'patron'];
@@ -1275,7 +1277,7 @@
     };
   }
 
-  function unlockStatus(unlock, stats, character, achievements, appState = { character }) {
+  function unlockStatus(unlock, stats, character, achievements, appState = { character }, balance) {
     if (!unlock || unlock.type === 'starter') return { unlocked: true, description: 'Available from the start.' };
     if (unlock.type === 'owner') {
       const unlocked = appState?.isCartovellaOwner === true;
@@ -1352,7 +1354,7 @@
     }
     if (unlock.type === 'coin') {
       const owned = character.purchasedItems.includes(unlock.itemId);
-      const available = coinSummary(stats, appState).availableCoins;
+      const available = (balance || coinSummary(stats, appState)).availableCoins;
       return {
         unlocked: owned || available >= unlock.cost,
         description: owned ? 'Purchased.' : `${unlock.cost} Wayfarer Coins.`
@@ -1403,16 +1405,18 @@
     return [(value >> 16) & 255, (value >> 8) & 255, value & 255];
   }
 
-  function processSpriteVariant(baseImage, variantSpec) {
+  function processSpriteVariant(baseImage, variantSpec, firstFrameOnly = false) {
     const sourcePath = baseImage?.currentSrc || baseImage?.src;
-    const cacheKey = `${sourcePath}|${JSON.stringify(variantSpec)}`;
+    const cacheKey = `${sourcePath}|${JSON.stringify(variantSpec)}|${firstFrameOnly ? 'frame' : 'sheet'}`;
     if (spriteVariantCache.has(cacheKey)) return spriteVariantCache.get(cacheKey);
-    const width = baseImage?.naturalWidth || baseImage?.width || 0;
-    const height = baseImage?.naturalHeight || baseImage?.height || 0;
-    if (!sourcePath || width < 80 || height < 64 || width % 80 !== 0 || height % 64 !== 0) {
+    const sourceWidth = baseImage?.naturalWidth || baseImage?.width || 0;
+    const sourceHeight = baseImage?.naturalHeight || baseImage?.height || 0;
+    if (!sourcePath || sourceWidth < 80 || sourceHeight < 64 || sourceWidth % 80 !== 0 || sourceHeight % 64 !== 0) {
       throw new Error(`Sprite variant source must be an aligned 80x64 sheet: ${sourcePath || 'unknown source'}`);
     }
     if (!variantSpec?.palette) throw new Error(`Sprite variant palette missing: ${sourcePath}`);
+    const width = firstFrameOnly ? 80 : sourceWidth;
+    const height = firstFrameOnly ? 64 : sourceHeight;
     const colors = Object.fromEntries(['outline', 'shadow', 'base', 'highlight', 'accent', 'sleeve', 'band']
       .filter(key => variantSpec.palette[key] &&
         !(key === 'band' && Array.isArray(variantSpec.palette[key])))
@@ -1448,11 +1452,27 @@
     const [bandLeft, bandRight] = variantSpec.bandXRange || [0, 79];
     let maximumLuminance = 0;
     if (variantSpec.colorizeByLuminance) {
-      for (let index = 0; index < data.length; index += 4) {
-        if (data[index + 3] === 0) continue;
-        maximumLuminance = Math.max(maximumLuminance,
-          (0.2126 * data[index] + 0.7152 * data[index + 1] + 0.0722 * data[index + 2]) / 255);
+      if (!spriteMaximumLuminances.has(baseImage)) {
+        let sourceData = data;
+        if (firstFrameOnly && (sourceWidth !== width || sourceHeight !== height)) {
+          const sourceCanvas = typeof OffscreenCanvas === 'function'
+            ? new OffscreenCanvas(sourceWidth, sourceHeight) : document.createElement('canvas');
+          sourceCanvas.width = sourceWidth;
+          sourceCanvas.height = sourceHeight;
+          const sourceContext = sourceCanvas.getContext('2d', { willReadFrequently: true });
+          if (!sourceContext) throw new Error(`2D canvas context unavailable for sprite luminance: ${sourcePath}`);
+          sourceContext.drawImage(baseImage, 0, 0);
+          sourceData = sourceContext.getImageData(0, 0, sourceWidth, sourceHeight).data;
+        }
+        for (let index = 0; index < sourceData.length; index += 4) {
+          if (sourceData[index + 3] === 0) continue;
+          maximumLuminance = Math.max(maximumLuminance,
+            (0.2126 * sourceData[index] + 0.7152 * sourceData[index + 1] +
+              0.0722 * sourceData[index + 2]) / 255);
+        }
+        spriteMaximumLuminances.set(baseImage, maximumLuminance);
       }
+      maximumLuminance = spriteMaximumLuminances.get(baseImage);
     }
     for (let y = 0; y < height; y++) {
       const localY = y % 64;
@@ -1538,11 +1558,12 @@
     return canvas;
   }
 
-  function processSpriteEyeColor(baseImage, eyeColorId, gender, sourceEyeRgb = ORIGINAL_EYE_RGB) {
+  function processSpriteEyeColor(baseImage, eyeColorId, gender, sourceEyeRgb = ORIGINAL_EYE_RGB,
+    firstFrameOnly = false) {
     const sourcePath = baseImage?.currentSrc || baseImage?.src;
-    const width = baseImage?.naturalWidth || baseImage?.width || 0;
-    const height = baseImage?.naturalHeight || baseImage?.height || 0;
-    if (!sourcePath || width < 80 || height < 64 || width % 80 !== 0 || height % 64 !== 0) {
+    const sourceWidth = baseImage?.naturalWidth || baseImage?.width || 0;
+    const sourceHeight = baseImage?.naturalHeight || baseImage?.height || 0;
+    if (!sourcePath || sourceWidth < 80 || sourceHeight < 64 || sourceWidth % 80 !== 0 || sourceHeight % 64 !== 0) {
       throw new Error(`Sprite eye-color source must be an aligned 80x64 sheet: ${sourcePath || 'unknown source'}`);
     }
     const eyePixels = EYE_PIXEL_OFFSETS[gender];
@@ -1552,7 +1573,9 @@
     const outputColor = parsePaletteColor(selectedColor.color);
     if (outputColor.every((channel, index) => channel === sourceEyeRgb[index])) return baseImage;
 
-    const cacheKey = `${sourcePath}|eye:${gender}:${eyeColorId}:${sourceEyeRgb.join(',')}`;
+    const width = firstFrameOnly ? 80 : sourceWidth;
+    const height = firstFrameOnly ? 64 : sourceHeight;
+    const cacheKey = `${sourcePath}|eye:${gender}:${eyeColorId}:${sourceEyeRgb.join(',')}:${firstFrameOnly ? 'frame' : 'sheet'}`;
     if (spriteVariantCache.has(cacheKey)) return spriteVariantCache.get(cacheKey);
     const canvas = typeof OffscreenCanvas === 'function'
       ? new OffscreenCanvas(width, height)
@@ -1750,8 +1773,8 @@
     characterSpriteAssets(character).forEach(layer => {
       const baseImage = getImage(layer, redraw);
       const image = !baseImage ? null : layer.eyeColor
-        ? processSpriteEyeColor(baseImage, layer.eyeColor, layer.eyeGender, layer.eyeSourceRgb)
-        : layer.variantSpec ? processSpriteVariant(baseImage, layer.variantSpec) : baseImage;
+        ? processSpriteEyeColor(baseImage, layer.eyeColor, layer.eyeGender, layer.eyeSourceRgb, true)
+        : layer.variantSpec ? processSpriteVariant(baseImage, layer.variantSpec, layer.layer !== 'effect') : baseImage;
       if (image) {
         if (layer.filter) {
           ctx.save();
@@ -1962,10 +1985,10 @@
       class="block h-10 w-10 shrink-0 rounded bg-slate-900"></canvas>`;
   }
 
-  function renderCharacterThumbnails(container) {
+  function renderCharacterThumbnails(container, enqueue = (canvas, draw) => draw()) {
     if (typeof container.querySelectorAll !== 'function') return;
     container.querySelectorAll('canvas[data-character-thumbnail]').forEach(canvas => {
-      renderAvatar(canvas, JSON.parse(canvas.dataset.characterThumbnail));
+      enqueue(canvas, () => renderAvatar(canvas, JSON.parse(canvas.dataset.characterThumbnail)));
     });
   }
 
@@ -2021,12 +2044,10 @@
     ctx.restore();
   }
 
-  function renderHairPreviews(container) {
+  function renderHairPreviews(container, enqueue = (canvas, draw) => draw()) {
     if (typeof container.querySelectorAll !== 'function') return;
     container.querySelectorAll('canvas[data-hair-preview]').forEach(canvas => {
-      const details = canvas.closest('details');
-      if (details && !details.open && !canvas.closest('summary')) return;
-      renderHairPreview(canvas);
+      enqueue(canvas, () => renderHairPreview(canvas));
     });
   }
 
@@ -2063,9 +2084,9 @@
   }
 
   function catalogOptions(catalog, value, stats, character, achievements,
-    selectedLabel = 'Selected', appState = { character }) {
+    selectedLabel = 'Selected', appState = { character }, balance = coinSummary(stats, appState)) {
     return catalog.map(item => {
-        const status = unlockStatus(item.unlock, stats, character, achievements, appState);
+        const status = unlockStatus(item.unlock, stats, character, achievements, appState, balance);
         const selected = item.id === value;
         const isCoinItem = item.unlock?.type === 'coin';
         const owned = isCoinItem && character.purchasedItems.includes(item.id);
@@ -2081,14 +2102,14 @@
       });
   }
 
-  function equipmentOptions(field, character, stats, achievements, appState) {
+  function equipmentOptions(field, character, stats, achievements, appState, balance) {
     const gender = equipmentGenderFor(character);
     const choices = (EQUIPMENT_BY_FIELD[field] || [])
       .filter(item => item.paths[gender]);
     choices.unshift({
       id: '', name: 'None', field, paths: {}, unlock: { type: 'starter' }, imageSrc: null
     });
-    return catalogOptions(choices, character[field], stats, character, achievements, 'Equipped', appState);
+    return catalogOptions(choices, character[field], stats, character, achievements, 'Equipped', appState, balance);
   }
 
   function equipmentThumbnailMarkup(item, gender) {
@@ -2101,30 +2122,31 @@
         class="block h-10 w-10 shrink-0 rounded bg-slate-900"></canvas>`;
     }
     return `<span aria-hidden="true" class="relative block h-10 w-10 shrink-0 overflow-hidden rounded bg-slate-900">
-      ${path ? `<img src="${escapeHtml(assetUrl(path))}" alt="" class="absolute left-0 top-0 max-w-none"
+      ${path ? `<img src="${escapeHtml(assetUrl(path))}" alt="" loading="lazy" decoding="async" class="absolute left-0 top-0 max-w-none"
         style="${isCustomGear ? 'width:40px;height:32px;top:4px;' :
           `width:${isPetAccessory ? 240 : 400}px;height:${isPetAccessory ? 80 : 224}px;`}image-rendering:pixelated">` : ''}
     </span>`;
   }
 
-  function renderSpriteVariantPreviews(container) {
+  function renderSpriteVariantPreviews(container, enqueue = (canvas, draw) => draw()) {
     if (typeof container.querySelectorAll !== 'function') return;
     container.querySelectorAll('canvas[data-sprite-variant-preview]').forEach(canvas => {
-      const details = canvas.closest('details');
-      if (details && !details.open && !canvas.closest('summary')) return;
-      const item = EQUIPMENT_CATALOG.find(candidate =>
-        candidate.id === canvas.dataset.spriteVariantPreview);
-      const path = item?.paths?.[canvas.dataset.gender];
-      if (!item?.variantSpec || !path) return;
-      const baseImage = getImage({ imageSrc: assetUrl(path) },
-        () => renderSpriteVariantPreviews(container));
-      if (!baseImage) return;
-      const image = processSpriteVariant(baseImage, variantSpecForGender(item, canvas.dataset.gender));
-      const context = canvas.getContext('2d');
-      if (!context) return;
-      context.imageSmoothingEnabled = false;
-      context.clearRect(0, 0, canvas.width, canvas.height);
-      context.drawImage(image, 0, 0, 80, 64, 0, 4, 40, 32);
+      const draw = () => {
+        if (canvas.isConnected === false) return;
+        const item = EQUIPMENT_CATALOG.find(candidate =>
+          candidate.id === canvas.dataset.spriteVariantPreview);
+        const path = item?.paths?.[canvas.dataset.gender];
+        if (!item?.variantSpec || !path) return;
+        const baseImage = getImage({ imageSrc: assetUrl(path) }, draw);
+        if (!baseImage) return;
+        const image = processSpriteVariant(baseImage, variantSpecForGender(item, canvas.dataset.gender), true);
+        const context = canvas.getContext('2d');
+        if (!context) return;
+        context.imageSmoothingEnabled = false;
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        context.drawImage(image, 0, 0, 80, 64, 0, 4, 40, 32);
+      };
+      enqueue(canvas, draw);
     });
   }
 
@@ -2162,14 +2184,50 @@
     ctx.restore();
   }
 
-  function renderPetPreviews(container) {
+  function renderPetPreviews(container, enqueue = (canvas, draw) => draw()) {
     if (typeof container.querySelectorAll !== 'function') return;
     container.querySelectorAll('canvas[data-pet-preview]').forEach(canvas => {
-      const details = canvas.closest('details');
-      if (details && !details.open && !canvas.closest('summary')) return;
-      const pet = getItem(PET_CATALOG, canvas.dataset.petPreview);
-      renderPetPreview(canvas, pet);
+      enqueue(canvas, () => renderPetPreview(canvas, getItem(PET_CATALOG, canvas.dataset.petPreview)));
     });
+  }
+
+  function renderControlPreviews(container) {
+    if (container.hidden) return;
+    let previews = previewObservers.get(container);
+    if (!previews) {
+      previews = { observed: new WeakSet(), draws: new WeakMap(), observer: null };
+      if (typeof IntersectionObserver === 'function') {
+        previews.observer = new IntersectionObserver(entries => {
+          entries.forEach(entry => {
+            if (!entry.isIntersecting || container.hidden || entry.target.isConnected === false) return;
+            previews.draws.get(entry.target)?.();
+            previews.observer.unobserve(entry.target);
+          });
+        });
+      }
+      previewObservers.set(container, previews);
+    }
+    const enqueue = (canvas, draw) => {
+      if (previews.observed.has(canvas)) return;
+      if (previews.observer) {
+        previews.observed.add(canvas);
+        previews.draws.set(canvas, draw);
+        previews.observer.observe(canvas);
+      } else {
+        // A summary remains visible inside its own closed details, but not a closed ancestor.
+        let details = canvas.closest?.('details');
+        while (details) {
+          if (!details.open && !details.querySelector('summary')?.contains(canvas)) return;
+          details = details.parentElement?.closest('details');
+        }
+        previews.observed.add(canvas);
+        draw();
+      }
+    };
+    renderPetPreviews(container, enqueue);
+    renderCharacterThumbnails(container, enqueue);
+    renderHairPreviews(container, enqueue);
+    renderSpriteVariantPreviews(container, enqueue);
   }
 
   function positionDropdown(details, container) {
@@ -2191,7 +2249,7 @@
   function backgroundThumbnailMarkup(background) {
     return `<span aria-hidden="true" class="block h-12 w-[72px] shrink-0 overflow-hidden rounded bg-slate-900">
       ${background.imageSrc
-        ? `<img src="${escapeHtml(background.imageSrc)}" alt="" class="h-full w-full object-cover">`
+        ? `<img src="${escapeHtml(background.imageSrc)}" alt="" loading="lazy" decoding="async" class="h-full w-full object-cover">`
         : ''}
     </span>`;
   }
@@ -2231,12 +2289,15 @@
   }
 
   function renderControls(container, character, stats, achievements, disabled, appState, currentDate) {
+    previewObservers.get(container)?.observer?.disconnect();
+    previewObservers.delete(container);
     const openBrowse = container.querySelectorAll?.('details[data-character-browse][open]');
     if (openBrowse?.length) {
       container.dataset.openCharacterBrowse = openBrowse[0].dataset.characterBrowse || '';
     }
     const activeTab = tabs.includes(container.dataset.activeTab) ? container.dataset.activeTab : 'appearance';
     const completedAchievements = achievementProgress(stats, achievements);
+    const coinBalance = coinSummary(stats, appState);
     const fixedSkin = fixedAppearanceSkin(character);
     const fixedAppearance = !!fixedSkin;
     const headwearBlockingItem = headwearBlockingTop(character);
@@ -2245,12 +2306,12 @@
       visualDropdownMarkup(label, field, choices, current, disabled || fieldDisabled, renderChoice);
     const equipmentDropdown = (field, label, fieldDisabled = false) => dropdown(
       field, label, character[field],
-      equipmentOptions(field, character, stats, completedAchievements, appState),
+      equipmentOptions(field, character, stats, completedAchievements, appState, coinBalance),
       option => equipmentThumbnailMarkup(option, equipmentGenderFor(character)),
       disabled || fieldDisabled || (field === 'headwear' && headwearBlocked)
     );
-    const petOptions = catalogOptions(PET_CATALOG, character.pet, stats, character,
-      completedAchievements, 'Equipped', appState);
+    const petOptions = activeTab === 'pets' ? catalogOptions(PET_CATALOG, character.pet, stats, character,
+      completedAchievements, 'Equipped', appState, coinBalance) : [];
     const selectedPet = getItem(PET_CATALOG, character.pet);
     const petAnimations = selectedPet.spriteSheet?.animations || [];
     const petAnimationOptions = petAnimations.map(animation =>
@@ -2270,13 +2331,12 @@
         </span>
       </label>`;
     const hairValue = `${character.hairStyle}::${character.hairColor}`;
-    const hairOptions = catalogOptions(hairPresetOptions(character), hairValue,
-      stats, character, completedAchievements, 'Equipped', appState);
-    const hairPicker = cyclePickerMarkup('Hairstyle', 'hairPreset', hairValue, hairOptions, disabled,
+    const hairOptions = activeTab === 'appearance' ? catalogOptions(hairPresetOptions(character), hairValue,
+      stats, character, completedAchievements, 'Equipped', appState, coinBalance) : [];
+    const hairPicker = () => cyclePickerMarkup('Hairstyle', 'hairPreset', hairValue, hairOptions, disabled,
       option => hairThumbnailMarkup({
         ...character, hairStyle: option.hairStyle, hairColor: option.hairColor
       }), 'Browse all hairstyles', container.dataset.openCharacterBrowse === 'hairPreset');
-    const coinBalance = coinSummary(stats, appState);
     const wardrobeFields = [
       ['top', 'Shirts, Bodices & Dresses'], ['bottoms', 'Pants & Skirts'], ['shoes', 'Footwear'],
       ['headwear', 'Hats & Helmets'], ['handItem', 'Hand Items'], ['backLayer', 'Back Layers'],
@@ -2290,8 +2350,8 @@
     const selectedWardrobeLabel = wardrobeFields.find(([field]) =>
       field === selectedWardrobeField)[1];
     const selectedWardrobeDisabled = selectedWardrobeField === 'headwear' && headwearBlocked;
-    const selectedWardrobeOptions = equipmentOptions(
-      selectedWardrobeField, character, stats, completedAchievements, appState);
+    const selectedWardrobeOptions = ['wardrobe', 'shop'].includes(activeTab) ? equipmentOptions(
+      selectedWardrobeField, character, stats, completedAchievements, appState, coinBalance) : [];
     const headwearRestrictionMessage = headwearBlocked
       ? `<p class="text-xs text-amber-200">${escapeHtml(headwearBlockingItem.headwearBlockMessage ||
         'This top covers headwear; hats and helmets stay hidden until you choose another top. Your selected headwear will return when you do.')}</p>`
@@ -2314,7 +2374,7 @@
           </button>
         </div>`
       : '';
-    const purchaseControls = `<div class="space-y-3">
+    const purchaseControls = () => `<div class="space-y-3">
       <label class="block text-xs font-medium text-slate-300">
         Outfit layer
         <span class="relative mt-1 block">
@@ -2339,7 +2399,7 @@
       )}
     </div>`;
     const sections = {
-      appearance: `<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      appearance: () => `<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
         ${fixedAppearance
           ? `<p class="sm:col-span-2 text-xs text-slate-400">${escapeHtml(fixedSkin.name)}’s sprite stays fixed; hair and clothing cannot be changed. Sprite, skin, and eye choices are saved for when you switch back.</p>`
           : ''}
@@ -2376,14 +2436,14 @@
         </fieldset>
         ${fixedAppearance
           ? `<p class="sm:col-span-2 text-xs text-slate-400">Hairstyle changes are unavailable while ${escapeHtml(fixedSkin.name)} is selected.</p>`
-          : `<div class="sm:col-span-2">${hairPicker}</div>`}
+          : `<div class="sm:col-span-2">          ${hairPicker()}</div>`}
         <div class="sm:col-span-2">${equipmentDropdown('specialSkin', 'Special Skins')}</div>
           <div class="sm:col-span-2">
             <p class="mb-2 text-xs text-slate-400">Equipped effects animate automatically. Unlock more in the Coin Shop.</p>
             ${equipmentDropdown('effect', 'Character Effects')}
           </div>
       </div>`,
-      wardrobe: `<div class="space-y-3">
+      wardrobe: () => `<div class="space-y-3">
         ${headwearRestrictionMessage}
         ${holidayHatControl}
         ${fixedAppearance
@@ -2392,21 +2452,21 @@
             ${equipmentDropdown('backLayer', 'Back Layers')}
             ${equipmentDropdown('handItem', 'Hand Items')}`
           : `<p class="text-xs text-slate-400">Choose a layer to preview and cycle through your unlocked gear. Browse all to shop.</p>
-        ${purchaseControls}`}
+        ${purchaseControls()}`}
       </div>`,
-      pets: `<p class="mb-3 text-xs text-slate-400">Companions are purchased with Wayfarer Coins and animate alongside your explorer.</p>
+      pets: () => `<p class="mb-3 text-xs text-slate-400">Companions are purchased with Wayfarer Coins and animate alongside your explorer.</p>
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
           ${dropdown('pet', 'Companion', character.pet, petOptions, option => petThumbnailMarkup(option))}
           ${petAnimationControl}
           ${equipmentDropdown('petHat', 'Dog Hat', !character.pet.startsWith('pet_trail_dog'))}
           ${equipmentDropdown('petBackpack', 'Dog Backpack', !character.pet.startsWith('pet_trail_dog'))}
         </div>`,
-      backgrounds: `<p class="mb-3 text-xs text-slate-400">Choose a scene for your character.</p>
+      backgrounds: () => `<p class="mb-3 text-xs text-slate-400">Choose a scene for your character.</p>
         ${dropdown('background', 'Scene', character.background,
           catalogOptions(BACKGROUND_CATALOG, character.background, stats, character,
-            completedAchievements, 'Equipped', appState),
+            completedAchievements, 'Equipped', appState, coinBalance),
           option => backgroundThumbnailMarkup(option))}`,
-      shop: fixedAppearance
+      shop: () => fixedAppearance
         ? `<p class="text-xs text-slate-400">The Coin Shop is unavailable while ${escapeHtml(fixedSkin.name)} is selected. Switch to a standard skin to purchase gear, then choose allowed accessories in Wardrobe.</p>`
         : `<div class="space-y-4">
         <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-400/30 bg-amber-950/20 p-4">
@@ -2414,9 +2474,9 @@
           <strong class="flex items-center gap-2 font-mono text-lg text-amber-200">${coinIconMarkup()}${coinBalance.availableCoins.toLocaleString('en')}</strong>
         </div>
         <p class="text-xs text-slate-400">Choose a layer to preview owned gear. Use Browse all to purchase and equip a new item.</p>
-        ${purchaseControls}
+        ${purchaseControls()}
       </div>`,
-      patron: `<div class="rounded-xl border border-amber-800/60 bg-amber-950/20 p-3 mb-4 text-xs text-amber-100">
+      patron: () => `<div class="rounded-xl border border-amber-800/60 bg-amber-950/20 p-3 mb-4 text-xs text-amber-100">
           Pro and donation rewards are not connected to verified purchases; Wayfarer Coin items are available in the Shop.
         </div>`
     };
@@ -2427,11 +2487,8 @@
     container.innerHTML = `<div class="flex flex-wrap gap-2 mb-4" role="tablist" aria-label="Character customization">
       ${tabs.map(tab => `<button type="button" role="tab" data-character-tab="${tab}" aria-selected="${tab === activeTab}"
         class="rounded-lg px-3 py-2 text-xs font-semibold ${tab === activeTab ? 'bg-amber-400 text-slate-950' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}">${tabLabels[tab]}</button>`).join('')}
-      </div><div role="tabpanel">${sections[activeTab]}</div>`;
-    renderPetPreviews(container);
-    renderCharacterThumbnails(container);
-    renderHairPreviews(container);
-    renderSpriteVariantPreviews(container);
+      </div><div role="tabpanel">${sections[activeTab]()}</div>`;
+    renderControlPreviews(container);
     if (typeof container.querySelectorAll === 'function') {
       container.querySelectorAll('details').forEach(details => {
         details.addEventListener('toggle', () => {
@@ -2456,10 +2513,7 @@
             container.dataset.openCharacterBrowse = '';
           }
           positionDropdown(details, container);
-          renderPetPreviews(details);
-          renderCharacterThumbnails(details);
-          renderHairPreviews(details);
-          renderSpriteVariantPreviews(details);
+          renderControlPreviews(container);
         });
       });
     }
@@ -2507,10 +2561,7 @@
         controls.hidden = !controls.hidden;
         customizeButton.setAttribute('aria-expanded', String(!controls.hidden));
         if (!controls.hidden) {
-          renderPetPreviews(controls);
-          renderCharacterThumbnails(controls);
-          renderHairPreviews(controls);
-          renderSpriteVariantPreviews(controls);
+          renderControlPreviews(controls);
           controls.focus?.({ preventScroll: true });
           controls.scrollIntoView?.({
             behavior: 'instant',
