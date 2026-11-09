@@ -81,9 +81,10 @@ async function fetchGooglePlace(fetcher, apiKey, grid, placeName = '') {
   const data = await response.json();
   if (!Array.isArray(data.places)) throw new Error('Google Places returned an invalid response.');
   const closest = data.places.map(place => {
-    const lat = place.location?.latitude;
-    const lng = place.location?.longitude;
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    const lat = place?.location?.latitude;
+    const lng = place?.location?.longitude;
+    if (!Number.isFinite(lat) || lat < -90 || lat > 90 ||
+        !Number.isFinite(lng) || lng < -180 || lng > 180) return null;
     return {
       placeName: typeof place.displayName?.text === 'string' ? place.displayName.text.trim() : '',
       reviewCount: place.userRatingCount === undefined ? null : place.userRatingCount,
@@ -134,11 +135,15 @@ export function createWorker(fetcher = fetch) {
         const lngText = url.searchParams.get('lng').trim();
         if (!latText || !lngText) throw new Error('Coordinates cannot be empty.');
         if (url.searchParams.has('name')) {
-          placeName = url.searchParams.get('name').trim().replace(/\s+/g, ' ');
+          const rawName = url.searchParams.get('name');
+          if (/[\u0000-\u001f\u007f]/.test(rawName)) {
+            throw new Error('Name must be 150 characters or fewer and contain no control characters.');
+          }
+          placeName = rawName.trim().replace(/\s+/g, ' ');
           if (!placeName || !lookups.normalizePlaceName(placeName)) {
             throw new Error('Name must contain searchable letters or numbers.');
           }
-          if (placeName.length > 150 || /[\u0000-\u001f\u007f]/.test(placeName)) {
+          if (placeName.length > 150) {
             throw new Error('Name must be 150 characters or fewer and contain no control characters.');
           }
         }
@@ -165,7 +170,8 @@ export function createWorker(fetcher = fetch) {
               cached.matchedLat !== grid.matchedLat || cached.matchedLng !== grid.matchedLng) {
             throw new Error('Invalid cached rarity entry.');
           }
-          if (!placeName || cached.source === 'Google Places API (New) + OpenStreetMap contributors (ODbL)') {
+          if (cached.source === 'Google Places API (New) + OpenStreetMap contributors (ODbL)' ||
+              (!placeName && !env.GOOGLE_PLACES_API_KEY)) {
             return reply(200, { ...cached, cached: true });
           }
         }
@@ -186,12 +192,12 @@ export function createWorker(fetcher = fetch) {
             if (openDataResult.status === 'rejected') {
               console.warn('Open-data highway lookup failed.', openDataResult.reason);
             }
-            if (!openData && !googlePlace) {
+            if (!openData) {
               throw openDataResult.status === 'rejected'
                 ? openDataResult.reason : new Error('No rarity provider returned a result.');
             }
-            const popularityScore = openData?.summary.nearbyPoiCount || 0;
-            const nearestHighwayKm = openData?.summary.nearestHighwayKm ?? null;
+            const popularityScore = openData.summary.nearbyPoiCount;
+            const nearestHighwayKm = openData.summary.nearestHighwayKm;
             const reviewCount = googlePlace?.reviewCount ?? null;
             const result = {
               placeName: googlePlace?.placeName || 'OSM vicinity (not a matched place)',
@@ -210,7 +216,9 @@ export function createWorker(fetcher = fetch) {
               osmDataTimestamp: openData?.timestamp || null
             };
             lookups.validateProviderRarity(result);
-            if (!placeName || googlePlace) await env.RARITY_CACHE.put(cacheKey, JSON.stringify(result));
+            if (googlePlace || (!placeName && !env.GOOGLE_PLACES_API_KEY)) {
+              await env.RARITY_CACHE.put(cacheKey, JSON.stringify(result));
+            }
             return result;
           })();
           inflight.set(cacheKey, operation);

@@ -3,6 +3,7 @@
   const source = 'https://github.com/RohanNagar/parksoftheworld';
   const wikidataSource = 'https://www.wikidata.org/';
   const excludedCountries = new Set(['US', 'AS', 'GU', 'MP', 'PR', 'VI', 'UM']);
+  const nonCountryRegions = new Set(['EU', 'EZ', 'UN', 'XA', 'XB']);
   const membershipLabels = {
     unesco: 'UNESCO World Heritage', dark_sky: 'International Dark Sky Park',
     ramsar: 'Ramsar Site', iucn_green: 'IUCN Green List'
@@ -28,7 +29,9 @@
         continue;
       }
       const country = countryNames.of(p.country);
-      if (!country || p.country === 'ZZ' || typeof p.name !== 'string' || !p.name.trim() ||
+      if (!country || p.country === 'ZZ' || nonCountryRegions.has(p.country) ||
+          new Intl.Locale(`und-${p.country}`).maximize().region !== p.country ||
+          typeof p.name !== 'string' || !p.name.trim() ||
           typeof p.description !== 'string' || typeof p.url !== 'string') {
         throw new Error(`Invalid worldwide park metadata (${p.country}).`);
       }

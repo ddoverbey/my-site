@@ -1,12 +1,19 @@
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import characterCreator from './character-creator.js';
+import { runInNewContext } from 'node:vm';
 
 let checks = 0;
+let failures = 0;
 function check(name, action) {
-  action();
-  checks++;
-  console.log(`PASS ${name}`);
+  try {
+    action();
+    checks++;
+    console.log(`PASS ${name}`);
+  } catch (error) {
+    failures++;
+    console.error(`FAIL ${name}\n${error.stack}`);
+  }
 }
 
 const allCatalogs = [
@@ -2620,4 +2627,366 @@ check('dog accessories share the dog frame origin and scale for every coat', () 
   }
 });
 
-console.log(`\n${checks} character creator checks passed.`);
+function isolatedCreator(globals = {}) {
+  const module = { exports: {} };
+  runInNewContext(readFileSync(new URL('./character-creator.js', import.meta.url), 'utf8'),
+    { module, Date, console, ...globals });
+  return module.exports;
+}
+
+function chooseCharacter(controls, field, id) {
+  controls.onclick({ target: { closest(selector) {
+    return selector === 'button[data-character-field][data-character-id]'
+      ? { dataset: { characterField: field, characterId: id }, disabled: false } : null;
+  } } });
+}
+
+check('normalization is idempotent for every unowned pet and invalid saved animation', () => {
+  for (const pet of characterCreator.PET_CATALOG) {
+    for (const petAnimation of ['', 'leap', 'cat-13', 'bunny-33', 'invalid']) {
+      const once = characterCreator.normalizeCharacter({ pet: pet.id, petAnimation });
+      assert.deepEqual(characterCreator.normalizeCharacter(once), once, `${pet.id} ${petAnimation}`);
+      if (once.pet === 'pet_none') assert.equal(once.petAnimation, '');
+    }
+  }
+});
+
+check('normalization preserves all owned catalog equipment and is stable after JSON persistence', () => {
+  const purchasedItems = [
+    ...characterCreator.EQUIPMENT_CATALOG, ...characterCreator.PET_CATALOG
+  ].filter(item => item.unlock?.type === 'coin').map(item => item.id);
+  for (const item of characterCreator.EQUIPMENT_CATALOG) {
+    for (const gender of item.genders) {
+      const once = characterCreator.normalizeCharacter({
+        gender, [item.field]: item.id, purchasedItems, unlockedEasterEggs: ['miku']
+      });
+      assert.equal(once[item.field], item.id);
+      assert.deepEqual(characterCreator.normalizeCharacter(JSON.parse(JSON.stringify(once))), once);
+    }
+  }
+  for (const value of [undefined, null, [], 42, true, 'invalid', {}, {
+    bodyWidth: '117', bodyHeight: Infinity, donationUsd: 'NaN',
+    seasonalHatDismissals: ['halloween:2026', 'invalid', 'halloween:2026']
+  }]) {
+    const once = characterCreator.normalizeCharacter(value);
+    assert.deepEqual(characterCreator.normalizeCharacter(once), once);
+  }
+});
+
+check('an earned achievement tier keeps its reward unlocked before the next tier', () => {
+  const definitions = [{
+    id: 'thinAir', title: 'Thin Air', progress: stats => stats.amount,
+    tiers: [{ goal: 1, title: 'First summit' }, { goal: 10, title: 'Ten summits' }]
+  }];
+  for (const stats of [
+    { amount: 1 },
+    { amount: 0, completedAchievementTiers: [{ key: 'thinAir:0' }] }
+  ]) {
+    const progress = characterCreator.achievementProgress(stats, definitions);
+    assert.equal(characterCreator.unlockStatus({ type: 'achievement', id: 'thinAir' },
+      stats, characterCreator.DEFAULT_CHARACTER, progress).unlocked, true);
+  }
+});
+
+check('select change events cannot bypass level, achievement, owner, or park requirements', () => {
+  for (const [field, value] of [
+    ['handItem', 'diamond_sword'], ['top', 'summit_down_parka'],
+    ['top', 'centennial_ranger_coat'], ['background', 'bg_yosemite'],
+    ['hairStyle', 'hair_fancy']
+  ]) {
+    const controls = { dataset: {}, hidden: true };
+    let changes = 0;
+    characterCreator.render({ controls, stats: { level: 1 }, onChange() { changes++; } });
+    controls.onchange({ target: { dataset: { characterField: field }, value } });
+    assert.equal(changes, 0, `${field} ${value}`);
+  }
+});
+
+check('unavailable gender-specific gear cannot charge coins or emit an ineffective change', () => {
+  const controls = { dataset: {}, hidden: true };
+  let changes = 0;
+  characterCreator.render({ controls, stats: { level: 10 }, onChange() { changes++; } });
+  chooseCharacter(controls, 'top', 'queen_dress');
+  assert.equal(changes, 0);
+});
+
+check('rapid callbacks preserve earlier edits and purchases without requiring a synchronous rerender', () => {
+  const controls = { dataset: {}, hidden: true };
+  const changes = [];
+  characterCreator.render({
+    controls, stats: { level: 6 },
+    onChange(next) { changes.push(next); }
+  });
+  chooseCharacter(controls, 'skinTone', 'deep');
+  chooseCharacter(controls, 'top', 'blue_shirt');
+  chooseCharacter(controls, 'pet', 'pet_trail_dog');
+  assert.equal(changes.length, 3);
+  assert.equal(changes.at(-1).skinTone, 'deep');
+  assert.equal(changes.at(-1).top, 'blue_shirt');
+  assert.deepEqual(changes.at(-1).purchasedItems, ['blue_shirt', 'pet_trail_dog']);
+  chooseCharacter(controls, 'backLayer', 'small_backpack');
+  assert.equal(changes.length, 3, '250 coins have already been spent');
+});
+
+check('displayed character ownership, not a stale appState character, determines purchase balance', () => {
+  const controls = { dataset: {}, hidden: true };
+  const character = characterCreator.normalizeCharacter({
+    top: 'blue_shirt', purchasedItems: ['blue_shirt']
+  });
+  let changed;
+  characterCreator.render({
+    controls, character, stats: { level: 4 },
+    appState: { character: characterCreator.DEFAULT_CHARACTER },
+    onChange(next) { changed = next; }
+  });
+  chooseCharacter(controls, 'pet', 'pet_trail_dog');
+  assert.equal(changed, undefined, 'only 50 coins remain after the existing purchase');
+});
+
+check('newly selected blocking tops and fixed skins immediately constrain subsequent callbacks', () => {
+  const controls = { dataset: {}, hidden: true };
+  const changes = [];
+  characterCreator.render({
+    controls, character: { unlockedEasterEggs: ['miku'] },
+    stats: { level: 10 }, onChange(next) { changes.push(next); }
+  });
+  chooseCharacter(controls, 'specialSkin', 'special_ranger_miku');
+  chooseCharacter(controls, 'headwear', 'traveler_cap');
+  assert.equal(changes.length, 1);
+  chooseCharacter(controls, 'top', 'starter_shirt');
+  assert.equal(changes.length, 1);
+});
+
+check('callback payload mutation cannot corrupt the editor state used by later changes', () => {
+  const controls = { dataset: {}, hidden: true };
+  let last;
+  characterCreator.render({
+    controls, onChange(next) {
+      last = characterCreator.normalizeCharacter(next);
+      next.purchasedItems.push('pet_trail_dog');
+      next.skinTone = 'porcelain';
+    }
+  });
+  chooseCharacter(controls, 'skinTone', 'deep');
+  chooseCharacter(controls, 'eyeColor', 'blue');
+  assert.equal(last.skinTone, 'deep');
+  assert.deepEqual(last.purchasedItems, []);
+});
+
+function drawingFixture() {
+  const pending = [];
+  const timers = new Map();
+  const calls = [];
+  class Image {
+    constructor() {
+      this.complete = false;
+      this.naturalWidth = 0;
+      pending.push(this);
+    }
+    load() {
+      this.complete = true;
+      this.naturalWidth = 80;
+      this.naturalHeight = 64;
+      this.onload();
+    }
+  }
+  const context = {
+    clearRect() { calls.length = 0; }, save() {}, restore() {}, translate() {},
+    scale() {}, fillRect() {}, drawImage(image) { calls.push(image.src); }
+  };
+  const canvas = {
+    width: 160, height: 90, isConnected: true, getContext: () => context
+  };
+  const api = isolatedCreator({
+    Image, window: {
+      setInterval(callback) { const id = timers.size + 1; timers.set(id, callback); return id; },
+      clearInterval(id) { timers.delete(id); }
+    }
+  });
+  const bare = { hairStyle: 'hair_bald', top: '', bottoms: '', shoes: '' };
+  return { api, pending, timers, calls, canvas, bare };
+}
+
+check('late avatar image loads render the latest character and portrait mode, never the stale avatar', () => {
+  const { api, pending, calls, canvas, bare } = drawingFixture();
+  api.renderAvatar(canvas, { ...bare, skinTone: 'deep' });
+  api.renderAvatar(canvas, { ...bare, skinTone: 'porcelain' }, { portrait: true });
+  pending.find(image => image.src.endsWith('Skin1.png')).load();
+  pending.find(image => image.src.endsWith('Skin5.png')).load();
+  assert.ok(calls.some(src => src.endsWith('Skin1.png')));
+  assert.equal(calls.some(src => src.endsWith('Skin5.png')), false);
+});
+
+check('reusing a stage canvas as an avatar stops its timer and obsolete image redraws', () => {
+  const { api, pending, timers, calls, canvas, bare } = drawingFixture();
+  api.drawStage(canvas, { ...bare, skinTone: 'deep', background: 'bg_green_hills' });
+  assert.equal(timers.size, 1);
+  api.renderAvatar(canvas, { ...bare, skinTone: 'porcelain' });
+  assert.equal(timers.size, 0);
+  pending.find(image => image.src.endsWith('Skin1.png')).load();
+  pending.find(image => image.src.includes('green-hills-bg')).load();
+  assert.equal(calls.some(src => src.includes('green-hills-bg')), false);
+  assert.ok(calls.some(src => src.endsWith('Skin1.png')));
+});
+
+check('shared asset completion causes one redraw per canvas even after many animation frames', () => {
+  const { api, pending, timers, canvas, bare } = drawingFixture();
+  let clears = 0;
+  const context = canvas.getContext();
+  context.clearRect = () => { clears++; };
+  api.drawStage(canvas, bare);
+  for (let frame = 0; frame < 20; frame++) [...timers.values()][0]();
+  const before = clears;
+  pending.find(image => image.src.includes('campfire-night')).load();
+  assert.equal(clears - before, 1, 'pending frames must share a stable redraw callback');
+});
+
+check('dog leap accessories use precisely the same full-frame transform as the body', () => {
+  const calls = [];
+  class Image {
+    constructor() { this.complete = true; this.naturalWidth = 80; this.naturalHeight = 64; }
+  }
+  const api = isolatedCreator({ Image });
+  const context = {
+    clearRect() {}, save() {}, restore() {}, scale() {}, fillRect() {},
+    drawImage(...args) { calls.push(args); }
+  };
+  api.drawStage({ width: 160, height: 90, getContext: () => context }, {
+    hairStyle: 'hair_bald', top: '', bottoms: '', shoes: '',
+    pet: 'pet_trail_dog', petAnimation: 'leap', petHat: 'dog_hat', petBackpack: 'dog_backpack',
+    purchasedItems: ['pet_trail_dog', 'dog_hat', 'dog_backpack']
+  }, { animate: false }, 10);
+  const body = calls.find(call => call[0].src.includes('doggy%20sheet.png'));
+  const accessories = calls.filter(call => /doggy%20(hat|backpack)\.png$/.test(call[0].src));
+  assert.equal(accessories.length, 2);
+  for (const accessory of accessories) assert.deepEqual(accessory.slice(1), body.slice(1));
+});
+
+check('holiday overlays do not crop hair for a ranger hat that is not actually visible', () => {
+  const assets = characterCreator.characterSpriteAssets({
+    headwear: 'ranger_hat_classic_brown'
+  }, new Date(2026, 11, 24));
+  assert.ok(assets.find(layer => layer.layer === 'headwear').imageSrc.includes('Santa'));
+  assert.equal(assets.find(layer => layer.layer === 'hair').clipTopSourceY, undefined);
+});
+
+check('unsupported shader patterns reject transparent sheets as well as opaque sheets', () => {
+  class Canvas {
+    constructor(width, height) { this.width = width; this.height = height; }
+    getContext() {
+      return {
+        drawImage() {}, getImageData: () => ({ data: new Uint8ClampedArray(this.width * this.height * 4) }),
+        putImageData() {}
+      };
+    }
+  }
+  const api = isolatedCreator({ OffscreenCanvas: Canvas });
+  assert.throws(() => api.processSpriteVariant({
+    src: 'transparent-invalid-pattern.png', naturalWidth: 80, naturalHeight: 64
+  }, {
+    palette: { shadow: '#111111', base: '#555555', highlight: '#eeeeee' },
+    pattern: 'unsupported'
+  }), /Unsupported sprite pattern/);
+});
+
+check('read-only mode rejects all mutation event paths', () => {
+  const controls = { dataset: { activeTab: 'wardrobe' }, hidden: true };
+  let changes = 0;
+  characterCreator.render({
+    controls, viewOnly: true, currentDate: new Date(2026, 11, 24),
+    stats: { level: 100 }, onChange() { changes++; }
+  });
+  chooseCharacter(controls, 'top', 'blue_shirt');
+  controls.onchange({ target: { dataset: { characterField: 'bodyWidth' }, value: '120' } });
+  controls.onclick({ target: { closest(selector) {
+    return selector === 'button[data-seasonal-hat-action]'
+      ? { dataset: { seasonalHatAction: 'remove' } } : null;
+  } } });
+  assert.equal(changes, 0);
+});
+
+check('frozen caller appState remains usable and unchanged during editing', () => {
+  const controls = { dataset: {}, hidden: true };
+  const appState = Object.freeze({
+    character: Object.freeze(characterCreator.normalizeCharacter()),
+    currentDate: new Date(2026, 9, 29)
+  });
+  let changed;
+  assert.doesNotThrow(() => characterCreator.render({
+    controls, appState, onChange(next) { changed = next; }
+  }));
+  chooseCharacter(controls, 'skinTone', 'deep');
+  assert.equal(changed.skinTone, 'deep');
+  assert.equal(appState.character.skinTone, 'warm');
+});
+
+check('explicit render dates consistently gate date-unlocked hats for clicks and select changes', () => {
+  const controls = { dataset: { activeTab: 'wardrobe' }, hidden: true };
+  let changes = 0;
+  characterCreator.render({
+    controls, currentDate: new Date(2026, 9, 29),
+    onChange() { changes++; }
+  });
+  chooseCharacter(controls, 'headwear', 'pumpkin_hat');
+  controls.onchange({ target: { dataset: { characterField: 'headwear' }, value: 'pumpkin_hat' } });
+  assert.equal(changes, 0);
+  characterCreator.render({
+    controls, currentDate: new Date(2026, 9, 30),
+    onChange() { changes++; }
+  });
+  chooseCharacter(controls, 'headwear', 'pumpkin_hat');
+  assert.equal(changes, 1);
+});
+
+check('unknown rarity names cannot resolve inherited object properties into coin rewards', () => {
+  for (const tier of ['toString', 'constructor', '__proto__', 'unknown']) {
+    assert.equal(characterCreator.rarityCoinReward(tier), 0, tier);
+    const balance = characterCreator.coinSummary({
+      metadataProgress: { rarityEntities: [{ kind: 'poi', tier }] },
+      completedAchievementTiers: [{ rarity: tier }]
+    });
+    assert.deepEqual(balance, { earnedCoins: 0, spentCoins: 0, availableCoins: 0 });
+  }
+});
+
+check('non-finite levels never create infinite balances or unlock level rewards', () => {
+  for (const level of [Infinity, 'Infinity', -Infinity, NaN]) {
+    const character = characterCreator.normalizeCharacter();
+    assert.equal(characterCreator.coinSummary({ level }).availableCoins, 0);
+    assert.equal(characterCreator.unlockStatus({ type: 'level', goal: 10 },
+      { level }, character, new Map()).unlocked, false);
+  }
+});
+
+check('unknown event fields cannot crash lookup tables or mutate account entitlements', () => {
+  const controls = { dataset: {}, hidden: true };
+  let changes = 0;
+  characterCreator.render({ controls, onChange() { changes++; } });
+  for (const field of ['constructor', 'toString', '__proto__', 'purchasedItems', 'proUnlocked']) {
+    assert.doesNotThrow(() => chooseCharacter(controls, field, 'true'));
+    assert.doesNotThrow(() => controls.onchange({
+      target: { dataset: { characterField: field }, value: 'true' }
+    }));
+  }
+  assert.equal(changes, 0);
+});
+
+check('offscreen stages pause and static rendering stops an existing timer without restarting it', () => {
+  const { api, timers, canvas, bare } = drawingFixture();
+  let clears = 0;
+  canvas.getContext().clearRect = () => { clears++; };
+  canvas.getClientRects = () => [];
+  api.drawStage(canvas, bare);
+  [...timers.values()][0]();
+  assert.equal(clears, 1);
+  canvas.getClientRects = () => [{}];
+  [...timers.values()][0]();
+  assert.equal(clears, 2);
+  api.drawStage(canvas, bare, { animate: false });
+  assert.equal(timers.size, 0);
+  api.drawStage(canvas, bare);
+  assert.equal(timers.size, 1);
+});
+
+console.log(`\n${checks} character creator checks passed; ${failures} failed.`);
+if (failures) process.exitCode = 1;

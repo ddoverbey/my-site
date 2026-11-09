@@ -48,7 +48,7 @@ check('metadata distinguishes dark sky Reserve and Sanctuary and missing optiona
 check('duplicates and invalid metadata are explicit errors', () => {
   assert.throws(() => catalog.normalizeParks([...records, records[0]]), /Duplicate/);
   for (const override of [
-    { country: 'ZZ' }, { latitude: '91' }, { longitude: true }, { url: 'javascript:alert(1)' },
+    { country: 'ZZ' }, { country: 'EU' }, { latitude: '91' }, { longitude: true }, { url: 'javascript:alert(1)' },
     { url: 'https://user:password@example.org/' }, { size_in_km: -1 }, { memberships: { unesco: 'yes' } }
   ]) assert.throws(() => catalog.normalizeParks([{ ...records[0], ...override }]));
 });

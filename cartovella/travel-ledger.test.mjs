@@ -1166,4 +1166,43 @@ check('AWD counts only its endpoints and Focal Length counts uploaded photos, no
   assert.equal(repeatedStats.overlander,2);
   assert.equal(repeatedStats.focal,2);
 });
+check('status, transit and rarity tiers reject coercible non-string values', () => {
+  for (const value of [['v'], { toString: () => 'v' }]) {
+    assert.throws(() => ledger.validateStatuses({ park: value }), /status tiers/);
+    assert.throws(() => migrate({ statusOverrides: { pins: { park: value } } }), /status overrides/);
+    assert.throws(() => migrate({ customPois: [{ ...poi, status: value }] }), /custom POI/);
+  }
+  assert.throws(() => ledger.validateTags([['road']], ledger.transitTags), /tags/);
+  assert.throws(() => migrate({ customPois: [{ ...poi, rarityTier: ['Hidden Gem'] }] }), /rarity tier/);
+  assert.throws(() => migrate({ parkRarity: { park: { rarity: null, rarityTier: ['Hidden Gem'] } } }), /rarity record/);
+  assert.throws(() => ledger.promote('v', ['l']), /promotion/);
+});
+check('biome location identities distinguish a POI from a park with the same ID', () => {
+  const state = migrate({
+    pins: { shared: 'v' },
+    customPois: [{ ...poi, id: 'shared', name: 'Shared POI', biomes: ['5'] }]
+  });
+  const progress = ledger.metadataProgress(state, {
+    parks: [{ id: 'shared', name: 'Shared Park', biomes: ['5'] }]
+  });
+  assert.deepEqual(progress.biomePins['5'].locations, [
+    { kind: 'park', id: 'shared', name: 'Shared Park' },
+    { kind: 'poi', id: 'shared', name: 'Shared POI' }
+  ]);
+});
+check('sparse sharing, photo and itinerary arrays cannot normalize into invalid saved data', () => {
+  const hole = Array(1);
+  assert.throws(() => ledger.normalizePublicSharing({ photoIndexes: hole }, 1), /public-sharing/);
+  assert.throws(() => ledger.validateJournal('', hole), /compressed JPEG/);
+  assert.throws(() => ledger.validateTags(hole, ledger.transitTags), /tags/);
+  assert.throws(() => ledger.validateExpeditions([{ ...exp, countyIds: hole }], lookups), /location IDs/);
+  assert.throws(() => ledger.validateExpeditions([{ ...exp, routeCoords: hole }], lookups), /route coordinate/);
+  const stops = Array(2);
+  assert.throws(() => ledger.validateExpeditions([{
+    ...exp, routeCoords: [[0, 0], [1, 1]], routeStops: stops
+  }], lookups), /stops/);
+  assert.throws(() => ledger.validateExpeditions([{
+    ...mixedExpedition, routeLegs: Array(mixedExpedition.routeLegs.length)
+  }], lookups), /travel leg/);
+});
 console.log(`${checks} travel ledger checks passed.`);

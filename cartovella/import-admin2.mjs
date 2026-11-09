@@ -102,9 +102,16 @@ export async function collectAdmin2(fetchText = downloadText) {
 }
 
 export async function buildAdmin2(features, sources) {
-  if (!Array.isArray(features) || !features.length ||
-      features.some(feature => !/^[A-Z]{3}:[A-Za-z0-9_.-]+$/.test(feature.id || ''))) {
+  if (!Array.isArray(features) || !features.length) {
     throw new Error('Admin-2 features must have valid stable IDs.');
+  }
+  const ids = new Set();
+  for (const feature of features) {
+    if (!/^[A-Z]{3}:[A-Za-z0-9_.-]+$/.test(feature.id || '')) {
+      throw new Error('Admin-2 features must have valid stable IDs.');
+    }
+    if (ids.has(feature.id)) throw new Error(`Duplicate Admin-2 feature ID: ${feature.id}.`);
+    ids.add(feature.id);
   }
   const output = await mapshaper.applyCommands(
     '-i source -rename-layers admin2 -filter-fields id,name,country ' +

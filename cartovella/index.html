@@ -1677,15 +1677,15 @@
     </section>
   </div>
 
-  <script src="./nps-catalog.js?v=20261108-character-performance-v2"></script>
-  <script src="./national-parks-scratch.js?v=20261108-character-performance-v2"></script>
-  <script src="./international-parks.js?v=20261108-character-performance-v2"></script>
-  <script src="./ecoregions.js?v=20261108-character-performance-v2"></script>
-  <script src="./coordinate-lookups.js?v=20261108-character-performance-v2"></script>
-  <script src="./micro-states.js?v=20261108-character-performance-v2"></script>
-  <script src="./travel-ledger.js?v=20261108-character-performance-v2"></script>
-  <script src="./character-creator.js?v=20261108-character-performance-v2"></script>
-  <script src="./rarity-config.js?v=20261108-character-performance-v2"></script>
+  <script src="./nps-catalog.js?v=20261108-correctness-v3"></script>
+  <script src="./national-parks-scratch.js?v=20261108-correctness-v3"></script>
+  <script src="./international-parks.js?v=20261108-correctness-v3"></script>
+  <script src="./ecoregions.js?v=20261108-correctness-v3"></script>
+  <script src="./coordinate-lookups.js?v=20261108-correctness-v3"></script>
+  <script src="./micro-states.js?v=20261108-correctness-v3"></script>
+  <script src="./travel-ledger.js?v=20261108-correctness-v3"></script>
+  <script src="./character-creator.js?v=20261108-correctness-v3"></script>
+  <script src="./rarity-config.js?v=20261108-correctness-v3"></script>
   <script>
     let BIOMES = Ecoregions.biomeDefinitions();
     let PARKS = [];
@@ -8616,7 +8616,7 @@
     });
   </script>
 
-  <script src="./expedition-ui.js?v=20261108-character-performance-v2"></script>
+  <script src="./expedition-ui.js?v=20261108-correctness-v3"></script>
   <script>
     function openHomeModal() {
       dismissPlaceSuggestions(true, true);
@@ -9141,17 +9141,30 @@
       return true;
     }
 
+    function ensureCloudAccountUnchanged(accountId) {
+      if (!accountId || cloudSession?.user?.id !== accountId) {
+        throw new Error('Your cloud account changed while the request was pending. Retry for the current account.');
+      }
+    }
+
     async function cloudFetch(url, options = {}, retried = false) {
       if (!cloudSession?.access_token) throw new Error('Sign in to access cloud sync.');
+      const accountId = cloudSession.user.id;
       const headers = new Headers(options.headers || {});
       headers.set('apikey', SUPABASE_ANON_KEY);
       headers.set('Authorization', `Bearer ${cloudSession.access_token}`);
       const response = await fetchWithCloudTimeout(url, { ...options, headers });
+      ensureCloudAccountUnchanged(accountId);
       if ((response.status === 401 || response.status === 403) && !retried) {
-        if (await refreshCloudSession()) return cloudFetch(url, options, true);
+        const refreshed = await refreshCloudSession();
+        if (refreshed) {
+          ensureCloudAccountUnchanged(accountId);
+          return cloudFetch(url, options, true);
+        }
         if (!cloudSession?.access_token) {
           throw new Error('Your cloud session is no longer valid. Sign in again; your local passport was kept.');
         }
+        ensureCloudAccountUnchanged(accountId);
       }
       return response;
     }
@@ -9613,6 +9626,7 @@
         const canvas = document.createElement('canvas');
         const context = canvas.getContext('2d');
         if (!context) throw new Error('Could not prepare the public route map preview.');
+        let thumbnail = null;
         for (const [width, height] of [[640, 309], [480, 232], [320, 155]]) {
           canvas.width = width;
           canvas.height = height;
@@ -9620,15 +9634,16 @@
           for (const quality of [0.55, 0.42, 0.3]) {
             const candidate = canvas.toDataURL('image/jpeg', quality);
             if (candidate.length <= 64000) {
-              publicRouteMapThumbnailCache = candidate;
+              thumbnail = candidate;
               break;
             }
           }
-          if (publicRouteMapThumbnailCache) break;
+          if (thumbnail) break;
         }
-        if (!publicRouteMapThumbnailCache) {
+        if (!thumbnail) {
           throw new Error('The rendered route map exceeds the public profile preview size limit.');
         }
+        publicRouteMapThumbnailCache = thumbnail;
         publicRouteMapThumbnailCacheKey = svgMarkup;
         return publicRouteMapThumbnailCache;
       } catch (error) {
@@ -10311,11 +10326,14 @@
         return false;
       }
       cloudSyncInProgress = true;
+      const accountId = cloudSession.user.id;
       try {
         const passportData = compactPassportForStorage(passportPayload());
         const uploadedSnapshot = stablePassportStringify(passportData);
         const uploadedProfileSnapshot = publicProfileSnapshot();
         const summaryStats = await buildPublicSummaryStats(calculateStats());
+        ensureCloudAccountUnchanged(accountId);
+        if (AppState.viewOnly) throw new Error('Cloud sync was cancelled because this passport is now read-only.');
         const cloudSavedAt = new Date();
         const response = await cloudFetch(`${SUPABASE_URL}/rest/v1/cartovella_passports`, {
           method: 'POST',
@@ -10324,7 +10342,7 @@
             Prefer: 'resolution=merge-duplicates'
           },
           body: JSON.stringify({
-            user_id: cloudSession.user.id,
+            user_id: accountId,
             passport_data: passportData,
             public_trip_sharing_version: publicProfile.visibility !== 'none' ? 1 : null,
             profile_visibility: publicProfile.visibility,
@@ -10335,6 +10353,7 @@
             updated_at: cloudSavedAt.toISOString()
           })
         });
+        ensureCloudAccountUnchanged(accountId);
         if (!response.ok) {
           const body = await response.json().catch(() => ({}));
           throw new Error(usernameConflictMessage(response.status, body, true) ||
@@ -10413,7 +10432,8 @@
         return;
       }
       try {
-        saveState({ recordEdit: false });
+        const saved = await saveState({ recordEdit: false });
+        if (saved === false) throw new Error('Browser storage did not save this passport. Export a backup before closing this page.');
       } catch (error) {
         console.error('Manual passport save failed.', error);
         setCloudStatus(`Save failed: ${error.message}`, true);
@@ -10436,6 +10456,7 @@
 
     async function loadFromCloud({ notifySeed = false } = {}) {
       if (AppState.viewOnly || !cloudSession?.access_token) return false;
+      const accountId = cloudSession.user.id;
       const loadingTask = beginAppLoading('Loading your cloud passport…');
       try {
         ensureAuthPublicUsername();
@@ -10453,6 +10474,8 @@
             : `Cloud load failed (HTTP ${response.status}).`);
         }
         const records = await response.json();
+        ensureCloudAccountUnchanged(accountId);
+        if (AppState.viewOnly) throw new Error('Cloud load was cancelled because this passport is now read-only.');
         if (!Array.isArray(records)) throw new Error('Supabase returned an unexpected passport response.');
         const localPassport = passportPayload();
         const signedOutAccountId = localStorage.getItem(LAST_SIGNED_OUT_CLOUD_ACCOUNT_KEY);

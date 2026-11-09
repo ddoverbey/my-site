@@ -126,7 +126,7 @@ the home marker, erase visits, or stop visited destinations from clearing their 
 
 ### Travel Ledger and rendering performance
 
-Local JavaScript URLs share a release query (`?v=20261108-character-performance-v2`) to prevent GitHub Pages'
+Local JavaScript URLs share a release query (`?v=20261108-correctness-v3`) to prevent GitHub Pages'
 10-minute asset cache from combining newly deployed HTML with older scripts. Bump this release
 query on all local scripts when changing their code or dependent markup, and on the stylesheet
 when rebuilding CSS. No cache or saved

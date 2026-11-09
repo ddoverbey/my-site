@@ -492,6 +492,16 @@ The tests cover park catalogs, ecoregions, coordinate lookup, geography, rarity,
 ledger, including compact cache keys, cache invalidation, yielding/cancellation, spatial lookup
 equivalence, lazy mini-map lifecycles and cached atlas layouts.
 
+Adversarial regressions also cover malformed and sparse saved data, duplicate importer IDs,
+incomplete rarity-provider responses, stale provider caches, character normalization idempotence,
+multi-tier achievement unlocks, purchase eligibility at event time, stale sprite callbacks, and
+animation teardown. Application tests verify that route edits retain explicit sharing choices,
+late rarity responses cannot overwrite changed itineraries, failed draft storage can be retried,
+aborted reads reject, manual Save waits for asynchronous browser storage, oversized public-map
+previews cannot reuse an unrelated cached image, and cloud responses cannot cross account changes.
+Provider and storage failures are exercised with fixtures; these tests do not certify live Supabase
+policies, third-party availability, or rendering on every browser/device.
+
 Rebuild and commit `styles.css` whenever changing utility classes in `index.html` or the app's
 JavaScript files. `tailwind.config.cjs` scans both static and dynamically created UI markup; keep
 class names as complete literal strings rather than assembling fragments at runtime. No Tailwind
@@ -501,6 +511,10 @@ stylesheet query after CSS changes.
 Geometry caches assume saved route arrays and polygon objects are replaced on edits, as they
 already are for imports and expedition saves. Do not mutate saved coordinate pairs in place.
 Caches are browser-session-only and do not change the passport format or require resetting saves.
+Geography index factories return immutable snapshots, including their feature geometry and bounds;
+replace the index when the source changes. Warm queries reuse their spatial grid without a full
+index scan. Externally supplied mutable index arrays are scanned without caching so same-length
+replacements and nested edits cannot produce stale containment results.
 
 Character customization updates only its controls, scene and coin summary after cosmetic edits,
 not the achievements, biome cards, flags or other profile sections. Sprite previews render as they

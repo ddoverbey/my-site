@@ -90,9 +90,9 @@
       }
       const regions = new Set();
       for (const region of location.ecoregions) {
-        if (!Number.isInteger(region.id) || regions.has(region.id) ||
+        if (!Number.isInteger(region.id) || region.id < 0 || regions.has(region.id) ||
             typeof region.name !== 'string' || !region.name.trim() ||
-            typeof region.realm !== 'string' || !ids.has(region.biomeId)) {
+            typeof region.realm !== 'string' || !region.realm.trim() || !ids.has(region.biomeId)) {
           throw new Error(`Invalid ecoregion for ${id}.`);
         }
         regions.add(region.id);

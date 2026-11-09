@@ -21,10 +21,23 @@ export function geometryBounds(geometry) {
 }
 
 export async function buildSnapshot(source, parks) {
-  const locations = Object.fromEntries(parks.map(park => [park.id, {
-    lat: park.lat, lng: park.lng, ecoregions: [],
-    status: park.lat === null || park.lng === null ? 'missing-coordinates' : 'no-terrestrial-match'
-  }]));
+  if (!Array.isArray(parks)) throw new Error('Ecoregion destinations must be an array.');
+  const locations = Object.create(null);
+  for (const park of parks) {
+    if (!park || typeof park.id !== 'string' || !park.id.trim() || Object.hasOwn(locations, park.id)) {
+      throw new Error(`Invalid or duplicate destination ID: ${park?.id ?? '(missing)'}.`);
+    }
+    const lat = park.lat ?? null;
+    const lng = park.lng ?? null;
+    if ((lat !== null && (!Number.isFinite(lat) || Math.abs(lat) > 90)) ||
+        (lng !== null && (!Number.isFinite(lng) || Math.abs(lng) > 180))) {
+      throw new Error(`Invalid destination coordinates for ${park.id}.`);
+    }
+    locations[park.id] = {
+      lat, lng, ecoregions: [],
+      status: lat === null || lng === null ? 'missing-coordinates' : 'no-terrestrial-match'
+    };
+  }
   const areas = Array(14).fill(0);
   const regionIds = new Set();
   let result;
@@ -32,9 +45,15 @@ export async function buildSnapshot(source, parks) {
     const feature = result.value;
     const p = feature.properties;
     if (p.LICENSE !== 'CC-BY 4.0' || !Number.isInteger(p.BIOME_NUM) ||
-        !Number.isInteger(p.ECO_ID) || typeof p.ECO_NAME !== 'string' ||
-        typeof p.REALM !== 'string' || !['Polygon', 'MultiPolygon'].includes(feature.geometry?.type)) {
+        !['Polygon', 'MultiPolygon'].includes(feature.geometry?.type)) {
       throw new Error('Unexpected RESOLVE shapefile schema or license.');
+    }
+    if (!Number.isInteger(p.ECO_ID) || p.ECO_ID < 0) {
+      throw new Error('Invalid RESOLVE ecoregion ID.');
+    }
+    if (typeof p.ECO_NAME !== 'string' || !p.ECO_NAME.trim() ||
+        typeof p.REALM !== 'string' || !p.REALM.trim()) {
+      throw new Error('Invalid RESOLVE ecoregion name or realm.');
     }
     // Rock/ice and inland water polygons are not part of the 14 terrestrial biomes.
     if (p.BIOME_NUM === 98 || p.BIOME_NUM === 99) continue;

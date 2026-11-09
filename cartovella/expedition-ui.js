@@ -32,7 +32,10 @@ function rarityBadgeMarkup(tier) {
 function expeditionDraftDatabase() {
   if (typeof indexedDB === 'undefined') return Promise.reject(new Error('This browser does not support IndexedDB.'));
   if (!expeditionDraftDbPromise) {
-    expeditionDraftDbPromise = openExpeditionDraftDatabase(EXPEDITION_DRAFT_DB);
+    expeditionDraftDbPromise = openExpeditionDraftDatabase(EXPEDITION_DRAFT_DB).catch(error => {
+      expeditionDraftDbPromise = null;
+      throw error;
+    });
   }
   return expeditionDraftDbPromise;
 }
@@ -49,9 +52,11 @@ function openExpeditionDraftDatabase(name) {
 
 function readDraftFromDatabase(database) {
   return new Promise((resolve, reject) => {
-    const request = database.transaction('drafts', 'readonly').objectStore('drafts').get('current');
+    const transaction = database.transaction('drafts', 'readonly');
+    const request = transaction.objectStore('drafts').get('current');
     request.onsuccess = () => resolve(request.result?.draft || null);
     request.onerror = () => reject(request.error || new Error('Could not read the saved expedition draft.'));
+    transaction.onabort = () => reject(transaction.error || new Error('Reading the saved expedition draft was aborted.'));
   });
 }
 
@@ -1048,7 +1053,10 @@ function draftExpedition(legs) {
     customPoiIds: [...new Set(stops.filter(stop => stop.kind === 'poi').map(stop => stop.id))],
     routeCoords: stops.map(stop => [...stop.coords]), routeStops: stops, routeLegs: legs,
     minElevationFt: null, maxElevationFt: null,
-    journal: existing?.journal || '', photos: [...(existing?.photos || [])]
+    journal: existing?.journal || '', photos: [...(existing?.photos || [])],
+    ...(existing?.publicSharing ? {
+      publicSharing: TravelLedger.normalizePublicSharing(existing.publicSharing, existing.photos?.length || 0)
+    } : {})
   };
 }
 
@@ -1178,7 +1186,7 @@ async function enrichExpeditionStopRarities(expeditionId) {
   }
   if (updated) {
     const current = AppState.expeditions.find(item => item.id === expeditionId);
-    if (current) {
+    if (current && !AppState.viewOnly && current.routeStops === expedition.routeStops) {
       try {
         updateExpedition({ ...current, routeStops: stops });
         refreshTravelUI();

@@ -61,12 +61,15 @@
         throw new Error('Invalid or duplicate NPS park record.');
       }
       codes.add(p.parkCode);
-      const stateCodes = p.states.split(',').map(s => s.trim()).filter(Boolean);
+      const stateCodes = [...new Set(p.states.split(',').map(s => s.trim()).filter(Boolean))];
       if (stateCodes.some(code => !stateNames[code])) {
         throw new Error(`Unknown state code for ${p.parkCode}.`);
       }
       const coordinate = (value, limit) => {
-        if (value === '' || value === null || value === undefined) return null;
+        if (value === null || value === undefined || (typeof value === 'string' && !value.trim())) return null;
+        if (!['string', 'number'].includes(typeof value)) {
+          throw new Error(`Invalid coordinates for ${p.parkCode}.`);
+        }
         const number = Number(value);
         if (!Number.isFinite(number) || Math.abs(number) > limit) {
           throw new Error(`Invalid coordinates for ${p.parkCode}.`);

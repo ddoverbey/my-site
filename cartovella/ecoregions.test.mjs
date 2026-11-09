@@ -82,6 +82,19 @@ check('geodesic area totals are positive and exclude rock/ice', () => {
   assert.ok(generated.biomes.find(b => b.id === 13).areaKm2 > 0);
   assert.ok(Math.abs(generated.biomes.reduce((sum, b) => sum + b.areaShare, 0) - 100) < 1e-9);
 });
+await assert.rejects(buildSnapshot({
+  read: async () => ({ done: true })
+}, [{ id: 'duplicate', lat: 0, lng: 0 }, { id: 'duplicate', lat: 1, lng: 1 }]), /duplicate destination/i);
+console.log('PASS snapshot generation rejects duplicate destination IDs instead of silently overwriting one');
+let emittedInvalidId = false;
+await assert.rejects(buildSnapshot({
+  read: async () => {
+    if (emittedInvalidId) return { done: true };
+    emittedInvalidId = true;
+    return { done: false, value: polygon([ring(0, 0, 10, 10)], -1, 13) };
+  }
+}, [{ id: 'inside', lng: 1, lat: 1 }]), /ecoregion ID/i);
+console.log('PASS snapshot generation rejects non-positive source ecoregion identifiers');
 
 const snapshot = JSON.parse(await readFile(new URL('./ecoregion-mapping.json', import.meta.url), 'utf8'));
 const nps = JSON.parse(await readFile(new URL('./nps-parks.json', import.meta.url), 'utf8'));
@@ -152,5 +165,8 @@ check('malformed biome shares and unsupported mapping data fail explicitly', () 
   const incorrectAreas = JSON.parse(JSON.stringify(snapshot));
   incorrectAreas.biomes[0].areaKm2 *= 2;
   assert.throws(() => ecoregions.validateSnapshot(incorrectAreas), /recorded areas/);
+  const invalidEcoregionId = JSON.parse(JSON.stringify(snapshot));
+  invalidEcoregionId.locations.yell.ecoregions[0].id = -1;
+  assert.throws(() => ecoregions.validateSnapshot(invalidEcoregionId), /ecoregion/);
 });
 console.log(`${checks} ecoregion checks passed.`);

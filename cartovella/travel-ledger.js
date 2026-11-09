@@ -21,6 +21,7 @@
   ]);
   const clearsFog = status => status === 't' || isVisited(status);
   const journalLimits = Object.freeze({ text: 20000, photos: 4, photoCharacters: 180000 });
+  const validStatus = status => typeof status === 'string' && Object.hasOwn(ranks, status);
   const passportFields = new Set([
     'version', 'homeBase', 'pins', 'regions', 'counties', 'customPois', 'customLocations',
     'expeditions', 'expeditionPromotions', 'parkRarity', 'nationalParkScratch', 'statusOverrides',
@@ -31,7 +32,7 @@
     if (typeof journal !== 'string' || journal.length > journalLimits.text) {
       throw new Error(`Journal entries must be text of at most ${journalLimits.text.toLocaleString('en')} characters.`);
     }
-    if (!Array.isArray(photos) || photos.length > journalLimits.photos || photos.some(photo =>
+    if (!Array.isArray(photos) || photos.length > journalLimits.photos || Array.from(photos).some(photo =>
       typeof photo !== 'string' || photo.length > journalLimits.photoCharacters ||
       !/^data:image\/jpeg;base64,(?:[A-Za-z0-9+/]{4})+(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(photo))) {
       throw new Error('Attach up to four compressed JPEG photos (135 KB each).');
@@ -53,20 +54,20 @@
     if (typeof enabled !== 'boolean' || typeof includeDetails !== 'boolean' ||
         typeof includeJournal !== 'boolean' || !Array.isArray(photoIndexes) ||
         new Set(photoIndexes).size !== photoIndexes.length ||
-        photoIndexes.some(index => !Number.isInteger(index) || index < 0 || index >= photoCount)) {
+        Array.from(photoIndexes).some(index => !Number.isInteger(index) || index < 0 || index >= photoCount)) {
       throw new Error('Invalid expedition public-sharing settings.');
     }
     return { enabled, includeDetails, includeJournal, photoIndexes: [...photoIndexes].sort((a, b) => a - b) };
   }
   const promote = (current, next) => {
-    if (!Object.hasOwn(ranks, next)) throw new Error('Invalid status promotion.');
+    if (!validStatus(next)) throw new Error('Invalid status promotion.');
     return (ranks[current] || 0) > ranks[next] ? current : next;
   };
   const validId = id => typeof id === 'string' && /^[a-zA-Z0-9_-]+$/.test(id) && !['__proto__', 'constructor', 'prototype'].includes(id);
 
   function validateStatuses(values, county = false) {
     if (!values || typeof values !== 'object' || Array.isArray(values) ||
-        Object.entries(values).some(([id, status]) => !Object.hasOwn(ranks, status) ||
+        Object.entries(values).some(([id, status]) => !validStatus(status) ||
           (county ? !validCountyId(id) : !id || ['__proto__', 'constructor', 'prototype'].includes(id)))) {
       throw new Error('Invalid passport status tiers.');
     }
@@ -82,7 +83,7 @@
     for (const field of ['pins', 'regions', 'counties']) {
       const records = value[field] ?? {};
       if (!records || typeof records !== 'object' || Array.isArray(records) ||
-          Object.entries(records).some(([id, status]) => !Object.hasOwn(ranks, status) && status !== 'un' ||
+          Object.entries(records).some(([id, status]) => !validStatus(status) && status !== 'un' ||
             (field === 'counties' ? !validCountyId(id) :
               !id || ['__proto__', 'constructor', 'prototype'].includes(id)))) {
         throw new Error('Invalid map status overrides.');
@@ -92,7 +93,7 @@
     const nationalParks = value.nationalParks ?? {};
     if (!nationalParks || typeof nationalParks !== 'object' || Array.isArray(nationalParks) ||
         Object.entries(nationalParks).some(([id, status]) =>
-          !['sequ', 'kica'].includes(id) || (!Object.hasOwn(ranks, status) && status !== 'un'))) {
+          !['sequ', 'kica'].includes(id) || (!validStatus(status) && status !== 'un'))) {
       throw new Error('Invalid map status overrides.');
     }
     overrides.nationalParks = { ...nationalParks };
@@ -100,7 +101,8 @@
   }
 
   function validateTags(tags, allowed) {
-    if (!Array.isArray(tags) || new Set(tags).size !== tags.length || tags.some(tag => !Object.hasOwn(allowed, tag))) {
+    if (!Array.isArray(tags) || new Set(tags).size !== tags.length ||
+        Array.from(tags).some(tag => typeof tag !== 'string' || !Object.hasOwn(allowed, tag))) {
       throw new Error('Invalid expedition or location tags.');
     }
     return [...tags];
@@ -127,7 +129,7 @@
       ids.add(exp.id);
       for (const field of ['countyIds', 'parkIds', 'customPoiIds']) {
         if (!Array.isArray(exp[field]) || new Set(exp[field]).size !== exp[field].length ||
-            exp[field].some(id => field === 'countyIds' ? !validCountyId(id) : !validId(id))) {
+            Array.from(exp[field]).some(id => field === 'countyIds' ? !validCountyId(id) : !validId(id))) {
           throw new Error('Invalid expedition location IDs.');
         }
       }
@@ -135,7 +137,7 @@
         throw new Error('Select at least one expedition location.');
       }
       if (!Array.isArray(exp.routeCoords)) throw new Error('Invalid expedition route.');
-      exp.routeCoords.forEach(point => {
+      Array.from(exp.routeCoords).forEach(point => {
         if (!Array.isArray(point) || point.length !== 2) throw new Error('Invalid route coordinate.');
         lookups.validateCoordinates(...point);
       });
@@ -146,7 +148,7 @@
         throw new Error('Invalid expedition elevation extremes.');
       }
       if (exp.routeStops !== undefined) {
-        if (!Array.isArray(exp.routeStops) || exp.routeStops.length !== exp.routeCoords.length || exp.routeStops.some((stop, index) =>
+        if (!Array.isArray(exp.routeStops) || exp.routeStops.length !== exp.routeCoords.length || Array.from(exp.routeStops).some((stop, index) =>
           !stop || !['county', 'park', 'poi', 'place'].includes(stop.kind) ||
           !(stop.kind === 'county' ? validCountyId(stop.id) : validId(stop.id)) ||
           typeof stop.name !== 'string' || !stop.name.trim() ||
@@ -157,7 +159,8 @@
           (stop.terrestrial !== undefined && typeof stop.terrestrial !== 'boolean'))) throw new Error('Invalid expedition stops.');
         exp.routeStops.forEach(stop => {
           lookups.validateCoordinates(...stop.coords);
-          if (stop.rarityTier !== undefined && !Object.hasOwn(lookups.RARITY_TIERS, stop.rarityTier)) {
+          if (stop.rarityTier !== undefined && (typeof stop.rarityTier !== 'string' ||
+              !Object.hasOwn(lookups.RARITY_TIERS, stop.rarityTier))) {
             throw new Error('Invalid expedition stop rarity tier.');
           }
           if (stop.rarity !== undefined && stop.rarity !== null) {
@@ -171,13 +174,13 @@
       if (exp.routeLegs !== undefined) {
         if (!exp.routeStops?.length || exp.routeStops.length > 100 || !Array.isArray(exp.routeLegs) ||
             exp.routeLegs.length !== exp.routeStops.length - 1) throw new Error('Invalid expedition travel legs.');
-        exp.routeLegs.forEach((leg, index) => {
+        Array.from(exp.routeLegs).forEach((leg, index) => {
           const routeSource = leg?.routeSource ?? (leg?.mode === 'flight' ? 'none' :
             ['road', 'awd'].includes(leg?.mode) ? 'routed' : 'direct');
-          if (!leg || !Object.hasOwn(transitTags, leg.mode) ||
+          if (!leg || typeof leg.mode !== 'string' || !Object.hasOwn(transitTags, leg.mode) ||
               !['routed', 'direct', 'uploaded', 'none'].includes(routeSource) || !Array.isArray(leg.routeCoords) ||
               !Array.isArray(leg.countyIds) || new Set(leg.countyIds).size !== leg.countyIds.length ||
-              leg.countyIds.some(id => !validCountyId(id)) ||
+              Array.from(leg.countyIds).some(id => !validCountyId(id)) ||
               (leg.mode === 'flight' ? routeSource === 'none'
                 ? leg.routeCoords.length || leg.countyIds.length
                 : routeSource !== 'uploaded' || leg.routeCoords.length < 2 || leg.countyIds.length :
@@ -190,7 +193,7 @@
                 (leg.mode === 'ferry' && !['routed', 'direct', 'uploaded'].includes(routeSource)))) {
             throw new Error('Invalid expedition travel leg.');
           }
-          leg.routeCoords.forEach(point => {
+          Array.from(leg.routeCoords).forEach(point => {
             if (!Array.isArray(point) || point.length !== 2) throw new Error('Invalid leg coordinate.');
             lookups.validateCoordinates(...point);
           });
@@ -254,7 +257,7 @@
 
   function normalizePoi(poi, lookups) {
     if (!poi || !validId(poi.id) || typeof poi.name !== 'string' || !poi.name.trim() ||
-        poi.name.length > 150 || !Object.hasOwn(ranks, poi.status)) throw new Error('Invalid custom POI.');
+        poi.name.length > 150 || !validStatus(poi.status)) throw new Error('Invalid custom POI.');
     lookups.validateCoordinates(poi.lat, poi.lng);
     if (poi.elevation) lookups.validateCustomLocations([poi]);
     const photonPlace = poi.source === 'Photon';
@@ -281,7 +284,7 @@
           !validCountyId(county?.id) || typeof county.name !== 'string')) throw new Error('Invalid POI regions.');
     const rarity = poi.rarity ? lookups.normalizeRarity(poi.rarity, poi.lat, poi.lng) : null;
     const rarityTier = rarity?.rarityTier ?? poi.rarityTier;
-    if (rarityTier !== undefined && !Object.hasOwn(lookups.RARITY_TIERS, rarityTier)) {
+    if (rarityTier !== undefined && (typeof rarityTier !== 'string' || !Object.hasOwn(lookups.RARITY_TIERS, rarityTier))) {
       throw new Error('Invalid POI rarity tier.');
     }
     const reviewCount = rarity ? rarity.reviewCount : poi.reviewCount ?? null;
@@ -473,7 +476,7 @@
       for (const [id, change] of Object.entries(changes)) {
         if (!id || ['__proto__', 'constructor', 'prototype'].includes(id) ||
             (field === 'counties' && !validCountyId(id)) || !change ||
-            (change.before !== null && !Object.hasOwn(ranks, change.before)) || change.after !== 'v' ||
+            (change.before !== null && !validStatus(change.before)) || change.after !== 'v' ||
             (field === 'poiStatuses' && change.before === null) ||
             (ranks[change.before] || 0) >= ranks[change.after]) throw new Error('Invalid expedition promotion records.');
         result[field][id] = { before: change.before, after: change.after };
@@ -491,7 +494,7 @@
       const id = catalog.aliases[rawId] || rawId;
       if (!validId(rawId) || !validId(id) || Object.hasOwn(result, id) ||
           !entry || typeof entry !== 'object' || Array.isArray(entry) ||
-          !Object.hasOwn(lookups.RARITY_TIERS, entry.rarityTier)) {
+          typeof entry.rarityTier !== 'string' || !Object.hasOwn(lookups.RARITY_TIERS, entry.rarityTier)) {
         throw new Error('Invalid catalog rarity record.');
       }
       let rarity = null;
@@ -763,12 +766,13 @@
       const key = `${location.kind}:${location.id}`;
       if (!source.locations.has(key)) source.locations.set(key, location);
     };
-    locations.forEach(location => {
-      const kind = parkById.has(location.id) ? 'park' : 'poi';
+    const addLocationBiomes = (location, kind) => {
       (location.biomes || []).forEach(biomeId => addBiomeLocation(biomeId, {
         kind, id: location.id, name: location.name
       }));
-    });
+    };
+    visitedParks.forEach(park => addLocationBiomes(park, 'park'));
+    pois.forEach(poi => addLocationBiomes(poi, 'poi'));
     if (state.homeBase) {
       sample(state.homeBase.lat, state.homeBase.lng, 'biomes').forEach(biomeId =>
         addBiomeLocation(biomeId, { kind: 'home', id: 'home-base', name: state.homeBase.name }));

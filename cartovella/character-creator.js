@@ -1084,6 +1084,7 @@
   const spriteMaximumLuminances = new WeakMap();
   const previewObservers = new WeakMap();
   const stageRenderers = new WeakMap();
+  const canvasRedraws = new WeakMap();
   const stageAnimations = new WeakMap();
   const tabs = ['appearance', 'wardrobe', 'pets', 'backgrounds', 'shop', 'patron'];
 
@@ -1147,7 +1148,8 @@
         candidate.paths[equipmentGender] && isOwned(candidate));
       return [field, item?.id || defaultItem?.id || fallback];
     }));
-    const selectedPet = PET_CATALOG.find(item => item.id === pet);
+    const selectedPet = PET_CATALOG.find(item => item.id === pet &&
+      (item.unlock.type !== 'coin' || purchasedItems.includes(item.id)));
     const petAnimations = selectedPet?.spriteSheet?.animations || [];
     const defaultPetAnimation = petAnimations.find(animation =>
       animation.id === selectedPet.spriteSheet.defaultAnimationId) || petAnimations[0];
@@ -1200,11 +1202,15 @@
         const goal = Number(typeof tier.goal === 'function' ? tier.goal(stats) : tier.goal);
         const completed = completedTiers.has(`${achievement.id}:${index}`);
         if ((Number.isFinite(amount) || completed) && Number.isFinite(goal)) {
-          progress.set(achievement.id, {
+          const result = {
             progress: Math.max(0, completed ? Math.max(Number.isFinite(amount) ? amount : 0, goal) : amount),
             goal: Math.max(0, goal),
             name: tier.title || achievement.title
-          });
+          };
+          const previous = progress.get(achievement.id);
+          if (!previous || previous.progress < previous.goal || result.progress >= result.goal) {
+            progress.set(achievement.id, result);
+          }
         }
       });
     });
@@ -1220,7 +1226,7 @@
     Uncharted: 35
   });
   function rarityCoinReward(tier) {
-    return COINS_PER_RARITY[tier] || 0;
+    return Object.hasOwn(COINS_PER_RARITY, tier) ? COINS_PER_RARITY[tier] : 0;
   }
   const COINS_PER_ACHIEVEMENT_RARITY = Object.freeze({
     common: 25, uncommon: 50, rare: 100, epic: 200, legendary: 350, mythic: 500
@@ -1229,6 +1235,11 @@
     ...EQUIPMENT_CATALOG.filter(item => item.unlock.type === 'coin'),
     ...PET_CATALOG.filter(item => item.unlock.type === 'coin')
   ].map(item => [item.id, item]));
+
+  function explorerLevel(value) {
+    const level = Number(value);
+    return Number.isFinite(level) ? Math.max(1, level) : 1;
+  }
 
   function coinSummary(stats = {}, appState = {}) {
     const expeditions = Array.isArray(appState.expeditions) ? appState.expeditions : [];
@@ -1261,9 +1272,12 @@
     const directCounties = Object.entries(appState.counties || {})
       .filter(([, status]) => status === 'v' || status === 'l').map(([id]) => id);
     directCounties.forEach(id => counties.add(id));
-    const levelCoins = Math.max(0, (Number(stats.level) || 1) - 1) * 50;
-    const achievementCoins = (stats.completedAchievementTiers || []).reduce((total, achievement) =>
-      total + (COINS_PER_ACHIEVEMENT_RARITY[String(achievement.rarity || '').toLowerCase()] || 0), 0);
+    const levelCoins = (explorerLevel(stats.level) - 1) * 50;
+    const achievementCoins = (stats.completedAchievementTiers || []).reduce((total, achievement) => {
+      const rarity = String(achievement.rarity || '').toLowerCase();
+      return total + (Object.hasOwn(COINS_PER_ACHIEVEMENT_RARITY, rarity)
+        ? COINS_PER_ACHIEVEMENT_RARITY[rarity] : 0);
+    }, 0);
     const earnedCoins = expeditionCoins + parks * 15 + placeCoins + countries.size * 15 +
       visitedStates.size * 5 + subdivisions.size * 5 + counties.size * 2 +
       levelCoins + achievementCoins;
@@ -1295,7 +1309,7 @@
       };
     }
     if (unlock.type === 'level') {
-      const current = Number(stats.level) || 1;
+      const current = explorerLevel(stats.level);
       return {
         unlocked: current >= unlock.goal,
         description: `Reach level ${unlock.goal} (${Math.min(current, unlock.goal)}/${unlock.goal}).`
@@ -1415,6 +1429,10 @@
       throw new Error(`Sprite variant source must be an aligned 80x64 sheet: ${sourcePath || 'unknown source'}`);
     }
     if (!variantSpec?.palette) throw new Error(`Sprite variant palette missing: ${sourcePath}`);
+    if (![undefined, null, 'solid', 'plaid', 'vest', 'buttons', 'jacket', 'hatBand']
+      .includes(variantSpec.pattern)) {
+      throw new Error(`Unsupported sprite pattern "${variantSpec.pattern}" for ${sourcePath}`);
+    }
     const width = firstFrameOnly ? 80 : sourceWidth;
     const height = firstFrameOnly ? 64 : sourceHeight;
     const colors = Object.fromEntries(['outline', 'shadow', 'base', 'highlight', 'accent', 'sleeve', 'band']
@@ -1622,7 +1640,8 @@
     const hairFolder = hair.fileName ? '28x Male Hair'
       : character.gender === 'female' ? '30x Female Hair' : '28x Male Hair';
     const hairFile = hair.fileName || `${genderName} Hair${hair.sheet}.png`;
-    const wearsRangerHat = character.headwear.startsWith('ranger_hat_');
+    const wearsRangerHat = !headwearBlockedByTop(character) &&
+      (holidayHat?.id || character.headwear).startsWith('ranger_hat_');
     const hairLayer = hair.id === 'hair_bald' ? null : {
       layer: 'hair',
       imageSrc: assetUrl(`${originalHair
@@ -1712,6 +1731,15 @@
     const animation = stageAnimations.get(canvas);
     if (animation && typeof window !== 'undefined') window.clearInterval(animation.intervalId);
     stageAnimations.delete(canvas);
+  }
+
+  function canvasRedraw(canvas) {
+    if (!canvasRedraws.has(canvas)) {
+      canvasRedraws.set(canvas, () => {
+        if (canvas.isConnected !== false) stageRenderers.get(canvas)?.();
+      });
+    }
+    return canvasRedraws.get(canvas);
   }
 
   function isStageVisible(canvas) {
@@ -1861,18 +1889,19 @@
     const image = getImage({ imageSrc: assetUrl(path) }, redraw);
     if (!image) return;
     const sprite = getItem(PET_CATALOG, character.pet).spriteSheet;
-    const scaleX = sprite.targetWidth / sprite.sourceWidth;
-    const scaleY = sprite.targetHeight / sprite.sourceHeight;
-    // Preserve the sheet's shared origin, including hat pixels above the dog's crop.
     const animation = petAnimationFor(getItem(PET_CATALOG, character.pet), animationId);
+    const geometry = { ...sprite, ...animation };
+    const scaleX = geometry.targetWidth / geometry.sourceWidth;
+    const scaleY = geometry.targetHeight / geometry.sourceHeight;
+    // Preserve the selected animation's shared origin, including pixels above its crop.
     const frameColumns = animation?.frameColumns ||
       Array.from({ length: sprite.frameCount }, (_, index) => index);
     const frame = frameColumns[Math.max(0, frameIndex) % frameColumns.length];
     ctx.drawImage(image, frame * sprite.frameWidth,
       (animation?.row ?? sprite.row ?? 0) * sprite.frameHeight,
       sprite.frameWidth, sprite.frameHeight,
-      sprite.targetX - sprite.sourceX * scaleX,
-      sprite.targetY - sprite.sourceY * scaleY,
+      geometry.targetX - geometry.sourceX * scaleX,
+      geometry.targetY - geometry.sourceY * scaleY,
       sprite.frameWidth * scaleX, sprite.frameHeight * scaleY);
   }
 
@@ -1881,9 +1910,7 @@
     const character = normalizeCharacter(value);
     const activeBackground = getItem(BACKGROUND_CATALOG, character.background);
     const activePet = getItem(PET_CATALOG, character.pet);
-    const redraw = () => {
-      if (canvas.isConnected !== false) stageRenderers.get(canvas)?.();
-    };
+    const redraw = canvasRedraw(canvas);
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     stageRenderers.set(canvas, () => drawStage(canvas, character, options,
@@ -1934,9 +1961,9 @@
     const character = normalizeCharacter(value);
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    const redraw = () => {
-      if (canvas.isConnected !== false) renderAvatar(canvas, character, { portrait });
-    };
+    stopStageAnimation(canvas);
+    stageRenderers.set(canvas, () => renderAvatar(canvas, character, { portrait }));
+    const redraw = canvasRedraw(canvas);
     ctx.imageSmoothingEnabled = false;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();
@@ -2523,7 +2550,7 @@
     if (!container) return;
     const balance = coinSummary(stats, appState);
     const parks = Array.isArray(stats.visitedParks) ? stats.visitedParks.length : 0;
-    const level = Math.max(1, Number(stats.level) || 1);
+    const level = explorerLevel(stats.level);
     const currentLevel = [...LEVEL_TRACK].reverse().find(reward => reward.level <= level) || LEVEL_TRACK[0];
     const xp = Math.max(0, Number(stats.xp) || 0).toLocaleString('en');
     container.innerHTML = `<div class="rounded-xl bg-slate-950/70 border border-slate-800 p-3">
@@ -2546,12 +2573,12 @@
     const canvas = options.canvas;
     const controls = options.controls;
     const customizeButton = options.customizeButton;
-    const character = normalizeCharacter(options.character);
-    const fixedAppearance = !!fixedAppearanceSkin(character);
-    const headwearBlocked = headwearBlockedByTop(character);
+    let character = normalizeCharacter(options.character);
     const stats = options.stats || {};
     const achievements = options.achievements || [];
-    const appState = options.appState || { character };
+    const appState = Object.create(options.appState || null, {
+      character: { value: character, writable: true, enumerable: true }
+    });
     const disabled = !!options.viewOnly;
     drawStage(canvas, character, { stats, achievements });
     renderAvatar(options.avatarCanvas, character);
@@ -2571,9 +2598,74 @@
       };
     }
     if (!controls) return;
-    const currentDate = options.currentDate instanceof Date ? options.currentDate : new Date();
+    const currentDate = options.currentDate instanceof Date ? options.currentDate
+      : appState.currentDate instanceof Date ? appState.currentDate : new Date();
+    Object.defineProperty(appState, 'currentDate', { value: currentDate, enumerable: true });
     renderControls(controls, character, stats, achievements, disabled, appState, currentDate);
     const completedAchievements = achievementProgress(stats, achievements);
+    const emitChange = next => {
+      character = normalizeCharacter(next);
+      appState.character = character;
+      options.onChange?.(normalizeCharacter(character));
+    };
+    const selectChoice = (field, id, cycle = false) => {
+      if (disabled || (field === 'headwear' && headwearBlockedByTop(character))) return;
+      if (fixedAppearanceSkin(character) && !FIXED_SKIN_ALLOWED_FIELDS.has(field)) return;
+      if (field === 'hairPreset' || field === 'hairStyle') {
+        const option = hairPresetOptions(character).find(item =>
+          field === 'hairPreset' ? item.id === id : item.hairStyle === id);
+        if (!option || !unlockStatus(option.unlock, stats, character,
+          completedAchievements, appState).unlocked) return;
+        emitChange({ ...character, hairStyle: option.hairStyle,
+          hairColor: field === 'hairPreset' ? option.hairColor : character.hairColor });
+        return;
+      }
+      const appearanceCatalog = new Map([
+        ['gender', [{ id: 'male' }, { id: 'female' }]],
+        ['skinTone', SKIN_TONES], ['eyeColor', EYE_COLORS], ['hairColor', HAIR_COLORS]
+      ]).get(field);
+      if (appearanceCatalog) {
+        if (appearanceCatalog.some(item => item.id === id)) emitChange({ ...character, [field]: id });
+        return;
+      }
+      if (field === 'bodyWidth' || field === 'bodyHeight') {
+        emitChange({ ...character, [field]: id });
+        return;
+      }
+      if (field === 'petAnimation') {
+        if (getItem(PET_CATALOG, character.pet).spriteSheet?.animations?.some(item => item.id === id)) {
+          emitChange({ ...character, petAnimation: id });
+        }
+        return;
+      }
+      const catalog = field === 'pet' ? PET_CATALOG :
+        field === 'background' ? BACKGROUND_CATALOG :
+          Object.hasOwn(EQUIPMENT_BY_FIELD, field) ? EQUIPMENT_BY_FIELD[field] : null;
+      if (!catalog) return;
+      const selected = catalog.find(item => item.id === id);
+      if (!selected && (id !== '' || !Object.hasOwn(EQUIPMENT_DEFAULTS, field))) return;
+      if (selected?.paths && !selected.paths[equipmentGenderFor(character)]) return;
+      if (selected && !unlockStatus(selected.unlock, stats, character,
+        completedAchievements, appState).unlocked) return;
+      const next = { ...character, [field]: id };
+      if (field === 'headwear') {
+        const holidayEvent = holidayHatEventFor(currentDate);
+        if (holidayEvent) {
+          next.seasonalHatDismissals = [...new Set([
+            ...character.seasonalHatDismissals, holidayEvent.key
+          ])];
+        }
+      }
+      if (selected?.unlock.type === 'coin' && !character.purchasedItems.includes(selected.id)) {
+        if (cycle || coinSummary(stats, appState).availableCoins < selected.cost) return;
+        next.purchasedItems = [...character.purchasedItems, selected.id];
+      }
+      if (field === 'pet' && !id.startsWith('pet_trail_dog')) {
+        next.petHat = '';
+        next.petBackpack = '';
+      }
+      emitChange(next);
+    };
     controls.onclick = event => {
       const tabButton = event.target.closest('[data-character-tab]');
       if (tabButton) {
@@ -2592,77 +2684,27 @@
         } else {
           dismissals.delete(holidayEvent.key);
         }
-        options.onChange?.(normalizeCharacter({
+        emitChange({
           ...character, seasonalHatDismissals: [...dismissals]
-        }));
+        });
         return;
       }
       const choiceButton = event.target.closest('button[data-character-field][data-character-id]');
       if (choiceButton) {
         if (disabled || choiceButton.disabled) return;
-        const field = choiceButton.dataset.characterField;
-        const id = choiceButton.dataset.characterId;
-        if (field === 'headwear' && headwearBlocked) return;
-        if (fixedAppearance && !FIXED_SKIN_ALLOWED_FIELDS.has(field)) return;
-        if (field === 'hairPreset') {
-          const option = hairPresetOptions(character).find(item => item.id === id);
-          if (!option || !unlockStatus(option.unlock, stats, character,
-            completedAchievements, appState).unlocked) return;
-          const [hairStyle, hairColor] = id.split('::');
-          options.onChange?.(normalizeCharacter({ ...character, hairStyle, hairColor }));
-          return;
-        }
-        if (field === 'gender' || field === 'skinTone' || field === 'eyeColor') {
-          options.onChange?.(normalizeCharacter({ ...character, [field]: id }));
-          return;
-        }
-        const catalog = field === 'pet' ? PET_CATALOG :
-          field === 'background' ? BACKGROUND_CATALOG : EQUIPMENT_BY_FIELD[field] || [];
-        const selected = catalog.find(item => item.id === id);
-        if (id && (!selected || !unlockStatus(selected.unlock, stats, character,
-          completedAchievements, appState).unlocked)) return;
-        const next = { ...character, [field]: id };
-        if (field === 'headwear') {
-          const holidayEvent = holidayHatEventFor(currentDate);
-          if (holidayEvent) {
-            next.seasonalHatDismissals = [...new Set([
-              ...character.seasonalHatDismissals, holidayEvent.key
-            ])];
-          }
-        }
-        if (selected?.unlock.type === 'coin' && !character.purchasedItems.includes(selected.id)) {
-          if (choiceButton.dataset.characterCycle === 'true') return;
-          const balance = coinSummary(stats, appState);
-          if (balance.availableCoins < selected.cost) return;
-          next.purchasedItems = [...character.purchasedItems, selected.id];
-        }
-        if (field === 'pet' && !id.startsWith('pet_trail_dog')) {
-          next.petHat = '';
-          next.petBackpack = '';
-        }
-        options.onChange?.(normalizeCharacter(next));
+        selectChoice(choiceButton.dataset.characterField, choiceButton.dataset.characterId,
+          choiceButton.dataset.characterCycle === 'true');
       }
     };
     controls.onchange = event => {
       if (event.target.dataset.characterWardrobeCategory === 'true') {
-        if (fixedAppearance) return;
+        if (fixedAppearanceSkin(character)) return;
         controls.dataset.activeWardrobeField = event.target.value;
         renderControls(controls, character, stats, achievements, disabled, appState, currentDate);
         return;
       }
       const field = event.target.dataset.characterField;
-      if (!field || disabled || (fixedAppearance && !FIXED_SKIN_ALLOWED_FIELDS.has(field))) return;
-      if (field === 'headwear' && headwearBlocked) return;
-      const next = { ...character, [field]: event.target.value };
-      if (field === 'headwear') {
-        const holidayEvent = holidayHatEventFor(currentDate);
-        if (holidayEvent) {
-          next.seasonalHatDismissals = [...new Set([
-            ...character.seasonalHatDismissals, holidayEvent.key
-          ])];
-        }
-      }
-      options.onChange?.(normalizeCharacter(next));
+      if (field) selectChoice(field, event.target.value);
     };
   }
 

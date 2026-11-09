@@ -4,7 +4,9 @@ import { gzipSync } from 'node:zlib';
 import * as geo from 'd3-geo';
 import { feature as decode } from 'topojson-client';
 import lookups from './coordinate-lookups.js';
+import npsCatalog from './nps-catalog.js';
 import { collectBoundaries } from './import-geography.mjs';
+import { collectParks } from './import-nps.mjs';
 import { selectSubdivisionFeatures } from './import-subdivisions.mjs';
 import { buildAdmin2, selectAdmin2Features } from './import-admin2.mjs';
 
@@ -55,12 +57,12 @@ await check('D3 winding normalization respects exteriors, holes, islands, and th
   assert.equal(lookups.findContaining(crossing, 0, 0, geo.geoContains).length, 0);
 });
 await check('spatial indexing preserves full-scan results, order, poles, and date-line boundaries', () => {
-  const features = lookups.indexFeatures([
+  const features = [...lookups.indexFeatures([
     polygon([ring(170, -10, -170, 10)]),
     polygon([ring(-20, -15, 20, 15)]),
     polygon([ring(-10, -10, 10, 10)]),
     polygon([ring(10, 70, 20, 85)])
-  ], geo);
+  ], geo)];
   const fullScan = (lat, lng) => features.filter(({feature, bounds:[[west,south],[east,north]]}) =>
     lat >= south && lat <= north &&
     (west <= east ? lng >= west && lng <= east : lng >= west || lng <= east) &&
@@ -73,17 +75,32 @@ await check('spatial indexing preserves full-scan results, order, poles, and dat
   features.push(...lookups.indexFeatures([polygon([ring(-5,-5,5,5)])],geo));
   assert.deepEqual(lookups.findContaining(features,0,0,geo.geoContains),fullScan(0,0));
 });
-await check('warm coordinate queries inspect only their spatial cell', () => {
-  let boundsReads = 0;
+await check('warm production coordinate queries inspect only their spatial cell without scanning array entries', async () => {
   const features = Array.from({length:3500}, (_,i) => {
     const south = -85 + (i % 35) * 5;
-    return {feature:polygon([ring(0,south,1,south+1)]),
-      get bounds() {boundsReads++; return [[0,south],[1,south+1]];}};
+    return polygon([ring(0,south,1,south+1)]);
   });
-  lookups.findContaining(features,0.5,0.5,()=>true);
-  boundsReads = 0;
-  assert.equal(lookups.findContaining(features,0.5,0.5,()=>true).length,100);
-  assert.ok(boundsReads <= features.length / 20, 'no full-array scan after the first lookup');
+  for (const production of [
+    lookups.indexFeatures(features, geo),
+    await lookups.indexFeaturesAsync(features, geo, async () => {})
+  ]) {
+    let entryReads = 0;
+    const index = new Proxy(production, {
+      get(target, key, receiver) {
+        if (typeof key === 'string' && /^\d+$/.test(key)) entryReads++;
+        return Reflect.get(target, key, receiver);
+      }
+    });
+    lookups.findContaining(index,0.5,0.5,()=>true);
+    entryReads = 0;
+    let containmentCalls = 0;
+    for (let query = 0; query < 10; query++) {
+      assert.equal(lookups.findContaining(index,0.5,0.5,() => {containmentCalls++; return true;}).length,100);
+      assert.deepEqual(lookups.findContaining(index,0,-100,()=>true),[]);
+    }
+    assert.equal(containmentCalls,1000);
+    assert.equal(entryReads,0,'warmed production lookups must not scan index entries');
+  }
 });
 await check('wrapped bounds in one longitude band never duplicate matching features', () => {
   const feature=polygon([ring(0,0,1,1)]);
@@ -91,6 +108,40 @@ await check('wrapped bounds in one longitude band never duplicate matching featu
   assert.deepEqual(lookups.findContaining(index,0,0,()=>true),[feature]);
   assert.deepEqual(lookups.findContaining(index,0,2.5,()=>true),[feature]);
   assert.deepEqual(lookups.findContaining(index,0,1.5,()=>true),[]);
+});
+await check('a same-length replacement in a warmed mutable index cannot return stale geometry', () => {
+  const first = [...lookups.indexFeatures([polygon([ring(0,0,1,1)], { name: 'first' })], geo)];
+  assert.equal(lookups.findContaining(first, 0.5, 0.5, geo.geoContains)[0].properties.name, 'first');
+  first[0] = lookups.indexFeatures([polygon([ring(10,10,11,11)], { name: 'replacement' })], geo)[0];
+  assert.deepEqual(lookups.findContaining(first, 0.5, 0.5, geo.geoContains), []);
+  assert.equal(lookups.findContaining(first, 10.5, 10.5, geo.geoContains)[0].properties.name, 'replacement');
+});
+await check('mutable external indexes reflect nested bounds and feature edits on every query', () => {
+  const feature = polygon([ring(0,0,1,1).reverse()]);
+  const index = [{ feature, bounds: [[0,0],[1,1]] }];
+  assert.deepEqual(lookups.findContaining(index,0.5,0.5,geo.geoContains),[feature]);
+  feature.geometry.coordinates = [ring(10,10,11,11).reverse()];
+  index[0].bounds[0].splice(0,2,10,10);
+  index[0].bounds[1].splice(0,2,11,11);
+  assert.deepEqual(lookups.findContaining(index,0.5,0.5,geo.geoContains),[]);
+  assert.deepEqual(lookups.findContaining(index,10.5,10.5,geo.geoContains),[feature]);
+});
+await check('production indexes are immutable snapshots without freezing caller-owned GeoJSON', async () => {
+  for (const build of [
+    features => lookups.indexFeatures(features,geo),
+    features => lookups.indexFeaturesAsync(features,geo,async()=>{})
+  ]) {
+    const input = polygon([ring(0,0,1,1)]);
+    const index = await build([input]);
+    lookups.findContaining(index,0.5,0.5,geo.geoContains);
+    assert.throws(() => {index[0] = index[0];},TypeError);
+    assert.throws(() => index.push(index[0]),TypeError);
+    assert.throws(() => {index[0].bounds[0][0] = 100;},TypeError);
+    assert.throws(() => {index[0].feature.geometry.coordinates[0][0][0] = 100;},TypeError);
+    input.geometry.coordinates[0][0][0] = 100;
+    input.properties.name = 'changed';
+    assert.equal(lookups.findContaining(index,0.5,0.5,geo.geoContains)[0].properties.name,'Test');
+  }
 });
 await check('async geography indexing yields within its work budget and discards cancelled results', async () => {
   const descriptor = Object.getOwnPropertyDescriptor(globalThis,'performance');
@@ -238,10 +289,19 @@ await check('geoBoundaries Admin-2 importer validates IDs and emits only compact
   assert.deepEqual(features[0].properties, {
     id: 'CAN:CAN-ADM2-01', name: 'Ottawa Division', country: 'CAN'
   });
+  await assert.rejects(buildAdmin2([features[0], features[0]], []), /duplicate/i);
   const { topology, featureCount } = await buildAdmin2(features, []);
   assert.equal(featureCount, 1);
   assert.equal(topology.metadata.license, 'CC-BY-4.0');
   assert.equal(topology.objects.admin2.geometries[0].properties.country, 'CAN');
+  assert.throws(() => selectSubdivisionFeatures([
+    { type: 'Feature', properties: {
+      adm0_a3: 'CAN', iso_a2: 'CA', adm1_code: 'CAN-ON-01', name: 'Ontario', admin: 'Canada'
+    }, geometry: { type: 'Polygon', coordinates: [ring(0, 0, 1, 1)] } },
+    { type: 'Feature', properties: {
+      adm0_a3: 'CAN', iso_a2: 'CA', adm1_code: 'CAN-ON-01', name: 'Ontario Duplicate', admin: 'Canada'
+    }, geometry: { type: 'Polygon', coordinates: [ring(0, 0, 1, 1)] } }
+  ]), /duplicate/i);
 });
 await check('Yosemite/Zion boundary matches and combined Sequoia/Kings Canyon codes are explicit', () => {
   for (const [code, lat, lng] of [['yose', 37.75, -119.59], ['zion', 37.3, -113.05]]) {
@@ -271,7 +331,7 @@ await check('detailed mangrove polygons correct the simplified classification at
 });
 await check('boundary importer paginates all records and fails on partial pages/service errors', async () => {
   const features = Array.from({ length: 405 }, (_, id) => ({
-    ...polygon([ring(0, 0, 1, 1)], { OBJECTID: id, UNIT_CODE: id.toString(36).padStart(4, '0').toUpperCase(), UNIT_NAME: `Unit ${id}` })
+    ...polygon([ring(0, 0, 1, 1)], { OBJECTID: id + 1, UNIT_CODE: id.toString(36).padStart(4, '0').toUpperCase(), UNIT_NAME: `Unit ${id}` })
   }));
   const offsets = [];
   const result = await collectBoundaries(async params => {
@@ -284,6 +344,38 @@ await check('boundary importer paginates all records and fails on partial pages/
   assert.deepEqual(offsets, [0, 100, 200, 300, 400]);
   assert.match(result.features[0].properties.parkCode, /^[a-z0-9]{4}$/);
   await assert.rejects(collectBoundaries(async params => params.returnCountOnly ? { count: 405 } : { features: [] }), /Incomplete/);
+});
+await check('boundary import rejects records without stable official object IDs', async () => {
+  const features = Array.from({ length: 400 }, (_, id) => ({
+    ...polygon([ring(0, 0, 1, 1)], {
+      OBJECTID: id === 0 ? undefined : id + 1,
+      UNIT_CODE: id.toString(36).padStart(4, '0').toLowerCase(),
+      UNIT_NAME: `Unit ${id}`
+    })
+  }));
+  await assert.rejects(collectBoundaries(async params => params.returnCountOnly
+    ? { count: features.length }
+    : { features: features.slice(Number(params.resultOffset), Number(params.resultOffset) + 100) }), /Invalid NPS boundary record/);
+});
+await check('NPS import rejects malformed single-record pagination totals and duplicate codes', async () => {
+  const valid = Array.from({ length: 400 }, (_, index) => ({
+    id: `record-${index}`, parkCode: index.toString(36).padStart(4, '0'),
+    fullName: `Park ${index}`, designation: 'National Park', description: '',
+    states: 'WY', url: 'https://www.nps.gov/test/', latitude: '1', longitude: '2',
+    topics: [], activities: []
+  }));
+  await assert.rejects(collectParks(async start => ({
+    total: start === 0 ? 400 : 401, data: valid.slice(start, start + 100)
+  })), /pagination/);
+  const duplicateCodes = valid.map(record => ({ ...record }));
+  duplicateCodes[399].parkCode = duplicateCodes[0].parkCode;
+  await assert.rejects(collectParks(async () => ({ total: 400, data: duplicateCodes })), /Invalid or duplicate/);
+  const booleanCoordinate = valid.map(record => ({ ...record }));
+  booleanCoordinate[0].latitude = true;
+  assert.throws(() => npsCatalog.normalizeParks(booleanCoordinate), /coordinates/);
+  const duplicateStates = valid.map(record => ({ ...record }));
+  duplicateStates[0].states = 'WY,WY';
+  assert.deepEqual(npsCatalog.normalizeParks(duplicateStates)[0].states, ['Wyoming']);
 });
 await check('OSM density categories use exact thresholds, not review-count claims', () => {
   for (const [count, category] of [[0, 'Uncharted'], [9, 'Uncharted'], [10, 'Hidden Gem'], [29, 'Hidden Gem'],

@@ -30,12 +30,14 @@ export async function collectBoundaries(fetchJson) {
     features: features.map(feature => {
       const code = feature.properties?.UNIT_CODE?.toLowerCase();
       const id = feature.properties?.OBJECTID;
-      if (!/^[a-z0-9]{4}$/.test(code) || ids.has(id) ||
+      const name = feature.properties?.UNIT_NAME;
+      if (!Number.isSafeInteger(id) || id <= 0 || !/^[a-z0-9]{4}$/.test(code) || ids.has(id) ||
+          typeof name !== 'string' || !name.trim() ||
           !['Polygon', 'MultiPolygon'].includes(feature.geometry?.type)) {
         throw new Error(`Invalid NPS boundary record ${id}: ${code}.`);
       }
       ids.add(id);
-      return { type: 'Feature', properties: { parkCode: code, name: feature.properties.UNIT_NAME }, geometry: feature.geometry };
+      return { type: 'Feature', properties: { parkCode: code, name }, geometry: feature.geometry };
     })
   };
 }

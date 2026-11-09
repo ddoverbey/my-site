@@ -136,11 +136,27 @@
     return { ...feature, geometry: { ...geometry, coordinates: geometry.type === 'Polygon' ? coordinates[0] : coordinates } };
   }
 
+  const immutableIndex = Symbol('immutable coordinate index');
+
+  function immutableCopy(value) {
+    if (!value || typeof value !== 'object') return value;
+    return Object.freeze(Array.isArray(value)
+      ? value.map(immutableCopy)
+      : Object.fromEntries(Object.entries(value).map(([key, item]) => [key, immutableCopy(item)])));
+  }
+
+  function finishIndex(index) {
+    Object.defineProperty(index, immutableIndex, { value: true });
+    return Object.freeze(index);
+  }
+
+  // Factories return deeply immutable, caller-independent snapshots. Replace the
+  // index to change production geography; only these snapshots are spatially cached.
   function indexFeatures(features, geo) {
-    return features.map(feature => {
+    return finishIndex(features.map(feature => {
       const normalized = normalizeFeature(feature, geo.geoArea);
-      return { feature: normalized, bounds: geo.geoBounds(normalized) };
-    });
+      return immutableCopy({ feature: normalized, bounds: geo.geoBounds(normalized) });
+    }));
   }
 
   async function indexFeaturesAsync(features, geo, yieldToMain, isCurrent = () => true) {
@@ -154,7 +170,7 @@
         started = performance.now();
       }
     }
-    return isCurrent() ? index : null;
+    return isCurrent() ? finishIndex(index) : null;
   }
 
   const spatialIndexes = new WeakMap();
@@ -162,8 +178,11 @@
   const longitudeBand = longitude => Math.min(71, Math.max(0, Math.floor((longitude + 180) / 5)));
 
   function spatialCandidates(index, lat, lng) {
+    // External arrays may change entries, bounds, or geometry between queries.
+    // Do not cache them: identity/length checks cannot detect all such edits.
+    if (!index[immutableIndex]) return index;
     let cached = spatialIndexes.get(index);
-    if (!cached || cached.length !== index.length) {
+    if (!cached) {
       const cells = Array.from({ length: 36 * 72 }, () => []);
       for (const entry of index) {
         const [[west, south], [east, north]] = entry.bounds;
@@ -176,7 +195,7 @@
           }
         }
       }
-      cached = { length: index.length, cells };
+      cached = { cells };
       spatialIndexes.set(index, cached);
     }
     return cached.cells[latitudeBand(lat) * 72 + longitudeBand(lng)];

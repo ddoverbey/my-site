@@ -273,7 +273,7 @@ check('character customization appears above the stage and progress summary', ()
 check('coupled local scripts use a shared release URL so cached old assets cannot break new HTML', () => {
   const sources = [...html.matchAll(/<script src="(\.\/[^"]+)"/g)].map(match => match[1]);
   assert.equal(sources.length, 10);
-  assert.ok(sources.every(source => source.endsWith('?v=20261108-character-performance-v2')));
+  assert.ok(sources.every(source => source.endsWith('?v=20261108-correctness-v3')));
   assert.ok(sources.some(source => source.startsWith('./character-creator.js?')));
   assert.ok(sources.some(source => source.startsWith('./expedition-ui.js?')));
 });
@@ -3875,7 +3875,7 @@ const formLookupIndexes = {
     formLookupFeature('Lazio', formLookupRing)
   ], d3Geo),
   counties: coordinateLookups.indexFeatures([
-    formLookupFeature('Lazio', formLookupRing, { country: 'Italy', isoA3: 'ITA' })
+    { ...formLookupFeature('Lazio', formLookupRing, { country: 'Italy', isoA3: 'ITA' }), id: 'ITA:LAZ' }
   ], d3Geo),
   ecoregions: coordinateLookups.indexFeatures([
     formLookupFeature('Central Italian forests', formLookupRing, {
@@ -3883,7 +3883,6 @@ const formLookupIndexes = {
     })
   ], d3Geo)
 };
-formLookupIndexes.counties[0].feature.id = 'ITA:LAZ';
 context.CoordinateLookups = { ...coordinateLookups };
 context.crypto = { randomUUID: () => 'saved-reference' };
 context.d3 = { ...d3Geo, geoContains: d3Geo.geoContains };
@@ -9648,5 +9647,290 @@ check('route atlases reuse projected geography and route paths but invalidate ch
     assert.equal(fits,3);
     assert.equal(paths,8,'six background paths and two distinct route geometries');
   } finally {context.d3=previousD3;}
+});
+check('route edits preserve explicit trip-sharing consent and selected photos', () => {
+  const saved = vm.runInContext('({trips:AppState.expeditions, expeditionEditingId, expeditionDraft})', context);
+  try {
+    vm.runInContext(`
+      AppState.expeditions=[{
+        id:'consent-edit', journal:'Keep this memory', photos:['data:image/jpeg;base64,YQ=='],
+        publicSharing:{enabled:true,includeDetails:false,includeJournal:true,photoIndexes:[0]}
+      }];
+      expeditionEditingId='consent-edit'; expeditionDraft=[];
+    `, context);
+    const edited = vm.runInContext('draftExpedition([])', context);
+    assert.ok(edited.publicSharing, 'editing must not discard explicit sharing settings');
+    assert.deepEqual(JSON.parse(JSON.stringify(edited.publicSharing)), {
+      enabled: true, includeDetails: false, includeJournal: true, photoIndexes: [0]
+    });
+    assert.equal(edited.journal, 'Keep this memory');
+    assert.equal(edited.photos.length, 1);
+    vm.runInContext('expeditionEditingId=null', context);
+    assert.equal(vm.runInContext('draftExpedition([]).publicSharing?.enabled === true', context), false);
+  } finally {
+    context.adversarialSaved = saved;
+    vm.runInContext(`AppState.expeditions=adversarialSaved.trips;
+      ({expeditionEditingId,expeditionDraft}=adversarialSaved); delete globalThis.adversarialSaved`, context);
+  }
+});
+await checkAsync('late rarity responses cannot overwrite edited itineraries but can merge into journal edits', async () => {
+  const saved = vm.runInContext(`({
+    trips:AppState.expeditions, viewOnly:AppState.viewOnly, updateExpedition, refreshTravelUI,
+    lookup:window.lookupCachedOrSharedRarity, appraisal:window.showFieldAppraisal
+  })`, context);
+  let release;
+  let updates = 0;
+  const originalRefresh = context.refreshTravelUI;
+  try {
+    context.window.lookupCachedOrSharedRarity = () => new Promise(resolve => { release = resolve; });
+    context.window.showFieldAppraisal = () => {};
+    context.refreshTravelUI = () => {};
+    context.updateExpedition = updated => {
+      updates++;
+      vm.runInContext('AppState.expeditions', context)[0] = updated;
+    };
+    for (const editItinerary of [true, false]) {
+      vm.runInContext(`AppState.viewOnly=false;AppState.expeditions=[{
+        id:'late-rarity',journal:'Before',routeStops:[
+          {kind:'place',id:'stop',name:'Original',coords:[10,20]}
+        ]
+      }]`, context);
+      const request = vm.runInContext("enrichExpeditionStopRarities('late-rarity')", context);
+      assert.equal(typeof release, 'function');
+      vm.runInContext(`AppState.expeditions[0]={
+        ...AppState.expeditions[0],journal:'Edited while loading'
+        ${editItinerary ? ",routeStops:[{kind:'place',id:'stop',name:'Moved',coords:[30,40]}]" : ''}
+      }`, context);
+      release({ rarityTier: 'Deep Cut' });
+      await request;
+      assert.equal(vm.runInContext('AppState.expeditions[0].journal', context), 'Edited while loading');
+      assert.equal(vm.runInContext('AppState.expeditions[0].routeStops[0].name', context),
+        editItinerary ? 'Moved' : 'Original');
+      assert.equal(updates, editItinerary ? 0 : 1);
+      if (!editItinerary) {
+        assert.equal(vm.runInContext('AppState.expeditions[0].routeStops[0].rarityTier', context), 'Deep Cut');
+      }
+    }
+  } finally {
+    context.refreshTravelUI = originalRefresh;
+    context.updateExpedition = saved.updateExpedition;
+    context.window.lookupCachedOrSharedRarity = saved.lookup;
+    context.window.showFieldAppraisal = saved.appraisal;
+    context.adversarialSaved = saved;
+    vm.runInContext(`AppState.expeditions=adversarialSaved.trips;
+      AppState.viewOnly=adversarialSaved.viewOnly;delete globalThis.adversarialSaved`, context);
+  }
+});
+await checkAsync('manual save waits for browser storage and never announces success after an asynchronous failure', async () => {
+  const saved = vm.runInContext('({saveState,showNotification,setCloudStatus,cloudSession,viewOnly:AppState.viewOnly})', context);
+  const notices = [];
+  let release;
+  try {
+    context.saveState = () => new Promise(resolve => { release = resolve; });
+    context.showNotification = title => { notices.push(title); };
+    context.setCloudStatus = () => {};
+    vm.runInContext('cloudSession=null;AppState.viewOnly=false', context);
+    const failed = vm.runInContext('handleManualSave()', context);
+    assert.deepEqual(notices, [], 'pending writes are not yet saved');
+    release(false);
+    await failed;
+    assert.ok(!notices.includes('Saved on this device'));
+    notices.length = 0;
+    const success = vm.runInContext('handleManualSave()', context);
+    release(true);
+    await success;
+    assert.deepEqual(notices, ['Saved on this device']);
+    notices.length = 0;
+    context.saveState = async () => { throw new Error('transaction aborted'); };
+    await vm.runInContext('handleManualSave()', context);
+    assert.deepEqual(notices, ['Save Failed']);
+  } finally {
+    context.saveState = saved.saveState;
+    context.showNotification = saved.showNotification;
+    context.setCloudStatus = saved.setCloudStatus;
+    context.adversarialSaved = saved;
+    vm.runInContext(`cloudSession=adversarialSaved.cloudSession;
+      AppState.viewOnly=adversarialSaved.viewOnly;delete globalThis.adversarialSaved`, context);
+  }
+});
+await checkAsync('a failed draft database open is retryable without reloading or losing the draft', async () => {
+  const savedDb = vm.runInContext('expeditionDraftDbPromise', context);
+  const savedIndexedDb = context.indexedDB;
+  const database = {};
+  let opens = 0;
+  try {
+    vm.runInContext('expeditionDraftDbPromise=null', context);
+    context.indexedDB = {
+      open() {
+        opens++;
+        const request = {};
+        queueMicrotask(() => {
+          if (opens === 1) {
+            request.error = new Error('temporarily blocked');
+            request.onerror();
+          } else {
+            request.result = database;
+            request.onsuccess();
+          }
+        });
+        return request;
+      }
+    };
+    await assert.rejects(vm.runInContext('expeditionDraftDatabase()', context), /temporarily blocked/);
+    assert.equal(await vm.runInContext('expeditionDraftDatabase()', context), database);
+    assert.equal(opens, 2);
+  } finally {
+    context.indexedDB = savedIndexedDb;
+    context.adversarialSavedDb = savedDb;
+    vm.runInContext('expeditionDraftDbPromise=adversarialSavedDb;delete globalThis.adversarialSavedDb', context);
+  }
+});
+await checkAsync('aborted draft reads reject instead of leaving recovery permanently pending', async () => {
+  const transaction = { objectStore: () => ({ get: () => ({}) }) };
+  const pending = context.readDraftFromDatabase({ transaction: () => transaction });
+  let outcome = 'pending';
+  const settled = pending.then(() => { outcome = 'resolved'; }, () => { outcome = 'rejected'; });
+  transaction.onabort?.();
+  await Promise.resolve();
+  assert.equal(outcome, 'rejected');
+  await settled;
+});
+await checkAsync('route preview regeneration never returns an old cached image when the new image is oversized', async () => {
+  const saved = vm.runInContext(`({
+    trips:AppState.expeditions, renderGlobalRoutesMap, travelLogLegs,
+    publicRouteMapThumbnailCacheKey,publicRouteMapThumbnailCache,
+    globalRoutesScope,globalRoutesYear,globalRoutesAtlasStyle
+  })`, context);
+  const original = {
+    Image: context.Image, URL: context.URL, Blob: context.Blob,
+    XMLSerializer: context.XMLSerializer, createElement: context.document.createElement,
+    clone: element('svgGlobalRoutesMap').cloneNode
+  };
+  let revoked = 0;
+  let oversized = true;
+  try {
+    context.renderGlobalRoutesMap = () => {};
+    context.travelLogLegs = () => [{ coords: [[0, 0], [1, 1]] }];
+    context.Image = class { set src(value) { this.onload(); } };
+    context.URL = { createObjectURL: () => 'blob:adversarial', revokeObjectURL() { revoked++; } };
+    context.Blob = class {};
+    context.XMLSerializer = class { serializeToString() { return '<svg>new itinerary</svg>'; } };
+    context.document.createElement = () => ({
+      getContext: () => ({ drawImage() {} }),
+      toDataURL: () => oversized ? 'x'.repeat(64001) : 'data:image/jpeg;base64,bmV3'
+    });
+    element('svgGlobalRoutesMap').cloneNode = () => ({ setAttribute() {} });
+    vm.runInContext(`
+      AppState.expeditions=[{publicSharing:{enabled:true,includeDetails:true}}];
+      publicRouteMapThumbnailCacheKey='old itinerary';
+      publicRouteMapThumbnailCache='data:image/jpeg;base64,b2xk';
+    `, context);
+    await assert.rejects(vm.runInContext('buildPublicRouteMapThumbnail()', context), /size limit/);
+    assert.equal(vm.runInContext('publicRouteMapThumbnailCacheKey', context), 'old itinerary');
+    oversized = false;
+    assert.equal(await vm.runInContext('buildPublicRouteMapThumbnail()', context), 'data:image/jpeg;base64,bmV3');
+    assert.equal(revoked, 2, 'both failed and successful renders release blob URLs');
+  } finally {
+    context.renderGlobalRoutesMap = saved.renderGlobalRoutesMap;
+    context.travelLogLegs = saved.travelLogLegs;
+    Object.assign(context, { Image: original.Image, URL: original.URL, Blob: original.Blob,
+      XMLSerializer: original.XMLSerializer });
+    context.document.createElement = original.createElement;
+    element('svgGlobalRoutesMap').cloneNode = original.clone;
+    context.adversarialSaved = saved;
+    vm.runInContext(`AppState.expeditions=adversarialSaved.trips;
+      ({publicRouteMapThumbnailCacheKey,publicRouteMapThumbnailCache,
+        globalRoutesScope,globalRoutesYear,globalRoutesAtlasStyle}=adversarialSaved);
+      delete globalThis.adversarialSaved`, context);
+  }
+});
+await checkAsync('cloud sync cannot upload the previous account passport after account changes during preview generation', async () => {
+  const saved = vm.runInContext(`({
+    cloudSession,cloudHydrated,cloudSyncInProgress,buildPublicSummaryStats,calculateStats,
+    cloudFetch,setCloudStatus,viewOnly:AppState.viewOnly
+  })`, context);
+  let release;
+  let uploads = 0;
+  try {
+    context.buildPublicSummaryStats = () => new Promise(resolve => { release = resolve; });
+    context.calculateStats = () => ({});
+    context.cloudFetch = async () => { uploads++; return { ok: true }; };
+    context.setCloudStatus = () => {};
+    vm.runInContext(`AppState.viewOnly=false;cloudHydrated=true;cloudSyncInProgress=false;
+      cloudSession={access_token:'test-session-a',user:{id:'account-a'}}`, context);
+    const pending = vm.runInContext('syncToCloud()', context);
+    vm.runInContext("cloudSession={access_token:'test-session-b',user:{id:'account-b'}}", context);
+    release({});
+    assert.equal(await pending, false);
+    assert.equal(uploads, 0, 'old account data must never be submitted under the new account');
+  } finally {
+    context.buildPublicSummaryStats = saved.buildPublicSummaryStats;
+    context.calculateStats = saved.calculateStats;
+    context.cloudFetch = saved.cloudFetch;
+    context.setCloudStatus = saved.setCloudStatus;
+    context.adversarialSaved = saved;
+    vm.runInContext(`({cloudSession,cloudHydrated,cloudSyncInProgress}=adversarialSaved);
+      AppState.viewOnly=adversarialSaved.viewOnly;delete globalThis.adversarialSaved`, context);
+  }
+});
+await checkAsync('late authenticated responses are rejected instead of being retried under another account', async () => {
+  const saved = vm.runInContext('({cloudSession,fetchWithCloudTimeout,refreshCloudSession})', context);
+  let release;
+  let refreshes = 0;
+  try {
+    context.fetchWithCloudTimeout = () => new Promise(resolve => { release = resolve; });
+    context.refreshCloudSession = async () => { refreshes++; return false; };
+    vm.runInContext("cloudSession={access_token:'test-session-a',user:{id:'account-a'}}", context);
+    const pending = vm.runInContext("cloudFetch('https://example.test/account-a')", context);
+    vm.runInContext("cloudSession={access_token:'test-session-b',user:{id:'account-b'}}", context);
+    release({ status: 401 });
+    await assert.rejects(pending, /account.*changed/i);
+    assert.equal(refreshes, 0);
+  } finally {
+    context.fetchWithCloudTimeout = saved.fetchWithCloudTimeout;
+    context.refreshCloudSession = saved.refreshCloudSession;
+    context.adversarialSaved = saved;
+    vm.runInContext('cloudSession=adversarialSaved.cloudSession;delete globalThis.adversarialSaved', context);
+  }
+});
+await checkAsync('a cloud passport arriving after an account switch never changes local progress or opens a conflict', async () => {
+  const saved = vm.runInContext(`({
+    cloudSession,cloudHydrated,cloudFetch,ensureAuthPublicUsername,setCloudStatus,
+    unlockAllPrimaryFeatures,renderLoadedCloudPassport,showCloudConflict,
+    passport:JSON.stringify(passportPayload()),viewOnly:AppState.viewOnly
+  })`, context);
+  let release;
+  let mutations = 0;
+  let markBodyRequested;
+  const bodyRequested = new Promise(resolve => { markBodyRequested = resolve; });
+  try {
+    context.cloudFetch = async () => ({
+      ok: true, json: () => new Promise(resolve => {
+        release = resolve;
+        markBodyRequested();
+      })
+    });
+    context.ensureAuthPublicUsername = () => {};
+    context.setCloudStatus = () => {};
+    context.unlockAllPrimaryFeatures = () => { mutations++; };
+    context.renderLoadedCloudPassport = async () => { mutations++; };
+    context.showCloudConflict = () => { mutations++; };
+    vm.runInContext(`AppState.viewOnly=false;
+      cloudSession={access_token:'test-session-a',user:{id:'account-a'}}`, context);
+    const pending = vm.runInContext('loadFromCloud()', context);
+    await bodyRequested;
+    assert.equal(typeof release, 'function');
+    vm.runInContext("cloudSession={access_token:'test-session-b',user:{id:'account-b'}}", context);
+    release([{ passport_data: { version: 2, pins: { yell: 'v' } } }]);
+    assert.equal(await pending, false);
+    assert.equal(mutations, 0);
+    assert.equal(vm.runInContext('JSON.stringify(passportPayload())', context), saved.passport);
+  } finally {
+    for (const name of ['cloudFetch','ensureAuthPublicUsername','setCloudStatus',
+      'unlockAllPrimaryFeatures','renderLoadedCloudPassport','showCloudConflict']) context[name] = saved[name];
+    context.adversarialSaved = saved;
+    vm.runInContext(`({cloudSession,cloudHydrated}=adversarialSaved);
+      AppState.viewOnly=adversarialSaved.viewOnly;delete globalThis.adversarialSaved`, context);
+  }
 });
 console.log(`${checks} checks passed.`);

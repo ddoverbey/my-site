@@ -286,4 +286,138 @@ await check('Google failures fall back to open-data density and highway isolatio
   assert.equal(fallbackData.rarityTier, 'Uncharted');
   assert.ok(fallbackData.nearestHighwayKm > 15);
 });
+await check('an unavailable OpenStreetMap provider never fabricates or caches an empty density', async () => {
+  const saved = new Map();
+  const grid = coordinateGrid(12, 34);
+  const cache = {
+    get: async key => saved.has(key) ? JSON.parse(saved.get(key)) : null,
+    put: async (key, value) => saved.set(key, value)
+  };
+  const failing = createWorker(async url => url.includes('googleapis.com')
+    ? new Response(JSON.stringify({ places: [{
+      displayName: { text: 'Example' }, userRatingCount: 123,
+      location: { latitude: grid.matchedLat, longitude: grid.matchedLng }
+    }] }))
+    : new Response('timeout', { status: 504 }));
+  assert.equal((await failing.fetch(request('lat=12&lng=34'), {
+    ...env, GOOGLE_PLACES_API_KEY: 'test-key', RARITY_CACHE: cache
+  })).status, 503);
+  assert.equal(saved.size, 0);
+});
+await check('Google timeout fallback is not cached and a later successful lookup replaces it', async () => {
+  const saved = new Map();
+  const grid = coordinateGrid(13, 34);
+  let googleCalls = 0;
+  const retrying = createWorker(async (url, options) => {
+    assert.ok(options.signal instanceof AbortSignal);
+    if (!url.includes('googleapis.com')) return new Response(JSON.stringify({ elements: [] }));
+    googleCalls++;
+    if (googleCalls === 1) throw new DOMException('Timed out', 'TimeoutError');
+    return new Response(JSON.stringify({ places: [{
+      displayName: { text: 'Recovered' }, userRatingCount: 1000,
+      location: { latitude: grid.matchedLat, longitude: grid.matchedLng }
+    }] }));
+  });
+  const retryEnv = {
+    ...env, GOOGLE_PLACES_API_KEY: 'test-key',
+    RARITY_CACHE: {
+      get: async key => saved.has(key) ? JSON.parse(saved.get(key)) : null,
+      put: async (key, value) => saved.set(key, value)
+    }
+  };
+  const first = await retrying.fetch(request('lat=13&lng=34'), retryEnv);
+  assert.equal((await first.json()).reviewCount, null);
+  assert.equal(saved.size, 0);
+  const second = await retrying.fetch(request('lat=13&lng=34'), retryEnv);
+  assert.equal((await second.json()).reviewCount, 1000);
+  assert.equal(googleCalls, 2);
+  assert.equal(saved.size, 1);
+});
+await check('Google candidates discard malformed and out-of-range coordinates without losing valid matches', async () => {
+  const grid = coordinateGrid(14, 34);
+  const candidates = createWorker(async url => url.includes('googleapis.com')
+    ? new Response(JSON.stringify({ places: [
+      null,
+      { displayName: { text: 'Bad coordinate' }, userRatingCount: 9999,
+        location: { latitude: grid.matchedLat, longitude: grid.matchedLng + 360 } },
+      { displayName: { text: 'Valid place' }, userRatingCount: 42,
+        location: { latitude: grid.matchedLat, longitude: grid.matchedLng } }
+    ] }))
+    : new Response(JSON.stringify({ elements: [] })));
+  const response = await candidates.fetch(request('lat=14&lng=34'), {
+    ...env, GOOGLE_PLACES_API_KEY: 'test-key',
+    RARITY_CACHE: { get: async () => null, put: async () => {} }
+  });
+  const result = await response.json();
+  assert.equal(result.placeName, 'Valid place');
+  assert.equal(result.reviewCount, 42);
+});
+await check('a pre-existing OSM-only cache entry is refreshed when Google becomes configured', async () => {
+  const saved = new Map();
+  const grid = coordinateGrid(15, 34);
+  let googleCalls = 0;
+  const refresh = createWorker(async url => {
+    if (!url.includes('googleapis.com')) return new Response(JSON.stringify({ elements: [] }));
+    googleCalls++;
+    return new Response(JSON.stringify({ places: [{
+      displayName: { text: 'New provider' }, userRatingCount: 123,
+      location: { latitude: grid.matchedLat, longitude: grid.matchedLng }
+    }] }));
+  });
+  const cache = {
+    get: async key => saved.has(key) ? JSON.parse(saved.get(key)) : null,
+    put: async (key, value) => saved.set(key, value)
+  };
+  assert.equal((await (await refresh.fetch(request('lat=15&lng=34'), {
+    ...env, RARITY_CACHE: cache
+  })).json()).reviewCount, null);
+  const refreshed = await refresh.fetch(request('lat=15&lng=34'), {
+    ...env, GOOGLE_PLACES_API_KEY: 'test-key', RARITY_CACHE: cache
+  });
+  assert.equal((await refreshed.json()).reviewCount, 123);
+  assert.equal(googleCalls, 1);
+});
+await check('name control characters are rejected before whitespace normalization', async () => {
+  for (const name of ['hello%0Aworld', '%09hello', 'hello%0Dworld']) {
+    assert.equal((await worker.fetch(request(`lat=1&lng=2&name=${name}`), env)).status, 400);
+  }
+});
+await check('provider timeout signals propagate and never cache incomplete results', async () => {
+  const originalTimeout = AbortSignal.timeout;
+  const timeouts = [];
+  let timedOut = 10000;
+  let puts = 0;
+  const grid = coordinateGrid(16, 34);
+  AbortSignal.timeout = milliseconds => {
+    timeouts.push(milliseconds);
+    return milliseconds === timedOut
+      ? AbortSignal.abort(new DOMException('Timed out', 'TimeoutError'))
+      : new AbortController().signal;
+  };
+  try {
+    const timeoutWorker = createWorker(async (url, options) => {
+      if (options.signal.aborted) throw options.signal.reason;
+      return url.includes('googleapis.com')
+        ? new Response(JSON.stringify({ places: [{
+          displayName: { text: 'Example' }, userRatingCount: 123,
+          location: { latitude: grid.matchedLat, longitude: grid.matchedLng }
+        }] }))
+        : new Response(JSON.stringify({ elements: [] }));
+    });
+    const timeoutEnv = {
+      ...env, GOOGLE_PLACES_API_KEY: 'test-key',
+      RARITY_CACHE: { get: async () => null, put: async () => { puts++; } }
+    };
+    const fallback = await timeoutWorker.fetch(request('lat=16&lng=34'), timeoutEnv);
+    assert.equal(fallback.status, 200);
+    assert.equal((await fallback.json()).reviewCount, null);
+    assert.equal(puts, 0);
+    timedOut = 30000;
+    assert.equal((await timeoutWorker.fetch(request('lat=16&lng=34'), timeoutEnv)).status, 503);
+    assert.equal(puts, 0);
+    assert.deepEqual(timeouts, [30000, 10000, 30000, 10000]);
+  } finally {
+    AbortSignal.timeout = originalTimeout;
+  }
+});
 console.log(`${checks} rarity Worker checks passed.`);
